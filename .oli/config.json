@@ -21,6 +21,7 @@
   "hono_route_tables": ["services/api-ts/src/generated/openapi/routes.ts"],
   "sdk_operation_sources": ["packages/sdk-ts/src/generated/**/*.ts"],
   "sdk_import_specifiers": ["@monobase/sdk-ts"],
+  "spec_sources": ["specs/api/dist/openapi/openapi.json"],
   "confidence_threshold": "MEDIUM",
   "out_dir": "docs/audits/codebase-map"
 }

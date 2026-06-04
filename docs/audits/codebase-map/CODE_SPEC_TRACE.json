@@ -1,11 +1,6160 @@
 {
   "version": 6,
-  "spec_source": null,
-  "operations": [],
+  "spec_source": "specs/api/dist/openapi/openapi.json",
+  "operations": [
+    {
+      "operation_id": "deleteInvoice",
+      "method": "DELETE",
+      "path": "/billing/invoices/:invoice",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/deleteInvoice.ts",
+        "handler_function": "deleteInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteBookingEvent",
+      "method": "DELETE",
+      "path": "/booking/events/:event",
+      "required_roles": [
+        "event:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/deleteBookingEvent.ts",
+        "handler_function": "deleteBookingEvent",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteScheduleException",
+      "method": "DELETE",
+      "path": "/booking/events/:event/exceptions/:exception",
+      "required_roles": [
+        "event:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/deleteScheduleException.ts",
+        "handler_function": "deleteScheduleException",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "cancelAppointment",
+      "method": "DELETE",
+      "path": "/dental/appointments/:appointmentId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/cancelAppointment.ts",
+        "handler_function": "cancelAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteConsentTemplate",
+      "method": "DELETE",
+      "path": "/dental/branches/:branchId/consent-templates/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/deleteConsentTemplate.ts",
+        "handler_function": "deleteConsentTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "removeHouseholdMember",
+      "method": "DELETE",
+      "path": "/dental/households/:householdId/members/:patientId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/household/removeHouseholdMember.ts",
+        "handler_function": "removeHouseholdMember",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingFindingsMgmt_deleteFinding",
+      "method": "DELETE",
+      "path": "/dental/imaging/findings/:findingId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingFindingsMgmt_deleteFinding.ts",
+        "handler_function": "ImagingFindingsMgmt_deleteFinding",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_deleteImage",
+      "method": "DELETE",
+      "path": "/dental/imaging/images/:imageId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_deleteImage.ts",
+        "handler_function": "ImagingMgmt_deleteImage",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_deleteCephLandmark",
+      "method": "DELETE",
+      "path": "/dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_deleteCephLandmark.ts",
+        "handler_function": "CephMgmt_deleteCephLandmark",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_deleteMeasurement",
+      "method": "DELETE",
+      "path": "/dental/imaging/measurements/:measurementId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_deleteMeasurement.ts",
+        "handler_function": "ImagingMgmt_deleteMeasurement",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deletePatientContact",
+      "method": "DELETE",
+      "path": "/dental/patients/:patientId/contacts/:contactId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/contacts/deletePatientContact.ts",
+        "handler_function": "deletePatientContact",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "detachTreatmentAppointment",
+      "method": "DELETE",
+      "path": "/dental/patients/:patientId/treatments/:treatmentId/appointment",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/detachTreatmentAppointment.ts",
+        "handler_function": "detachTreatmentAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteTreatmentTemplate",
+      "method": "DELETE",
+      "path": "/dental/treatment-templates/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/templates/deleteTreatmentTemplate.ts",
+        "handler_function": "deleteTreatmentTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteAttachment",
+      "method": "DELETE",
+      "path": "/dental/visits/:visitId/attachments/:attachmentId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/attachments/deleteAttachment.ts",
+        "handler_function": "deleteAttachment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deactivatePatient",
+      "method": "DELETE",
+      "path": "/patients/:id",
+      "required_roles": [
+        "admin",
+        "registrar",
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/deactivatePatient.ts",
+        "handler_function": "deactivatePatient",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deactivatePractitionerRole",
+      "method": "DELETE",
+      "path": "/providers/practitioner-roles/:id",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/deactivatePractitionerRole.ts",
+        "handler_function": "deactivatePractitionerRole",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deactivatePractitioner",
+      "method": "DELETE",
+      "path": "/providers/practitioners/:id",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/deactivatePractitioner.ts",
+        "handler_function": "deactivatePractitioner",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteReview",
+      "method": "DELETE",
+      "path": "/reviews/:review",
+      "required_roles": [
+        "review:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/reviews/deleteReview.ts",
+        "handler_function": "deleteReview",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "deleteFile",
+      "method": "DELETE",
+      "path": "/storage/files/:file",
+      "required_roles": [
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/deleteFile.ts",
+        "handler_function": "deleteFile",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "abortMultipartUpload",
+      "method": "DELETE",
+      "path": "/storage/multipart/:file/abort",
+      "required_roles": [
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/abortMultipartUpload.ts",
+        "handler_function": "abortMultipartUpload",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listAuditLogs",
+      "method": "GET",
+      "path": "/audit/logs",
+      "required_roles": [
+        "admin",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/audit/listAuditLogs.ts",
+        "handler_function": "listAuditLogs",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listInvoices",
+      "method": "GET",
+      "path": "/billing/invoices",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/listInvoices.ts",
+        "handler_function": "listInvoices",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getInvoice",
+      "method": "GET",
+      "path": "/billing/invoices/:invoice",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/getInvoice.ts",
+        "handler_function": "getInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getMerchantAccount",
+      "method": "GET",
+      "path": "/billing/merchant-accounts/:merchantAccount",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/getMerchantAccount.ts",
+        "handler_function": "getMerchantAccount",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listBookings",
+      "method": "GET",
+      "path": "/booking/bookings",
+      "required_roles": [
+        "client:owner",
+        "host:owner",
+        "admin",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/listBookings.ts",
+        "handler_function": "listBookings",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getBooking",
+      "method": "GET",
+      "path": "/booking/bookings/:booking",
+      "required_roles": [
+        "client:owner",
+        "host:owner",
+        "admin",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/getBooking.ts",
+        "handler_function": "getBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listBookingEvents",
+      "method": "GET",
+      "path": "/booking/events",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/listBookingEvents.ts",
+        "handler_function": "listBookingEvents",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getBookingEvent",
+      "method": "GET",
+      "path": "/booking/events/:event",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/getBookingEvent.ts",
+        "handler_function": "getBookingEvent",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listScheduleExceptions",
+      "method": "GET",
+      "path": "/booking/events/:event/exceptions",
+      "required_roles": [
+        "event:owner",
+        "admin",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/listScheduleExceptions.ts",
+        "handler_function": "listScheduleExceptions",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getScheduleException",
+      "method": "GET",
+      "path": "/booking/events/:event/exceptions/:exception",
+      "required_roles": [
+        "event:owner",
+        "admin",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/getScheduleException.ts",
+        "handler_function": "getScheduleException",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listEventSlots",
+      "method": "GET",
+      "path": "/booking/events/:event/slots",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/listEventSlots.ts",
+        "handler_function": "listEventSlots",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getTimeSlot",
+      "method": "GET",
+      "path": "/booking/slots/:slotId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/getTimeSlot.ts",
+        "handler_function": "getTimeSlot",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listChatRooms",
+      "method": "GET",
+      "path": "/comms/chat-rooms",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/listChatRooms.ts",
+        "handler_function": "listChatRooms",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getChatRoom",
+      "method": "GET",
+      "path": "/comms/chat-rooms/:room",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/getChatRoom.ts",
+        "handler_function": "getChatRoom",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getChatMessages",
+      "method": "GET",
+      "path": "/comms/chat-rooms/:room/messages",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/getChatMessages.ts",
+        "handler_function": "getChatMessages",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getIceServers",
+      "method": "GET",
+      "path": "/comms/ice-servers",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/getIceServers.ts",
+        "handler_function": "getIceServers",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listAppointments",
+      "method": "GET",
+      "path": "/dental/appointments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/listAppointments.ts",
+        "handler_function": "listAppointments",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features",
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getAppointment",
+      "method": "GET",
+      "path": "/dental/appointments/:appointmentId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/getAppointment.ts",
+        "handler_function": "getAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getAuditEvents",
+      "method": "GET",
+      "path": "/dental/audit-events",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-audit/getAuditEvents.ts",
+        "handler_function": "getAuditEvents",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listInsuranceClaims",
+      "method": "GET",
+      "path": "/dental/billing/claims",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/listInsuranceClaims.ts",
+        "handler_function": "listInsuranceClaims",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getInsuranceClaim",
+      "method": "GET",
+      "path": "/dental/billing/claims/:claimId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getInsuranceClaim.ts",
+        "handler_function": "getInsuranceClaim",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPayerArAging",
+      "method": "GET",
+      "path": "/dental/billing/claims/aging",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getPayerArAging.ts",
+        "handler_function": "getPayerArAging",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getArAging",
+      "method": "GET",
+      "path": "/dental/billing/collections/aging",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getArAging.ts",
+        "handler_function": "getArAging",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getCollectionsSummary",
+      "method": "GET",
+      "path": "/dental/billing/collections/summary",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getCollectionsSummary.ts",
+        "handler_function": "getCollectionsSummary",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDentalInvoices",
+      "method": "GET",
+      "path": "/dental/billing/invoices",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/listDentalInvoices.ts",
+        "handler_function": "listDentalInvoices",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalInvoice",
+      "method": "GET",
+      "path": "/dental/billing/invoices/:invoiceId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getDentalInvoice.ts",
+        "handler_function": "getDentalInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDentalPayments",
+      "method": "GET",
+      "path": "/dental/billing/invoices/:invoiceId/payments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/listDentalPayments.ts",
+        "handler_function": "listDentalPayments",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalPaymentReceipt",
+      "method": "GET",
+      "path": "/dental/billing/invoices/:invoiceId/payments/:paymentId/receipt",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getDentalPaymentReceipt.ts",
+        "handler_function": "getDentalPaymentReceipt",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalPaymentPlan",
+      "method": "GET",
+      "path": "/dental/billing/invoices/:invoiceId/plan",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getDentalPaymentPlan.ts",
+        "handler_function": "getDentalPaymentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPatientBalance",
+      "method": "GET",
+      "path": "/dental/billing/patients/:patientId/balance",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/getPatientBalance.ts",
+        "handler_function": "getPatientBalance",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getBranchesByUser",
+      "method": "GET",
+      "path": "/dental/branches",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getBranchesByUser.ts",
+        "handler_function": "getBranchesByUser",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listConsentTemplates",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/consent-templates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/listConsentTemplates.ts",
+        "handler_function": "listConsentTemplates",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listInventoryItems",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/inventory",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/inventory/listInventoryItems.ts",
+        "handler_function": "listInventoryItems",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listInventoryAdjustments",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/inventory/:itemId/adjustments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/inventory/listInventoryAdjustments.ts",
+        "handler_function": "listInventoryAdjustments",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPostopTemplates",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/postop-templates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/postop/listPostopTemplates.ts",
+        "handler_function": "listPostopTemplates",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listQueueBoard",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/queue-board",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/listQueueBoard.ts",
+        "handler_function": "listQueueBoard",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getBranchSettings",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/settings",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getBranchSettings.ts",
+        "handler_function": "getBranchSettings",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listWaitlist",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/waitlist",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/listWaitlist.ts",
+        "handler_function": "listWaitlist",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getWorkingHours",
+      "method": "GET",
+      "path": "/dental/branches/:branchId/working-hours",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getWorkingHours.ts",
+        "handler_function": "getWorkingHours",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listMedicalHistory",
+      "method": "GET",
+      "path": "/dental/clinical/medical-history",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/medical-history/listMedicalHistory.ts",
+        "handler_function": "listMedicalHistory",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getMedicalHistoryReview",
+      "method": "GET",
+      "path": "/dental/clinical/medical-history-review",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/medical-history/getMedicalHistoryReview.ts",
+        "handler_function": "getMedicalHistoryReview",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDashboardSummary",
+      "method": "GET",
+      "path": "/dental/dashboard/summary",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getDashboardSummary.ts",
+        "handler_function": "getDashboardSummary",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listErasureRequests",
+      "method": "GET",
+      "path": "/dental/erasure-requests",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-erasure/listErasureRequests.ts",
+        "handler_function": "listErasureRequests",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getErasureRequest",
+      "method": "GET",
+      "path": "/dental/erasure-requests/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-erasure/getErasureRequest.ts",
+        "handler_function": "getErasureRequest",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getFeeSchedule",
+      "method": "GET",
+      "path": "/dental/fee-schedule",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getFeeSchedule.ts",
+        "handler_function": "getFeeSchedule",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getHousehold",
+      "method": "GET",
+      "path": "/dental/households/:householdId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/household/getHousehold.ts",
+        "handler_function": "getHousehold",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_getCephSuperimposition",
+      "method": "GET",
+      "path": "/dental/imaging/ceph/superimpositions/:superimpositionId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_getCephSuperimposition.ts",
+        "handler_function": "CephMgmt_getCephSuperimposition",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_getCephAnalysis",
+      "method": "GET",
+      "path": "/dental/imaging/images/:imageId/ceph/analysis",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_getCephAnalysis.ts",
+        "handler_function": "CephMgmt_getCephAnalysis",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_listCephLandmarks",
+      "method": "GET",
+      "path": "/dental/imaging/images/:imageId/ceph/landmarks",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_listCephLandmarks.ts",
+        "handler_function": "CephMgmt_listCephLandmarks",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_getCephLandmarkDetectionJob",
+      "method": "GET",
+      "path": "/dental/imaging/images/:imageId/ceph/landmarks/detect/:jobId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_getCephLandmarkDetectionJob.ts",
+        "handler_function": "CephMgmt_getCephLandmarkDetectionJob",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_getCephReport",
+      "method": "GET",
+      "path": "/dental/imaging/images/:imageId/ceph/reports",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_getCephReport.ts",
+        "handler_function": "CephMgmt_getCephReport",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingFindingsMgmt_listFindings",
+      "method": "GET",
+      "path": "/dental/imaging/images/:imageId/findings",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingFindingsMgmt_listFindings.ts",
+        "handler_function": "ImagingFindingsMgmt_listFindings",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_listMeasurements",
+      "method": "GET",
+      "path": "/dental/imaging/images/:imageId/measurements",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_listMeasurements.ts",
+        "handler_function": "ImagingMgmt_listMeasurements",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_listCephSuperimpositions",
+      "method": "GET",
+      "path": "/dental/imaging/patients/:patientId/ceph/superimpositions",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_listCephSuperimpositions.ts",
+        "handler_function": "CephMgmt_listCephSuperimpositions",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_getImagingStudy",
+      "method": "GET",
+      "path": "/dental/imaging/studies/:studyId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_getImagingStudy.ts",
+        "handler_function": "ImagingMgmt_getImagingStudy",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_getCbctViewerLink",
+      "method": "GET",
+      "path": "/dental/imaging/studies/:studyId/cbct/viewer-link",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_getCbctViewerLink.ts",
+        "handler_function": "ImagingMgmt_getCbctViewerLink",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listLegalHolds",
+      "method": "GET",
+      "path": "/dental/legal-holds",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-legalhold/listLegalHolds.ts",
+        "handler_function": "listLegalHolds",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getOrgContext",
+      "method": "GET",
+      "path": "/dental/org/context",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getOrgContext.ts",
+        "handler_function": "getOrgContext",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listMembers",
+      "method": "GET",
+      "path": "/dental/org/members",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/listMembers.ts",
+        "handler_function": "listMembers",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPermissionGrid",
+      "method": "GET",
+      "path": "/dental/org/permissions",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/getPermissionGrid.ts",
+        "handler_function": "getPermissionGrid",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalOrganizationManagement_get",
+      "method": "GET",
+      "path": "/dental/organizations/:id",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalOrganizationManagement_get.ts",
+        "handler_function": "DentalOrganizationManagement_get",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalBranchManagement_list",
+      "method": "GET",
+      "path": "/dental/organizations/:orgId/branches",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalBranchManagement_list.ts",
+        "handler_function": "DentalBranchManagement_list",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalBranchManagement_get",
+      "method": "GET",
+      "path": "/dental/organizations/:orgId/branches/:branchId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalBranchManagement_get.ts",
+        "handler_function": "DentalBranchManagement_get",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalMembershipManagement_list",
+      "method": "GET",
+      "path": "/dental/organizations/:orgId/branches/:branchId/members",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalMembershipManagement_list.ts",
+        "handler_function": "DentalMembershipManagement_list",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDentalPatients",
+      "method": "GET",
+      "path": "/dental/patients",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/listDentalPatients.ts",
+        "handler_function": "listDentalPatients",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalPatient",
+      "method": "GET",
+      "path": "/dental/patients/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/getDentalPatient.ts",
+        "handler_function": "getDentalPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/hooks"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listFollowUpNotes",
+      "method": "GET",
+      "path": "/dental/patients/:id/follow-up-notes",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/engagement/listFollowUpNotes.ts",
+        "handler_function": "listFollowUpNotes",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalPatientSafetyFloor",
+      "method": "GET",
+      "path": "/dental/patients/:id/safety-floor",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientSafetyFloor.ts",
+        "handler_function": "getDentalPatientSafetyFloor",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalPatientStatement",
+      "method": "GET",
+      "path": "/dental/patients/:id/statement",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/getDentalPatientStatement.ts",
+        "handler_function": "getDentalPatientStatement",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listCoverageAuthorizations",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/authorizations",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/listCoverageAuthorizations.ts",
+        "handler_function": "listCoverageAuthorizations",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listCasePresentations",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/case-presentations",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/case-presentation/listCasePresentations.ts",
+        "handler_function": "listCasePresentations",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getCasePresentation",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/case-presentations/:presentationId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/case-presentation/getCasePresentation.ts",
+        "handler_function": "getCasePresentation",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientClaims",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/claims",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/listPatientClaims.ts",
+        "handler_function": "listPatientClaims",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getClaimReadiness",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/claims/:claimId/readiness",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/getClaimReadiness.ts",
+        "handler_function": "getClaimReadiness",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPatientCommunicationConsent",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/communication-consent",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/consent/getPatientCommunicationConsent.ts",
+        "handler_function": "getPatientCommunicationConsent",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientContacts",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/contacts",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/contacts/listPatientContacts.ts",
+        "handler_function": "listPatientContacts",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDentalAlerts",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/dental-alerts",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/alerts/listDentalAlerts.ts",
+        "handler_function": "listDentalAlerts",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPatientHousehold",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/household",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/household/getPatientHousehold.ts",
+        "handler_function": "getPatientHousehold",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "PatientImageMgmt_listPatientImages",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/images",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/PatientImageMgmt_listPatientImages.ts",
+        "handler_function": "PatientImageMgmt_listPatientImages",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientInsuranceProfiles",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/insurance-profiles",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/listPatientInsuranceProfiles.ts",
+        "handler_function": "listPatientInsuranceProfiles",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listOcclusionScreenings",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/occlusion-screenings",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/occlusion/listOcclusionScreenings.ts",
+        "handler_function": "listOcclusionScreenings",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientRecalls",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/recalls",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/recalls/listPatientRecalls.ts",
+        "handler_function": "listPatientRecalls",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientTasks",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/tasks",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/engagement/listPatientTasks.ts",
+        "handler_function": "listPatientTasks",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listTreatmentOptionGroup",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/treatment-options/:optionGroupId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/listTreatmentOptionGroup.ts",
+        "handler_function": "listTreatmentOptionGroup",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getTreatmentPlan",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/treatment-plan",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/getTreatmentPlan.ts",
+        "handler_function": "getTreatmentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getTreatmentPlanVersion",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/treatment-plan/versions/:versionId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/getTreatmentPlanVersion.ts",
+        "handler_function": "getTreatmentPlanVersion",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientTreatmentPlans",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/treatment-plans",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/listPatientTreatmentPlans.ts",
+        "handler_function": "listPatientTreatmentPlans",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listTreatmentPlanStatusHistory",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/treatment-plans/:planId/status-history",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/listTreatmentPlanStatusHistory.ts",
+        "handler_function": "listTreatmentPlanStatusHistory",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientConditions",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/treatments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/listPatientConditions.ts",
+        "handler_function": "listPatientConditions",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatientVisits",
+      "method": "GET",
+      "path": "/dental/patients/:patientId/visits",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/listPatientVisits.ts",
+        "handler_function": "listPatientVisits",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "detectDuplicatePatients",
+      "method": "GET",
+      "path": "/dental/patients/duplicates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/detectDuplicatePatients.ts",
+        "handler_function": "detectDuplicatePatients",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "exportDentalPatients",
+      "method": "GET",
+      "path": "/dental/patients/export",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/exportDentalPatients.ts",
+        "handler_function": "exportDentalPatients",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPerioChart",
+      "method": "GET",
+      "path": "/dental/perio-charts/:chartId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-perio/getPerioChart.ts",
+        "handler_function": "getPerioChart",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listImportedPMDs",
+      "method": "GET",
+      "path": "/dental/pmd/imported",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/listImportedPMDs.ts",
+        "handler_function": "listImportedPMDs",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getImportedPMD",
+      "method": "GET",
+      "path": "/dental/pmd/imported/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/getImportedPMD.ts",
+        "handler_function": "getImportedPMD",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "exportPatientCareRecord",
+      "method": "GET",
+      "path": "/dental/pmd/patient/:patientId/care-record",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/exportPatientCareRecord.ts",
+        "handler_function": "exportPatientCareRecord",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getOnlineBooking",
+      "method": "GET",
+      "path": "/dental/public/bookings/:confirmationCode",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/getOnlineBooking.ts",
+        "handler_function": "getOnlineBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPublicAvailability",
+      "method": "GET",
+      "path": "/dental/public/branches/:branchId/availability",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/getPublicAvailability.ts",
+        "handler_function": "getPublicAvailability",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPublicBookingConfig",
+      "method": "GET",
+      "path": "/dental/public/branches/:branchId/booking-config",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/getPublicBookingConfig.ts",
+        "handler_function": "getPublicBookingConfig",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDueRecalls",
+      "method": "GET",
+      "path": "/dental/recalls/due",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/recalls/listDueRecalls.ts",
+        "handler_function": "listDueRecalls",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listSyncLogs",
+      "method": "GET",
+      "path": "/dental/sync-logs",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/sync/listSyncLogs.ts",
+        "handler_function": "listSyncLogs",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listTreatmentTemplates",
+      "method": "GET",
+      "path": "/dental/treatment-templates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/templates/listTreatmentTemplates.ts",
+        "handler_function": "listTreatmentTemplates",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDentalVisits",
+      "method": "GET",
+      "path": "/dental/visits",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/visits/listDentalVisits.ts",
+        "handler_function": "listDentalVisits",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalVisit",
+      "method": "GET",
+      "path": "/dental/visits/:visitId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/visits/getDentalVisit.ts",
+        "handler_function": "getDentalVisit",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listAmendments",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/amendments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/amendments/listAmendments.ts",
+        "handler_function": "listAmendments",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listAttachments",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/attachments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/attachments/listAttachments.ts",
+        "handler_function": "listAttachments",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getDentalChart",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/chart",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/chart/getDentalChart.ts",
+        "handler_function": "getDentalChart",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listConsentRefusals",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/consent-refusals",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/consent/listConsentRefusals.ts",
+        "handler_function": "listConsentRefusals",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listConsentForms",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/consents",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/consent/listConsentForms.ts",
+        "handler_function": "listConsentForms",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listLabOrders",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/lab-orders",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/lab-orders/listLabOrders.ts",
+        "handler_function": "listLabOrders",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getVisitNotes",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/notes",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/notes/getVisitNotes.ts",
+        "handler_function": "getVisitNotes",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getVisitNoteHistory",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/notes/history",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/notes/getVisitNoteHistory.ts",
+        "handler_function": "getVisitNoteHistory",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getVisitPerioChart",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/perio-chart",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-perio/getVisitPerioChart.ts",
+        "handler_function": "getVisitPerioChart",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPMDForVisit",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/pmd",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/getPMDForVisit.ts",
+        "handler_function": "getPMDForVisit",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "exportPMD",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/pmd/export",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/exportPMD.ts",
+        "handler_function": "exportPMD",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPrescriptions",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/prescriptions",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/prescriptions/listPrescriptions.ts",
+        "handler_function": "listPrescriptions",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listDentalTreatments",
+      "method": "GET",
+      "path": "/dental/visits/:visitId/treatments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/treatments/listDentalTreatments.ts",
+        "handler_function": "listDentalTreatments",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getToothHistory",
+      "method": "GET",
+      "path": "/dental/visits/history/:patientId/teeth/:toothNumber",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/chart/getToothHistory.ts",
+        "handler_function": "getToothHistory",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPMDs",
+      "method": "GET",
+      "path": "/dental/visits/pmd",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/listPMDs.ts",
+        "handler_function": "listPMDs",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listEmailQueueItems",
+      "method": "GET",
+      "path": "/email/queue",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/listEmailQueueItems.ts",
+        "handler_function": "listEmailQueueItems",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getEmailQueueItem",
+      "method": "GET",
+      "path": "/email/queue/:queue",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/getEmailQueueItem.ts",
+        "handler_function": "getEmailQueueItem",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listEmailTemplates",
+      "method": "GET",
+      "path": "/email/templates",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/listEmailTemplates.ts",
+        "handler_function": "listEmailTemplates",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getEmailTemplate",
+      "method": "GET",
+      "path": "/email/templates/:template",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/getEmailTemplate.ts",
+        "handler_function": "getEmailTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listConsultations",
+      "method": "GET",
+      "path": "/emr/consultations",
+      "required_roles": [
+        "provider",
+        "admin",
+        "patient"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/emr/listConsultations.ts",
+        "handler_function": "listConsultations",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getConsultation",
+      "method": "GET",
+      "path": "/emr/consultations/:consultation",
+      "required_roles": [
+        "admin",
+        "provider:owner",
+        "patient:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/emr/getConsultation.ts",
+        "handler_function": "getConsultation",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listEMRPatients",
+      "method": "GET",
+      "path": "/emr/patients",
+      "required_roles": [
+        "provider",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/emr/listEMRPatients.ts",
+        "handler_function": "listEMRPatients",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listNotifications",
+      "method": "GET",
+      "path": "/notifs",
+      "required_roles": [
+        "user",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/notifs/listNotifications.ts",
+        "handler_function": "listNotifications",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getNotification",
+      "method": "GET",
+      "path": "/notifs/:notif",
+      "required_roles": [
+        "user",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/notifs/getNotification.ts",
+        "handler_function": "getNotification",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPatients",
+      "method": "GET",
+      "path": "/patients",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "support",
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/listPatients.ts",
+        "handler_function": "listPatients",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPatient",
+      "method": "GET",
+      "path": "/patients/:id",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "support",
+        "user",
+        "patient:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/getPatient.ts",
+        "handler_function": "getPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPersons",
+      "method": "GET",
+      "path": "/persons",
+      "required_roles": [
+        "admin",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/person/listPersons.ts",
+        "handler_function": "listPersons",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPerson",
+      "method": "GET",
+      "path": "/persons/:person",
+      "required_roles": [
+        "admin",
+        "support",
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/person/getPerson.ts",
+        "handler_function": "getPerson",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPractitionerRoles",
+      "method": "GET",
+      "path": "/providers/practitioner-roles",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/listPractitionerRoles.ts",
+        "handler_function": "listPractitionerRoles",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPractitionerRole",
+      "method": "GET",
+      "path": "/providers/practitioner-roles/:id",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "support",
+        "practitioner:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/getPractitionerRole.ts",
+        "handler_function": "getPractitionerRole",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listPractitioners",
+      "method": "GET",
+      "path": "/providers/practitioners",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "support"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/listPractitioners.ts",
+        "handler_function": "listPractitioners",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getPractitioner",
+      "method": "GET",
+      "path": "/providers/practitioners/:id",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "support",
+        "practitioner:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/getPractitioner.ts",
+        "handler_function": "getPractitioner",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listReviews",
+      "method": "GET",
+      "path": "/reviews/",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/reviews/listReviews.ts",
+        "handler_function": "listReviews",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getReview",
+      "method": "GET",
+      "path": "/reviews/:review",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/reviews/getReview.ts",
+        "handler_function": "getReview",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "listFiles",
+      "method": "GET",
+      "path": "/storage/files",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/listFiles.ts",
+        "handler_function": "listFiles",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getFile",
+      "method": "GET",
+      "path": "/storage/files/:file",
+      "required_roles": [
+        "admin",
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/getFile.ts",
+        "handler_function": "getFile",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getFileDownload",
+      "method": "GET",
+      "path": "/storage/files/:file/download",
+      "required_roles": [
+        "admin",
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/getFileDownload.ts",
+        "handler_function": "getFileDownload",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "generateMultipartPartUrl",
+      "method": "GET",
+      "path": "/storage/multipart/:file/part-url",
+      "required_roles": [
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/generateMultipartPartUrl.ts",
+        "handler_function": "generateMultipartPartUrl",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateInvoice",
+      "method": "PATCH",
+      "path": "/billing/invoices/:invoice",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/updateInvoice.ts",
+        "handler_function": "updateInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateBookingEvent",
+      "method": "PATCH",
+      "path": "/booking/events/:event",
+      "required_roles": [
+        "event:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/updateBookingEvent.ts",
+        "handler_function": "updateBookingEvent",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateVideoCallParticipant",
+      "method": "PATCH",
+      "path": "/comms/chat-rooms/:room/video-call/participant",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/updateVideoCallParticipant.ts",
+        "handler_function": "updateVideoCallParticipant",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateAppointment",
+      "method": "PATCH",
+      "path": "/dental/appointments/:appointmentId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/updateAppointment.ts",
+        "handler_function": "updateAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features",
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateInsuranceClaimLine",
+      "method": "PATCH",
+      "path": "/dental/billing/claims/:claimId/lines/:lineId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/updateInsuranceClaimLine.ts",
+        "handler_function": "updateInsuranceClaimLine",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateInsuranceClaimStatus",
+      "method": "PATCH",
+      "path": "/dental/billing/claims/:claimId/status",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/updateInsuranceClaimStatus.ts",
+        "handler_function": "updateInsuranceClaimStatus",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "issueDentalInvoice",
+      "method": "PATCH",
+      "path": "/dental/billing/invoices/:invoiceId/issue",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/issueDentalInvoice.ts",
+        "handler_function": "issueDentalInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateConsentTemplate",
+      "method": "PATCH",
+      "path": "/dental/branches/:branchId/consent-templates/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/updateConsentTemplate.ts",
+        "handler_function": "updateConsentTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateInventoryItem",
+      "method": "PATCH",
+      "path": "/dental/branches/:branchId/inventory/:itemId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/inventory/updateInventoryItem.ts",
+        "handler_function": "updateInventoryItem",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePostopTemplate",
+      "method": "PATCH",
+      "path": "/dental/branches/:branchId/postop-templates/:templateId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/postop/updatePostopTemplate.ts",
+        "handler_function": "updatePostopTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateMedicalHistoryEntry",
+      "method": "PATCH",
+      "path": "/dental/clinical/medical-history/:entryId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/medical-history/updateMedicalHistoryEntry.ts",
+        "handler_function": "updateMedicalHistoryEntry",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateFeeScheduleEntry",
+      "method": "PATCH",
+      "path": "/dental/fee-schedule/:cdt",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/updateFeeScheduleEntry.ts",
+        "handler_function": "updateFeeScheduleEntry",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingFindingsMgmt_updateFinding",
+      "method": "PATCH",
+      "path": "/dental/imaging/findings/:findingId",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingFindingsMgmt_updateFinding.ts",
+        "handler_function": "ImagingFindingsMgmt_updateFinding",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_updateImageCalibration",
+      "method": "PATCH",
+      "path": "/dental/imaging/images/:imageId/calibration",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_updateImageCalibration.ts",
+        "handler_function": "ImagingMgmt_updateImageCalibration",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_updateCephLandmark",
+      "method": "PATCH",
+      "path": "/dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_updateCephLandmark.ts",
+        "handler_function": "CephMgmt_updateCephLandmark",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_updateImageModality",
+      "method": "PATCH",
+      "path": "/dental/imaging/images/:imageId/modality",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_updateImageModality.ts",
+        "handler_function": "ImagingMgmt_updateImageModality",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateMember",
+      "method": "PATCH",
+      "path": "/dental/org/members/:memberId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/updateMember.ts",
+        "handler_function": "updateMember",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalOrganizationManagement_update",
+      "method": "PATCH",
+      "path": "/dental/organizations/:id",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalOrganizationManagement_update.ts",
+        "handler_function": "DentalOrganizationManagement_update",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateDentalPatient",
+      "method": "PATCH",
+      "path": "/dental/patients/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/updateDentalPatient.ts",
+        "handler_function": "updateDentalPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateCoverageAuthorizationStatus",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/authorizations/:authorizationId/status",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/updateCoverageAuthorizationStatus.ts",
+        "handler_function": "updateCoverageAuthorizationStatus",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateClaimStatus",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/claims/:claimId/status",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/updateClaimStatus.ts",
+        "handler_function": "updateClaimStatus",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePatientCommunicationConsent",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/communication-consent",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/consent/updatePatientCommunicationConsent.ts",
+        "handler_function": "updatePatientCommunicationConsent",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePatientContact",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/contacts/:contactId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/contacts/updatePatientContact.ts",
+        "handler_function": "updatePatientContact",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateDentalAlert",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/dental-alerts/:alertId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/alerts/updateDentalAlert.ts",
+        "handler_function": "updateDentalAlert",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateInsuranceProfile",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/insurance-profiles/:profileId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/updateInsuranceProfile.ts",
+        "handler_function": "updateInsuranceProfile",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateRecall",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/recalls/:recallId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/recalls/updateRecall.ts",
+        "handler_function": "updateRecall",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateTask",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/tasks/:taskId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/engagement/updateTask.ts",
+        "handler_function": "updateTask",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateTreatmentPlan",
+      "method": "PATCH",
+      "path": "/dental/patients/:patientId/treatment-plans/:planId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/updateTreatmentPlan.ts",
+        "handler_function": "updateTreatmentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateQueueItemStatus",
+      "method": "PATCH",
+      "path": "/dental/queue-items/:itemId/status",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/updateQueueItemStatus.ts",
+        "handler_function": "updateQueueItemStatus",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateSyncLog",
+      "method": "PATCH",
+      "path": "/dental/sync-logs/:logId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/sync/updateSyncLog.ts",
+        "handler_function": "updateSyncLog",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateTreatmentTemplate",
+      "method": "PATCH",
+      "path": "/dental/treatment-templates/:id",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/templates/updateTreatmentTemplate.ts",
+        "handler_function": "updateTreatmentTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateDentalVisit",
+      "method": "PATCH",
+      "path": "/dental/visits/:visitId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/visits/updateDentalVisit.ts",
+        "handler_function": "updateDentalVisit",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateTooth",
+      "method": "PATCH",
+      "path": "/dental/visits/:visitId/chart/teeth/:toothNumber",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/chart/updateTooth.ts",
+        "handler_function": "updateTooth",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "revokeConsentForm",
+      "method": "PATCH",
+      "path": "/dental/visits/:visitId/consents/:cid/revoke",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/consent/revokeConsentForm.ts",
+        "handler_function": "revokeConsentForm",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateLabOrder",
+      "method": "PATCH",
+      "path": "/dental/visits/:visitId/lab-orders/:orderId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/lab-orders/updateLabOrder.ts",
+        "handler_function": "updateLabOrder",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePrescription",
+      "method": "PATCH",
+      "path": "/dental/visits/:visitId/prescriptions/:prescriptionId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/prescriptions/updatePrescription.ts",
+        "handler_function": "updatePrescription",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateDentalTreatment",
+      "method": "PATCH",
+      "path": "/dental/visits/:visitId/treatments/:treatmentId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/treatments/updateDentalTreatment.ts",
+        "handler_function": "updateDentalTreatment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateEmailTemplate",
+      "method": "PATCH",
+      "path": "/email/templates/:template",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/updateEmailTemplate.ts",
+        "handler_function": "updateEmailTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateConsultation",
+      "method": "PATCH",
+      "path": "/emr/consultations/:consultation",
+      "required_roles": [
+        "provider:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/emr/updateConsultation.ts",
+        "handler_function": "updateConsultation",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePatient",
+      "method": "PATCH",
+      "path": "/patients/:id",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "registrar",
+        "user",
+        "patient:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/updatePatient.ts",
+        "handler_function": "updatePatient",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePerson",
+      "method": "PATCH",
+      "path": "/persons/:person",
+      "required_roles": [
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/person/updatePerson.ts",
+        "handler_function": "updatePerson",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePractitionerRole",
+      "method": "PATCH",
+      "path": "/providers/practitioner-roles/:id",
+      "required_roles": [
+        "admin",
+        "credentialing",
+        "practitioner:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/updatePractitionerRole.ts",
+        "handler_function": "updatePractitionerRole",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePractitioner",
+      "method": "PATCH",
+      "path": "/providers/practitioners/:id",
+      "required_roles": [
+        "admin",
+        "credentialing",
+        "practitioner:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/updatePractitioner.ts",
+        "handler_function": "updatePractitioner",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createInvoice",
+      "method": "POST",
+      "path": "/billing/invoices",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/createInvoice.ts",
+        "handler_function": "createInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "captureInvoicePayment",
+      "method": "POST",
+      "path": "/billing/invoices/:invoice/capture",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+        "handler_function": "captureInvoicePayment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "finalizeInvoice",
+      "method": "POST",
+      "path": "/billing/invoices/:invoice/finalize",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/finalizeInvoice.ts",
+        "handler_function": "finalizeInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "markInvoiceUncollectible",
+      "method": "POST",
+      "path": "/billing/invoices/:invoice/mark-uncollectible",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+        "handler_function": "markInvoiceUncollectible",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "payInvoice",
+      "method": "POST",
+      "path": "/billing/invoices/:invoice/pay",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/payInvoice.ts",
+        "handler_function": "payInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "refundInvoicePayment",
+      "method": "POST",
+      "path": "/billing/invoices/:invoice/refund",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+        "handler_function": "refundInvoicePayment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "voidInvoice",
+      "method": "POST",
+      "path": "/billing/invoices/:invoice/void",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/voidInvoice.ts",
+        "handler_function": "voidInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createMerchantAccount",
+      "method": "POST",
+      "path": "/billing/merchant-accounts",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/createMerchantAccount.ts",
+        "handler_function": "createMerchantAccount",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "getMerchantDashboard",
+      "method": "POST",
+      "path": "/billing/merchant-accounts/:merchantAccount/dashboard",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/getMerchantDashboard.ts",
+        "handler_function": "getMerchantDashboard",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "onboardMerchantAccount",
+      "method": "POST",
+      "path": "/billing/merchant-accounts/:merchantAccount/onboard",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/onboardMerchantAccount.ts",
+        "handler_function": "onboardMerchantAccount",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "handleStripeWebhook",
+      "method": "POST",
+      "path": "/billing/webhooks/stripe",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/billing/handleStripeWebhook.ts",
+        "handler_function": "handleStripeWebhook",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createBooking",
+      "method": "POST",
+      "path": "/booking/bookings",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/createBooking.ts",
+        "handler_function": "createBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "cancelBooking",
+      "method": "POST",
+      "path": "/booking/bookings/:booking/cancel",
+      "required_roles": [
+        "client:owner",
+        "host:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/cancelBooking.ts",
+        "handler_function": "cancelBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "confirmBooking",
+      "method": "POST",
+      "path": "/booking/bookings/:booking/confirm",
+      "required_roles": [
+        "host:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/confirmBooking.ts",
+        "handler_function": "confirmBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "markNoShowBooking",
+      "method": "POST",
+      "path": "/booking/bookings/:booking/no-show",
+      "required_roles": [
+        "client:owner",
+        "host:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/markNoShowBooking.ts",
+        "handler_function": "markNoShowBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "rejectBooking",
+      "method": "POST",
+      "path": "/booking/bookings/:booking/reject",
+      "required_roles": [
+        "host:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/rejectBooking.ts",
+        "handler_function": "rejectBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createBookingEvent",
+      "method": "POST",
+      "path": "/booking/events",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/createBookingEvent.ts",
+        "handler_function": "createBookingEvent",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createScheduleException",
+      "method": "POST",
+      "path": "/booking/events/:event/exceptions",
+      "required_roles": [
+        "event:owner",
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/booking/createScheduleException.ts",
+        "handler_function": "createScheduleException",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createChatRoom",
+      "method": "POST",
+      "path": "/comms/chat-rooms",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/createChatRoom.ts",
+        "handler_function": "createChatRoom",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "sendChatMessage",
+      "method": "POST",
+      "path": "/comms/chat-rooms/:room/messages",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/sendChatMessage.ts",
+        "handler_function": "sendChatMessage",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "endVideoCall",
+      "method": "POST",
+      "path": "/comms/chat-rooms/:room/video-call/end",
+      "required_roles": [
+        "user:admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/endVideoCall.ts",
+        "handler_function": "endVideoCall",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "joinVideoCall",
+      "method": "POST",
+      "path": "/comms/chat-rooms/:room/video-call/join",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/joinVideoCall.ts",
+        "handler_function": "joinVideoCall",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "leaveVideoCall",
+      "method": "POST",
+      "path": "/comms/chat-rooms/:room/video-call/leave",
+      "required_roles": [
+        "user:participant"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/comms/leaveVideoCall.ts",
+        "handler_function": "leaveVideoCall",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createAppointment",
+      "method": "POST",
+      "path": "/dental/appointments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/createAppointment.ts",
+        "handler_function": "createAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "checkInAppointment",
+      "method": "POST",
+      "path": "/dental/appointments/:appointmentId/check-in",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/checkInAppointment.ts",
+        "handler_function": "checkInAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "confirmAppointment",
+      "method": "POST",
+      "path": "/dental/appointments/:appointmentId/confirm",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/confirmAppointment.ts",
+        "handler_function": "confirmAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createQueueItem",
+      "method": "POST",
+      "path": "/dental/appointments/:appointmentId/queue-item",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/createQueueItem.ts",
+        "handler_function": "createQueueItem",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createInsuranceClaim",
+      "method": "POST",
+      "path": "/dental/billing/claims",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/createInsuranceClaim.ts",
+        "handler_function": "createInsuranceClaim",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "addInsuranceClaimLine",
+      "method": "POST",
+      "path": "/dental/billing/claims/:claimId/lines",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/addInsuranceClaimLine.ts",
+        "handler_function": "addInsuranceClaimLine",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "recordClaimRemittance",
+      "method": "POST",
+      "path": "/dental/billing/claims/:claimId/remittance",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/recordClaimRemittance.ts",
+        "handler_function": "recordClaimRemittance",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "estimateClaimCoverage",
+      "method": "POST",
+      "path": "/dental/billing/estimate",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/estimateClaimCoverage.ts",
+        "handler_function": "estimateClaimCoverage",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createDentalInvoice",
+      "method": "POST",
+      "path": "/dental/billing/invoices",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/createDentalInvoice.ts",
+        "handler_function": "createDentalInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "applyDentalDiscount",
+      "method": "POST",
+      "path": "/dental/billing/invoices/:invoiceId/discount",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/applyDentalDiscount.ts",
+        "handler_function": "applyDentalDiscount",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "recordDentalPayment",
+      "method": "POST",
+      "path": "/dental/billing/invoices/:invoiceId/payments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/recordDentalPayment.ts",
+        "handler_function": "recordDentalPayment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "voidDentalPayment",
+      "method": "POST",
+      "path": "/dental/billing/invoices/:invoiceId/payments/:paymentId/void",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/voidDentalPayment.ts",
+        "handler_function": "voidDentalPayment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createDentalPaymentPlan",
+      "method": "POST",
+      "path": "/dental/billing/invoices/:invoiceId/plan",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/createDentalPaymentPlan.ts",
+        "handler_function": "createDentalPaymentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "markUncollectible",
+      "method": "POST",
+      "path": "/dental/billing/invoices/:invoiceId/uncollectible",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/markUncollectible.ts",
+        "handler_function": "markUncollectible",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "voidDentalInvoice",
+      "method": "POST",
+      "path": "/dental/billing/invoices/:invoiceId/void",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/voidDentalInvoice.ts",
+        "handler_function": "voidDentalInvoice",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "generateStatementBatch",
+      "method": "POST",
+      "path": "/dental/billing/statements/batch",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-billing/generateStatementBatch.ts",
+        "handler_function": "generateStatementBatch",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createConsentTemplate",
+      "method": "POST",
+      "path": "/dental/branches/:branchId/consent-templates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/createConsentTemplate.ts",
+        "handler_function": "createConsentTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createInventoryItem",
+      "method": "POST",
+      "path": "/dental/branches/:branchId/inventory",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/inventory/createInventoryItem.ts",
+        "handler_function": "createInventoryItem",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createInventoryAdjustment",
+      "method": "POST",
+      "path": "/dental/branches/:branchId/inventory/:itemId/adjustments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/inventory/createInventoryAdjustment.ts",
+        "handler_function": "createInventoryAdjustment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPostopTemplate",
+      "method": "POST",
+      "path": "/dental/branches/:branchId/postop-templates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/postop/createPostopTemplate.ts",
+        "handler_function": "createPostopTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createWaitlistEntry",
+      "method": "POST",
+      "path": "/dental/branches/:branchId/waitlist",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/createWaitlistEntry.ts",
+        "handler_function": "createWaitlistEntry",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createMedicalHistoryEntry",
+      "method": "POST",
+      "path": "/dental/clinical/medical-history",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/medical-history/createMedicalHistoryEntry.ts",
+        "handler_function": "createMedicalHistoryEntry",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "recordMedicalHistoryReview",
+      "method": "POST",
+      "path": "/dental/clinical/medical-history-review",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/medical-history/recordMedicalHistoryReview.ts",
+        "handler_function": "recordMedicalHistoryReview",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "requestErasure",
+      "method": "POST",
+      "path": "/dental/erasure-requests",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-erasure/requestErasure.ts",
+        "handler_function": "requestErasure",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "approveErasure",
+      "method": "POST",
+      "path": "/dental/erasure-requests/:id/approve",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-erasure/approveErasure.ts",
+        "handler_function": "approveErasure",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "rejectErasure",
+      "method": "POST",
+      "path": "/dental/erasure-requests/:id/reject",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-erasure/rejectErasure.ts",
+        "handler_function": "rejectErasure",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createHousehold",
+      "method": "POST",
+      "path": "/dental/households",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/household/createHousehold.ts",
+        "handler_function": "createHousehold",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "addHouseholdMember",
+      "method": "POST",
+      "path": "/dental/households/:householdId/members",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/household/addHouseholdMember.ts",
+        "handler_function": "addHouseholdMember",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_createCephSuperimposition",
+      "method": "POST",
+      "path": "/dental/imaging/ceph/superimpositions",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_createCephSuperimposition.ts",
+        "handler_function": "CephMgmt_createCephSuperimposition",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_previewCephSuperimposition",
+      "method": "POST",
+      "path": "/dental/imaging/ceph/superimpositions/preview",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_previewCephSuperimposition.ts",
+        "handler_function": "CephMgmt_previewCephSuperimposition",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_recomputeCephAnalysis",
+      "method": "POST",
+      "path": "/dental/imaging/images/:imageId/ceph/analysis/recompute",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_recomputeCephAnalysis.ts",
+        "handler_function": "CephMgmt_recomputeCephAnalysis",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_batchUpsertCephLandmarks",
+      "method": "POST",
+      "path": "/dental/imaging/images/:imageId/ceph/landmarks",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_batchUpsertCephLandmarks.ts",
+        "handler_function": "CephMgmt_batchUpsertCephLandmarks",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_detectCephLandmarks",
+      "method": "POST",
+      "path": "/dental/imaging/images/:imageId/ceph/landmarks/detect",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_detectCephLandmarks.ts",
+        "handler_function": "CephMgmt_detectCephLandmarks",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "CephMgmt_createCephReport",
+      "method": "POST",
+      "path": "/dental/imaging/images/:imageId/ceph/reports",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/CephMgmt_createCephReport.ts",
+        "handler_function": "CephMgmt_createCephReport",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingFindingsMgmt_createFinding",
+      "method": "POST",
+      "path": "/dental/imaging/images/:imageId/findings",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingFindingsMgmt_createFinding.ts",
+        "handler_function": "ImagingFindingsMgmt_createFinding",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_createMeasurement",
+      "method": "POST",
+      "path": "/dental/imaging/images/:imageId/measurements",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_createMeasurement.ts",
+        "handler_function": "ImagingMgmt_createMeasurement",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_createImagingStudy",
+      "method": "POST",
+      "path": "/dental/imaging/studies",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_createImagingStudy.ts",
+        "handler_function": "ImagingMgmt_createImagingStudy",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "ImagingMgmt_finalizeCbctStudy",
+      "method": "POST",
+      "path": "/dental/imaging/studies/:studyId/cbct/finalize",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-imaging/ImagingMgmt_finalizeCbctStudy.ts",
+        "handler_function": "ImagingMgmt_finalizeCbctStudy",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "placeLegalHold",
+      "method": "POST",
+      "path": "/dental/legal-holds",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-legalhold/placeLegalHold.ts",
+        "handler_function": "placeLegalHold",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "releaseLegalHold",
+      "method": "POST",
+      "path": "/dental/legal-holds/:id/release",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-legalhold/releaseLegalHold.ts",
+        "handler_function": "releaseLegalHold",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createOnboarding",
+      "method": "POST",
+      "path": "/dental/onboarding",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/createOnboarding.ts",
+        "handler_function": "createOnboarding",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createMember",
+      "method": "POST",
+      "path": "/dental/org/members",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/createMember.ts",
+        "handler_function": "createMember",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "recoverPin",
+      "method": "POST",
+      "path": "/dental/org/members/:memberId/recover-pin",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/recoverPin.ts",
+        "handler_function": "recoverPin",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "resetMemberPin",
+      "method": "POST",
+      "path": "/dental/org/members/:memberId/reset-pin",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/resetMemberPin.ts",
+        "handler_function": "resetMemberPin",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "setSecurityQuestion",
+      "method": "POST",
+      "path": "/dental/org/members/:memberId/security-question",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/setSecurityQuestion.ts",
+        "handler_function": "setSecurityQuestion",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalOrganizationManagement_create",
+      "method": "POST",
+      "path": "/dental/organizations",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalOrganizationManagement_create.ts",
+        "handler_function": "DentalOrganizationManagement_create",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalBranchManagement_create",
+      "method": "POST",
+      "path": "/dental/organizations/:orgId/branches",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalBranchManagement_create.ts",
+        "handler_function": "DentalBranchManagement_create",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalMembershipManagement_create",
+      "method": "POST",
+      "path": "/dental/organizations/:orgId/branches/:branchId/members",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalMembershipManagement_create.ts",
+        "handler_function": "DentalMembershipManagement_create",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalMembershipManagement_deactivate",
+      "method": "POST",
+      "path": "/dental/organizations/:orgId/branches/:branchId/members/:membershipId/deactivate",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalMembershipManagement_deactivate.ts",
+        "handler_function": "DentalMembershipManagement_deactivate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalMembershipManagement_setPin",
+      "method": "POST",
+      "path": "/dental/organizations/:orgId/branches/:branchId/members/:membershipId/set-pin",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalMembershipManagement_setPin.ts",
+        "handler_function": "DentalMembershipManagement_setPin",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "DentalMembershipManagement_verifyPin",
+      "method": "POST",
+      "path": "/dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/DentalMembershipManagement_verifyPin.ts",
+        "handler_function": "DentalMembershipManagement_verifyPin",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createDentalPatient",
+      "method": "POST",
+      "path": "/dental/patients",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/createDentalPatient.ts",
+        "handler_function": "createDentalPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features",
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "archiveDentalPatient",
+      "method": "POST",
+      "path": "/dental/patients/:id/archive",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/archiveDentalPatient.ts",
+        "handler_function": "archiveDentalPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "addFollowUpNote",
+      "method": "POST",
+      "path": "/dental/patients/:id/follow-up-notes",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/engagement/addFollowUpNote.ts",
+        "handler_function": "addFollowUpNote",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "restoreDentalPatient",
+      "method": "POST",
+      "path": "/dental/patients/:id/restore",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/restoreDentalPatient.ts",
+        "handler_function": "restoreDentalPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createCoverageAuthorization",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/authorizations",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/createCoverageAuthorization.ts",
+        "handler_function": "createCoverageAuthorization",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createCasePresentation",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/case-presentations",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/case-presentation/createCasePresentation.ts",
+        "handler_function": "createCasePresentation",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "acceptCasePresentation",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/case-presentations/:presentationId/accept",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/case-presentation/acceptCasePresentation.ts",
+        "handler_function": "acceptCasePresentation",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "rejectCasePresentation",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/case-presentations/:presentationId/reject",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/case-presentation/rejectCasePresentation.ts",
+        "handler_function": "rejectCasePresentation",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createClaimDraft",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/claims",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/createClaimDraft.ts",
+        "handler_function": "createClaimDraft",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPatientContact",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/contacts",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/contacts/createPatientContact.ts",
+        "handler_function": "createPatientContact",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createDentalAlert",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/dental-alerts",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/alerts/createDentalAlert.ts",
+        "handler_function": "createDentalAlert",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "initializeDentition",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/dentition",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/initializeDentition.ts",
+        "handler_function": "initializeDentition",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createInsuranceProfile",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/insurance-profiles",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/insurance/createInsuranceProfile.ts",
+        "handler_function": "createInsuranceProfile",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createOcclusionScreening",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/occlusion-screenings",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/occlusion/createOcclusionScreening.ts",
+        "handler_function": "createOcclusionScreening",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createRecall",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/recalls",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/recalls/createRecall.ts",
+        "handler_function": "createRecall",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createTask",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/tasks",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/engagement/createTask.ts",
+        "handler_function": "createTask",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "acceptTreatmentOption",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/treatment-options/:optionGroupId/accept",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/acceptTreatmentOption.ts",
+        "handler_function": "acceptTreatmentOption",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "acceptTreatmentPlan",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/treatment-plan/accept",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/acceptTreatmentPlan.ts",
+        "handler_function": "acceptTreatmentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createTreatmentPlan",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/treatment-plans",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/createTreatmentPlan.ts",
+        "handler_function": "createTreatmentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "approveTreatmentPlan",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/treatment-plans/:planId/approval",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/approveTreatmentPlan.ts",
+        "handler_function": "approveTreatmentPlan",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "attachTreatmentAppointment",
+      "method": "POST",
+      "path": "/dental/patients/:patientId/treatments/:treatmentId/appointment",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/treatment-plans/attachTreatmentAppointment.ts",
+        "handler_function": "attachTreatmentAppointment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "bulkArchiveDentalPatients",
+      "method": "POST",
+      "path": "/dental/patients/bulk-archive",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/bulkArchiveDentalPatients.ts",
+        "handler_function": "bulkArchiveDentalPatients",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "importPatients",
+      "method": "POST",
+      "path": "/dental/patients/import",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/identity/importPatients.ts",
+        "handler_function": "importPatients",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPerioChart",
+      "method": "POST",
+      "path": "/dental/perio-charts",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-perio/createPerioChart.ts",
+        "handler_function": "createPerioChart",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "completePerioChart",
+      "method": "POST",
+      "path": "/dental/perio-charts/:chartId/complete",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-perio/completePerioChart.ts",
+        "handler_function": "completePerioChart",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "importPMD",
+      "method": "POST",
+      "path": "/dental/pmd/import",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/importPMD.ts",
+        "handler_function": "importPMD",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "confirmAppointmentByToken",
+      "method": "POST",
+      "path": "/dental/public/appointments/:appointmentId/confirm/:token",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/confirmAppointmentByToken.ts",
+        "handler_function": "confirmAppointmentByToken",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createOnlineBooking",
+      "method": "POST",
+      "path": "/dental/public/branches/:branchId/bookings",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/createOnlineBooking.ts",
+        "handler_function": "createOnlineBooking",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createBookingHold",
+      "method": "POST",
+      "path": "/dental/public/branches/:branchId/holds",
+      "required_roles": [],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/createBookingHold.ts",
+        "handler_function": "createBookingHold",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createSyncLog",
+      "method": "POST",
+      "path": "/dental/sync-logs",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-patient/sync/createSyncLog.ts",
+        "handler_function": "createSyncLog",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createTreatmentTemplate",
+      "method": "POST",
+      "path": "/dental/treatment-templates",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/templates/createTreatmentTemplate.ts",
+        "handler_function": "createTreatmentTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createDentalVisit",
+      "method": "POST",
+      "path": "/dental/visits",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/visits/createDentalVisit.ts",
+        "handler_function": "createDentalVisit",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createAmendment",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/amendments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/amendments/createAmendment.ts",
+        "handler_function": "createAmendment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "approveAmendment",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/amendments/:amendmentId/approve",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/amendments/approveAmendment.ts",
+        "handler_function": "approveAmendment",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "applyTemplate",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/apply-template/:templateId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/templates/applyTemplate.ts",
+        "handler_function": "applyTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createAttachment",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/attachments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/attachments/createAttachment.ts",
+        "handler_function": "createAttachment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "carryOverTreatments",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/carry-over",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/treatments/carryOverTreatments.ts",
+        "handler_function": "carryOverTreatments",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "upsertDentalChart",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/chart",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/chart/upsertDentalChart.ts",
+        "handler_function": "upsertDentalChart",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "recordConsentRefusal",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/consent-refusals",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/consent/recordConsentRefusal.ts",
+        "handler_function": "recordConsentRefusal",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createConsentForm",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/consents",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/consent/createConsentForm.ts",
+        "handler_function": "createConsentForm",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "signConsentForm",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/consents/:consentId/sign",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/consent/signConsentForm.ts",
+        "handler_function": "signConsentForm",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createLabOrder",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/lab-orders",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/lab-orders/createLabOrder.ts",
+        "handler_function": "createLabOrder",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "upsertVisitNotes",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/notes",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/notes/upsertVisitNotes.ts",
+        "handler_function": "upsertVisitNotes",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createVisitNoteAddendum",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/notes/addendum",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/notes/createVisitNoteAddendum.ts",
+        "handler_function": "createVisitNoteAddendum",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "signVisitNotes",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/notes/sign",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/notes/signVisitNotes.ts",
+        "handler_function": "signVisitNotes",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "generatePMD",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/pmd",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-pmd/generatePMD.ts",
+        "handler_function": "generatePMD",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPrescription",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/prescriptions",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-clinical/prescriptions/createPrescription.ts",
+        "handler_function": "createPrescription",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createDentalTreatment",
+      "method": "POST",
+      "path": "/dental/visits/:visitId/treatments",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-visit/treatments/createDentalTreatment.ts",
+        "handler_function": "createDentalTreatment",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "promoteWaitlistEntry",
+      "method": "POST",
+      "path": "/dental/waitlist/:entryId/promote",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-scheduling/promoteWaitlistEntry.ts",
+        "handler_function": "promoteWaitlistEntry",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "cancelEmailQueueItem",
+      "method": "POST",
+      "path": "/email/queue/:queue/cancel",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/cancelEmailQueueItem.ts",
+        "handler_function": "cancelEmailQueueItem",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "retryEmailQueueItem",
+      "method": "POST",
+      "path": "/email/queue/:queue/retry",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/retryEmailQueueItem.ts",
+        "handler_function": "retryEmailQueueItem",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createEmailTemplate",
+      "method": "POST",
+      "path": "/email/templates",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/createEmailTemplate.ts",
+        "handler_function": "createEmailTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "testEmailTemplate",
+      "method": "POST",
+      "path": "/email/templates/:template/test",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/email/testEmailTemplate.ts",
+        "handler_function": "testEmailTemplate",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createConsultation",
+      "method": "POST",
+      "path": "/emr/consultations",
+      "required_roles": [
+        "provider"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/emr/createConsultation.ts",
+        "handler_function": "createConsultation",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "finalizeConsultation",
+      "method": "POST",
+      "path": "/emr/consultations/:consultation/finalize",
+      "required_roles": [
+        "provider:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/emr/finalizeConsultation.ts",
+        "handler_function": "finalizeConsultation",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "markNotificationAsRead",
+      "method": "POST",
+      "path": "/notifs/:notif/read",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/notifs/markNotificationAsRead.ts",
+        "handler_function": "markNotificationAsRead",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "markAllNotificationsAsRead",
+      "method": "POST",
+      "path": "/notifs/read-all",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/notifs/markAllNotificationsAsRead.ts",
+        "handler_function": "markAllNotificationsAsRead",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPatient",
+      "method": "POST",
+      "path": "/patients",
+      "required_roles": [
+        "admin",
+        "clinician",
+        "registrar",
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/createPatient.ts",
+        "handler_function": "createPatient",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "mergePatients",
+      "method": "POST",
+      "path": "/patients/merge",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/mergePatients.ts",
+        "handler_function": "mergePatients",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": true
+    },
+    {
+      "operation_id": "unmergePatients",
+      "method": "POST",
+      "path": "/patients/unmerge",
+      "required_roles": [
+        "admin"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/patient/unmergePatients.ts",
+        "handler_function": "unmergePatients",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": true
+    },
+    {
+      "operation_id": "createPerson",
+      "method": "POST",
+      "path": "/persons",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/person/createPerson.ts",
+        "handler_function": "createPerson",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/routes"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPractitionerRole",
+      "method": "POST",
+      "path": "/providers/practitioner-roles",
+      "required_roles": [
+        "admin",
+        "credentialing"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/createPractitionerRole.ts",
+        "handler_function": "createPractitionerRole",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createPractitioner",
+      "method": "POST",
+      "path": "/providers/practitioners",
+      "required_roles": [
+        "admin",
+        "credentialing"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/provider/createPractitioner.ts",
+        "handler_function": "createPractitioner",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "createReview",
+      "method": "POST",
+      "path": "/reviews/",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/reviews/createReview.ts",
+        "handler_function": "createReview",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "completeFileUpload",
+      "method": "POST",
+      "path": "/storage/files/:file/complete",
+      "required_roles": [
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/completeFileUpload.ts",
+        "handler_function": "completeFileUpload",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "uploadFile",
+      "method": "POST",
+      "path": "/storage/files/upload",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/uploadFile.ts",
+        "handler_function": "uploadFile",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "completeMultipartUpload",
+      "method": "POST",
+      "path": "/storage/multipart/:file/complete",
+      "required_roles": [
+        "user:owner"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/completeMultipartUpload.ts",
+        "handler_function": "completeMultipartUpload",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "initiateMultipartUpload",
+      "method": "POST",
+      "path": "/storage/multipart/initiate",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/storage/initiateMultipartUpload.ts",
+        "handler_function": "initiateMultipartUpload",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateBranchSettings",
+      "method": "PUT",
+      "path": "/dental/branches/:branchId/settings",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/updateBranchSettings.ts",
+        "handler_function": "updateBranchSettings",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updateWorkingHours",
+      "method": "PUT",
+      "path": "/dental/branches/:branchId/working-hours",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/updateWorkingHours.ts",
+        "handler_function": "updateWorkingHours",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "updatePermissions",
+      "method": "PUT",
+      "path": "/dental/org/permissions",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/updatePermissions.ts",
+        "handler_function": "updatePermissions",
+        "module": "src/handlers"
+      },
+      "consumers": [],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
+      "operation_id": "upsertToothReading",
+      "method": "PUT",
+      "path": "/dental/perio-charts/:chartId/readings/:toothNumber",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-perio/upsertToothReading.ts",
+        "handler_function": "upsertToothReading",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    }
+  ],
   "coverage": {
-    "matched": [],
+    "matched": [
+      "DELETE /billing/invoices/:invoice",
+      "DELETE /booking/events/:event",
+      "DELETE /booking/events/:event/exceptions/:exception",
+      "DELETE /dental/appointments/:appointmentId",
+      "DELETE /dental/branches/:branchId/consent-templates/:id",
+      "DELETE /dental/households/:householdId/members/:patientId",
+      "DELETE /dental/imaging/findings/:findingId",
+      "DELETE /dental/imaging/images/:imageId",
+      "DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode",
+      "DELETE /dental/imaging/measurements/:measurementId",
+      "DELETE /dental/patients/:patientId/contacts/:contactId",
+      "DELETE /dental/patients/:patientId/treatments/:treatmentId/appointment",
+      "DELETE /dental/treatment-templates/:id",
+      "DELETE /dental/visits/:visitId/attachments/:attachmentId",
+      "DELETE /patients/:id",
+      "DELETE /providers/practitioner-roles/:id",
+      "DELETE /providers/practitioners/:id",
+      "DELETE /reviews/:review",
+      "DELETE /storage/files/:file",
+      "DELETE /storage/multipart/:file/abort",
+      "GET /audit/logs",
+      "GET /billing/invoices",
+      "GET /billing/invoices/:invoice",
+      "GET /billing/merchant-accounts/:merchantAccount",
+      "GET /booking/bookings",
+      "GET /booking/bookings/:booking",
+      "GET /booking/events",
+      "GET /booking/events/:event",
+      "GET /booking/events/:event/exceptions",
+      "GET /booking/events/:event/exceptions/:exception",
+      "GET /booking/events/:event/slots",
+      "GET /booking/slots/:slotId",
+      "GET /comms/chat-rooms",
+      "GET /comms/chat-rooms/:room",
+      "GET /comms/chat-rooms/:room/messages",
+      "GET /comms/ice-servers",
+      "GET /dental/appointments",
+      "GET /dental/appointments/:appointmentId",
+      "GET /dental/audit-events",
+      "GET /dental/billing/claims",
+      "GET /dental/billing/claims/:claimId",
+      "GET /dental/billing/claims/aging",
+      "GET /dental/billing/collections/aging",
+      "GET /dental/billing/collections/summary",
+      "GET /dental/billing/invoices",
+      "GET /dental/billing/invoices/:invoiceId",
+      "GET /dental/billing/invoices/:invoiceId/payments",
+      "GET /dental/billing/invoices/:invoiceId/payments/:paymentId/receipt",
+      "GET /dental/billing/invoices/:invoiceId/plan",
+      "GET /dental/billing/patients/:patientId/balance",
+      "GET /dental/branches",
+      "GET /dental/branches/:branchId/consent-templates",
+      "GET /dental/branches/:branchId/inventory",
+      "GET /dental/branches/:branchId/inventory/:itemId/adjustments",
+      "GET /dental/branches/:branchId/postop-templates",
+      "GET /dental/branches/:branchId/queue-board",
+      "GET /dental/branches/:branchId/settings",
+      "GET /dental/branches/:branchId/waitlist",
+      "GET /dental/branches/:branchId/working-hours",
+      "GET /dental/clinical/medical-history",
+      "GET /dental/clinical/medical-history-review",
+      "GET /dental/dashboard/summary",
+      "GET /dental/erasure-requests",
+      "GET /dental/erasure-requests/:id",
+      "GET /dental/fee-schedule",
+      "GET /dental/households/:householdId",
+      "GET /dental/imaging/ceph/superimpositions/:superimpositionId",
+      "GET /dental/imaging/images/:imageId/ceph/analysis",
+      "GET /dental/imaging/images/:imageId/ceph/landmarks",
+      "GET /dental/imaging/images/:imageId/ceph/landmarks/detect/:jobId",
+      "GET /dental/imaging/images/:imageId/ceph/reports",
+      "GET /dental/imaging/images/:imageId/findings",
+      "GET /dental/imaging/images/:imageId/measurements",
+      "GET /dental/imaging/patients/:patientId/ceph/superimpositions",
+      "GET /dental/imaging/studies/:studyId",
+      "GET /dental/imaging/studies/:studyId/cbct/viewer-link",
+      "GET /dental/legal-holds",
+      "GET /dental/org/context",
+      "GET /dental/org/members",
+      "GET /dental/org/permissions",
+      "GET /dental/organizations/:id",
+      "GET /dental/organizations/:orgId/branches",
+      "GET /dental/organizations/:orgId/branches/:branchId",
+      "GET /dental/organizations/:orgId/branches/:branchId/members",
+      "GET /dental/patients",
+      "GET /dental/patients/:id",
+      "GET /dental/patients/:id/follow-up-notes",
+      "GET /dental/patients/:id/safety-floor",
+      "GET /dental/patients/:id/statement",
+      "GET /dental/patients/:patientId/authorizations",
+      "GET /dental/patients/:patientId/case-presentations",
+      "GET /dental/patients/:patientId/case-presentations/:presentationId",
+      "GET /dental/patients/:patientId/claims",
+      "GET /dental/patients/:patientId/claims/:claimId/readiness",
+      "GET /dental/patients/:patientId/communication-consent",
+      "GET /dental/patients/:patientId/contacts",
+      "GET /dental/patients/:patientId/dental-alerts",
+      "GET /dental/patients/:patientId/household",
+      "GET /dental/patients/:patientId/images",
+      "GET /dental/patients/:patientId/insurance-profiles",
+      "GET /dental/patients/:patientId/occlusion-screenings",
+      "GET /dental/patients/:patientId/recalls",
+      "GET /dental/patients/:patientId/tasks",
+      "GET /dental/patients/:patientId/treatment-options/:optionGroupId",
+      "GET /dental/patients/:patientId/treatment-plan",
+      "GET /dental/patients/:patientId/treatment-plan/versions/:versionId",
+      "GET /dental/patients/:patientId/treatment-plans",
+      "GET /dental/patients/:patientId/treatment-plans/:planId/status-history",
+      "GET /dental/patients/:patientId/treatments",
+      "GET /dental/patients/:patientId/visits",
+      "GET /dental/patients/duplicates",
+      "GET /dental/patients/export",
+      "GET /dental/perio-charts/:chartId",
+      "GET /dental/pmd/imported",
+      "GET /dental/pmd/imported/:id",
+      "GET /dental/pmd/patient/:patientId/care-record",
+      "GET /dental/public/bookings/:confirmationCode",
+      "GET /dental/public/branches/:branchId/availability",
+      "GET /dental/public/branches/:branchId/booking-config",
+      "GET /dental/recalls/due",
+      "GET /dental/sync-logs",
+      "GET /dental/treatment-templates",
+      "GET /dental/visits",
+      "GET /dental/visits/:visitId",
+      "GET /dental/visits/:visitId/amendments",
+      "GET /dental/visits/:visitId/attachments",
+      "GET /dental/visits/:visitId/chart",
+      "GET /dental/visits/:visitId/consent-refusals",
+      "GET /dental/visits/:visitId/consents",
+      "GET /dental/visits/:visitId/lab-orders",
+      "GET /dental/visits/:visitId/notes",
+      "GET /dental/visits/:visitId/notes/history",
+      "GET /dental/visits/:visitId/perio-chart",
+      "GET /dental/visits/:visitId/pmd",
+      "GET /dental/visits/:visitId/pmd/export",
+      "GET /dental/visits/:visitId/prescriptions",
+      "GET /dental/visits/:visitId/treatments",
+      "GET /dental/visits/history/:patientId/teeth/:toothNumber",
+      "GET /dental/visits/pmd",
+      "GET /email/queue",
+      "GET /email/queue/:queue",
+      "GET /email/templates",
+      "GET /email/templates/:template",
+      "GET /emr/consultations",
+      "GET /emr/consultations/:consultation",
+      "GET /emr/patients",
+      "GET /notifs",
+      "GET /notifs/:notif",
+      "GET /patients",
+      "GET /patients/:id",
+      "GET /persons",
+      "GET /persons/:person",
+      "GET /providers/practitioner-roles",
+      "GET /providers/practitioner-roles/:id",
+      "GET /providers/practitioners",
+      "GET /providers/practitioners/:id",
+      "GET /reviews/",
+      "GET /reviews/:review",
+      "GET /storage/files",
+      "GET /storage/files/:file",
+      "GET /storage/files/:file/download",
+      "GET /storage/multipart/:file/part-url",
+      "PATCH /billing/invoices/:invoice",
+      "PATCH /booking/events/:event",
+      "PATCH /comms/chat-rooms/:room/video-call/participant",
+      "PATCH /dental/appointments/:appointmentId",
+      "PATCH /dental/billing/claims/:claimId/lines/:lineId",
+      "PATCH /dental/billing/claims/:claimId/status",
+      "PATCH /dental/billing/invoices/:invoiceId/issue",
+      "PATCH /dental/branches/:branchId/consent-templates/:id",
+      "PATCH /dental/branches/:branchId/inventory/:itemId",
+      "PATCH /dental/branches/:branchId/postop-templates/:templateId",
+      "PATCH /dental/clinical/medical-history/:entryId",
+      "PATCH /dental/fee-schedule/:cdt",
+      "PATCH /dental/imaging/findings/:findingId",
+      "PATCH /dental/imaging/images/:imageId/calibration",
+      "PATCH /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode",
+      "PATCH /dental/imaging/images/:imageId/modality",
+      "PATCH /dental/org/members/:memberId",
+      "PATCH /dental/organizations/:id",
+      "PATCH /dental/patients/:id",
+      "PATCH /dental/patients/:patientId/authorizations/:authorizationId/status",
+      "PATCH /dental/patients/:patientId/claims/:claimId/status",
+      "PATCH /dental/patients/:patientId/communication-consent",
+      "PATCH /dental/patients/:patientId/contacts/:contactId",
+      "PATCH /dental/patients/:patientId/dental-alerts/:alertId",
+      "PATCH /dental/patients/:patientId/insurance-profiles/:profileId",
+      "PATCH /dental/patients/:patientId/recalls/:recallId",
+      "PATCH /dental/patients/:patientId/tasks/:taskId",
+      "PATCH /dental/patients/:patientId/treatment-plans/:planId",
+      "PATCH /dental/queue-items/:itemId/status",
+      "PATCH /dental/sync-logs/:logId",
+      "PATCH /dental/treatment-templates/:id",
+      "PATCH /dental/visits/:visitId",
+      "PATCH /dental/visits/:visitId/chart/teeth/:toothNumber",
+      "PATCH /dental/visits/:visitId/consents/:cid/revoke",
+      "PATCH /dental/visits/:visitId/lab-orders/:orderId",
+      "PATCH /dental/visits/:visitId/prescriptions/:prescriptionId",
+      "PATCH /dental/visits/:visitId/treatments/:treatmentId",
+      "PATCH /email/templates/:template",
+      "PATCH /emr/consultations/:consultation",
+      "PATCH /patients/:id",
+      "PATCH /persons/:person",
+      "PATCH /providers/practitioner-roles/:id",
+      "PATCH /providers/practitioners/:id",
+      "POST /billing/invoices",
+      "POST /billing/invoices/:invoice/capture",
+      "POST /billing/invoices/:invoice/finalize",
+      "POST /billing/invoices/:invoice/mark-uncollectible",
+      "POST /billing/invoices/:invoice/pay",
+      "POST /billing/invoices/:invoice/refund",
+      "POST /billing/invoices/:invoice/void",
+      "POST /billing/merchant-accounts",
+      "POST /billing/merchant-accounts/:merchantAccount/dashboard",
+      "POST /billing/merchant-accounts/:merchantAccount/onboard",
+      "POST /billing/webhooks/stripe",
+      "POST /booking/bookings",
+      "POST /booking/bookings/:booking/cancel",
+      "POST /booking/bookings/:booking/confirm",
+      "POST /booking/bookings/:booking/no-show",
+      "POST /booking/bookings/:booking/reject",
+      "POST /booking/events",
+      "POST /booking/events/:event/exceptions",
+      "POST /comms/chat-rooms",
+      "POST /comms/chat-rooms/:room/messages",
+      "POST /comms/chat-rooms/:room/video-call/end",
+      "POST /comms/chat-rooms/:room/video-call/join",
+      "POST /comms/chat-rooms/:room/video-call/leave",
+      "POST /dental/appointments",
+      "POST /dental/appointments/:appointmentId/check-in",
+      "POST /dental/appointments/:appointmentId/confirm",
+      "POST /dental/appointments/:appointmentId/queue-item",
+      "POST /dental/billing/claims",
+      "POST /dental/billing/claims/:claimId/lines",
+      "POST /dental/billing/claims/:claimId/remittance",
+      "POST /dental/billing/estimate",
+      "POST /dental/billing/invoices",
+      "POST /dental/billing/invoices/:invoiceId/discount",
+      "POST /dental/billing/invoices/:invoiceId/payments",
+      "POST /dental/billing/invoices/:invoiceId/payments/:paymentId/void",
+      "POST /dental/billing/invoices/:invoiceId/plan",
+      "POST /dental/billing/invoices/:invoiceId/uncollectible",
+      "POST /dental/billing/invoices/:invoiceId/void",
+      "POST /dental/billing/statements/batch",
+      "POST /dental/branches/:branchId/consent-templates",
+      "POST /dental/branches/:branchId/inventory",
+      "POST /dental/branches/:branchId/inventory/:itemId/adjustments",
+      "POST /dental/branches/:branchId/postop-templates",
+      "POST /dental/branches/:branchId/waitlist",
+      "POST /dental/clinical/medical-history",
+      "POST /dental/clinical/medical-history-review",
+      "POST /dental/erasure-requests",
+      "POST /dental/erasure-requests/:id/approve",
+      "POST /dental/erasure-requests/:id/reject",
+      "POST /dental/households",
+      "POST /dental/households/:householdId/members",
+      "POST /dental/imaging/ceph/superimpositions",
+      "POST /dental/imaging/ceph/superimpositions/preview",
+      "POST /dental/imaging/images/:imageId/ceph/analysis/recompute",
+      "POST /dental/imaging/images/:imageId/ceph/landmarks",
+      "POST /dental/imaging/images/:imageId/ceph/landmarks/detect",
+      "POST /dental/imaging/images/:imageId/ceph/reports",
+      "POST /dental/imaging/images/:imageId/findings",
+      "POST /dental/imaging/images/:imageId/measurements",
+      "POST /dental/imaging/studies",
+      "POST /dental/imaging/studies/:studyId/cbct/finalize",
+      "POST /dental/legal-holds",
+      "POST /dental/legal-holds/:id/release",
+      "POST /dental/onboarding",
+      "POST /dental/org/members",
+      "POST /dental/org/members/:memberId/recover-pin",
+      "POST /dental/org/members/:memberId/reset-pin",
+      "POST /dental/org/members/:memberId/security-question",
+      "POST /dental/organizations",
+      "POST /dental/organizations/:orgId/branches",
+      "POST /dental/organizations/:orgId/branches/:branchId/members",
+      "POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/deactivate",
+      "POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/set-pin",
+      "POST /dental/organizations/:orgId/branches/:branchId/members/:membershipId/verify-pin",
+      "POST /dental/patients",
+      "POST /dental/patients/:id/archive",
+      "POST /dental/patients/:id/follow-up-notes",
+      "POST /dental/patients/:id/restore",
+      "POST /dental/patients/:patientId/authorizations",
+      "POST /dental/patients/:patientId/case-presentations",
+      "POST /dental/patients/:patientId/case-presentations/:presentationId/accept",
+      "POST /dental/patients/:patientId/case-presentations/:presentationId/reject",
+      "POST /dental/patients/:patientId/claims",
+      "POST /dental/patients/:patientId/contacts",
+      "POST /dental/patients/:patientId/dental-alerts",
+      "POST /dental/patients/:patientId/dentition",
+      "POST /dental/patients/:patientId/insurance-profiles",
+      "POST /dental/patients/:patientId/occlusion-screenings",
+      "POST /dental/patients/:patientId/recalls",
+      "POST /dental/patients/:patientId/tasks",
+      "POST /dental/patients/:patientId/treatment-options/:optionGroupId/accept",
+      "POST /dental/patients/:patientId/treatment-plan/accept",
+      "POST /dental/patients/:patientId/treatment-plans",
+      "POST /dental/patients/:patientId/treatment-plans/:planId/approval",
+      "POST /dental/patients/:patientId/treatments/:treatmentId/appointment",
+      "POST /dental/patients/bulk-archive",
+      "POST /dental/patients/import",
+      "POST /dental/perio-charts",
+      "POST /dental/perio-charts/:chartId/complete",
+      "POST /dental/pmd/import",
+      "POST /dental/public/appointments/:appointmentId/confirm/:token",
+      "POST /dental/public/branches/:branchId/bookings",
+      "POST /dental/public/branches/:branchId/holds",
+      "POST /dental/sync-logs",
+      "POST /dental/treatment-templates",
+      "POST /dental/visits",
+      "POST /dental/visits/:visitId/amendments",
+      "POST /dental/visits/:visitId/amendments/:amendmentId/approve",
+      "POST /dental/visits/:visitId/apply-template/:templateId",
+      "POST /dental/visits/:visitId/attachments",
+      "POST /dental/visits/:visitId/carry-over",
+      "POST /dental/visits/:visitId/chart",
+      "POST /dental/visits/:visitId/consent-refusals",
+      "POST /dental/visits/:visitId/consents",
+      "POST /dental/visits/:visitId/consents/:consentId/sign",
+      "POST /dental/visits/:visitId/lab-orders",
+      "POST /dental/visits/:visitId/notes",
+      "POST /dental/visits/:visitId/notes/addendum",
+      "POST /dental/visits/:visitId/notes/sign",
+      "POST /dental/visits/:visitId/pmd",
+      "POST /dental/visits/:visitId/prescriptions",
+      "POST /dental/visits/:visitId/treatments",
+      "POST /dental/waitlist/:entryId/promote",
+      "POST /email/queue/:queue/cancel",
+      "POST /email/queue/:queue/retry",
+      "POST /email/templates",
+      "POST /email/templates/:template/test",
+      "POST /emr/consultations",
+      "POST /emr/consultations/:consultation/finalize",
+      "POST /notifs/:notif/read",
+      "POST /notifs/read-all",
+      "POST /patients",
+      "POST /patients/merge",
+      "POST /patients/unmerge",
+      "POST /persons",
+      "POST /providers/practitioner-roles",
+      "POST /providers/practitioners",
+      "POST /reviews/",
+      "POST /storage/files/:file/complete",
+      "POST /storage/files/upload",
+      "POST /storage/multipart/:file/complete",
+      "POST /storage/multipart/initiate",
+      "PUT /dental/branches/:branchId/settings",
+      "PUT /dental/branches/:branchId/working-hours",
+      "PUT /dental/org/permissions",
+      "PUT /dental/perio-charts/:chartId/readings/:toothNumber"
+    ],
     "spec_only": [],
     "code_only": [],
-    "auth_drift": []
+    "auth_drift": [
+      "POST /patients/merge",
+      "POST /patients/unmerge"
+    ]
   }
 }
