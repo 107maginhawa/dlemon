@@ -12,15 +12,14 @@ import {
   listFollowUpNotesQueryKey,
   addFollowUpNoteMutation,
 } from '@monobase/sdk-ts/generated/react-query';
+import type { DentalPatientModuleFollowUpNote } from '@monobase/sdk-ts/generated';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-export interface FollowUpNote {
-  id: string;
-  text: string;
-  createdAt: string;
-  createdBy: string;
-}
+// Cause-fix (oli QA_ESCAPES §6): this was a hand-rolled duplicate of the SDK note
+// type (field-for-field identical, createdAt is a string at runtime — no
+// transformer). Alias it for a single source of truth.
+export type FollowUpNote = DentalPatientModuleFollowUpNote;
 
 // ─── List hook ────────────────────────────────────────────────────────────
 
@@ -31,12 +30,11 @@ interface UseFollowUpNotesOptions {
 export function useFollowUpNotes({ patientId }: UseFollowUpNotesOptions) {
   const query = useQuery({
     ...listFollowUpNotesOptions({ path: { id: patientId } }),
-    select: (data) => {
-      const raw = data as unknown as { notes?: FollowUpNote[]; total?: number };
-      return (raw?.notes ?? [])
+    // The SDK models the response as { notes: FollowUpNote[]; total } — no cast needed.
+    select: (data) =>
+      (data?.notes ?? [])
         .slice()
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) as FollowUpNote[];
-    },
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     enabled: !!patientId,
   });
 

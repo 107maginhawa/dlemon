@@ -21,16 +21,12 @@ export function usePatientBilling({ patientId, branchId }: UsePatientBillingOpti
     ...listDentalInvoicesOptions({
       query: { patientId, branchId: branchId ?? undefined },
     }),
+    // Same endpoint as use-invoices.ts — reuse its proven SDK-derived Invoice type.
+    // The SDK response is { data: DentalInvoice[]; pagination }; a single `as`
+    // widens to the documented enrichment shape (no blind `as unknown as` — GAP-D).
     select: (data) => {
-      const raw = data as Record<string, unknown>;
-      const items = Array.isArray(data)
-        ? data
-        : Array.isArray(raw.data)
-          ? raw.data
-          : Array.isArray(raw.invoices)
-            ? raw.invoices
-            : [];
-      return items as unknown as Invoice[];
+      const items = Array.isArray(data) ? data : (data?.data ?? []);
+      return items as Invoice[];
     },
     enabled: !!patientId,
   });

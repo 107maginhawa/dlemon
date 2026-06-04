@@ -6,33 +6,23 @@
  * On success: invalidates listDentalVisits query so the timeline refreshes.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createDentalVisit } from '@monobase/sdk-ts/generated';
+import { createDentalVisit, type CreateDentalVisitRequest } from '@monobase/sdk-ts/generated';
 import { listDentalVisitsQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { toastError } from '@/lib/error-toast';
 
-interface CreateVisitInput {
-  patientId: string;
-  branchId: string;
-  dentistMemberId: string;
-}
-
-interface CreatedVisit {
-  id: string;
-  patientId: string;
-  status: 'draft' | 'active' | 'completed' | 'locked';
-  createdAt: string;
-}
+// Cause-fix (oli QA_ESCAPES §6): consume the SDK request type (the FE input is a
+// subset — patientId/branchId/dentistMemberId are all required) and let the SDK
+// response (DentalVisit) flow through. The previous `as Parameters<…>['body']` +
+// `as unknown as CreatedVisit` casts disabled tsc at both ends.
+type CreateVisitInput = Pick<CreateDentalVisitRequest, 'patientId' | 'branchId' | 'dentistMemberId'>;
 
 export function useCreateVisit(patientId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateVisitInput): Promise<CreatedVisit> => {
-      const { data } = await createDentalVisit({
-        body: input as Parameters<typeof createDentalVisit>[0]['body'],
-        throwOnError: true,
-      });
-      return data as unknown as CreatedVisit;
+    mutationFn: async (input: CreateVisitInput) => {
+      const { data } = await createDentalVisit({ body: input, throwOnError: true });
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

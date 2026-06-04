@@ -46,7 +46,10 @@ export function useMedicalHistoryReview(patientId: string) {
     refetchOnWindowFocus: false,
   });
 
-  const review = (query.data as unknown as MedicalHistoryReview | undefined) ?? null;
+  // getMedicalHistoryReview is typed as MedicalHistoryReview by the SDK — the
+  // previous `as unknown as` was redundant type-blinding (GAP-D). 404 (never
+  // reviewed) surfaces as query.data === undefined via retry:false.
+  const review = query.data ?? null;
 
   return {
     review,
