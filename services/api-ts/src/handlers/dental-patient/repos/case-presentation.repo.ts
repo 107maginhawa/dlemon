@@ -15,7 +15,10 @@ import {
   type CasePresentationDecision,
   type CasePresentationStatus,
 } from './case-presentation.schema';
-import { dentalTreatments } from '../../dental-visit/repos/treatment.schema';
+import {
+  getTreatmentsByPlanForPatient,
+  getFirstVisitIdForPlan,
+} from '../../dental-visit/repos/visit-treatment-plan.facade';
 
 /** A patient-readable treatment line item (denormalized for presentation). */
 export interface CasePresentationItem {
@@ -126,15 +129,7 @@ export class CasePresentationRepository {
    * presentation can only surface that patient's own items.
    */
   async findPlanItems(planId: string, patientId: string): Promise<CasePresentationItem[]> {
-    const rows = await this.db
-      .select()
-      .from(dentalTreatments)
-      .where(
-        and(
-          eq(dentalTreatments.treatmentPlanId, planId),
-          eq(dentalTreatments.patientId, patientId),
-        ),
-      );
+    const rows = await getTreatmentsByPlanForPatient(this.db, planId, patientId);
     return rows.map((t) => ({
       id: t.id,
       toothNumber: t.toothNumber ?? null,
@@ -154,16 +149,6 @@ export class CasePresentationRepository {
    * accept hangs off a visit). Returns null if the plan has no linked items.
    */
   async findPlanVisitId(planId: string, patientId: string): Promise<string | null> {
-    const [row] = await this.db
-      .select({ visitId: dentalTreatments.visitId })
-      .from(dentalTreatments)
-      .where(
-        and(
-          eq(dentalTreatments.treatmentPlanId, planId),
-          eq(dentalTreatments.patientId, patientId),
-        ),
-      )
-      .limit(1);
-    return row?.visitId ?? null;
+    return getFirstVisitIdForPlan(this.db, planId, patientId);
   }
 }

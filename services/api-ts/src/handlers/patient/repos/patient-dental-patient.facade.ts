@@ -242,6 +242,21 @@ export async function restoreDentalPatientRecord(
   return new PatientRepository(db).restorePatient(patientId);
 }
 
+/**
+ * Persist a patient's follow-up notes (JSONB) and flag needsFollowUp. Combines
+ * the former two sequential UPDATEs into one — same resulting row.
+ */
+export async function setPatientFollowUpNotes(
+  db: DatabaseInstance,
+  patientId: string,
+  notes: Patient['followUpNotes'],
+): Promise<void> {
+  await db
+    .update(patients)
+    .set({ followUpNotes: notes, needsFollowUp: true, updatedAt: new Date() })
+    .where(eq(patients.id, patientId));
+}
+
 /** Insert a patient row inside a Drizzle transaction (importPatients use case). */
 export async function insertPatientForImport(
   db: DatabaseInstance,

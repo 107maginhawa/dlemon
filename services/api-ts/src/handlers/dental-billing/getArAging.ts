@@ -15,10 +15,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalInvoices } from './repos/dental-invoice.schema';
-import { patients } from '../patient/repos/patient.schema';
-import { persons } from '../person/repos/person.schema';
-import { and, eq, ne, gt, type SQL } from 'drizzle-orm';
+import { getOutstandingInvoicesForAging } from './repos/billing-report.facade';
 import {
   computePatientAging,
   computeAgingSummary,
@@ -42,27 +39,7 @@ export async function getArAging(ctx: BaseContext) {
 
   // Pull all outstanding (non-voided, balance > 0) invoices joined to the
   // patient's display name. Branch filter applied when supplied.
-  const conditions: SQL<unknown>[] = [
-    ne(dentalInvoices.status, 'voided'),
-    gt(dentalInvoices.balanceCents, 0),
-  ];
-  if (q['branchId']) conditions.push(eq(dentalInvoices.branchId, q['branchId']));
-
-  const rows = await db
-    .select({
-      patientId: dentalInvoices.patientId,
-      firstName: persons.firstName,
-      lastName: persons.lastName,
-      balanceCents: dentalInvoices.balanceCents,
-      status: dentalInvoices.status,
-      dueDate: dentalInvoices.dueDate,
-      issuedAt: dentalInvoices.issuedAt,
-      createdAt: dentalInvoices.createdAt,
-    })
-    .from(dentalInvoices)
-    .innerJoin(patients, eq(dentalInvoices.patientId, patients.id))
-    .innerJoin(persons, eq(patients.person, persons.id))
-    .where(and(...conditions));
+  const rows = await getOutstandingInvoicesForAging(db, q['branchId']);
 
   // Group invoices by patient.
   const byPatient = new Map<string, { name: string; invoices: AgingInvoice[] }>();

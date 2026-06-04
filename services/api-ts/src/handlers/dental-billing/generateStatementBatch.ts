@@ -16,10 +16,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalInvoices } from './repos/dental-invoice.schema';
-import { patients } from '../patient/repos/patient.schema';
-import { persons } from '../person/repos/person.schema';
-import { and, eq, inArray, type SQL } from 'drizzle-orm';
+import { getStatementInvoices } from './repos/billing-report.facade';
 import { computePatientStatement, type AgingInvoice, type PatientStatement } from './utils/aging';
 import type { GenerateStatementBatchBody } from '@/generated/openapi/validators';
 
@@ -40,30 +37,10 @@ export async function generateStatementBatch(
   const asOf = body.asOf ? new Date(body.asOf) : new Date();
   const includeZeroBalance = body.includeZeroBalance ?? false;
 
-  const conditions: SQL<unknown>[] = [];
-  if (body.branchId) conditions.push(eq(dentalInvoices.branchId, body.branchId));
-  if (body.patientIds && body.patientIds.length > 0) {
-    conditions.push(inArray(dentalInvoices.patientId, body.patientIds));
-  }
-
-  const rows = await db
-    .select({
-      patientId: dentalInvoices.patientId,
-      firstName: persons.firstName,
-      lastName: persons.lastName,
-      status: dentalInvoices.status,
-      totalCents: dentalInvoices.totalCents,
-      paidCents: dentalInvoices.paidCents,
-      discountCents: dentalInvoices.discountCents,
-      balanceCents: dentalInvoices.balanceCents,
-      dueDate: dentalInvoices.dueDate,
-      issuedAt: dentalInvoices.issuedAt,
-      createdAt: dentalInvoices.createdAt,
-    })
-    .from(dentalInvoices)
-    .innerJoin(patients, eq(dentalInvoices.patientId, patients.id))
-    .innerJoin(persons, eq(patients.person, persons.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
+  const rows = await getStatementInvoices(db, {
+    branchId: body.branchId,
+    patientIds: body.patientIds,
+  });
 
   const byPatient = new Map<string, { name: string; invoices: AgingInvoice[] }>();
   for (const r of rows) {

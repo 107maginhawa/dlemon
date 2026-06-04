@@ -1,4 +1,4 @@
-import { eq, and, inArray, isNull, ne } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import {
   dentalTreatmentPlans,
@@ -13,7 +13,14 @@ import {
   type NewDentalTreatmentPlanStatusHistory,
   type TreatmentPlanStatus,
 } from './treatment-plan.schema';
-import { dentalTreatments } from '../../dental-visit/repos/treatment.schema';
+import {
+  linkPendingTreatmentsToPlan,
+  getTreatmentStatusesByPlan,
+  setTreatmentAppointment,
+  getTreatmentPlanRef,
+  getOptionGroupTreatments,
+  acceptTreatmentOption,
+} from '../../dental-visit/repos/visit-treatment-plan.facade';
 
 export class TreatmentPlanRepository {
   constructor(
@@ -63,18 +70,7 @@ export class TreatmentPlanRepository {
    * so re-running is safe. Returns the number of treatments newly linked.
    */
   async linkPendingTreatments(planId: string, patientId: string): Promise<number> {
-    const linked = await this.db
-      .update(dentalTreatments)
-      .set({ treatmentPlanId: planId })
-      .where(
-        and(
-          eq(dentalTreatments.patientId, patientId),
-          inArray(dentalTreatments.status, ['diagnosed', 'planned']),
-          isNull(dentalTreatments.treatmentPlanId),
-        ),
-      )
-      .returning({ id: dentalTreatments.id });
-    return linked.length;
+    return linkPendingTreatmentsToPlan(this.db, patientId, planId);
   }
 
   /**
@@ -86,10 +82,7 @@ export class TreatmentPlanRepository {
     const plan = await this.findOneById(planId, patientId);
     if (!plan) return null;
 
-    const items = await this.db
-      .select({ status: dentalTreatments.status })
-      .from(dentalTreatments)
-      .where(eq(dentalTreatments.treatmentPlanId, planId));
+    const items = await getTreatmentStatusesByPlan(this.db, planId);
 
     const derived = deriveTreatmentPlanStatus(
       plan.status,
@@ -109,12 +102,7 @@ export class TreatmentPlanRepository {
     patientId: string,
     appointmentId: string,
   ): Promise<{ id: string; appointmentId: string | null } | null> {
-    const [row] = await this.db
-      .update(dentalTreatments)
-      .set({ appointmentId, updatedAt: new Date() })
-      .where(and(eq(dentalTreatments.id, treatmentId), eq(dentalTreatments.patientId, patientId)))
-      .returning({ id: dentalTreatments.id, appointmentId: dentalTreatments.appointmentId });
-    return row ?? null;
+    return setTreatmentAppointment(this.db, treatmentId, patientId, appointmentId);
   }
 
   /** P1-21: detach a planned treatment item from its appointment (clear the loose ref). */
@@ -122,20 +110,12 @@ export class TreatmentPlanRepository {
     treatmentId: string,
     patientId: string,
   ): Promise<{ id: string; appointmentId: string | null } | null> {
-    const [row] = await this.db
-      .update(dentalTreatments)
-      .set({ appointmentId: null, updatedAt: new Date() })
-      .where(and(eq(dentalTreatments.id, treatmentId), eq(dentalTreatments.patientId, patientId)))
-      .returning({ id: dentalTreatments.id, appointmentId: dentalTreatments.appointmentId });
-    return row ?? null;
+    return setTreatmentAppointment(this.db, treatmentId, patientId, null);
   }
 
   /** Recompute the plan a given treatment belongs to (if any). Used by the treatment-update trigger. */
   async recomputeForTreatment(treatmentId: string): Promise<void> {
-    const [t] = await this.db
-      .select({ planId: dentalTreatments.treatmentPlanId, patientId: dentalTreatments.patientId })
-      .from(dentalTreatments)
-      .where(eq(dentalTreatments.id, treatmentId));
+    const t = await getTreatmentPlanRef(this.db, treatmentId);
     if (t?.planId) await this.recomputeStatus(t.planId, t.patientId);
   }
 
@@ -163,19 +143,7 @@ export class TreatmentPlanRepository {
     optionGroupId: string,
     patientId: string,
   ): Promise<Array<{ id: string; status: string; recommended: boolean }>> {
-    return this.db
-      .select({
-        id: dentalTreatments.id,
-        status: dentalTreatments.status,
-        recommended: dentalTreatments.recommended,
-      })
-      .from(dentalTreatments)
-      .where(
-        and(
-          eq(dentalTreatments.optionGroupId, optionGroupId),
-          eq(dentalTreatments.patientId, patientId),
-        ),
-      );
+    return getOptionGroupTreatments(this.db, optionGroupId, patientId);
   }
 
   /**
@@ -189,32 +157,7 @@ export class TreatmentPlanRepository {
     chosenTreatmentId: string,
     patientId: string,
   ): Promise<Array<{ id: string; status: string; recommended: boolean }>> {
-    const now = new Date();
-    // Accept the chosen option.
-    await this.db
-      .update(dentalTreatments)
-      .set({ status: 'planned', updatedAt: now })
-      .where(
-        and(
-          eq(dentalTreatments.id, chosenTreatmentId),
-          eq(dentalTreatments.optionGroupId, optionGroupId),
-          eq(dentalTreatments.patientId, patientId),
-        ),
-      );
-    // Decline its siblings (only those still in a non-terminal state).
-    await this.db
-      .update(dentalTreatments)
-      .set({ status: 'declined', refusalReason: 'Alternate option accepted', updatedAt: now })
-      .where(
-        and(
-          eq(dentalTreatments.optionGroupId, optionGroupId),
-          eq(dentalTreatments.patientId, patientId),
-          inArray(dentalTreatments.status, ['diagnosed', 'planned']),
-          // siblings = everything in the group that is NOT the chosen treatment
-          ne(dentalTreatments.id, chosenTreatmentId),
-        ),
-      );
-    return this.findOptionGroup(optionGroupId, patientId);
+    return acceptTreatmentOption(this.db, optionGroupId, chosenTreatmentId, patientId);
   }
 
   /** P2-8: append a status-history row (who / when / from → to). */
