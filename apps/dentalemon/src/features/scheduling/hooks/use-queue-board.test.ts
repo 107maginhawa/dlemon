@@ -42,6 +42,22 @@ describe('useQueueBoard', () => {
     expect(result.current.items[1]?.status).toBe('called');
   });
 
+  test('sends credentials on the cross-origin queue-board fetch [QA-005 auth-omission]', async () => {
+    let init: RequestInit | undefined;
+    global.fetch = mock((_url: string | URL | Request, opts?: RequestInit) => {
+      init = opts;
+      return jsonResponse(ITEMS);
+    });
+    const qc = freshClientWithMutations();
+    const { result } = renderHook(
+      () => useQueueBoard('b1'),
+      { wrapper: makeWrapper(qc) },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    // Pre-fix the GET omitted credentials → cross-origin (:3003→:7213) 401 → false-empty board.
+    expect(init?.credentials).toBe('include');
+  });
+
   test('unwraps { data: [...] } envelope', async () => {
     global.fetch = mock(() => jsonResponse({ data: ITEMS }));
     const qc = freshClientWithMutations();

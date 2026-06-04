@@ -9,26 +9,13 @@
 
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useInvoices } from '../hooks/use-invoices';
+import { useInvoices, type Invoice } from '../hooks/use-invoices';
 import { ListErrorState } from '@/components/list-error-state';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types — Invoice is the single SDK-derived type (see use-invoices); no local
+// re-declaration that can silently drift from the API.
 // ---------------------------------------------------------------------------
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  patientId: string;
-  patientName?: string;
-  visitDate?: string;
-  dueDate?: string;
-  totalCents: number;
-  paidCents: number;
-  balanceCents: number;
-  status: string;
-  createdAt: string;
-}
 
 export interface BillingListProps {
   branchId?: string;

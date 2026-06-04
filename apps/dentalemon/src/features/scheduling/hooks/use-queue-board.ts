@@ -31,7 +31,11 @@ export function useQueueBoard(branchId: string) {
   const query = useQuery({
     queryKey: queueBoardQueryKey(branchId),
     queryFn: async (): Promise<QueueItem[]> => {
-      const res = await fetch(`${apiBaseUrl}/dental/branches/${branchId}/queue-board`);
+      // QA-005: cross-origin (:3003→:7213) auth-gated GET — must send the session
+      // cookie or it 401s (→ false-empty board). Mirrors the recalls/plans fix.
+      const res = await fetch(`${apiBaseUrl}/dental/branches/${branchId}/queue-board`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error(`Failed to fetch queue board (${res.status})`);
       const data: unknown = await res.json();
       if (Array.isArray(data)) return data as QueueItem[];
@@ -47,6 +51,7 @@ export function useQueueBoard(branchId: string) {
     mutationFn: async ({ itemId, status }: { itemId: string; status: QueueItemStatus }) => {
       const res = await fetch(`${apiBaseUrl}/dental/queue-items/${itemId}/status`, {
         method: 'PATCH',
+        credentials: 'include', // QA-005: auth-gated mutation — send the session cookie
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });

@@ -52,8 +52,10 @@ export function useImagingUpload() {
       }
 
       // 1. Initiate imaging study + get the upload envelope (single PUT or multipart)
+      // QA-006: auth-gated API POST — must send the session cookie or it 401s.
       const initRes = await fetch(`${apiBaseUrl}/dental/imaging/studies`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: options.patientId,
@@ -91,6 +93,7 @@ export function useImagingUpload() {
         }
         const completeRes = await fetch(`${apiBaseUrl}/storage/multipart/${fileId}/complete`, {
           method: 'POST',
+          credentials: 'include', // QA-006: auth-gated API call
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uploadId: init.uploadId, parts }),
           signal,
@@ -107,7 +110,10 @@ export function useImagingUpload() {
     } catch (err) {
       // On error: abort any partial multipart at storage layer (DELETE /storage/multipart/{fileId}/abort)
       if (fileId) {
-        fetch(`${apiBaseUrl}/storage/multipart/${fileId}/abort`, { method: 'DELETE' }).catch(() => {
+        fetch(`${apiBaseUrl}/storage/multipart/${fileId}/abort`, {
+          method: 'DELETE',
+          credentials: 'include', // QA-006: auth-gated API call
+        }).catch(() => {
           // best-effort cleanup
         })
       }

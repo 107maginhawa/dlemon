@@ -4,23 +4,17 @@
  * Loads invoices with optional status and branchId filters.
  * Query key includes both filters so the cache is keyed per-filter-combination.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { createDentalInvoice } from '@monobase/sdk-ts/generated';
+import { createDentalInvoice, type DentalInvoice } from '@monobase/sdk-ts/generated';
 
-export interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  patientId: string;
-  patientName?: string;
-  visitDate?: string;
-  dueDate?: string;
-  totalCents: number;
-  paidCents: number;
-  balanceCents: number;
-  status: string;
-  createdAt: string;
-}
+// Cause-fix recipe (QA_ESCAPES §6): intersect the generated SDK type instead of
+// re-declaring an independent one + casting. tsc now checks every SDK-modeled field
+// (catches priceCents/balanceCents-style drift); the two genuine backend enrichments
+// (patientName, visitDate) are explicit here because they are NOT yet in the OpenAPI
+// spec/SDK. TODO(spec): add patientName + visitDate to the invoice-list response schema,
+// regenerate the SDK, then drop this intersection.
+export type Invoice = DentalInvoice & { patientName?: string; visitDate?: string };
 
 interface UseInvoicesOptions {
   branchId?: string;
@@ -30,10 +24,13 @@ interface UseInvoicesOptions {
 
 export function useInvoices({ branchId, status, patientId }: UseInvoicesOptions) {
   const query = useQuery({
-    ...listDentalInvoicesOptions({ query: { patientId: patientId, status: status as any, branchId: branchId ?? undefined } }),
+    ...listDentalInvoicesOptions({
+      query: { patientId, status: status as DentalInvoice['status'] | undefined, branchId: branchId ?? undefined },
+    }),
     select: (data) => {
-      const raw = data as any;
-      const items = Array.isArray(raw) ? raw : (raw?.data ?? []);
+      // No blind `as any`: the SDK response is { data: DentalInvoice[]; pagination }.
+      // The single `as Invoice[]` only widens to the documented enrichment (above).
+      const items = Array.isArray(data) ? data : (data?.data ?? []);
       return items as Invoice[];
     },
     staleTime: 30_000,

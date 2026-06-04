@@ -4,9 +4,10 @@
  * Covers: PAY-01 (create invoice), PAY-02 (view invoice status)
  */
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { usePatientInvoices, useCreateInvoice } from './use-workspace-payment';
+import { useOrgContextStore } from '@/stores/org-context.store';
 import { makeWrapper, jsonResponse } from '@/test-utils';
 
 const _toastError = mock(() => {});
@@ -34,17 +35,43 @@ describe('usePatientInvoices', () => {
     qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     global.fetch = mockFetch as unknown as typeof fetch;
     mockFetch.mockReset();
+    // QA-004: the invoices query is gated on branchId (the endpoint 400s without
+    // it). Seed org context so the query fires in these tests.
+    useOrgContextStore.setState({ branchId: 'branch-1' });
   });
 
   afterEach(() => {
+    cleanup();
     global.fetch = originalFetch;
     qc.clear();
+    useOrgContextStore.setState({ branchId: null });
   });
 
   it('is disabled when patientId is null', () => {
     const wrapper = makeWrapper(qc);
     const { result } = renderHook(() => usePatientInvoices(null), { wrapper });
     expect(result.current.isFetching).toBe(false);
+  });
+
+  it('is disabled when branchId is missing (would 400) [QA-004]', () => {
+    useOrgContextStore.setState({ branchId: null });
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(() => usePatientInvoices('pat-1'), { wrapper });
+    expect(result.current.isFetching).toBe(false);
+  });
+
+  it('includes branchId in query URL [QA-004 contract: required request param]', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+    const wrapper = makeWrapper(qc);
+    renderHook(() => usePatientInvoices('pat-1'), { wrapper });
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const req = mockFetch.mock.calls[0]![0] as Request | string;
+    const url = req instanceof Request ? req.url : String(req);
+    // Pre-fix the hook omitted branchId → the real backend 400s "branchId is required".
+    expect(url).toContain('branchId=branch-1');
   });
 
   it('fetches invoices for patient (PAY-02)', async () => {
@@ -110,6 +137,7 @@ describe('useCreateInvoice', () => {
   });
 
   afterEach(() => {
+    cleanup();
     global.fetch = originalFetch;
     qc.clear();
   });

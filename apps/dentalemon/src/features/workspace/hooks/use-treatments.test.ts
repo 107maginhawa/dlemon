@@ -61,6 +61,27 @@ describe('useTreatments', () => {
     expect(result.current.treatments[0]!.id).toBe('t1');
   });
 
+  test('maps API priceCents (cents) → Treatment.priceAmount (dollars) [QA-002 contract drift]', async () => {
+    // The API returns `priceCents` (integer cents), but the FE Treatment model and
+    // every consumer (breakdown table, visit totals, payment-modal line items) read
+    // `priceAmount` (dollars). Nothing mapped it, so priceAmount was undefined → ₱0.
+    // The other tests here include priceCents in fixtures but never assert the price
+    // value — that unasserted gap is exactly how this shipped past a green suite.
+    global.fetch = mock(() =>
+      jsonResponse({ data: [{ ...mockTreatments[0], priceCents: 150000 }] }),
+    );
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useTreatments({ visitId: 'v1' }),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    // 150000 cents → 1500 dollars. Pre-fix this was undefined → ₱0.
+    expect(result.current.treatments[0]!.priceAmount).toBe(1500);
+  });
+
   test('handles wrapped response (data key)', async () => {
     global.fetch = mock(() =>
       jsonResponse({ data: mockTreatments }),

@@ -229,7 +229,9 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
                     inv.status === 'paid'
                       ? 'bg-green-100 text-green-800'
-                      : inv.status === 'pending' || inv.status === 'overdue'
+                      : // 'pending' was never a real DentalInvoiceStatus (draft|issued|
+                        // partial|paid|overdue|voided) → this branch was always false.
+                        inv.status === 'issued' || inv.status === 'partial' || inv.status === 'overdue'
                       ? 'bg-yellow-100 text-yellow-800'
                       : 'bg-muted text-muted-foreground',
                   ].join(' ')}

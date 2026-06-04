@@ -42,9 +42,23 @@ export function useTreatments({ visitId }: UseTreatmentsOptions) {
     }),
     enabled: !!visitId,
     select: (data) => {
-      const raw = data as unknown as { data?: Treatment[] } | Treatment[];
-      const items: Treatment[] = Array.isArray(raw) ? raw : (raw?.data ?? []);
-      return items;
+      // Contract drift fix (QA-002): the API returns `priceCents` (integer cents,
+      // locked at recording time — see SDK DentalTreatment), but FE Treatment models
+      // `priceAmount` in dollars. Nothing mapped it, so `priceAmount` was always
+      // undefined → every breakdown price, visit subtotal/total, and payment-modal
+      // line item rendered ₱0. Derive priceAmount from priceCents at this single
+      // read boundary so all consumers get a real price.
+      const raw = data as unknown as
+        | { data?: Array<Treatment & { priceCents?: number }> }
+        | Array<Treatment & { priceCents?: number }>;
+      const rawItems = Array.isArray(raw) ? raw : (raw?.data ?? []);
+      return rawItems.map((it): Treatment => ({
+        ...it,
+        priceAmount:
+          typeof it.priceAmount === 'number'
+            ? it.priceAmount
+            : (it.priceCents ?? 0) / 100,
+      }));
     },
   });
 
