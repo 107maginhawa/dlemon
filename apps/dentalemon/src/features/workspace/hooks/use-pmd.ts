@@ -10,6 +10,28 @@ import { SdkError } from '@monobase/sdk-ts/client';
 import type { PmdDocument } from '@monobase/sdk-ts/generated';
 import type { PMDDocument } from '@/features/pmd/types';
 
+// Cause-fix (oli QA_ESCAPES §6): map the SDK PmdDocument to the pmd feature's
+// app-facing PMDDocument explicitly instead of an `as unknown as`. The app
+// contract uses ISO-string dates (createdAt/signedAt) — the SDK + getPmdForVisit
+// transformer give Date — so normalize them here; tsc checks every field-access.
+const toIso = (d: Date | string | null | undefined): string | null =>
+  d == null ? null : d instanceof Date ? d.toISOString() : String(d);
+
+function toPMDDocument(d: PmdDocument): PMDDocument {
+  return {
+    id: d.id,
+    visitId: d.visitId,
+    patientId: d.patientId,
+    status: d.status,
+    content: d.content,
+    signature: d.signature ?? null,
+    signedAt: toIso(d.signedAt),
+    supersedesId: d.supersedesId ?? null,
+    checksum: d.checksum,
+    createdAt: toIso(d.createdAt) ?? '',
+  };
+}
+
 export function usePMD(visitId: string | null) {
   const options = getPmdForVisitOptions({ path: { visitId: visitId as string } });
   // Pin the generics: queryFn yields the generated `PmdDocument | null` (the
@@ -30,6 +52,6 @@ export function usePMD(visitId: string | null) {
     },
     enabled: !!visitId,
     retry: false,
-    select: (data) => (data ? (data as unknown as PMDDocument) : null),
+    select: (data) => (data ? toPMDDocument(data) : null),
   });
 }

@@ -14,20 +14,19 @@ interface SharePMDInput {
   patientId: string;
 }
 
-interface PMDResult {
-  checksum: string;
-  [key: string]: unknown;
-}
-
 export function useSharePMD() {
   return useMutation({
-    mutationFn: async (input: SharePMDInput): Promise<PMDResult> => {
+    // Cause-fix (oli QA_ESCAPES §6): the SDK GeneratePmdRequest body requires both
+    // visitId and patientId — the previous body sent only { patientId } behind an
+    // `as Parameters<…>` cast. Send the full, SDK-typed body and let the
+    // PmdDocument response flow (consumer reads .checksum); both casts removed.
+    mutationFn: async (input: SharePMDInput) => {
       const { data } = await generatePmd({
         path: { visitId: input.visitId },
-        body: { patientId: input.patientId } as Parameters<typeof generatePmd>[0]['body'],
+        body: { visitId: input.visitId, patientId: input.patientId },
         throwOnError: true,
       });
-      return data as unknown as PMDResult;
+      return data;
     },
     // V-FE-ERR-001: surface PMD generation/share failures rather than letting
     // the rejected promise fall through silently.
