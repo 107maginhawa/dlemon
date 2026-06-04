@@ -220,7 +220,7 @@ export function TreatmentTable({
                     {t.conditionCode ?? '—'}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
-                    {t.description ?? t.procedureName ?? '—'}
+                    {t.description || '—'}
                   </td>
                   <td className="px-4 py-2 text-center">
                     {t.status === 'performed' || t.status === 'verified' ? (

@@ -13,32 +13,33 @@ afterEach(cleanup);
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+// Mirrors the live GET /dental/visits/:id/treatments shape (2026-06-04): the API
+// returns cdtCode + description + integer priceCents — NOT procedureCode /
+// procedureName / currency (those were FE-invented; see QA_ESCAPES §6 / QA-003).
 const mockTreatments = [
   {
     id: 't1',
     visitId: 'v1',
+    patientId: 'p1',
     toothNumber: 11,
-    procedureCode: 'D2391',
-    procedureName: 'Composite resin',
     cdtCode: 'D2391',
     description: 'One surface, posterior',
     status: 'diagnosed',
-    priceCents: '1500',
-    currency: 'PHP',
+    priceCents: 150000,
+    carriedOver: false,
     createdAt: '2026-05-01T10:00:00Z',
     updatedAt: '2026-05-01T10:00:00Z',
   },
   {
     id: 't2',
     visitId: 'v1',
+    patientId: 'p1',
     toothNumber: 21,
-    procedureCode: 'D0120',
-    procedureName: 'Periodic oral evaluation',
     cdtCode: 'D0120',
     description: 'Periodic exam',
     status: 'planned',
-    priceCents: '500',
-    currency: 'PHP',
+    priceCents: 50000,
+    carriedOver: false,
     createdAt: '2026-05-01T10:05:00Z',
     updatedAt: '2026-05-01T10:05:00Z',
   },
@@ -80,6 +81,24 @@ describe('useTreatments', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     // 150000 cents → 1500 dollars. Pre-fix this was undefined → ₱0.
     expect(result.current.treatments[0]!.priceAmount).toBe(1500);
+  });
+
+  test('surfaces the REAL API fields (cdtCode/description), not the dropped invented ones [QA-003]', async () => {
+    // The view-model used to invent procedureCode/procedureName/currency that the
+    // API never sends; consumers read them as undefined. The hook now projects the
+    // SDK DentalTreatment, so the real fields must come through and priceAmount is
+    // derived from priceCents.
+    global.fetch = mock(() => jsonResponse({ data: mockTreatments }));
+    const qc = freshClient();
+    const { result } = renderHook(() => useTreatments({ visitId: 'v1' }), { wrapper: makeWrapper(qc) });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const t = result.current.treatments[0]!;
+    expect(t.cdtCode).toBe('D2391');
+    expect(t.description).toBe('One surface, posterior');
+    expect(t.priceAmount).toBe(1500);
+    // The invented fields are gone from the contract.
+    expect((t as Record<string, unknown>).procedureName).toBeUndefined();
+    expect((t as Record<string, unknown>).currency).toBeUndefined();
   });
 
   test('handles wrapped response (data key)', async () => {

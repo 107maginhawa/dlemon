@@ -524,8 +524,8 @@ function WorkspacePage() {
         visitId={currentVisitId}
         lineItems={treatments.map((t) => ({
           id: t.id,
-          description: t.description ?? t.procedureName ?? '—',
-          cdtCode: t.cdtCode ?? t.procedureCode,
+          description: t.description || '—',
+          cdtCode: t.cdtCode,
           toothNumber: t.toothNumber ?? undefined,
           priceCents: Math.round((t.priceAmount ?? 0) * 100),
           status: t.status ?? 'pending',
