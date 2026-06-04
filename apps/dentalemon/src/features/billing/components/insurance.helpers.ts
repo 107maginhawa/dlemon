@@ -5,52 +5,47 @@
  * centavos; display uses ₱ / en-PH (matches collections-view.helpers).
  */
 
-export type InsuranceClaimStatus =
-  | 'draft'
-  | 'ready'
-  | 'submitted'
-  | 'under_review'
-  | 'approved'
-  | 'partially_paid'
-  | 'paid'
-  | 'denied'
-  | 'appealed'
-  | 'written_off';
+import type {
+  InsuranceClaim,
+  InsuranceClaimStatus as SdkInsuranceClaimStatus,
+  PayerArRow as SdkPayerArRow,
+  PayerArSummary as SdkPayerArSummary,
+} from '@monobase/sdk-ts/generated';
 
-export interface InsuranceClaimRow {
-  id: string;
-  claimNumber: string;
-  patientId: string;
-  insuranceProfileId: string;
-  status: InsuranceClaimStatus;
-  billedAmountCents: number;
-  paidByPayerCents: number;
-  disallowedCents: number | null;
-  patientPortionCents: number;
-  payerReference: string | null;
-  submittedAt: string | null;
-}
+// Cause-fix (oli QA_ESCAPES §6): these were hand-rolled duplicates of generated
+// SDK types. The enum + aging rows match the SDK 1:1, so alias them for a single
+// source of truth that cannot drift from the backend contract.
+export type InsuranceClaimStatus = SdkInsuranceClaimStatus;
+export type PayerArRow = SdkPayerArRow;
+export type PayerArSummary = SdkPayerArSummary;
 
-export interface PayerArRow {
-  insuranceProfileId: string;
-  payerName: string;
-  currentCents: number;
-  days30Cents: number;
-  days60Cents: number;
-  days90PlusCents: number;
-  totalOutstandingCents: number;
-  claimCount: number;
-  oldestClaimDays: number;
-}
+// The worklist row IS the SDK InsuranceClaim, with one ground-truthed correction:
+// listInsuranceClaims has NO response transformer (transformers.gen.ts), so its
+// timestamps arrive as ISO strings at runtime even though the SDK over-types them
+// as Date. Override the date fields to string so the type matches reality (the
+// previous local type was actually more accurate than the SDK here — a stale-spec
+// the GAP-D detector must catch by ground-truthing the live response, §6).
+export type InsuranceClaimRow = Omit<
+  InsuranceClaim,
+  'submittedAt' | 'decisionAt' | 'paidAt' | 'createdAt' | 'updatedAt'
+> & {
+  submittedAt?: string | null;
+  decisionAt?: string | null;
+  paidAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
-export interface PayerArSummary {
-  currentCents: number;
-  days30Cents: number;
-  days60Cents: number;
-  days90PlusCents: number;
-  totalOutstandingCents: number;
-  payerCount: number;
-  claimCount: number;
+/** Re-type a raw SDK claim to the runtime-honest row (string timestamps). */
+export function toInsuranceClaimRow(c: InsuranceClaim): InsuranceClaimRow {
+  return {
+    ...c,
+    submittedAt: c.submittedAt == null ? null : String(c.submittedAt),
+    decisionAt: c.decisionAt == null ? null : String(c.decisionAt),
+    paidAt: c.paidAt == null ? null : String(c.paidAt),
+    createdAt: c.createdAt == null ? undefined : String(c.createdAt),
+    updatedAt: c.updatedAt == null ? undefined : String(c.updatedAt),
+  };
 }
 
 /** Format integer centavos as a Philippine Peso string (en-PH). */

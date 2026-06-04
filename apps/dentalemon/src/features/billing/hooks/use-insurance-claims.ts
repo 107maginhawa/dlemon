@@ -22,12 +22,26 @@ import {
   estimateClaimCoverage,
   createCoverageAuthorization,
   updateCoverageAuthorizationStatus,
+  type InsuranceClaimList,
+  type PayerArAgingResponse,
+  type CoverageEstimateResult,
+  type DentalPatientFinanceModuleCoverageAuthorization,
 } from '@monobase/sdk-ts/generated';
-import type { InsuranceClaimRow, InsuranceClaimStatus, PayerArRow, PayerArSummary } from '../components/insurance.helpers';
+import { toInsuranceClaimRow } from '../components/insurance.helpers';
+import type { InsuranceClaimStatus } from '../components/insurance.helpers';
 
 interface BranchOpt {
   branchId?: string | null;
 }
+
+// Cause-fix (oli QA_ESCAPES §6): the generated SDK models every response in this
+// file, so the previous local re-declarations + `as unknown as` casts were
+// type-blinding. The query responses are typed `Payload | ErrorResponse` (the
+// OpenAPI puts the error in the 200 slot), but the SDK queryFn uses
+// throwOnError:true so an error surfaces via React Query's isError — at runtime
+// `data` is always the success arm. We narrow off ErrorResponse with a single
+// (non-`unknown`) `as`, then normalize the date fields the SDK over-types (these
+// endpoints have NO response transformer → timestamps are ISO strings, §6).
 
 export function useInsuranceClaims({ branchId, status }: BranchOpt & { status?: InsuranceClaimStatus }) {
   const query = useQuery({
@@ -35,7 +49,10 @@ export function useInsuranceClaims({ branchId, status }: BranchOpt & { status?: 
       query: { branchId: branchId ?? undefined, status: status ?? undefined },
     }),
     enabled: Boolean(branchId),
-    select: (data) => (data as unknown as { items: InsuranceClaimRow[]; total: number }),
+    select: (data) => {
+      const list = data as InsuranceClaimList;
+      return { items: list.items.map(toInsuranceClaimRow), total: list.total };
+    },
     staleTime: 30_000,
   });
   return {
@@ -47,17 +64,18 @@ export function useInsuranceClaims({ branchId, status }: BranchOpt & { status?: 
   };
 }
 
-export interface PayerArData {
-  asOf: string;
-  summary: PayerArSummary;
-  payers: PayerArRow[];
-}
+// asOf is over-typed as Date by the SDK but getPayerArAging has no transformer →
+// it is an ISO string at runtime (§6). Re-type it accordingly.
+export type PayerArData = Omit<PayerArAgingResponse, 'asOf'> & { asOf: string };
 
 export function usePayerArAging({ branchId }: BranchOpt) {
   const query = useQuery({
     ...getPayerArAgingOptions({ query: { branchId: branchId ?? undefined } }),
     enabled: Boolean(branchId),
-    select: (data) => data as unknown as PayerArData,
+    select: (data): PayerArData => {
+      const r = data as PayerArAgingResponse;
+      return { ...r, asOf: String(r.asOf) };
+    },
     staleTime: 30_000,
   });
   return {
@@ -130,20 +148,17 @@ export interface CoverageEstimateLine {
   description?: string;
 }
 
-export interface CoverageEstimateResult {
-  estimatedCoveredCents: number;
-  estimatedPatientPortionCents: number;
-  estimatedBilledCents: number;
-  cappedByAnnualLimit: boolean;
-  uncoveredProcedures: string[];
-  perLine: Array<{ cdtCode: string; coveredCents: number; patientPortionCents: number; uncovered: boolean }>;
-}
+// Re-export the SDK result type (it fully models the estimate response — no dates)
+// so callers keep importing it under the historical name without a local copy.
+export type { CoverageEstimateResult };
 
 export function useCoverageEstimate() {
   const mutation = useMutation({
     mutationFn: async (args: { patientId?: string; insuranceProfileId?: string; authorizationId?: string; lines: CoverageEstimateLine[] }) => {
+      // throwOnError narrows the runtime value to the success arm; a single `as`
+      // strips the ErrorResponse type-union member.
       const { data } = await estimateClaimCoverage({ body: args, throwOnError: true });
-      return data as unknown as CoverageEstimateResult;
+      return data as CoverageEstimateResult;
     },
   });
   return {
@@ -161,7 +176,9 @@ export function usePatientAuthorizations(patientId?: string | null) {
     staleTime: 30_000,
   });
   return {
-    authorizations: (query.data ?? []) as unknown as Array<{ id: string; status: string; loaNumber: string | null; approvedAmountCents: number | null }>,
+    // Narrow off the ErrorResponse union arm with a single `as`; the SDK auth type
+    // carries the fields the LOA UI reads (id/status/loaNumber/approvedAmountCents).
+    authorizations: (query.data ?? []) as DentalPatientFinanceModuleCoverageAuthorization[],
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };
