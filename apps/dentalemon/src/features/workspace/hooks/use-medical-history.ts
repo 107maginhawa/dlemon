@@ -14,46 +14,19 @@ import {
 import {
   createMedicalHistoryEntry,
   updateMedicalHistoryEntry,
+  type MedicalHistoryEntry,
+  type MedicalHistoryEntryType,
+  type CreateMedicalHistoryEntryRequest,
+  type UpdateMedicalHistoryEntryRequest,
 } from '@monobase/sdk-ts/generated';
 
-export type MedicalHistoryEntryType =
-  | 'condition'
-  | 'medication'
-  | 'allergy'
-  | 'procedure'
-  | 'vaccination'
-  | 'family_history';
-
-export interface MedicalHistoryEntry {
-  id: string;
-  patientId: string;
-  entryType: MedicalHistoryEntryType;
-  codeSystem?: string | null;
-  code?: string | null;
-  displayName: string;
-  notes?: string | null;
-  onsetDate?: string | null;
-  resolvedDate?: string | null;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateEntryInput {
-  patientId: string;
-  entryType: MedicalHistoryEntryType;
-  displayName: string;
-  codeSystem?: string;
-  code?: string;
-  notes?: string;
-}
-
-export interface UpdateEntryInput {
-  active?: boolean;
-  notes?: string;
-  displayName?: string;
-  resolvedDate?: string;
-}
+// Cause-fix (oli QA_ESCAPES §6): the entry type + entry-type enum were hand-rolled
+// duplicates of the SDK; the request inputs were subsets of the SDK request types.
+// Alias all of them for a single source of truth — no local re-declaration, no
+// `as unknown as`/`as Parameters<…>` casts.
+export type { MedicalHistoryEntry, MedicalHistoryEntryType };
+export type CreateEntryInput = CreateMedicalHistoryEntryRequest;
+export type UpdateEntryInput = UpdateMedicalHistoryEntryRequest;
 
 export function medicalHistoryKey(patientId: string) {
   return listMedicalHistoryQueryKey({ query: { patientId } });
@@ -65,10 +38,8 @@ export function useMedicalHistory(patientId: string) {
     enabled: !!patientId,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
-    select: (data) => {
-      const raw = data as unknown as { data?: MedicalHistoryEntry[] } | MedicalHistoryEntry[];
-      return Array.isArray(raw) ? raw : (raw?.data ?? []);
-    },
+    // SDK response is { data: MedicalHistoryEntry[]; pagination } — no cast needed.
+    select: (data) => (Array.isArray(data) ? data : (data?.data ?? [])),
   });
 
   return {
@@ -84,36 +55,25 @@ export function useMedicalHistoryMutations(patientId: string) {
     queryClient.invalidateQueries({ queryKey: listMedicalHistoryQueryKey({ query: { patientId } }) });
 
   const addMutation = useMutation({
-    mutationFn: async (input: CreateEntryInput): Promise<MedicalHistoryEntry> => {
-      const { data } = await createMedicalHistoryEntry({
-        body: input as Parameters<typeof createMedicalHistoryEntry>[0]['body'],
-        throwOnError: true,
-      });
-      return data as unknown as MedicalHistoryEntry;
+    mutationFn: async (input: CreateEntryInput) => {
+      const { data } = await createMedicalHistoryEntry({ body: input, throwOnError: true });
+      return data;
     },
     onSuccess: invalidate,
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ entryId, active }: { entryId: string; active: boolean }): Promise<MedicalHistoryEntry> => {
-      const { data } = await updateMedicalHistoryEntry({
-        path: { entryId },
-        body: { active } as Parameters<typeof updateMedicalHistoryEntry>[0]['body'],
-        throwOnError: true,
-      });
-      return data as unknown as MedicalHistoryEntry;
+    mutationFn: async ({ entryId, active }: { entryId: string; active: boolean }) => {
+      const { data } = await updateMedicalHistoryEntry({ path: { entryId }, body: { active }, throwOnError: true });
+      return data;
     },
     onSuccess: invalidate,
   });
 
   const updateNotesMutation = useMutation({
-    mutationFn: async ({ entryId, patch }: { entryId: string; patch: UpdateEntryInput }): Promise<MedicalHistoryEntry> => {
-      const { data } = await updateMedicalHistoryEntry({
-        path: { entryId },
-        body: patch as Parameters<typeof updateMedicalHistoryEntry>[0]['body'],
-        throwOnError: true,
-      });
-      return data as unknown as MedicalHistoryEntry;
+    mutationFn: async ({ entryId, patch }: { entryId: string; patch: UpdateEntryInput }) => {
+      const { data } = await updateMedicalHistoryEntry({ path: { entryId }, body: patch, throwOnError: true });
+      return data;
     },
     onSuccess: invalidate,
   });
