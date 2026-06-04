@@ -180,6 +180,112 @@ describe('useInvoiceDetail — payments (RPT-02)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Contract regression — REAL live API shape (QA_ESCAPES §6 roll-out)
+//
+// Ground-truthed against GET /dental/billing/invoices/:invoiceId (2026-06-04).
+// The detail endpoint returns the bare DentalInvoice (taxCents/taxRate/dueDate/…)
+// PLUS enrichments the SDK does not model: outstandingCents, patientName,
+// visitDate, lineItems (amountCents AND priceCents), payments. Because these
+// enrichments bypass the SDK date transformer, their timestamps stay ISO
+// STRINGS at runtime — the detail sheet's formatDate() depends on that.
+// ---------------------------------------------------------------------------
+
+// Mirrors the live response field-for-field (see oli/docs/roadmap/QA_ESCAPES.md §2 QA-007 class).
+const realInvoice = {
+  id: 'db798b31-c6b7-43e9-841d-593b25300ec9',
+  createdAt: '2026-06-03T23:06:07.157Z',
+  updatedAt: '2026-06-03T23:06:07.157Z',
+  visitId: '8c9dc7e3-0fe2-42a1-a3a3-7432815575fa',
+  patientId: '7e2c5726-ccbe-4fce-a0d3-87cd4af0853c',
+  branchId: 'e17678dd-bb19-4c4a-9b72-ad4cd8e7d37c',
+  dentistMemberId: 'f95d2bab-a72f-417f-a79d-644b23afe13e',
+  invoiceNumber: 'INV-2026-548AAE2A',
+  status: 'draft',
+  subtotalCents: 350000,
+  discountCents: 0,
+  taxCents: 0,
+  taxRate: '0.0000',
+  totalCents: 350000,
+  paidCents: 0,
+  balanceCents: 350000,
+  dueDate: null,
+  issuedAt: null,
+  paidAt: null,
+  voidedAt: null,
+  outstandingCents: 350000,
+  patientName: 'Juan dela Cruz',
+  visitDate: '2026-06-03',
+  lineItems: [
+    {
+      id: '8606091a-5df3-4e70-9373-8fc03d656985',
+      invoiceId: 'db798b31-c6b7-43e9-841d-593b25300ec9',
+      treatmentId: 'c4504775-c55b-4c50-8b8a-9b0267dfdde6',
+      cdtCode: 'D0120',
+      description: 'Periodic oral evaluation',
+      unitPriceCents: 100000,
+      quantity: 1,
+      amountCents: 100000,
+      priceCents: 100000,
+    },
+  ],
+  payments: [
+    {
+      id: 'pay-real-1',
+      invoiceId: 'db798b31-c6b7-43e9-841d-593b25300ec9',
+      amountCents: 150000,
+      method: 'gcash',
+      createdAt: '2026-06-04T09:30:00.000Z',
+    },
+  ],
+};
+
+describe('useInvoiceDetail — real API shape (contract regression)', () => {
+  test('surfaces SDK-modeled fields AND the unmodeled enrichments', async () => {
+    global.fetch = mock(() => jsonResponse(realInvoice));
+    const qc = freshClient();
+    const { result } = renderHook(() => useInvoiceDetail('db798b31-c6b7-43e9-841d-593b25300ec9'), {
+      wrapper: makeWrapper(qc),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const inv = result.current.invoice!;
+    // SDK-modeled
+    expect(inv.invoiceNumber).toBe('INV-2026-548AAE2A');
+    expect(inv.balanceCents).toBe(350000);
+    expect(inv.status).toBe('draft');
+    // Enrichments the SDK omits (would be undefined if we'd naively consumed the bare SDK type)
+    expect(inv.outstandingCents).toBe(350000);
+    expect(inv.patientName).toBe('Juan dela Cruz');
+    expect(inv.visitDate).toBe('2026-06-03');
+  });
+
+  test('lineItem carries both amountCents and the backend-mapped priceCents', async () => {
+    global.fetch = mock(() => jsonResponse(realInvoice));
+    const qc = freshClient();
+    const { result } = renderHook(() => useInvoiceDetail('db798b31-c6b7-43e9-841d-593b25300ec9'), {
+      wrapper: makeWrapper(qc),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const item = result.current.invoice!.lineItems[0]!;
+    expect(item.amountCents).toBe(100000);
+    expect(item.priceCents).toBe(100000);
+  });
+
+  test('payment.createdAt is an ISO STRING (enrichment bypasses the SDK date transformer)', async () => {
+    global.fetch = mock(() => jsonResponse(realInvoice));
+    const qc = freshClient();
+    const { result } = renderHook(() => useInvoiceDetail('db798b31-c6b7-43e9-841d-593b25300ec9'), {
+      wrapper: makeWrapper(qc),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const pay = result.current.invoice!.payments[0]!;
+    // formatDate(payment.createdAt) in invoice-detail-sheet.tsx requires a string.
+    expect(typeof pay.createdAt).toBe('string');
+    // Dental method union is wider than the generated PaymentMethod enum.
+    expect(pay.method).toBe('gcash');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Error state
 // ---------------------------------------------------------------------------
 
