@@ -3,7 +3,7 @@
  * Encapsulates all database operations for the patients table
  */
 
-import { eq, and, or, ilike, isNull, inArray, sql, type SQL, isNotNull } from 'drizzle-orm';
+import { eq, and, inArray, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
@@ -11,9 +11,14 @@ import {
   type Patient,
   type NewPatient,
   type PatientWithPerson,
-  type PersonData
 } from './patient.schema';
-import { persons } from '../../person/repos/person.schema';
+import {
+  findPatientWithPersonById,
+  findManyPatientsWithPerson,
+  countPatientsWithPerson,
+  findPotentialDuplicatePatients,
+  findActivePatientsWithPersonByBranch,
+} from './patient-person.facade';
 
 export interface PatientFilters {
   person?: string;
@@ -89,31 +94,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
    * Find patient with person data joined
    */
   async findOneByIdWithPerson(patientId: string): Promise<PatientWithPerson | null> {
-    this.logger?.debug({ patientId }, 'Finding patient with person data');
-    
-    const result = await this.db
-      .select({
-        patient: patients,
-        person: persons
-      })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .where(eq(patients.id, patientId))
-      .limit(1);
-    
-    const row = result[0];
-    if (!row) {
-      return null;
-    }
-
-    const { patient, person } = row;
-
-    this.logger?.debug({ patientId, found: true }, 'Patient with person data retrieved');
-
-    return {
-      ...patient,
-      person: person as unknown as PersonData
-    };
+    return findPatientWithPersonById(this.db, patientId);
   }
 
   /**
@@ -132,83 +113,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
     filters?: PatientFilters,
     options?: { pagination?: PaginationOptions }
   ): Promise<PatientWithPerson[]> {
-    this.logger?.debug({ filters, options }, 'Finding patients with person data');
-    
-    const query = this.db
-      .select({
-        patient: patients,
-        person: persons
-      })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .$dynamic();
-
-    // Apply filters
-    const conditions = [];
-
-    if (filters?.person) {
-      conditions.push(eq(patients.person, filters.person));
-    }
-
-    if (filters?.ids && filters.ids.length > 0) {
-      conditions.push(inArray(patients.id, filters.ids));
-    }
-
-    // General search across person fields
-    if (filters?.q) {
-      conditions.push(
-        or(
-          ilike(persons.firstName, `%${filters.q}%`),
-          ilike(persons.lastName, `%${filters.q}%`)
-        )
-      );
-    }
-
-    if (filters?.branchIds && filters.branchIds.length > 0) {
-      conditions.push(
-        or(
-          inArray(patients.preferredBranchId, filters.branchIds),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    } else if (filters?.branchId) {
-      conditions.push(
-        or(
-          eq(patients.preferredBranchId, filters.branchId),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    }
-
-    if (filters?.needsFollowUp !== undefined) {
-      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
-    }
-
-    if (filters?.status) {
-      conditions.push(eq(patients.status, filters.status));
-    }
-
-    if (conditions.length > 0) {
-      query.where(and(...conditions));
-    }
-
-    // Apply pagination
-    if (options?.pagination) {
-      const { limit = 25, offset = 0 } = options.pagination;
-      query.limit(limit).offset(offset);
-    }
-
-    const results = await query;
-
-    this.logger?.debug({
-      filters,
-      resultCount: results.length
-    }, 'Patients with person data retrieved');
-
-    return results.map(({ patient, person }) => ({
-      ...patient,
-      person
-    })) as PatientWithPerson[];
+    return findManyPatientsWithPerson(this.db, filters, options);
   }
 
   /**
@@ -218,61 +123,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
   async countWithPerson(
     filters?: PatientFilters
   ): Promise<number> {
-    const conditions = [];
-
-    if (filters?.person) {
-      conditions.push(eq(patients.person, filters.person));
-    }
-
-    if (filters?.ids && filters.ids.length > 0) {
-      conditions.push(inArray(patients.id, filters.ids));
-    }
-
-    if (filters?.q) {
-      conditions.push(
-        or(
-          ilike(persons.firstName, `%${filters.q}%`),
-          ilike(persons.lastName, `%${filters.q}%`)
-        )
-      );
-    }
-
-    if (filters?.branchIds && filters.branchIds.length > 0) {
-      conditions.push(
-        or(
-          inArray(patients.preferredBranchId, filters.branchIds),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    } else if (filters?.branchId) {
-      conditions.push(
-        or(
-          eq(patients.preferredBranchId, filters.branchId),
-          isNull(patients.preferredBranchId)
-        )
-      );
-    }
-
-    if (filters?.needsFollowUp !== undefined) {
-      conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
-    }
-
-    if (filters?.status) {
-      conditions.push(eq(patients.status, filters.status));
-    }
-
-    const query = this.db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .$dynamic();
-
-    if (conditions.length > 0) {
-      query.where(and(...conditions));
-    }
-
-    const result = await query;
-    return Number(result[0]?.count ?? 0);
+    return countPatientsWithPerson(this.db, filters);
   }
 
   /**
@@ -342,29 +193,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
    * Returns matching patients for the same branch — non-blocking (caller decides).
    */
   async findPotentialDuplicates(firstName: string, lastName: string | null, branchId?: string): Promise<PatientWithPerson[]> {
-    const conditions: SQL<unknown>[] = [
-      ilike(persons.firstName, `%${firstName}%`),
-    ];
-
-    if (lastName) {
-      conditions.push(ilike(persons.lastName, `%${lastName}%`));
-    }
-
-    if (branchId) {
-      conditions.push(eq(patients.preferredBranchId, branchId));
-    }
-
-    const results = await this.db
-      .select({ patient: patients, person: persons })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .where(and(...conditions))
-      .limit(5);
-
-    return results.map(({ patient, person }) => ({
-      ...patient,
-      person,
-    })) as PatientWithPerson[];
+    return findPotentialDuplicatePatients(this.db, firstName, lastName, branchId);
   }
 
   /**
@@ -383,13 +212,7 @@ export class PatientRepository extends DatabaseRepository<Patient, NewPatient, P
       patients: PatientWithPerson[];
     }>
   > {
-    const rows = await this.db
-      .select({ patient: patients, person: persons })
-      .from(patients)
-      .innerJoin(persons, eq(patients.person, persons.id))
-      .where(and(eq(patients.preferredBranchId, branchId), eq(patients.status, 'active')));
-
-    const records = rows.map(({ patient, person }) => ({ ...patient, person })) as PatientWithPerson[];
+    const records = await findActivePatientsWithPersonByBranch(this.db, branchId);
 
     const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
     const nameKey = (p: PatientWithPerson) => `${norm(p.person.firstName)}|${norm(p.person.lastName)}`;
