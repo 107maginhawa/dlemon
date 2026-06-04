@@ -161,6 +161,24 @@
       "auth_drift": false
     },
     {
+      "operation_id": "deactivateMember",
+      "method": "DELETE",
+      "path": "/dental/org/members/:memberId",
+      "required_roles": [
+        "user"
+      ],
+      "backend": {
+        "handler_file": "services/api-ts/src/handlers/dental-org/deactivateMember.ts",
+        "handler_function": "deactivateMember",
+        "module": "src/handlers"
+      },
+      "consumers": [
+        "src/features"
+      ],
+      "status": "matched",
+      "auth_drift": false
+    },
+    {
       "operation_id": "deletePatientContact",
       "method": "DELETE",
       "path": "/dental/patients/:patientId/contacts/:contactId",
@@ -5823,6 +5841,7 @@
       "DELETE /dental/imaging/images/:imageId",
       "DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode",
       "DELETE /dental/imaging/measurements/:measurementId",
+      "DELETE /dental/org/members/:memberId",
       "DELETE /dental/patients/:patientId/contacts/:contactId",
       "DELETE /dental/patients/:patientId/treatments/:treatmentId/appointment",
       "DELETE /dental/treatment-templates/:id",

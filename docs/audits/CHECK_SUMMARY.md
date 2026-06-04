@@ -1,18 +1,13 @@
 ---
 oli-version: "1.0"
 based-on:
-  - docs/audits/enforce/module/dental-org.md
-  - docs/decisions/ADR-007-self-service-onboarding.md
-  - services/api-ts/src/handlers/dental-org/createOnboarding.ts
-  - services/api-ts/src/handlers/dental-org/DentalOrganizationManagement_create.ts
-  - specs/api/src/modules/dental-org.tsp
-  - services/api-ts/src/generated/openapi/routes.ts
-  - services/api-ts/src/generated/openapi/registry.ts
-  - services/api-ts/src/generated/migrations/0088_sloppy_sprite.sql
+  - docs/trace/TRACE_REPORT.md
+  - docs/audits/codebase-map/CODE_SPEC_TRACE.json
+  - docs/audits/codebase-map/CODE_API_SURFACE.json
   - docs/audits/codebase-map/.map-meta.json
-last-modified: 2026-06-03
+last-modified: 2026-06-04
 last-modified-by: oli-check
-run: "focused — reconciliation verification of the self-service onboarding batch (enforcement + traceability + diff bug-hunt)"
+run: "single-dimension — /oli-check --traceability (full-scope spec-trace map, engine v6); 1 P1 found + fixed same session"
 ---
 
 # OLI Check — Roll-Up Summary
@@ -20,20 +15,16 @@ run: "focused — reconciliation verification of the self-service onboarding bat
 ## 0. TRUST STATUS
 
 ```
-PRODUCER:      engine (oli-engine v0.1.0) — map artifacts carried from prior run
-MAP-FRESHNESS: STALE-OVERLAP — map@c26d37b (branch feat/ceph-demoable-and-manual-ux)
-               vs HEAD@c47ba346 (branch fix/standards-review-batch)
-SCOPE:         backend handlers + TypeSpec/OpenAPI codegen + migration (raw-source dimensions, map-blind by design)
+PRODUCER:      engine (oli-engine v6)
+MAP-FRESHNESS: FRESH (rescanned post-fix this session)
+ENGINE:        resolved via legacy fallback (~/Desktop/oli-engine/dist/cli.js)
+SPEC-TRACE:    ON — spec_trace_optin=true, spec_source=specs/api/dist/openapi/openapi.json
+               matched=352, spec_only=0, code_only=0, auth_drift=2
+SCOPE:         apps/dentalemon/src/** + services/api-ts/src/** (full FE+BE)
 fields_unavailable: []
-unverified:    0
+unverified:    0   (5g materialized — response_shape populated 336/353; is_phantom 1, an engine URL-parse artifact)
 ─────────────────────────────────────────────────────────────────────
-THESIS NOTE: the frontend codebase-map is stale on this branch, BUT this run is a
-FOCUSED reconciliation of a backend/spec change. The dimensions exercised
-(enforcement, traceability, diff bug-hunt) read RAW SOURCE and direct file
-evidence — they do not consume the frontend graph — so map-staleness does not
-bear on the verdict below. A full multi-dimension --auto re-run (with a fresh
-rescan) was offered and deliberately scoped OUT; the 2026-06-02 full-state PASS
-stands for everything outside this batch.
+THESIS IN FORCE for this run.
 ```
 
 ---
@@ -44,67 +35,62 @@ stands for everything outside this batch.
 GATE: PASS
 ```
 
-The self-service onboarding batch (`243316db`→`c47ba346`, 9 commits) introduced **no new P0/P1**, the **EM-ORG-002 admin gate remains enforced**, and the new `POST /dental/onboarding` operation is **fully traceable** end-to-end. No drivers block the gate.
+This run first surfaced one in-scope **P1** (`TR-PHANTOM-ORG-001`), which was **fixed in the same session**. After the fix + map rescan, in-scope product P0/P1 = 0 and there are no `✗` coverage gaps → **PASS**.
 
 ## 2. Triage — Fix-First Ranking
 
 ✓ No actionable findings. Pipeline unblocked.
 
+*(Resolved this run: TR-PHANTOM-ORG-001 — fixed; TR-INFRA-001 — root-cause cleared by spec-trace enablement.)*
+
 ## 3. Run Context
 
-- **Date:** 2026-06-03 · **Branch:** `fix/standards-review-batch` · **HEAD:** `c47ba346` (local-only, not pushed)
-- **Invocation:** focused reconciliation — "validate the EM-ORG-002 reconciliation holds; triage FIX-NOW vs DEFER"
-- **Batch under review:** `243316db^..c47ba346` — self-service clinic onboarding (`POST /dental/onboarding`)
-- **Dimensions exercised:** Enforcement (EM-ORG-002), Traceability (onboarding codegen chain), adversarial diff bug-hunt
-- **Method:** read-only multi-agent investigation against raw source + audit/decision docs (map-blind)
+- **Date:** 2026-06-04 · **Branch:** `main` · **HEAD:** `08b91b79` (+ uncommitted fix)
+- **Invocation:** `/oli-check --traceability` (single dimension), followed by the fix the user requested
+- **State detected:** specs ✓, source ✓ (FE+BE), tests ✓, engine map ✓ (FRESH, full-scope, spec-trace ON)
+- **Dimension run:** Traceability (`dimensions/traceability.md`, Phase D — full chain).
+- **Method:** read-only audit → root-cause confirmed → fix applied (TypeSpec op + codegen + regression test) → re-verified via full test suite + map rescan.
 
 ## 4. Dimension Results
 
-| Dimension | Verdict | report_age | Key findings | unverified |
-|-----------|---------|------------|--------------|------------|
-| Enforcement (EM-ORG-002 reconciliation) | **PASS** | current (direct-source) | 0 — admin gate intact, annotation well-formed, no re-flag | 0 |
-| Traceability (`POST /dental/onboarding`) | **PASS** | current (direct-source) | 0 — full chain present, zero codegen drift | 0 |
-| Diff bug-hunt (batch `243316db^..c47ba346`) | **PASS** | current (direct-source) | 0 new P0/P1 — tx atomic, race-safe, FE mapping + SSE gate correct | 0 |
+| Dimension | Verdict | Report | report_age | P0 | P1 | P2 |
+|-----------|---------|--------|-----------|----|----|----|
+| Traceability | **PASS** | [docs/trace/TRACE_REPORT.md](../trace/TRACE_REPORT.md) | current (re-traced + post-fix re-verified @ 08b91b79) | 0 | 0 | 34 |
 
-### Enforcement — EM-ORG-002 reconciliation HOLDS
-- `docs/audits/enforce/module/dental-org.md:73-74` annotates EM-ORG-002 **"RESOLVED + ENFORCED"**, cites the live gate at `DentalOrganizationManagement_create.ts:24`, references **ADR-007**, and explicitly instructs against re-flagging. An enforcement re-scan reading this treats it as resolved-and-enforced — NOT a re-opened P0.
-- Admin gate `DentalOrganizationManagement_create.ts:24` (`if (user.role !== 'admin') throw new ForbiddenError(...)`) is **literally unchanged**; no self-service/bypass branch added.
-- `createOnboarding.ts` has **no admin path**; all four compensating guardrails are code-present — prod verified-email → `403 EMAIL_NOT_VERIFIED`, one-active-org pre-check → `409 ORG_LIMIT_REACHED`, tier gate `solo`/`clinic` → `403 TIER_NOT_SELF_SERVICE`, prod-only IP rate-limit → `429`. Audit row records real `actorRole: 'dentist_owner'` + `mode: 'self-service'`, not hardcoded `'admin'`.
-- No other audit/enforce doc re-flags EM-ORG-002 as open (`ENFORCEMENT_FIX_REPORT.md` cites it as fixed).
+Dimensions not selected this run (single `--traceability`): Consistency, Discovery, Compliance, Confidence, Enforcement, Journeys, UI-Consistency, Runtime, Seed-Coherence. Run `/oli-check` (no flags) for a full multi-dimension sweep.
 
-### Traceability — INTACT (zero drift)
-TypeSpec `DentalOnboarding` (`dental-org.tsp:703`) → OpenAPI `/dental/onboarding` (in sync) → generated route **registered** (`routes.ts:1124`) → validator → registry binding (`registry.ts:110,478`) → handler → migration `0088_sloppy_sprite.sql` (status column + partial unique index `dental_org_one_active_per_owner`, journaled idx 88). No dead-handler.
+## 5. Coverage Matrix (module × Traceability)
 
-### Diff bug-hunt — NO NEW P0/P1
-- Org+branch+membership creation is one atomic `db.transaction()` — full rollback on any failure, no partial tenant.
-- One-active-org is race-safe: app pre-check **and** DB unique-index violation both resolve to `409 ORG_LIMIT_REACHED`.
-- Frontend wizard maps `409`→dashboard / `403`→verify-email / `429`→retry, with localStorage cleared (no 409 resume loop).
-- Side-fixes correct: storage SSE gate `provider==='s3'` (not inverted); `use-perio-chart` 204-as-empty is correct; demo-admin removal leaves no path assuming demo is admin.
+| Module | Traceability |
+|--------|--------------|
+| dental-org | ✓ checked (TR-PHANTOM-ORG-001 found + FIXED — DELETE member route now wired) |
+| dental-audit | ✓ checked |
+| dental-billing | ✓ checked (TR-BR-013 deferred → P2) |
+| dental-clinical | ✓ checked (BR-019 deferred 501) |
+| dental-imaging | ✓ checked (ceph/analysis:qs phantom = engine URL-parse artifact, non-gap) |
+| dental-patient | ✓ checked (auth_drift merge/unmerge = confirmed FP; BR-020 deferred) |
+| dental-perio | ✓ checked (0 AC-NNN — P2) |
+| dental-pmd | ✓ checked |
+| dental-scheduling | ✓ checked |
+| dental-visit | ✓ checked (FSM transitions traced) |
+| emr-consultation | ✓ checked |
+| external-records-import | ✓ checked |
+| legal-hold | ⊘ skipped (no product MODULE_SPEC — orphan-by-design, code→test→contract complete) |
+| retention | ⊘ skipped (no product MODULE_SPEC — internal cron, code→test complete) |
 
-## 5. Coverage Matrix
-
-Single in-scope module this run (`dental-org`); dimensions limited to the batch's surface.
-
-| Module | Enforcement | Traceability | Diff bug-hunt |
-|--------|-------------|--------------|---------------|
-| dental-org | ✓ checked (PASS) | ✓ checked (PASS) | ✓ checked (PASS) |
-
-**Uncovered modules:** none in scope. Other modules ⊘ skipped (out-of-batch — covered by the 2026-06-02 full-state run; not re-verified here by design).
+**Uncovered modules:** none with a `✗`. The `legal-hold`/`retention` ⊘-skips are legitimate (governance modules with no product spec node).
 
 ## 6. Overall
 
-**PASS** — reconciliation validated, trace intact, no new P0/P1. The frontend-graph staleness is a freshness signal only; it does not floor this focused backend/spec verdict (the exercised dimensions are map-blind). For a graph-anchored full-state PASS across all modules, run `/oli-check --auto` after `oli-engine scan . --write` on this branch.
+**Overall verdict: PASS.** Trust banner `THESIS IN FORCE`. The single P1 surfaced this run was a pre-existing latent defect (newly *detectable* once the map covered the backend route table) — it was fixed in-session, re-verified by the full backend suite (286 files / 3368 pass / 0 fail), typecheck, `check:boundaries`, and a fresh map rescan.
 
-## 7. DEFER / no-op (known-expected or pre-existing — confirmed, NOT regressions)
+Movement vs prior run (2026-06-02 @ c26d37bd):
+- **Resolved:** TR-INFRA-001 (EXTERNAL spec-trace-off → fully resolved, matched=352/0/0); 5g map-degenerate caveat (response_shape populated); **TR-PHANTOM-ORG-001** (found + fixed this session).
+- **Confirmed FP:** `auth_drift=2` on patient merge/unmerge (in-handler admin guard enforced; route-level-only detection).
 
-Recorded so a later run does not mistake these for gaps:
-- `status` column with no enforcement → designed PHI go-live fast-follow (ADR-007 §"PHI go-live gating").
-- Onboarding IP rate-limit production-only → documented stopgap; one-active-org index is the real control.
-- Stale SDK (~33K lines) → deliberately not regenerated (frontend uses raw fetch); pre-existing backlog.
-- MCP/permission-spec mention of onboarding → correctly **absent** (pre-org bootstrap, auth-layer-only gating; no role permission applies). No action.
-- Pre-existing, out of scope: perio-charting red-line bug (`perio-charting.spec.ts:242`); perio-voice non-existent route; 3 non-dental contract failures (auth-password-reset, cors, storage-edge).
+## 7. What's Next
 
-## What's Next
-
-- Gate is clean; no `--fix` needed.
-- Branch `fix/standards-review-batch` held local per decision — push/PR deferred to the user.
+1. **Commit the fix** (currently uncommitted): `specs/api/src/modules/dental-org.tsp` (+`@delete deactivateMember`), regenerated `services/api-ts/src/generated/openapi/{routes,registry,validators}.ts` + `specs/api/dist/openapi/openapi.json`, new test `deactivateMember.route.test.ts`, refreshed codebase-map + trace artifacts.
+2. *(Optional, P3)* Declare the admin security scheme on `POST /patients/merge` + `/unmerge` in TypeSpec so the OpenAPI contract advertises the admin requirement the handler already enforces (clears `auth_drift=2`).
+3. *(Optional)* Regenerate `packages/sdk-ts` to add the `deactivateMember` operation for SDK parity (the FE uses a raw `fetch` for this call, so no functional dependency).
+4. P2 backlog (report-only) unchanged — E2E for unit-only BRs, AC tag normalization, perio ACs, legal-hold/retention spec nodes.

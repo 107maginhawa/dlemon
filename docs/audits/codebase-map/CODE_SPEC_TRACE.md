@@ -1,7 +1,7 @@
 # Code Spec Trace
 
 <!-- oli:regen:code-spec-trace:begin -->
-Spec: `specs/api/dist/openapi/openapi.json` · Matched: 351 · Spec-only: 0 · Code-only: 0 · Auth-drift: 2
+Spec: `specs/api/dist/openapi/openapi.json` · Matched: 352 · Spec-only: 0 · Code-only: 0 · Auth-drift: 2
 
 | Operation | operationId | Roles | Backend | Status | Drift |
 |---|---|---|---|---|---|
@@ -15,6 +15,7 @@ Spec: `specs/api/dist/openapi/openapi.json` · Matched: 351 · Spec-only: 0 · C
 | `DELETE /dental/imaging/images/:imageId` | `ImagingMgmt_deleteImage` | — | `ImagingMgmt_deleteImage` | matched |  |
 | `DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode` | `CephMgmt_deleteCephLandmark` | — | `CephMgmt_deleteCephLandmark` | matched |  |
 | `DELETE /dental/imaging/measurements/:measurementId` | `ImagingMgmt_deleteMeasurement` | — | `ImagingMgmt_deleteMeasurement` | matched |  |
+| `DELETE /dental/org/members/:memberId` | `deactivateMember` | user | `deactivateMember` | matched |  |
 | `DELETE /dental/patients/:patientId/contacts/:contactId` | `deletePatientContact` | user | `deletePatientContact` | matched |  |
 | `DELETE /dental/patients/:patientId/treatments/:treatmentId/appointment` | `detachTreatmentAppointment` | user | `detachTreatmentAppointment` | matched |  |
 | `DELETE /dental/treatment-templates/:id` | `deleteTreatmentTemplate` | user | `deleteTreatmentTemplate` | matched |  |

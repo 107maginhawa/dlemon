@@ -5179,6 +5179,29 @@
         "last_modified_days_ago": 0
       }
     },
+    "DELETE /dental/org/members/:memberId": {
+      "method": "DELETE",
+      "path": "/dental/org/members/:memberId",
+      "handler_file": "services/api-ts/src/handlers/dental-org/deactivateMember.ts",
+      "handler_function": "deactivateMember",
+      "auth_required": true,
+      "auth_middleware": "authMiddleware",
+      "request_shape": {},
+      "response_shape": {},
+      "module": "src/handlers",
+      "confidence": "HIGH",
+      "consumer_count": 1,
+      "consumers": [
+        "src/features"
+      ],
+      "is_phantom": false,
+      "deprecation_signals": {
+        "single_consumer": true,
+        "has_todo_fixme": false,
+        "deprecated_annotation": false,
+        "last_modified_days_ago": 0
+      }
+    },
     "POST /dental/org/members/:memberId/recover-pin": {
       "method": "POST",
       "path": "/dental/org/members/:memberId/recover-pin",
@@ -11971,29 +11994,6 @@
     "GET /dental/imaging/images/:imageId/ceph/analysis:qs": {
       "method": "GET",
       "path": "/dental/imaging/images/:imageId/ceph/analysis:qs",
-      "handler_file": "",
-      "handler_function": "",
-      "auth_required": null,
-      "auth_middleware": null,
-      "request_shape": {},
-      "response_shape": {},
-      "module": "unknown",
-      "confidence": "LOW",
-      "consumer_count": 1,
-      "consumers": [
-        "src/features"
-      ],
-      "is_phantom": true,
-      "deprecation_signals": {
-        "single_consumer": false,
-        "has_todo_fixme": false,
-        "deprecated_annotation": false,
-        "last_modified_days_ago": 0
-      }
-    },
-    "DELETE /dental/org/members/:memberId": {
-      "method": "DELETE",
-      "path": "/dental/org/members/:memberId",
       "handler_file": "",
       "handler_function": "",
       "auth_required": null,

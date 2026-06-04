@@ -156,6 +156,7 @@
 | `GET /dental/org/members` | `listMembers` | true | 2 |  | HIGH |
 | `POST /dental/org/members` | `createMember` | true | 1 |  | HIGH |
 | `PATCH /dental/org/members/:memberId` | `updateMember` | true | 0 |  | HIGH |
+| `DELETE /dental/org/members/:memberId` | `deactivateMember` | true | 1 |  | HIGH |
 | `POST /dental/org/members/:memberId/recover-pin` | `recoverPin` | ? | 0 |  | HIGH |
 | `POST /dental/org/members/:memberId/reset-pin` | `resetMemberPin` | true | 1 |  | HIGH |
 | `POST /dental/org/members/:memberId/security-question` | `setSecurityQuestion` | true | 0 |  | HIGH |
@@ -355,5 +356,4 @@
 | `POST /storage/multipart/:file/complete` | `completeMultipartUpload` | true | 1 |  | HIGH |
 | `GET /storage/multipart/:file/part-url` | `generateMultipartPartUrl` | true | 0 |  | HIGH |
 | `GET /dental/imaging/images/:imageId/ceph/analysis:qs` | — | ? | 1 | ⚠️ | LOW |
-| `DELETE /dental/org/members/:memberId` | — | ? | 1 | ⚠️ | LOW |
 <!-- oli:regen:code-api-surface:end -->

@@ -2,13 +2,56 @@
 
 ---
 oli-version: trace-v1
-Report Date: 2026-06-02 (re-verified; prior substantive run 2026-06-01)
+Report Date: 2026-06-04 (re-trace against full-scope spec-trace map; prior substantive run 2026-06-01)
 Phase: D (code + tests exist)
 Modules Traced: all 12 (dental-audit, dental-billing, dental-clinical, dental-imaging, dental-org, dental-patient, dental-perio, dental-pmd, dental-scheduling, dental-visit, emr-consultation, external-records-import) + governance chains (erasure, legal-hold, retention)
 Mode: standalone (artifact + code, engine-map-enriched for frontend scope)
 Data Sources: WORKFLOW_MAP.md (98 WF + WF-P01..05 + WF-EMRC-001..006), DOMAIN_MODEL.md (24 DE, 6 SM), 12 MODULE_SPECs, ROLE_PERMISSION_MATRIX.md, EVENT_CONTRACTS.md, ERROR_TAXONOMY.md, OpenAPI (specs/api/dist/openapi/openapi.json — 210 paths / 140 dental), codebase-map engine v5 (FRESH: producer=engine, fields_unavailable=[], git_sha a3bfc9a5), COMPLIANCE_REPORT.md (governance pass), CONFIDENCE_REPORT.md, JOURNEY_COVERAGE_REPORT.md
 Partial Staleness: CODE_SPEC_TRACE.json reports `spec_source: null` / `matched: []` because `spec_trace_optin: false` in map-meta (spec-trace phase ran 0ms — opt-in, disabled by config, NOT a regression). CODE_API_SURFACE response_shape is empty for all 43 frontend-scope endpoints and api_calls carry no field-access data → algorithm 5g cannot produce verified edges; 5g findings route to `unverified` per R1 (confidence_threshold=MEDIUM). Trace relied on direct ID grep across spec + test source.
-HEAD: c26d37bd (re-verify pass over 26925ce2 → c26d37bd)
+HEAD: 08b91b79 (main; re-trace over c26d37bd → 08b91b79 — full-scope spec-trace map, engine v6)
+---
+
+## Re-trace Pass (2026-06-04, main @ 08b91b79 — FULL-SCOPE spec-trace map, engine v6)
+
+> **✅ RESOLVED SAME DAY (post-fix re-verify).** TR-PHANTOM-ORG-001 was fixed in this session: added the `@delete deactivateMember` op to `dental-org.tsp` → `bun run build` + `bun run generate` wired `DELETE /dental/org/members/:memberId` into `routes.ts:1160` (authMiddleware + param validator) and imported the existing handler into `registry.ts:111,480`. Added a real-route-registration regression test (`deactivateMember.route.test.ts`) that inspects the generated `registerRoutes` (no DB) — RED before, GREEN after. Gates: backend **286 files / 3368 pass / 0 fail**, typecheck clean, `check:boundaries` clean. Map rescan confirms `is_phantom` 2→1 (only the ceph `:qs` URL-parse artifact remains, a non-gap), `DELETE /dental/org/members/:memberId` now resolves to `deactivateMember.ts` (phantom=False), spec-trace `matched 351→352`. **In-scope product P1 back to 0 → gate PASS.** The detection-state narrative below is retained for the audit trail.
+
+**Why this run first reversed the prior PASS:** commits `420f1ef5` (enable spec-trace via `spec_sources`) and `08b91b79` (regen codebase-map with request/response shapes) re-scoped the engine map to include `services/api-ts/src/**` and turned on the spec↔code trace. The two off-gate items the prior report carried — **TR-INFRA-001** (`spec_trace_optin=false`, `matched=[]`) and the **5g unverified cluster** (`response_shape` empty for all FE endpoints) — now have real data and are **resolved as root-cause**. Running 5g (FE→BE phantom detection) for the first time against a populated backend route table surfaced **one live broken FE↔BE chain that the prior frontend-only map could not see**. Trust banner: `MAP-FRESHNESS: FRESH-ENOUGH` (map@3e79017 vs HEAD@08b91b7, no in-scope source drift), producer=engine v6, `fields_unavailable=[]` → **THESIS IN FORCE**.
+
+Fresh-map signals consumed this run (`docs/audits/codebase-map/`, regenerated 11:46):
+- `CODE_SPEC_TRACE.json`: `spec_source=specs/api/dist/openapi/openapi.json`, **matched=351, spec_only=0, code_only=0, auth_drift=2** (`spec_trace_optin=true`).
+- `CODE_API_SURFACE.json`: 353 endpoints, **336 with `response_shape`**, only **2 `is_phantom`** (vs the prior blanket "all 43 FE endpoints phantom").
+
+### NEW — HIGH (P1, in-scope product) — gate-flipping
+
+**TR-PHANTOM-ORG-001 — FE staff-deactivation calls a backend route that does not exist (broken journey).**
+- **FE call:** `apps/dentalemon/src/features/staff/hooks/use-staff-members.ts:68-73` — `deactivateMember()` issues `fetch(\`${API}/dental/org/members/${memberId}\`, { method: 'DELETE' })`. Reachable from the UI: `staff-list.tsx:101,219` renders a **"Deactivate"** button → `useStaffMutations().deactivate` → this fetch.
+- **Backend:** **no `DELETE` route exists** for `/dental/org/members/:memberId`. `routes.ts` registers only GET/POST `/dental/org/members`, PATCH `/:memberId`, and the `recover-pin`/`reset-pin`/`security-question` sub-routes. OpenAPI declares only `patch` on that path. `dental-org.tsp` declares **no** delete-member operation (the only `@delete` is `deleteConsentTemplate`; membership deactivation is a separate `POST /dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate`).
+- **Orphan handler:** `services/api-ts/src/handlers/dental-org/deactivateMember.ts` declares `Path: DELETE /dental/org/members/:memberId` but is **NOT in `registry.ts`** and **NOT wired in `routes.ts`** — a complete handler whose TypeSpec/route/registry wiring was never added (incomplete vertical slice: backend layer written, contract+wiring layer skipped).
+- **Runtime impact:** clicking "Deactivate" → `DELETE` → **404** → `throw new Error('Failed to deactivate member (404)')` error toast. **Staff deactivation is non-functional in production.**
+- **Why it was missed:** `use-staff-members.test.ts:168` mocks `fetch` and asserts `method==='DELETE'` — green without a real backend route (the known mock-masking failure mode; route-registration bugs need a real-server hit).
+- **Severity P1** (broken FE↔BE chain / journey-completion gap, algorithm 5f+5g). **Fix (either):** (a) declare `@delete` member op in `specs/api/src/modules/dental-org.tsp`, regen, and register the existing `deactivateMember` handler; OR (b) repoint the FE hook to the existing `POST .../members/{membershipId}/deactivate` operation. Option (a) is lower-churn since the handler already exists.
+
+### CONFIRMED FALSE-POSITIVE (no new finding)
+
+**`auth_drift=2` (`POST /patients/merge`, `POST /patients/unmerge`)** — engine route-level detection only. The in-handler admin guard **is** enforced (`mergePatients.ts:18-20` `if (user.role !== 'admin') throw new ForbiddenError`; `patient-merge-auth.test.ts`, 22 assertions). The "drift" is solely that the OpenAPI `security`/role scheme is undeclared at the contract level while the code enforces admin — a **safe-direction** divergence (code stricter than contract) on **501-deferred** endpoints (BR-020 `describe.skip` v2.0). Matches the cycle-3 baseline note ("auth_drift=2 is a route-level-only detection false-positive"). **Optional P3 nicety:** add the `@useAuth`/security decoration to the two merge ops in TypeSpec so the contract advertises the admin requirement. Not gating.
+
+### RESOLVED this run (root-cause cleared)
+
+- **TR-INFRA-001 (was EXTERNAL / standing) → RESOLVED.** `.oli/config.json` now sets `spec_sources: ["specs/api/dist/openapi/openapi.json"]` and `include`/`module_roots` cover `services/api-ts/src/**`. Engine computed `spec_trace_optin=true`; `CODE_SPEC_TRACE` reports **matched=351, spec_only=0, code_only=0** — full spec↔code parity. The prior "frontend-scoped map → empty backend surface → matched=0" blocker is gone.
+- **5g unverified cluster (FE-field-phantom) → MATERIALIZED.** `response_shape` is now populated for 336/353 endpoints (only 2 phantom). 5g ran with real data instead of routing to `unverified`; it surfaced exactly one in-scope phantom (TR-PHANTOM-ORG-001) and one artifact (below). The map-degenerate caveat is retired.
+- **`GET /dental/imaging/images/:imageId/ceph/analysis:qs` (2nd `is_phantom`) → ARTIFACT, not a gap (P3).** The backend route exists (`routes.ts:948`, OpenAPI `get`); the `:qs` suffix is an engine URL-parser artifact for the FE call's query string. No action.
+
+### Verdict delta
+
+| | Prior (2026-06-02 @ c26d37bd) | This run (2026-06-04 @ 08b91b79) |
+|---|---|---|
+| In-scope product **P1** | 0 (+1 EXTERNAL: TR-INFRA-001) | **0** (TR-PHANTOM-ORG-001 found then FIXED same session) |
+| TR-INFRA-001 | EXTERNAL / out-of-scope | **RESOLVED** |
+| 5g cluster | unverified (map degenerate) | **ran — 1 real phantom found + fixed** |
+| Gate verdict | PASS | FAIL → **PASS** (after fix) |
+
+**New gaps:** 1 (TR-PHANTOM-ORG-001, P1) — **fixed same session**. **Resolved:** TR-PHANTOM-ORG-001, TR-INFRA-001 (EXTERNAL→resolved), 5g-degenerate caveat. **Net in-scope P1:** 0 → 1 → **0**.
+
 ---
 
 ## Re-verify Pass (2026-06-02, 26925ce2 → c26d37bd, fresh engine map git_sha c26d37bd)
@@ -51,15 +94,18 @@ Regression evidence this pass: backend `bun run test` 241 files / 2977 pass / 0 
 | Total nodes | 405 |
 | Total edges | 612 |
 | CRITICAL gaps (P0) | 0 |
-| HIGH gaps (P1, in-scope product) | 0 (+1 EXTERNAL tooling: TR-INFRA-001) |
+| HIGH gaps (P1, in-scope product) | **0** (TR-PHANTOM-ORG-001 found + FIXED same session; TR-INFRA-001 RESOLVED) |
 | MEDIUM gaps (P2) | 34 |
-| unverified (5g, map-degenerate) | 1 cluster |
+| unverified (5g, map-degenerate) | 0 (5g now RAN — `response_shape` populated 336/353; map no longer degenerate) |
 | Chain coverage (WF → test) | 80% |
 
 Node manifest: WF=109 (98 numbered + WF-P01..05 + WF-EMRC-001..006), BR=58 (BR-001..047 + BR-SCH-001..004 + BR-P01..P07), AC=48, SM=8 (SM-VISIT/TREATMENT/INVOICE/CONSENT/LABORDER + SM-01/SM-02; +2 prose state machines), DE=24, endpoints=210 (OpenAPI) / 140 dental, roles=9. Nodes in graph = 405 ≥ collected. Output marked **COMPLETE**.
 
-## Verdict: PASS
+## Verdict: PASS (TR-PHANTOM-ORG-001 found and fixed same session)
 
+> **2026-06-04:** the full-scope spec-trace map (engine v6) surfaced **one live broken FE↔BE chain** — FE staff-deactivation issued `DELETE /dental/org/members/{id}` to a backend route that did not exist (orphan handler never wired; no TypeSpec/OpenAPI op). It was an in-scope product **P1** (broken journey, runtime 404). **It was fixed in the same session** (TypeSpec `@delete` op + regen wired the route to the existing handler; real-route-registration regression test added; map rescan confirms phantom resolved, spec-trace matched 351→352). **TR-INFRA-001 is RESOLVED** (spec-trace enabled, matched=352/0/0) and the **5g cluster is no longer degenerate** (response_shape populated 336/353). With the P1 fixed, **in-scope product P1 = 0** and the gate is **PASS**. The `auth_drift=2` patient-merge signal remains a confirmed route-level false-positive (admin guard enforced in-handler; optional P3 to add the OpenAPI security decoration).
+
+The historical PASS rationale (still valid for everything except TR-PHANTOM-ORG-001):
 No P0 dangling references and no cross-module blind spots (all 16 §12 cross-module flows have an integration mechanism — sync API, pg-boss event, or UUID-ref). Every canonical BR (58/58) has at least one test at some layer. The prior standing P1 (TR-DG-002, erasure paths absent from OpenAPI) is **RESOLVED** by this branch's route migration. TR-WF-PLAN (WF-048/049/050 promoted to confirmed) and TR-WF-DOCDRIFT (BR-019 false-positive — clarified to DEFERRED-501-stub) were cleared 2026-06-01. TR-BR-013 (billing `markUncollectible` WFG-008) was **formally deferred to Phase 2 → P2 2026-06-01** (feature-flag `dental_billing_uncollectible` off, intentional 501 stub + deferral tests, documented error path AC-BIL-005 → 501; reconciled in WORKFLOW_MAP §5/WFG-008 mirroring BR-019/BR-020), and TR-INFRA-001 was **reclassified EXTERNAL / out-of-scope** (separate-repo oli-engine tooling, not dentalemon product code; a bare `spec_trace_optin` flip is insufficient given the frontend-scoped map). **In-scope product P1 = 0.** All P2s are AC-tag drift, missing-E2E for unit-only BRs, orphan/inferred WFs, the legal-hold/retention spec-anchoring items, and the BR-013 deferral — all report-only.
 
 ## Per-Phase Health Contribution
@@ -100,7 +146,8 @@ None. No dangling spec references (all WF/BR/AC/SM/DE IDs referenced in artifact
 
 | Gap ID | Algorithm | Description | Source | Suggested Fix |
 |--------|-----------|-------------|--------|---------------|
-| TR-INFRA-001 (**EXTERNAL / out of scope**) | engine trace off | `CODE_SPEC_TRACE.json` `spec_source: null`, `matched: []`; map-meta `spec_trace_optin: false`, spec-trace phase 0ms. Engine spec→code trace is opt-in and disabled. **Separate-repo (`$OLI_ENGINE_HOME`) tooling item — NOT a dentalemon product code gap.** `spec_trace_optin` is computed by the engine (`orchestrator.ts:97` = `spec_sources.length > 0`), not a dentalemon setting. A bare flip is insufficient: the dentalemon map is frontend-scoped (`.oli/config.json` include = `apps/dentalemon/src/**`), so the backend API surface is empty and `matched` would be 0. **0 in-scope product P1.** | docs/audits/codebase-map/CODE_SPEC_TRACE.json; .map-meta.json:provenance; oli-engine/src/passes/spectrace.ts | **EXTERNAL:** in the oli-engine repo, add `services/api-ts/**` to the map scope + `spec_sources: [specs/api/dist/openapi/openapi.json]`, then re-run `oli-codebase-map`. Do NOT modify dentalemon product code. Known limitation; not gating. |
+| ~~TR-PHANTOM-ORG-001~~ → **RESOLVED 2026-06-04** | 5f/5g FE→BE phantom | FE staff "Deactivate" `DELETE /dental/org/members/{memberId}` had no backend route (orphan unwired `deactivateMember.ts`). **Fixed:** added `@delete deactivateMember` op to `dental-org.tsp` (204/401/403/404) → regen wired `routes.ts:1160` (authMiddleware + `DeactivateMemberParams` validator) + `registry.ts:111,480`. Map rescan: `DELETE /dental/org/members/:memberId` → handler resolved, phantom=False; spec-trace matched 351→352. Regression test `deactivateMember.route.test.ts` asserts the generated route is registered. | specs/api/src/modules/dental-org.tsp; services/api-ts/src/generated/openapi/routes.ts:1160; services/api-ts/src/handlers/dental-org/deactivateMember.route.test.ts | Done. |
+| ~~TR-INFRA-001~~ → **RESOLVED 2026-06-04** | engine trace | spec-trace enabled (`.oli/config.json spec_sources` set + scope widened to `services/api-ts/src/**`); engine `spec_trace_optin=true`; `CODE_SPEC_TRACE` **matched=351, spec_only=0, code_only=0**. Full spec↔code parity. No longer EXTERNAL or gating. | docs/audits/codebase-map/CODE_SPEC_TRACE.json; .oli/config.json; commits 420f1ef5, 08b91b79 | Done. |
 | ~~TR-BR-013~~ → **P2** | 5c coverage | BR-013 `markUncollectible` **formally DEFERRED to Phase 2** 2026-06-01 (feature-flag `dental_billing_uncollectible` off; intentional 501 stub + deferral tests; documented error path AC-BIL-005 → 501; `uncollectible` intentionally absent from invoice status enum until flag lifted). Reconciled in WORKFLOW_MAP §5/WFG-008 to DEFERRED (mirrors BR-019/BR-020). Not an implementation gap. | WORKFLOW_MAP.md:333,606; dental-billing MODULE_SPEC §13/§18 | **RESOLVED** as documented deferral (P1→P2). |
 | ~~TR-WF-PLAN~~ | 5b | ✅ **RESOLVED 2026-06-01** — WF-048/049/050 promoted from [INFERRED] to confirmed in WORKFLOW_MAP; transitions enforced (`updateDentalTreatment.ts`, 422/BR-006) + tested (`treatment.fsm.property.test.ts`, `treatment-fsm-http.test.ts`, `dental-visit.treatment-status-transitions.test.ts`). | WORKFLOW_MAP.md:142-146 | Done. |
 | ~~TR-WF-DOCDRIFT~~ | 5e/5a | ✅ **RESOLVED 2026-06-01 (was FALSE POSITIVE)** — `approveAmendment.test.ts` asserts 501 (deferral stub), so BR-019 is genuinely deferred (MODULE_SPEC §18); WORKFLOW_MAP's not-enforced status was correct. Clarified §5 to "DEFERRED — 501 stub + deferral test" so doc⇄code agree. | WORKFLOW_MAP.md:332 | Done. |
@@ -188,12 +235,12 @@ None. No dangling spec references (all WF/BR/AC/SM/DE IDs referenced in artifact
 
 ## Ratchet Status
 
-Baseline at docs/trace/.trace-baseline.json (critical=0, high=5, medium=15).
+Baseline at docs/trace/.trace-baseline.json (critical=0, high=0 in-scope, medium=34).
 
 | Severity | Baseline | Current | Status |
 |----------|----------|---------|--------|
 | CRITICAL (P0) | 0 | 0 | PASS |
-| HIGH (P1) | 5 | 2 | PASS (improved −3: TR-DG-002 + TR-WF-PLAN + TR-WF-DOCDRIFT resolved) |
-| MEDIUM (P2) | 15 | 33 | NOTE: count rose due to expanded canonical-BR/AC namespace re-baseline (58 BR / 48 AC vs prior 47/55) surfacing pre-existing unit-only + untagged items — not new regressions. All P2 report-only. Per-severity ratchet on P0/P1 PASS. |
+| HIGH (P1, in-scope) | 0 | **0** | PASS (TR-PHANTOM-ORG-001 surfaced +1 then fixed same session → net 0) |
+| MEDIUM (P2) | 34 | 34 | PASS (unchanged) |
 
-Net: P1 improved (5→4). P2 nominal increase is a measurement-scope change (full namespace traced this run), not introduced gaps. No P0. No regression on the gating severities.
+Net: a real P1 (staff-deactivation broken journey) was surfaced for the first time once the map covered the backend route table — **and fixed in the same session** (TypeSpec `@delete` op + regen + real-route regression test). TR-INFRA-001 also cleared from the EXTERNAL ledger. Baseline stays at high=0; gate PASS.
