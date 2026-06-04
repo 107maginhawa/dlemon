@@ -23,9 +23,12 @@ function captureUrl(data: unknown, status = 200): { getUrl: () => string; fetchM
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
 
+// Mirrors the live GET /dental/appointments wire shape (2026-06-04): startAt/endAt/
+// visitType/providerId + a patientName enrichment — NOT the display-facing
+// scheduledAt/durationMinutes/serviceType the hook normalizes to (QA_ESCAPES §6).
 const mockAppointments = [
-  { id: 'a1', patientId: 'p1', patientName: 'Maria Santos', scheduledAt: '2026-05-04T09:00:00Z', status: 'scheduled', durationMinutes: 30, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: 'a2', patientId: 'p2', patientName: 'Ramon Cruz', scheduledAt: '2026-05-04T10:00:00Z', status: 'completed', durationMinutes: 45, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 'a1', patientId: 'p1', patientName: 'Maria Santos', providerId: 'prov1', branchId: 'b1', startAt: '2026-05-04T09:00:00Z', endAt: '2026-05-04T09:30:00Z', visitType: 'Routine cleaning', walkIn: false, status: 'scheduled', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 'a2', patientId: 'p2', patientName: 'Ramon Cruz', providerId: 'prov1', branchId: 'b1', startAt: '2026-05-04T10:00:00Z', endAt: '2026-05-04T10:45:00Z', visitType: 'Extraction', walkIn: false, status: 'completed', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
 ];
 
 describe('useAppointments', () => {
@@ -48,7 +51,15 @@ describe('useAppointments', () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.appointments).toHaveLength(2);
-    expect(result.current.appointments[0]?.id).toBe('a1');
+    const a = result.current.appointments[0]!;
+    expect(a.id).toBe('a1');
+    // Normalized from the wire shape: startAt→scheduledAt (ISO string),
+    // endAt−startAt→durationMinutes, visitType→serviceType, providerId→dentistMemberId.
+    expect(typeof a.scheduledAt).toBe('string');
+    expect(a.durationMinutes).toBe(30);
+    expect(a.serviceType).toBe('Routine cleaning');
+    expect(a.dentistMemberId).toBe('prov1');
+    expect(a.patientName).toBe('Maria Santos');
   });
 
   test('returns empty array when response has no appointments', async () => {

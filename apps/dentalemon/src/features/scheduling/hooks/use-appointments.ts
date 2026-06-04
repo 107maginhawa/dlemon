@@ -7,9 +7,14 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { listAppointmentsOptions } from '@monobase/sdk-ts/generated/react-query';
+import type { DentalAppointment } from '@monobase/sdk-ts/generated';
 import type { Appointment } from '../components/appointment-card';
 
 export type { Appointment };
+
+// The list response is Array<DentalAppointment> plus a `patientName` enrichment the
+// SDK omits (live-confirmed 2026-06-04) — intersect it.
+type DentalAppointmentRow = DentalAppointment & { patientName?: string };
 
 interface UseAppointmentsOptions {
   date: string;       // ISO date string YYYY-MM-DD
@@ -55,32 +60,42 @@ function computeWindow(date: string, view: 'day' | 'week' | 'month'): { from: st
 }
 
 /**
- * V-SCH-006/007: the wire response now uses startAt/endAt/visitType/providerId.
+ * V-SCH-006/007: the wire response uses startAt/endAt/visitType/providerId.
  * Normalize to the display-facing Appointment shape (scheduledAt/durationMinutes/
  * serviceType/dentistMemberId) so calendar components stay unchanged.
+ *
+ * Cause-fix (oli QA_ESCAPES §6): typed against the SDK DentalAppointment so each
+ * field-access is checked — no `as unknown as Appointment`. startAt/endAt are Date
+ * at runtime (the listAppointments transformer runs); new Date()/`instanceof`
+ * guards keep it robust either way. scheduledAt is emitted as a real ISO string
+ * (the previous code leaked a Date object behind a `string` type).
  */
-function normalizeAppointment(raw: Record<string, unknown>): Appointment {
-  const startAt = (raw['startAt'] ?? raw['scheduledAt']) as string | undefined;
-  const endAt = raw['endAt'] as string | undefined;
-  const durationMinutes = (raw['durationMinutes'] as number | undefined)
-    ?? (startAt && endAt ? Math.max(Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60_000), 1) : 30);
+function normalizeAppointment(a: DentalAppointmentRow): Appointment {
+  const startMs = new Date(a.startAt).getTime();
+  const endMs = new Date(a.endAt).getTime();
+  const durationMinutes = Math.max(Math.round((endMs - startMs) / 60_000), 1);
   return {
-    ...raw,
-    scheduledAt: startAt ?? '',
+    id: a.id,
+    patientId: a.patientId,
+    patientName: a.patientName,
+    dentistMemberId: a.providerId,
+    branchId: a.branchId,
+    scheduledAt: a.startAt instanceof Date ? a.startAt.toISOString() : String(a.startAt),
     durationMinutes,
-    serviceType: (raw['visitType'] ?? raw['serviceType'] ?? '') as string,
-    dentistMemberId: (raw['providerId'] ?? raw['dentistMemberId']) as string | undefined,
-  } as unknown as Appointment;
+    serviceType: a.visitType,
+    status: a.status,
+    notes: a.notes ?? undefined,
+    walkIn: a.walkIn,
+  };
 }
 
 export function useAppointments({ date, view, branchId }: UseAppointmentsOptions) {
   const { from, to } = computeWindow(date, view);
   const query = useQuery({
     ...listAppointmentsOptions({ query: { branchId: branchId as string, date_from: from, date_to: to } }),
-    select: (data) => {
-      const rows = (Array.isArray(data) ? data : (data as Record<string, unknown>).appointments ?? []) as Record<string, unknown>[];
-      return rows.map(normalizeAppointment);
-    },
+    // listAppointments returns Array<DentalAppointment> (+ patientName enrichment);
+    // single `as` adds the enrichment — no blind `as unknown as`.
+    select: (data) => ((data ?? []) as DentalAppointmentRow[]).map(normalizeAppointment),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });

@@ -9,10 +9,23 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listAttachmentsOptions, listAttachmentsQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { uploadFile, completeFileUpload, createAttachment, deleteAttachment } from '@monobase/sdk-ts/generated';
+import {
+  uploadFile,
+  completeFileUpload,
+  createAttachment,
+  deleteAttachment,
+  type DentalAttachment,
+  type DentalAttachmentImageType,
+} from '@monobase/sdk-ts/generated';
 import { toastError } from '@/lib/error-toast';
 
-export type AttachmentImageType = 'xray' | 'photo' | 'scan' | 'document' | 'other';
+// Cause-fix (oli QA_ESCAPES §6): the image-type enum + attachment row were
+// hand-rolled duplicates of the SDK. Alias them — the SDK shape is the truthful
+// one (createdAt/updatedAt are Date and fileSizeBytes is bigint at runtime, per
+// the dentalAttachment response transformer; the local string/number typings were
+// wrong, and formatBytes already accepts bigint).
+export type AttachmentImageType = DentalAttachmentImageType;
+export type { DentalAttachment };
 
 export const IMAGE_TYPE_LABELS: Record<AttachmentImageType, string> = {
   xray: 'X-Ray',
@@ -24,22 +37,6 @@ export const IMAGE_TYPE_LABELS: Record<AttachmentImageType, string> = {
 
 export const IMAGE_TYPES = Object.keys(IMAGE_TYPE_LABELS) as AttachmentImageType[];
 
-export interface DentalAttachment {
-  id: string;
-  visitId: string;
-  patientId: string;
-  imageType: AttachmentImageType;
-  toothNumbers?: number[];
-  fileName: string;
-  filePath: string;
-  fileSizeBytes: number;
-  mimeType: string;
-  note?: string;
-  createdAt: string;
-  updatedAt: string;
-  version: number;
-}
-
 export interface UploadAttachmentInput {
   file: File;
   imageType: AttachmentImageType;
@@ -50,7 +47,8 @@ export interface UploadAttachmentInput {
 export function useAttachments(visitId: string | null) {
   return useQuery({
     ...listAttachmentsOptions({ path: { visitId: visitId! } }),
-    select: (data) => (Array.isArray(data) ? data : (data as Record<string, unknown>).data ?? []) as unknown as DentalAttachment[],
+    // SDK response is { data: DentalAttachment[]; pagination } — no cast needed.
+    select: (data) => (Array.isArray(data) ? data : (data?.data ?? [])),
     enabled: Boolean(visitId),
     staleTime: 30_000,
   });
@@ -90,7 +88,7 @@ export function useUploadAttachment(visitId: string | null, patientId: string) {
         body: {
           visitId: visitId!,
           patientId,
-          imageType: imageType as Parameters<typeof createAttachment>[0]['body']['imageType'],
+          imageType,
           fileName: file.name,
           filePath: fileId,
           fileSizeBytes: BigInt(file.size),
@@ -99,7 +97,7 @@ export function useUploadAttachment(visitId: string | null, patientId: string) {
           note: note ?? '',
         },
       });
-      return data as unknown as DentalAttachment;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: listAttachmentsQueryKey({ path: { visitId: visitId! } }) });
@@ -116,7 +114,7 @@ export function useDeleteAttachment(visitId: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (attachmentId: string) =>
-      deleteAttachment({ path: { visitId: visitId!, attachmentId }, throwOnError: true } as any),
+      deleteAttachment({ path: { visitId: visitId!, attachmentId }, throwOnError: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: listAttachmentsQueryKey({ path: { visitId: visitId! } }) });
     },
