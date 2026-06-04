@@ -50,6 +50,9 @@ export async function getToothHistory(ctx: HandlerContext) {
     conditionCode?: string;
     treatmentCdtCode?: string;
     treatmentDescription?: string;
+    surfaces?: string[];
+    treatmentStatus?: string;
+    treatmentPriceCents?: number;
   }> = [];
 
   for (const visit of completedVisits) {
@@ -70,6 +73,11 @@ export async function getToothHistory(ctx: HandlerContext) {
       conditionCode: tooth.conditionCode,
       treatmentCdtCode: toothTreatment?.cdtCode,
       treatmentDescription: toothTreatment?.description,
+      // QA-003: surface these so the per-tooth slideout's Surface/Status/Total
+      // columns render real data instead of invented FE-only fields.
+      surfaces: toothTreatment?.surfaces ?? undefined,
+      treatmentStatus: toothTreatment?.status,
+      treatmentPriceCents: toothTreatment?.priceCents,
     });
   }
 

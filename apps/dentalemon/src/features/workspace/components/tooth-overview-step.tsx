@@ -16,14 +16,7 @@ import type { SurfaceStatus } from './dental/types';
 import { getSurfacesForTooth, isAnteriorTooth } from './five-surface-selector.helpers';
 import type { ToothSurface } from './five-surface-selector.helpers';
 import { useToothHistory } from '../hooks/use-tooth-history';
-import type { ToothHistoryEntry } from '@monobase/sdk-ts/generated';
 import type { ChartEntryClassification } from './dental-chart.helpers';
-
-type ExtendedToothHistoryEntry = ToothHistoryEntry & {
-  surfaces?: string[];
-  treatmentStatus?: string;
-  treatmentPriceCents?: number;
-};
 import { APP_LOCALE } from '@/constants/brand';
 
 const ENTRY_CLASSIFICATIONS: { value: ChartEntryClassification; label: string; ariaLabel: string; description: string }[] = [
@@ -302,11 +295,11 @@ export function ToothOverviewStep({
               </tr>
             </thead>
             <tbody>
-              {(history as ExtendedToothHistoryEntry[]).map((entry, idx) => (
+              {history.map((entry, idx) => (
                 <tr key={`${entry.visitId}-${idx}`} className="border-t border-border">
                   <td className="px-3 py-2 text-foreground uppercase">
-                    {entry.surfaces && (entry.surfaces as string[]).length > 0
-                      ? (entry.surfaces as string[]).map(s => s.charAt(0).toUpperCase()).join('')
+                    {entry.surfaces && entry.surfaces.length > 0
+                      ? entry.surfaces.map(s => s.charAt(0).toUpperCase()).join('')
                       : '—'}
                   </td>
                   <td className="px-3 py-2 text-foreground capitalize">{entry.state}</td>
@@ -325,19 +318,19 @@ export function ToothOverviewStep({
                   </td>
                   <td className="px-3 py-2 text-foreground text-right font-medium">
                     {entry.treatmentPriceCents
-                      ? `₱${((entry.treatmentPriceCents as number) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+                      ? `₱${(entry.treatmentPriceCents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
                       : '—'}
                   </td>
                 </tr>
               ))}
             </tbody>
-            {history.some(e => (e as any).treatmentPriceCents) && (
+            {history.some(e => e.treatmentPriceCents) && (
               <tfoot>
                 <tr className="bg-[#fafaf9] border-t-2 border-border">
                   <td colSpan={4} className="px-3 py-2 font-bold text-foreground">Total</td>
                   <td className="px-3 py-2 font-bold text-foreground text-right">
-                    ₱{((history as ExtendedToothHistoryEntry[])
-                      .reduce((sum, e) => sum + ((e.treatmentPriceCents as number) || 0), 0) / 100)
+                    ₱{(history
+                      .reduce((sum, e) => sum + (e.treatmentPriceCents || 0), 0) / 100)
                       .toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>

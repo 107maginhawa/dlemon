@@ -103,4 +103,26 @@ describe('ToothSlideout', () => {
     const nextBtn = screen.queryByText('Next');
     expect(nextBtn).not.toBeNull();
   });
+
+  // QA-003: the history table reads surfaces / treatmentStatus / treatmentPriceCents
+  // straight off the typed SDK ToothHistoryEntry (no invented FE fields). This
+  // asserts those columns render real data so the dead-column escape can't recur.
+  test('QA-003: history table renders surfaces, status and price from the API', async () => {
+    global.fetch = mock(() => jsonResponse({
+      data: [{
+        visitId: 'v1', visitDate: '2024-03-01T00:00:00Z', toothNumber: 11,
+        state: 'filled', treatmentDescription: 'Resin composite',
+        surfaces: ['mesial', 'occlusal'], treatmentStatus: 'performed', treatmentPriceCents: 12500,
+      }],
+      pagination: { totalCount: 1, limit: 20, offset: 0 },
+    })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+
+    // Surface initials: mesial + occlusal → "MO"
+    expect(await screen.findByText('MO')).not.toBeNull();
+    // Status badge for a performed treatment
+    expect(screen.getByText('Done')).not.toBeNull();
+    // ₱125.00 appears in the row and the Total footer (12500 cents / 100)
+    expect(screen.getAllByText(/₱125\.00/).length).toBeGreaterThanOrEqual(2);
+  });
 });

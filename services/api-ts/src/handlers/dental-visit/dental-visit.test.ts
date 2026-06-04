@@ -893,6 +893,31 @@ describe('getToothHistory handler', () => {
     expect(body.data[0].state).toBe('caries');
     expect(body.data[0].visitId).toBe(completedVisit!.id);
   });
+
+  test('QA-003: returns surfaces / treatmentStatus / treatmentPriceCents from the tooth treatment', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    await chartRepo.upsert({
+      visitId: completedVisit!.id,
+      patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'filled', conditionCode: 'K02.1' }],
+    });
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: completedVisit!.id, patientId: PATIENT_ID,
+      toothNumber: 11, cdtCode: 'D2391', description: 'Resin composite',
+      surfaces: ['mesial', 'occlusal'], priceCents: 12500, status: 'performed',
+      carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/11`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data[0].surfaces).toEqual(['mesial', 'occlusal']);
+    expect(body.data[0].treatmentStatus).toBe('performed');
+    expect(body.data[0].treatmentPriceCents).toBe(12500);
+  });
 });
 
 // ---------------------------------------------------------------------------
