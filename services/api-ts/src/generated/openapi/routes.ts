@@ -2384,12 +2384,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // mergePatients
   app.post('/patients/merge',
+    authMiddleware({ roles: ["admin"] }),
     zValidator('json', validators.MergePatientsBody, validationErrorHandler),
     registry.mergePatients as unknown as Handler
   );
 
   // unmergePatients
   app.post('/patients/unmerge',
+    authMiddleware({ roles: ["admin"] }),
     zValidator('json', validators.UnmergePatientsBody, validationErrorHandler),
     registry.unmergePatients as unknown as Handler
   );

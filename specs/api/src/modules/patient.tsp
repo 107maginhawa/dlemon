@@ -475,6 +475,7 @@ namespace PatientModule {
 
     @doc("Merge two patient records. The source patient record is marked as replaced and all references are updated to point to the target patient.")
     @operationId("mergePatients")
+    @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["admin"])
     @post
     @route("/merge")
@@ -487,6 +488,7 @@ namespace PatientModule {
 
     @doc("Unmerge previously merged patient records. Reverses a merge operation and restores the source patient record.")
     @operationId("unmergePatients")
+    @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["admin"])
     @post
     @route("/unmerge")
