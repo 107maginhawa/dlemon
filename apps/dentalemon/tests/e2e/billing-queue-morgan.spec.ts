@@ -20,66 +20,89 @@ import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 async function signUpAndSeedMorgan(page: Page) {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
   // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
-  const { orgId, branchId } = await signUpOnboardAndUnlock(page, {
+  const { orgId, branchId, memberId } = await signUpOnboardAndUnlock(page, {
     tier: 'clinic',
     label: 'Morgan',
   });
 
-  return { orgId, branchId };
+  return { orgId, branchId, memberId };
 }
 
-/** Seed a patient + active visit + invoice; returns invoiceId */
-async function seedInvoice(page: Page, branchId: string) {
-  return page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
-    const membersRaw = await fetch(`${api}/dental/org/members`, { credentials: 'include' });
-    if (!membersRaw.ok) return null; // members API failed — propagate as seed failure
-    const memberRes = await membersRaw.json() as any;
-    const memberId = memberRes?.items?.[0]?.id;
-    if (!memberId) return null;
-
-    const patientRes = await fetch(`${api}/dental/patients`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ displayName: 'Morgan Billing Patient', consentGiven: true }),
-    });
-    if (!patientRes.ok) return null;
-    const patient = await patientRes.json() as any;
-
-    const visitRes = await fetch(`${api}/dental/visits`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ patientId: patient.id, branchId, dentistMemberId: memberId }),
-    });
-    if (!visitRes.ok) return null;
-    const visit = await visitRes.json() as any;
-
-    // Activate + complete visit so invoice can be created
-    for (const status of ['active', 'completed'] as const) {
-      await fetch(`${api}/dental/visits/${visit.id}`, {
+/**
+ * Seed a patient + completed visit carrying a performed treatment + a draft invoice.
+ *
+ * createDentalInvoice enforces BR-009 (needs ≥1 performed/verified treatment), and
+ * both the visit-completion gate and the treatment FSM (planned→performed) require a
+ * SIGNED CONSENT — and a freshly-onboarded org has no consent template. So we run the
+ * full billable flow (mirrors scripts/seed-demo.ts): consent template → patient →
+ * visit(active) → sign consent → treatment diagnosed→planned→performed → complete →
+ * invoice. Each step throws with context so a failing gate is pinpointed, not swallowed.
+ */
+async function seedInvoice(page: Page, branchId: string, memberId: string) {
+  return page.evaluate(async ({ api, branchId, memberId }: { api: string; branchId: string; memberId: string }) => {
+    const post = (path: string, body?: unknown) =>
+      fetch(`${api}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      });
+    const patch = (path: string, body: unknown) =>
+      fetch(`${api}${path}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(body),
       });
+    const need = async (step: string, res: Response) => {
+      if (!res.ok) throw new Error(`seedInvoice failed at ${step}: ${res.status} ${await res.text()}`);
+      return res.json() as any;
+    };
+
+    // A fresh onboarded org has no consent template — create one (validator wants
+    // title/content, handler reads name/body; response is { template: { id } }).
+    const tpl = await need('consent-template', await post(`/dental/branches/${branchId}/consent-templates`, {
+      title: 'General Treatment Consent', content: 'I consent to treatment.',
+      name: 'General Treatment Consent', body: 'I consent to treatment.',
+    }));
+    const templateId = tpl?.template?.id ?? tpl?.id;
+    if (!templateId) throw new Error('seedInvoice: no consent template id');
+
+    const patient = await need('patient', await post('/dental/patients', {
+      displayName: 'Morgan Billing Patient', consentGiven: true, branchId,
+    }));
+
+    const visit = await need('visit', await post('/dental/visits', {
+      patientId: patient.id, branchId, dentistMemberId: memberId,
+    }));
+    await patch(`/dental/visits/${visit.id}`, { status: 'active' });
+
+    // Sign a consent — required before treatment→performed AND visit completion.
+    const consent = await need('consent', await post(`/dental/visits/${visit.id}/consents`, {
+      visitId: visit.id, patientId: patient.id, templateId, templateName: 'General Treatment Consent',
+    }));
+    const consentId = consent?.id ?? consent?.data?.id;
+    await need('consent-sign', await post(`/dental/visits/${visit.id}/consents/${consentId}/sign`, {
+      signatureData: 'data:image/png;base64,iVBORw0KGgo=',
+    }));
+
+    // Treatment FSM is two-step: diagnosed → planned → performed (a single jump 422s).
+    const treatment = await need('treatment', await post(`/dental/visits/${visit.id}/treatments`, {
+      visitId: visit.id, patientId: patient.id, cdtCode: 'D2391',
+      description: 'Resin composite', priceCents: 250000, toothNumber: 16,
+    }));
+    const treatmentId = treatment?.id ?? treatment?.data?.id;
+    for (const status of ['planned', 'performed'] as const) {
+      await need(`treatment→${status}`, await patch(`/dental/visits/${visit.id}/treatments/${treatmentId}`, { status }));
     }
 
-    const invoiceRes = await fetch(`${api}/dental/billing/invoices`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        visitId: visit.id,
-        patientId: patient.id,
-        branchId,
-        dentistMemberId: memberId,
-      }),
-    });
-    if (!invoiceRes.ok) return null;
-    const invoice = await invoiceRes.json() as any;
+    await need('complete-visit', await patch(`/dental/visits/${visit.id}`, { status: 'completed' }));
+
+    const invoice = await need('invoice', await post('/dental/billing/invoices', {
+      visitId: visit.id, patientId: patient.id, branchId, dentistMemberId: memberId,
+    }));
     return { invoiceId: invoice.id, visitId: visit.id, patientId: patient.id, memberId };
-  }, { api: API, branchId });
+  }, { api: API, branchId, memberId });
 }
 
 // ---------------------------------------------------------------------------
@@ -88,8 +111,8 @@ async function seedInvoice(page: Page, branchId: string) {
 
 test.describe('Morgan — Billing Review Queue', () => {
   test('billing page shows invoice list with status filter', async ({ page }) => {
-    const { branchId } = await signUpAndSeedMorgan(page);
-    const seeded = await seedInvoice(page, branchId);
+    const { branchId, memberId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId, memberId);
 
     expect(seeded, 'Seeding failed — member, patient, or invoice creation returned null').not.toBeNull();
     expect(seeded!.memberId, 'members API failed during billing-queue seed').toBeTruthy();
@@ -110,40 +133,47 @@ test.describe('Morgan — Billing Review Queue', () => {
 
 test.describe('Morgan — Void Invoice', () => {
   test('Morgan voids a draft invoice — status becomes voided', async ({ page }) => {
-    const { branchId } = await signUpAndSeedMorgan(page);
-    const seeded = await seedInvoice(page, branchId);
+    const { branchId, memberId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId, memberId);
     if (!seeded) throw new Error('Seeding failed — member, patient, or invoice creation returned null');
 
     const result = await page.evaluate(async ({ api, invoiceId }: { api: string; invoiceId: string }) => {
-      // Void the invoice
+      // Void the invoice — the void contract requires an auditable reason (min 5).
       const voidRes = await fetch(`${api}/dental/billing/invoices/${invoiceId}/void`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ reason: 'Billing error — duplicate invoice' }),
       });
       if (!voidRes.ok) return { ok: false, status: voidRes.status, body: await voidRes.text() };
       const voided = await voidRes.json() as any;
       return { ok: true, status: voided.status };
     }, { api: API, invoiceId: seeded.invoiceId });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok, (result as any).body).toBe(true);
     expect(result.status).toBe('voided');
   });
 
   test('cannot void an already-voided invoice (returns 4xx)', async ({ page }) => {
-    const { branchId } = await signUpAndSeedMorgan(page);
-    const seeded = await seedInvoice(page, branchId);
+    const { branchId, memberId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId, memberId);
     if (!seeded) throw new Error('Seeding failed — member, patient, or invoice creation returned null');
 
     const result = await page.evaluate(async ({ api, invoiceId }: { api: string; invoiceId: string }) => {
-      // First void
+      const voidBody = { reason: 'Billing error — duplicate invoice' };
+      // First void — succeeds.
       await fetch(`${api}/dental/billing/invoices/${invoiceId}/void`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify(voidBody),
       });
-      // Second void — should fail
+      // Second void — already voided, should fail.
       const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/void`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify(voidBody),
       });
       return { status: res.status };
     }, { api: API, invoiceId: seeded.invoiceId });
@@ -158,8 +188,8 @@ test.describe('Morgan — Void Invoice', () => {
 
 test.describe('Morgan — Mark Uncollectible (BR-013)', () => {
   test('issue → mark uncollectible → status becomes uncollectible', async ({ page }) => {
-    const { branchId } = await signUpAndSeedMorgan(page);
-    const seeded = await seedInvoice(page, branchId);
+    const { branchId, memberId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId, memberId);
     if (!seeded) throw new Error('Seeding failed — member, patient, or invoice creation returned null');
 
     const result = await page.evaluate(async ({ api, invoiceId }: { api: string; invoiceId: string }) => {
@@ -184,8 +214,8 @@ test.describe('Morgan — Mark Uncollectible (BR-013)', () => {
   });
 
   test('terminal — a second write-off on an uncollectible invoice returns 4xx', async ({ page }) => {
-    const { branchId } = await signUpAndSeedMorgan(page);
-    const seeded = await seedInvoice(page, branchId);
+    const { branchId, memberId } = await signUpAndSeedMorgan(page);
+    const seeded = await seedInvoice(page, branchId, memberId);
     if (!seeded) throw new Error('Seeding failed — member, patient, or invoice creation returned null');
 
     const result = await page.evaluate(async ({ api, invoiceId }: { api: string; invoiceId: string }) => {
