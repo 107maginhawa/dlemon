@@ -8,252 +8,96 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { setupDentalOrg, API, APP } from './fixtures';
 
 /**
- * Sign up as practice owner and return session cookies
+ * Add a member to an existing branch (owner-authenticated session) and set its PIN.
+ * Member creation by an owner is allowed; only org creation is admin-gated
+ * (EM-ORG-002), which is why the org/branch/owner come from setupDentalOrg.
  */
-async function signUpOwner(page: Page) {
-  const suffix = Date.now();
-  const email = `pin-e2e-owner-${suffix}@example.org`;
-  const password = 'E2eTestPass123!';
-
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`PIN Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially(password, { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Create person profile to bypass onboarding redirect
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/persons`, {
+async function addMemberWithPin(
+  page: Page,
+  opts: { orgId: string; branchId: string; displayName: string; role: string; pin?: string; personId?: string },
+): Promise<string> {
+  const memberId = await page.evaluate(async ({ api, o }) => {
+    const res = await fetch(`${api}/dental/organizations/${o.orgId}/branches/${o.branchId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ firstName: 'PIN', lastName: 'Owner' }),
+      body: JSON.stringify({
+        displayName: o.displayName,
+        role: o.role,
+        ...(o.personId ? { personId: o.personId } : {}),
+      }),
     });
-  }, API);
+    if (!res.ok) throw new Error(`Member creation failed: ${res.status} ${await res.text().catch(() => '')}`);
+    const m = await res.json() as any;
+    return m.id as string;
+  }, { api: API, o: opts });
 
-  return { email, password };
+  if (opts.pin) {
+    await page.evaluate(async ({ api, o, memberId }) => {
+      const res = await fetch(
+        `${api}/dental/organizations/${o.orgId}/branches/${o.branchId}/members/${memberId}/set-pin`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ pin: o.pin }),
+        },
+      );
+      if (!res.ok) throw new Error(`set-pin failed: ${res.status} ${await res.text().catch(() => '')}`);
+    }, { api: API, o: opts, memberId });
+  }
+
+  return memberId;
 }
 
 /**
- * Seed org, branch, and one staff_full member via API (uses existing browser session)
+ * Onboard an org via the canonical self-service helper (owner = "E2E Dentist",
+ * PIN 123456), then add ONE extra staff_full member ("Staff Ana Cruz", PIN 123456).
+ * Returns the staff member's id (the subject of the PIN tests).
  */
 async function seedOrgAndStaff(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'PIN Test Clinic', tier: 'solo', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-  const orgId = orgRes.id;
-
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Clinic', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId });
-  const branchId = branchRes.id;
-
-  await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
-    localStorage.setItem('currentBranchId', branchId);
-    localStorage.setItem('currentOrgId', orgId);
-  }, { branchId, orgId });
-
-  // Create owner membership so assertBranchAccess passes in listMembers
-  await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    const session = await sessionRes.json() as any;
-    const personId = session?.user?.id;
-    if (personId) {
-      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Clinic Owner', role: 'dentist_owner', personId }),
-      });
-    }
-  }, { api: API, orgId, branchId });
-
-  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ displayName: 'Staff Ana Cruz', role: 'staff_full' }),
-    });
-    return res.json();
-  }, { api: API, orgId, branchId });
-  const memberId = memberRes.id;
-
-  await page.evaluate(async ({ api, orgId, branchId, memberId }: { api: string; orgId: string; branchId: string; memberId: string }) => {
-    await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ pin: '123456' }),
-    });
-  }, { api: API, orgId, branchId, memberId });
-
+  const { orgId, branchId } = await setupDentalOrg(page);
+  const memberId = await addMemberWithPin(page, {
+    orgId,
+    branchId,
+    displayName: 'Staff Ana Cruz',
+    role: 'staff_full',
+    pin: '123456',
+  });
   return { orgId, branchId, memberId };
 }
 
 /**
- * Seed org, branch, and ONE dentist_owner member via API
+ * Onboard an org, then add a second dentist_owner member ("Dr. Maria Reyes",
+ * PIN 654321). Returns that owner member's id.
  */
 async function seedOrgAndOwnerMember(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Owner PIN Test Clinic', tier: 'solo', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-  const orgId = orgRes.id;
-
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Clinic', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId });
-  const branchId = branchRes.id;
-
-  await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
-    localStorage.setItem('currentBranchId', branchId);
-    localStorage.setItem('currentOrgId', orgId);
-  }, { branchId, orgId });
-
-  // Create owner membership so assertBranchAccess passes in listMembers
-  await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    const session = await sessionRes.json() as any;
-    const personId = session?.user?.id;
-    if (personId) {
-      await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Clinic Owner', role: 'dentist_owner', personId }),
-      });
-    }
-  }, { api: API, orgId, branchId });
-
-  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ displayName: 'Dr. Maria Reyes', role: 'dentist_owner' }),
-    });
-    return res.json();
-  }, { api: API, orgId, branchId });
-  const memberId = memberRes.id;
-
-  await page.evaluate(async ({ api, orgId, branchId, memberId }: { api: string; orgId: string; branchId: string; memberId: string }) => {
-    await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ pin: '654321' }),
-    });
-  }, { api: API, orgId, branchId, memberId });
-
+  const { orgId, branchId } = await setupDentalOrg(page);
+  const memberId = await addMemberWithPin(page, {
+    orgId,
+    branchId,
+    displayName: 'Dr. Maria Reyes',
+    role: 'dentist_owner',
+    pin: '654321',
+  });
   return { orgId, branchId, memberId };
 }
 
 /**
- * Seed org, branch, and exactly ONE member (the session user as dentist_owner).
- * This satisfies assertBranchAccess AND triggers FR9.2 auto-select (single member).
+ * Onboard an org. setupDentalOrg leaves the branch with exactly ONE member (the
+ * onboarded owner "E2E Dentist", PIN 123456), which triggers FR9.2 auto-select.
+ * Returns that single owner member's id.
  */
 async function seedOrgWithSingleMember(page: Page): Promise<{ orgId: string; branchId: string; memberId: string }> {
-  const orgRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/organizations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Single Member Clinic', tier: 'solo', countryCode: 'PH' }),
-    });
-    return res.json();
-  }, API);
-  const orgId = orgRes.id;
-
-  const branchRes = await page.evaluate(async ({ api, orgId }: { api: string; orgId: string }) => {
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name: 'Main Clinic', timezone: 'Asia/Manila' }),
-    });
-    return res.json();
-  }, { api: API, orgId });
-  const branchId = branchRes.id;
-
-  await page.evaluate(({ branchId, orgId }: { branchId: string; orgId: string }) => {
-    localStorage.setItem('currentBranchId', branchId);
-    localStorage.setItem('currentOrgId', orgId);
-  }, { branchId, orgId });
-
-  // Create single owner membership with personId (satisfies assertBranchAccess)
-  const memberRes = await page.evaluate(async ({ api, orgId, branchId }: { api: string; orgId: string; branchId: string }) => {
-    const sessionRes = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-    const session = await sessionRes.json() as any;
-    const personId = session?.user?.id;
-    const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ displayName: 'Solo Dentist', role: 'dentist_owner', personId }),
-    });
-    return res.json();
-  }, { api: API, orgId, branchId });
-  const memberId = memberRes.id;
-
-  // Set PIN for the single member
-  await page.evaluate(async ({ api, orgId, branchId, memberId }: { api: string; orgId: string; branchId: string; memberId: string }) => {
-    await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ pin: '111111' }),
-    });
-  }, { api: API, orgId, branchId, memberId });
-
+  const { orgId, branchId, memberId } = await setupDentalOrg(page);
   return { orgId, branchId, memberId };
 }
 
 test.describe('PIN authentication flow', () => {
   test('owner can set up staff and staff can select profile', async ({ page }) => {
-    await signUpOwner(page);
     const { orgId, branchId } = await seedOrgAndStaff(page);
 
     // Add a second member so the selection screen is shown (FR9.2 auto-select skips with 1 member)
@@ -268,14 +112,12 @@ test.describe('PIN authentication flow', () => {
 
     // Navigate to PIN select screen
     await page.goto(`${APP}/auth/pin-select`);
-    await page.waitForLoadState('networkidle');
 
     // Should show the staff member card
-    await expect(page.getByText('Staff Ana Cruz')).toBeVisible();
+    await expect(page.getByText('Staff Ana Cruz')).toBeVisible({ timeout: 15000 });
   });
 
   test('selecting a member card navigates to PIN entry', async ({ page }) => {
-    await signUpOwner(page);
     const { orgId, branchId } = await seedOrgAndStaff(page);
 
     // Add second member to disable auto-select
@@ -289,10 +131,11 @@ test.describe('PIN authentication flow', () => {
     }, { api: API, orgId, branchId });
 
     await page.goto(`${APP}/auth/pin-select`);
-    await page.waitForLoadState('networkidle');
 
-    // Click the staff member card
-    await page.getByRole('button', { name: /Sign in as Staff Ana Cruz/i }).click();
+    // Click the staff member card (wait for it to render first)
+    const staffCard = page.getByRole('button', { name: /Sign in as Staff Ana Cruz/i });
+    await expect(staffCard).toBeVisible({ timeout: 15000 });
+    await staffCard.click();
 
     // Should navigate to PIN entry screen
     await expect(page.getByText('Staff Ana Cruz')).toBeVisible();
@@ -301,12 +144,11 @@ test.describe('PIN authentication flow', () => {
   });
 
   test('entering correct PIN as dentist_owner reaches /dashboard', async ({ page }) => {
-    await signUpOwner(page);
     const { memberId } = await seedOrgAndOwnerMember(page);
 
     // Navigate directly to pin-entry for the owner member (FR9.2 auto-selects for single member too)
     await page.goto(`${APP}/auth/pin-entry/${memberId}`);
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByLabel('1')).toBeVisible({ timeout: 15000 });
 
     // Enter PIN 6-5-4-3-2-1
     for (const digit of ['6', '5', '4', '3', '2', '1']) {
@@ -319,12 +161,11 @@ test.describe('PIN authentication flow', () => {
   });
 
   test('wrong PIN shows error message', async ({ page }) => {
-    await signUpOwner(page);
     const { memberId } = await seedOrgAndStaff(page);
 
     // Navigate directly to pin-entry
     await page.goto(`${APP}/auth/pin-entry/${memberId}`);
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByLabel('1')).toBeVisible({ timeout: 15000 });
 
     // Enter wrong PIN
     for (const digit of ['9', '9', '9', '9', '9', '9']) {
@@ -336,12 +177,11 @@ test.describe('PIN authentication flow', () => {
   });
 
   test('FR9.3: staff_full correct PIN lands on /patients (not /dashboard)', async ({ page }) => {
-    await signUpOwner(page);
     const { memberId } = await seedOrgAndStaff(page);
 
     // Navigate directly to pin-entry
     await page.goto(`${APP}/auth/pin-entry/${memberId}`);
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByLabel('1')).toBeVisible({ timeout: 15000 });
 
     // Enter correct PIN
     for (const digit of ['1', '2', '3', '4', '5', '6']) {
@@ -354,12 +194,11 @@ test.describe('PIN authentication flow', () => {
   });
 
   test('FR9.7: "Forgot PIN?" link appears after 3 failed attempts', async ({ page }) => {
-    await signUpOwner(page);
     const { memberId } = await seedOrgAndStaff(page);
 
     // Navigate directly to pin-entry
     await page.goto(`${APP}/auth/pin-entry/${memberId}`);
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByLabel('1')).toBeVisible({ timeout: 15000 });
 
     // Enter wrong PIN 3 times
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -374,7 +213,6 @@ test.describe('PIN authentication flow', () => {
   });
 
   test('FR9.2: single member auto-navigates to PIN entry', async ({ page }) => {
-    await signUpOwner(page);
     await seedOrgWithSingleMember(page); // exactly 1 member in this branch
 
     // Navigate to pin-select — should auto-redirect to pin-entry for the single member

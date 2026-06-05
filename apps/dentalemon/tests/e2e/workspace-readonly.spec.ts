@@ -13,7 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupDentalOrg, createDentalPatient, APP, API } from './fixtures';
+import { setupDentalOrg, createDentalPatient, APP, API , gotoApp, signVisitConsent } from './fixtures';
 
 async function createAndCompleteVisit(
   page: Parameters<typeof createDentalPatient>[0],
@@ -37,6 +37,26 @@ async function createAndCompleteVisit(
   );
 
   const visitId = visitRes.id as string;
+
+  // BR-003/VISIT_CONSENT_REQUIRED: completing a visit needs a SIGNED consent.
+  // A fresh org has no consent template, so create + attach + sign one first.
+  await signVisitConsent(page, { branchId, visitId, patientId });
+
+  // Seed the visit's dental chart so the completed (read-only) carousel slide
+  // renders the actual teeth (tooth-21, …) instead of the empty-dentition card.
+  // POST /dental/patients/:patientId/dentition auto-populates the FDI chart by DOB.
+  await page.evaluate(
+    async ({ api, patientId, visitId }) => {
+      const res = await fetch(`${api}/dental/patients/${patientId}/dentition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ visitId, dateOfBirth: '1990-01-01' }),
+      });
+      if (!res.ok) throw new Error(`init dentition failed: ${res.status} ${await res.text().catch(() => '')}`);
+    },
+    { api: API, patientId, visitId },
+  );
 
   // Activate → complete
   for (const status of ['active', 'completed'] as const) {
@@ -72,7 +92,7 @@ test.describe('Workspace read-only after checkout (AC-VISIT-02, BR-003)', () => 
     await createAndCompleteVisit(page, patientId, branchId, memberId);
 
     // Re-navigate to workspace
-    await page.goto(`${APP}/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // The timeline carousel should be visible
@@ -104,10 +124,13 @@ test.describe('Workspace read-only after checkout (AC-VISIT-02, BR-003)', () => 
 
     await createAndCompleteVisit(page, patientId, branchId, memberId);
 
-    await page.goto(`${APP}/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
-    // "View Invoice" appears in the workspace payment area / footer for completed visits
-    await expect(page.getByText('View Invoice')).toBeVisible({ timeout: 8000 });
+    // "View Invoice" appears in the workspace payment area / footer for completed visits.
+    // Target the button (testid) — the patient is named "View Invoice Patient", whose
+    // name span would otherwise collide with a bare getByText('View Invoice').
+    await expect(page.getByTestId('continue-to-payment-btn')).toBeVisible({ timeout: 8000 });
+    await expect(page.getByTestId('continue-to-payment-btn')).toHaveText(/View Invoice/);
   });
 });

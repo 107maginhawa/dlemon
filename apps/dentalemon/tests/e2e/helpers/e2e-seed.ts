@@ -66,16 +66,15 @@ export async function signUpOnboardAndUnlock(
   await page.waitForLoadState('networkidle');
 
   // Mark email verified + create the caller's person record so the workspace
-  // guards don't bounce the owner to verify-email / profile-setup.
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'E2E', lastName: 'Owner' }),
-    });
-  }, API);
+  // guards don't bounce the owner to verify-email / profile-setup. Use the
+  // navigation-immune APIRequestContext (page.request, which shares the browser
+  // context's cookies) instead of an in-page fetch — a post-signup client redirect
+  // was racing the page.evaluate and destroying its execution context.
+  await page.request.post(`${API}/dev/verify-email`);
+  await page.request.post(`${API}/persons`, {
+    headers: { 'Content-Type': 'application/json' },
+    data: { firstName: 'E2E', lastName: 'Owner' },
+  });
 
   // Provision org + default branch + dentist_owner membership in ONE self-service call.
   const onb = await page.evaluate(

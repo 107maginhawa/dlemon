@@ -11,67 +11,43 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, signUpOnboardAndUnlock } from './helpers/e2e-seed';
+import { signVisitConsent } from './fixtures';
 
 async function setup(page: Page) {
-  const suffix = Date.now();
+  // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
+  // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
+  const { branchId, memberId } = await signUpOnboardAndUnlock(page, {
+    tier: 'clinic',
+    label: 'Plan',
+  });
 
-  // Sign up
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`Plan Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(`plan-e2e-${suffix}@example.org`);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned \${response.status()}: \${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Create patient
-  const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
+  // Create patient via the dental endpoint (real org/branch context).
+  const patientRes = await page.evaluate(async ({ api, branchId }) => {
+    const res = await fetch(`${api}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        name: [{ use: 'official', family: 'Santos', given: ['Maria'] }],
-        birthDate: '1985-03-15',
-        gender: 'female',
-      }),
+      body: JSON.stringify({ displayName: 'Maria Santos', branchId, consentGiven: true }),
     });
+    if (!res.ok) throw new Error(`Patient create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return res.json();
-  }, API);
+  }, { api: API, branchId });
 
-  return { patientId: patientRes.id };
+  return { patientId: patientRes.id, branchId, memberId };
 }
 
-async function createAndCompleteVisit(page: Page, patientId: string) {
+async function createAndCompleteVisit(page: Page, patientId: string, branchId: string, memberId: string) {
   // Create visit
-  const visitRes = await page.evaluate(async ({ api, patientId }) => {
+  const visitRes = await page.evaluate(async ({ api, patientId, branchId, memberId }) => {
     const res = await fetch(`${api}/dental/visits`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        patientId,
-        branchId: '00000000-0000-4000-8000-000000000001',
-        dentistMemberId: '00000000-0000-4000-8000-000000000002',
-      }),
+      body: JSON.stringify({ patientId, branchId, dentistMemberId: memberId }),
     });
     return res.json();
-  }, { api: API, patientId });
+  }, { api: API, patientId, branchId, memberId });
 
   const visitId = visitRes.id;
 
@@ -85,7 +61,10 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
     });
   }, { api: API, visitId });
 
-  // Add treatment and mark as performed
+  // Consent gate: performing a treatment / completing the visit requires a SIGNED consent.
+  await signVisitConsent(page, { branchId, visitId, patientId });
+
+  // Add treatment
   const treatmentId = await page.evaluate(async ({ api, visitId, patientId }) => {
     const res = await fetch(`${api}/dental/visits/${visitId}/treatments`, {
       method: 'POST',
@@ -104,14 +83,17 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
     return data.id;
   }, { api: API, visitId, patientId });
 
-  await page.evaluate(async ({ api, visitId, treatmentId }) => {
-    return fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ status: 'performed' }),
-    });
-  }, { api: API, visitId, treatmentId });
+  // FSM is two-step: diagnosed → planned → performed.
+  for (const status of ['planned', 'performed'] as const) {
+    await page.evaluate(async ({ api, visitId, treatmentId, status }) => {
+      return fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+    }, { api: API, visitId, treatmentId, status });
+  }
 
   // Complete
   await page.evaluate(async ({ api, visitId }) => {
@@ -128,11 +110,11 @@ async function createAndCompleteVisit(page: Page, patientId: string) {
 
 test.describe('Payment Plan', () => {
   test('can create payment plan for an invoice', async ({ page }) => {
-    const { patientId } = await setup(page);
-    const visitId = await createAndCompleteVisit(page, patientId);
+    const { patientId, branchId, memberId } = await setup(page);
+    const visitId = await createAndCompleteVisit(page, patientId, branchId, memberId);
 
     // Create invoice from visit
-    const invoiceRes = await page.evaluate(async ({ api, visitId, patientId }) => {
+    const invoiceRes = await page.evaluate(async ({ api, visitId, patientId, branchId, memberId }) => {
       const res = await fetch(`${api}/dental/billing/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,12 +122,12 @@ test.describe('Payment Plan', () => {
         body: JSON.stringify({
           visitId,
           patientId,
-          branchId: '00000000-0000-4000-8000-000000000001',
-          dentistMemberId: '00000000-0000-4000-8000-000000000002',
+          branchId,
+          dentistMemberId: memberId,
         }),
       });
       return { status: res.status, body: await res.json() };
-    }, { api: API, visitId, patientId });
+    }, { api: API, visitId, patientId, branchId, memberId });
 
     expect(invoiceRes.status).toBe(201);
     const invoiceId = invoiceRes.body.id;
@@ -153,7 +135,7 @@ test.describe('Payment Plan', () => {
     // Issue invoice
     const issueRes = await page.evaluate(async ({ api, invoiceId }) => {
       const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/issue`, {
-        method: 'POST',
+        method: 'PATCH',
         credentials: 'include',
       });
       return res.status;
@@ -183,12 +165,12 @@ test.describe('Payment Plan', () => {
   });
 
   test('BR-011: cannot void invoice with active payment plan (AC-PAY-03)', async ({ page }) => {
-    const { patientId } = await setup(page);
-    const visitId = await createAndCompleteVisit(page, patientId);
+    const { patientId, branchId, memberId } = await setup(page);
+    const visitId = await createAndCompleteVisit(page, patientId, branchId, memberId);
 
     // Create invoice
     const invoiceRes = await page.evaluate(
-      async ({ api, visitId, patientId }) => {
+      async ({ api, visitId, patientId, branchId, memberId }) => {
         const res = await fetch(`${api}/dental/billing/invoices`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -196,13 +178,13 @@ test.describe('Payment Plan', () => {
           body: JSON.stringify({
             visitId,
             patientId,
-            branchId: '00000000-0000-4000-8000-000000000001',
-            dentistMemberId: '00000000-0000-4000-8000-000000000002',
+            branchId,
+            dentistMemberId: memberId,
           }),
         });
         return { status: res.status, body: await res.json() };
       },
-      { api: API, visitId, patientId },
+      { api: API, visitId, patientId, branchId, memberId },
     );
     expect(invoiceRes.status).toBe(201);
     const invoiceId = invoiceRes.body.id as string;
@@ -211,7 +193,7 @@ test.describe('Payment Plan', () => {
     const issueStatus = await page.evaluate(
       async ({ api, invoiceId }) => {
         const res = await fetch(`${api}/dental/billing/invoices/${invoiceId}/issue`, {
-          method: 'POST',
+          method: 'PATCH',
           credentials: 'include',
         });
         return res.status;
@@ -247,7 +229,7 @@ test.describe('Payment Plan', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ voidReason: 'test' }),
+          body: JSON.stringify({ reason: 'Voiding for test purposes' }),
         });
         const body = await res.json().catch(() => ({}));
         return { status: res.status, body };

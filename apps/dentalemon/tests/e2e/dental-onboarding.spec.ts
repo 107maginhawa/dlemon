@@ -15,6 +15,74 @@ import { test, expect, type Page } from '@playwright/test';
 const APP = 'http://localhost:3003';
 const API = 'http://localhost:7213';
 
+/**
+ * After the onboarding wizard finishes it provisions the org + sets the owner's
+ * PIN, then navigates to /dashboard. /dashboard is under the PIN-gated _dashboard
+ * route tree (src/routes/_dashboard.tsx), whose beforeLoad requires an in-memory
+ * pinSession that is minted ONLY by the pin-select → pin-entry keypad flow. The
+ * wizard never drives that keypad, so the guard bounces /dashboard to
+ * /auth/pin-select. To deterministically reach /dashboard the test must drive the
+ * real keypad (CC-2).
+ *
+ * Determinism note: pin-select auto-forwards a single-member org to
+ * /auth/pin-entry/{memberId}, where {memberId} comes from /dental/org/members and
+ * verify-pin runs against that member. To avoid any dependence on the wizard's
+ * set-pin propagation timing or on the member-list ⇄ onboarding-membership id
+ * lining up, we re-set the PIN via the API on the SAME canonical member the
+ * workspace uses (/dental/org/context → member.id), then unlock with that PIN.
+ * The session cookie + pin-select's loadOrgContext recover org/branch context
+ * across the hard reload.
+ */
+async function unlockToDashboard(page: Page, pin: string): Promise<void> {
+  // Re-set the PIN via API on the canonical org member so verify-pin is guaranteed
+  // to match regardless of wizard timing. The wizard's onComplete fires right after
+  // its own provisioning calls, so /dental/org/context can briefly still be empty —
+  // poll until the member resolves before re-setting the PIN.
+  await page.evaluate(
+    async ({ api, pin }) => {
+      let ctx: any = null;
+      for (let i = 0; i < 30; i++) {
+        ctx = await (await fetch(`${api}/dental/org/context`, { credentials: 'include' })).json().catch(() => null);
+        if (ctx?.org?.id && ctx?.branch?.id && ctx?.member?.id) break;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      const orgId = ctx?.org?.id;
+      const branchId = ctx?.branch?.id;
+      const memberId = ctx?.member?.id;
+      if (!orgId || !branchId || !memberId) throw new Error(`org/context incomplete: ${JSON.stringify(ctx)}`);
+      const r = await fetch(
+        `${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/set-pin`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ pin }),
+        },
+      );
+      if (!r.ok) throw new Error(`set-pin failed (${r.status}): ${await r.text().catch(() => '')}`);
+    },
+    { api: API, pin },
+  );
+
+  await page.goto(`${APP}/auth/pin-select`);
+  await page.waitForLoadState('networkidle');
+
+  // pin-select either auto-forwards (single member) to the keypad, or shows the
+  // owner card. Wait for whichever, then drive the keypad.
+  await page.waitForURL(/\/auth\/pin-(select|entry)/, { timeout: 15000 });
+  if (page.url().includes('/auth/pin-select')) {
+    const card = page.getByRole('button', { name: /Sign in as/i }).first();
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await card.click();
+  }
+  await page.waitForURL(/\/auth\/pin-entry\//, { timeout: 15000 });
+  await expect(page.getByRole('group', { name: /PIN keypad/i })).toBeVisible({ timeout: 15000 });
+  for (const digit of pin) {
+    await page.getByRole('button', { name: digit, exact: true }).click();
+  }
+  await page.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15000 });
+}
+
 /** Sign up + complete 2-step person profile. Returns page on the dental-onboarding or dashboard screen. */
 async function signUpAndSetupPerson(page: Page): Promise<void> {
   const suffix = Date.now();
@@ -45,10 +113,36 @@ async function signUpAndSetupPerson(page: Page): Promise<void> {
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
   await page.waitForLoadState('networkidle');
 
-  // Mark email as verified so the verify-email blocker doesn't stop us
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-  }, API);
+  // Mark email as verified so the verify-email blocker doesn't stop us, and
+  // create the caller's Person record. The requirePerson guard bounces every
+  // protected route (incl. /auth/pin-select and /dashboard) to the /onboarding
+  // profile wizard until a person profile exists; a fresh signup has none. Create
+  // it via the API (firstName is the only required field) so the post-wizard PIN
+  // unlock can reach pin-select → /dashboard instead of dead-ending on /onboarding.
+  //
+  // A post-signup client redirect can still be in flight here, which destroys the
+  // page.evaluate execution context mid-fetch. Retry once on that specific race.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.evaluate(async (api) => {
+        await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+        const r = await fetch(`${api}/persons`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ firstName: 'Doc', lastName: 'Owner' }),
+        });
+        // 409 = already exists (Better-Auth may auto-create) → tolerate.
+        if (!r.ok && r.status !== 409) {
+          throw new Error(`person create failed (${r.status}): ${await r.text().catch(() => '')}`);
+        }
+      }, API);
+      break;
+    } catch (err) {
+      if (attempt === 2 || !/context was destroyed|Execution context/i.test(String(err))) throw err;
+      await page.waitForLoadState('networkidle').catch(() => {});
+    }
+  }
 
   // If stuck on verify-email, navigate to trigger the routing logic
   if (page.url().includes('/verify-email')) {
@@ -187,8 +281,10 @@ test.describe('Dental Clinic Onboarding Wizard', () => {
     // Skip patient step
     await page.getByRole('button', { name: /skip/i }).click();
 
-    // Should redirect to dashboard
-    await page.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15000 });
+    // Wizard completes → sets PIN → navigates to /dashboard, but the PIN-gated
+    // _dashboard guard bounces to /auth/pin-select until we unlock with the PIN
+    // the wizard just set (fillDentistStep default = 123456). Unlock, then assert.
+    await unlockToDashboard(page, '123456');
     await expect(page).toHaveURL(`${APP}/dashboard`);
   });
 
@@ -206,11 +302,10 @@ test.describe('Dental Clinic Onboarding Wizard', () => {
     await page.locator('input[type="date"]').fill('1990-05-15');
     await page.getByRole('button', { name: /get started/i }).click();
 
-    // Should redirect to dashboard or patients
-    await page.waitForURL(
-      (url) => url.pathname === '/dashboard' || url.pathname === '/patients',
-      { timeout: 15000 },
-    );
+    // Wizard completes → PIN-gated _dashboard bounces to /auth/pin-select until we
+    // unlock with the PIN the wizard set (fillDentistStep default = 123456).
+    await unlockToDashboard(page, '123456');
+    await expect(page).toHaveURL(`${APP}/dashboard`);
   });
 
   test('FR7.4: wizard progress is preserved after page refresh', async ({ page }) => {
@@ -247,7 +342,10 @@ test.describe('Dental Clinic Onboarding Wizard', () => {
     await page.getByRole('button', { name: 'Next' }).click(); // Fee schedule
     await page.getByRole('button', { name: /skip/i }).click(); // Skip patient
 
-    await page.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15000 });
+    // Wizard completes → PIN-gated _dashboard bounces to /auth/pin-select until we
+    // unlock with the PIN the wizard set above (654321). The wizard's onboarding +
+    // set-pin POSTs have already fired (and been captured) by this point.
+    await unlockToDashboard(page, '654321');
 
     // Verify correct API endpoints were called
     expect(apiCalls.some((url) => /\/dental\/organizations\/$/.test(url) || /\/dental\/organizations\//.test(url))).toBe(true);

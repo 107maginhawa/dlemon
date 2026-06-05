@@ -70,7 +70,7 @@ test.describe('Online self-service booking (P1-25)', () => {
     // ── Staff side: the appointment is on the calendar (list API). ──
     const listed = await page.evaluate(async ({ api, branchId }) => {
       const today = new Date();
-      const to = new Date(); to.setDate(to.getDate() + 31);
+      const to = new Date(); to.setDate(to.getDate() + 30);
       const fmt = (d: Date) => d.toISOString().slice(0, 10);
       const r = await fetch(`${api}/dental/appointments?branchId=${branchId}&date_from=${fmt(today)}&date_to=${fmt(to)}`, {
         credentials: 'include',

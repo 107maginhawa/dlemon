@@ -11,7 +11,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupDentalOrg, createDentalPatient, APP } from './fixtures';
+import { setupDentalOrg, createDentalPatient, APP , gotoApp} from './fixtures';
 
 test.describe('Workspace empty states — P2-007', () => {
   test('RecallsSheet: empty state for new patient', async ({ page }) => {
@@ -21,7 +21,7 @@ test.describe('Workspace empty states — P2-007', () => {
       branchId,
     });
 
-    await page.goto(`${APP}/_workspace/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // Wait for workspace to finish loading (year filter bar appears after visits load)
@@ -43,7 +43,7 @@ test.describe('Workspace empty states — P2-007', () => {
       branchId,
     });
 
-    await page.goto(`${APP}/_workspace/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="treatment-plans-tab-btn"]', { timeout: 10000 });
@@ -60,7 +60,7 @@ test.describe('Workspace empty states — P2-007', () => {
   test('QueueBoard: empty state when no patients queued', async ({ page }) => {
     await setupDentalOrg(page);
 
-    await page.goto(`${APP}/_workspace/queue-board`);
+    await gotoApp(page, `/queue-board`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('No patients in the queue.')).toBeVisible({ timeout: 10000 });

@@ -38,60 +38,48 @@ test.describe('First Launch Onboarding', () => {
     await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
     await page.waitForLoadState('networkidle');
 
-    // Verify email so subsequent API calls succeed
+    // Verify email so subsequent API calls succeed, and create the caller's
+    // Person record (required before onboarding).
     await page.evaluate(async (api) => {
       await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-    }, API);
-
-    // Get session personId for member creation
-    const personId = await page.evaluate(async (api) => {
-      const res = await fetch(`${api}/auth/get-session`, { credentials: 'include' });
-      const session = await res.json();
-      return session?.user?.id as string;
-    }, API);
-    expect(personId).toBeTruthy();
-
-    // Create org via API
-    const orgRes = await page.evaluate(async (api) => {
-      const res = await fetch(`${api}/dental/organizations`, {
+      const r = await fetch(`${api}/persons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: `Test Clinic ${Date.now()}`, tier: 'solo', countryCode: 'PH' }),
+        body: JSON.stringify({ firstName: 'Onboard', lastName: 'Owner' }),
+      });
+      if (!r.ok && r.status !== 409) {
+        throw new Error(`person create failed (${r.status}): ${await r.text().catch(() => '')}`);
+      }
+    }, API);
+
+    // Provision clinic + default branch + dentist_owner membership in ONE
+    // self-service call. Direct org creation (POST /dental/organizations) is now
+    // admin-only (EM-ORG-002) and 403s for a normal owner — the self-service path
+    // is POST /dental/onboarding (the caller becomes org owner + dentist_owner).
+    const onbRes = await page.evaluate(async (api) => {
+      const res = await fetch(`${api}/dental/onboarding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          organizationName: `Test Clinic ${Date.now()}`,
+          tier: 'solo',
+          countryCode: 'PH',
+          branchName: 'Main Branch',
+          timezone: 'Asia/Manila',
+          ownerDisplayName: 'Dr. Test Owner',
+        }),
       });
       return { status: res.status, body: await res.json() };
     }, API);
 
-    expect(orgRes.status).toBe(201);
-    expect(orgRes.body.id).toBeTruthy();
-    const orgId = orgRes.body.id;
-
-    // Create branch
-    const branchRes = await page.evaluate(async ({ api, orgId }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ organizationId: orgId, name: 'Main Branch', timezone: 'Asia/Manila' }),
-      });
-      return { status: res.status, body: await res.json() };
-    }, { api: API, orgId });
-
-    expect(branchRes.status).toBe(201);
-    const branchId = branchRes.body.id;
-
-    // Create dentist-owner membership (use org-scoped endpoint with personId)
-    const memberRes = await page.evaluate(async ({ api, orgId, branchId, personId }) => {
-      const res = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Dr. Test Owner', role: 'dentist_owner', personId }),
-      });
-      return { status: res.status, body: await res.json() };
-    }, { api: API, orgId, branchId, personId });
-
-    expect(memberRes.status).toBe(201);
+    // Onboarding returns 200/201 with organizationId/branchId/membershipId.
+    expect([200, 201]).toContain(onbRes.status);
+    expect(onbRes.body.organizationId).toBeTruthy();
+    expect(onbRes.body.branchId).toBeTruthy();
+    expect(onbRes.body.membershipId).toBeTruthy();
+    const branchId = onbRes.body.branchId;
 
     // Create first patient (include branchId for association)
     const patientRes = await page.evaluate(async ({ api, branchId }) => {

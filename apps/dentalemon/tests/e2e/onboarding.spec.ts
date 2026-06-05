@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+const API = 'http://localhost:7213'
+
 /**
  * Helper function to create a fresh test user via UI signup flow
  * Returns unique credentials that can only complete onboarding once
@@ -56,16 +58,24 @@ async function signUpNewUser(page: any) {
     throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`)
   }
 
-  // Wait for redirect (either to onboarding or email verification)
+  // Wait for redirect off the sign-up page (signup callbackURL points at "/",
+  // which — for an authed, person-less, PIN-less user — cascades through the
+  // dashboard guard to /auth/pin-select; we don't rely on that landing).
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 })
 
-  // Set a mock dental context so the dashboard guard (FR7.5) doesn't redirect to
-  // /dental-onboarding after person profile completion. These tests specifically
-  // test the person profile onboarding flow, not the dental clinic setup.
-  await page.evaluate(() => {
-    localStorage.setItem('currentBranchId', '00000000-0000-4000-8000-000000000001');
-    localStorage.setItem('currentOrgId', '00000000-0000-4000-8000-000000000002');
-  });
+  // The /onboarding route guard requires a verified email (requireEmailVerified).
+  // The backend runs with requireEmailVerification:false, but the frontend guard
+  // still checks the session's emailVerified flag, so flip it via the dev-only
+  // endpoint (mirrors fixtures.setupDentalOrg).
+  await page.evaluate(async (api: string) => {
+    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' })
+  }, API)
+
+  // Land deterministically on the profile-setup wizard. A fresh user has no person
+  // record, so requireNoPerson lets us in; the post-signup cascade would otherwise
+  // bounce us to pin-select (no PIN session) instead of the wizard.
+  await page.goto('/onboarding')
+  await expect(page).toHaveURL('/onboarding')
 
   return { email, password, name }
 }
@@ -91,12 +101,9 @@ async function completePersonalInfoStep(page: any, options?: { skipDateOfBirth?:
 }
 
 test.describe('Onboarding Flow', () => {
-  test('completes onboarding with full address and redirects to dashboard', async ({ page }) => {
-    // Create fresh user via signup flow
+  test('completes onboarding with full address and creates a person profile', async ({ page }) => {
+    // Create fresh user via signup flow (lands on the /onboarding wizard)
     const user = await signUpNewUser(page)
-
-    // Should redirect to onboarding
-    await expect(page).toHaveURL('/onboarding')
 
     // Step 1: Verify pre-filled name from signup
     const expectedFirstName = user.name.split(' ')[0] ?? ''
@@ -118,37 +125,32 @@ test.describe('Onboarding Flow', () => {
     await page.fill('input[placeholder*="CA"]', 'TS')
     await page.fill('input[placeholder*="94102"]', '12345')
 
-    // Capture the createPerson response for diagnostics so a server-side
-    // validation failure surfaces as the actual error rather than a generic
-    // "still on /onboarding" redirect timeout.
-    const createPersonResponse = page
-      .waitForResponse(
-        (resp: any) => /\/persons$/.test(resp.url()) && resp.request().method() === 'POST',
-        { timeout: 15000 },
-      )
-      .catch(() => null)
+    // Capture the createPerson response — the wizard's job is to POST /persons.
+    const createPersonResponse = page.waitForResponse(
+      (resp: any) => /\/persons$/.test(resp.url()) && resp.request().method() === 'POST',
+      { timeout: 15000 },
+    )
 
     // Complete setup
     await page.click('button:has-text("Complete Setup")')
 
     const cpr = await createPersonResponse
-    if (cpr && cpr.status() >= 400) {
+    if (cpr.status() >= 400) {
       const body = await cpr.text().catch(() => '<unreadable>')
       throw new Error(`createPerson POST returned ${cpr.status()}: ${body.slice(0, 500)}`)
     }
+    expect(cpr.status()).toBeLessThan(300)
 
-    // Should redirect to dashboard
-    await expect(page).toHaveURL('/dashboard', { timeout: 15000 })
-
-    // Verify profile on dashboard (use full name as it appears on dashboard)
-    await expect(page.getByTestId('morning-briefing')).toBeVisible()
+    // The wizard navigates to /dashboard on success; for a fresh user with no PIN
+    // session + no dental org that cascades on to pin-select / dental-onboarding.
+    // Either way it must leave the profile wizard.
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15000 })
+      .not.toBe('/onboarding')
   })
 
-  test('completes onboarding by skipping address and redirects to dashboard', async ({ page }) => {
-    const user = await signUpNewUser(page)
-
-    // Should redirect to onboarding
-    await expect(page).toHaveURL('/onboarding')
+  test('completes onboarding by skipping address and creates a person profile', async ({ page }) => {
+    await signUpNewUser(page)
 
     // Step 1: Complete personal info
     await completePersonalInfoStep(page)
@@ -156,44 +158,54 @@ test.describe('Onboarding Flow', () => {
     // Step 2: Skip address
     await expect(page.getByText(/Step 2 of 2/i)).toBeVisible()
 
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle')
-
-    // Click skip button and wait for navigation
     const skipButton = page.getByRole('button', { name: /skip for now/i })
     await expect(skipButton).toBeVisible()
+
+    const createPersonResponse = page.waitForResponse(
+      (resp: any) => /\/persons$/.test(resp.url()) && resp.request().method() === 'POST',
+      { timeout: 15000 },
+    )
     await skipButton.click()
 
-    // Should redirect to dashboard
-    await expect(page).toHaveURL('/dashboard', { timeout: 15000 })
+    const cpr = await createPersonResponse
+    if (cpr.status() >= 400) {
+      const body = await cpr.text().catch(() => '<unreadable>')
+      throw new Error(`createPerson POST returned ${cpr.status()}: ${body.slice(0, 500)}`)
+    }
+    expect(cpr.status()).toBeLessThan(300)
 
-    // Verify on dashboard (use full name)
-    await expect(page.getByTestId('morning-briefing')).toBeVisible()
+    // Wizard leaves /onboarding once the profile is created.
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15000 })
+      .not.toBe('/onboarding')
   })
 
-  test('redirects to dashboard if user already completed onboarding', async ({ page }) => {
-    const user = await signUpNewUser(page)
-    await expect(page).toHaveURL('/onboarding')
+  test('redirects away from onboarding once the profile exists', async ({ page }) => {
+    await signUpNewUser(page)
 
     // Complete onboarding quickly (skip address)
     await completePersonalInfoStep(page)
+
+    const createPersonResponse = page.waitForResponse(
+      (resp: any) => /\/persons$/.test(resp.url()) && resp.request().method() === 'POST',
+      { timeout: 15000 },
+    )
     await page.click('button:has-text("Skip for now")')
+    const cpr = await createPersonResponse
+    expect(cpr.status()).toBeLessThan(300)
 
-    // Wait for dashboard
-    await expect(page).toHaveURL('/dashboard', { timeout: 15000 })
+    // Profile now exists; the requireNoPerson guard must bounce a fresh visit to
+    // /onboarding away (to /dashboard, which itself cascades for a PIN-less user).
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15000 })
+      .not.toBe('/onboarding')
 
-    // Ensure page is fully loaded with session and person data
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByTestId('morning-briefing')).toBeVisible()
+    await page.goto('/onboarding', { waitUntil: 'commit' })
 
-    // Try to access onboarding again - should redirect since profile exists.
-    // waitUntil:'networkidle' ensures the TanStack Router loader (which fetches
-    // person profile to decide whether to redirect) fully resolves before we
-    // assert the final URL.
-    await page.goto('/onboarding', { waitUntil: 'networkidle' })
-
-    // Should redirect back to dashboard (already has profile)
-    await expect(page).toHaveURL('/dashboard', { timeout: 15000 })
+    // Should NOT remain on /onboarding (requireNoPerson redirects).
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15000 })
+      .not.toBe('/onboarding')
   })
 
   test('preserves form data when navigating back between steps', async ({ page }) => {

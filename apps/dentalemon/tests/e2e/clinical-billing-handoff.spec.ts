@@ -12,6 +12,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { API, signUpOnboardAndUnlock } from './helpers/e2e-seed';
+import { signVisitConsent } from './fixtures';
 
 async function setup(page: Page) {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
@@ -66,6 +67,10 @@ async function createAndCompleteVisit(page: Page, patientId: string, branchId: s
       body: JSON.stringify({ status: 'active' }),
     });
   }, { api: API, visitId });
+
+  // Consent gate: marking a treatment performed (and completing the visit)
+  // requires a SIGNED consent. Fresh org → create template, attach, sign.
+  await signVisitConsent(page, { branchId, visitId, patientId });
 
   // Add treatment and mark as performed
   const treatmentRes = await page.evaluate(async ({ api, visitId, patientId }) => {
@@ -172,10 +177,10 @@ test.describe('Clinical-Billing Handoff', () => {
     expect(lineItem.cdtCode).toBe('D2391');
     expect(lineItem.description).toBe('Composite Filling');
 
-    // Issue invoice first
+    // Issue invoice first (issue is a PATCH on the invoice resource).
     await page.evaluate(async ({ api, invoiceId }) => {
       return fetch(`${api}/dental/billing/invoices/${invoiceId}/issue`, {
-        method: 'POST',
+        method: 'PATCH',
         credentials: 'include',
       });
     }, { api: API, invoiceId });

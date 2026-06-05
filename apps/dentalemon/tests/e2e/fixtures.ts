@@ -13,6 +13,68 @@ const APP = 'http://localhost:3003';
 
 export { expect, APP, API };
 
+/**
+ * Map a free-text service description to the appointment `visitType` enum
+ * (checkup|treatment|emergency|recall). The wire contract dropped free-text
+ * serviceType in favour of this enum (+ free-text `notes`).
+ */
+export function toVisitType(service?: string): 'checkup' | 'treatment' | 'emergency' | 'recall' {
+  const s = (service ?? '').toLowerCase();
+  if (/emergency|acute|toothache|\bpain\b|urgent|walk.?in/.test(s)) return 'emergency';
+  if (/recall|periodic|annual|maintenance|\breview\b|follow.?up|hygiene/.test(s)) return 'recall';
+  if (/exam|checkup|check-up|cleaning|consult|screening/.test(s)) return 'checkup';
+  return 'treatment';
+}
+
+/**
+ * Create + sign a general consent on a visit. The backend gates marking a
+ * treatment `performed` (and completing a visit) behind a SIGNED consent
+ * (TREATMENT_CONSENT_REQUIRED / VISIT_CONSENT_REQUIRED). A fresh test org has no
+ * consent template, so this creates one first, attaches a consent to the visit,
+ * and signs it. Mirrors scripts/seed-demo.ts::ensureSignedConsent.
+ * Call AFTER creating the visit and BEFORE performing a treatment.
+ */
+export async function signVisitConsent(
+  page: Page,
+  opts: { branchId: string; visitId: string; patientId: string },
+): Promise<void> {
+  const res = await page.evaluate(async ({ api, o }) => {
+    // 1. consent template — validator needs title+content, handler reads name+body.
+    const tplRes = await fetch(`${api}/dental/branches/${o.branchId}/consent-templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        title: 'General Treatment Consent', content: 'I consent to treatment.',
+        name: 'General Treatment Consent', body: 'I consent to treatment.',
+      }),
+    });
+    if (!tplRes.ok) return { ok: false, step: 'template', status: tplRes.status, body: await tplRes.text().catch(() => '') };
+    const tpl = await tplRes.json();
+    const templateId = tpl?.template?.id ?? tpl?.id;
+    // 2. attach consent to the visit.
+    const conRes = await fetch(`${api}/dental/visits/${o.visitId}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ visitId: o.visitId, patientId: o.patientId, templateId, templateName: 'General Treatment Consent' }),
+    });
+    if (!conRes.ok) return { ok: false, step: 'consent', status: conRes.status, body: await conRes.text().catch(() => '') };
+    const con = await conRes.json();
+    const consentId = con?.consent?.id ?? con?.id;
+    // 3. sign it.
+    const signRes = await fetch(`${api}/dental/visits/${o.visitId}/consents/${consentId}/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ signatureData: 'data:image/png;base64,iVBORw0KGgo=' }),
+    });
+    if (!signRes.ok) return { ok: false, step: 'sign', status: signRes.status, body: await signRes.text().catch(() => '') };
+    return { ok: true, step: 'done', status: 200, body: '' };
+  }, { api: API, o: opts });
+  if (!res.ok) throw new Error(`signVisitConsent failed at ${res.step}: ${res.status} ${res.body}`);
+}
+
 /** Extends base test with error-capturing page fixture */
 export const test = base.extend<{
   /** Page with auto-attached error listeners */
@@ -82,37 +144,32 @@ export async function setupDentalOrg(page: Page) {
 
   // Mark email as verified so the frontend guard doesn't redirect to /verify-email.
   // The backend has requireEmailVerification: false but the frontend guard still checks
-  // emailVerified on the session. The /dev/verify-email endpoint is only available in
-  // non-production environments.
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-  }, API);
+  // emailVerified on the session. /dev/verify-email is non-production only.
+  // Use the navigation-immune APIRequestContext (page.request, shares context cookies)
+  // rather than an in-page fetch — a post-signup client redirect was racing the
+  // page.evaluate and destroying its execution context.
+  await page.request.post(`${API}/dev/verify-email`);
 
   // Provision dental org + default branch + owner membership in ONE self-service
   // call (the caller becomes the org owner + dentist_owner member). Replaces the old
   // org→branch→member sequence, which now 403s for a normal user (org creation is
   // admin-only — EM-ORG-002; self-service goes through /dental/onboarding).
-  const ctx = await page.evaluate(async (api) => {
-    const onbRes = await fetch(`${api}/dental/onboarding`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        organizationName: 'E2E Test Clinic',
-        tier: 'solo',
-        countryCode: 'PH',
-        branchName: 'Main Branch',
-        timezone: 'Asia/Manila',
-        ownerDisplayName: 'E2E Dentist',
-      }),
-    });
-    if (!onbRes.ok) {
-      const body = await onbRes.text().catch(() => '<unreadable>');
-      throw new Error(`Onboarding failed (${onbRes.status}): ${body.slice(0, 300)}`);
-    }
-    const onb = await onbRes.json();
-    return { orgId: onb.organizationId, branchId: onb.branchId, memberId: onb.membershipId };
-  }, API);
+  const onbRes = await page.request.post(`${API}/dental/onboarding`, {
+    headers: { 'Content-Type': 'application/json' },
+    data: {
+      organizationName: 'E2E Test Clinic',
+      tier: 'solo',
+      countryCode: 'PH',
+      branchName: 'Main Branch',
+      timezone: 'Asia/Manila',
+      ownerDisplayName: 'E2E Dentist',
+    },
+  });
+  if (!onbRes.ok()) {
+    throw new Error(`Onboarding failed (${onbRes.status()}): ${(await onbRes.text().catch(() => '')).slice(0, 300)}`);
+  }
+  const onb = await onbRes.json();
+  const ctx = { orgId: onb.organizationId as string, branchId: onb.branchId as string, memberId: onb.membershipId as string };
 
   // Set localStorage context
   await page.evaluate((ids) => {
@@ -122,7 +179,76 @@ export async function setupDentalOrg(page: Page) {
     localStorage.setItem('currentMemberRole', 'dentist_owner');
   }, ctx);
 
-  return { email, password, ...ctx };
+  // The requirePerson guard (src/lib/guards.ts) bounces every protected route to
+  // the /onboarding profile wizard until a person profile exists. A fresh signup
+  // has none (the demo account the journeys reuse already does), so create one via
+  // the API. firstName is the only required field (PersonCreateRequestSchema).
+  const personRes = await page.request.post(`${API}/persons`, {
+    headers: { 'Content-Type': 'application/json' },
+    data: { firstName: 'E2E', lastName: 'Owner', contactInfo: { email } },
+  });
+  // 409 = person already exists (idempotent retry) → tolerate.
+  if (!personRes.ok() && personRes.status() !== 409) {
+    throw new Error(`person create failed (${personRes.status()}): ${(await personRes.text().catch(() => '')).slice(0, 200)}`);
+  }
+
+  // CC-2: the _workspace + _dashboard route trees are PIN-gated. The in-memory
+  // pinSession is minted ONLY by the keypad verify-pin flow and is wiped by a full
+  // page reload. A freshly-onboarded member has NO pin (createOnboarding sets none),
+  // so set one via the API, then mint the session through the real pin-select →
+  // pin-entry keypad (mirrors tests/e2e/journeys/_journey-helpers.ts::pinAuth).
+  // After this returns, the page holds a live pin session — reach gated routes with
+  // gotoApp() (SPA-nav), NEVER page.goto (a hard reload wipes the session).
+  const setPinRes = await page.request.post(
+    `${API}/dental/organizations/${ctx.orgId}/branches/${ctx.branchId}/members/${ctx.memberId}/set-pin`,
+    { headers: { 'Content-Type': 'application/json' }, data: { pin: DEMO_PIN } },
+  );
+  if (!setPinRes.ok()) {
+    throw new Error(`set-pin failed (${setPinRes.status()}): ${(await setPinRes.text().catch(() => '')).slice(0, 200)}`);
+  }
+
+  await page.goto(`${APP}/auth/pin-select`);
+  await page.waitForLoadState('networkidle');
+  // Single-member orgs may auto-redirect straight to pin-entry; handle both.
+  if (page.url().includes('/auth/pin-select')) {
+    const card = page.getByRole('button', { name: new RegExp(`Sign in as ${OWNER_DISPLAY_NAME}`, 'i') });
+    await expect(card, `PIN-select card for "${OWNER_DISPLAY_NAME}" must render`).toBeVisible({ timeout: 15000 });
+    await card.click();
+  }
+  await page.waitForURL(/\/auth\/pin-entry\//, { timeout: 10000 });
+  await expect(page.getByLabel('1')).toBeVisible({ timeout: 10000 });
+  for (const digit of DEMO_PIN) {
+    await page.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
+  }
+  // Land off the auth flow — the in-memory pin session is now active.
+  await page.waitForURL((url: URL) => !url.pathname.startsWith('/auth/'), { timeout: 10000 });
+
+  return { email, password, pin: DEMO_PIN, ...ctx };
+}
+
+/** PIN used for the self-bootstrap fixture owner (valid per /^\d{4,8}$/). */
+const DEMO_PIN = '123456';
+/** Display name onboarded by setupDentalOrg — must match the pin-select card text. */
+const OWNER_DISPLAY_NAME = 'E2E Dentist';
+
+/**
+ * SPA-navigate to a same-origin app route WITHOUT a full reload. The workspace +
+ * dashboard route trees are PIN-gated and the pin session minted by setupDentalOrg
+ * lives ONLY in memory — a hard page.goto wipes it and bounces to /auth/pin-select.
+ * TanStack Router intercepts the history change and renders the target with the
+ * session intact (mirrors _journey-helpers.ts::openWorkspace).
+ *
+ * Accepts a path ("/patients", `/${patientId}`) or a full APP URL.
+ */
+export async function gotoApp(page: Page, pathOrUrl: string): Promise<void> {
+  const to = pathOrUrl.startsWith('http')
+    ? new URL(pathOrUrl).pathname + new URL(pathOrUrl).search
+    : pathOrUrl;
+  await page.evaluate((target) => {
+    window.history.pushState({}, '', target);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, to);
+  await page.waitForLoadState('networkidle');
 }
 
 /**
@@ -167,8 +293,15 @@ export async function createAppointment(page: Page, opts: {
   durationMinutes?: number;
   serviceType?: string;
 }) {
-  const res = await page.evaluate(async ({ api, opts }) => {
-    const scheduledAt = opts.scheduledAt ?? new Date(Date.now() + 86400000).toISOString();
+  // Contract (CreateAppointmentRequestSchema): providerId, startAt, endAt (ISO
+  // datetimes), visitType (checkup|treatment|emergency|recall) — NOT the legacy
+  // dentistMemberId/scheduledAt/durationMinutes/serviceType. Translate the helper's
+  // friendly opts to the wire contract; keep the free-text service string in `notes`.
+  const startAt = opts.scheduledAt ?? new Date(Date.now() + 86400000).toISOString();
+  const durationMinutes = opts.durationMinutes ?? 30;
+  const endAt = new Date(new Date(startAt).getTime() + durationMinutes * 60_000).toISOString();
+  const visitType = toVisitType(opts.serviceType);
+  const res = await page.evaluate(async ({ api, opts, startAt, endAt, visitType }) => {
     const r = await fetch(`${api}/dental/appointments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -176,15 +309,16 @@ export async function createAppointment(page: Page, opts: {
       body: JSON.stringify({
         patientId: opts.patientId,
         branchId: opts.branchId,
-        dentistMemberId: opts.memberId,
-        scheduledAt,
-        durationMinutes: opts.durationMinutes ?? 30,
-        serviceType: opts.serviceType ?? 'Examination',
+        providerId: opts.memberId,
+        startAt,
+        endAt,
+        visitType,
+        notes: opts.serviceType,
       }),
     });
-    if (!r.ok) throw new Error(`Appointment creation failed: ${r.status}`);
+    if (!r.ok) throw new Error(`Appointment creation failed: ${r.status} ${await r.text().catch(() => '')}`);
     return r.json();
-  }, { api: API, opts });
+  }, { api: API, opts, startAt, endAt, visitType });
 
-  return res as { id: string; status: string; scheduledAt: string; durationMinutes: number };
+  return res as { id: string; status: string; startAt: string; endAt: string; visitType: string };
 }

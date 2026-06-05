@@ -77,26 +77,24 @@ test.describe('Calendar UI (FR3.x)', () => {
   });
 
   test('FR3.9: check-in API call made when check-in button clicked on appointment card', async ({ page }) => {
-    await signUpAndSeedOrg(page);
-
     // Seed a patient + appointment for today
-    const { branchId } = await signUpAndSeedOrg(page);
-    const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
+    const { branchId, memberId: ownerMemberId } = await signUpAndSeedOrg(page);
+    const result = await page.evaluate(async ({ api, branchId, ownerMemberId }: { api: string; branchId: string; ownerMemberId: string }) => {
       // Create a patient via dental endpoint
       const patientRes = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Test Patient Appt', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Test Patient Appt', branchId, consentGiven: true }),
       });
       if (!patientRes.ok) return null;
       const patient = await patientRes.json() as any;
 
-      // Seed a member for the appointment
+      // Use the onboarded owner membership as the appointment provider.
       const memberRes = await fetch(`${api}/dental/org/members`, {
         credentials: 'include',
       }).then(r => r.json() as any).catch(() => ({ items: [] }));
-      const memberId = memberRes?.items?.[0]?.id;
+      const memberId = memberRes?.items?.[0]?.id ?? ownerMemberId;
       if (!memberId) return null;
 
       // Create appointment for today
@@ -108,16 +106,17 @@ test.describe('Calendar UI (FR3.x)', () => {
         body: JSON.stringify({
           patientId: patient.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt: today,
-          durationMinutes: 30,
-          serviceType: 'Check-up',
+          providerId: memberId,
+          startAt: today,
+          endAt: new Date(new Date(today).getTime() + 30 * 60000).toISOString(),
+          visitType: 'checkup',
+          notes: 'Check-up',
         }),
       });
       if (!apptRes.ok) return null;
       const appt = await apptRes.json() as any;
       return { appointmentId: appt.id };
-    }, { api: API, branchId });
+    }, { api: API, branchId, ownerMemberId });
 
     if (!result) {
       // Seeding failed (no members available) — skip check-in interaction test
@@ -158,7 +157,7 @@ test.describe('Scheduling: Cancel Appointment (AC-SCHED-04)', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Cancel Test Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Cancel Test Patient', branchId, consentGiven: true }),
       });
       if (!patientRes.ok) return null;
       const patient = await patientRes.json() as any;
@@ -168,20 +167,21 @@ test.describe('Scheduling: Cancel Appointment (AC-SCHED-04)', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
+        body: (() => { const startAt = new Date(Date.now() + 86400000).toISOString(); return JSON.stringify({
           patientId: patient.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-          durationMinutes: 30,
-          serviceType: 'Cleaning',
-        }),
+          providerId: memberId,
+          startAt,
+          endAt: new Date(new Date(startAt).getTime() + 30 * 60000).toISOString(),
+          visitType: 'recall',
+          notes: 'Cleaning',
+        }); })(),
       });
       if (!apptRes.ok) return null;
       const appt = await apptRes.json() as any;
 
-      // Cancel appointment (returns 204 No Content)
-      const cancelRes = await fetch(`${api}/dental/appointments/${appt.id}`, {
+      // Cancel appointment (returns 204 No Content); reason is a required query param (min 5).
+      const cancelRes = await fetch(`${api}/dental/appointments/${appt.id}?reason=${encodeURIComponent('E2E cancellation')}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -222,11 +222,15 @@ test.describe('Scheduling: Create Appointment (AC-SCHED-01)', () => {
 
     expect(appt.id).toBeTruthy();
     expect(appt.status).toBe('scheduled');
-    expect(appt.durationMinutes).toBe(45);
+    expect((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000).toBe(45);
 
-    // Verify appointment appears when listing branch appointments
+    // Verify appointment appears when listing branch appointments.
+    // The list requires branchId + date_from + date_to (calendar window, ≤31d).
     const listed = await page.evaluate(async ({ api, branchId, apptId }: { api: string; branchId: string; apptId: string }) => {
-      const r = await fetch(`${api}/dental/appointments?branchId=${branchId}`, { credentials: 'include' });
+      const fmt = (d: Date) => d.toISOString().slice(0, 10);
+      const from = fmt(new Date());
+      const to = fmt(new Date(Date.now() + 7 * 86400000));
+      const r = await fetch(`${api}/dental/appointments?branchId=${branchId}&date_from=${from}&date_to=${to}`, { credentials: 'include' });
       if (!r.ok) return null;
       const body = await r.json() as any;
       const items: any[] = body.items ?? body ?? [];
@@ -245,12 +249,13 @@ test.describe('Scheduling: Create Appointment (AC-SCHED-01)', () => {
     const scheduledAt = new Date(Date.now() + 86400000).toISOString();
 
     const result = await page.evaluate(async ({ api, branchId, memberId, patientA, patientB, scheduledAt }: any) => {
+      const endAt = new Date(new Date(scheduledAt).getTime() + 30 * 60000).toISOString();
       // First booking
       const r1 = await fetch(`${api}/dental/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ patientId: patientA, branchId, dentistMemberId: memberId, scheduledAt, durationMinutes: 30, serviceType: 'Exam' }),
+        body: JSON.stringify({ patientId: patientA, branchId, providerId: memberId, startAt: scheduledAt, endAt, visitType: 'checkup', notes: 'Exam' }),
       });
       if (!r1.ok) return { ok: false, step: 'first', status: r1.status };
 
@@ -259,7 +264,7 @@ test.describe('Scheduling: Create Appointment (AC-SCHED-01)', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ patientId: patientB, branchId, dentistMemberId: memberId, scheduledAt, durationMinutes: 30, serviceType: 'Exam' }),
+        body: JSON.stringify({ patientId: patientB, branchId, providerId: memberId, startAt: scheduledAt, endAt, visitType: 'checkup', notes: 'Exam' }),
       });
       const body2 = await r2.json() as any;
       return { ok: true, status: r2.status, warning: body2.warning ?? body2.warnings ?? null };
@@ -324,7 +329,7 @@ test.describe('Scheduling: Edit Appointment (AC-SCHED-02)', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Edit Test Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Edit Test Patient', branchId, consentGiven: true }),
       });
       if (!patientRes.ok) return null;
       const patient = await patientRes.json() as any;
@@ -338,24 +343,25 @@ test.describe('Scheduling: Edit Appointment (AC-SCHED-02)', () => {
         body: JSON.stringify({
           patientId: patient.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt: originalTime,
-          durationMinutes: 30,
-          serviceType: 'Exam',
+          providerId: memberId,
+          startAt: originalTime,
+          endAt: new Date(new Date(originalTime).getTime() + 30 * 60000).toISOString(),
+          visitType: 'checkup',
+          notes: 'Exam',
         }),
       });
       if (!apptRes.ok) return null;
       const appt = await apptRes.json() as any;
 
-      // Edit appointment — change duration and add notes
+      // Edit appointment — change duration (via endAt) and add notes
       const newTime = new Date(Date.now() + 172800000).toISOString();
       const patchRes = await fetch(`${api}/dental/appointments/${appt.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          scheduledAt: newTime,
-          durationMinutes: 60,
+          startAt: newTime,
+          endAt: new Date(new Date(newTime).getTime() + 60 * 60000).toISOString(),
           notes: 'Updated via E2E test',
         }),
       });
@@ -363,9 +369,9 @@ test.describe('Scheduling: Edit Appointment (AC-SCHED-02)', () => {
       const updated = await patchRes.json() as any;
       return {
         ok: true,
-        durationMinutes: updated.durationMinutes,
+        durationMinutes: (new Date(updated.endAt).getTime() - new Date(updated.startAt).getTime()) / 60000,
         notes: updated.notes,
-        scheduledAt: updated.scheduledAt,
+        startAt: updated.startAt,
       };
     }, { api: API, branchId, memberId });
 

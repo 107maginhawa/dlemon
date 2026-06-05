@@ -17,12 +17,12 @@ import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 async function signUpAndSeedOrg(page: Page) {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
   // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
-  const { orgId, branchId } = await signUpOnboardAndUnlock(page, {
+  const { orgId, branchId, memberId } = await signUpOnboardAndUnlock(page, {
     tier: 'clinic',
     label: 'Riley',
   });
 
-  return { orgId, branchId };
+  return { orgId, branchId, memberId };
 }
 
 // ---------------------------------------------------------------------------
@@ -31,23 +31,24 @@ async function signUpAndSeedOrg(page: Page) {
 
 test.describe('Riley — Edit Appointment (AC-SCHED-02)', () => {
   test('edit appointment reschedules duration and notes', async ({ page }) => {
-    const { branchId } = await signUpAndSeedOrg(page);
+    const { branchId, memberId: ownerMemberId } = await signUpAndSeedOrg(page);
 
-    const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
+    const result = await page.evaluate(async ({ api, branchId, ownerMemberId }: { api: string; branchId: string; ownerMemberId: string }) => {
       const memberRes = await fetch(`${api}/dental/org/members`, { credentials: 'include' })
         .then(r => r.json() as any).catch(() => ({ items: [] }));
-      const memberId = memberRes?.items?.[0]?.id;
+      const memberId = memberRes?.items?.[0]?.id ?? ownerMemberId;
       if (!memberId) return null;
 
       const patientRes = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Riley Edit Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Riley Edit Patient', branchId, consentGiven: true }),
       });
       if (!patientRes.ok) return null;
       const patient = await patientRes.json() as any;
 
+      const startAt = new Date(Date.now() + 2 * 86400000).toISOString();
       const apptRes = await fetch(`${api}/dental/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,10 +56,11 @@ test.describe('Riley — Edit Appointment (AC-SCHED-02)', () => {
         body: JSON.stringify({
           patientId: patient.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt: new Date(Date.now() + 2 * 86400000).toISOString(),
-          durationMinutes: 30,
-          serviceType: 'Cleaning',
+          providerId: memberId,
+          startAt,
+          endAt: new Date(new Date(startAt).getTime() + 30 * 60000).toISOString(),
+          visitType: 'recall',
+          notes: 'Cleaning',
         }),
       });
       if (!apptRes.ok) return null;
@@ -71,8 +73,8 @@ test.describe('Riley — Edit Appointment (AC-SCHED-02)', () => {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          scheduledAt: newTime,
-          durationMinutes: 60,
+          startAt: newTime,
+          endAt: new Date(new Date(newTime).getTime() + 60 * 60000).toISOString(),
           notes: 'Extended consultation — Riley rescheduled',
         }),
       });
@@ -81,11 +83,11 @@ test.describe('Riley — Edit Appointment (AC-SCHED-02)', () => {
       return {
         ok: true,
         id: updated.id,
-        durationMinutes: updated.durationMinutes,
+        durationMinutes: (new Date(updated.endAt).getTime() - new Date(updated.startAt).getTime()) / 60000,
         notes: updated.notes,
         status: updated.status,
       };
-    }, { api: API, branchId });
+    }, { api: API, branchId, ownerMemberId });
 
     if (!result) throw new Error('Seeding failed: no members found or appointment creation failed');
 
@@ -109,19 +111,19 @@ test.describe('Riley — Edit Appointment (AC-SCHED-02)', () => {
 
 test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
   test('cancel appointment returns status=cancelled', async ({ page }) => {
-    const { branchId } = await signUpAndSeedOrg(page);
+    const { branchId, memberId: ownerMemberId } = await signUpAndSeedOrg(page);
 
-    const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
+    const result = await page.evaluate(async ({ api, branchId, ownerMemberId }: { api: string; branchId: string; ownerMemberId: string }) => {
       const memberRes = await fetch(`${api}/dental/org/members`, { credentials: 'include' })
         .then(r => r.json() as any).catch(() => ({ items: [] }));
-      const memberId = memberRes?.items?.[0]?.id;
+      const memberId = memberRes?.items?.[0]?.id ?? ownerMemberId;
       if (!memberId) return null;
 
       const patientRes = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Riley Cancel Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Riley Cancel Patient', branchId, consentGiven: true }),
       });
       if (!patientRes.ok) return null;
       const patient = await patientRes.json() as any;
@@ -134,17 +136,18 @@ test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
         body: JSON.stringify({
           patientId: patient.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt,
-          durationMinutes: 30,
-          serviceType: 'Exam',
+          providerId: memberId,
+          startAt: scheduledAt,
+          endAt: new Date(new Date(scheduledAt).getTime() + 30 * 60000).toISOString(),
+          visitType: 'checkup',
+          notes: 'Exam',
         }),
       });
       if (!apptRes.ok) return null;
       const appt = await apptRes.json() as any;
 
-      // Riley cancels the appointment
-      const cancelRes = await fetch(`${api}/dental/appointments/${appt.id}`, {
+      // Riley cancels the appointment (reason is a required query param, min 5).
+      const cancelRes = await fetch(`${api}/dental/appointments/${appt.id}?reason=${encodeURIComponent('Riley cancellation')}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -163,7 +166,7 @@ test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
         scheduledAt,
         branchId,
       };
-    }, { api: API, branchId });
+    }, { api: API, branchId, ownerMemberId });
 
     if (!result) throw new Error('Seeding failed: appointment cancellation setup returned null');
 
@@ -172,25 +175,25 @@ test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
   });
 
   test('slot freed: creating new appointment at same time succeeds after cancel', async ({ page }) => {
-    const { branchId } = await signUpAndSeedOrg(page);
+    const { branchId, memberId: ownerMemberId } = await signUpAndSeedOrg(page);
 
-    const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
+    const result = await page.evaluate(async ({ api, branchId, ownerMemberId }: { api: string; branchId: string; ownerMemberId: string }) => {
       const memberRes = await fetch(`${api}/dental/org/members`, { credentials: 'include' })
         .then(r => r.json() as any).catch(() => ({ items: [] }));
-      const memberId = memberRes?.items?.[0]?.id;
+      const memberId = memberRes?.items?.[0]?.id ?? ownerMemberId;
       if (!memberId) return null;
 
       const patient1Res = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Slot Freed Patient 1', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Slot Freed Patient 1', branchId, consentGiven: true }),
       });
       const patient2Res = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Slot Freed Patient 2', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Slot Freed Patient 2', branchId, consentGiven: true }),
       });
       if (!patient1Res.ok || !patient2Res.ok) return null;
       const patient1 = await patient1Res.json() as any;
@@ -206,17 +209,18 @@ test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
         body: JSON.stringify({
           patientId: patient1.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt,
-          durationMinutes: 30,
-          serviceType: 'Cleaning',
+          providerId: memberId,
+          startAt: scheduledAt,
+          endAt: new Date(new Date(scheduledAt).getTime() + 30 * 60000).toISOString(),
+          visitType: 'recall',
+          notes: 'Cleaning',
         }),
       });
       if (!appt1Res.ok) return null;
       const appt1 = await appt1Res.json() as any;
 
-      // Cancel it — slot is freed
-      await fetch(`${api}/dental/appointments/${appt1.id}`, {
+      // Cancel it — slot is freed (reason is a required query param, min 5).
+      await fetch(`${api}/dental/appointments/${appt1.id}?reason=${encodeURIComponent('Freeing the slot')}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -229,10 +233,11 @@ test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
         body: JSON.stringify({
           patientId: patient2.id,
           branchId,
-          dentistMemberId: memberId,
-          scheduledAt,
-          durationMinutes: 30,
-          serviceType: 'Exam',
+          providerId: memberId,
+          startAt: scheduledAt,
+          endAt: new Date(new Date(scheduledAt).getTime() + 30 * 60000).toISOString(),
+          visitType: 'checkup',
+          notes: 'Exam',
         }),
       });
 
@@ -240,7 +245,7 @@ test.describe('Riley — Cancel Appointment + Slot Freed (AC-SCHED-04)', () => {
         appt2Status: appt2Res.status,
         appt2Id: appt2Res.ok ? (await appt2Res.json() as any).id : null,
       };
-    }, { api: API, branchId });
+    }, { api: API, branchId, ownerMemberId });
 
     if (!result) throw new Error('Seeding failed: slot/appointment creation returned null');
 

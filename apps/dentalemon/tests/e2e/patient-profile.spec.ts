@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupDentalOrg, createDentalPatient } from './fixtures';
+import { setupDentalOrg, createDentalPatient , gotoApp} from './fixtures';
 
 const APP = 'http://localhost:3003';
 
@@ -19,7 +19,7 @@ test.describe('Patient Profile: Profile page loads (AC-PROF-01)', () => {
       branchId,
     });
 
-    await page.goto(`${APP}/patients/${patientId}`);
+    await gotoApp(page, `/patients/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // Page should load without error
@@ -46,8 +46,14 @@ test.describe('Patient Profile: Open workspace from profile (AC-PROF-02)', () =>
       branchId,
     });
 
-    await page.goto(`${APP}/patients/${patientId}`);
+    await gotoApp(page, `/patients/${patientId}`);
     await page.waitForLoadState('networkidle');
+    // Anchor on the profile page itself before probing for a workspace CTA. The
+    // SPA transition from the dashboard can otherwise leave the previous route's
+    // "Open Workspace" quick-action briefly in the DOM, which detaches mid-click
+    // and times out. Waiting for the profile header guarantees we evaluate the
+    // locator against the settled profile page (which has no workspace CTA).
+    await page.getByTestId('back-to-patients').waitFor({ state: 'visible', timeout: 8000 });
 
     // Look for a workspace link/button
     const workspaceLink = page.getByRole('link', { name: /workspace|open workspace/i })
@@ -57,7 +63,7 @@ test.describe('Patient Profile: Open workspace from profile (AC-PROF-02)', () =>
     if (linkExists === 0) {
       // If the profile page doesn't have an explicit link, check that the patient ID
       // is accessible and a direct workspace URL works
-      await page.goto(`${APP}/${patientId}`);
+      await gotoApp(page, `/${patientId}`);
       await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).not.toContainText('500');
       return;

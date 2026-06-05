@@ -25,7 +25,10 @@ const MOCK_FINDING = {
   patientId: 'test-patient-id',
   branchId: 'test-branch-id',
   type: 'caries',
-  status: 'suspected',
+  // SM-01 finding lifecycle is draft → confirmed → resolved (see
+  // use-imaging-findings.ts ImagingFindingStatus). 'suspected' is not a valid
+  // status; starting at 'draft' so the cycle button advances to 'confirmed'.
+  status: 'draft',
   toothNumber: 14,
   surfaces: null,
   note: 'test finding',
@@ -85,6 +88,16 @@ test.describe('FindingsSidebar — create / update / delete', () => {
     })
 
     await page.goto(IMAGING_TEST_URL)
+
+    // The TanStack Devtools trigger is a position:fixed, z-index:99999 button
+    // pinned bottom-right (dev-only widget, never ships). It overlaps the
+    // FindingsSidebar's per-row cycle/delete buttons (also bottom-right of the
+    // panel) and intercepts pointer events, so clicks on those actions time out.
+    // Hide the dev widget so the real product affordances are clickable. This is
+    // a test-environment artifact, not a product defect.
+    await page.addStyleTag({
+      content: 'button:has(> img[alt="TanStack Devtools"]) { display: none !important; }',
+    })
   })
 
   test('Findings toggle button opens the sidebar panel', async ({ page }) => {
@@ -120,9 +133,11 @@ test.describe('FindingsSidebar — create / update / delete', () => {
     // Submit
     await page.getByRole('button', { name: /add finding/i }).click()
 
-    // Finding should appear in the list
+    // Finding should appear in the list. The status badge renders the raw
+    // lowercase status ('draft') with a CSS `capitalize`; use exact: true so we
+    // match the badge span, not the case-different <option>Draft</option>.
     await expect(page.getByText('Caries').first()).toBeVisible()
-    await expect(page.getByText('suspected')).toBeVisible()
+    await expect(page.getByText('draft', { exact: true })).toBeVisible()
     await expect(page.getByText('#14')).toBeVisible()
   })
 
@@ -134,14 +149,16 @@ test.describe('FindingsSidebar — create / update / delete', () => {
     await page.getByRole('spinbutton', { name: /tooth/i }).fill('14')
     await page.getByRole('button', { name: /add finding/i }).click()
 
-    // Wait for finding to appear
-    await expect(page.getByText('suspected')).toBeVisible()
+    // Wait for finding to appear (badge shows raw lowercase status 'draft')
+    await expect(page.getByText('draft', { exact: true })).toBeVisible()
 
     // Cycle status
     await page.getByRole('button', { name: /cycle status/i }).click()
 
-    // Should now show confirmed (mocked PATCH returns confirmed)
-    await expect(page.getByText('confirmed')).toBeVisible()
+    // Cycling draft → confirmed (SM-01). The PATCH mock echoes the sent status;
+    // the badge re-renders 'confirmed'. exact:true matches the badge span, not
+    // the case-different <option>Confirmed</option>.
+    await expect(page.getByText('confirmed', { exact: true })).toBeVisible()
   })
 
   test('delete button removes finding from list', async ({ page }) => {

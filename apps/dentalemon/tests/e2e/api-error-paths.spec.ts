@@ -159,10 +159,13 @@ test.describe('API Error: Lab order backward status transition rejected', () => 
   });
 });
 
-// ─── Prescription: invalid frequency → 4xx ───────────────────────────────
+// ─── Prescription: malformed prescriberMemberId → 4xx ─────────────────────
+// `frequency` is intentionally FREE-TEXT (z.string()) — an arbitrary frequency is
+// a valid 201, not an error. The genuine validation error path is a malformed
+// required UUID (prescriberMemberId).
 
-test.describe('API Error: Prescription with invalid frequency rejected', () => {
-  test('POST /dental/visits/:id/prescriptions with invalid frequency returns 4xx', async ({ page }) => {
+test.describe('API Error: Prescription with malformed prescriberMemberId rejected', () => {
+  test('POST /dental/visits/:id/prescriptions with malformed prescriberMemberId returns 4xx', async ({ page }) => {
     const { branchId, memberId } = await setupDentalOrg(page);
     const patientId = await createDentalPatient(page, { displayName: 'ErrRx Patient', branchId });
 
@@ -184,7 +187,7 @@ test.describe('API Error: Prescription with invalid frequency rejected', () => {
         body: JSON.stringify({ status: 'active' }),
       });
 
-      // Attempt prescription with invalid frequency
+      // Attempt prescription with a malformed prescriberMemberId (invalid UUID)
       const rxRes = await fetch(`${api}/dental/visits/${visit.id}/prescriptions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,10 +195,10 @@ test.describe('API Error: Prescription with invalid frequency rejected', () => {
         body: JSON.stringify({
           visitId: visit.id,
           patientId,
-          prescriberMemberId: memberId,
+          prescriberMemberId: 'not-a-valid-uuid',
           drugName: 'Amoxicillin',
           dosage: '500mg',
-          frequency: 'INVALID_FREQUENCY_XYZ_999',
+          frequency: 'BID',
           duration: '7 days',
           quantity: '21 capsules',
         }),
@@ -205,7 +208,7 @@ test.describe('API Error: Prescription with invalid frequency rejected', () => {
 
     if (!result.ok) return; // Skip if visit setup failed
 
-    // Invalid frequency should be rejected
+    // Malformed prescriberMemberId should be rejected
     expect(result.status).toBeGreaterThanOrEqual(400);
     expect(result.status).toBeLessThan(500);
   });

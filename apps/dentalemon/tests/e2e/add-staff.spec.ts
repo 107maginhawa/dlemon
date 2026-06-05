@@ -8,7 +8,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { API, APP, signUpOnboardAndUnlock, spaNavigate, setMemberPin, unlockWorkspace } from './helpers/e2e-seed';
+import { API, APP, signUpOnboardAndUnlock, spaNavigate, setMemberPin } from './helpers/e2e-seed';
 
 async function signUpAndSetupPractice(page: Page): Promise<{ orgId: string; branchId: string }> {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
@@ -113,6 +113,15 @@ test.describe('Staff Management', () => {
     await staffPage.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
     const staffPersonId = await staffPage.evaluate(async (api: string) => {
       await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+      // The requirePerson guard bounces any user without a person profile to the
+      // /onboarding wizard — which would strand the PIN-entry route below. Create
+      // the staff user's person record so the workspace guards let them through.
+      await fetch(`${api}/persons`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ firstName: 'Staff', lastName: 'Full' }),
+      });
       const s = await (await fetch(`${api}/auth/get-session`, { credentials: 'include' })).json() as any;
       return s?.user?.id as string;
     }, API);
@@ -141,7 +150,20 @@ test.describe('Staff Management', () => {
       localStorage.setItem('currentMemberId', memberId);
       localStorage.setItem('currentMemberRole', 'staff_full');
     }, { orgId: owner.orgId, branchId: owner.branchId, memberId: staffMemberId });
-    await unlockWorkspace(staffPage, pin);
+
+    // Unlock the staff user's PIN-gated session. The shared unlockWorkspace helper
+    // expects the keypad to render immediately at /auth/pin-select, but with two
+    // members in the branch (owner + staff) that page lists member-select cards
+    // instead of auto-advancing — so drive the keypad directly via the staff
+    // member's pin-entry route, which reconstructs context from the seeded
+    // localStorage (currentOrgId/currentBranchId) and verifies the PIN.
+    await staffPage.goto(`${APP}/auth/pin-entry/${staffMemberId}`);
+    await staffPage.waitForLoadState('networkidle');
+    await expect(staffPage.getByRole('group', { name: /PIN keypad/i })).toBeVisible({ timeout: 15000 });
+    for (const digit of pin) {
+      await staffPage.getByRole('button', { name: new RegExp(`^${digit}$`) }).click();
+    }
+    await staffPage.waitForURL((url: URL) => !url.pathname.startsWith('/auth/'), { timeout: 15000 });
 
     await spaNavigate(staffPage, `/staff`);
 

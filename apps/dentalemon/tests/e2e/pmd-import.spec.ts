@@ -7,7 +7,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupDentalOrg, createDentalPatient, API } from './fixtures';
+import { setupDentalOrg, createDentalPatient, API, APP } from './fixtures';
 
 // @BR-030 PMD import links to patient and branch
 
@@ -28,11 +28,14 @@ test.describe('PMD Import (AC-PMD-03)', () => {
           patientId,
           sourceFacility: 'External Dental Clinic',
           sourceReference: 'REF-2026-001',
-          content: {
+          // Contract (ImportPMDRequestSchema): sourceDescription (string, ≤200) is
+          // required and `content` is a string (serialize the clinical record).
+          sourceDescription: 'Transferred records from External Dental Clinic',
+          content: JSON.stringify({
             allergies: ['penicillin'],
             medications: ['ibuprofen 400mg'],
             conditions: ['hypertension'],
-          },
+          }),
         }),
       });
       if (!res.ok) return { ok: false, status: res.status, body: await res.text() };
@@ -40,13 +43,20 @@ test.describe('PMD Import (AC-PMD-03)', () => {
       return { ok: true, id: data.id, patientId: data.patientId, sourceFacility: data.sourceFacility };
     }, { api: API, patientId });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok, `import failed: ${JSON.stringify(result)}`).toBe(true);
     expect(result.id).toBeTruthy();
     expect(result.patientId).toBe(patientId);
     expect(result.sourceFacility).toBe('External Dental Clinic');
   });
 
   test('POST /dental/pmd/import returns 401 without auth', async ({ page }) => {
+    // Load the app origin first (public sign-in page mints no session) so the
+    // fetch runs from a same-site browsing context — a bare about:blank evaluate
+    // can't reach the cross-origin API ("Failed to fetch"). No auth cookie is set,
+    // so the import endpoint must reject with 401.
+    await page.goto(`${APP}/auth/sign-in`);
+    await page.waitForLoadState('domcontentloaded');
+
     const result = await page.evaluate(async (api: string) => {
       const res = await fetch(`${api}/dental/pmd/import`, {
         method: 'POST',
@@ -55,7 +65,8 @@ test.describe('PMD Import (AC-PMD-03)', () => {
           patientId: '00000000-0000-4000-8000-000000000099',
           sourceFacility: 'Test',
           sourceReference: 'REF-X',
-          content: {},
+          sourceDescription: 'unauth probe',
+          content: '{}',
         }),
       });
       return { status: res.status };
@@ -72,8 +83,8 @@ test.describe('PMD Import (AC-PMD-03)', () => {
     });
 
     // Import one PMD
-    await page.evaluate(async ({ api, patientId }: { api: string; patientId: string }) => {
-      await fetch(`${api}/dental/pmd/import`, {
+    const imported = await page.evaluate(async ({ api, patientId }: { api: string; patientId: string }) => {
+      const r = await fetch(`${api}/dental/pmd/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -81,10 +92,13 @@ test.describe('PMD Import (AC-PMD-03)', () => {
           patientId,
           sourceFacility: 'City Hospital',
           sourceReference: 'REF-LIST-001',
-          content: { notes: 'test import' },
+          sourceDescription: 'City Hospital transfer summary',
+          content: JSON.stringify({ notes: 'test import' }),
         }),
       });
+      return { ok: r.ok, status: r.status, body: r.ok ? '' : await r.text().catch(() => '') };
     }, { api: API, patientId });
+    expect(imported.ok, `import failed: ${imported.status} ${imported.body}`).toBe(true);
 
     // List imported PMDs
     const result = await page.evaluate(async ({ api, patientId }: { api: string; patientId: string }) => {
@@ -93,7 +107,16 @@ test.describe('PMD Import (AC-PMD-03)', () => {
       });
       if (!res.ok) return { ok: false, status: res.status };
       const data = await res.json() as any;
-      return { ok: true, count: Array.isArray(data.items) ? data.items.length : (Array.isArray(data) ? data.length : 0) };
+      // listImportedPMDs returns { data: [...], pagination }. Tolerate items[]/bare
+      // array shapes too.
+      const list = Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data.items)
+          ? data.items
+          : Array.isArray(data)
+            ? data
+            : [];
+      return { ok: true, count: list.length };
     }, { api: API, patientId });
 
     expect(result.ok).toBe(true);

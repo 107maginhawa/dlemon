@@ -70,7 +70,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await page.locator('#appt-dentist-id').fill(memberId)
     await page.locator('#appt-date').fill(bookYmd)
     await page.locator('#appt-time').fill('10:00')
-    await page.locator('#appt-procedure').fill('checkup')
+    // #appt-procedure is a constrained <select> (QA-009: serviceType enum
+    // checkup|treatment|emergency|recall), not a free-text input — selectOption.
+    await page.locator('#appt-procedure').selectOption('checkup')
     await page.locator('#appt-notes').fill(marker)
     const branchField = page.locator('#appt-branch-id')
     await branchField.fill(branchId)

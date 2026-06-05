@@ -12,7 +12,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { setupDentalOrg, createDentalPatient, APP, API } from './fixtures';
+import { setupDentalOrg, createDentalPatient, gotoApp, APP, API } from './fixtures';
 
 /**
  * Complete the tooth slideout wizard for a single tooth:
@@ -43,7 +43,7 @@ test.describe('Action Contracts: Workspace', () => {
       branchId,
     });
 
-    await page.goto(`${APP}/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // Listen for the visit creation response
@@ -69,7 +69,7 @@ test.describe('Action Contracts: Workspace', () => {
       branchId,
     });
 
-    await page.goto(`${APP}/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // Create visit first
@@ -82,6 +82,9 @@ test.describe('Action Contracts: Workspace', () => {
     expect(visitRes.status()).toBe(201);
 
     // Click a tooth
+    // Fresh visit → initialize dentition so the chart renders clickable teeth.
+    await page.getByTestId('init-dentition-btn').click();
+    await expect(page.getByTestId('dental-chart')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('tooth-21').click();
     await expect(page.getByTestId('tooth-slideout')).toBeVisible();
 
@@ -109,7 +112,7 @@ test.describe('Action Contracts: Treatment Plan', () => {
       branchId,
     });
 
-    await page.goto(`${APP}/${patientId}`);
+    await gotoApp(page, `/${patientId}`);
     await page.waitForLoadState('networkidle');
 
     // Create visit
@@ -122,6 +125,9 @@ test.describe('Action Contracts: Treatment Plan', () => {
     expect(visitRes.status()).toBe(201);
 
     // Open tooth slideout
+    // Fresh visit → initialize dentition so the chart renders clickable teeth.
+    await page.getByTestId('init-dentition-btn').click();
+    await expect(page.getByTestId('dental-chart')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('tooth-21').click();
     await expect(page.getByTestId('tooth-slideout')).toBeVisible();
 
@@ -169,7 +175,7 @@ test.describe('Action Contracts: Patient Registration', () => {
   test('register patient produces 201 from API', async ({ page }) => {
     const { branchId } = await setupDentalOrg(page);
 
-    await page.goto(`${APP}/patients`);
+    await gotoApp(page, `/patients`);
     await page.waitForLoadState('networkidle');
 
     // Listen for the patient creation response

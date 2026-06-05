@@ -59,7 +59,8 @@ test.describe('Prescribe Medication (J7)', () => {
     const { patientId } = await setupWorkspace(page);
     await spaNavigate(page, `/${patientId}`);
     await page.getByTestId('new-visit-btn').click();
-    await page.waitForTimeout(600);
+    // Fresh visit → initialize dentition so the chart renders.
+    await page.getByTestId('init-dentition-btn').click();
     await expect(page.getByTestId('dental-chart')).toBeVisible();
   });
 
@@ -72,7 +73,8 @@ test.describe('Prescribe Medication (J7)', () => {
 
     // Create a new visit via the UI so the workspace enters active mode
     await page.getByTestId('new-visit-btn').click();
-    await page.waitForTimeout(600);
+    // Fresh visit → initialize dentition so the chart renders.
+    await page.getByTestId('init-dentition-btn').click();
     await expect(page.getByTestId('dental-chart')).toBeVisible();
 
     // Capture the visitId from the prescriptions API call triggered when Rx sheet opens

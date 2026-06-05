@@ -7,7 +7,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupDentalOrg, createDentalPatient } from './fixtures';
+import { setupDentalOrg, createDentalPatient , gotoApp} from './fixtures';
 
 const API = 'http://localhost:7213';
 const APP = 'http://localhost:3003';
@@ -62,6 +62,29 @@ async function seedCompletedVisit(page: any, opts: { patientId: string; branchId
       body: JSON.stringify({ status: 'planned' }),
     });
     if (!planRes.ok) throw new Error(`Plan treatment: ${planRes.status}: ${await planRes.text()}`);
+
+    // 3b. Sign a consent — the backend gates marking a treatment `performed` (and
+    // completing the visit) behind a SIGNED consent (TREATMENT_CONSENT_REQUIRED).
+    // A fresh org has no template, so create one, attach a consent, and sign it.
+    const tplRes = await fetch(`${api}/dental/branches/${opts.branchId}/consent-templates`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ title: 'General Treatment Consent', content: 'I consent.', name: 'General Treatment Consent', body: 'I consent.' }),
+    });
+    if (!tplRes.ok) throw new Error(`Consent template: ${tplRes.status}: ${await tplRes.text()}`);
+    const tplJson = await tplRes.json() as any;
+    const templateId = tplJson?.template?.id ?? tplJson?.id;
+    const conRes = await fetch(`${api}/dental/visits/${visit.id}/consents`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ visitId: visit.id, patientId: opts.patientId, templateId, templateName: 'General Treatment Consent' }),
+    });
+    if (!conRes.ok) throw new Error(`Create consent: ${conRes.status}: ${await conRes.text()}`);
+    const conJson = await conRes.json() as any;
+    const consentId = conJson?.consent?.id ?? conJson?.id;
+    const signRes = await fetch(`${api}/dental/visits/${visit.id}/consents/${consentId}/sign`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ signatureData: 'data:image/png;base64,iVBORw0KGgo=' }),
+    });
+    if (!signRes.ok) throw new Error(`Sign consent: ${signRes.status}: ${await signRes.text()}`);
 
     const perfRes = await fetch(`${api}/dental/visits/${visit.id}/treatments/${tx.id}`, {
       method: 'PATCH',
@@ -157,7 +180,7 @@ test.describe('Invoice: View from completed visit (AC-INV-04)', () => {
     expect(invoiceId).toBeTruthy();
 
     // Navigate to billing list and verify invoice is visible
-    await page.goto(`${APP}/billing`);
+    await gotoApp(page, `/billing`);
     await page.waitForLoadState('networkidle');
     // Billing page loads without a server error (note: "500" in peso amounts is fine)
     await expect(page.locator('body')).not.toContainText('Internal Server Error');
@@ -184,9 +207,10 @@ test.describe('Payment: Record payment against invoice (AC-PAY-01)', () => {
       if (!invRes.ok) return { ok: false, step: 'create', status: invRes.status, body: await invRes.text() };
       const invoice = await invRes.json() as any;
 
-      // Issue invoice (draft → issued)
+      // Issue invoice (draft → issued). V-BIL-008: issue is a state transition,
+      // so the canonical method is PATCH (not POST).
       const issueRes = await fetch(`${api}/dental/billing/invoices/${invoice.id}/issue`, {
-        method: 'POST',
+        method: 'PATCH',
         credentials: 'include',
       });
       if (!issueRes.ok) return { ok: false, step: 'issue', status: issueRes.status };
@@ -224,7 +248,8 @@ test.describe('Payment: Record payment against invoice (AC-PAY-01)', () => {
       if (!invRes.ok) return { ok: false, step: 'create', status: invRes.status, body: await invRes.text() };
       const invoice = await invRes.json() as any;
 
-      await fetch(`${api}/dental/billing/invoices/${invoice.id}/issue`, { method: 'POST', credentials: 'include' });
+      // V-BIL-008: issue is a PATCH state transition.
+      await fetch(`${api}/dental/billing/invoices/${invoice.id}/issue`, { method: 'PATCH', credentials: 'include' });
 
       // Record FULL payment matching invoice balance
       const payRes = await fetch(`${api}/dental/billing/invoices/${invoice.id}/payments`, {

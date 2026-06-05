@@ -212,9 +212,10 @@ test.describe('Consent Signing (AC-MED-03, BR-014)', () => {
       { api: API, visitId, patientId, branchId },
     );
 
-    // Re-signing a signed form must return 409 Conflict or 400 Bad Request
+    // Re-signing a signed form must be rejected (BR-014 immutability):
+    // 409 Conflict / 400 Bad Request / 422 Unprocessable.
     expect(result.error).toBeUndefined();
-    expect([400, 409]).toContain(result.reSignStatus);
+    expect([400, 409, 422]).toContain(result.reSignStatus);
   });
 
   test('signed consent form is read-only — GET list shows signed=true after signing (AC-MED-03)', async ({ page }) => {

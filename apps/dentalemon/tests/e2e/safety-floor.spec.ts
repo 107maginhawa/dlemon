@@ -121,22 +121,57 @@ test.describe('Safety Floor Medical Alerts (AC-MED-02)', () => {
   });
 
   test('resolved allergy does not appear in safety floor', async ({ page }) => {
-    // [AC-MED-02] only active entries surface — resolved allergies must be silent
-    const allergyName = 'Aspirin';
-    const { patientId, allergyId } = await setupPatientWithAllergy(page, allergyName);
+    // [AC-MED-02] only active entries surface — resolved allergies must be silent.
+    //
+    // Medical-history entries are immutable (V-CLN-009): an in-place PATCH to flip
+    // `active`/`resolvedDate` is rejected with 405 MEDICAL_HISTORY_IMMUTABLE.
+    // Resolution flows through the additive amendment path instead — an entry is
+    // recorded with a `resolvedDate`, which marks it resolved (active=false) at
+    // creation time, so it must never surface in the safety floor.
+    const { branchId } = await signUpOnboardAndUnlock(page, { tier: 'solo', label: 'Resolved' });
 
-    // Resolve the allergy via API
-    await page.evaluate(
+    const patientId = await page.evaluate(
       async (args) => {
-        await fetch(`${args.api}/dental/clinical/medical-history/${args.allergyId}`, {
-          method: 'PATCH',
+        const res = await fetch(`${args.api}/dental/patients`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ active: false, resolvedDate: new Date().toISOString() }),
+          body: JSON.stringify({
+            displayName: 'Resolved Patient',
+            dateOfBirth: '1988-11-05',
+            gender: 'female',
+            branchId: args.branchId,
+            consentGiven: true,
+          }),
         });
+        if (!res.ok) throw new Error(`Patient create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+        return (await res.json()).id as string;
       },
-      { api: API, allergyId },
+      { api: API, branchId },
     );
+
+    // Record the allergy as already resolved (additive amendment path).
+    const resolved = await page.evaluate(
+      async (args) => {
+        const res = await fetch(`${args.api}/dental/clinical/medical-history`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            patientId: args.patientId,
+            entryType: 'allergy',
+            displayName: 'Aspirin',
+            notes: 'Severe reaction (resolved)',
+            resolvedDate: new Date().toISOString(),
+          }),
+        });
+        if (!res.ok) throw new Error(`Resolved allergy create failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+        return res.json();
+      },
+      { api: API, patientId },
+    );
+    // A resolved entry must be inactive so the safety floor's `active` filter drops it.
+    expect(resolved.active).toBe(false);
 
     await spaNavigate(page, `/${patientId}`);
     await page.getByTestId('timeline-carousel').waitFor({ state: 'visible', timeout: 8000 });

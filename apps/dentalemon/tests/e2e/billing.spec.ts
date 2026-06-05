@@ -16,12 +16,12 @@ import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 async function signUpAndSeedBilling(page: Page) {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
   // — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
-  const { orgId, branchId } = await signUpOnboardAndUnlock(page, {
+  const { orgId, branchId, memberId } = await signUpOnboardAndUnlock(page, {
     tier: 'clinic',
     label: 'Billing',
   });
 
-  return { orgId, branchId };
+  return { orgId, branchId, memberId };
 }
 
 test.describe('Billing (FR4.x)', () => {
@@ -53,24 +53,18 @@ test.describe('Billing (FR4.x)', () => {
   });
 
   test('FR4.1b: invoice status badge visible after seeding an invoice', async ({ page }) => {
-    const { branchId } = await signUpAndSeedBilling(page);
+    const { branchId, memberId } = await signUpAndSeedBilling(page);
 
     // Seed patient + visit + treatment + invoice via API
-    const result = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
-      // Get current user's member for dentistMemberId
-      const membersRes = await fetch(`${api}/dental/org/members`, { credentials: 'include' });
-      const members = await membersRes.json() as any;
-      const memberId = members?.items?.[0]?.id;
-      if (!memberId) return null;
-
+    const result = await page.evaluate(async ({ api, branchId, memberId }: { api: string; branchId: string; memberId: string }) => {
       // Create patient
       const patientRes = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: 'Billing Test Patient', consentGiven: true }),
+        body: JSON.stringify({ displayName: 'Billing Test Patient', branchId, consentGiven: true }),
       });
-      if (!patientRes.ok) return null;
+      if (!patientRes.ok) return { error: `patient ${patientRes.status}: ${(await patientRes.text()).slice(0, 200)}` };
       const patient = await patientRes.json() as any;
 
       // Create visit
@@ -80,36 +74,70 @@ test.describe('Billing (FR4.x)', () => {
         credentials: 'include',
         body: JSON.stringify({ patientId: patient.id, branchId, dentistMemberId: memberId }),
       });
-      if (!visitRes.ok) return null;
+      if (!visitRes.ok) return { error: `visit ${visitRes.status}: ${(await visitRes.text()).slice(0, 200)}` };
       const visit = await visitRes.json() as any;
+      const visitId = visit.id;
 
       // Activate visit
-      await fetch(`${api}/dental/visits/${visit.id}`, {
+      await fetch(`${api}/dental/visits/${visitId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ status: 'active' }),
       });
 
-      // Add treatment (performed)
-      const treatRes = await fetch(`${api}/dental/visits/${visit.id}/treatments`, {
+      // Consent gate: marking a treatment performed (and completing the visit)
+      // requires a SIGNED consent. A fresh org has no template, so create one,
+      // attach a consent, and sign it before the perform/complete steps.
+      const tplRes = await fetch(`${api}/dental/branches/${branchId}/consent-templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: 'General Treatment Consent', content: 'I consent.', name: 'General Treatment Consent', body: 'I consent.' }),
+      });
+      const tplJson = await tplRes.json() as any;
+      const templateId = tplJson?.template?.id ?? tplJson?.id;
+      const conRes = await fetch(`${api}/dental/visits/${visitId}/consents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ visitId, patientId: patient.id, templateId, templateName: 'General Treatment Consent' }),
+      });
+      const conJson = await conRes.json() as any;
+      const consentId = conJson?.consent?.id ?? conJson?.id;
+      await fetch(`${api}/dental/visits/${visitId}/consents/${consentId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ signatureData: 'data:image/png;base64,iVBORw0KGgo=' }),
+      });
+
+      // Add treatment, then advance diagnosed → planned → performed (FSM is two-step).
+      const treatRes = await fetch(`${api}/dental/visits/${visitId}/treatments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          visitId,
           patientId: patient.id,
           cdtCode: 'D1110',
           description: 'Prophylaxis',
+          toothNumber: 16,
           priceCents: 5000,
         }),
       });
+      if (!treatRes.ok) return { error: `treatment ${treatRes.status}: ${(await treatRes.text()).slice(0, 200)}` };
       const treatment = await treatRes.json() as any;
-      await fetch(`${api}/dental/visits/${visit.id}/treatments/${treatment.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'performed' }),
-      });
+      const treatmentId = treatment?.id ?? treatment?.data?.id;
+      for (const status of ['planned', 'performed']) {
+        const tRes = await fetch(`${api}/dental/visits/${visitId}/treatments/${treatmentId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status }),
+        });
+        if (!tRes.ok) return { error: `treatment→${status} ${tRes.status}: ${(await tRes.text()).slice(0, 200)}` };
+      }
 
       // Complete visit
       await fetch(`${api}/dental/visits/${visit.id}`, {
@@ -131,12 +159,13 @@ test.describe('Billing (FR4.x)', () => {
           dentistMemberId: memberId,
         }),
       });
-      if (!invoiceRes.ok) return null;
+      if (!invoiceRes.ok) return { error: `invoice ${invoiceRes.status}: ${(await invoiceRes.text()).slice(0, 200)}` };
       const invoice = await invoiceRes.json() as any;
       return { invoiceId: invoice.id };
-    }, { api: API, branchId });
+    }, { api: API, branchId, memberId });
 
-    expect(result, 'Seeding failed: member lookup or invoice creation returned null').not.toBeNull();
+    expect(result, `Seeding failed: ${(result as any)?.error}`).not.toBeNull();
+    expect((result as any).error, `Seeding failed: ${(result as any)?.error}`).toBeUndefined();
 
     await spaNavigate(page, '/billing');
 

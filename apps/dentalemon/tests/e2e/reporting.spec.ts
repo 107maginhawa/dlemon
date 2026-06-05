@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupDentalOrg } from './fixtures';
+import { setupDentalOrg , gotoApp} from './fixtures';
 
 const APP = 'http://localhost:3003';
 
@@ -15,7 +15,7 @@ test.describe('Reporting: Daily report loads (AC-REPORT-01)', () => {
   test('navigating to /reports/daily renders without server error', async ({ page }) => {
     await setupDentalOrg(page);
 
-    await page.goto(`${APP}/reports/daily`);
+    await gotoApp(page, `/reports/daily`);
     await page.waitForLoadState('networkidle');
 
     // Must not show a 500 server error

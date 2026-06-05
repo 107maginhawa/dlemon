@@ -1,193 +1,147 @@
 /**
  * E2E: PMD Generation — Journey
  *
- * Flow: sign up → create patient → create visit → activate → add treatment →
- *       complete visit → generate PMD → verify PMD content
+ * Flow: sign up → onboard clinic → create patient → create visit → activate →
+ *       add treatment → sign consent → perform → complete visit → generate PMD →
+ *       verify PMD content
  *
  * Preconditions:
  *  - API running on localhost:7213
  *  - App running on localhost:3003
+ *
+ * Notes on the test seeding (matches tests/e2e/invoice-detail.spec.ts):
+ *  - Org creation is admin-only (EM-ORG-002); a fresh owner self-provisions via
+ *    setupDentalOrg → /dental/onboarding (also mints a live PIN session).
+ *  - The workspace is PIN-gated, so the FR12.6 UI test navigates with gotoApp
+ *    (SPA pushState) — a hard page.goto would wipe the in-memory PIN session.
+ *  - Marking a treatment `performed` and completing a visit are both gated behind
+ *    a SIGNED consent (BR-006 / TREATMENT_CONSENT_REQUIRED). A fresh org has no
+ *    template, so we create one, attach a consent, and sign it before performing.
+ *  - Treatment FSM is diagnosed → planned → performed (two steps).
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { setupDentalOrg, createDentalPatient, gotoApp, API } from './fixtures';
 
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
-
-async function setup(page: Page) {
-  const suffix = Date.now();
-
-  // Sign up
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`PMD Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(`pmd-e2e-${suffix}@example.org`);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned \${response.status()}: \${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Create patient
-  const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/patients`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        name: [{ use: 'official', family: 'Dela Cruz', given: ['Jose'] }],
-        birthDate: '1970-05-01',
-        gender: 'male',
-      }),
-    });
-    return res.json();
-  }, API);
-
-  return { patientId: patientRes.id };
+interface SeedCtx {
+  patientId: string;
+  branchId: string;
+  memberId: string;
 }
 
-async function createAndCompleteVisit(page: Page, patientId: string) {
-  // Create visit
-  const visitRes = await page.evaluate(async ({ api, patientId }) => {
-    const res = await fetch(`${api}/dental/visits`, {
+/** Sign up, onboard a clinic, and register a patient. Returns seed context. */
+async function setup(page: Page, displayName = 'Jose Dela Cruz'): Promise<SeedCtx> {
+  const { branchId, memberId } = await setupDentalOrg(page);
+  const patientId = await createDentalPatient(page, { displayName, branchId });
+  return { patientId, branchId, memberId };
+}
+
+/**
+ * Create a visit, add a performed D2391 treatment (with signed consent), and
+ * complete the visit. Returns the visitId. Throws with the failing call's
+ * status/body so a swallowed 4xx surfaces precisely.
+ */
+async function createAndCompleteVisit(page: Page, ctx: SeedCtx): Promise<string> {
+  // setupDentalOrg leaves the page on a freshly-landed /dashboard that may still
+  // be settling its post-PIN redirect; let it quiesce so the seeding evaluate
+  // isn't torn down mid-navigation ("Execution context was destroyed").
+  await page.waitForLoadState('networkidle').catch(() => {});
+  return page.evaluate(async ({ api, ctx }) => {
+    // 1. Create visit
+    const visitRes = await fetch(`${api}/dental/visits`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        patientId,
-        branchId: '00000000-0000-4000-8000-000000000001',
-        dentistMemberId: '00000000-0000-4000-8000-000000000002',
-      }),
+      body: JSON.stringify({ patientId: ctx.patientId, branchId: ctx.branchId, dentistMemberId: ctx.memberId }),
     });
-    return res.json();
-  }, { api: API, patientId });
+    if (!visitRes.ok) throw new Error(`Create visit: ${visitRes.status}: ${await visitRes.text()}`);
+    const visit = await visitRes.json() as any;
 
-  const visitId = visitRes.id;
-
-  // Activate
-  await page.evaluate(async ({ api, visitId }) => {
-    return fetch(`${api}/dental/visits/${visitId}`, {
+    // 2. Activate
+    const activateRes = await fetch(`${api}/dental/visits/${visit.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ status: 'active' }),
     });
-  }, { api: API, visitId });
+    if (!activateRes.ok) throw new Error(`Activate visit: ${activateRes.status}: ${await activateRes.text()}`);
 
-  // Add treatment
-  await page.evaluate(async ({ api, visitId, patientId }) => {
-    return fetch(`${api}/dental/visits/${visitId}/treatments`, {
+    // 3. Add treatment (D2391 — PMD content assertions expect this CDT code)
+    const txRes = await fetch(`${api}/dental/visits/${visit.id}/treatments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        visitId,
-        patientId,
+        visitId: visit.id,
+        patientId: ctx.patientId,
         cdtCode: 'D2391',
         description: 'Resin composite, one surface',
         toothNumber: 21,
         priceCents: 15000,
       }),
     });
-  }, { api: API, visitId, patientId });
+    if (!txRes.ok) throw new Error(`Create treatment: ${txRes.status}: ${await txRes.text()}`);
+    const tx = await txRes.json() as any;
 
-  // Complete
-  await page.evaluate(async ({ api, visitId }) => {
-    return fetch(`${api}/dental/visits/${visitId}`, {
+    // diagnosed → planned (first FSM step)
+    const planRes = await fetch(`${api}/dental/visits/${visit.id}/treatments/${tx.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: 'planned' }),
+    });
+    if (!planRes.ok) throw new Error(`Plan treatment: ${planRes.status}: ${await planRes.text()}`);
+
+    // 3b. Create + sign a consent (gates performed + complete).
+    const tplRes = await fetch(`${api}/dental/branches/${ctx.branchId}/consent-templates`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ title: 'General Treatment Consent', content: 'I consent.', name: 'General Treatment Consent', body: 'I consent.' }),
+    });
+    if (!tplRes.ok) throw new Error(`Consent template: ${tplRes.status}: ${await tplRes.text()}`);
+    const tplJson = await tplRes.json() as any;
+    const templateId = tplJson?.template?.id ?? tplJson?.id;
+    const conRes = await fetch(`${api}/dental/visits/${visit.id}/consents`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ visitId: visit.id, patientId: ctx.patientId, templateId, templateName: 'General Treatment Consent' }),
+    });
+    if (!conRes.ok) throw new Error(`Create consent: ${conRes.status}: ${await conRes.text()}`);
+    const conJson = await conRes.json() as any;
+    const consentId = conJson?.consent?.id ?? conJson?.id;
+    const signRes = await fetch(`${api}/dental/visits/${visit.id}/consents/${consentId}/sign`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ signatureData: 'data:image/png;base64,iVBORw0KGgo=' }),
+    });
+    if (!signRes.ok) throw new Error(`Sign consent: ${signRes.status}: ${await signRes.text()}`);
+
+    // planned → performed (second FSM step, now consent-gated)
+    const perfRes = await fetch(`${api}/dental/visits/${visit.id}/treatments/${tx.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: 'performed' }),
+    });
+    if (!perfRes.ok) throw new Error(`Perform treatment: ${perfRes.status}: ${await perfRes.text()}`);
+
+    // 4. Complete visit
+    const completeRes = await fetch(`${api}/dental/visits/${visit.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ status: 'completed' }),
     });
-  }, { api: API, visitId });
+    if (!completeRes.ok) throw new Error(`Complete visit: ${completeRes.status}: ${await completeRes.text()}`);
 
-  return visitId;
-}
-
-async function signUpForPMD(page: Page) {
-  const suffix = Date.now();
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`PMD UI Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(`pmd-ui-e2e-${suffix}@example.org`);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  await signupResponse;
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Bypass onboarding
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'PMD', lastName: 'Owner' }),
-    });
-  }, API);
-
-  return { suffix };
+    return visit.id as string;
+  }, { api: API, ctx });
 }
 
 test.describe('FR12.6: Share PMD Button on Completed Visits', () => {
   test('Share PMD button appears on completed visit in workspace', async ({ page }) => {
-    await signUpForPMD(page);
+    const ctx = await setup(page, 'PMD Share Patient');
+    await createAndCompleteVisit(page, ctx);
 
-    // Seed a patient + completed visit via API
-    const result = await page.evaluate(async (api) => {
-      const patientRes = await fetch(`${api}/dental/patients`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'PMD Share Patient', consentGiven: true }),
-      });
-      if (!patientRes.ok) return null;
-      const patient = await patientRes.json() as any;
-
-      const visitRes = await fetch(`${api}/dental/visits`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          patientId: patient.id,
-          branchId: '00000000-0000-4000-8000-000000000001',
-          dentistMemberId: '00000000-0000-4000-8000-000000000002',
-        }),
-      });
-      if (!visitRes.ok) return null;
-      const visit = await visitRes.json() as any;
-
-      // Complete the visit
-      await fetch(`${api}/dental/visits/${visit.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'completed' }),
-      });
-
-      return { patientId: patient.id, visitId: visit.id };
-    }, API);
-
-    if (!result) throw new Error('Seeding failed: patient/visit creation returned null');
-
-    await page.goto(`${APP}/${result.patientId}`);
-    await page.waitForLoadState('networkidle');
+    // PIN-gated workspace: SPA-navigate, never hard reload (would wipe PIN session).
+    await gotoApp(page, `/${ctx.patientId}`);
 
     // FR12.6: Share PMD button should be visible when a completed visit is selected
     await expect(page.getByTestId('share-pmd-btn')).toBeVisible({ timeout: 8000 });
@@ -196,8 +150,8 @@ test.describe('FR12.6: Share PMD Button on Completed Visits', () => {
 
 test.describe('PMD Generation', () => {
   test('can generate PMD from a completed visit', async ({ page }) => {
-    const { patientId } = await setup(page);
-    const visitId = await createAndCompleteVisit(page, patientId);
+    const ctx = await setup(page, 'PMD Gen Patient');
+    const visitId = await createAndCompleteVisit(page, ctx);
 
     const pmdRes = await page.evaluate(async ({ api, visitId, patientId }) => {
       const res = await fetch(`${api}/dental/visits/${visitId}/pmd`, {
@@ -207,7 +161,7 @@ test.describe('PMD Generation', () => {
         body: JSON.stringify({ visitId, patientId }),
       });
       return { status: res.status, body: await res.json() };
-    }, { api: API, visitId, patientId });
+    }, { api: API, visitId, patientId: ctx.patientId });
 
     expect(pmdRes.status).toBe(201);
     expect(pmdRes.body.status).toBe('generated');
@@ -216,8 +170,8 @@ test.describe('PMD Generation', () => {
   });
 
   test('PMD content includes treatment data', async ({ page }) => {
-    const { patientId } = await setup(page);
-    const visitId = await createAndCompleteVisit(page, patientId);
+    const ctx = await setup(page, 'PMD Content Patient');
+    const visitId = await createAndCompleteVisit(page, ctx);
 
     const pmdRes = await page.evaluate(async ({ api, visitId, patientId }) => {
       const res = await fetch(`${api}/dental/visits/${visitId}/pmd`, {
@@ -227,7 +181,7 @@ test.describe('PMD Generation', () => {
         body: JSON.stringify({ visitId, patientId }),
       });
       return res.json();
-    }, { api: API, visitId, patientId });
+    }, { api: API, visitId, patientId: ctx.patientId });
 
     const content = JSON.parse(pmdRes.content);
     expect(Array.isArray(content.treatments)).toBe(true);
@@ -236,38 +190,36 @@ test.describe('PMD Generation', () => {
   });
 
   test('cannot generate PMD from a draft visit', async ({ page }) => {
-    const { patientId } = await setup(page);
+    const ctx = await setup(page, 'PMD Draft Patient');
 
-    const visitRes = await page.evaluate(async ({ api, patientId }) => {
+    const visitRes = await page.evaluate(async ({ api, ctx }) => {
       const res = await fetch(`${api}/dental/visits`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          patientId,
-          branchId: '00000000-0000-4000-8000-000000000001',
-          dentistMemberId: '00000000-0000-4000-8000-000000000002',
-        }),
+        body: JSON.stringify({ patientId: ctx.patientId, branchId: ctx.branchId, dentistMemberId: ctx.memberId }),
       });
       return res.json();
-    }, { api: API, patientId });
+    }, { api: API, ctx });
 
-    const status = await page.evaluate(async ({ api, visitId, patientId }) => {
-      const res = await fetch(`${api}/dental/visits/${visitId}/pmd`, {
+    const res = await page.evaluate(async ({ api, visitId, patientId }) => {
+      const r = await fetch(`${api}/dental/visits/${visitId}/pmd`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ visitId, patientId }),
       });
-      return res.status;
-    }, { api: API, visitId: visitRes.id, patientId });
+      return { status: r.status, body: await r.text().catch(() => '') };
+    }, { api: API, visitId: visitRes.id, patientId: ctx.patientId });
 
-    expect(status).toBe(400);
+    // Generating a PMD from a draft (non-completed/locked) visit is rejected with
+    // 422 VISIT_NOT_COMPLETED (contract drift: the endpoint moved off a bare 400).
+    expect(res.status, `unexpected body: ${res.body}`).toBe(422);
   });
 
   test('can retrieve generated PMD by visitId', async ({ page }) => {
-    const { patientId } = await setup(page);
-    const visitId = await createAndCompleteVisit(page, patientId);
+    const ctx = await setup(page, 'PMD Retrieve Patient');
+    const visitId = await createAndCompleteVisit(page, ctx);
 
     // Generate
     await page.evaluate(async ({ api, visitId, patientId }) => {
@@ -277,7 +229,7 @@ test.describe('PMD Generation', () => {
         credentials: 'include',
         body: JSON.stringify({ visitId, patientId }),
       });
-    }, { api: API, visitId, patientId });
+    }, { api: API, visitId, patientId: ctx.patientId });
 
     // Retrieve
     const getRes = await page.evaluate(async ({ api, visitId }) => {

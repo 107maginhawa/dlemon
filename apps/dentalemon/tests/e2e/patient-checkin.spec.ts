@@ -10,84 +10,55 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-
-const API = 'http://localhost:7213';
-const APP = 'http://localhost:3003';
+import { API, setupDentalOrg, createDentalPatient } from './fixtures';
 
 async function setup(page: Page) {
-  const suffix = Date.now();
-
-  // Sign up
-  await page.goto(`${APP}/auth/sign-up`);
-  await page.waitForLoadState('networkidle');
-  await page.getByLabel('Name', { exact: true }).fill(`CheckIn Owner ${suffix}`);
-  await page.getByLabel('Email', { exact: true }).fill(`checkin-e2e-${suffix}@example.org`);
-  const pwInput = page.locator('input[type="password"]');
-  await pwInput.click();
-  await pwInput.pressSequentially('E2eTestPass123!', { delay: 10 });
-  await expect(pwInput).not.toHaveValue('');
-  const signupResponse = page.waitForResponse(
-    (resp: any) => /\/auth\/sign-up/.test(resp.url()) && resp.request().method() === 'POST',
-    { timeout: 10000 },
-  ).catch(() => null);
-  await page.getByRole('button', { name: /create an account/i }).click();
-  const response = await signupResponse;
-  if (response && response.status() >= 400) {
-    const body = await response.text().catch(() => '<unreadable>');
-    throw new Error(`Sign-up POST returned \${response.status()}: \${body.slice(0, 500)}`);
-  }
-  await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
-
-  // Create patient
-  const patientRes = await page.evaluate(async (api) => {
-    const res = await fetch(`${api}/dental/patients`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        displayName: 'Maria Santos',
-        dateOfBirth: '1985-03-15',
-        gender: 'female',
-      }),
-    });
-    return res.json();
-  }, API);
-
-  return { patientId: patientRes.id };
+  // Provision a real org + branch + owner member (org creation is admin-only —
+  // self-service goes through /dental/onboarding), then seed a patient in the
+  // branch. Returns branchId/memberId so the appointment can reference real ids.
+  const { branchId, memberId } = await setupDentalOrg(page);
+  const patientId = await createDentalPatient(page, {
+    displayName: 'Maria Santos',
+    branchId,
+    dateOfBirth: '1985-03-15',
+    gender: 'female',
+  });
+  return { patientId, branchId, memberId };
 }
 
-async function createAppointment(page: Page, patientId: string) {
+async function createAppointment(page: Page, opts: { patientId: string; branchId: string; memberId: string }) {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(9, 0, 0, 0);
   const scheduledAt = tomorrow.toISOString();
 
-  const apptRes = await page.evaluate(async ({ api, patientId, scheduledAt }) => {
+  const apptRes = await page.evaluate(async ({ api, opts, scheduledAt }) => {
     const res = await fetch(`${api}/dental/appointments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        patientId,
-        branchId: '00000000-0000-4000-8000-000000000001',
-        dentistMemberId: '00000000-0000-4000-8000-000000000002',
-        scheduledAt,
-        durationMinutes: 30,
-        serviceType: 'Initial Check-up',
+        patientId: opts.patientId,
+        branchId: opts.branchId,
+        providerId: opts.memberId,
+        startAt: scheduledAt,
+        endAt: new Date(new Date(scheduledAt).getTime() + 30 * 60000).toISOString(),
+        visitType: 'checkup',
+        notes: 'Initial Check-up',
       }),
     });
     return { status: res.status, body: await res.json() };
-  }, { api: API, patientId, scheduledAt });
+  }, { api: API, opts, scheduledAt });
 
   return apptRes;
 }
 
 test.describe('Patient Check-In', () => {
   test('check-in creates a draft dental visit', async ({ page }) => {
-    const { patientId } = await setup(page);
+    const { patientId, branchId, memberId } = await setup(page);
 
     // Create appointment
-    const apptRes = await createAppointment(page, patientId);
+    const apptRes = await createAppointment(page, { patientId, branchId, memberId });
     expect(apptRes.status).toBe(201);
     const appointmentId = apptRes.body.id;
     expect(apptRes.body.status).toBe('scheduled');
