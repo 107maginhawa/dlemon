@@ -9,7 +9,7 @@
  * methods delegate here, keeping their public signatures intact.
  */
 
-import { eq, and, or, ilike, isNull, inArray, sql, type SQL } from 'drizzle-orm';
+import { eq, and, or, ilike, inArray, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { PaginationOptions } from '@/core/database.repo';
 import { patients, type PatientWithPerson, type PersonData } from './patient.schema';
@@ -43,14 +43,15 @@ function listConditions(filters?: PatientFilters): SQL<unknown>[] {
       or(ilike(persons.firstName, `%${filters.q}%`), ilike(persons.lastName, `%${filters.q}%`)) as SQL<unknown>,
     );
   }
+  // STRICT per-branch scope (data isolation). Previously this OR'd in
+  // `isNull(preferredBranchId)`, which leaked every branchless patient into EVERY
+  // branch's list across orgs (cross-tenant PHI leak). Branchless patients are
+  // intentionally NOT a free-for-all (see dental-patient-branchless-auth.test.ts),
+  // so they must not surface in any branch list.
   if (filters?.branchIds && filters.branchIds.length > 0) {
-    conditions.push(
-      or(inArray(patients.preferredBranchId, filters.branchIds), isNull(patients.preferredBranchId)) as SQL<unknown>,
-    );
+    conditions.push(inArray(patients.preferredBranchId, filters.branchIds));
   } else if (filters?.branchId) {
-    conditions.push(
-      or(eq(patients.preferredBranchId, filters.branchId), isNull(patients.preferredBranchId)) as SQL<unknown>,
-    );
+    conditions.push(eq(patients.preferredBranchId, filters.branchId));
   }
   if (filters?.needsFollowUp !== undefined) conditions.push(eq(patients.needsFollowUp, filters.needsFollowUp));
   if (filters?.status) conditions.push(eq(patients.status, filters.status));

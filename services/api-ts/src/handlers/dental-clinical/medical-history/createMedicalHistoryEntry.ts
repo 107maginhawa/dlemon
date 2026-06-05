@@ -33,6 +33,11 @@ export async function createMedicalHistoryEntry(
 
   const repo = new MedicalHistoryRepository(db);
 
+  // AC-MED-02 / V-CLN-009: medical history entries are immutable, so resolution
+  // is expressed at creation time via the additive amendment path rather than an
+  // in-place PATCH. An entry recorded with a `resolvedDate` is, by definition,
+  // already resolved and must NOT surface as an active safety-floor alert — so we
+  // derive `active` from the presence of a resolution date.
   const entry = await repo.createOne({
     patientId: body.patientId,
     entryType: body.entryType,
@@ -42,6 +47,7 @@ export async function createMedicalHistoryEntry(
     notes: body.notes,
     onsetDate: body.onsetDate,
     resolvedDate: body.resolvedDate,
+    active: !body.resolvedDate,
   });
 
   return ctx.json(entry, 201);

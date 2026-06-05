@@ -292,4 +292,21 @@ export class MembershipRepository extends DatabaseRepository<
       .limit(1);
     return row ?? null;
   }
+
+  /**
+   * Find the caller's first ACTIVE membership across any branch (no branch known
+   * yet). Used to resolve org context for a non-owner staff member who belongs to
+   * someone else's org — getOrgContext must not return {org:null} for them.
+   */
+  async findFirstActiveByPerson(personId: string): Promise<DentalMembership | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalMemberships)
+      .where(and(
+        eq(dentalMemberships.personId, personId),
+        eq(dentalMemberships.status, 'active'),
+      ))
+      .limit(1);
+    return row ?? null;
+  }
 }
