@@ -125,4 +125,19 @@ describe('ToothSlideout', () => {
     // ₱125.00 appears in the row and the Total footer (12500 cents / 100)
     expect(screen.getAllByText(/₱125\.00/).length).toBeGreaterThanOrEqual(2);
   });
+
+  // P4 regression: the read-only Add-Amendment affordance must render only when a
+  // visitId is supplied. The $patientId route was not passing visitId, so the
+  // button silently never appeared. Footer renders it on `readOnly && visitId`.
+  test('P4: shows "Add Amendment" in read-only mode when a visitId is present', () => {
+    global.fetch = mock(() => jsonResponse({ data: [], pagination: { totalCount: 0, limit: 20, offset: 0 } })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.getByText('Add Amendment')).not.toBeNull();
+  });
+
+  test('P4: omits "Add Amendment" in read-only mode when no visitId is present', () => {
+    global.fetch = mock(() => jsonResponse({ data: [], pagination: { totalCount: 0, limit: 20, offset: 0 } })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true })), { wrapper: makeWrapper() });
+    expect(screen.queryByText('Add Amendment')).toBeNull();
+  });
 });
