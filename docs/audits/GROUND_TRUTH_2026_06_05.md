@@ -3,6 +3,24 @@
 **Branch:** `fix/contract-drift-auth-cleanup`  **Base SHA at validation start:** `9f33ce4f`
 **Predecessor:** supersedes `GROUND_TRUTH_2026_06_04.md` (which was itself stale — see below).
 
+> **ADDENDUM (post-cert iPad sweep) — a real bug the certification missed.** The cert ran
+> `--project=chromium` only and labeled the iPad-viewport spec failures "out of scope." Running the
+> **`ipad-portrait`/`ipad-landscape` projects** (never run before) surfaced **5 failures → 3 root causes**,
+> one a genuine product bug:
+> 1. **Calendar grid broken for EVERY user (real bug, fixed).** `_dashboard/calendar.tsx` read `branchId`
+>    from the store but never passed it to `useAppointments`, which fired `GET /dental/appointments` with
+>    `branchId=undefined` (required param) → grid hard-errored "Validation failed: branchId … received
+>    undefined". **Reproduced as the demo user via API** (no-branchId → 400, with-branchId → 200). The demo
+>    E2E specs only assert the calendar *toolbar*, never the *grid*, so it stayed green while broken — the
+>    iPad grid assertion was the only test exercising it. Fixed (pass branchId + `enabled:!!branchId`,
+>    R4 pattern) with a RED→GREEN unit regression. All 4 branchId query hooks now gate on `enabled`.
+> 2. **Workspace nav** — false failure: one-shot `isVisible()` raced the route transition (passed portrait,
+>    flaked landscape). Fixed with `data-testid=sidebar-toggle` + web-first wait.
+> 3. **Imaging** — stale test: navigated to `/imaging`, which is **not a route** (imaging is a workspace
+>    overlay). Repointed to the `/imaging-test` harness.
+> Post-fix: **iPad 20/20, chromium 244/0, FE unit 1942/0**, typecheck/lint clean. Lesson: assert the
+> *content*, not just the chrome; and run every Playwright project, not just chromium.
+
 ## Verdict: 🟢 GATE PASS — TDD / spec-driven / domain-designed, all test layers green
 
 Every verdict below was produced by **running the real suite in this session**, not by trusting
