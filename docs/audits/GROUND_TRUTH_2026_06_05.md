@@ -103,3 +103,58 @@ P2/P4 remain E2E-covered (chromium green).
 - L2 confidence cap is an OLI SDK-resolver limitation on raw-`fetch` hooks — not a test hole.
 - 3 iPad-viewport specs (run under the desktop chromium project) + 6 offline/SW specs (no service
   worker in dev) — known, skip/fail-with-reason, not product failures.
+
+---
+
+## ADDENDUM — content-blind E2E hardening + contract fuzz (2026-06-05, commit `facf3906`)
+
+Continuation of the same gap-hardening thread that found the calendar/visits-400 bugs. The
+**systemic root** was confirmed again: the demo/feature E2E specs assert *chrome* (buttons,
+headings) but not *data content*, so a required-param query that 400s leaves the page chrome
+intact and the test stays green. Fixed the worst offenders + ran the fuzz layer.
+
+### A real bug the chrome-only tests hid (fixed)
+
+- **Revenue Report was permanently empty for every clinic.** `RevenueReport` fetched
+  `GET /dental/billing/invoices` (which returns `{ data, pagination }`) but assumed a **bare
+  array** (`data.filter(...)`). The `TypeError` was swallowed by the component's silent
+  `.catch(() => setInvoices([]))`, so the report always rendered "No invoices for this period"
+  + ₱0 regardless of real billing. The RevenueReport **unit test only covered re-implemented
+  pure helpers**, never the fetch/parse path — a classic integration-glue gap. Fixed to extract
+  `body.data ?? body`; **found via RED→GREEN** on the strengthened reporting E2E.
+
+### Four content-blind specs strengthened (truthful, bug-catching assertions)
+
+| Spec | Was | Now | RED proof |
+|------|-----|-----|-----------|
+| `reporting.spec.ts` | navigated to **`/reports/daily` (a route that does NOT exist)**, asserted body-length>10 — a phantom test | hits real `/reports`, seeds a billed invoice, asserts the invoice number renders | RED against the real RevenueReport bug above |
+| `patient-profile.spec.ts` | asserted page length>50 | seeds a visit, asserts the Overview tab renders its chief complaint (the visits-400 surface) | RED-proven: drop `branchId` from `useVisits` → empty → fails |
+| `calendar.spec.ts` | asserted toolbar buttons only | seeds a today appointment, asserts the card renders in the day grid (the universal branchId-grid bug) | RED-proven: drop `branchId` from `useAppointments` → no card → fails |
+| `patient-registration.spec.ts` FR2.1 | seeded a **branch-less** patient + accepted empty-OR-card (trivially green) | seeds an in-branch patient, asserts its card by name | content-bound (unique seeded name) |
+
+### Contract fuzz (schemathesis 4.21, `bun run test:contract:fuzz`) — 0 real bugs
+
+50,705 cases / 351 ops / ~4 min. **48 failures + 1 error, all spec-precision artifacts — no impl
+or contract bug, no 500s:**
+- **30 "Undocumented HTTP status"** = all `401 vs documented-200` → authed operations don't declare
+  a `401` response in TypeSpec (same root as the 342 "Missing authentication" warnings).
+- **7 "API rejected schema-compliant"** = all `400` validating malformed input the fuzzer generated
+  (`availableFrom=0`, empty `date_from`, `confirmationCode=0`) → spec **under-types** datetime/required
+  query params; the impl correctly rejects.
+- **11 "Unsupported methods"** = all `401 vs 405` → auth middleware runs before method-not-allowed
+  (defensible ordering).
+- **1 health-check** = `filter_too_much` on `POST /email/templates/{template}/test`.
+- **Follow-up (P3, deferred):** tighten TypeSpec — declare `401` on authed ops + type datetime query
+  params as `utcDateTime`/required — to make the contract precise and quiet the fuzz noise. No code bug.
+
+### Optional Task 9 — imaging missing-image status: NON-ISSUE
+
+All **21** imaging handlers that call `findImageById` guard the not-found case (`NotFoundError` → 404),
+incl. `getCephAnalysis`. No 500-vs-404 gap exists in current code (verified by inspection).
+
+### Verification (this addendum)
+
+typecheck clean · lint 0 errors · **FE unit 1942/0** · 4 touched specs + `calendar`/`ipad-calendar`
+green on chromium · **authed-route-sweep green** · no stray source edits (RED reverts confirmed clean).
+Backend untouched (FE-only change). OLI map refresh + full multi-project suite re-run not re-run this
+addendum (FE-scoped change).

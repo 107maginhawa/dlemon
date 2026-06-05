@@ -2,7 +2,7 @@
   "generated_at_run": true,
   "contract_version": 6,
   "totals": {
-    "pass": 38,
+    "pass": 34,
     "fail": 4,
     "P0": 0,
     "P1": 0,
@@ -70,38 +70,6 @@
       "id": "/dental-onboarding",
       "kind": "nav-links",
       "route": "/dental-onboarding",
-      "severity": "P3",
-      "status": "pass",
-      "detail": "links resolve"
-    },
-    {
-      "id": "/imaging-comparison-test",
-      "kind": "page-load",
-      "route": "/imaging-comparison-test",
-      "severity": "P3",
-      "status": "pass",
-      "detail": "ok"
-    },
-    {
-      "id": "/imaging-comparison-test",
-      "kind": "nav-links",
-      "route": "/imaging-comparison-test",
-      "severity": "P3",
-      "status": "pass",
-      "detail": "links resolve"
-    },
-    {
-      "id": "/imaging-test",
-      "kind": "page-load",
-      "route": "/imaging-test",
-      "severity": "P3",
-      "status": "pass",
-      "detail": "ok"
-    },
-    {
-      "id": "/imaging-test",
-      "kind": "nav-links",
-      "route": "/imaging-test",
       "severity": "P3",
       "status": "pass",
       "detail": "links resolve"
