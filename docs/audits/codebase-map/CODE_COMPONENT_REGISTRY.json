@@ -1846,6 +1846,10 @@
         },
         {
           "method": "POST",
+          "endpoint": "/dental/billing/invoices/:invoiceId/uncollectible"
+        },
+        {
+          "method": "POST",
           "endpoint": "/dental/billing/invoices/:invoiceId/payments"
         }
       ],

@@ -1,14 +1,51 @@
 <!-- oli-version: 1.2 -->
-<!-- generated: 2026-06-02 @ HEAD c26d37bd | mode: degraded(workflow-map) -->
-<!-- skill: oli-check --journeys (static, no --live; DEGRADED — no UI_BLUEPRINT) -->
-<!-- target: apps/dentalemon/src (TanStack Router, file-based) -->
-<!-- journey-source: docs/product/WORKFLOW_MAP.md (WF-### + WFG-### groups) -->
-<!-- implemented-ui-surface: CODE_ROUTE_MAP.json v5 + CODE_COMPONENT_REGISTRY.json (FRESH, producer=engine) -->
+<!-- generated: 2026-06-05 @ HEAD 9f33ce4f | mode: verb-gated(FRESH) -->
+<!-- prior-run: 2026-06-02 @ HEAD c26d37bd | mode: degraded(workflow-map) -->
+<!-- skill: oli-check --journeys (static, no --live) -->
+<!-- target: apps/dentalemon/src (TanStack Router, file-based) + services/api-ts (Hono routes) -->
+<!-- journey-source: docs/product/WORKFLOW_MAP.md (104 WF-###) + apps/dentalemon/tests/e2e/journeys/ (J01-J18) -->
+<!-- implemented-ui-surface: docs/audits/codebase-map/ (FRESH, producer=engine; CODE_SPEC_TRACE 352/352 matched) -->
 <!-- cross-ref: ROLE_PERMISSION_MATRIX.md, NAVIGATION_MAP.md, CODE_API_SURFACE.json, ERROR_TAXONOMY.md -->
 
 # Journey Coverage Report — Dentalemon (workflow→route coverage)
 
-## Mode & Provenance
+## Re-Verification @ HEAD 9f33ce4f (2026-06-05) — verb-gated, FRESH
+
+**VERDICT: PASS** (P0=0, P1=0). Re-ran with the engine `interactions` verb gate (Step 0) against a FRESH codebase-map.
+
+**Step 0 Engine Verb Gate: PASS.** `ok: true`, `map_freshness: FRESH`, `count: 32`. No `J-VERB-GATE` block. `by_class`: `J-PHANTOM-NAV`=2, `J-DEADHREF`=2, `J-MY-NO-ON-ERROR`=28.
+
+**0 real phantoms.** All 4 navigation-class engine findings are **confirmed FALSE POSITIVES** (both-sides verified):
+
+| Engine finding | Class | FE call | Backend/route reality | Verdict |
+|----------------|-------|---------|------------------------|---------|
+| `J-PHANTOM-NAV-3ce148bf` (CephWorkspacePanel) | P0 LOW | `GET …/ceph/analysis:qs` | Route EXISTS: `routes.ts:948` + openapi.json `/dental/imaging/images/{imageId}/ceph/analysis` | INVALID — engine `:qs` query-string keying artifact (per task brief) |
+| `J-PHANTOM-NAV-ffc971ac` (ImagingWorkspace) | P0 LOW | same `:qs` | same route | INVALID — same artifact |
+| `J-DEADHREF-d5c4e68d` (DuplicatePatientsPanel:114) | P1 MED | `to="/patients/$patientId"` | Route EXISTS: `routes/_dashboard/patients_/$patientId.tsx` → `fullPath '/patients/$patientId'` (routeTree.gen.ts:433) | INVALID — engine missed TanStack `patients_/` pathless-parent flattening (`*.gen.ts` excluded from scan) |
+| `J-DEADHREF-dc47c9a5` (_workspace/$patientId.tsx:290) | P1 MED | `to="/patients/$patientId"` | same route | INVALID — same flattening |
+
+**J-MY-NO-ON-ERROR ×28 → P2 advisory (not P0).** 28 `useMutation` sites without inline `onError`/`onSettled`/`.catch`. Spot-verified `use-mark-treatment-done.ts`: hook exposes `isError`/`error` (+ `throwOnError: true` SDK call), delegating render to consumer — standard TanStack pattern. Failures surfaced, NOT swallowed. UX-hardening backlog (wire per-call toasts), not a journey break.
+
+**UI→API wiring oracle — DEFINITIVE.** `CODE_SPEC_TRACE.json` at this HEAD: **352 operations, ALL `matched`** (spec_only=0, code_only=0, auth_drift=0, phantom=0). Every FE SDK call resolves to a registered Hono route.
+
+**Recent-fix call sites verified (TRUST-BUT-VERIFY, 4/4 resolve to real routes):**
+
+| Fix | FE site | Backend route |
+|-----|---------|---------------|
+| P1 cross-branch patient leak | `listDentalPatientsOptions` (use-patients.ts:91) | `GET /dental/patients` (routes.ts:1295) |
+| P3 getOrgContext | `useOrgContextStore` → `/dental/org/context` | matched in spec-trace |
+| P4 ToothSlideout Add-Amendment visitId | `createAmendment` | `POST /dental/visits/:visitId/amendments` (routes.ts:1964) |
+| R4 billing-list branchId | `listDentalInvoicesOptions` (use-invoices.ts:27, `branchId` query) | `listDentalInvoices` GET (routes.ts:520) |
+
+**Journey harness (J01–J18): 18/18 covered, 0 missing.** Specs at `apps/dentalemon/tests/e2e/journeys/` (01-new-patient-exam … 18-org-onboarding). UI→API wiring intact for all 18. NOTE: this dimension audits **static** UI→API integrity, NOT live E2E pass/fail — live execution reds are tracked separately in `docs/audits/GROUND_TRUTH_2026_06_04.md` (fixture/spec drift, F1/F3/F4/F5 queued; those are harness issues, not wiring breaks).
+
+**Ground-truth discrepancy: NONE for wiring.** Verb gate (FRESH) and spec-trace (352/352) agree: 0 dead API calls, 0 broken nav, 0 auth drift.
+
+**Changes since prior run (c26d37bd → 9f33ce4f):** verb gate now executes (prior run was degraded(workflow-map) with no verb). Net new real findings: 0. All prior P2/P3 advisories below remain valid and carried forward. The module-level coverage body (prior run) is preserved unchanged below.
+
+---
+
+## Mode & Provenance (prior run — preserved)
 
 **MODE: degraded(workflow-map).** The journeys dimension nominally requires `UI_BLUEPRINT.md`, which is **ABSENT**. Per the degraded-execution contract, this run substitutes:
 - **Journey source** → `docs/product/WORKFLOW_MAP.md` (104 WF-### IDs across 12 modules + 14 WFG-### gap groups).

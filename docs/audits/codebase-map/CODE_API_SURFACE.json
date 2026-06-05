@@ -2769,11 +2769,13 @@
       },
       "module": "src/handlers",
       "confidence": "HIGH",
-      "consumer_count": 0,
-      "consumers": [],
+      "consumer_count": 1,
+      "consumers": [
+        "src/features"
+      ],
       "is_phantom": false,
       "deprecation_signals": {
-        "single_consumer": false,
+        "single_consumer": true,
         "has_todo_fixme": false,
         "deprecated_annotation": false,
         "last_modified_days_ago": 0
@@ -9846,7 +9848,8 @@
         "autoDismissed": "boolean",
         "clinicalNotes": "string",
         "phase": "string",
-        "priority": "integer"
+        "priority": "integer",
+        "appointmentId": "string"
       },
       "module": "src/handlers",
       "confidence": "HIGH",
@@ -9929,7 +9932,8 @@
         "autoDismissed": "boolean",
         "clinicalNotes": "string",
         "phase": "string",
-        "priority": "integer"
+        "priority": "integer",
+        "appointmentId": "string"
       },
       "module": "src/handlers",
       "confidence": "HIGH",

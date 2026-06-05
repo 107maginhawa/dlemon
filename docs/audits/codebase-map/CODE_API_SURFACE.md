@@ -79,7 +79,7 @@
 | `POST /dental/billing/invoices/:invoiceId/payments/:paymentId/void` | `voidDentalPayment` | true | 0 |  | HIGH |
 | `POST /dental/billing/invoices/:invoiceId/plan` | `createDentalPaymentPlan` | true | 0 |  | HIGH |
 | `GET /dental/billing/invoices/:invoiceId/plan` | `getDentalPaymentPlan` | true | 1 |  | HIGH |
-| `POST /dental/billing/invoices/:invoiceId/uncollectible` | `markUncollectible` | true | 0 |  | HIGH |
+| `POST /dental/billing/invoices/:invoiceId/uncollectible` | `markUncollectible` | true | 1 |  | HIGH |
 | `POST /dental/billing/invoices/:invoiceId/void` | `voidDentalInvoice` | true | 1 |  | HIGH |
 | `GET /dental/billing/patients/:patientId/balance` | `getPatientBalance` | true | 0 |  | HIGH |
 | `POST /dental/billing/statements/batch` | `generateStatementBatch` | true | 1 |  | HIGH |

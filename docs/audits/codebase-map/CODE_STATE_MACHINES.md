@@ -12,7 +12,7 @@
 | `fsm:chat-room-status` | active / archived | 0 | drizzle_enum | MEDIUM |
 | `fsm:consultation-status` | draft / finalized / amended | 0 | drizzle_enum | MEDIUM |
 | `fsm:dental-installment-status` | pending / paid / overdue / waived | 0 | drizzle_enum | MEDIUM |
-| `fsm:dental-invoice-status` | draft / issued / partial / paid / overdue / voided | 0 | drizzle_enum | MEDIUM |
+| `fsm:dental-invoice-status` | draft / issued / partial / paid / overdue / voided / uncollectible | 0 | drizzle_enum | MEDIUM |
 | `fsm:dental-perio-chart-status` | draft / completed / locked | 0 | drizzle_enum | MEDIUM |
 | `fsm:dental-plan-frequency` | weekly / biweekly / monthly | 0 | drizzle_enum | MEDIUM |
 | `fsm:dental-plan-status` | on_track / behind / completed / defaulted | 0 | drizzle_enum | MEDIUM |

@@ -2935,6 +2935,14 @@
           "primary_key": false,
           "references": null,
           "enum_ref": null
+        },
+        {
+          "name": "uncollectible_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary_key": false,
+          "references": null,
+          "enum_ref": null
         }
       ]
     },
@@ -2942,7 +2950,7 @@
       "name": "dental_invoice_line_item",
       "variable": "dentalInvoiceLineItems",
       "source_file": "services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts",
-      "source_line": 49,
+      "source_line": 50,
       "module": "src/handlers",
       "columns": [
         {
@@ -8324,7 +8332,8 @@
         "partial",
         "paid",
         "overdue",
-        "voided"
+        "voided",
+        "uncollectible"
       ],
       "source_file": "services/api-ts/src/handlers/dental-billing/repos/dental-invoice.schema.ts",
       "source_line": 16,

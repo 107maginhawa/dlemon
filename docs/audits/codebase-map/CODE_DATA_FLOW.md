@@ -51,7 +51,7 @@
 | `BillingList` | BillingPage | BillingPage | — | — | — |
 | `ClaimsWorklist` | BillingPage | — | — | — | — |
 | `CollectionsView` | BillingPage | — | — | — | — |
-| `InvoiceDetail` | BillingPage, WorkspacePaymentModal | BillingPage, WorkspacePaymentModal | — | — | GET /dental/billing/invoices/:invoiceId, PATCH /dental/billing/invoices/:invoiceId/issue, POST /dental/billing/invoices/:invoiceId/void, POST /dental/billing/invoices/:invoiceId/payments |
+| `InvoiceDetail` | BillingPage, WorkspacePaymentModal | BillingPage, WorkspacePaymentModal | — | — | GET /dental/billing/invoices/:invoiceId, PATCH /dental/billing/invoices/:invoiceId/issue, POST /dental/billing/invoices/:invoiceId/void, POST /dental/billing/invoices/:invoiceId/uncollectible, POST /dental/billing/invoices/:invoiceId/payments |
 | `InvoiceInsuranceBlock` | — | — | — | — | — |
 | `PaymentPlanView` | BillingPage | BillingPage | — | — | GET /dental/billing/invoices/:invoiceId/plan |
 | `useArAging` | — | — | — | — | — |

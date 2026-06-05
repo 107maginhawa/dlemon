@@ -4004,7 +4004,9 @@
         "handler_function": "markUncollectible",
         "module": "src/handlers"
       },
-      "consumers": [],
+      "consumers": [
+        "src/features"
+      ],
       "status": "matched",
       "auth_drift": false
     },

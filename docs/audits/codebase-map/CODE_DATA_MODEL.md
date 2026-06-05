@@ -36,7 +36,7 @@ Dialect: `postgres` · Tables: 93 · Enums: 65
 | `dental_insurance_profile` | 13 | — | patient_id→patients | src/handlers |
 | `dental_inventory_adjustment` | 4 | — | item_id→dentalInventoryItems | src/handlers |
 | `dental_inventory_item` | 8 | — | branch_id→dentalBranches | src/handlers |
-| `dental_invoice` | 19 | — | visit_id→dentalVisits, patient_id→patients, branch_id→dentalBranches, dentist_member_id→dentalMemberships | src/handlers |
+| `dental_invoice` | 20 | — | visit_id→dentalVisits, patient_id→patients, branch_id→dentalBranches, dentist_member_id→dentalMemberships | src/handlers |
 | `dental_invoice_line_item` | 9 | — | invoice_id→dentalInvoices, treatment_id→dentalTreatments | src/handlers |
 | `dental_legal_hold` | 10 | — | — | src/handlers |
 | `dental_membership` | 16 | — | branch_id→dentalBranches | src/handlers |
@@ -123,7 +123,7 @@ Dialect: `postgres` · Tables: 93 · Enums: 65
 | `controlled_substance_schedule` | none / II / III / IV / V |
 | `dental_attachment_image_type` | xray / photo / scan / document / other |
 | `dental_installment_status` | pending / paid / overdue / waived |
-| `dental_invoice_status` | draft / issued / partial / paid / overdue / voided |
+| `dental_invoice_status` | draft / issued / partial / paid / overdue / voided / uncollectible |
 | `dental_payment_method` | cash / card / bank_transfer |
 | `dental_perio_chart_status` | draft / completed / locked |
 | `dental_plan_frequency` | weekly / biweekly / monthly |

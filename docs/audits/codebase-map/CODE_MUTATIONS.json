@@ -42,7 +42,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "line": 51,
+      "line": 49,
       "confidence": "MEDIUM"
     },
     {
@@ -53,7 +53,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "line": 78,
+      "line": 96,
       "confidence": "MEDIUM"
     },
     {
@@ -64,7 +64,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "line": 90,
+      "line": 108,
       "confidence": "MEDIUM"
     },
     {
@@ -75,7 +75,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "line": 100,
+      "line": 118,
       "confidence": "MEDIUM"
     },
     {
@@ -86,7 +86,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "line": 143,
+      "line": 156,
       "confidence": "MEDIUM"
     },
     {
@@ -97,7 +97,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "line": 176,
+      "line": 193,
       "confidence": "MEDIUM"
     },
     {
@@ -108,7 +108,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "line": 188,
+      "line": 205,
       "confidence": "MEDIUM"
     },
     {
@@ -229,7 +229,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/scheduling/hooks/use-queue-board.ts",
-      "line": 46,
+      "line": 50,
       "confidence": "MEDIUM"
     },
     {
@@ -295,7 +295,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
-      "line": 86,
+      "line": 57,
       "confidence": "MEDIUM"
     },
     {
@@ -306,7 +306,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
-      "line": 97,
+      "line": 65,
       "confidence": "MEDIUM"
     },
     {
@@ -317,7 +317,7 @@
       "has_catch": false,
       "has_call_site_handler": false,
       "file": "apps/dentalemon/src/features/workspace/hooks/use-medical-history.ts",
-      "line": 109,
+      "line": 73,
       "confidence": "MEDIUM"
     },
     {

@@ -11,6 +11,36 @@ Partial Staleness: CODE_SPEC_TRACE.json reports `spec_source: null` / `matched: 
 HEAD: 08b91b79 (main; re-trace over c26d37bd → 08b91b79 — full-scope spec-trace map, engine v6)
 ---
 
+## Re-trace Pass (2026-06-05, fix/contract-drift-auth-cleanup @ 9f33ce4f — FRESH map, /oli-check traceability)
+
+> **✅ VERDICT: PASS.** Fresh OLI knowledge graph rebuilt at HEAD `9f33ce4f` (`.map-meta.json` git_sha matches HEAD exactly → map FRESH, not stale). Spec↔code parity is total and the BR→test matrix is fully populated. `bun run audit:trace:ci` exits **0** (all P0 safety-critical BRs have test coverage).
+
+### Tool output (ground truth)
+- **`bun run audit:trace`** → 47 BRs / 55 ACs parsed; coverage **16 FULLY_COVERED (unit+E2E) / 30 UNIT_COVERED (no literal E2E tag) / 0 UNTESTED / 1 NOT_IMPLEMENTED**. Written to `docs/audits/TRACEABILITY_MATRIX_AUTO.md`.
+- **`bun run audit:trace:ci`** → **exit 0** — "CI gate passed — all P0 BRs have test coverage."
+- **`CODE_SPEC_TRACE.json`** (engine v6, `spec_source=specs/api/dist/openapi/openapi.json`) → **matched=352, spec_only=0, code_only=0, auth_drift=0** (full spec↔code parity; the prior run's `auth_drift=2` on `/patients/merge`+`/unmerge` is now **0** — resolved, confirms the `@useAuth` security-decorator fix in the SDK/spec).
+
+### Coverage metrics
+- **AC tag coverage: 52/55** defined ACs are referenced by at least one test (94%). The 3 un-*tagged* ACs — **AC-SETTINGS-01** (branch working hours), **AC-IMG-01** (imaging study + upload URL), **AC-IMG-02** (image list branch-membership enforcement) — are all behaviorally covered (verified: `branch.test.ts` + `online-booking.spec.ts` for SETTINGS-01; `imaging.test.ts` / `imaging-integration.test.ts` / `imaging-coverage.test.ts` for IMG-01/02). These are **tag-literal gaps (P2)**, not coverage gaps.
+- **BR→E2E coverage: 16/47 (34%)** carry a literal `BR-NNN` tag in an E2E spec. The 30 "unit-only" BRs are unit/contract-covered; the 4 flagged P1 (BR-007/012/018/021) were **trust-but-verify confirmed behaviorally covered by E2E** (`workspace-readonly.spec.ts`, `04-revenue-chain.journey.spec.ts`, `lab-order-tracking.spec.ts`, `09-plan-versioning`/`10-void-amend-audit.journey.spec.ts`) — they just omit the literal tag. **Orphan BRs (zero test reference anywhere): NONE.**
+- **Chain coverage (WF→test): 80%** (unchanged — matches baseline; spec-trace parity holds all 18 journey specs intact).
+
+### Gap findings (all P2/P3 — no P0/P1 in-scope)
+
+| ID | Sev | Module | Finding | Evidence (verified) |
+|---|---|---|---|---|
+| TR-DOC-BR020 | P2 | dental-patient | **BR-020 doc drift** — `BUSINESS_RULES.md` marks patient merge/unmerge "not-implemented (TODO)" but the feature SHIPS: `handlers/patient/mergePatients.ts` + `unmergePatients.ts` + `patient-merge-auth.test.ts` (22 assertions) exist, `POST /patients/merge` + `/unmerge` are **matched** spec-trace routes, auth_drift now 0. BR doc references the wrong module path (`dental-patient/` vs `patient/`) and a stale status. | `CODE_SPEC_TRACE.json` matched; `handlers/patient/*merge*`; `BUSINESS_RULES.md:69` |
+| TR-TAG-E2E | P2 | all | 30 BRs unit-covered but lack a literal `BR-NNN` tag in their E2E spec; 4 (BR-007/012/018/021) verified behaviorally E2E-covered. Cosmetic traceability-tagging debt; add `// @BR-NNN` to journey describe blocks. | `TRACEABILITY_MATRIX_AUTO.md` gaps table |
+| TR-TAG-AC | P2 | dental-org, dental-imaging | AC-SETTINGS-01 / AC-IMG-01 / AC-IMG-02 behaviorally tested but un-tagged in their tests. | grep verify (branch/imaging tests) |
+| TR-TOOL-REGEX | P3 | tooling | `audit-traceability` AC regex `AC-[A-Z]+-\d{2}` truncates 3-digit module ACs (`AC-BL-001`→`AC-BL-00`), producing 11 phantom "dangling" tags. **Not real dangling refs** — they are real 3-digit ACs in module unit tests (`dental-chart-baseline.test.ts` etc.). Tooling limitation, no spec gap. | `dental-chart-baseline.test.ts:4-22` |
+
+### Discrepancies vs prior baseline (tool-vs-ground-truth)
+1. **auth_drift 2→0** (RESOLVED): prior baseline note carried `auth_drift=2` (`/patients/merge`,`/unmerge`) as a route-level-only false positive. The fresh map computes **auth_drift=0** — the spec/SDK now carries the bearer security decorator on those ops, so the drift is genuinely gone, not just suppressed. Baseline note is now stale on this point.
+2. **BR-020** "not-implemented" status in `BUSINESS_RULES.md` is **contradicted by code** (handlers + tests + matched routes exist). Filed TR-DOC-BR020 (P2 doc drift) — the only ground-truth-vs-doc contradiction this run.
+3. **TR-PHANTOM-ORG-001** (prior gate-flipping P1) **confirmed still resolved**: `DELETE /dental/org/members/:memberId` present in matched routes (`deactivateMember.ts` wired); no phantom recurrence.
+
+---
+
 ## Re-trace Pass (2026-06-04, main @ 08b91b79 — FULL-SCOPE spec-trace map, engine v6)
 
 > **✅ RESOLVED SAME DAY (post-fix re-verify).** TR-PHANTOM-ORG-001 was fixed in this session: added the `@delete deactivateMember` op to `dental-org.tsp` → `bun run build` + `bun run generate` wired `DELETE /dental/org/members/:memberId` into `routes.ts:1160` (authMiddleware + param validator) and imported the existing handler into `registry.ts:111,480`. Added a real-route-registration regression test (`deactivateMember.route.test.ts`) that inspects the generated `registerRoutes` (no DB) — RED before, GREEN after. Gates: backend **286 files / 3368 pass / 0 fail**, typecheck clean, `check:boundaries` clean. Map rescan confirms `is_phantom` 2→1 (only the ceph `:qs` URL-parse artifact remains, a non-gap), `DELETE /dental/org/members/:memberId` now resolves to `deactivateMember.ts` (phantom=False), spec-trace `matched 351→352`. **In-scope product P1 back to 0 → gate PASS.** The detection-state narrative below is retained for the audit trail.

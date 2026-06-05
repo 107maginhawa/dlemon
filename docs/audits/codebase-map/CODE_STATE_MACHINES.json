@@ -193,7 +193,8 @@
         "partial",
         "paid",
         "overdue",
-        "voided"
+        "voided",
+        "uncollectible"
       ],
       "transitions": [],
       "spec_match": null,
@@ -699,25 +700,25 @@
           "from": "*",
           "to": "day",
           "trigger": "handleDayClick",
-          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:177"
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:179"
         },
         {
           "from": "*",
           "to": "day",
           "trigger": "CalendarPage",
-          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:238"
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:240"
         },
         {
           "from": "*",
           "to": "week",
           "trigger": "CalendarPage",
-          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:250"
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:252"
         },
         {
           "from": "*",
           "to": "month",
           "trigger": "CalendarPage",
-          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:262"
+          "site": "apps/dentalemon/src/routes/_dashboard/calendar.tsx:264"
         }
       ],
       "spec_match": null,

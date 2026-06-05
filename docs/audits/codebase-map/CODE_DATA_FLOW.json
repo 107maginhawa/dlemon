@@ -589,6 +589,7 @@
         {
           "parent": "BillingPage",
           "props": [
+            "branchId",
             "onInvoiceClick"
           ]
         }
@@ -691,6 +692,11 @@
           "method": "POST",
           "endpoint": "/dental/billing/invoices/:invoiceId/void",
           "trigger": "handleVoid"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/dental/billing/invoices/:invoiceId/uncollectible",
+          "trigger": "handleMarkUncollectible"
         },
         {
           "method": "POST",
@@ -2944,7 +2950,8 @@
             "open",
             "patientId",
             "readOnly",
-            "toothNumber"
+            "toothNumber",
+            "visitId"
           ]
         }
       ],
