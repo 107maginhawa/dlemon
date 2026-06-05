@@ -85,7 +85,7 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
   timeLabels.push({ hour: DAY_END_HOUR, minute: 0 });
 
   return (
-    <div className="flex-1 bg-background overflow-hidden flex flex-col" role="main" aria-label="Week schedule">
+    <div className="flex-1 bg-background overflow-hidden flex flex-col" role="main" aria-label="Week schedule" data-testid="calendar-week">
       {/* Column headers */}
       <div className="grid flex-shrink-0 border-b border-border" style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}>
         <div className="border-r border-border h-12" />

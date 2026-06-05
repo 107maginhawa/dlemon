@@ -63,14 +63,12 @@ test.describe('iPad workspace layout', () => {
 
     await spaNavigate(page, '/patients');
 
-    // Navigation should be accessible — sidebar toggle, nav link, or top bar
-    const navVisible = await page
-      .locator('[data-testid="sidebar-toggle"], nav, [role="navigation"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(navVisible).toBe(true);
+    // Navigation must be accessible — the sidebar toggle (always rendered in the
+    // dashboard header). Web-first wait: a one-shot isVisible() races the route
+    // transition (passed in portrait, flaked in landscape).
+    await expect(
+      page.locator('[data-testid="sidebar-toggle"], nav, [role="navigation"]').first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('lemon accent button has correct background colour', async ({ page }) => {

@@ -115,7 +115,7 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
   }
 
   return (
-    <div className="flex-1 bg-background overflow-y-auto" role="main" aria-label="Day schedule">
+    <div className="flex-1 bg-background overflow-y-auto" role="main" aria-label="Day schedule" data-testid="calendar-day">
       <div className="grid" style={{ gridTemplateColumns: '56px 1fr' }}>
         {/* Time labels */}
         <div className="border-r border-border sticky left-0 z-[5] bg-background" aria-hidden="true">

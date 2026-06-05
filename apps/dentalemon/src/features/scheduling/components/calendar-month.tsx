@@ -121,7 +121,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
   const monthTitle = selected.toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' });
 
   return (
-    <div className="flex-1 bg-background overflow-auto p-4" role="main" aria-label="Month schedule">
+    <div className="flex-1 bg-background overflow-auto p-4" role="main" aria-label="Month schedule" data-testid="calendar-month">
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 mb-1">
         {DAY_HEADERS.map((name) => (

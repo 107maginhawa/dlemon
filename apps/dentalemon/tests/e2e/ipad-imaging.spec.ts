@@ -6,41 +6,20 @@
  * landscape width and that there is no horizontal overflow.
  */
 
-import { test, expect, type Page } from '@playwright/test';
-import { signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { test, expect } from '@playwright/test';
 
-// ---------------------------------------------------------------------------
-// Setup helper — onboard a clinic via /dental/onboarding (org creation is
-// admin-only — EM-ORG-002), set a PIN, and unlock the PIN-gated workspace.
-// ---------------------------------------------------------------------------
-
-async function signUpAndSeedOrg(page: Page) {
-  const { orgId, branchId } = await signUpOnboardAndUnlock(page, {
-    tier: 'clinic',
-    label: 'iPad Img',
-  });
-  return { orgId, branchId };
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+// Imaging is a workspace overlay, not a standalone route. The `/imaging-test`
+// harness mounts the REAL ImagingWorkspace + PatientImageList (no auth/seed), so
+// these iPad-viewport layout assertions drive it directly.
 
 test.describe('iPad imaging workspace layout', () => {
   test('imaging section has no horizontal overflow at landscape viewport', async ({ page }) => {
-    let seeded = false;
-    try {
-      await signUpAndSeedOrg(page);
-      seeded = true;
-    } catch {
-      test.skip(true, 'Skipped — requires full seed setup (API unavailable)');
-      return;
-    }
-
-    if (!seeded) return;
-
-    // Navigate to imaging list / hub page
-    await spaNavigate(page, '/imaging');
+    // There is no standalone /imaging route — imaging is a workspace overlay.
+    // /imaging-test is the routable harness that mounts the REAL ImagingWorkspace
+    // + PatientImageList (no auth/seed needed), so it's the surface for asserting
+    // the imaging layout at an iPad viewport.
+    await page.goto('/imaging-test');
+    await expect(page.getByTestId('imaging-toolbar')).toBeVisible({ timeout: 15_000 });
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const viewportWidth = page.viewportSize()?.width ?? 1366;
@@ -48,26 +27,8 @@ test.describe('iPad imaging workspace layout', () => {
   });
 
   test('imaging viewer panel is visible at landscape viewport', async ({ page }) => {
-    let seeded = false;
-    try {
-      await signUpAndSeedOrg(page);
-      seeded = true;
-    } catch {
-      test.skip(true, 'Skipped — requires full seed setup (API unavailable)');
-      return;
-    }
-
-    if (!seeded) return;
-
-    await spaNavigate(page, '/imaging');
-
-    // The imaging page (list or empty state) should be visible
-    const pageContent = await page
-      .locator('main, [data-testid="imaging-viewer"], [data-testid="imaging-list"], [role="main"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(pageContent).toBe(true);
+    await page.goto('/imaging-test');
+    // The ImagingWorkspace viewer (toolbar + canvas) renders in the right pane.
+    await expect(page.getByTestId('imaging-toolbar')).toBeVisible({ timeout: 15_000 });
   });
 });

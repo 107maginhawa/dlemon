@@ -41,16 +41,18 @@ test.describe('iPad calendar layout', () => {
 
     await spaNavigate(page, '/calendar');
 
-    // Calendar grid or scheduling page container should be present
-    const gridVisible = await page
-      .locator(
-        '[data-testid="calendar-grid"], [data-testid="calendar-week"], [data-testid="calendar-day"], [role="grid"], .calendar-grid',
-      )
-      .first()
-      .isVisible()
-      .catch(() => false);
+    // Web-first wait: the appointments query loads async (a one-shot isVisible()
+    // races the "Loading appointments…" spinner). The grid root carries a stable
+    // data-testid per view (default = day).
+    await expect(
+      page
+        .locator('[data-testid="calendar-day"], [data-testid="calendar-week"], [data-testid="calendar-month"]')
+        .first(),
+    ).toBeVisible({ timeout: 15_000 });
 
-    expect(gridVisible).toBe(true);
+    // Regression: the calendar must NOT hard-error. Before the fix the grid query
+    // fired without branchId → "Validation failed: branchId … received undefined".
+    await expect(page.getByTestId('calendar-error')).toHaveCount(0);
   });
 
   test('day headers are visible', async ({ page }) => {
