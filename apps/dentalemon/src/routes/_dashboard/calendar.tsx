@@ -85,7 +85,7 @@ function CalendarPage() {
 
   const weekStart = getMondayOfWeek(selectedDate);
 
-  const { appointments, isLoading, error, refetch } = useAppointments({ date: selectedDate, view });
+  const { appointments, isLoading, error, refetch } = useAppointments({ date: selectedDate, view, branchId });
 
   function invalidateAppointments() {
     queryClient.invalidateQueries({ queryKey: ['appointments'] });

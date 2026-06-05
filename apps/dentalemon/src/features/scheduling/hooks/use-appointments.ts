@@ -93,6 +93,10 @@ export function useAppointments({ date, view, branchId }: UseAppointmentsOptions
   const { from, to } = computeWindow(date, view);
   const query = useQuery({
     ...listAppointmentsOptions({ query: { branchId: branchId as string, date_from: from, date_to: to } }),
+    // branchId is REQUIRED by GET /dental/appointments (it 400s on undefined), so
+    // gate the query until the org-context branchId is available — otherwise the
+    // calendar grid hard-errors instead of showing a loading/empty state.
+    enabled: !!branchId,
     // listAppointments returns Array<DentalAppointment> (+ patientName enrichment);
     // single `as` adds the enrichment — no blind `as unknown as`.
     select: (data) => ((data ?? []) as DentalAppointmentRow[]).map(normalizeAppointment),

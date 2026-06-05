@@ -32,11 +32,27 @@ const mockAppointments = [
 ];
 
 describe('useAppointments', () => {
+  // Regression: the calendar grid 400'd with "branchId: expected string, received
+  // undefined" because the query fired without a branchId (the required endpoint
+  // param). The query must be DISABLED until a branchId is supplied — no request
+  // with branchId=undefined should ever go out.
+  test('does not fetch when branchId is absent — query is disabled', () => {
+    const { fetchMock } = captureUrl([]);
+    global.fetch = fetchMock;
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useAppointments({ view: 'day', date: '2026-05-04' }), // no branchId — disabled
+      { wrapper: makeWrapper(qc) },
+    );
+    expect(result.current.isLoading).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test('starts in loading state', () => {
     global.fetch = mock(() => new Promise(() => {}));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     expect(result.current.isLoading).toBe(true);
@@ -46,7 +62,7 @@ describe('useAppointments', () => {
     global.fetch = mock(() => jsonResponse(mockAppointments));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -66,7 +82,7 @@ describe('useAppointments', () => {
     global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -78,7 +94,7 @@ describe('useAppointments', () => {
     global.fetch = fetchMock;
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -94,7 +110,7 @@ describe('useAppointments', () => {
     const qc = freshClient();
     // 2026-05-04 is a Monday — getMondayOfWeek returns same date; window spans 7 days.
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'week' }),
+      () => useAppointments({ date: '2026-05-04', view: 'week', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -106,7 +122,7 @@ describe('useAppointments', () => {
     global.fetch = mock(() => jsonResponse({ message: 'Internal Server Error' }, 500));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -117,7 +133,7 @@ describe('useAppointments', () => {
     global.fetch = mock(() => jsonResponse({ message: 'Internal Server Error' }, 500));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.error).not.toBeNull());
@@ -131,7 +147,7 @@ describe('useAppointments', () => {
     global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useAppointments({ date: '2026-05-04', view: 'day' }),
+      () => useAppointments({ date: '2026-05-04', view: 'day', branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
