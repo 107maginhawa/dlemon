@@ -103,11 +103,11 @@
         },
         {
           "id": "BR-013",
-          "description": "Dental invoices do not support an uncollectible status. The dental invoice status enum is closed.",
-          "type": "deferred",
-          "status": "deferred",
-          "source": "dental-billing/repos/dental-invoice.schema.ts — no uncollectible in status enum",
-          "notes": "Base billing module has markInvoiceUncollectible but it does not apply to dental invoices"
+          "description": "Dental invoices support an 'uncollectible' terminal status (write-off), reachable from issued/partial/overdue; uncollectible is terminal (no further transitions).",
+          "type": "state-machine",
+          "status": "implemented",
+          "source": "dental-billing/markUncollectible.ts; dental-invoice.schema.ts (status enum includes 'uncollectible' + uncollectible_at); route POST /dental/billing/invoices/:invoiceId/uncollectible",
+          "notes": "Covered by invoice.fsm.property.test.ts (uncollectible reachability + terminality) and dental-billing.test.ts. Registry reconciled 2026-06-05: prior 'deferred' status was stale."
         }
       ]
     },
