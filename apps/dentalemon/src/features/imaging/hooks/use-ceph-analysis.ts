@@ -22,6 +22,15 @@ export function useCephAnalysis(imageId: string, analysisType: string = 'steiner
     },
     enabled: Boolean(imageId),
     staleTime: 30_000,
+    // A tier-gate 403 (free/null imaging tier) will never succeed on retry, so
+    // surface it to the addon/upgrade UI immediately instead of running the
+    // default 3× exponential backoff first (which delayed the gate >15s under
+    // load and flaked the B01 journey). Other (transient) errors still retry.
+    retry: (failureCount, error) => {
+      const msg = error instanceof Error ? error.message : String(error)
+      if (/403|forbidden|imaging_tier_required/i.test(msg)) return false
+      return failureCount < 2
+    },
   })
 
   return {

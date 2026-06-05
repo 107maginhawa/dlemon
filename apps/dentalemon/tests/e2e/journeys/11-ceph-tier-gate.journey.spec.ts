@@ -82,24 +82,26 @@ test(`${META.id} — ${META.name}`, async ({ page }) => {
     await page.getByTestId('imaging-tab-btn').click()
     await expect(page.getByTestId('imaging-overlay')).toBeVisible({ timeout: 10_000 })
 
-    // Select the ceph image → the ceph panel renders the tier gate.
-    const imageEntry = page
+    // Select the ceph image FOR VIEWING. The row's <li> also holds a comparison
+    // checkbox, and clicking the <li> centre can land off the view-select region
+    // (PatientImageList: the `onSelectImage` handler is on the inner cursor-pointer
+    // div, NOT the <li>), leaving the viewer on "Select an image to view" and the
+    // ceph panel un-mounted. Click the modality/filename text inside that div, and
+    // fail loudly (no silent `if (count)` skip) if the row is missing.
+    const cephRow = page
       .getByTestId('imaging-overlay')
       .locator('li')
-      .filter({ has: page.locator('p', { hasText: 'cephalometric' }) })
+      .filter({ hasText: /cephalometric/i })
       .first()
-    if (await imageEntry.count()) {
-      await imageEntry.click()
-      await page.waitForLoadState('networkidle')
-    }
+    await expect(cephRow, 'seeded free-tier cephalometric image must appear in the list').toBeVisible({ timeout: 10_000 })
+    await cephRow.getByText(/cephalometric/i).click()
 
-    // Open the ceph analysis panel — this fires the analysis query, which the free
-    // tier rejects (403), surfacing the add-on/tier gate in the panel.
+    // The ceph toggle only renders once an image is loaded into the viewer — its
+    // appearance confirms the selection actually registered.
     const cephToggle = page.getByRole('button', { name: /toggle ceph panel/i }).first()
-    if (await cephToggle.count()) {
-      await cephToggle.click()
-      await page.waitForLoadState('networkidle')
-    }
+    await expect(cephToggle, 'image must be selected (viewer toolbar present) before opening the ceph panel').toBeVisible({ timeout: 15_000 })
+    await cephToggle.click()
+    await page.waitForLoadState('networkidle')
 
     // ── Independent-read gate assertion (free clinic's own session) ───────────
     // CORE (CIMG-001/002): free/null-tier ceph analysis must be server-gated → 403.
