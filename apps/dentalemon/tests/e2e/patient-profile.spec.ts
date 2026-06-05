@@ -4,20 +4,51 @@
  * ACs covered: AC-PROF-01, AC-PROF-02
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { setupDentalOrg, createDentalPatient , gotoApp} from './fixtures';
+import { API } from './helpers/e2e-seed';
 
 const APP = 'http://localhost:3003';
 
-// ─── AC-PROF-01: Patient profile page loads with fields ───────────────────
+/** Seed a visit for a patient so the Overview tab's visit history has real rows. */
+async function seedVisit(
+  page: Page,
+  opts: { patientId: string; branchId: string; memberId: string; chiefComplaint: string },
+): Promise<string> {
+  return page.evaluate(async ({ api, opts }) => {
+    const r = await fetch(`${api}/dental/visits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        patientId: opts.patientId,
+        branchId: opts.branchId,
+        dentistMemberId: opts.memberId,
+        chiefComplaint: opts.chiefComplaint,
+      }),
+    });
+    if (!r.ok) throw new Error(`Visit creation failed: ${r.status} ${await r.text().catch(() => '')}`);
+    const v = await r.json() as { id: string };
+    return v.id;
+  }, { api: API, opts });
+}
+
+// ─── AC-PROF-01: Patient profile page loads with real demographics + visits ──
 
 test.describe('Patient Profile: Profile page loads (AC-PROF-01)', () => {
-  test('navigating to /patients/:id shows patient profile fields', async ({ page }) => {
-    const { branchId } = await setupDentalOrg(page);
+  test('navigating to /patients/:id renders the patient name and seeded visit history', async ({ page }) => {
+    const { branchId, memberId } = await setupDentalOrg(page);
     const patientId = await createDentalPatient(page, {
       displayName: 'Profile Test Patient',
       branchId,
     });
+    // Seed a visit so the Overview tab MUST render real visit-history content. If
+    // the profile's useVisits query loses its branchId again (the visits-400 bug),
+    // GET /dental/visits 400s, visits is empty, and the seeded complaint below never
+    // renders — failing this test instead of silently showing the empty state. A
+    // chrome-only assertion (page length / no-500) would not catch that regression.
+    const chiefComplaint = 'E2E Toothache Visit';
+    await seedVisit(page, { patientId, branchId, memberId, chiefComplaint });
 
     await gotoApp(page, `/patients/${patientId}`);
     await page.waitForLoadState('networkidle');
@@ -26,13 +57,21 @@ test.describe('Patient Profile: Profile page loads (AC-PROF-01)', () => {
     await expect(page.locator('body')).not.toContainText('500');
     await expect(page.locator('body')).not.toContainText('Not Found');
 
-    // Profile content should be visible — patient name or profile section
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    // PROF-01: the patient's name renders in the profile header (real data, not just
+    // chrome). The backend splits displayName "Profile Test Patient" into
+    // firstName="Profile" / lastName="Test Patient"; the header renders
+    // `{LASTNAME}, {firstName}` → "TEST PATIENT, Profile".
+    const profileName = page.getByTestId('profile-name');
+    await expect(profileName).toBeVisible();
+    await expect(profileName).toContainText(/Profile/i);
+    await expect(profileName).toContainText(/Patient/i);
 
-    // Confirm the page rendered (not blank/error)
-    const content = await page.textContent('body');
-    expect(content?.length).toBeGreaterThan(50);
+    // PROF-02: the Overview tab's visit-history section must show the SEEDED visit —
+    // proving the visits query (which requires branchId) actually returned data.
+    const visitHistory = page.getByTestId('visit-history-section');
+    await expect(visitHistory).toBeVisible();
+    await expect(visitHistory.getByText(chiefComplaint)).toBeVisible();
+    await expect(page.getByTestId('no-visits-message')).toHaveCount(0);
   });
 });
 

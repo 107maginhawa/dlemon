@@ -37,8 +37,12 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
     setLoading(true);
     fetch(`${API}/dental/billing/invoices?branchId=${branchId}`, { credentials: 'include' })
       .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
-      .then((data: Invoice[]) => {
-        const filtered = data.filter(i => {
+      .then((body: Invoice[] | { data?: Invoice[] }) => {
+        // GET /dental/billing/invoices returns { data, pagination } — extract the
+        // array. (Previously this assumed a bare array, so `data.filter` threw and
+        // the silent catch below left every revenue report permanently empty.)
+        const list = Array.isArray(body) ? body : (body.data ?? []);
+        const filtered = list.filter(i => {
           const d = i.createdAt.slice(0, 10);
           return d >= startDate && d <= endDate;
         });

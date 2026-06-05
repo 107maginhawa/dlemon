@@ -66,6 +66,41 @@ test.describe('Calendar UI (FR3.x)', () => {
     await expect(page.getByRole('button', { name: /create new appointment/i })).toBeVisible();
   });
 
+  test('FR3.6: a seeded appointment for today renders as a card in the day grid', async ({ page }) => {
+    // The toolbar tests above pass even when the appointment GRID is broken — that's
+    // exactly how the universal branchId bug (calendar.tsx firing GET /dental/appointments
+    // without branchId → 400 → empty grid) stayed green. This test seeds a real
+    // appointment for today and asserts its card renders in the day view, so a
+    // regression that drops branchId (or otherwise empties the grid) fails here.
+    const { branchId, memberId } = await signUpAndSeedOrg(page);
+    const patientId = await createDentalPatient(page, { displayName: 'Calendar Grid Patient', branchId });
+
+    // Seed at 14:00 UTC today so the appointment falls inside the day-view window
+    // ([today 00:00Z, today 23:59:59Z]) regardless of the runner's local timezone.
+    const today = new Date().toISOString().slice(0, 10);
+    const appt = await createAppointment(page, {
+      patientId,
+      branchId,
+      memberId,
+      scheduledAt: `${today}T14:00:00.000Z`,
+      durationMinutes: 30,
+      serviceType: 'Cleaning',
+    });
+    expect(appt.id).toBeTruthy();
+
+    await spaNavigate(page, '/calendar');
+
+    // The day grid must render the seeded appointment card (data-testid keyed by id).
+    // If the appointments query 400s / errors, the grid shows calendar-error instead
+    // and this assertion fails — the content guard the toolbar checks never gave us.
+    const card = page.getByTestId(`appt-draggable-${appt.id}`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+    // The card shows the appointment's status badge — confirms a real row, not chrome.
+    await expect(card.getByText('Scheduled')).toBeVisible();
+    // The error state must NOT be present.
+    await expect(page.getByTestId('calendar-error')).toHaveCount(0);
+  });
+
   test('FR3.8: clicking Walk-In button opens appointment modal', async ({ page }) => {
     await signUpAndSeedOrg(page);
     await spaNavigate(page, '/calendar');

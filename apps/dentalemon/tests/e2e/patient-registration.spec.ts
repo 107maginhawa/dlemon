@@ -139,42 +139,32 @@ test.describe('Patient Registration flow', () => {
     expect(status).toBe(422);
   });
 
-  test('FR2.1: patient list fetches from API (not hardcoded empty)', async ({ page }) => {
-    await signUpAndSeedOrg(page);
+  test('FR2.1: patient list fetches from API and renders a seeded in-branch patient', async ({ page }) => {
+    const { branchId } = await signUpAndSeedOrg(page);
 
-    // Pre-seed a patient via API
-    const patientCreated = await page.evaluate(async (api) => {
-      // Create a person first
-      const personRes = await fetch(`${api}/persons`, {
+    // Seed a patient IN THE BRANCH (createDentalPatient mints its own person record).
+    // The earlier version seeded a patient with no branchId, so the branch-filtered
+    // list never showed it and the assertion fell back to the empty state — passing
+    // even if the list query were broken. Seeding in-branch forces a real card.
+    const displayName = `Seeded ListPatient ${Date.now()}`;
+    const created = await page.evaluate(async ({ api, branchId, displayName }) => {
+      const r = await fetch(`${api}/dental/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ firstName: 'Pre', lastName: 'Seeded' }),
+        body: JSON.stringify({ displayName, branchId, consentGiven: true }),
       });
-      if (!personRes.ok) return false;
-      const person = await personRes.json() as any;
-
-      // Create a patient for that person
-      const patientRes = await fetch(`${api}/dental/patients`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayName: 'Pre Seeded', consentGiven: true }),
-      });
-      return patientRes.ok;
-    }, API);
-
-    if (!patientCreated) {
-      // Skip if seeding failed (e.g., person endpoint not available in this context)
-      return;
-    }
+      return r.ok;
+    }, { api: API, branchId, displayName });
+    expect(created, 'in-branch patient seeding must succeed').toBe(true);
 
     await spaNavigate(page, '/patients');
 
-    // If the list is empty even though a patient exists, the implementation
-    // is using a hardcoded empty array (the old bug)
-    // We expect either the patient card or the empty state (if branchId filters it out)
-    // The key thing: the page does NOT hardcode STUB_PATIENTS = []
-    await expect(page.getByTestId('patient-list-empty').or(page.getByTestId('patient-folder-card'))).toBeVisible({ timeout: 5000 });
+    // The seeded patient's card must render — proving the list query fetched live,
+    // branch-scoped data (not a hardcoded empty array, and not a 400-empty fallback).
+    await expect(page.getByTestId('patient-list-empty')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: new RegExp(`Open patient record for ${displayName}`, 'i') }),
+    ).toBeVisible({ timeout: 8000 });
   });
 });
