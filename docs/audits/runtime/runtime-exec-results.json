@@ -1,15 +1,23 @@
 {
   "generated_at_run": true,
-  "contract_version": 5,
+  "contract_version": 6,
   "totals": {
-    "pass": 36,
-    "fail": 1,
+    "pass": 38,
+    "fail": 4,
     "P0": 0,
     "P1": 0,
     "P2": 0,
-    "P3": 1
+    "P3": 4
   },
   "findings": [
+    {
+      "id": "page-load /book/$branchId (unresolved param)",
+      "kind": "skip",
+      "route": "-",
+      "severity": "P3",
+      "status": "fail",
+      "detail": "page-load /book/$branchId (unresolved param)"
+    },
     {
       "id": "page-load /imaging-ceph-report/$imageId (unresolved param)",
       "kind": "skip",
@@ -51,6 +59,54 @@
       "detail": "links resolve"
     },
     {
+      "id": "/dental-onboarding",
+      "kind": "page-load",
+      "route": "/dental-onboarding",
+      "severity": "P3",
+      "status": "pass",
+      "detail": "ok"
+    },
+    {
+      "id": "/dental-onboarding",
+      "kind": "nav-links",
+      "route": "/dental-onboarding",
+      "severity": "P3",
+      "status": "pass",
+      "detail": "links resolve"
+    },
+    {
+      "id": "/imaging-comparison-test",
+      "kind": "page-load",
+      "route": "/imaging-comparison-test",
+      "severity": "P3",
+      "status": "pass",
+      "detail": "ok"
+    },
+    {
+      "id": "/imaging-comparison-test",
+      "kind": "nav-links",
+      "route": "/imaging-comparison-test",
+      "severity": "P3",
+      "status": "pass",
+      "detail": "links resolve"
+    },
+    {
+      "id": "/imaging-test",
+      "kind": "page-load",
+      "route": "/imaging-test",
+      "severity": "P3",
+      "status": "pass",
+      "detail": "ok"
+    },
+    {
+      "id": "/imaging-test",
+      "kind": "nav-links",
+      "route": "/imaging-test",
+      "severity": "P3",
+      "status": "pass",
+      "detail": "links resolve"
+    },
+    {
       "id": "/",
       "kind": "page-load",
       "route": "/",
@@ -142,22 +198,6 @@
       "id": "/_dashboard/dashboard",
       "kind": "nav-links",
       "route": "/_dashboard/dashboard",
-      "severity": "P3",
-      "status": "pass",
-      "detail": "links resolve"
-    },
-    {
-      "id": "/_dashboard/dental-onboarding",
-      "kind": "page-load",
-      "route": "/_dashboard/dental-onboarding",
-      "severity": "P3",
-      "status": "pass",
-      "detail": "ok"
-    },
-    {
-      "id": "/_dashboard/dental-onboarding",
-      "kind": "nav-links",
-      "route": "/_dashboard/dental-onboarding",
       "severity": "P3",
       "status": "pass",
       "detail": "links resolve"
@@ -295,16 +335,16 @@
       "kind": "data-surface",
       "route": "/_workspace/$patientId",
       "severity": "P3",
-      "status": "pass",
-      "detail": "Recalls: opened, no error"
+      "status": "fail",
+      "detail": "opener testid 'recalls-tab-btn' not found — configure or add data-testid"
     },
     {
       "id": "/_workspace/$patientId::Plans",
       "kind": "data-surface",
       "route": "/_workspace/$patientId",
       "severity": "P3",
-      "status": "pass",
-      "detail": "Plans: opened, no error"
+      "status": "fail",
+      "detail": "opener testid 'treatment-plans-tab-btn' not found — configure or add data-testid"
     }
   ]
 }

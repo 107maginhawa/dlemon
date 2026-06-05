@@ -12,8 +12,8 @@
 | Metric | Count |
 |--------|-------|
 | Total BRs | 47 |
-| ✅ Fully Covered (unit + E2E) | 15 (32%) |
-| ⚠️ Unit Covered (no E2E yet) | 31 (66%) |
+| ✅ Fully Covered (unit + E2E) | 16 (34%) |
+| ⚠️ Unit Covered (no E2E yet) | 30 (64%) |
 | ❌ Untested | 0 (0%) |
 | 🚫 Not implemented | 1 |
 | Total ACs | 55 |
@@ -23,7 +23,6 @@
 | Priority | BR | Status | Summary |
 |----------|----|--------|---------|
 | P1 | BR-007 | ⚠️ UNIT_COVERED | `business-rules.test.ts` — describe('BR-007') field-edit guard enforced |
-| P1 | BR-009 | ⚠️ UNIT_COVERED | `business-rules.test.ts` — describe('BR-009') `[BR-009]` |
 | P1 | BR-012 | ⚠️ UNIT_COVERED | Invoice state lifecycle: `draft` → `sent` → `paid` / `partial` / `overdue` / `vo |
 | P1 | BR-018 | ⚠️ UNIT_COVERED | Lab order state lifecycle: `ordered` → `in_fabrication` → `delivered` → `fitted` |
 | P1 | BR-021 | ⚠️ UNIT_COVERED | `business-rules.test.ts` — describe('BR-021') snapshot/checksum `[BR-021]` (4 te |
@@ -66,7 +65,7 @@
 | BR-006 | Treatment state transitions are forward-only: `diagnosed` →  | ✅ (2) | ✅ (3) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-007 | `business-rules.test.ts` — describe('BR-007') field-edit gua | ✅ (2) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
 | BR-008 | Carried-over treatments from a treatment plan appear in the  | ✅ (2) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
-| BR-009 | `business-rules.test.ts` — describe('BR-009') `[BR-009]` | ✅ (2) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
+| BR-009 | `business-rules.test.ts` — describe('BR-009') `[BR-009]` | ✅ (2) | ✅ (1) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-010 | Tax is always 0. Fee schedule prices are pre-tax. Tax calcul | ✅ (1) | ❌ | ❌ | ⚠️ UNIT_COVERED |
 | BR-011 | `business-rules.test.ts` — describe('BR-011') void blocked b | ✅ (4) | ✅ (1) | ✅ (2) | ✅ FULLY_COVERED |
 | BR-012 | Invoice state lifecycle: `draft` → `sent` → `paid` / `partia | ✅ (4) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
