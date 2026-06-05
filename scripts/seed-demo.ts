@@ -1581,6 +1581,15 @@ async function seed() {
   // ── 9. Appointments ──────────────────────────────────────────────────────
   section('9. Appointments')
 
+  // Map a free-text service description to the appointment visitType enum.
+  const apptVisitType = (service: string): 'checkup' | 'treatment' | 'emergency' | 'recall' => {
+    const s = service.toLowerCase()
+    if (/emergency|acute|toothache|\bpain\b|urgent|walk.?in/.test(s)) return 'emergency'
+    if (/recall|periodic|annual|maintenance|\breview\b|follow.?up|hygiene/.test(s)) return 'recall'
+    if (/exam|checkup|check-up|cleaning|consult|screening/.test(s)) return 'checkup'
+    return 'treatment'
+  }
+
   const apptDefs: Array<{ pidx: number; at: string; dur: number; service: string; status?: string; reason?: string }> = [
     // Today
     { pidx: 0, at: atToday(9),    dur: 60,  service: 'Annual Checkup + X-rays' },
@@ -1602,9 +1611,12 @@ async function seed() {
   const apptIds: Record<number, string[]> = {}
   for (const a of apptDefs) {
     const p = P[a.pidx]; if (!p) continue
+    // CreateAppointmentRequestSchema: providerId/startAt/endAt/visitType (+ notes),
+    // NOT the legacy dentistMemberId/scheduledAt/durationMinutes/serviceType.
+    const endAt = new Date(new Date(a.at).getTime() + a.dur * 60_000).toISOString()
     const r = await post('/dental/appointments', {
-      patientId: p.id, dentistMemberId: ownerMember.id, branchId: branch.id,
-      scheduledAt: a.at, durationMinutes: a.dur, serviceType: a.service,
+      patientId: p.id, providerId: ownerMember.id, branchId: branch.id,
+      startAt: a.at, endAt, visitType: apptVisitType(a.service), notes: a.service,
     }, cookie)
     if (!r.ok) { log(`⚠ Appt ${p.displayName} (${r.status})`); continue }
     const apptId = r.data.id
