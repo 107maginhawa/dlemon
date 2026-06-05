@@ -96,7 +96,11 @@ function TabButton({
 // ─── Overview Tab ──────────────────────────────────────────────────────────
 
 function OverviewTab({ patientId }: { patientId: string }) {
-  const { visits, isLoading } = useVisits({ patientId });
+  // GET /dental/visits requires branchId (it 400s without it) — pass the active
+  // branch from org context, mirroring the workspace call site. Omitting it made
+  // the profile's visit history silently 400.
+  const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
+  const { visits, isLoading } = useVisits({ patientId, branchId });
 
   return (
     <div className="flex flex-col gap-4">
