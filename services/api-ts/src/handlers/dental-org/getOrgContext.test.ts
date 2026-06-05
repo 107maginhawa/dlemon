@@ -260,4 +260,51 @@ describe('getOrgContext handler', () => {
     expect(body.branch).toBeNull();
     expect(body.member).toBeNull();
   });
+
+  // --------------------------------------------------------------------------
+  // P3 regression: NON-OWNER staff must resolve org context via their active
+  // membership (membership → branch → org). Previously getOrgContext only looked
+  // up orgs by ownership, so a staff_full member of SOMEONE ELSE'S org received
+  // {org:null} and the dashboard guard bounced them to onboarding.
+  // Revert the fix (owner-only lookup) → body.org is null → this test fails.
+  // --------------------------------------------------------------------------
+
+  test('resolves org context for a NON-OWNER staff member via their active membership', async () => {
+    // Org owned by OWNER_ID. The caller (OTHER_USER_ID) owns NOTHING but is an
+    // active staff_full member of the org's branch.
+    const org = await orgRepo.createOne({
+      name: 'Employer Clinic',
+      tier: 'clinic',
+      ownerPersonId: OWNER_ID,
+      countryCode: 'US',
+      active: true,
+    });
+    const branch = await branchRepo.createOne({
+      organizationId: org.id,
+      name: 'Main Branch',
+      timezone: 'America/New_York',
+      active: true,
+    });
+    await memberRepo.createOne({
+      branchId: branch.id,
+      personId: OTHER_USER_ID,
+      displayName: 'Staff Member',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+
+    // Call AS the non-owner staff member — NOT the owner.
+    const app = buildTestApp({ id: OTHER_USER_ID, email: 'staff@clinic.com' });
+    const res = await app.request('/dental/org/context');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    // CRITICAL: a non-owner staff member must resolve the EMPLOYER's org, not null.
+    expect(body.org).not.toBeNull();
+    expect(body.org.id).toBe(org.id);
+    expect(body.branch.id).toBe(branch.id);
+    expect(body.member).not.toBeNull();
+    expect(body.member.displayName).toBe('Staff Member');
+    expect(body.member.role).toBe('staff_full');
+  });
 });
