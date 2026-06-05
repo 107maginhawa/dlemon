@@ -135,6 +135,21 @@ jobs:
       - name: Check P0 BR coverage
         run: bun run audit:trace:ci
 
+  module-boundaries:
+    name: Module Boundary Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - run: bun install --frozen-lockfile
+      # Fail the build on any cross-module repository-import boundary violation
+      # (domain isolation). Static check — no DB/server needed.
+      - name: Check cross-module repo boundaries
+        run: cd services/api-ts && bun run check:boundaries
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
