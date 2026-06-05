@@ -116,7 +116,11 @@ function VisitChartCard({
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
           </div>
-        ) : isError ? (
+        ) : isError && !canInitDentition ? (
+          // A brand-new editable visit has no chart row yet → GET chart 404s. That
+          // is an EMPTY chart, not a failure: when this visit can initialize its
+          // dentition (active + editable + DOB known + no teeth), fall through to the
+          // Initialize-Dentition empty state below instead of dead-ending on an error.
           <div
             data-testid="visit-chart-error"
             className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center"

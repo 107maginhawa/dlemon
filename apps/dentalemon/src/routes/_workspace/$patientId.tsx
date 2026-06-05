@@ -356,6 +356,7 @@ function WorkspacePage() {
         onSave={saveToothData}
         onSaveAndNext={handleSaveAndNext}
         readOnly={isReadOnly}
+        visitId={currentVisitId ?? undefined}
       />
 
       {/* Footer */}

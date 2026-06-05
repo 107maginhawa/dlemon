@@ -84,7 +84,7 @@ function BillingPage() {
       </div>
 
       {tab === 'invoices' ? (
-        <BillingList onInvoiceClick={handleInvoiceClick} />
+        <BillingList branchId={branchId ?? undefined} onInvoiceClick={handleInvoiceClick} />
       ) : tab === 'collections' ? (
         <CollectionsView branchId={branchId} />
       ) : (

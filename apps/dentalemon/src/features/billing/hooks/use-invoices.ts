@@ -25,8 +25,16 @@ interface UseInvoicesOptions {
 export function useInvoices({ branchId, status, patientId }: UseInvoicesOptions) {
   const query = useQuery({
     ...listDentalInvoicesOptions({
-      query: { patientId, status: status as DentalInvoice['status'] | undefined, branchId: branchId ?? undefined },
+      // Only include DEFINED filters — a literal `?patientId=undefined` /
+      // `?status=undefined` fails UUID/enum validation (400). branchId is
+      // required by the endpoint for per-branch scoping.
+      query: {
+        ...(branchId ? { branchId } : {}),
+        ...(patientId ? { patientId } : {}),
+        ...(status ? { status: status as DentalInvoice['status'] } : {}),
+      },
     }),
+    enabled: !!branchId,
     select: (data) => {
       // No blind `as any`: the SDK response is { data: DentalInvoice[]; pagination }.
       // The single `as Invoice[]` only widens to the documented enrichment (above).
