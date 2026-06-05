@@ -61,7 +61,15 @@ export const config: OliRuntimeConfig = {
   ],
   paramFixtures: {},
   // auth/PIN routes need flows we don't drive in a smoke; the patient page is the focus.
-  denyRoutes: ["/auth/$authView", "/auth/pin-entry/$memberId"],
+  // imaging-test / imaging-comparison-test are DEV HARNESS routes that mount the
+  // imaging components with hard-coded fake image IDs (test-image-id), so their
+  // ceph/measurement fetches 500 by design — not product routes; exclude them.
+  denyRoutes: [
+    "/auth/$authView",
+    "/auth/pin-entry/$memberId",
+    "/imaging-test",
+    "/imaging-comparison-test",
+  ],
   maxTargets: 500,
   navLinkCheck: true,
 };

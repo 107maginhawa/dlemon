@@ -151,9 +151,14 @@ const findings: Finding[] = [];
 // Not all 4xx are equal: 401/403 (auth) and 5xx (server) are almost always real
 // bugs → P1 (BLOCK). A bare 404 is often "resource not created yet" and handled
 // gracefully by the UI → P2 (WARN), so we don't false-block on benign empties.
+// A 400 (Bad Request) means the FRONTEND sent a malformed/invalid request —
+// e.g. a required query param missing (`?branchId=` / `branchId=undefined`). That
+// is always a client bug, not a benign empty, and it renders a hard error state.
+// Treating 400 as P2 is exactly why this sweep passed while the calendar grid was
+// 400-broken for every user; 400 is now P1-blocking (404 stays P2).
 function classifyBad(bad: { url: string; status: number }[]): { sev: Severity; detail: string } | null {
   if (!bad.length) return null;
-  const blocking = bad.some((b) => b.status >= 500 || b.status === 401 || b.status === 403);
+  const blocking = bad.some((b) => b.status >= 500 || b.status === 400 || b.status === 401 || b.status === 403);
   return { sev: blocking ? "P1" : "P2", detail: bad.map((b) => `${b.status} ${b.url}`).join(" | ") };
 }
 function record(t: Target, status: "pass" | "fail", severity: Severity, detail: string) {
@@ -268,6 +273,12 @@ loop("oli-runtime-loop", async ({ browser, session }) => {
       if (t.kind === "page-load") {
         await page.goto(t.nav, { waitUntil: "domcontentloaded" });
         await skeletonCleared(page);
+        // Wait for the route's async data fetches to settle before classifying —
+        // skeletonCleared can resolve before a fast data query returns its 4xx, so
+        // a page-load 400 (e.g. the calendar's missing-branchId grid query) would be
+        // recorded "ok" and the response captured too late. Bounded + non-fatal so a
+        // polling/websocket app can't hang the run.
+        await page.waitForLoadState("networkidle", { timeout: 6000 }).catch(() => {});
         const cb = classifyBad(bad);
         if (errors.length) record(t, "fail", "P0", `errors on load: ${errors.join(" | ")}`);
         else if (cb) record(t, "fail", cb.sev, `bad responses: ${cb.detail}`);
