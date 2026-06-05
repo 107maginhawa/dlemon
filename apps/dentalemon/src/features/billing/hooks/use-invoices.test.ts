@@ -24,7 +24,8 @@ describe('useInvoices', () => {
     global.fetch = mock(() => new Promise(() => {}));
     const qc = freshClient();
     const { result } = renderHook(
-      () => useInvoices({}),
+      // branchId is required to enable the query (enabled: !!branchId).
+      () => useInvoices({ branchId: 'b1' }),
       { wrapper: makeWrapper(qc) },
     );
     expect(result.current.isLoading).toBe(true);
@@ -34,7 +35,7 @@ describe('useInvoices', () => {
     // SDK transformer expects { data: [...] } shape — bare array crashes the transformer
     global.fetch = mock(() => jsonResponse({ data: mockInvoices }));
     const qc = freshClient();
-    const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
+    const { result } = renderHook(() => useInvoices({ branchId: 'b1' }), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.invoices).toHaveLength(2);
     expect(result.current.invoices[0]?.id).toBe('inv1');
@@ -47,7 +48,7 @@ describe('useInvoices', () => {
       return jsonResponse([]);
     });
     const qc = freshClient();
-    const { result } = renderHook(() => useInvoices({ status: 'overdue' }), { wrapper: makeWrapper(qc) });
+    const { result } = renderHook(() => useInvoices({ branchId: 'b1', status: 'overdue' }), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(capturedUrl).toContain('status=overdue');
   });
@@ -71,7 +72,7 @@ describe('useInvoices', () => {
       return jsonResponse([]);
     });
     const qc = freshClient();
-    const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
+    const { result } = renderHook(() => useInvoices({ branchId: 'b1' }), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(capturedUrl).not.toContain('status=');
   });
@@ -79,7 +80,7 @@ describe('useInvoices', () => {
   test('sets error when fetch fails', async () => {
     global.fetch = mock(() => jsonResponse({}, 500));
     const qc = freshClient();
-    const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
+    const { result } = renderHook(() => useInvoices({ branchId: 'b1' }), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).not.toBeNull();
   });
@@ -87,7 +88,7 @@ describe('useInvoices', () => {
   test('refetch function is defined', async () => {
     global.fetch = mock(() => jsonResponse([]));
     const qc = freshClient();
-    const { result } = renderHook(() => useInvoices({}), { wrapper: makeWrapper(qc) });
+    const { result } = renderHook(() => useInvoices({ branchId: 'b1' }), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(typeof result.current.refetch).toBe('function');
   });

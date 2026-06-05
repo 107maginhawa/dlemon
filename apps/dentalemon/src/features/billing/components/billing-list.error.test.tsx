@@ -22,7 +22,9 @@ afterEach(() => {
 
 function renderList() {
   const qc = freshClient();
-  render(React.createElement(BillingList, {}), { wrapper: makeWrapper(qc) });
+  // branchId is required to enable the invoices query (enabled: !!branchId);
+  // without it the query never runs and neither error nor empty state resolves.
+  render(React.createElement(BillingList, { branchId: 'b1' }), { wrapper: makeWrapper(qc) });
   return qc;
 }
 
