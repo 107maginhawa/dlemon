@@ -92,8 +92,11 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4 bg-zinc-900 rounded-lg">
       <div>
-        <label className="text-sm text-zinc-300 block mb-1">Modality</label>
+        <label htmlFor="image-upload-modality" className="text-sm text-zinc-300 block mb-1">Modality</label>
         <select
+          id="image-upload-modality"
+          name="modality"
+          aria-label="Modality"
           value={modality}
           onChange={(e) => setModality(e.target.value)}
           className="w-full bg-zinc-800 text-white border border-zinc-700 rounded px-2 py-1 text-sm"

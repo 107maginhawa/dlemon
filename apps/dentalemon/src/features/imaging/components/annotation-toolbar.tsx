@@ -21,13 +21,15 @@ export function AnnotationToolbar({ toolMode, onToolChange }: AnnotationToolbarP
   }
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1 bg-zinc-800 border-b border-zinc-700">
+    <div className="flex items-center gap-1 px-2 py-1 bg-zinc-800 border-b border-zinc-700" data-testid="annotation-toolbar">
       {ANNOTATION_TOOLS.map(({ mode, label }) => {
         const isActive = toolMode === mode
         return (
           <button
             key={mode}
             aria-pressed={isActive}
+            aria-label={label}
+            data-testid={`tool-${mode}`}
             onClick={() => handleClick(mode)}
             className={`px-2 py-1 text-xs rounded transition-colors ${
               isActive

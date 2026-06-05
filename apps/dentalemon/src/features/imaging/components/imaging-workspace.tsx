@@ -364,17 +364,17 @@ export function ImagingWorkspace({
   return (
     <div ref={containerRef} className={`relative flex flex-col bg-black ${className ?? ''}`}>
       {/* Viewer toolbar */}
-      <div className="flex items-center gap-2 p-2 bg-zinc-900">
-        <button onClick={() => rotate(-1)} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↺ CCW</button>
-        <button onClick={() => rotate(1)} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↻ CW</button>
-        <button onClick={flip} className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">⇆ Flip</button>
+      <div className="flex items-center gap-2 p-2 bg-zinc-900" data-testid="imaging-toolbar">
+        <button onClick={() => rotate(-1)} aria-label="Rotate counter-clockwise" className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↺ CCW</button>
+        <button onClick={() => rotate(1)} aria-label="Rotate clockwise" className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↻ CW</button>
+        <button onClick={flip} aria-label="Flip image" className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">⇆ Flip</button>
         <label className="text-xs text-zinc-300">
           Brightness
-          <input type="range" min={0} max={200} value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} className="ml-1 w-20" />
+          <input type="range" min={0} max={200} value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} className="ml-1 w-20" data-testid="brightness-control" aria-label="Brightness" />
         </label>
         <label className="text-xs text-zinc-300">
           Contrast
-          <input type="range" min={0} max={200} value={contrast} onChange={(e) => setContrast(Number(e.target.value))} className="ml-1 w-20" />
+          <input type="range" min={0} max={200} value={contrast} onChange={(e) => setContrast(Number(e.target.value))} className="ml-1 w-20" data-testid="contrast-control" aria-label="Contrast" />
         </label>
         <button
           onClick={() => setFindingsPanelOpen((prev) => !prev)}
@@ -393,7 +393,7 @@ export function ImagingWorkspace({
             Ceph
           </button>
         )}
-        <button onClick={fullscreen} className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
+        <button onClick={fullscreen} aria-label="Fullscreen" data-testid="fullscreen-btn" className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
       </div>
 
       <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} onRequestCalibrate={() => setToolMode('calibration')} />
