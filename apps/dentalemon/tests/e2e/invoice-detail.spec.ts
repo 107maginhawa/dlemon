@@ -232,6 +232,7 @@ test.describe('Payment: Record payment against invoice (AC-PAY-01)', () => {
     expect(result.paymentId).toBeTruthy();
   });
 
+  // @BR-012 invoice state lifecycle: draft → (payment) → paid (and partial → plan, below)
   test('invoice status becomes paid after full payment is recorded (AC-PAY-01)', async ({ page }) => {
     const { branchId, memberId } = await setupDentalOrg(page);
     const patientId = await createDentalPatient(page, { displayName: 'Pay01b Patient', branchId });

@@ -124,8 +124,9 @@ async function parseACs(): Promise<ACRecord[]> {
   const text = await readText(path);
   const records: ACRecord[] = [];
 
-  // Match "### AC-XXX-NN: Title"
-  const re = /###\s+(AC-[A-Z]+-\d{2}):\s+(.+)/g;
+  // Match "### AC-XXX-NN: Title" (2- or 3-digit number — \d{2,3} future-proofs
+  // 3-digit module ACs like AC-CHART-001 without dropping them silently).
+  const re = /###\s+(AC-[A-Z]+-\d{2,3}):\s+(.+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const id = m[1].trim();

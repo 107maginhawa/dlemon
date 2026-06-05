@@ -50,6 +50,9 @@ async function setupAndGetVisit(page: Page) {
   return { patientId: patientRes.id, visitId: visitRes.id };
 }
 
+// @BR-018 lab order lifecycle ordered → in_fabrication → delivered → fitted
+//   (forward transitions driven end-to-end against the real API below; the
+//    backward-transition rejection is covered in api-error-paths.spec.ts)
 test.describe('Lab Order Tracking (J56)', () => {
   test('can create a lab order for a visit', async ({ page }) => {
     const { visitId, patientId } = await setupAndGetVisit(page);

@@ -10,6 +10,9 @@
  * renders. This spec DOM-drives that flow and confirms the chart persisted for
  * the visit via an independent read (the perio chart is anchored to the visit,
  * i.e. linked to the odontogram session).
+ *
+ * @AC-PERIO-01 — "Start perio exam" POSTs /dental/perio-charts and the chart
+ *   persists for the visit (end-to-end, real API).
  */
 import {
   test,

@@ -12,19 +12,17 @@
 | Metric | Count |
 |--------|-------|
 | Total BRs | 47 |
-| ✅ Fully Covered (unit + E2E) | 16 (34%) |
-| ⚠️ Unit Covered (no E2E yet) | 30 (64%) |
+| ✅ Fully Covered (unit + E2E) | 18 (38%) |
+| ⚠️ Unit Covered (no E2E yet) | 28 (60%) |
 | ❌ Untested | 0 (0%) |
 | 🚫 Not implemented | 1 |
-| Total ACs | 55 |
+| Total ACs | 65 |
 
 ## Coverage Gaps
 
 | Priority | BR | Status | Summary |
 |----------|----|--------|---------|
 | P1 | BR-007 | ⚠️ UNIT_COVERED | `business-rules.test.ts` — describe('BR-007') field-edit guard enforced |
-| P1 | BR-012 | ⚠️ UNIT_COVERED | Invoice state lifecycle: `draft` → `sent` → `paid` / `partial` / `overdue` / `vo |
-| P1 | BR-018 | ⚠️ UNIT_COVERED | Lab order state lifecycle: `ordered` → `in_fabrication` → `delivered` → `fitted` |
 | P1 | BR-021 | ⚠️ UNIT_COVERED | `business-rules.test.ts` — describe('BR-021') snapshot/checksum `[BR-021]` (4 te |
 | P2 | BR-005 | ⚠️ UNIT_COVERED | `business-rules.test.ts` — describe.skip (placeholder) |
 | P2 | BR-008 | ⚠️ UNIT_COVERED | Carried-over treatments from a treatment plan appear in the workspace treatment  |
@@ -68,13 +66,13 @@
 | BR-009 | `business-rules.test.ts` — describe('BR-009') `[BR-009]` | ✅ (2) | ✅ (1) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-010 | Tax is always 0. Fee schedule prices are pre-tax. Tax calcul | ✅ (1) | ❌ | ❌ | ⚠️ UNIT_COVERED |
 | BR-011 | `business-rules.test.ts` — describe('BR-011') void blocked b | ✅ (4) | ✅ (1) | ✅ (2) | ✅ FULLY_COVERED |
-| BR-012 | Invoice state lifecycle: `draft` → `sent` → `paid` / `partia | ✅ (4) | ✅ (1) | ❌ | ⚠️ UNIT_COVERED |
+| BR-012 | Invoice state lifecycle: `draft` → `sent` → `paid` / `partia | ✅ (4) | ✅ (1) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-013 | `business-rules.test.ts` — describe.skip (placeholder) | ✅ (3) | ✅ (1) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-014 | Consent form is immutable once signed. No edits, no re-signi | ✅ (3) | ❌ | ✅ (1) | ✅ FULLY_COVERED |
 | BR-015 | `business-rules.test.ts` — consent guard enforced (handler f | ✅ (2) | ✅ (1) | ✅ (1) | ✅ FULLY_COVERED |
 | BR-016 | Branch membership is required for all clinical data access.  | ✅ (1) | ❌ | ✅ (2) | ✅ FULLY_COVERED |
 | BR-017 | `business-rules.test.ts` — describe('BR-017') missing prescr | ✅ (1) | ❌ | ✅ (1) | ✅ FULLY_COVERED |
-| BR-018 | Lab order state lifecycle: `ordered` → `in_fabrication` → `d | ✅ (1) | ❌ | ❌ | ⚠️ UNIT_COVERED |
+| BR-018 | Lab order state lifecycle: `ordered` → `in_fabrication` → `d | ✅ (1) | ❌ | ✅ (1) | ✅ FULLY_COVERED |
 | BR-019 | `business-rules.test.ts` — test.skip (placeholder) | ✅ (3) | ❌ | ✅ (1) | ✅ FULLY_COVERED |
 | BR-020 | Patient merge and unmerge are not implemented. Duplicate pat | ✅ (1) | ❌ | ❌ | 🚫 NOT_IMPLEMENTED |
 | BR-021 | `business-rules.test.ts` — describe('BR-021') snapshot/check | ✅ (2) | ❌ | ❌ | ⚠️ UNIT_COVERED |
@@ -167,6 +165,16 @@ _The full hand-maintained AC coverage table is in `docs/audits/TRACEABILITY_MATR
 | AC-PROF-01 | View patient profile |
 | AC-PROF-02 | Navigate workspace from profile |
 | AC-REPORT-01 | View daily report |
+| AC-PERIO-01 | Create perio chart |
+| AC-PERIO-02 | Duplicate chart rejected |
+| AC-PERIO-03 | Upsert tooth readings |
+| AC-PERIO-04 | Probing depth range enforced |
+| AC-PERIO-05 | Valid FDI tooth number enforced |
+| AC-PERIO-06 | Completion requires minimum readings |
+| AC-PERIO-07 | Completion succeeds with sufficient readings |
+| AC-PERIO-08 | Locked visit blocks writes |
+| AC-PERIO-09 | Role gate on creation |
+| AC-PERIO-10 | Read chart returns readings |
 
 ---
 

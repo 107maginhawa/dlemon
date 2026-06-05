@@ -9,6 +9,11 @@
  *   getPerioChart          GET  /dental/perio-charts/:chartId             → 200
  *   RBAC                   non-dentist → 403; staff_scheduling → 403 on read (EF-PER-002)
  *
+ * Acceptance criteria covered (see docs/prd/ACCEPTANCE_CRITERIA.md §18):
+ *   @AC-PERIO-01 create→201   @AC-PERIO-02 dup→409   @AC-PERIO-03 upsert→200
+ *   @AC-PERIO-06 complete<16→422   @AC-PERIO-07 complete≥16→200(completed)
+ *   @AC-PERIO-08 locked-visit→422   @AC-PERIO-09 staff_scheduling→403   @AC-PERIO-10 read readings
+ *
  * All fixture IDs use `ee` UUID prefix to avoid collisions with other suites.
  * Routes registered inline — not yet wired in app.ts.
  */

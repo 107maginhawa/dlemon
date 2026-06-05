@@ -461,6 +461,74 @@ Companion to `docs/prd/v3-dentalemon.md`. Defines Given/When/Then criteria for a
 
 ---
 
+## 18. Periodontal Charting (AC-PERIO)
+
+> Formalized from `docs/product/modules/dental-perio/MODULE_SPEC.md` §11 (was an
+> `AC-P0N` checklist there; renamed to the parseable `AC-PERIO-0N` form). Handler
+> coverage: `services/api-ts/src/handlers/dental-perio/dental-perio-coverage.test.ts`.
+
+### AC-PERIO-01: Create perio chart
+
+**Given** an authenticated clinician (dentist/hygienist) with branch membership  
+**When** they POST `/dental/perio-charts` for a visit  
+**Then** a 201 is returned with the chart in `draft` status linked to the visit
+
+### AC-PERIO-02: Duplicate chart rejected
+
+**Given** a visit that already has a perio chart  
+**When** a second chart is created for the same visit  
+**Then** the request is rejected with 409 `CHART_EXISTS`
+
+### AC-PERIO-03: Upsert tooth readings
+
+**Given** an existing draft perio chart  
+**When** a clinician PUTs readings for a tooth  
+**Then** a 200 is returned and the per-tooth data is upserted (single-site patches preserve other sites)
+
+### AC-PERIO-04: Probing depth range enforced
+
+**Given** a reading write  
+**When** a probing depth is outside [0, 20] mm  
+**Then** the request is rejected with 422
+
+### AC-PERIO-05: Valid FDI tooth number enforced
+
+**Given** a reading write  
+**When** the tooth number is not a valid FDI number  
+**Then** the request is rejected with 422
+
+### AC-PERIO-06: Completion requires minimum readings
+
+**Given** a draft chart with fewer than 16 teeth recorded  
+**When** completion is requested  
+**Then** the request is rejected with 422 `INSUFFICIENT_READINGS`
+
+### AC-PERIO-07: Completion succeeds with sufficient readings
+
+**Given** a draft chart with ≥ 16 teeth recorded  
+**When** completion is requested  
+**Then** a 200 is returned and the chart status becomes `completed`
+
+### AC-PERIO-08: Locked visit blocks writes
+
+**Given** a chart whose parent visit is locked/completed  
+**When** any write to the chart is attempted  
+**Then** the request is rejected with 422
+
+### AC-PERIO-09: Role gate on creation
+
+**Given** a `staff_scheduling` member  
+**When** they attempt to create or write a perio chart  
+**Then** the request is rejected with 403
+
+### AC-PERIO-10: Read chart returns readings
+
+**Given** a perio chart with persisted readings  
+**When** the chart is fetched  
+**Then** a 200 is returned with the readings (per-tooth)
+
+---
+
 ## Changelog
 
 | Date | Version | Change |
