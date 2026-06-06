@@ -267,3 +267,7 @@ docs/prompts-erase/
 
 # Claude Code agent worktree scratch (transient)
 .claude/worktrees/
+
+# understand-anything knowledge-graph cache (regenerable via /understand +
+# `bun run scripts/build-contract-spine.ts`). Bulky + churns every regen.
+.understand-anything/
