@@ -96,6 +96,7 @@ export function useImagingUpload() {
         for (let i = 0; i < initData.partUrls.length; i++) {
           const start = i * partSize
           const chunk = file.slice(start, Math.min(start + partSize, file.size))
+          // eslint-disable-next-line no-restricted-syntax -- presigned S3/MinIO multipart PUT, not an API endpoint
           const partRes = await fetch(initData.partUrls[i]!, { method: 'PUT', body: chunk, signal })
           if (!partRes.ok) throw new Error('Storage multipart part upload failed')
           const etag = partRes.headers.get('ETag') ?? partRes.headers.get('etag') ?? ''
@@ -103,6 +104,7 @@ export function useImagingUpload() {
           setProgress(10 + Math.round(((i + 1) / initData.partUrls.length) * 85))
         }
         // KEPT RAW: /storage/multipart/complete is a storage-layer endpoint, not dental API.
+        // eslint-disable-next-line no-restricted-syntax -- storage-layer multipart endpoint, no SDK op
         const completeRes = await fetch(`${apiBaseUrl}/storage/multipart/${fileId}/complete`, {
           method: 'POST',
           credentials: 'include', // QA-006: auth-gated API call
@@ -114,6 +116,7 @@ export function useImagingUpload() {
       } else {
         // 2b. Single PUT (unchanged for ordinary X-ray/photo uploads).
         //     KEPT RAW: presigned S3/MinIO PUT carries no session cookie.
+        // eslint-disable-next-line no-restricted-syntax -- presigned S3/MinIO PUT, not an API endpoint
         const uploadRes = await fetch(uploadUrl, { method: uploadMethod, body: file, signal })
         if (!uploadRes.ok) throw new Error('Storage upload failed')
       }
@@ -124,6 +127,7 @@ export function useImagingUpload() {
       // On error: abort any partial multipart at storage layer (DELETE /storage/multipart/{fileId}/abort)
       // KEPT RAW: storage abort endpoint, not dental API.
       if (fileId) {
+        // eslint-disable-next-line no-restricted-syntax -- storage-layer multipart abort endpoint, no SDK op
         fetch(`${apiBaseUrl}/storage/multipart/${fileId}/abort`, {
           method: 'DELETE',
           credentials: 'include', // QA-006: auth-gated API call

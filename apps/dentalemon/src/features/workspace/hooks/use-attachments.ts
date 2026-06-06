@@ -72,6 +72,7 @@ export function useUploadAttachment(visitId: string | null, patientId: string) {
       const { file: fileId, uploadUrl, uploadMethod } = uploadData as { file: string; uploadUrl: string; uploadMethod?: string };
 
       // Step 2: upload to presigned URL (external S3/MinIO — stays as raw fetch)
+      // eslint-disable-next-line no-restricted-syntax -- presigned S3/MinIO PUT, not an API endpoint
       const putRes = await fetch(uploadUrl, {
         method: uploadMethod ?? 'PUT',
         body: file,

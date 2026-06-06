@@ -13,6 +13,7 @@ export async function loadAndPrepareSvg(
   if (cached) return cached;
 
   const url = `/teeth/tooth-${toothNumber}-${variant}.svg`;
+  // eslint-disable-next-line no-restricted-syntax -- static public asset, not an API endpoint
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to load SVG: ${url}`);
 

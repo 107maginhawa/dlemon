@@ -151,6 +151,7 @@ export function ImagingWorkspace({
         }
         render()
         if (!cached) {
+          // eslint-disable-next-line no-restricted-syntax -- presigned image blob download, not an API endpoint
           fetch(imageUrl)
             .then((r) => r.blob())
             .then((blob) => setCachedBlob(imageId, blob))
