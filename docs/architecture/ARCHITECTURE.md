@@ -118,6 +118,76 @@ Each handler directory contains:
 - `jobs/` - Background job definitions
 - `utils/` - Module-specific utilities
 
+## Architecture Invariants
+
+Three rules hold this codebase together. They are easy to violate by accident and
+expensive to unwind later, so they are enforced (lint/codegen) where possible and
+documented here for everything else. **Read these before adding a feature or module.**
+
+### 1. SDK-only data access — never raw `fetch()` in features
+
+Frontend feature code (`apps/dentalemon/src/features/**`) reaches the backend
+**exclusively** through the generated `@monobase/sdk-ts` TanStack Query hooks
+(`*Options` for reads, `*Mutation` for writes), imported from
+`@monobase/sdk-ts/generated/react-query`. Never hand-roll a `fetch()` with a
+literal URL, manual `credentials`, or ad-hoc error handling.
+
+- **Why**: a raw fetch hard-codes a URL/method/shape the OpenAPI contract can change
+  underneath it. That is exactly how the QA-002..008 contract-drift bugs shipped past
+  a green build. Routing through the SDK makes the spec the source of truth on the
+  client too, and lets `tsc` catch drift at the FE↔BE boundary.
+- **Canonical pattern**: `features/billing/hooks/use-invoices.ts`,
+  `features/workspace/hooks/use-visits.ts`, `features/workspace/hooks/use-attachments.ts`
+  (hybrid: SDK for JSON + a sanctioned raw PUT for presigned uploads). Wrap the SDK
+  hook and map the response to a view-model in `select`; narrow `Result | ErrorResponse`
+  unions on the top-level `error` discriminant.
+- **Enforced**: an ESLint `no-restricted-syntax` rule (error) bans `fetch(` across
+  `src/features/**` (see `apps/dentalemon/eslint.config.js`). The only sanctioned
+  exceptions are **non-API transfers** — presigned S3/MinIO PUTs, binary blob
+  downloads, static public assets — each carrying an inline
+  `// eslint-disable-next-line no-restricted-syntax -- <reason>`.
+- **If the SDK lacks an endpoint**: add it to TypeSpec first, regenerate
+  (`cd specs/api && bun run build` → `cd services/api-ts && bun run generate` → regen
+  the SDK), then consume the hook. Do **not** reach for raw fetch to fill the gap.
+
+### 2. The two module tiers (generic base + `dental-*` overlay) are intentional
+
+There are two tiers of modules, and a pair like `billing` / `dental-billing` (also
+`booking`/`dental-scheduling`, `patient`/`dental-patient`, `person`, `provider`) is
+**not duplication** — it is the design:
+
+- **Generic base modules** (`billing`, `booking`, `patient`, `person`, `provider`, …)
+  are the vertical-neutral platform primitives inherited from the `mono-js-lf` template.
+- **`dental-*` overlay modules** add the dentistry domain on top (dental invoices,
+  dental scheduling/queue, perio charts, imaging, treatment plans, …).
+
+Both tiers are wired and active. A new dev will be tempted to "de-duplicate" them —
+**don't**. Build a new product vertical by adding your own `dental-*`-style overlay
+modules, not by collapsing the tiers. See the module list in the root `CLAUDE.md`.
+
+### 3. Handlers are wired by codegen from TypeSpec `@operationId`, not by imports
+
+A backend handler is connected to its HTTP route through generated code, **not**
+through an import you write:
+
+1. The TypeSpec operation declares an `@operationId`.
+2. `cd services/api-ts && bun run generate` reads it and emits the route + registry
+   binding under `src/generated/` (never hand-edited).
+3. The handler file in `src/handlers/{module}/` is bound to that route by the
+   generated registry — there is no import edge from route → handler in source.
+
+- **Consequence for navigation**: grepping for imports will make wired handlers look
+  like "orphans." They aren't — the binding lives in the generated registry. To add a
+  handler, add the TypeSpec operation + `@operationId`, regenerate, then implement the
+  handler stub; do not try to register it by hand.
+- **Not every `handlers/` module is an API module.** Some (e.g. `retention/`) are
+  internal libraries — background jobs + onboarding seeding — that intentionally
+  expose **no** routes and have no TypeSpec. The absence of routes there is by design,
+  not an unwired gap.
+
+See [CONTRIBUTING_API.md](../development/CONTRIBUTING_API.md) and the per-module
+10-step sequence in [VERTICAL_TDD.md](../development/VERTICAL_TDD.md).
+
 ## Compliance Considerations
 
 When working with regulated data:
