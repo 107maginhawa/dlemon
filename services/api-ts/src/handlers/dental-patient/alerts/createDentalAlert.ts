@@ -9,13 +9,15 @@ import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-den
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalAlertRepository } from '../repos/dental-alert.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { CreateDentalAlertParams, CreateDentalAlertBody } from '@/generated/openapi/validators';
 
-export async function createDentalAlert(ctx: any): Promise<Response> {
+export async function createDentalAlert(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as CreateDentalAlertParams;
+  const body = ctx.req.valid('json') as CreateDentalAlertBody;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

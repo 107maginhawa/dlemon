@@ -78,7 +78,7 @@ export async function listInvoices(
   const paginationMeta = buildPaginationMeta(invoices, totalCount, limit, offset);
 
   // Format response to match TypeSpec Invoice model
-  const formattedInvoices = invoices.map((invoice: any) => ({
+  const formattedInvoices = invoices.map((invoice) => ({
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
     customer: invoice.customer,

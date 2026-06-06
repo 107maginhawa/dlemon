@@ -7,13 +7,14 @@ import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { OcclusionScreeningRepository } from '../repos/occlusion-screening.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createOcclusionScreening(ctx: any): Promise<Response> {
+export async function createOcclusionScreening(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as { patientId: string };
+  const body = ctx.req.valid('json') as { visitId?: string | null; angleClass?: 'class_i' | 'class_ii_div1' | 'class_ii_div2' | 'class_iii' | 'edge_to_edge' | null; overbiteMm?: number | null; overjetMm?: number | null; crossbite?: boolean; crowding?: boolean; spacing?: boolean; midlineDeviation?: string | null; notes?: string | null };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

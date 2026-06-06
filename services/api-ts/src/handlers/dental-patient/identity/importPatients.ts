@@ -92,8 +92,8 @@ export async function importPatients(ctx: Context): Promise<Response> {
 
     if (Array.isArray(parsed)) {
       rawRows = parsed;
-    } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).patients)) {
-      rawRows = (parsed as any).patients;
+    } else if (parsed && typeof parsed === 'object' && 'patients' in parsed && Array.isArray((parsed as { patients: unknown }).patients)) {
+      rawRows = (parsed as { patients: Record<string, string | undefined>[] }).patients;
     } else {
       return ctx.json({ success: false, errors: ['Body must be a JSON array or { patients: [...] }'], imported: 0, total: 0 }, 400);
     }
@@ -161,10 +161,11 @@ export async function importPatients(ctx: Context): Promise<Response> {
         });
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return ctx.json({
       success: false,
-      errors: [`Import transaction failed: ${err.message}`],
+      errors: [`Import transaction failed: ${message}`],
       imported: 0,
       total: validRows.length,
     }, 422);

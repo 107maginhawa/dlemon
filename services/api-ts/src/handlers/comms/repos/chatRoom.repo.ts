@@ -6,6 +6,7 @@
 import { eq, and, or, ne, desc, sql, isNull, isNotNull, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { 
   chatRooms,
   chatMessages,
@@ -18,7 +19,7 @@ import {
 export class ChatRoomRepository extends DatabaseRepository<ChatRoom, NewChatRoom, ChatRoomFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, chatRooms, logger);
   }

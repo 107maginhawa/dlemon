@@ -1,6 +1,7 @@
 import type { BaseContext } from '@/types/app';
 import type { NotificationService } from '@/core/notifs';
-import { 
+import type { Logger } from '@/types/logger';
+import {
   ValidationError,
   BusinessLogicError
 } from '@/core/errors';
@@ -148,9 +149,9 @@ export async function handleStripeWebhook(
  * Handle payment_intent.succeeded event
  */
 async function handlePaymentIntentSucceeded(
-  event: Stripe.Event, 
+  event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any,
+  logger: Logger,
   notificationService: NotificationService
 ) {
   const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -214,7 +215,7 @@ async function handlePaymentIntentSucceeded(
 async function handlePaymentIntentFailed(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any,
+  logger: Logger,
   notificationService: NotificationService
 ) {
   const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -270,7 +271,7 @@ async function handlePaymentIntentFailed(
 async function handlePaymentIntentCanceled(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any
+  logger: Logger
 ) {
   const paymentIntent = event.data.object as Stripe.PaymentIntent;
   const invoiceId = paymentIntent.metadata?.['invoiceId'];
@@ -298,7 +299,7 @@ async function handlePaymentIntentCanceled(
 async function handlePaymentIntentRequiresAction(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any
+  logger: Logger
 ) {
   const paymentIntent = event.data.object as Stripe.PaymentIntent;
   const invoiceId = paymentIntent.metadata?.['invoiceId'];
@@ -324,7 +325,7 @@ async function handlePaymentIntentRequiresAction(
 async function handleChargeSucceeded(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any,
+  logger: Logger,
   notificationService: NotificationService
 ) {
   const charge = event.data.object as Stripe.Charge;
@@ -410,7 +411,7 @@ async function handleChargeSucceeded(
 async function handleChargeFailed(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any,
+  logger: Logger,
   notificationService: NotificationService
 ) {
   const charge = event.data.object as Stripe.Charge;
@@ -468,7 +469,7 @@ async function handleChargeFailed(
 async function handleChargeRefunded(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any
+  logger: Logger
 ) {
   const charge = event.data.object as Stripe.Charge;
   const paymentIntentId = charge.payment_intent as string;
@@ -527,7 +528,7 @@ async function handleChargeRefunded(
 async function handleAccountUpdated(
   event: Stripe.Event,
   merchantAccountRepo: MerchantAccountRepository,
-  logger: any
+  logger: Logger
 ) {
   const account = event.data.object as Stripe.Account;
   
@@ -581,7 +582,7 @@ async function handleAccountUpdated(
 async function handleAccountDeauthorized(
   event: Stripe.Event,
   merchantAccountRepo: MerchantAccountRepository,
-  logger: any
+  logger: Logger
 ) {
   const deauth = event.data.object as { account: string };
 
@@ -618,7 +619,7 @@ async function handleAccountDeauthorized(
 async function handleTransferCreated(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any
+  logger: Logger
 ) {
   const transfer = event.data.object as Stripe.Transfer;
   
@@ -646,7 +647,7 @@ async function handleTransferCreated(
 async function handleTransferFailed(
   event: Stripe.Event,
   invoiceRepo: InvoiceRepository,
-  logger: any
+  logger: Logger
 ) {
   const transfer = event.data.object as Stripe.Transfer;
   

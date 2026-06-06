@@ -30,7 +30,7 @@ export async function promoteWaitlistEntry(ctx: HandlerContext) {
   const body = ctx.req.valid('json') as PromoteWaitlistEntryBody;
 
   const db = ctx.get('database') as DatabaseInstance;
-  const logger = ctx.get('logger') as any | undefined;
+  const logger = ctx.get('logger');
 
   const waitlistRepo = new DentalWaitlistEntryRepository(db, logger);
   const entry = await waitlistRepo.findOneById(entryId);

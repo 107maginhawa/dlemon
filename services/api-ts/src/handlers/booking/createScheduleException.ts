@@ -27,7 +27,7 @@ export async function createScheduleException(
   
   // Get validated parameters
   const params = ctx.req.valid('param') as { event: string };
-  const body = ctx.req.valid('json') as any; // Type will be validated by repository
+  const body = ctx.req.valid('json') as unknown as ScheduleExceptionCreateRequest; // shape validated by zValidator + repo
 
   // Get dependencies from context
   const db = ctx.get('database') as DatabaseInstance;

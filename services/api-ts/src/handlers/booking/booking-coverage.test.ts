@@ -8,6 +8,7 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
+import type { Logger } from '@/types/logger';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
@@ -23,7 +24,7 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 // ---------------------------------------------------------------------------
 
 const noop = () => {};
-const logger = { debug: noop, info: noop, warn: noop, error: noop };
+const logger = { debug: noop, info: noop, warn: noop, error: noop } as unknown as Logger;
 
 function makeNotifs() {
   return { createNotification: async () => ({}) };

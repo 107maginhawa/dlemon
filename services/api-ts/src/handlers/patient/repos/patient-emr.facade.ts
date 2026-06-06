@@ -8,6 +8,7 @@
 
 import type { DatabaseInstance } from '@/core/database';
 import type { FindManyOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { PatientRepository, type PatientFilters } from './patient.repo';
 import type { Patient, PatientWithPerson } from './patient.schema';
 
@@ -19,7 +20,7 @@ export type { PatientFilters } from './patient.repo';
 export async function getPatientForEMR(
   db: DatabaseInstance,
   patientId: string,
-  logger?: any
+  logger?: Logger
 ): Promise<Patient | null> {
   const repo = new PatientRepository(db, logger);
   return repo.findOneById(patientId);
@@ -31,7 +32,7 @@ export async function getPatientForEMR(
 export async function getPatientWithPersonForEMR(
   db: DatabaseInstance,
   patientId: string,
-  logger?: any
+  logger?: Logger
 ): Promise<PatientWithPerson | null> {
   const repo = new PatientRepository(db, logger);
   return repo.findOneByIdWithPerson(patientId);
@@ -43,7 +44,7 @@ export async function getPatientWithPersonForEMR(
 export async function getPatientByPersonIdForEMR(
   db: DatabaseInstance,
   personId: string,
-  logger?: any
+  logger?: Logger
 ): Promise<Patient | null> {
   const repo = new PatientRepository(db, logger);
   return repo.findByPersonId(personId);
@@ -56,7 +57,7 @@ export async function listPatientsForEMR(
   db: DatabaseInstance,
   filters?: PatientFilters,
   options?: FindManyOptions,
-  logger?: any
+  logger?: Logger
 ): Promise<Patient[]> {
   const repo = new PatientRepository(db, logger);
   return repo.findMany(filters, options);
@@ -69,7 +70,7 @@ export async function listPatientsWithPersonForEMR(
   db: DatabaseInstance,
   filters?: PatientFilters,
   options?: { pagination?: FindManyOptions['pagination'] },
-  logger?: any
+  logger?: Logger
 ): Promise<PatientWithPerson[]> {
   const repo = new PatientRepository(db, logger);
   return repo.findManyWithPerson(filters, options);

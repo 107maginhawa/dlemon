@@ -6,6 +6,7 @@
 import { eq, and, inArray, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   patients,
   type Patient,
@@ -38,7 +39,7 @@ export interface ArchiveResult {
 export class PatientRepository extends DatabaseRepository<Patient, NewPatient, PatientFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, patients, logger);
   }

@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq, and, desc, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalInsuranceClaims,
   dentalInsuranceClaimLines,
@@ -22,7 +23,7 @@ export interface ClaimFilters {
 }
 
 export class DentalInsuranceClaimRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   /** Clinic-generated claim number: CLM-{year}-{8-char UUID slice}. */
   generateClaimNumber(): string {

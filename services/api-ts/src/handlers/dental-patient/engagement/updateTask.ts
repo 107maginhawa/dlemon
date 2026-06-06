@@ -10,14 +10,16 @@ import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-den
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TaskRepository } from '../repos/task.repo';
 import { TASK_FSM, type TaskStatus } from '../repos/task.schema';
+import type { DentalTask } from '../repos/task.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateTask(ctx: any): Promise<Response> {
+export async function updateTask(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, taskId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, taskId } = ctx.req.valid('param') as { patientId: string; taskId: string };
+  const body = ctx.req.valid('json') as Partial<Pick<DentalTask, 'title' | 'description' | 'taskType' | 'status' | 'dueDate' | 'assignedTo'>>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -38,17 +40,17 @@ export async function updateTask(ctx: any): Promise<Response> {
   const existing = await taskRepo.findOneById(taskId, patientId);
   if (!existing) throw new NotFoundError('Task not found');
 
-  const updates: Record<string, unknown> = {};
+  const updates: Partial<Pick<DentalTask, 'title' | 'description' | 'taskType' | 'status' | 'dueDate' | 'assignedTo' | 'completedAt' | 'updatedBy'>> = {};
 
-  if (body['title'] !== undefined) updates['title'] = body['title'];
-  if (body['description'] !== undefined) updates['description'] = body['description'];
-  if (body['taskType'] !== undefined) updates['taskType'] = body['taskType'];
-  if (body['dueDate'] !== undefined) updates['dueDate'] = body['dueDate'];
-  if (body['assignedTo'] !== undefined) updates['assignedTo'] = body['assignedTo'];
+  if (body.title !== undefined) updates['title'] = body.title;
+  if (body.description !== undefined) updates['description'] = body.description;
+  if (body.taskType !== undefined) updates['taskType'] = body.taskType;
+  if (body.dueDate !== undefined) updates['dueDate'] = body.dueDate;
+  if (body.assignedTo !== undefined) updates['assignedTo'] = body.assignedTo;
 
-  if (body['status'] !== undefined) {
+  if (body.status !== undefined) {
     const from = existing.status as TaskStatus;
-    const to = body['status'] as TaskStatus;
+    const to = body.status as TaskStatus;
     const allowed = TASK_FSM[from];
 
     if (!allowed.includes(to)) {
@@ -64,7 +66,7 @@ export async function updateTask(ctx: any): Promise<Response> {
 
   updates['updatedBy'] = user.id;
 
-  const task = await taskRepo.update(taskId, patientId, updates as any);
+  const task = await taskRepo.update(taskId, patientId, updates);
   if (!task) throw new NotFoundError('Task not found');
 
   logger?.info({ action: 'updateTask', patientId, taskId, updates }, 'Task updated');

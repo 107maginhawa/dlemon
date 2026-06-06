@@ -132,8 +132,10 @@ export async function createMeasurement(ctx: BaseContext): Promise<Response> {
   // Branch-level authorization (T-08-01)
   await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
 
-  const isMeasurementType = MEASUREMENT_TYPES.has(rawBody.type as any);
-  const isAnnotationType = ANNOTATION_TYPES.has(rawBody.type as any);
+  type MeasurementType = 'distance' | 'angle' | 'area';
+  type AnnotationTypeValue = 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth';
+  const isMeasurementType = MEASUREMENT_TYPES.has(rawBody.type as MeasurementType);
+  const isAnnotationType = ANNOTATION_TYPES.has(rawBody.type as AnnotationTypeValue);
 
   if (!isMeasurementType && !isAnnotationType) {
     throw new ValidationError(

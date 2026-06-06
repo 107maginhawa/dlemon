@@ -11,6 +11,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getDentalPatientRecord, updateDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
+import type { Patient, EmergencyContact, CommunicationPreferences } from '../../patient/repos/patient-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
 
@@ -47,7 +48,7 @@ export async function updateDentalPatient(
     await assertBranchRole(db, user.id, patient.preferredBranchId as string, ['dentist_owner']);
   }
 
-  const updates: Record<string, any> = {};
+  const updates: Partial<Patient> = {};
 
   if (body['needsFollowUp'] !== undefined) updates['needsFollowUp'] = body['needsFollowUp'];
   if (body['dentalHistorySummary'] !== undefined) updates['dentalHistorySummary'] = body['dentalHistorySummary'];
@@ -62,12 +63,12 @@ export async function updateDentalPatient(
 
   // FR2.16: Emergency contact
   if (body['emergencyContact'] !== undefined) {
-    updates['emergencyContact'] = body['emergencyContact'];
+    updates['emergencyContact'] = body['emergencyContact'] as unknown as EmergencyContact | null | undefined;
   }
 
   // FR2.17: Communication preferences
   if (body['communicationPreferences'] !== undefined) {
-    updates['communicationPreferences'] = body['communicationPreferences'];
+    updates['communicationPreferences'] = body['communicationPreferences'] as CommunicationPreferences | null | undefined;
   }
 
   // FR2.18: Recall date + note

@@ -23,9 +23,9 @@ export function registerBookingJobs(scheduler: JobScheduler, notificationService
     // Extend context to include notification service
     const extendedContext = {
       ...context,
-      notificationService
+      notificationService,
     };
-    await confirmationTimerJob(extendedContext as any);
+    await confirmationTimerJob(extendedContext);
   });
 
   // Slot cleanup job - runs daily at 3 AM
@@ -70,7 +70,7 @@ export async function triggerSlotGeneration(
  */
 export async function getBookingJobsHealth(scheduler: JobScheduler): Promise<{
   overallHealth: 'healthy' | 'degraded' | 'unhealthy';
-  details?: any;
+  details?: Record<string, unknown>;
 }> {
   try {
     const health = await scheduler.getHealth();
@@ -80,7 +80,7 @@ export async function getBookingJobsHealth(scheduler: JobScheduler): Promise<{
     
     return {
       overallHealth,
-      details: health,
+      details: health as unknown as Record<string, unknown>,
     };
   } catch (error) {
     return {

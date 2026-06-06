@@ -5,13 +5,14 @@
  * Branch-scoped — the caller must be an active member of the requested branch.
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import type { InsuranceClaimStatus } from './repos/dental-insurance-claim.schema';
 
-export async function listInsuranceClaims(ctx: any): Promise<Response> {
+export async function listInsuranceClaims(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 

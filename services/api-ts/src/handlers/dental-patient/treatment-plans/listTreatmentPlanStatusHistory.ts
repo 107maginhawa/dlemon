@@ -12,12 +12,13 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { logAuditEvent } from '@/core/audit-logger';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function listTreatmentPlanStatusHistory(ctx: any): Promise<Response> {
+export async function listTreatmentPlanStatusHistory(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, planId } = ctx.req.valid('param');
+  const { patientId, planId } = ctx.req.valid('param') as { patientId: string; planId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

@@ -71,7 +71,7 @@ export async function getPatient(ctx: HandlerContext) {
   const personId = typeof patient.person === 'string' ? patient.person : (patient.person as { id: string }).id;
   const isOwner = personId === user.id;
   const staffRoles = ['admin', 'clinician', 'registrar', 'support'];
-  const userRole = (user as any).role || 'user';
+  const userRole = user.role || 'user';
   const isStaff = staffRoles.some(r =>
     userRole.split(',').map((s: string) => s.trim()).includes(r)
   );

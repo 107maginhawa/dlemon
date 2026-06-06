@@ -15,6 +15,7 @@ import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CreateDentalTreatmentBody, CreateDentalTreatmentParams } from '@/generated/openapi/validators';
+import type { ToothChartState } from '../repos/dental-chart.schema';
 
 export async function createDentalTreatment(
   ctx: ValidatedContext<CreateDentalTreatmentBody, never, CreateDentalTreatmentParams>
@@ -47,7 +48,7 @@ export async function createDentalTreatment(
     const chartRepo = new DentalChartRepository(db);
     const chart = await chartRepo.findByVisit(visit.id);
     if (chart) {
-      const toothState = chart.teeth.find((t: any) => t.toothNumber === body.toothNumber);
+      const toothState = (chart.teeth as ToothChartState[]).find(t => t.toothNumber === body.toothNumber);
       if (toothState?.state === 'extracted') {
         throw new BusinessLogicError(
           `Tooth ${body.toothNumber} is extracted — cannot add pending treatments`,

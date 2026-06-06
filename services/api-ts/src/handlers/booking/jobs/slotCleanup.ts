@@ -4,6 +4,8 @@
  */
 
 import type { JobContext } from '@/core/jobs';
+import type { Logger } from '@/types/logger';
+import type { DatabaseInstance } from '@/core/database';
 import { TimeSlotRepository } from '../repos/timeSlot.repo';
 import { BookingRepository } from '../repos/booking.repo';
 import { subDays, subMonths, format } from 'date-fns';
@@ -107,18 +109,18 @@ export async function slotCleanupJob(context: JobContext): Promise<void> {
  * Archive old available slots using soft delete for compliance
  */
 async function cleanupOldAvailableSlots(
-  db: any,
+  db: DatabaseInstance,
   retentionDays: number,
   batchSize: number,
-  logger: any
+  logger: Logger
 ): Promise<number> {
   const cutoffDate = subDays(new Date(), retentionDays);
   let totalArchived = 0;
 
-  logger.debug('Archiving old available slots', {
+  logger.debug({
     cutoffDate: cutoffDate.toISOString(),
     retentionDays
-  });
+  }, 'Archiving old available slots');
 
   // Archive in batches to avoid locking the table
   while (true) {
@@ -141,7 +143,7 @@ async function cleanupOldAvailableSlots(
     }
 
     // Delete the batch (hard delete)
-    const slotIds = oldSlots.map((s: any) => s.id);
+    const slotIds = oldSlots.map((s: { id: string }) => s.id);
     const result = await db
       .delete(timeSlots)
       .where(inArray(timeSlots.id, slotIds))
@@ -149,10 +151,10 @@ async function cleanupOldAvailableSlots(
 
     totalArchived += result.length;
 
-    logger.debug(`Archived batch of ${result.length} available slots`, {
+    logger.debug({
       totalArchived,
-      slotIds: result.map((r: any) => r.id)
-    });
+      slotIds: result.map((r: { id: string }) => r.id)
+    }, `Archived batch of ${result.length} available slots`);
 
     // Small delay between batches
     if (oldSlots.length === batchSize) {
@@ -168,18 +170,18 @@ async function cleanupOldAvailableSlots(
  * Archive old blocked slots using soft delete for compliance
  */
 async function cleanupOldBlockedSlots(
-  db: any,
+  db: DatabaseInstance,
   retentionDays: number,
   batchSize: number,
-  logger: any
+  logger: Logger
 ): Promise<number> {
   const cutoffDate = subDays(new Date(), retentionDays);
   let totalArchived = 0;
 
-  logger.debug('Archiving old blocked slots', {
+  logger.debug({
     cutoffDate: cutoffDate.toISOString(),
     retentionDays
-  });
+  }, 'Archiving old blocked slots');
 
   // Archive in batches
   while (true) {
@@ -201,7 +203,7 @@ async function cleanupOldBlockedSlots(
     }
 
     // Delete the batch (hard delete)
-    const slotIds = oldSlots.map((s: any) => s.id);
+    const slotIds = oldSlots.map((s: { id: string }) => s.id);
     const result = await db
       .delete(timeSlots)
       .where(inArray(timeSlots.id, slotIds))
@@ -209,10 +211,10 @@ async function cleanupOldBlockedSlots(
 
     totalArchived += result.length;
 
-    logger.debug(`Deleted batch of ${result.length} blocked slots`, {
+    logger.debug({
       totalArchived,
-      slotIds: result.map((r: any) => r.id)
-    });
+      slotIds: result.map((r: { id: string }) => r.id)
+    }, `Deleted batch of ${result.length} blocked slots`);
 
     if (oldSlots.length === batchSize) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -227,18 +229,18 @@ async function cleanupOldBlockedSlots(
  * Archive old completed bookings using soft delete for compliance
  */
 async function archiveOldBookings(
-  db: any,
+  db: DatabaseInstance,
   archiveDays: number,
   batchSize: number,
-  logger: any
+  logger: Logger
 ): Promise<number> {
   const cutoffDate = subMonths(new Date(), Math.floor(archiveDays / 30));
   let totalArchived = 0;
   
-  logger.debug('Archiving old bookings', {
+  logger.debug({
     cutoffDate: cutoffDate.toISOString(),
     archiveDays
-  });
+  }, 'Archiving old bookings');
   
   // In a real implementation, we would:
   // 1. Create a bookings_archive table with the same structure
@@ -260,9 +262,9 @@ async function archiveOldBookings(
   
   // Archive old bookings using soft delete for compliance
   if (oldBookings.length > 0) {
-    const bookingIds = oldBookings.map((a: any) => a.id);
+    const bookingIds = oldBookings.map((a: { id: string }) => a.id);
 
-    await db.transaction(async (tx: any) => {
+    await db.transaction(async (tx: typeof db) => {
       // Delete bookings (hard delete)
       const result = await tx
         .delete(bookings)
@@ -271,10 +273,10 @@ async function archiveOldBookings(
 
       totalArchived = result.length;
 
-      logger.debug(`Deleted ${result.length} old bookings`, {
-        bookingIds: result.map((r: any) => r.id),
+      logger.debug({
+        bookingIds: result.map((r: { id: string }) => r.id),
         cutoffDate: cutoffDate.toISOString()
-      });
+      }, `Deleted ${result.length} old bookings`);
     });
   }
   
@@ -285,7 +287,7 @@ async function archiveOldBookings(
 /**
  * Optimize database indexes for better performance
  */
-async function optimizeDatabaseIndexes(db: any, logger: any): Promise<void> {
+async function optimizeDatabaseIndexes(db: DatabaseInstance, logger: Logger): Promise<void> {
   try {
     // Analyze tables to update statistics
     await db.execute(sql`ANALYZE time_slots`);
@@ -294,9 +296,9 @@ async function optimizeDatabaseIndexes(db: any, logger: any): Promise<void> {
     
     logger.info('Database indexes optimized');
   } catch (error) {
-    logger.error('Failed to optimize database indexes', {
+    logger.error({
       error: error instanceof Error ? error.message : String(error)
-    });
+    }, 'Failed to optimize database indexes');
     // Don't throw - this is not critical
   }
 }
@@ -304,7 +306,7 @@ async function optimizeDatabaseIndexes(db: any, logger: any): Promise<void> {
 /**
  * Vacuum database to reclaim space (PostgreSQL specific)
  */
-async function vacuumDatabase(db: any, logger: any): Promise<void> {
+async function vacuumDatabase(db: DatabaseInstance, logger: Logger): Promise<void> {
   try {
     // Note: VACUUM cannot be executed inside a transaction block
     // In production, this might need to be run separately or with special permissions
@@ -319,9 +321,9 @@ async function vacuumDatabase(db: any, logger: any): Promise<void> {
     
     logger.info('Database vacuum completed (limited mode)');
   } catch (error) {
-    logger.error('Failed to vacuum database', {
+    logger.error({
       error: error instanceof Error ? error.message : String(error)
-    });
+    }, 'Failed to vacuum database');
     // Don't throw - vacuum failure shouldn't fail the entire job
   }
 }
@@ -329,7 +331,7 @@ async function vacuumDatabase(db: any, logger: any): Promise<void> {
 /**
  * Get cleanup statistics for monitoring
  */
-export async function getCleanupStatistics(db: any): Promise<{
+export async function getCleanupStatistics(db: DatabaseInstance): Promise<{
   oldAvailableSlots: number;
   oldBlockedSlots: number;
   oldBookings: number;
@@ -339,7 +341,7 @@ export async function getCleanupStatistics(db: any): Promise<{
   const ninetyDaysAgo = subDays(new Date(), 90);
   
   // Count old available slots (not yet archived)
-  const [availableCount] = await db
+  const availableCountRows = await db
     .select({ count: sql`COUNT(*)` })
     .from(timeSlots)
     .where(
@@ -350,9 +352,10 @@ export async function getCleanupStatistics(db: any): Promise<{
 
       )
     );
+  const availableCount = availableCountRows[0] ?? { count: 0 };
 
   // Count old blocked slots (not yet archived)
-  const [blockedCount] = await db
+  const blockedCountRows = await db
     .select({ count: sql`COUNT(*)` })
     .from(timeSlots)
     .where(
@@ -363,9 +366,10 @@ export async function getCleanupStatistics(db: any): Promise<{
 
       )
     );
+  const blockedCount = blockedCountRows[0] ?? { count: 0 };
 
   // Count old bookings (not yet archived)
-  const [bookingCount] = await db
+  const bookingCountRows = await db
     .select({ count: sql`COUNT(*)` })
     .from(bookings)
     .where(
@@ -375,13 +379,14 @@ export async function getCleanupStatistics(db: any): Promise<{
 
       )
     );
-  
+  const bookingCount = bookingCountRows[0] ?? { count: 0 };
+
   // Estimate space usage (rough calculation)
   const estimatedRows = Number(availableCount.count) + Number(blockedCount.count) + Number(bookingCount.count);
   const avgRowSize = 1024; // bytes (rough estimate)
   const estimatedBytes = estimatedRows * avgRowSize;
   const estimatedMB = (estimatedBytes / (1024 * 1024)).toFixed(2);
-  
+
   return {
     oldAvailableSlots: Number(availableCount.count),
     oldBlockedSlots: Number(blockedCount.count),

@@ -26,8 +26,8 @@ export async function listPractitioners(
   const { limit, offset } = parsePagination(query);
 
   const filters: PractitionerFilters = {};
-  if ((query as any).active !== undefined) filters.active = (query as any).active;
-  if ((query as any).specialty) filters.specialty = (query as any).specialty;
+  if (query.active !== undefined) filters.active = query.active;
+  if (query.specialty) filters.specialty = query.specialty;
 
   const repo = new PractitionerRepository(db, logger);
   const [data, totalCount] = await Promise.all([

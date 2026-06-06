@@ -6,7 +6,7 @@
 import { pgTable, uuid, jsonb, index, uniqueIndex, text, boolean, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
-import { persons, type PersonCreateRequest } from '../../person/repos/person.schema';
+import { persons, type PersonCreateRequest, type Address, type ContactInfo } from '../../person/repos/person.schema';
 
 // Patients table - matches TypeSpec Patient model
 export const patients = pgTable('patient', {
@@ -99,8 +99,8 @@ export interface PersonData {
   middleName?: string;
   dateOfBirth?: string;
   gender?: string;
-  primaryAddress?: any;
-  contactInfo?: any;
+  primaryAddress?: Address;
+  contactInfo?: ContactInfo;
   languagesSpoken?: string[];
   timezone?: string;
   createdAt: Date;

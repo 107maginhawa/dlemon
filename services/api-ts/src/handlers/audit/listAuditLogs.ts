@@ -35,23 +35,28 @@ export async function listAuditLogs(
   // Get query parameters
   const query = ctx.req.valid('query') as AuditLogQueryParams;
   
+  // Spread into a plain object so it is assignable to Record<string, unknown>
+  const queryRecord: Record<string, unknown> = { ...query };
+
   // Parse pagination with audit-specific defaults
-  const { limit, offset } = parsePagination(query, { limit: 25, maxLimit: 100 });
-  
+  const { limit, offset } = parsePagination(queryRecord, { limit: 25, maxLimit: 100 });
+
   // Parse filters - only allow specific fields for security
   const allowedFields = [
-    'eventType', 'category', 'action', 'outcome', 
+    'eventType', 'category', 'action', 'outcome',
     'user', 'userType', 'resourceType', 'resource',
     'retentionStatus', 'startDate', 'endDate', 'ipAddress'
   ];
-  
-  const rawFilters = parseFilters(query, allowedFields);
-  
+
+  const rawFilters = parseFilters(queryRecord, allowedFields);
+
   // Convert date strings to Date objects if present
+  const startDateRaw = rawFilters['startDate'];
+  const endDateRaw = rawFilters['endDate'];
   const filters: AuditLogFilters = {
     ...rawFilters,
-    startDate: rawFilters['startDate'] ? new Date(rawFilters['startDate']) : undefined,
-    endDate: rawFilters['endDate'] ? new Date(rawFilters['endDate']) : undefined
+    startDate: startDateRaw != null ? new Date(String(startDateRaw)) : undefined,
+    endDate: endDateRaw != null ? new Date(String(endDateRaw)) : undefined
   };
   
   // Validate date range

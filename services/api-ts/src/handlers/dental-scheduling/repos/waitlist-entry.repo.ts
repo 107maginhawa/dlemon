@@ -5,6 +5,7 @@
 import { eq, and, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   dentalWaitlistEntries,
   type DentalWaitlistEntry,
@@ -23,7 +24,7 @@ export class DentalWaitlistEntryRepository extends DatabaseRepository<
   NewDentalWaitlistEntry,
   WaitlistEntryFilters
 > {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalWaitlistEntries, logger);
   }
 

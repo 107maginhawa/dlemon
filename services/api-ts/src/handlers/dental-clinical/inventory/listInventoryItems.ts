@@ -7,12 +7,13 @@ import { InventoryRepository } from '../repos/inventory.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
 import { eq } from 'drizzle-orm';
+import type { HandlerContext } from '@/types/app';
 
-export async function listInventoryItems(ctx: any): Promise<Response> {
+export async function listInventoryItems(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { branchId } = ctx.req.valid('param');
+  const { branchId } = ctx.req.valid('param') as { branchId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

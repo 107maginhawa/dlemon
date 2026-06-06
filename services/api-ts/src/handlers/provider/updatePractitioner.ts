@@ -37,18 +37,26 @@ export async function updatePractitioner(
     });
   }
 
+  // DB schema element types for JSONB columns (Drizzle $type annotations).
+  // Zod-validated shapes are structurally compatible at runtime (stored as JSONB);
+  // the explicit casts bridge optionality/enum mismatches between the Zod and DB types.
+  type DbName         = NonNullable<Practitioner['name']>[number];
+  type DbQualification = NonNullable<Practitioner['qualification']>[number];
+  type DbCredential   = NonNullable<Practitioner['credential']>[number];
+  type DbSpecialty    = NonNullable<Practitioner['specialties']>[number];
+
   const updateData: Partial<Practitioner> = {};
-  if ((body as any).name !== undefined) updateData.name = (body as any).name;
-  if ((body as any).active !== undefined) updateData.active = (body as any).active;
-  if ((body as any).telecom !== undefined) updateData.telecom = (body as any).telecom;
-  if ((body as any).address !== undefined) updateData.address = (body as any).address;
-  if ((body as any).gender !== undefined) updateData.gender = (body as any).gender;
-  if ((body as any).birthDate !== undefined) updateData.birthDate = (body as any).birthDate;
-  if ((body as any).photo !== undefined) updateData.photo = (body as any).photo;
-  if ((body as any).qualification !== undefined) updateData.qualification = (body as any).qualification;
-  if ((body as any).credential !== undefined) updateData.credential = (body as any).credential;
-  if ((body as any).specialties !== undefined) updateData.specialties = (body as any).specialties;
-  if ((body as any).languages !== undefined) updateData.languages = (body as any).languages;
+  if (body.name !== undefined) updateData.name = (body.name ?? undefined) as DbName[] | undefined;
+  if (body.active !== undefined) updateData.active = body.active ?? undefined;
+  if (body.telecom !== undefined) updateData.telecom = body.telecom ?? undefined;
+  if (body.address !== undefined) updateData.address = body.address ?? undefined;
+  if (body.gender !== undefined) updateData.gender = body.gender ?? undefined;
+  if (body.birthDate !== undefined) updateData.birthDate = body.birthDate ?? undefined;
+  if (body.photo !== undefined) updateData.photo = body.photo ?? undefined;
+  if (body.qualification !== undefined) updateData.qualification = (body.qualification ?? undefined) as DbQualification[] | undefined;
+  if (body.credential !== undefined) updateData.credential = (body.credential ?? undefined) as DbCredential[] | undefined;
+  if (body.specialties !== undefined) updateData.specialties = (body.specialties ?? undefined) as DbSpecialty[] | undefined;
+  if (body.languages !== undefined) updateData.languages = (body.languages ?? undefined) as DbSpecialty[] | undefined;
 
   const updated = await repo.updateOneById(params.id, updateData);
 

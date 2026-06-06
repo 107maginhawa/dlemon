@@ -16,12 +16,14 @@ import { getPatientFirstName } from '../repos/patient-name.facade';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { buildCasePresentationAggregate } from './aggregate';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { GetCasePresentationParams } from '@/generated/openapi/validators';
 
-export async function getCasePresentation(ctx: any): Promise<Response> {
+export async function getCasePresentation(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, presentationId } = ctx.req.valid('param');
+  const { patientId, presentationId } = ctx.req.valid('param') as GetCasePresentationParams;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

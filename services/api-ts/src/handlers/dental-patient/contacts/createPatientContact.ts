@@ -11,13 +11,15 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { PatientContactRepository } from '../repos/patient-contact.repo';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { CreatePatientContactParams, CreatePatientContactBody } from '@/generated/openapi/validators';
 
-export async function createPatientContact(ctx: any): Promise<Response> {
+export async function createPatientContact(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as CreatePatientContactParams;
+  const body = ctx.req.valid('json') as CreatePatientContactBody;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

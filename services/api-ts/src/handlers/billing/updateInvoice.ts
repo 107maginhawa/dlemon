@@ -15,6 +15,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { UpdateInvoiceBody, UpdateInvoiceParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
 import { InvoiceRepository } from './repos/billing.repo';
+import type { NewInvoice } from './repos/billing.schema';
 import { findBillingParty } from '../person/repos/person-billing.facade';
 import type { Config } from '@/core/config';
 
@@ -86,7 +87,7 @@ export async function updateInvoice(
   }
 
   // Build update data
-  const updateData: any = {
+  const updateData: Partial<NewInvoice> = {
     updatedBy: user.id
   };
 
@@ -120,7 +121,7 @@ export async function updateInvoice(
     // Calculate new amounts using config tax/platform rates
     const taxRate = config.billing.taxRatePct;
     let subtotal = 0;
-    body.lineItems.forEach((item: any) => {
+    body.lineItems.forEach((item) => {
       const quantity = item.quantity || 1;
       subtotal += quantity * item.unitPrice;
     });
@@ -162,7 +163,7 @@ export async function updateInvoice(
     currency: updatedInvoice.currency,
     paymentCaptureMethod: updatedInvoice.paymentCaptureMethod,
     paymentDueAt: updatedInvoice.paymentDueAt?.toISOString() || null,
-    lineItems: lineItems.map((item: any) => ({
+    lineItems: lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,

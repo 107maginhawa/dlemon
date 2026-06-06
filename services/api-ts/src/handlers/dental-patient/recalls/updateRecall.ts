@@ -9,16 +9,17 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } 
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { RecallRepository } from '../repos/recall.repo';
-import { RECALL_FSM, type RecallStatus } from '../repos/recall.schema';
+import { RECALL_FSM, type RecallStatus, type DentalRecall } from '../repos/recall.schema';
 import { addMonths, todayInTimezone } from '../utils/recall-dates';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateRecall(ctx: any): Promise<Response> {
+export async function updateRecall(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, recallId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, recallId } = ctx.req.valid('param') as { patientId: string; recallId: string };
+  const body = ctx.req.valid('json') as Partial<Pick<DentalRecall, 'type' | 'dueDate' | 'notes' | 'intervalMonths' | 'status'>>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -39,16 +40,16 @@ export async function updateRecall(ctx: any): Promise<Response> {
   const existing = await recallRepo.findOneById(recallId, patientId);
   if (!existing) throw new NotFoundError('Recall not found');
 
-  const updates: Record<string, unknown> = {};
+  const updates: Partial<Pick<DentalRecall, 'type' | 'dueDate' | 'notes' | 'intervalMonths' | 'status' | 'sentAt' | 'completedAt'>> = {};
 
-  if (body['type'] !== undefined) updates['type'] = body['type'];
-  if (body['dueDate'] !== undefined) updates['dueDate'] = body['dueDate'];
-  if (body['notes'] !== undefined) updates['notes'] = body['notes'];
-  if (body['intervalMonths'] !== undefined) updates['intervalMonths'] = body['intervalMonths'];
+  if (body.type !== undefined) updates.type = body.type;
+  if (body.dueDate !== undefined) updates.dueDate = body.dueDate;
+  if (body.notes !== undefined) updates.notes = body.notes;
+  if (body.intervalMonths !== undefined) updates.intervalMonths = body.intervalMonths;
 
-  if (body['status'] !== undefined) {
+  if (body.status !== undefined) {
     const from = existing.status as RecallStatus;
-    const to = body['status'] as RecallStatus;
+    const to = body.status as RecallStatus;
     const allowed = RECALL_FSM[from];
 
     if (!allowed.includes(to)) {
@@ -58,19 +59,19 @@ export async function updateRecall(ctx: any): Promise<Response> {
       );
     }
 
-    updates['status'] = to;
-    if (to === 'sent') updates['sentAt'] = new Date();
-    if (to === 'completed') updates['completedAt'] = new Date();
+    updates.status = to;
+    if (to === 'sent') updates.sentAt = new Date();
+    if (to === 'completed') updates.completedAt = new Date();
   }
 
-  const recall = await recallRepo.update(recallId, patientId, updates as any);
+  const recall = await recallRepo.update(recallId, patientId, updates);
   if (!recall) throw new NotFoundError('Recall not found');
 
   // P1-24: on completion of a recurring recall (intervalMonths set), seed the
   // next-cycle pending recall (D4 decision: trigger on recall-completed, not on a
   // completed visit — no cross-module visit coupling). Idempotent enough for the
   // single-completion path; a duplicate same-type/same-dueDate row is harmless.
-  if (updates['status'] === 'completed' && recall.intervalMonths && recall.intervalMonths > 0) {
+  if (updates.status === 'completed' && recall.intervalMonths && recall.intervalMonths > 0) {
     const baseDate = todayInTimezone('UTC');
     const nextDueDate = addMonths(baseDate, recall.intervalMonths);
     await recallRepo.create({

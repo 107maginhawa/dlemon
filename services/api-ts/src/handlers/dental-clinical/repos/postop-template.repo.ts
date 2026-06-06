@@ -1,5 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalPostopTemplates,
   type DentalPostopTemplate,
@@ -10,7 +11,7 @@ import {
 export class PostopTemplateRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async findByBranchId(branchId: string, category?: PostopCategory): Promise<DentalPostopTemplate[]> {

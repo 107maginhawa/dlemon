@@ -5,6 +5,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   dentalErasureRequests,
   type DentalErasureRequest,
@@ -23,7 +24,7 @@ export class ErasureRequestRepository extends DatabaseRepository<
   NewDentalErasureRequest,
   ErasureRequestFilters
 > {
-  constructor(db: DatabaseInstance, logger?: unknown) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalErasureRequests, logger);
   }
 

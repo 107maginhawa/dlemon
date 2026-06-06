@@ -6,6 +6,7 @@
 import { eq, and, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   providers,
   type Provider,
@@ -19,6 +20,7 @@ import {
   findBookingProvidersWithAvailability as facadeFindBookingProvidersWithAvailability,
   findBookingProvidersWithActiveEvents as facadeFindBookingProvidersWithActiveEvents,
   findProviderWithPersonAndEventById,
+  type ProviderWithEvent,
 } from './provider-person.facade';
 
 export interface ProviderFilters {
@@ -32,7 +34,7 @@ export interface ProviderFilters {
 export class ProviderRepository extends DatabaseRepository<Provider, NewProvider, ProviderFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, providers, logger);
   }
@@ -128,14 +130,14 @@ export class ProviderRepository extends DatabaseRepository<Provider, NewProvider
   async findBookingProvidersWithActiveEvents(
     filters?: ProviderFilters & { q?: string },
     options?: { pagination?: PaginationOptions }
-  ): Promise<(ProviderWithPerson & { event?: any })[]> {
+  ): Promise<ProviderWithEvent[]> {
     return facadeFindBookingProvidersWithActiveEvents(this.db, filters, options);
   }
 
   /**
    * Find provider by ID with person and active event joined
    */
-  async findOneByIdWithPersonAndEvent(providerId: string): Promise<(ProviderWithPerson & { event?: any }) | null> {
+  async findOneByIdWithPersonAndEvent(providerId: string): Promise<ProviderWithEvent | null> {
     return findProviderWithPersonAndEventById(this.db, providerId);
   }
 

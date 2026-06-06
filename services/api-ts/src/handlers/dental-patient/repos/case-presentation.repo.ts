@@ -8,6 +8,7 @@
 
 import { eq, and, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalCasePresentations,
   type DentalCasePresentation,
@@ -37,7 +38,7 @@ export interface CasePresentationItem {
 export class CasePresentationRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async create(

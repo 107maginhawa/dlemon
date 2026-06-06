@@ -1,5 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalRecalls,
   type DentalRecall,
@@ -11,7 +12,7 @@ import { getDueRecallsByBranch, getDispatchableRecalls } from './recall-person.f
 export class RecallRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async findByPatientId(patientId: string): Promise<DentalRecall[]> {

@@ -9,6 +9,7 @@
 
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { BusinessLogicError } from '@/core/errors';
 import {
   dentalPaymentPlans,
@@ -50,7 +51,7 @@ function addFrequency(date: Date, frequency: string, count: number): Date {
 }
 
 export class DentalPaymentPlanRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   /**
    * Create a plan and auto-generate installment records.

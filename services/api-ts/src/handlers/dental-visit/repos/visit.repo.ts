@@ -9,6 +9,7 @@
 import { eq, and, or, lt, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   dentalVisits,
   type DentalVisit,
@@ -23,7 +24,7 @@ export interface VisitFilters {
 }
 
 export class VisitRepository extends DatabaseRepository<DentalVisit, NewDentalVisit, VisitFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalVisits, logger);
   }
 

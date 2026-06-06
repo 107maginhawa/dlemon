@@ -10,13 +10,15 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { PatientContactRepository } from '../repos/patient-contact.repo';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { DentalPatientContact } from '../repos/patient-contact.schema';
 
-export async function updatePatientContact(ctx: any): Promise<Response> {
+export async function updatePatientContact(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, contactId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, contactId } = ctx.req.valid('param') as { patientId: string; contactId: string };
+  const body = ctx.req.valid('json') as Partial<Pick<DentalPatientContact, 'name' | 'relationship' | 'phone' | 'email' | 'isGuardian' | 'isEmergencyContact' | 'notes'>>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

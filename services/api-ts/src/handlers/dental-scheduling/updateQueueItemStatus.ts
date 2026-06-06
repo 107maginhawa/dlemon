@@ -10,14 +10,15 @@ import { QueueItemRepository } from './repos/queue-item.repo';
 import { QUEUE_ITEM_FSM } from './repos/queue-item.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { DatabaseInstance } from '@/core/database';
-import type { DentalQueueItem } from './repos/queue-item.schema';
+import type { DentalQueueItem, QueueItemStatus } from './repos/queue-item.schema';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateQueueItemStatus(ctx: any): Promise<Response> {
+export async function updateQueueItemStatus(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { itemId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { itemId } = ctx.req.valid('param') as { itemId: string };
+  const body = ctx.req.valid('json') as { status: QueueItemStatus; notes?: string | null };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

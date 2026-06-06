@@ -1,5 +1,6 @@
 import { eq, and, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalPatientContacts,
   type DentalPatientContact,
@@ -9,7 +10,7 @@ import {
 export class PatientContactRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async findByPatientId(patientId: string): Promise<DentalPatientContact[]> {

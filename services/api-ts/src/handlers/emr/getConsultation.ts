@@ -127,14 +127,16 @@ export async function getConsultation(ctx: HandlerContext) {
   
   // Compose expanded details via owning-module facades — the EMR module never
   // reaches into patient/provider/person schemas directly (EX-005/EX-006).
-  const consultationWithDetails: ConsultationNoteWithDetails = { ...consultation };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- patient/provider FKs replaced with expanded objects below
+  const { patient: _patient, provider: _provider, ...consultationBase } = consultation;
+  const consultationWithDetails: ConsultationNoteWithDetails = { ...consultationBase };
 
   if (expandPatient) {
     const patientData = expandPerson
       ? await getPatientWithPersonForEMR(db, consultation.patient, logger)
       : await getPatientForEMR(db, consultation.patient, logger);
     if (patientData) {
-      consultationWithDetails.patient = patientData;
+      consultationWithDetails.patient = patientData as Record<string, unknown>;
     }
   }
 
@@ -143,7 +145,7 @@ export async function getConsultation(ctx: HandlerContext) {
       ? await getProviderWithPersonForEMR(db, consultation.provider, logger)
       : await getProviderForEMR(db, consultation.provider, logger);
     if (providerData) {
-      consultationWithDetails.provider = providerData;
+      consultationWithDetails.provider = providerData as Record<string, unknown>;
     }
   }
 

@@ -37,17 +37,34 @@ export async function updatePractitionerRole(
     });
   }
 
+  // DB schema element types for JSONB columns.
+  type DbCodeableConcept = NonNullable<PractitionerRole['code']>[number];
+  type DbNotAvailable    = NonNullable<PractitionerRole['notAvailable']>[number];
+
   const updateData: Partial<PractitionerRole> = {};
-  if ((body as any).active !== undefined) updateData.active = (body as any).active;
-  if ((body as any).code !== undefined) updateData.code = (body as any).code;
-  if ((body as any).specialty !== undefined) updateData.specialty = (body as any).specialty;
-  if ((body as any).location !== undefined) updateData.location = (body as any).location;
-  if ((body as any).healthcareService !== undefined) updateData.healthcareService = (body as any).healthcareService;
-  if ((body as any).telecom !== undefined) updateData.telecom = (body as any).telecom;
-  if ((body as any).availableTime !== undefined) updateData.availableTime = (body as any).availableTime;
-  if ((body as any).notAvailable !== undefined) updateData.notAvailable = (body as any).notAvailable;
-  if ((body as any).period?.start !== undefined) updateData.periodStart = new Date((body as any).period.start);
-  if ((body as any).period?.end !== undefined) updateData.periodEnd = new Date((body as any).period.end);
+  if (body.active !== undefined) updateData.active = body.active ?? undefined;
+  if (body.code !== undefined) updateData.code = (body.code ?? undefined) as DbCodeableConcept[] | undefined;
+  if (body.specialty !== undefined) updateData.specialty = (body.specialty ?? undefined) as DbCodeableConcept[] | undefined;
+  if (body.location !== undefined) updateData.location = body.location ?? undefined;
+  if (body.healthcareService !== undefined) updateData.healthcareService = body.healthcareService ?? undefined;
+  if (body.telecom !== undefined) updateData.telecom = body.telecom ?? undefined;
+  if (body.availableTime !== undefined) updateData.availableTime = body.availableTime ?? undefined;
+  if (body.notAvailable !== undefined) {
+    // Zod transforms period dates to Date objects; DB schema stores them as ISO strings.
+    updateData.notAvailable = (body.notAvailable == null ? undefined : body.notAvailable.map(
+      (na): DbNotAvailable => ({
+        description: na.description,
+        ...(na.during && {
+          during: {
+            start: na.during.start instanceof Date ? na.during.start.toISOString() : na.during.start,
+            end: na.during.end instanceof Date ? na.during.end.toISOString() : na.during.end,
+          },
+        }),
+      })
+    ));
+  }
+  if (body.period?.start !== undefined) updateData.periodStart = body.period.start;
+  if (body.period?.end !== undefined) updateData.periodEnd = body.period.end;
 
   const updated = await repo.updateOneById(params.id, updateData);
 

@@ -119,7 +119,7 @@ export async function markInvoiceUncollectible(
     currency: updatedInvoice.currency,
     paymentCaptureMethod: updatedInvoice.paymentCaptureMethod,
     paymentDueAt: updatedInvoice.paymentDueAt?.toISOString() || null,
-    lineItems: updatedInvoice.lineItems.map((item: any) => ({
+    lineItems: updatedInvoice.lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,

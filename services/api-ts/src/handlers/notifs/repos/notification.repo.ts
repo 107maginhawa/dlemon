@@ -13,6 +13,7 @@ import {
   type NotificationFilters,
   type CreateNotificationRequest
 } from './notification.schema';
+import type { Logger } from '@/types/logger';
 import { findNotificationRecipient } from '../../person/repos/person-notifs.facade';
 import { ValidationError, NotFoundError, ForbiddenError } from '@/core/errors';
 import * as OneSignal from '@onesignal/node-onesignal';
@@ -27,7 +28,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
 
   constructor(
     db: DatabaseInstance,
-    logger?: any,
+    logger?: Logger,
     oneSignalConfig?: { appId: string; apiKey: string },
     emailService?: EmailService
   ) {
@@ -57,14 +58,14 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     }
 
     if (filters.type) {
-      conditions.push(eq(notifications.type, filters.type as any));
+      conditions.push(eq(notifications.type, filters.type as Notification['type']));
     }
 
     // Auto-filter to in-app notifications if no channel specified
     if (!filters.channel) {
       conditions.push(eq(notifications.channel, 'in-app'));
     } else {
-      conditions.push(eq(notifications.channel, filters.channel as any));
+      conditions.push(eq(notifications.channel, filters.channel as Notification['channel']));
     }
 
     // Handle special 'unread' status value
@@ -74,7 +75,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
         inArray(notifications.status, ['sent', 'delivered'])
       );
     } else if (filters.status) {
-      conditions.push(eq(notifications.status, filters.status as any));
+      conditions.push(eq(notifications.status, filters.status as Notification['status']));
     }
     
     if (filters.startDate) {
@@ -130,8 +131,8 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     // Create notification record with final status in single operation
     const notification = await this.createOne({
       recipient: request.recipient,
-      type: request.type as any,
-      channel: request.channel as any,
+      type: request.type as Notification['type'],
+      channel: request.channel as Notification['channel'],
       title: request.title,
       message: request.message,
       scheduledAt: request.scheduledAt || null,
@@ -142,10 +143,6 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
       consentValidated: request.consentValidated || false,
       createdBy: SYSTEM_USER_ID, // Module-created notifications are system-generated
       updatedBy: SYSTEM_USER_ID,
-      // Store targetApp for later use when sending push notifications
-      ...(request.targetApp && {
-        data: { targetApp: request.targetApp }
-      } as any),
     });
 
     this.logger?.info({
@@ -169,8 +166,8 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
   async enqueueScheduledIfAbsent(request: CreateNotificationRequest): Promise<{ created: boolean; notification: Notification }> {
     const scheduledAt = request.scheduledAt ?? null;
     const existingConds = [
-      eq(notifications.type, request.type as any),
-      eq(notifications.channel, request.channel as any),
+      eq(notifications.type, request.type as Notification['type']),
+      eq(notifications.channel, request.channel as Notification['channel']),
     ];
     if (request.relatedEntity) existingConds.push(eq(notifications.relatedEntity, request.relatedEntity));
     else existingConds.push(isNull(notifications.relatedEntity));
@@ -208,7 +205,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
       .where(and(
         eq(notifications.relatedEntity, relatedEntity),
         eq(notifications.status, 'queued'),
-        inArray(notifications.type, types as any),
+        inArray(notifications.type, types as readonly Notification['type'][]),
       ));
     return result.rowCount ?? 0;
   }
@@ -300,7 +297,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
     ];
 
     if (type) {
-      conditions.push(eq(notifications.type, type as any));
+      conditions.push(eq(notifications.type, type as Notification['type']));
     }
     
     const result = await this.db
@@ -455,6 +452,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
             };
 
             // Optional: Filter by app tag if targetApp is specified
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- `data` is not a schema column; targetApp is stored as an in-memory hint only
             const targetApp = (notification as any).data?.targetApp;
             if (targetApp) {
               oneSignalNotification.filters = [
@@ -485,6 +483,7 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
               this.logger?.info({
                 notificationId: notification.id,
                 oneSignalId: result.id,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OneSignal SDK omits `recipients` from its response type
                 recipients: (result as any).recipients
               }, 'Push notification sent via OneSignal');
 
@@ -493,9 +492,11 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
                 sentAt: new Date(),
                 deliveredAt: new Date(),
                 metadata: {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- `metadata` is not a schema column; accessing persisted JSONB workaround
                   ...(notification as any).metadata,
                   oneSignalId: result.id
                 }
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see suppress above; cast closes the same oversize update object
               } as any);
             } else {
               this.logger?.warn({

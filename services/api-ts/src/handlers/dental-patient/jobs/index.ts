@@ -11,6 +11,8 @@ import type { NotificationService } from '@/core/notifs';
 import { recallDueScanJob } from './recallDueScan';
 import { recallDispatchJob } from './recallDispatch';
 
+type RecallDispatchJobContext = JobContext & { notificationService: NotificationService };
+
 export function registerDentalPatientJobs(
   scheduler: JobScheduler,
   notificationService: NotificationService,
@@ -20,7 +22,7 @@ export function registerDentalPatientJobs(
 
   // Daily recare dispatch (07:00) — enqueues outreach + flips recalls to sent.
   scheduler.registerCron('dental-patient.recallDispatch', '0 7 * * *', async (context: JobContext) => {
-    await recallDispatchJob({ ...context, notificationService } as any);
+    await recallDispatchJob({ ...context, notificationService } as RecallDispatchJobContext);
   });
 }
 

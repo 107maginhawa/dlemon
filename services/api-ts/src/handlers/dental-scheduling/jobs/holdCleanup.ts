@@ -14,7 +14,7 @@ import { reminderArmerJob } from './reminderArmer';
 export async function holdCleanupJob(context: JobContext): Promise<void> {
   const { db, logger, jobId } = context;
   try {
-    const repo = new AppointmentHoldRepository(db as any);
+    const repo = new AppointmentHoldRepository(db);
     const removed = await repo.deleteExpired();
     if (removed > 0) logger.info({ jobId, removed }, 'Expired appointment holds cleaned up');
   } catch (error) {
@@ -36,7 +36,7 @@ export function registerDentalSchedulingJobs(
   // precedent. Needs the NotificationService to enqueue idempotently.
   if (notificationService) {
     scheduler.registerInterval('dental-scheduling.reminderArmer', 15 * 60 * 1000, async (context) => {
-      await reminderArmerJob({ ...context, notificationService } as any);
+      await reminderArmerJob({ ...context, notificationService });
     });
   }
 }

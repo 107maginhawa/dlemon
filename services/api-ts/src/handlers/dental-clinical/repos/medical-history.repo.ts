@@ -5,6 +5,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   medicalHistoryEntries,
   type MedicalHistoryEntry,
@@ -19,7 +20,7 @@ export interface MedicalHistoryFilters {
 }
 
 export class MedicalHistoryRepository extends DatabaseRepository<MedicalHistoryEntry, NewMedicalHistoryEntry, MedicalHistoryFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, medicalHistoryEntries, logger);
   }
 

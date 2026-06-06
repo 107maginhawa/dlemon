@@ -7,6 +7,7 @@ import {
 import type { CreatePractitionerBody } from '@/generated/openapi/validators';
 import { PractitionerRepository } from './repos/practitioner.repo';
 import { ProviderRepository } from './repos/provider.repo';
+import type { NewPractitioner } from './repos/practitioner.schema';
 
 /**
  * createPractitioner
@@ -22,12 +23,13 @@ export async function createPractitioner(
     throw new UnauthorizedError();
   }
 
-  const body = ctx.req.valid('json');
+  // providerId is an app-layer extension not present in the OpenAPI schema
+  const body = ctx.req.valid('json') as CreatePractitionerBody & { providerId?: string };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
   // providerId must be supplied by the caller (FHIR: Practitioner belongs to an organization/provider)
-  const providerId = (body as any).providerId as string | undefined;
+  const providerId = body.providerId;
   if (!providerId) {
     throw new NotFoundError('providerId is required in request body', {
       resourceType: 'provider',
@@ -49,19 +51,26 @@ export async function createPractitioner(
 
   const repo = new PractitionerRepository(db, logger);
 
+  // DB element types for JSONB columns (Drizzle $type annotations).
+  // Zod-validated shapes are structurally compatible at runtime (stored as JSONB);
+  // explicit casts bridge optionality/shape mismatches between Zod and DB types.
+  type DbQualification = NonNullable<NewPractitioner['qualification']>[number];
+  type DbCredential    = NonNullable<NewPractitioner['credential']>[number];
+  type DbSpecialty     = NonNullable<NewPractitioner['specialties']>[number];
+
   const practitioner = await repo.createOne({
     providerId,
-    active: (body as any).active ?? true,
-    name: (body as any).name ?? [],
-    telecom: (body as any).telecom ?? null,
-    address: (body as any).address ?? null,
-    gender: (body as any).gender ?? null,
-    birthDate: (body as any).birthDate ?? null,
-    photo: (body as any).photo ?? null,
-    qualification: (body as any).qualification ?? [],
-    credential: (body as any).credential ?? [],
-    specialties: (body as any).specialties ?? [],
-    languages: (body as any).languages ?? null,
+    active: body.active ?? true,
+    name: body.name ?? [],
+    telecom: body.telecom ?? null,
+    address: body.address ?? null,
+    gender: body.gender ?? null,
+    birthDate: body.birthDate ?? null,
+    photo: body.photo ?? null,
+    qualification: (body.qualification ?? []) as DbQualification[],
+    credential: (body.credential ?? []) as DbCredential[],
+    specialties: (body.specialties ?? []) as DbSpecialty[],
+    languages: (body.languages ?? null) as DbSpecialty[] | null,
   });
 
   logger?.info(

@@ -56,7 +56,7 @@ export async function exportDentalPatients(
   await assertBranchRole(db, user.id, q['branchId'], ['dentist_owner']);
 
   const format = q['format'] === 'csv' ? 'csv' : 'json';
-  const filters: Record<string, any> = {};
+  const filters: { branchId?: string } = {};
   if (q.branchId) filters['branchId'] = q.branchId;
 
   // Fetch up to 10k for export

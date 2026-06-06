@@ -7,12 +7,13 @@ import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-den
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { CoverageAuthorizationRepository } from '../repos/coverage-authorization.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function listCoverageAuthorizations(ctx: any): Promise<Response> {
+export async function listCoverageAuthorizations(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
+  const { patientId } = ctx.req.valid('param') as { patientId: string };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

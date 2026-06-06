@@ -26,13 +26,15 @@ import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { TREATMENT_PLAN_FSM } from '../repos/treatment-plan.schema';
 import { writeAcceptanceConsent } from '@/handlers/dental-clinical/repos/case-presentation-consent.facade';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { AcceptCasePresentationParams, AcceptCasePresentationBody } from '@/generated/openapi/validators';
 
-export async function acceptCasePresentation(ctx: any): Promise<Response> {
+export async function acceptCasePresentation(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, presentationId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, presentationId } = ctx.req.valid('param') as AcceptCasePresentationParams;
+  const body = ctx.req.valid('json') as AcceptCasePresentationBody;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

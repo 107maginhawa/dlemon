@@ -13,6 +13,7 @@ import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
+import type { Logger } from '@/types/logger';
 import { OrganizationRepository } from './repos/organization.repo';
 import { dentalMemberships } from './repos/membership.schema';
 import { dentalBranches } from './repos/branch.schema';
@@ -23,7 +24,7 @@ export async function resolveOrgForCaller(
   db: DatabaseInstance,
   userId: string,
   requestedOrgId: string | undefined,
-  logger?: unknown,
+  logger?: Logger,
 ): Promise<{ id: string; ownerPersonId: string }> {
   const orgRepo = new OrganizationRepository(db, logger);
 
@@ -62,7 +63,7 @@ export async function getPermissionGrid(ctx: Context): Promise<Response> {
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  const logger = ctx.get('logger');
+  const logger = ctx.get('logger') as Logger | undefined;
   const requestedOrgId = ctx.req.query('organizationId') || undefined;
 
   const org = await resolveOrgForCaller(db, user.id, requestedOrgId, logger);

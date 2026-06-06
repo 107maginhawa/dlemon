@@ -5,6 +5,7 @@
 
 import { eq, and, or, gte, lte, isNull, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { DatabaseRepository } from '@/core/database.repo';
 import {
   scheduleExceptions,
@@ -27,7 +28,7 @@ export interface ScheduleExceptionFilters {
 export class ScheduleExceptionRepository extends DatabaseRepository<ScheduleException, NewScheduleException, ScheduleExceptionFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, scheduleExceptions, logger);
   }

@@ -9,14 +9,15 @@ import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
 import { eq } from 'drizzle-orm';
 import type { PostopCategory } from '../repos/postop-template.schema';
+import type { HandlerContext } from '@/types/app';
 
-export async function listPostopTemplates(ctx: any): Promise<Response> {
+export async function listPostopTemplates(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { branchId } = ctx.req.valid('param');
+  const { branchId } = ctx.req.valid('param') as { branchId: string };
   const query = ctx.req.query();
-  const category = query.category as PostopCategory | undefined;
+  const category = query['category'] as PostopCategory | undefined;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

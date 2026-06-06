@@ -12,6 +12,7 @@
 import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql, eq, and } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
 import { reminderArmerJob } from './reminderArmer';
 import { DentalAppointmentRepository } from '../repos/dental-appointment.repo';
@@ -31,7 +32,7 @@ const ORG_ID = 'f0000000-0000-1000-8000-0000000000d1';
 const BRANCH_ID = 'b0000000-0000-1000-8000-0000000000d1';
 const MEMBER_ID = 'c0000000-0000-1000-8000-0000000000d1';
 
-const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
+const noopLogger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
 
 function buildNotifsRepo() {
   return new NotificationRepository(db, noopLogger);

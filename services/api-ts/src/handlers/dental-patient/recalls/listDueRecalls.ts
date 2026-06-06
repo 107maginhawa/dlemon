@@ -15,8 +15,9 @@ import { RecallRepository } from '../repos/recall.repo';
 import { getBranchReminderPolicy } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { todayInTimezone, addMonths } from '../utils/recall-dates';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function listDueRecalls(ctx: any): Promise<Response> {
+export async function listDueRecalls(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 

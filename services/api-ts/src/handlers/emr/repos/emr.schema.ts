@@ -66,7 +66,7 @@ export const consultationNotes = pgTable('consultation_note', {
     respiratoryRate?: number;
     oxygenSaturation?: number;
     notes?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>(),
   
   symptoms: jsonb('symptoms').$type<{
@@ -76,7 +76,7 @@ export const consultationNotes = pgTable('consultation_note', {
     description?: string;
     associated?: string[];
     denies?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   }>(),
   
   prescriptions: jsonb('prescriptions').$type<Array<{
@@ -88,7 +88,7 @@ export const consultationNotes = pgTable('consultation_note', {
     durationDays?: number;
     instructions?: string;
     notes?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>>(),
   
   followUp: jsonb('follow_up').$type<{
@@ -96,11 +96,11 @@ export const consultationNotes = pgTable('consultation_note', {
     timeframeDays?: number;
     instructions?: string;
     specialistReferral?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>(),
   
   // Integration support for external systems (e.g., Mapflow)
-  externalDocumentation: jsonb('external_documentation').$type<Record<string, any>>(),
+  externalDocumentation: jsonb('external_documentation').$type<Record<string, unknown>>(),
   
   // Workflow fields
   status: consultationStatusEnum('status')
@@ -181,7 +181,7 @@ export interface VitalsData {
   respiratoryRate?: number;
   oxygenSaturation?: number;
   notes?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SymptomsData {
@@ -191,7 +191,7 @@ export interface SymptomsData {
   description?: string;
   associated?: string[];
   denies?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PrescriptionData {
@@ -203,7 +203,7 @@ export interface PrescriptionData {
   durationDays?: number;
   instructions?: string;
   notes?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FollowUpData {
@@ -211,7 +211,7 @@ export interface FollowUpData {
   timeframeDays?: number;
   instructions?: string;
   specialistReferral?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Request types for API endpoints - matches TypeSpec models exactly
@@ -226,7 +226,7 @@ export interface CreateConsultationRequest {
   symptoms?: SymptomsData;
   prescriptions?: PrescriptionData[];
   followUp?: FollowUpData;
-  externalDocumentation?: Record<string, any>; // V-EMR-008: settable at create (parity with update)
+  externalDocumentation?: Record<string, unknown>; // V-EMR-008: settable at create (parity with update)
 }
 
 export interface UpdateConsultationRequest {
@@ -237,7 +237,7 @@ export interface UpdateConsultationRequest {
   symptoms?: SymptomsData | null;       // Can be null to clear per TypeSpec
   prescriptions?: PrescriptionData[] | null; // Can be null to clear per TypeSpec
   followUp?: FollowUpData | null;       // Can be null to clear per TypeSpec
-  externalDocumentation?: Record<string, any> | null; // Can be null to clear per TypeSpec
+  externalDocumentation?: Record<string, unknown> | null; // Can be null to clear per TypeSpec
 }
 
 // Patient health summary - matches TypeSpec model
@@ -254,8 +254,8 @@ export interface PatientHealthSummary {
 
 // Helper types for queries with joined data
 export type ConsultationNoteWithDetails = Omit<ConsultationNote, 'patient' | 'provider'> & {
-  patient?: any;
-  provider?: any;
+  patient?: Record<string, unknown>;
+  provider?: Record<string, unknown>;
 };
 
 // Response type for paginated consultation lists

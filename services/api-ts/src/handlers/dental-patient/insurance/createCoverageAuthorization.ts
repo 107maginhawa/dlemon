@@ -11,15 +11,16 @@ import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-den
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import { CoverageAuthorizationRepository } from '../repos/coverage-authorization.repo';
-import type { CoverageAuthStatus } from '../repos/coverage-authorization.schema';
+import type { CoverageAuthStatus, DentalCoverageAuthorization } from '../repos/coverage-authorization.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createCoverageAuthorization(ctx: any): Promise<Response> {
+export async function createCoverageAuthorization(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as { patientId: string };
+  const body = ctx.req.valid('json') as Partial<DentalCoverageAuthorization>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -37,7 +38,7 @@ export async function createCoverageAuthorization(ctx: any): Promise<Response> {
 
   // Verify insuranceProfileId belongs to this patient
   const profileRepo = new InsuranceProfileRepository(db, logger);
-  const profile = await profileRepo.findOneById(body.insuranceProfileId, patientId);
+  const profile = await profileRepo.findOneById(body.insuranceProfileId ?? '', patientId);
   if (!profile) throw new BusinessLogicError('Insurance profile not found for this patient');
 
   const status: CoverageAuthStatus = body.status ?? 'requested';
@@ -45,7 +46,7 @@ export async function createCoverageAuthorization(ctx: any): Promise<Response> {
   const repo = new CoverageAuthorizationRepository(db, logger);
   const auth = await repo.create({
     patientId,
-    insuranceProfileId: body.insuranceProfileId,
+    insuranceProfileId: body.insuranceProfileId ?? '',
     branchId: patient.preferredBranchId!,
     visitId: body.visitId ?? null,
     treatmentPlanId: body.treatmentPlanId ?? null,

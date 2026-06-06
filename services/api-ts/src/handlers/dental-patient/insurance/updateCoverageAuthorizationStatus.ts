@@ -12,12 +12,13 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { CoverageAuthorizationRepository } from '../repos/coverage-authorization.repo';
 import { COVERAGE_AUTH_FSM, type CoverageAuthStatus } from '../repos/coverage-authorization.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateCoverageAuthorizationStatus(ctx: any): Promise<Response> {
+export async function updateCoverageAuthorizationStatus(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, authorizationId } = ctx.req.valid('param');
+  const { patientId, authorizationId } = ctx.req.valid('param') as { patientId: string; authorizationId: string };
   const body = ctx.req.valid('json') as {
     status: CoverageAuthStatus;
     approvedAmountCents?: number;

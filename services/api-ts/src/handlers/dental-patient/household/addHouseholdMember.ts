@@ -10,13 +10,14 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { HouseholdRepository } from '../repos/household.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function addHouseholdMember(ctx: any): Promise<Response> {
+export async function addHouseholdMember(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const { householdId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { householdId } = ctx.req.valid('param') as { householdId: string };
+  const body = ctx.req.valid('json') as { patientId: string; relationship?: string | null };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

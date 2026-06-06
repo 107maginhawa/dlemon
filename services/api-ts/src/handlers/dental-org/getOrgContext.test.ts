@@ -33,7 +33,6 @@ function buildTestApp(user?: { id: string; email: string }) {
   });
 
   app.use('*', async (c, next) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ctx = c as any;
     ctx.set('database', db);
     ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });

@@ -1,11 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { dentalSyncLogs, type DentalSyncLog, type NewDentalSyncLog, type SyncStatus } from './sync-log.schema';
 
 export class SyncLogRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async findAll(): Promise<DentalSyncLog[]> {

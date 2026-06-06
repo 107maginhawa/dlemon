@@ -7,7 +7,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { PatientRepository } from './repos/patient.repo';
-import { type PatientUpdateRequest } from './repos/patient.schema';
+import { type Patient, type PatientUpdateRequest } from './repos/patient.schema';
 import type { User } from '@/types/auth';
 
 /**
@@ -45,26 +45,26 @@ export async function updatePatient(ctx: HandlerContext) {
   }
   
   // Prepare update data — admin/staff can update any patient
-  const updateData: any = {
+  const updateData: Partial<Patient> = {
     updatedBy: user.id
   };
 
   // Only update fields that are provided
   if (body.primaryProvider !== undefined) {
-    updateData.primaryProvider = body.primaryProvider;
+    updateData.primaryProvider = body.primaryProvider as typeof updateData.primaryProvider;
   }
   if (body.primaryPharmacy !== undefined) {
-    updateData.primaryPharmacy = body.primaryPharmacy;
+    updateData.primaryPharmacy = body.primaryPharmacy as typeof updateData.primaryPharmacy;
   }
-  // Dental-specific fields
-  if ((body as any).dentalHistorySummary !== undefined) {
-    updateData.dentalHistorySummary = (body as any).dentalHistorySummary;
+  // Dental-specific fields (all present in PatientUpdateRequest)
+  if (body.dentalHistorySummary !== undefined) {
+    updateData.dentalHistorySummary = body.dentalHistorySummary;
   }
-  if ((body as any).needsFollowUp !== undefined) {
-    updateData.needsFollowUp = (body as any).needsFollowUp;
+  if (body.needsFollowUp !== undefined) {
+    updateData.needsFollowUp = body.needsFollowUp;
   }
-  if ((body as any).preferredBranchId !== undefined) {
-    updateData.preferredBranchId = (body as any).preferredBranchId;
+  if (body.preferredBranchId !== undefined) {
+    updateData.preferredBranchId = body.preferredBranchId;
   }
 
   const isOwner = existingPatient.person === user.id;

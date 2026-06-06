@@ -7,6 +7,7 @@
 import { eq, and, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { dentalPerioToothReadings, type DentalPerioToothReading, type NewDentalPerioToothReading } from './perio-reading.schema';
 
 export interface PerioReadingFilters {
@@ -28,7 +29,7 @@ const PATCHABLE_READING_COLUMNS = [
 ] as const satisfies readonly (keyof NewDentalPerioToothReading)[];
 
 export class PerioReadingRepository extends DatabaseRepository<DentalPerioToothReading, NewDentalPerioToothReading, PerioReadingFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalPerioToothReadings, logger);
   }
 

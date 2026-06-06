@@ -35,7 +35,6 @@ function makeEntry(overrides: Partial<NewDentalAuditLog> = {}): NewDentalAuditLo
 
 let teardown: () => Promise<void>;
 let repo: AuditLogRepository;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any;
 
 beforeEach(async () => {

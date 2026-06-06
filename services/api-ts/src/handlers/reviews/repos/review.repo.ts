@@ -5,6 +5,7 @@
 import { and, eq, isNull, or, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { reviews, type Review, type NewReview, type CreateReviewRequest } from './review.schema';
 
 export interface ReviewFilters {
@@ -18,7 +19,7 @@ export interface ReviewFilters {
  * Review repository
  */
 export class ReviewRepository extends DatabaseRepository<Review, NewReview, ReviewFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, reviews, logger);
   }
 

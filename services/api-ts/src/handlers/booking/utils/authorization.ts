@@ -4,6 +4,9 @@
  */
 
 import type { DatabaseInstance } from '@/core/database';
+import type { AuthInstance } from '@/core/auth';
+import type { User } from '@/types/auth';
+import type { Booking } from '../repos/booking.schema';
 import { user as userTable } from '@/generated/better-auth/schema';
 import { eq } from 'drizzle-orm';
 import { ForbiddenError } from '@/core/errors';
@@ -19,8 +22,8 @@ import { ForbiddenError } from '@/core/errors';
  */
 export async function checkBookingEventOwnership(
   db: DatabaseInstance,
-  auth: any,
-  user: any,
+  auth: AuthInstance,
+  user: User,
   ownerId: string,
   eventId?: string
 ): Promise<boolean> {
@@ -47,8 +50,8 @@ export async function checkBookingEventOwnership(
  */
 export async function checkBookingEventCreateAuthorization(
   db: DatabaseInstance,
-  auth: any,
-  user: any
+  auth: AuthInstance,
+  user: User
 ): Promise<boolean> {
   // Any authenticated user can create events
   // The user becomes the owner automatically
@@ -63,7 +66,7 @@ export async function checkBookingEventCreateAuthorization(
  * @returns true if authorized, throws ForbiddenError otherwise
  */
 export function checkUserRole(
-  user: any,
+  user: User,
   requiredRoles: string[],
   operation: string
 ): boolean {
@@ -86,8 +89,8 @@ export function checkUserRole(
  */
 export async function checkBookingOwnership(
   db: DatabaseInstance,
-  user: any,
-  booking: any
+  user: User,
+  booking: Booking
 ): Promise<boolean> {
   // Admin and support roles can access any booking
   if (user.role === 'admin' || user.role === 'support') {

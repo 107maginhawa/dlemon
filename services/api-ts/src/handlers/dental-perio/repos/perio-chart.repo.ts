@@ -6,6 +6,7 @@ import { eq, and, ne } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { dentalPerioCharts, type DentalPerioChart, type NewDentalPerioChart } from './perio-chart.schema';
+import type { Logger } from '@/types/logger';
 
 export interface PerioChartFilters {
   visitId?: string;
@@ -14,7 +15,7 @@ export interface PerioChartFilters {
 }
 
 export class PerioChartRepository extends DatabaseRepository<DentalPerioChart, NewDentalPerioChart, PerioChartFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalPerioCharts, logger);
   }
 

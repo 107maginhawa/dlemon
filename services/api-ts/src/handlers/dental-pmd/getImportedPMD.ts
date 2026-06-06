@@ -7,7 +7,7 @@
  * If content is valid JSON, returns a parsed structured view.
  */
 
-import type { Context } from 'hono';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
@@ -17,7 +17,7 @@ import { getPatientForPMD } from '@/handlers/patient/repos/patient-pmd.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { eq } from 'drizzle-orm';
 
-export async function getImportedPMD(ctx: Context): Promise<Response> {
+export async function getImportedPMD(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
@@ -52,7 +52,7 @@ export async function getImportedPMD(ctx: Context): Promise<Response> {
     parsedContent = record.content;
   }
 
-  const audit = ctx.get('audit') as any;
+  const audit = ctx.get('audit');
   if (audit?.logEvent) {
     await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'imported-pmd', resource: id, description: 'Imported PMD retrieved', details: { resultCount: 1 }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
   }

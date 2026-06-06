@@ -9,12 +9,13 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { HouseholdRepository } from '../repos/household.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function removeHouseholdMember(ctx: any): Promise<Response> {
+export async function removeHouseholdMember(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const { householdId, patientId } = ctx.req.valid('param');
+  const { householdId, patientId } = ctx.req.valid('param') as { householdId: string; patientId: string };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

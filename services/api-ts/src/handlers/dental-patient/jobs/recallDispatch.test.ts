@@ -12,6 +12,7 @@
 import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql, eq, and } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
 import { recallDispatchJob } from './recallDispatch';
 import { RecallRepository } from '../repos/recall.repo';
@@ -31,7 +32,7 @@ const PATIENT_ID = 'a0000000-0000-1000-8000-0000000000f2';
 const ORG_ID = 'f0000000-0000-1000-8000-0000000000f1';
 const BRANCH_ID = 'b0000000-0000-1000-8000-0000000000f1';
 
-const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
+const noopLogger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
 
 function buildNotifsService() {
   const repo = new NotificationRepository(db, noopLogger);

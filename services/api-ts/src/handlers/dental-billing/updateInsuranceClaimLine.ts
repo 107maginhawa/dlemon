@@ -5,17 +5,18 @@
  * decision), then recompute the claim's billed/patient-portion totals.
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import type { ClaimLineStatus } from './repos/dental-insurance-claim.schema';
 
-export async function updateInsuranceClaimLine(ctx: any): Promise<Response> {
+export async function updateInsuranceClaimLine(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { claimId, lineId } = ctx.req.valid('param');
+  const { claimId, lineId } = ctx.req.valid('param') as { claimId: string; lineId: string };
   const body = ctx.req.valid('json') as {
     approvedAmountCents?: number;
     paidAmountCents?: number;

@@ -48,11 +48,12 @@ export async function listEmailTemplates(
   // Build filters object for repository
   const filters: EmailTemplateFilters = {};
   if (rawFilters['status']) {
-    filters.status = rawFilters['status'];
+    filters.status = rawFilters['status'] as 'active' | 'draft' | 'archived';
   }
   if (rawFilters['tags']) {
     // Handle both single tag string and array of tags
-    filters.tags = Array.isArray(rawFilters['tags']) ? rawFilters['tags'] : [rawFilters['tags']];
+    const rawTags = rawFilters['tags'];
+    filters.tags = Array.isArray(rawTags) ? (rawTags as string[]) : [rawTags as string];
   }
   
   // Get dependencies from context

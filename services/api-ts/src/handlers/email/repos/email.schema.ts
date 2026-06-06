@@ -30,7 +30,7 @@ export interface TemplateVariable {
   type: VariableType;
   label: string;
   required: boolean;
-  defaultValue?: any;
+  defaultValue?: string | number | boolean | string[];
   minLength?: number;
   maxLength?: number;
   min?: number;
@@ -134,10 +134,10 @@ export const emailQueue = pgTable('email_queue', {
   recipientName: varchar('recipient_name', { length: 255 }),
   
   // Template variables for rendering
-  variables: jsonb('variables').notNull().$type<Record<string, any>>(),
-  
+  variables: jsonb('variables').notNull().$type<Record<string, unknown>>(),
+
   // Metadata for tracking and reference (e.g., bookingId, notificationId)
-  metadata: jsonb('metadata').$type<Record<string, any>>(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   
   // Processing status
   status: emailQueueStatusEnum('status').notNull().default('pending'),

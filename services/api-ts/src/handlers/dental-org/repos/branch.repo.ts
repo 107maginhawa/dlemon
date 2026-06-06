@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { dentalBranches, type DentalBranch, type NewDentalBranch } from './branch.schema';
+import type { Logger } from '@/types/logger';
 
 export interface BranchFilters {
   organizationId?: string;
@@ -13,7 +14,7 @@ export interface BranchFilters {
 }
 
 export class BranchRepository extends DatabaseRepository<DentalBranch, NewDentalBranch, BranchFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalBranches, logger);
   }
 

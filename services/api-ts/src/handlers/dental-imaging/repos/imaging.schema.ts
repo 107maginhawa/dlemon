@@ -145,6 +145,8 @@ export const ALLOWED_IMAGING_MIME_TYPES = [
 
 export type AllowedImagingMimeType = (typeof ALLOWED_IMAGING_MIME_TYPES)[number];
 
+export type ImagingModality = (typeof modalityEnum.enumValues)[number];
+
 // ---------------------------------------------------------------------------
 // P2-7 / P1-9: typed dicomMetadata JSONB shape
 // ---------------------------------------------------------------------------

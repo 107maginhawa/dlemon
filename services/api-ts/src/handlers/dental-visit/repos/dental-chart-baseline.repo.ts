@@ -2,9 +2,10 @@ import { eq } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalPatientChartBaselines, type DentalPatientChartBaseline } from './dental-chart-baseline.schema';
 import type { ToothChartState } from './dental-chart.schema';
+import type { Logger } from '@/types/logger';
 
 export class DentalChartBaselineRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   async findByPatient(patientId: string): Promise<DentalPatientChartBaseline | null> {
     const [row] = await this.db

@@ -27,7 +27,7 @@ export async function listDentalPatients(
 
   // Branch-level authorization — branchId is required to prevent cross-branch data leaks
   if (!q['branchId']) {
-    return ctx.json({ error: 'branchId is required' } as any, 400);
+    return ctx.json({ error: 'branchId is required' }, 400);
   }
   // V-PAT-008: per ROLE_PERMISSION_MATRIX, ALL dental context roles may view
   // the patient list (scoped to their branch). Read access is the floor.
@@ -43,7 +43,7 @@ export async function listDentalPatients(
     'read_only',
   ]);
 
-  const filters: Record<string, any> = {};
+  const filters: { branchId?: string; q?: string; needsFollowUp?: boolean; status?: string } = {};
 
   // EM-PAT-004/EF-PAT-003: strict per-branch scope — never expand to the whole org
   if (q['branchId']) {

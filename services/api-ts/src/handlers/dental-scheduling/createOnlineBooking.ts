@@ -54,7 +54,7 @@ export async function createOnlineBooking(
   if (Number.isNaN(startAt.getTime())) throw new ValidationError('startAt must be a valid date');
 
   const db = ctx.get('database') as DatabaseInstance;
-  const logger = ctx.get('logger') as any | undefined;
+  const logger = ctx.get('logger');
   const notifs = ctx.get('notifs') as NotificationService | undefined;
 
   const branch = await getBranchOnlineBookingContext(db, branchId);

@@ -154,8 +154,7 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   // privileged READ that MUST be self-audited (ACCESSED). Record scope/counts only —
   // never PHI. This is a single insert, so it cannot recurse (logAuditEvent does not
   // re-invoke getAuditEvents); logAuditEvent never throws, so it cannot break the read.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const logger = ctx.get('logger') as any;
+  const logger = ctx.get('logger');
   await logAuditEvent(db, logger, {
     personId: user.id,
     tenantId: tenantId ?? branchId,

@@ -7,6 +7,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   prescriptions,
   type Prescription,
@@ -22,7 +23,7 @@ export interface PrescriptionFilters {
 }
 
 export class PrescriptionRepository extends DatabaseRepository<Prescription, NewPrescription, PrescriptionFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, prescriptions, logger);
   }
 

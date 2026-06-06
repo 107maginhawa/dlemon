@@ -5,6 +5,7 @@
 import { eq, and, ne, isNotNull, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { BusinessLogicError } from '@/core/errors';
 import {
   dentalMemberships,
@@ -51,7 +52,7 @@ export class MembershipRepository extends DatabaseRepository<
   NewDentalMembership,
   MembershipFilters
 > {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalMemberships, logger);
   }
 

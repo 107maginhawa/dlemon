@@ -26,6 +26,7 @@ export async function resetMemberPin(ctx: Context): Promise<Response> {
   const memberId = ctx.req.param('memberId')!;
   // In production, body is pre-validated by zValidator as { newPin }.
   // In unit tests (no middleware), parse directly.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ctx.req.valid() is absent from the base HonoRequest; present when zValidator middleware is mounted
   const validated = (ctx.req as any).valid?.('json') as { newPin?: string } | undefined;
   const pin = validated?.newPin ?? resetMemberPinSchema.parse(await ctx.req.json()).newPin;
   const db = ctx.get('database') as DatabaseInstance;

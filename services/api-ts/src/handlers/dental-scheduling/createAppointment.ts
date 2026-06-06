@@ -66,7 +66,7 @@ export async function createAppointment(ctx: HandlerContext) {
     }
   }
 
-  const logger = ctx.get('logger') as any | undefined;
+  const logger = ctx.get('logger');
 
   // FR3.7: Check for overlapping appointments (non-blocking — returns warning in response)
   const overlapping = await repo.findOverlapping(dentistMemberId, branchId, scheduledAt, durationMinutes);

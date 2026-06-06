@@ -7,18 +7,19 @@
  * post-hoc (plan §3.3).
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getCoverageAuthorizationForBilling } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
-import { INSURANCE_CLAIM_FSM, type InsuranceClaimStatus } from './repos/dental-insurance-claim.schema';
+import { INSURANCE_CLAIM_FSM, SUBMISSION_CHANNELS, type InsuranceClaimStatus, type SubmissionChannel } from './repos/dental-insurance-claim.schema';
 
-export async function updateInsuranceClaimStatus(ctx: any): Promise<Response> {
+export async function updateInsuranceClaimStatus(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { claimId } = ctx.req.valid('param');
+  const { claimId } = ctx.req.valid('param') as { claimId: string };
   const body = ctx.req.valid('json') as {
     status: InsuranceClaimStatus;
     payerReference?: string;
@@ -58,7 +59,7 @@ export async function updateInsuranceClaimStatus(ctx: any): Promise<Response> {
   if (body.status === 'submitted') {
     updateFields.submittedAt = new Date();
     if (body.payerReference !== undefined) updateFields.payerReference = body.payerReference;
-    if (body.submissionChannel !== undefined) updateFields.submissionChannel = body.submissionChannel as any;
+    if (body.submissionChannel !== undefined) updateFields.submissionChannel = (SUBMISSION_CHANNELS.includes(body.submissionChannel as SubmissionChannel) ? body.submissionChannel as SubmissionChannel : undefined);
 
     // Warn-not-block: no approved LOA backing the claim.
     let hasApprovedLoa = false;

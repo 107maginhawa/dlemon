@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { amendments, type Amendment, type NewAmendment } from './amendment.schema';
+import type { Logger } from '@/types/logger';
 
 export interface AmendmentFilters {
   visitId?: string;
@@ -16,7 +17,7 @@ export interface AmendmentFilters {
 }
 
 export class AmendmentRepository extends DatabaseRepository<Amendment, NewAmendment, AmendmentFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, amendments, logger);
   }
 

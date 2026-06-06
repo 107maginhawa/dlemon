@@ -11,8 +11,13 @@ import {
   consultationNotes,
   type ConsultationNote,
   type NewConsultationNote,
-  type ConsultationStatus
+  type ConsultationStatus,
+  type VitalsData,
+  type SymptomsData,
+  type PrescriptionData,
+  type FollowUpData
 } from './emr.schema';
+import type { Logger } from '@/types/logger';
 
 // NOTE: Patient/provider/person field expansion is intentionally NOT done here.
 // Each owning module exposes its own join via a facade (patient-emr.facade /
@@ -35,7 +40,7 @@ export class ConsultationNoteRepository extends DatabaseRepository<
 > {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, consultationNotes, logger);
   }
@@ -412,11 +417,11 @@ export class ConsultationNoteRepository extends DatabaseRepository<
       chiefComplaint?: string;
       assessment?: string;
       plan?: string;
-      vitals?: any;
-      symptoms?: any;
-      prescriptions?: any[];
-      followUp?: any;
-      externalDocumentation?: Record<string, any>;
+      vitals?: VitalsData;
+      symptoms?: SymptomsData;
+      prescriptions?: PrescriptionData[];
+      followUp?: FollowUpData;
+      externalDocumentation?: Record<string, unknown>;
     }
   ): Promise<ConsultationNote> {
     this.logger?.debug({ consultationData }, 'Creating consultation note directly');
@@ -501,11 +506,11 @@ export class ConsultationNoteRepository extends DatabaseRepository<
       chiefComplaint?: string | null;
       assessment?: string | null;
       plan?: string | null;
-      vitals?: any | null;
-      symptoms?: any | null;
-      prescriptions?: any[] | null;
-      followUp?: any | null;
-      externalDocumentation?: Record<string, any> | null;
+      vitals?: VitalsData | null;
+      symptoms?: SymptomsData | null;
+      prescriptions?: PrescriptionData[] | null;
+      followUp?: FollowUpData | null;
+      externalDocumentation?: Record<string, unknown> | null;
     }
   ): Promise<ConsultationNote> {
     this.logger?.debug({ noteId, updates }, 'Updating consultation note with nulls');

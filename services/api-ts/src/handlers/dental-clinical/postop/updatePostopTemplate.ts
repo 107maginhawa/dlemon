@@ -6,13 +6,15 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PostopTemplateRepository } from '../repos/postop-template.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { PostopCategory, DentalPostopTemplate } from '../repos/postop-template.schema';
 
-export async function updatePostopTemplate(ctx: any): Promise<Response> {
+export async function updatePostopTemplate(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { branchId, templateId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { branchId, templateId } = ctx.req.valid('param') as { branchId: string; templateId: string };
+  const body = ctx.req.valid('json') as Partial<Pick<DentalPostopTemplate, 'category' | 'title' | 'content' | 'active'>>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

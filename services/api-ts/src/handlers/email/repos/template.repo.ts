@@ -6,6 +6,7 @@
 import { eq, and, or, isNull, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions, type PaginatedResult } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { 
   emailTemplates, 
   type EmailTemplate, 
@@ -36,7 +37,7 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
   
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, emailTemplates, logger);
     
@@ -175,7 +176,7 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
     this.logger?.debug({ name: data.name }, 'Creating new template');
     
     // Validate template syntax
-    this.validateTemplateSyntax(data);
+    this.validateTemplateSyntax({ subject: data.subject, bodyHtml: data.bodyHtml, bodyText: data.bodyText ?? null });
     
     // Validate variable definitions
     if (data.variables) {
@@ -235,7 +236,7 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
   /**
    * Validate template syntax
    */
-  private validateTemplateSyntax(template: any): void {
+  private validateTemplateSyntax(template: Pick<EmailTemplate, 'subject' | 'bodyHtml' | 'bodyText'>): void {
     try {
       // Try to compile templates to check syntax
       if (template.subject) {
@@ -284,7 +285,7 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
   /**
    * Validate variables against template variable definitions
    */
-  validateVariables(variableDefinitions: TemplateVariable[], variables: Record<string, any>): string[] {
+  validateVariables(variableDefinitions: TemplateVariable[], variables: Record<string, unknown>): string[] {
     const errors: string[] = [];
     
     for (const definition of variableDefinitions) {
@@ -376,7 +377,7 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
    */
   async renderTemplate(
     id: string, 
-    variables: Record<string, any>
+    variables: Record<string, unknown>
   ): Promise<TemplatePreviewResult> {
     this.logger?.debug({ id }, 'Rendering template');
     
@@ -423,7 +424,7 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
   /**
    * Preview template with sample variables
    */
-  async previewTemplate(id: string, variables?: Record<string, any>): Promise<TemplatePreviewResult> {
+  async previewTemplate(id: string, variables?: Record<string, unknown>): Promise<TemplatePreviewResult> {
     this.logger?.debug({ id }, 'Previewing template');
     
     // Get template
@@ -444,8 +445,8 @@ export class EmailTemplateRepository extends DatabaseRepository<EmailTemplate, N
   /**
    * Generate sample variables from template variable definitions
    */
-  private generateSampleVariables(variableDefinitions: TemplateVariable[]): Record<string, any> {
-    const sampleVars: Record<string, any> = {};
+  private generateSampleVariables(variableDefinitions: TemplateVariable[]): Record<string, unknown> {
+    const sampleVars: Record<string, unknown> = {};
     
     for (const definition of variableDefinitions) {
       if (definition.defaultValue !== undefined) {

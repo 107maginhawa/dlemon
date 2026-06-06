@@ -7,6 +7,7 @@
  */
 
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { ProviderRepository } from './provider.repo';
 import type { Provider, ProviderWithPerson } from './provider.schema';
 
@@ -16,7 +17,7 @@ import type { Provider, ProviderWithPerson } from './provider.schema';
 export async function getProviderByPersonIdForEMR(
   db: DatabaseInstance,
   personId: string,
-  logger?: any
+  logger?: Logger
 ): Promise<Provider | null> {
   const repo = new ProviderRepository(db, logger);
   return repo.findByPersonId(personId);
@@ -28,7 +29,7 @@ export async function getProviderByPersonIdForEMR(
 export async function getProviderForEMR(
   db: DatabaseInstance,
   providerId: string,
-  logger?: any
+  logger?: Logger
 ): Promise<Provider | null> {
   const repo = new ProviderRepository(db, logger);
   return repo.findOneById(providerId);
@@ -40,7 +41,7 @@ export async function getProviderForEMR(
 export async function getProviderWithPersonForEMR(
   db: DatabaseInstance,
   providerId: string,
-  logger?: any
+  logger?: Logger
 ): Promise<ProviderWithPerson | null> {
   const repo = new ProviderRepository(db, logger);
   return repo.findOneByIdWithPerson(providerId);

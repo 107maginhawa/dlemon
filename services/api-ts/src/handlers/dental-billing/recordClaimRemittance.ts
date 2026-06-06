@@ -17,23 +17,25 @@
  *     invoice balance (proven by the acceptance test).
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import { DentalPayerPaymentRepository } from './repos/dental-payer-payment.repo';
+import { PAYER_PAYMENT_METHODS, type PayerPaymentMethod } from './repos/dental-payer-payment.schema';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import type { InsuranceClaimStatus } from './repos/dental-insurance-claim.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 
-export async function recordClaimRemittance(ctx: any): Promise<Response> {
+export async function recordClaimRemittance(ctx: HandlerContext): Promise<Response> {
   const session = ctx.get('session');
   const user = ctx.get('user');
   const actorId = session?.userId ?? user?.id;
   if (!actorId) throw new UnauthorizedError('Authentication required');
 
-  const { claimId } = ctx.req.valid('param');
+  const { claimId } = ctx.req.valid('param') as { claimId: string };
   const body = ctx.req.valid('json') as {
     amountCents: number;
     remittanceReference?: string;
@@ -96,7 +98,7 @@ export async function recordClaimRemittance(ctx: any): Promise<Response> {
     amountCents: paid,
     remittanceReference: body.remittanceReference ?? null,
     remittedAt: body.remittedAt ?? null,
-    method: (body.method as any) ?? 'bank_transfer',
+    method: (PAYER_PAYMENT_METHODS.includes(body.method as PayerPaymentMethod) ? body.method as PayerPaymentMethod : 'bank_transfer'),
     disallowanceCents: disallowed > 0 ? disallowed : null,
     disallowanceReason: body.disallowanceReason ?? null,
     createdBy: actorId,

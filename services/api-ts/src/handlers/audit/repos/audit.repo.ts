@@ -7,6 +7,7 @@ import { eq, and, or, gte, lte, inArray, type SQL } from 'drizzle-orm';
 import { createHash } from 'crypto';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { SYSTEM_USER_ID } from '@/core/constants';
 import { subDays, addYears } from 'date-fns';
 import {
@@ -27,7 +28,7 @@ import type { User } from '@/types/auth';
 export class AuditRepository extends DatabaseRepository<AuditLogEntry, NewAuditLogEntry, AuditLogFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, auditLogEntries, logger);
   }
@@ -147,7 +148,7 @@ export class AuditRepository extends DatabaseRepository<AuditLogEntry, NewAuditL
   /**
    * Calculate SHA-256 integrity hash for audit log entry
    */
-  private calculateIntegrityHash(data: Record<string, any>): string {
+  private calculateIntegrityHash(data: Record<string, unknown>): string {
     const sortedKeys = Object.keys(data).sort();
     const hashableString = sortedKeys
       .map(key => `${key}:${data[key]}`)

@@ -97,6 +97,7 @@ export async function getDentalPatient(
     // V-PAT-007: safety floor + follow-up notes + consent on the profile.
     safetyFloor,
     followUpNotes: patient.followUpNotes ?? [],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- consent is present on the DB row but absent from PersonData interface; typed fix requires schema change
     consent: (person as any)?.consent ?? null,
     // V-PAT-014: return a DECLARED subset of person — never spread the full
     // person row (which carries undeclared PII: contactInfo, primaryAddress…).

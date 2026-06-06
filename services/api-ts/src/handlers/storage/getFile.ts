@@ -103,10 +103,15 @@ export async function getFile(
     }
   }
 
-  // Build base response with file metadata
-  let response: any = {
-    ...file
+  // Build base response with file metadata, optionally extended with download info
+  type FileResponse = StoredFile & {
+    downloadUrl?: string;
+    downloadExpiresAt?: Date;
+    downloadMethod?: string;
+    downloadError?: string;
+    statusMessage?: string;
   };
+  let response: FileResponse = { ...file };
 
   // Add download URL if requested and file is available
   const shouldIncludeDownload = includeDownloadUrl;

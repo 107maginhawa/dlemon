@@ -9,7 +9,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { PersonRepository } from './repos/person.repo';
-import { type PersonUpdateRequest } from './repos/person.schema';
+import { type PersonUpdateRequest, type Person } from './repos/person.schema';
 import { validateDateOfBirth } from '@/utils/date';
 
 /**
@@ -56,7 +56,7 @@ export async function updatePerson(
   // Build update data with only defined fields
   // undefined = field not provided (no change)
   // null = explicitly clear the field
-  const updateData: any = { updatedBy: user.id };
+  const updateData: Partial<Person> & { updatedBy: string } = { updatedBy: user.id };
 
   if (body.firstName !== undefined) updateData.firstName = body.firstName;
   if (body.lastName !== undefined) updateData.lastName = body.lastName;
@@ -67,13 +67,14 @@ export async function updatePerson(
     } else {
       const dateOfBirth = new Date(body.dateOfBirth);
       validateDateOfBirth(dateOfBirth);
-      updateData.dateOfBirth = dateOfBirth;
+      // dateOfBirth column is Drizzle date() → stored/returned as string; pass the validated string
+      updateData.dateOfBirth = body.dateOfBirth;
     }
   }
   if (body.gender !== undefined) updateData.gender = body.gender;
   if (body.contactInfo !== undefined) updateData.contactInfo = body.contactInfo;
-  if (body.primaryAddress !== undefined) updateData.primaryAddress = body.primaryAddress;
-  if (body.avatar !== undefined) updateData.avatar = body.avatar;
+  if (body.primaryAddress !== undefined) updateData.primaryAddress = body.primaryAddress as typeof updateData.primaryAddress;
+  if (body.avatar !== undefined) updateData.avatar = body.avatar as typeof updateData.avatar;
   if (body.languagesSpoken !== undefined) updateData.languagesSpoken = body.languagesSpoken;
   if (body.timezone !== undefined) updateData.timezone = body.timezone;
   

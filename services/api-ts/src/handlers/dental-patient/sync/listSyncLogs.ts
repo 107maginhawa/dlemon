@@ -8,8 +8,9 @@ import { UnauthorizedError } from '@/core/errors';
 import { logAuditEvent } from '@/core/audit-logger';
 import { SyncLogRepository } from '../repos/sync-log.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function listSyncLogs(ctx: any): Promise<Response> {
+export async function listSyncLogs(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 

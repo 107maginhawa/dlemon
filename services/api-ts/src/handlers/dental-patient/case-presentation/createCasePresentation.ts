@@ -16,13 +16,15 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { CasePresentationRepository } from '../repos/case-presentation.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { CreateCasePresentationParams, CreateCasePresentationBody } from '@/generated/openapi/validators';
 
-export async function createCasePresentation(ctx: any): Promise<Response> {
+export async function createCasePresentation(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as CreateCasePresentationParams;
+  const body = ctx.req.valid('json') as CreateCasePresentationBody;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

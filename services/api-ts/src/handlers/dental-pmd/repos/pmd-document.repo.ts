@@ -8,6 +8,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   pmdDocuments,
   type PMDDocument,
@@ -21,7 +22,7 @@ export interface PMDFilters {
 }
 
 export class PMDDocumentRepository extends DatabaseRepository<PMDDocument, NewPMDDocument, PMDFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, pmdDocuments, logger);
   }
 

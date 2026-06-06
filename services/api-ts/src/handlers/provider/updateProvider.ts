@@ -8,7 +8,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { ProviderRepository } from './repos/provider.repo';
-import { type ProviderUpdateRequest } from './repos/provider.schema';
+import { type Provider, type ProviderUpdateRequest } from './repos/provider.schema';
 
 /**
  * updateProvider
@@ -52,7 +52,7 @@ export async function updateProvider(ctx: Context) {
   }
   
   // Build update payload
-  const updateData: any = {};
+  const updateData: Partial<Provider> = {};
   
   if (body.yearsOfExperience !== undefined) updateData.yearsOfExperience = body.yearsOfExperience;
   if (body.biography !== undefined) updateData.biography = body.biography;

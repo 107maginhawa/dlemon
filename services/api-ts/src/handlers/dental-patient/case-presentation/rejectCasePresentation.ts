@@ -21,13 +21,15 @@ import { CasePresentationRepository } from '../repos/case-presentation.repo';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { TREATMENT_PLAN_FSM } from '../repos/treatment-plan.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { RejectCasePresentationParams, RejectCasePresentationBody } from '@/generated/openapi/validators';
 
-export async function rejectCasePresentation(ctx: any): Promise<Response> {
+export async function rejectCasePresentation(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, presentationId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, presentationId } = ctx.req.valid('param') as RejectCasePresentationParams;
+  const body = ctx.req.valid('json') as RejectCasePresentationBody;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
