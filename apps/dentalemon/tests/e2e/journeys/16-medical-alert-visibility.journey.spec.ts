@@ -18,7 +18,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
   API,
@@ -92,9 +91,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     if (alertVisible) {
       recordJourneyPass(META)
     } else {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Safety floor alert not visible in workspace UI. ' +
           'API returns hasAlerts=true (penicillin allergy) for Juan dela Cruz but no UI indicator found. ' +
           'ENC-BR-004 / PAT-BR-003 gap: medical alerts must be displayed in the clinical workspace.',

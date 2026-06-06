@@ -19,7 +19,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -42,12 +41,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     const tpBtn = page.getByRole('button', { name: /treatment plan/i }).first()
     if (!(await tpBtn.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No Treatment Plan affordance — cannot capture acceptance / version. Step 1 impossible.',
       )
-      return
     }
     await tpBtn.click()
     await page.waitForLoadState('networkidle')
@@ -60,14 +56,11 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       .first()
 
     if (!(await acceptCtl.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Treatment Plan tab exposes no acceptance-capture control (Gap #6). An ' +
           'accepted plan cannot be frozen as an immutable versioned snapshot through ' +
           'the UI; the goal state (version N frozen) is unreachable.',
       )
-      return
     }
 
     // Baseline plan version BEFORE acceptance (independent read — branchId required).
@@ -103,9 +96,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `UI plan acceptance did not freeze a new version snapshot. ` +
         `accept POST=${acceptResp?.status() ?? 'no-resp'}, version before=${beforeVersion} ` +
         `after=${afterVersion}. Versioning (Gap #6) not working through the UI.`,

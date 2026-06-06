@@ -79,7 +79,12 @@ export interface JourneyRecord {
   name: string
   set: 'A' | 'B'
   expectedVerdict: 'PASS' | 'BROKEN'
-  actualVerdict: 'PASS' | 'BROKEN' | 'ERROR'
+  // SKIPPED = the journey could not run because an ENVIRONMENT precondition was
+  // absent (e.g. no seeded ceph image because CI has no storage/MinIO). It is
+  // neither a pass nor a regression — the gate tolerates it. Reserve SKIPPED for
+  // genuine environment-absence; a missing FEATURE or unfinishable UI step must
+  // throw (ERROR), never skip.
+  actualVerdict: 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'
   failedStep: string | null
   screenshotPath: string | null
   rubricIds: string[]
@@ -305,57 +310,14 @@ export function getActiveTooth(page: Page) {
 
 // ── Verdict helpers ───────────────────────────────────────────────────────────
 
-/**
- * Record a confirmed BROKEN journey.
- *
- * The journey performed every UI step it could; the failure point was reached
- * (UI step impossible, OR independent read proves goal state never persisted).
- * This is the DELIVERABLE for a known-broken journey — the spec is GREEN in
- * Playwright iff the expected break occurred. We do NOT add a shortcut to make
- * the journey itself succeed (Anti-Cheating Rule 3).
- *
- * If `unexpectedlyOk` is true the break did NOT occur (a P0 may be fixed) —
- * we throw so a human reviews whether the harness is now cheating.
- */
-export async function expectJourneyBroken(
-  page: Page,
-  meta: JourneyMeta,
-  reason: string,
-  opts: { unexpectedlyOk?: boolean } = {},
-): Promise<void> {
-  ensureDir()
-  const shotPath = path.join(RESULTS_DIR, `${meta.id}-broken.png`)
-  try {
-    await page.screenshot({ path: shotPath, fullPage: true })
-  } catch {
-    /* screenshot best-effort */
-  }
-
-  if (opts.unexpectedlyOk) {
-    writeJourneyRecord({
-      ...meta,
-      actualVerdict: 'PASS',
-      failedStep: null,
-      screenshotPath: shotPath,
-    })
-    throw new Error(
-      `[${meta.id}] expected BROKEN but the journey COMPLETED. ` +
-        `A P0 may be fixed — re-audit against the Anti-Cheating Rules before ` +
-        `marking PASS. Context: ${reason}`,
-    )
-  }
-
-  writeJourneyRecord({
-    ...meta,
-    actualVerdict: 'BROKEN',
-    failedStep: reason,
-    screenshotPath: shotPath,
-  })
-  // Confirmed break = the expected outcome ⇒ spec is GREEN. The runner reads
-  // the record file to surface BROKEN in journey-results.json.
-  // eslint-disable-next-line no-console
-  console.log(`[JOURNEY ${meta.id}] BROKEN (expected): ${reason}`)
-}
+// NOTE: the former `expectJourneyBroken` soft-green helper was RETIRED (2026-06-05).
+// It turned a missing precondition / unfinishable UI step into a GREEN Playwright
+// result while recording a BROKEN verdict in a JSON side-channel that only the
+// harness gate read — so `playwright test --project=journeys` lied. With zero
+// "designed-broken" journeys remaining (all 18 are expectedVerdict:'PASS'), every
+// call site was a precondition escape hatch; they now `throw` so a journey that
+// cannot run its real steps fails LOUDLY (RED) in any runner. recordJourneyError
+// (in each journey's catch) still writes an ERROR verdict for the harness summary.
 
 /** Record a fully-passing journey (all UI steps + independent read + persist). */
 export function recordJourneyPass(meta: JourneyMeta): void {
@@ -377,6 +339,26 @@ export function recordJourneyError(meta: JourneyMeta, err: unknown): void {
     failedStep: err instanceof Error ? err.message : String(err),
     screenshotPath: null,
   })
+}
+
+/**
+ * Record an ENVIRONMENT skip — the journey cannot run because a precondition is
+ * genuinely absent in this environment (e.g. no seeded ceph image because CI has
+ * no storage/MinIO). Honest middle ground: NOT a green pass, NOT a false red.
+ * The harness tolerates SKIPPED (it is not a regression). Call this immediately
+ * before `test.skip(true, reason)` and BEFORE the journey's try/catch, so the
+ * record survives (the catch must not overwrite it with ERROR). Do NOT use this
+ * for a missing feature or an unfinishable UI step — those must throw.
+ */
+export function recordJourneySkipped(meta: JourneyMeta, reason: string): void {
+  writeJourneyRecord({
+    ...meta,
+    actualVerdict: 'SKIPPED',
+    failedStep: reason,
+    screenshotPath: null,
+  })
+  // eslint-disable-next-line no-console
+  console.log(`[JOURNEY ${meta.id}] SKIPPED (environment): ${reason}`)
 }
 
 // ── Golden ceph fixture (packages/ceph-math/src/ceph-math.test.ts CLASS_I) ─────

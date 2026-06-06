@@ -23,7 +23,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -58,12 +57,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Step 1: open the per-visit perio capture surface.
     const perioEntry = page.getByTestId('perio-tab-btn')
     if (!(await perioEntry.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No periodontal capture affordance (perio-tab-btn) in the workspace. Gap #7.',
       )
-      return
     }
     await perioEntry.click()
     await expect(page.getByTestId('perio-overlay')).toBeVisible({ timeout: 10_000 })
@@ -97,9 +93,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `Perio grid rendered but no persisted chart for visit ${visitId ?? 'unknown'} ` +
         `(GET /dental/visits/${visitId ?? 'unknown'}/perio-chart → ${chartResp?.status() ?? 'null'}).`,
     )

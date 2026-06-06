@@ -15,7 +15,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -73,13 +72,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
         : null
       const notesBody = notesResp?.ok() ? await notesResp.json() : null
       const notesStr = JSON.stringify(notesBody)
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `No tooth element to progress watch→diagnosed on the recall visit. UI step 3 impossible. ` +
           `Independent read of visit ${latestVisitIdBefore ?? 'unknown'} notes: ${notesStr.slice(0, 120)}`,
       )
-      return
     }
     await tooth.click()
     const slideout = page.locator('[data-testid="tooth-slideout"], [role="dialog"]').first()
@@ -88,13 +84,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
         ? await apiReader.get(`/dental/visits/${latestVisitIdBefore}/notes`)
         : null
       const notesBody = notesResp?.ok() ? await notesResp.json() : null
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `ToothSlideout did not open. UI step 3 impossible. ` +
           `Independent read of visit notes: ${JSON.stringify(notesBody).slice(0, 120)}`,
       )
-      return
     }
 
     // The watch→diagnosed transition distinct from the prior record requires a
@@ -131,9 +124,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `Status-collapse (Gap #1) prevents a watch→diagnosed transition that is ` +
         `distinct from the prior visit record, and the D0120 recall note is ` +
         `local React state with no DB column (P0-004) — confirmed by independent read: ` +

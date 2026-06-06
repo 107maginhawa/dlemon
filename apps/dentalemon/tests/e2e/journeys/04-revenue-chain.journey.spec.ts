@@ -37,7 +37,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
   writeJourneyRecord,
@@ -63,18 +62,14 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Step 1: open a tooth and confirm ToothSlideout renders.
     const tooth = getActiveTooth(page)
     if (!(await tooth.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No tooth element to open ToothSlideout — cannot record a diagnosis. Step 1 impossible.',
       )
-      return
     }
     await tooth.click()
     const slideout = page.locator('[data-testid="tooth-slideout"], [role="dialog"]').first()
     if (!(await slideout.isVisible().catch(() => false))) {
-      await expectJourneyBroken(page, META, 'ToothSlideout did not open. Step 1 impossible.')
-      return
+      throw new Error('ToothSlideout did not open. Step 1 impossible.')
     }
 
     // Step 2: close the slideout so the always-visible Treatment Breakdown
@@ -96,15 +91,11 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       const txResp = await apiReader.get(`/dental/patients/${patientId}/treatments`)
       const txBody = txResp.ok() ? await txResp.json() : null
       const anyPerformed = /"status":"performed"/.test(JSON.stringify(txBody))
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         anyPerformed
           ? 'A treatment reached performed (Mark-Done affordance not needed — may have been pre-done by seed).'
           : 'No "Mark Done" affordance reachable in the UI; independent read shows no treatment is `performed` (revenue chain dead).',
-        { unexpectedlyOk: false },
       )
-      return
     }
 
     // Step 4: register PATCH#1 listener BEFORE clicking, then click.
@@ -124,13 +115,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     // PATCH#1 must be 200 (diagnosed → planned).
     if (patch1Status !== 200) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `PATCH#1 (diagnosed→planned) returned ${patch1Status ?? 'no-resp'} — expected 200. ` +
           `Body: ${String(patch1Body).slice(0, 120)}. Revenue chain blocked at step 1.`,
       )
-      return
     }
 
     // Step 5: wait for PATCH#2 (planned → performed).
@@ -149,9 +137,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     if (patch2Status !== 200) {
       const consentBlocked =
         patch2Status === 422 && /TREATMENT_CONSENT_REQUIRED/i.test(String(patch2Body))
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         consentBlocked
           ? `PATCH#2 (planned→performed) returned 422 TREATMENT_CONSENT_REQUIRED — ` +
               `seed consent appears unsigned. Re-run \`bun run db:reseed\`. ` +
@@ -159,7 +145,6 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
           : `PATCH#2 (planned→performed) returned ${patch2Status ?? 'no-resp'} — expected 200. ` +
               `Body: ${String(patch2Body).slice(0, 120)}. Revenue chain blocked at step 2.`,
       )
-      return
     }
 
     // Step 6: independent read — confirm treatment reached `performed`.
@@ -169,25 +154,19 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const anyPerformed = /"status":"performed"/.test(txStr)
 
     if (!anyPerformed) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `PATCH#1=${patch1Status}, PATCH#2=${patch2Status} both 200, but independent read ` +
           `shows no treatment in \`performed\` state. Persistence mismatch.`,
       )
-      return
     }
 
     // Step 7: create invoice via API (no invoice creation UI exists in the workspace).
     // Resolve active visitId from patient visits list.
     const visitsResp = await apiReader.get(`/dental/patients/${patientId}/visits`)
     if (!visitsResp.ok()) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `GET /dental/patients/${patientId}/visits → ${visitsResp.status()}. Cannot resolve visitId for invoice.`,
       )
-      return
     }
     const visitsBody = await visitsResp.json()
     const visitItems: any[] = Array.isArray(visitsBody)
@@ -197,12 +176,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const activeVisit =
       visitItems.find((v: any) => v.status === 'open' || v.status === 'active') ?? visitItems[0]
     if (!activeVisit?.id) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `No active visit found for Maria Santos — cannot create invoice. Visits: ${JSON.stringify(visitItems.slice(0, 3))}`,
       )
-      return
     }
     const visitId = activeVisit.id
 
@@ -218,13 +194,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     if (!invoiceResp.ok()) {
       const invBody = await invoiceResp.text().catch(() => '')
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `POST /dental/billing/invoices → ${invoiceResp.status()}. ` +
           `Body: ${invBody.slice(0, 200)}. Invoice creation failed — revenue chain incomplete.`,
       )
-      return
     }
 
     // Step 8: independent read — confirm invoice exists for this patient.
@@ -239,13 +212,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       : ((invListBody?.data?.length ?? invListBody?.items?.length) ?? 0) > 0
 
     if (!hasInvoice) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Invoice POST returned ${invoiceResp.status()} but independent read shows no invoices for patient. ` +
           `Revenue chain persistence mismatch.`,
       )
-      return
     }
 
     // All checks passed: revenue chain works end-to-end.

@@ -250,6 +250,10 @@ test-results.json
 
 # Journey harness transient per-journey records (aggregated into journey-results.json)
 apps/dentalemon/.journey-tmp/
+# Journey harness aggregate report — a generated, environment-specific artifact
+# (ceph journeys SKIP without MinIO). Nothing reads the committed copy; CI
+# regenerates it each run and uploads it as an artifact. Keep it out of VCS.
+apps/dentalemon/journey-results.json
 
 # TanStack Router generated cache
 .tanstack/

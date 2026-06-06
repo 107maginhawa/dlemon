@@ -53,16 +53,19 @@ const EXPECTED: Record<
 > = {
   J01: { name: 'New-patient comprehensive oral evaluation', set: 'A', expected: 'PASS', rubricIds: ['Q6', 'Q7', 'Q8', 'Q9', 'Q10'] },
   J02: { name: 'Periodic recall exam (D0120)', set: 'A', expected: 'PASS', rubricIds: ['Q9', 'Q10', 'Q25'] },
-  J03: { name: 'Periodontal charting linked to odontogram', set: 'A', expected: 'BROKEN', rubricIds: ['Q11', 'Q12', 'Q13', 'Q14', 'Q16'] },
-  J04: { name: 'Revenue chain (flagship)', set: 'A', expected: 'BROKEN', rubricIds: ['Q17', 'Q18', 'Q19', 'Q20', 'Q22', 'Q23'] },
+  J03: { name: 'Periodontal charting linked to odontogram', set: 'A', expected: 'PASS', rubricIds: ['Q11', 'Q12', 'Q13', 'Q14', 'Q16'] },
+  J04: { name: 'Revenue chain (flagship)', set: 'A', expected: 'PASS', rubricIds: ['Q17', 'Q18', 'Q19', 'Q20', 'Q22', 'Q23'] },
   J05: { name: 'Status integrity on the odontogram', set: 'A', expected: 'PASS', rubricIds: ['Q8', 'Q24', 'Q25'] },
-  J06: { name: 'Multi-visit / phased treatment plan sequencing', set: 'A', expected: 'BROKEN', rubricIds: ['Q26', 'Q27', 'Q28'] },
+  J06: { name: 'Multi-visit / phased treatment plan sequencing', set: 'A', expected: 'PASS', rubricIds: ['Q26', 'Q27', 'Q28'] },
   J07: { name: 'Charting granularity & mixed dentition', set: 'A', expected: 'PASS', rubricIds: ['Q29', 'Q30', 'Q31', 'Q32', 'Q33'] },
-  J08: { name: 'Informed refusal', set: 'A', expected: 'BROKEN', rubricIds: ['Q20'] },
-  J09: { name: 'Treatment-plan versioning', set: 'A', expected: 'BROKEN', rubricIds: ['Q34', 'Q35'] },
-  J10: { name: 'Void / amend a signed entry', set: 'A', expected: 'BROKEN', rubricIds: ['Q36', 'Q37', 'Q38', 'Q39'] },
-  B01: { name: 'Free-tier ceph gate', set: 'B', expected: 'BROKEN', rubricIds: ['CIMG-001', 'CIMG-002', 'CIMG-007'] },
-  B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'BROKEN', rubricIds: ['CIMG-003'] }, // CI: no MinIO → seed skips ceph study → precondition missing
+  J08: { name: 'Informed refusal', set: 'A', expected: 'PASS', rubricIds: ['Q20'] },
+  J09: { name: 'Treatment-plan versioning', set: 'A', expected: 'PASS', rubricIds: ['Q34', 'Q35'] },
+  J10: { name: 'Void / amend a signed entry', set: 'A', expected: 'PASS', rubricIds: ['Q36', 'Q37', 'Q38', 'Q39'] },
+  // B01/B02 PASS where a ceph image is seeded (local, MinIO present). In CI there
+  // is no MinIO → no seeded ceph image → these journeys record SKIPPED (honest
+  // environment skip, tolerated by the gate), not a fake BROKEN.
+  B01: { name: 'Free-tier ceph gate', set: 'B', expected: 'PASS', rubricIds: ['CIMG-001', 'CIMG-002', 'CIMG-007'] },
+  B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'PASS', rubricIds: ['CIMG-003'] },
   B03: { name: 'Locked landmark immutability', set: 'B', expected: 'PASS', rubricIds: ['CIMG-004'] },
   B04: { name: 'Report gate + immutable versioned snapshot', set: 'B', expected: 'PASS', rubricIds: ['CIMG-006', 'CIMG-008'] },
 }
@@ -72,7 +75,7 @@ interface JourneyResult {
   name: string
   set: 'A' | 'B'
   expectedVerdict: 'PASS' | 'BROKEN'
-  actualVerdict: 'PASS' | 'BROKEN' | 'ERROR'
+  actualVerdict: 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'
   duration_ms: number
   failedStep: string | null
   screenshotPath: string | null
@@ -199,6 +202,7 @@ async function main() {
     pass: journeys.filter((j) => j.actualVerdict === 'PASS').length,
     broken: journeys.filter((j) => j.actualVerdict === 'BROKEN').length,
     error: journeys.filter((j) => j.actualVerdict === 'ERROR').length,
+    skipped: journeys.filter((j) => j.actualVerdict === 'SKIPPED').length,
     setA: {
       pass: journeys.filter((j) => j.set === 'A' && j.actualVerdict === 'PASS').length,
       broken: journeys.filter((j) => j.set === 'A' && j.actualVerdict === 'BROKEN').length,
@@ -237,7 +241,7 @@ async function main() {
   }
   console.log('─'.repeat(70))
   console.log(
-    `Total ${summary.total} | PASS ${summary.pass} | BROKEN ${summary.broken} | ERROR ${summary.error}`,
+    `Total ${summary.total} | PASS ${summary.pass} | BROKEN ${summary.broken} | ERROR ${summary.error} | SKIPPED ${summary.skipped}`,
   )
   console.log(
     `Set A: PASS ${summary.setA.pass} BROKEN ${summary.setA.broken} | ` +
@@ -245,7 +249,15 @@ async function main() {
   )
   console.log('═'.repeat(70))
 
-  const drifts = journeys.filter((j) => j.expectedVerdict !== j.actualVerdict)
+  // SKIPPED is an honest environment skip, not verdict drift — don't flag it.
+  const drifts = journeys.filter(
+    (j) => j.expectedVerdict !== j.actualVerdict && j.actualVerdict !== 'SKIPPED',
+  )
+  const skips = journeys.filter((j) => j.actualVerdict === 'SKIPPED')
+  if (skips.length) {
+    console.log('\nℹ Environment skips (precondition absent — not run here, not a failure):')
+    for (const s of skips) console.log(`  ${s.id}: ${s.failedStep ?? ''}`)
+  }
   if (drifts.length) {
     console.log('\n⚠ Verdict drift (expected ≠ actual) — needs human review:')
     for (const d of drifts) {

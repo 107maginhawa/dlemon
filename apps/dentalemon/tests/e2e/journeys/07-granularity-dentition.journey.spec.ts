@@ -18,7 +18,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -47,24 +46,18 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const teeth = page.locator('[data-active-card="1"] [data-testid^="tooth-"]')
     const toothCount = await teeth.count()
     if (toothCount === 0) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No teeth render for the mixed-dentition patient — chart surface unusable.',
       )
-      return
     }
 
     // Step 3: open a posterior tooth, record a valid MOD restoration.
     await getActiveTooth(page).click()
     const slideout = page.locator('[data-testid="tooth-slideout"], [role="dialog"]').first()
     if (!(await slideout.isVisible().catch(() => false))) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'ToothSlideout did not open — cannot record a restoration. Step 3 impossible.',
       )
-      return
     }
 
     // Select mesial + distal + occlusal surfaces (MOD) and a condition.
@@ -107,9 +100,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       recordJourneyPass(META)
       expect(hasMODSurfaces, 'MOD restoration persisted with surface set').toBe(true)
     } else {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Independent read shows no persisted MOD surface set ` +
           `(surfacesPicked=${surfacesPicked}). Either the chart write did not ` +
           `persist or surface granularity is lost (Gap #9). Provisional PASS ` +

@@ -24,9 +24,9 @@ import {
   readPatientIdByName,
   SEED_PATIENTS,
   CEPH_EXPECTED,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
+  recordJourneySkipped,
 } from './_journey-helpers'
 
 const META: JourneyMeta = {
@@ -38,34 +38,37 @@ const META: JourneyMeta = {
 }
 
 test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+  // Environment precondition (hoisted before try/catch so an honest skip is not
+  // swallowed and re-recorded as ERROR). No seeded ceph image ⇒ storage/MinIO is
+  // absent in this environment (e.g. CI has no MinIO) ⇒ skip honestly. A genuine
+  // read failure here throws uncaught (real RED), which is correct.
+  const { branchId } = await readOrgContext(apiReader)
+  const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.miguel)
+
+  // branchId is required by the listPatientImages handler.
+  const imgsResp = await apiReader.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
+  const imgs = imgsResp.ok() ? await imgsResp.json() : []
+  const items: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? [])
+  const ceph = items.find((i) =>
+    /cephalometric/i.test(i.modality ?? i.imageModality ?? ''),
+  )
+  if (!ceph) {
+    const reason = 'No seeded ceph image (storage/MinIO unavailable in this environment).'
+    recordJourneySkipped(META, reason)
+    test.skip(true, reason)
+    return
+  }
+  const imageId = ceph.id ?? ceph.imageId
+
   try {
-    const { branchId } = await readOrgContext(apiReader)
-    const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.miguel)
-
-    // branchId is required by the listPatientImages handler.
-    const imgsResp = await apiReader.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
-    const imgs = imgsResp.ok() ? await imgsResp.json() : []
-    const items: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? [])
-    const ceph = items.find((i) =>
-      /cephalometric/i.test(i.modality ?? i.imageModality ?? ''),
-    )
-    if (!ceph) {
-      await expectJourneyBroken(page, META, 'No seeded ceph image — precondition missing.')
-      return
-    }
-    const imageId = ceph.id ?? ceph.imageId
-
     // Tier precheck (independent read): if 403, this is the free-tier branch
     // and B02 cannot run with the seeded identity.
     const tierProbe = await apiReader.get(`/dental/imaging/images/${imageId}/ceph/analysis`)
     if (tierProbe.status() === 403) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Ceph analysis → 403: seeded identity is on the free imaging tier; ' +
           'a paid-tier member is required to exercise B02 (DONE_WITH_CONCERNS).',
       )
-      return
     }
 
     // ── DOM-only journey: open the ceph workspace ─────────────────────────
@@ -82,12 +85,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       .filter({ has: page.locator('p', { hasText: 'cephalometric' }) })
       .first()
     if (!(await imageEntry.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Ceph image not selectable in PatientImageList — cannot open the ceph workspace.',
       )
-      return
     }
     await imageEntry.click()
     await page.waitForLoadState('networkidle')
@@ -95,13 +95,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Open the ceph panel (landmark palette).
     const cephToggle = page.getByRole('button', { name: 'Toggle ceph panel' })
     if (!(await cephToggle.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No "Toggle ceph panel" control — the cephalometric workspace did not ' +
           'mount for the selected image. UI step 1 impossible.',
       )
-      return
     }
     await cephToggle.click()
 
@@ -121,12 +118,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       `/dental/imaging/images/${imageId}/ceph/analysis`,
     )
     if (!analysisResp.ok()) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Ceph analysis read → ${analysisResp.status()} — no analysis to verify.`,
       )
-      return
     }
     const analysis = await analysisResp.json()
     const m = analysis.analysis?.measurements ?? analysis.measurements ?? analysis
@@ -162,17 +156,12 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
         expect(close(anb, CEPH_EXPECTED.anb), `ANB≈${CEPH_EXPECTED.anb} (got ${anb})`).toBe(true)
         return
       }
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Numbers did not survive reload (SNA re-read=${reM.sna}).`,
       )
-      return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `NUMERIC mismatch — UI→API→math seam drifted from golden. ` +
         `Got SNA=${sna} (exp ${CEPH_EXPECTED.sna}), SNB=${snb} (exp ` +
         `${CEPH_EXPECTED.snb}), ANB=${anb} (exp ${CEPH_EXPECTED.anb}), ` +

@@ -22,9 +22,9 @@ import {
   readPatientIdByName,
   SEED_PATIENTS,
   CEPH_EXPECTED,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
+  recordJourneySkipped,
 } from './_journey-helpers'
 
 const META: JourneyMeta = {
@@ -36,46 +36,46 @@ const META: JourneyMeta = {
 }
 
 test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+  // Environment precondition (hoisted before try/catch so an honest skip is not
+  // swallowed and re-recorded as ERROR). No seeded ceph image ⇒ storage/MinIO is
+  // absent in this environment (e.g. CI has no MinIO) ⇒ skip honestly. A genuine
+  // read failure here throws uncaught (real RED), which is correct.
+  const { branchId } = await readOrgContext(apiReader)
+  const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.miguel)
+
+  // branchId is required by the listPatientImages handler.
+  const imgsResp = await apiReader.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
+  const imgs = imgsResp.ok() ? await imgsResp.json() : []
+  const list: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? [])
+  const ceph = list.find((i) =>
+    /cephalometric/i.test(i.modality ?? i.imageModality ?? ''),
+  )
+  if (!ceph) {
+    const reason = 'No seeded ceph image (storage/MinIO unavailable in this environment).'
+    recordJourneySkipped(META, reason)
+    test.skip(true, reason)
+    return
+  }
+  const imageId = ceph.id ?? ceph.imageId
+
   try {
-    const { branchId } = await readOrgContext(apiReader)
-    const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.miguel)
-
-    // branchId is required by the listPatientImages handler.
-    const imgsResp = await apiReader.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
-    const imgs = imgsResp.ok() ? await imgsResp.json() : []
-    const list: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? [])
-    const ceph = list.find((i) =>
-      /cephalometric/i.test(i.modality ?? i.imageModality ?? ''),
-    )
-    if (!ceph) {
-      await expectJourneyBroken(page, META, 'No seeded ceph image — precondition missing.')
-      return
-    }
-    const imageId = ceph.id ?? ceph.imageId
-
     // Tier precheck.
     const probe = await apiReader.get(`/dental/imaging/images/${imageId}/ceph/reports`)
     if (probe.status() === 403) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Ceph reports → 403: seeded identity on free tier; paid tier required ' +
           'to exercise B04 (DONE_WITH_CONCERNS).',
       )
-      return
     }
 
     // The seed already generated a ceph report (v1) for this image with
     // A/B/Go/Po confirmed. Independent read of v1 snapshot.
     const v1Resp = await apiReader.get(`/dental/imaging/images/${imageId}/ceph/reports?version=1`)
     if (!v1Resp.ok()) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Seeded ceph report v1 read → ${v1Resp.status()} — no report snapshot ` +
           `to verify (CIMG-006 gate may have blocked generation, or seed failed).`,
       )
-      return
     }
     const v1 = await v1Resp.json()
     const snap1 = v1.snapshot ?? v1
@@ -97,12 +97,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       .count()
 
     if (!reportRendered) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Ceph report print route did not render the v1 snapshot in the DOM.',
       )
-      return
     }
 
     // CIMG-008: attempt update/delete of v1 must fail (append-only). Verified
@@ -122,9 +119,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `Report snapshot integrity failed: numericFrozen=${numericFrozen} ` +
         `(SNA=${m1.sna} exp ${CEPH_EXPECTED.sna}, SNB=${m1.snb} exp ` +
         `${CEPH_EXPECTED.snb}), byteIdentical=${byteIdentical}. CIMG-006/008 ` +

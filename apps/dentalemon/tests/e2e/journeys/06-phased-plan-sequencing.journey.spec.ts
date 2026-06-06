@@ -19,7 +19,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -43,12 +42,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Open the Treatment Plan tab.
     const tpBtn = page.getByRole('button', { name: /treatment plan/i }).first()
     if (!(await tpBtn.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No Treatment Plan affordance in the workspace top bar. UI step 1 impossible.',
       )
-      return
     }
     await tpBtn.click()
     await page.waitForLoadState('networkidle')
@@ -59,13 +55,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Step 2: a phase-assignment control must exist for a pending treatment.
     const phaseCtl = tpPanel.getByTestId('phase-select').first()
     if (!(await phaseCtl.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Treatment Plan tab exposes no phase/sequence assignment control (Gap #14). ' +
           'Phased sequencing cannot be expressed through the UI.',
       )
-      return
     }
 
     // Step 3: assign a clinical phase through the UI (DOM-only) and capture the PATCH.
@@ -98,9 +91,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `UI phase assignment did not persist. GET treatment-plan → ${planResp.status()}, ` +
         `no treatment carries phase='definitive' (Gap #14).`,
     )

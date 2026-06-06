@@ -19,7 +19,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -44,12 +43,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     // Step 1: open the signed note in SoapNotesSheet.
     const notesBtn = page.getByRole('button', { name: /notes|soap/i }).first()
     if (!(await notesBtn.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No Notes affordance in the workspace top bar. UI step 1 impossible.',
       )
-      return
     }
     await notesBtn.click()
     await page.waitForLoadState('networkidle')
@@ -93,13 +89,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       .or(notesSheet.getByRole('button', { name: /add addendum|addendum|amend/i }))
       .first()
     if (!(await addendumCtl.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Signed note exposes no addendum/amend control — the void/amend audit model ` +
           `(Gap #3 hard-delete, Gap #5 editable signed notes) is unreachable through the UI.`,
       )
-      return
     }
     await addendumCtl.click()
 
@@ -137,9 +130,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       `Void/amend audit trail not preserved: GET /dental/visits/${visitId ?? 'unknown'}/notes/history ` +
         `→ ${histResp?.status() ?? 'null'}, versions=${versions.length}, addendumVersion=${hasAddendumVersion}.`,
     )

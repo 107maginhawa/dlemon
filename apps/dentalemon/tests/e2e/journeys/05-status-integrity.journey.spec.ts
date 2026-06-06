@@ -18,7 +18,6 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
 } from './_journey-helpers'
@@ -42,19 +41,15 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const carousel = page.getByTestId('workspace-carousel-zone')
     const tooth = getActiveTooth(page)
     if (!(await tooth.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No tooth element to create per-status records. UI step 2 impossible.',
       )
-      return
     }
     await tooth.click()
 
     const slideout = page.locator('[data-testid="tooth-slideout"], [role="dialog"]').first()
     if (!(await slideout.isVisible().catch(() => false))) {
-      await expectJourneyBroken(page, META, 'ToothSlideout did not open. UI step 2 impossible.')
-      return
+      throw new Error('ToothSlideout did not open. UI step 2 impossible.')
     }
 
     // The slideout must offer DISTINCT status controls for Existing,
@@ -68,15 +63,12 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const missing = wanted.filter((_, i) => found[i] === 0)
 
     if (missing.length > 0) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         `Status-collapse (Gap #1/#2): slideout lacks distinct status controls ` +
           `for: ${missing.join(', ')}. Distinct enumerated statuses ` +
           `(Existing ≠ Existing-Other ≠ TP ≠ Condition) are unreachable, and ` +
           `Completed depends on the dead revenue chain (P0-001).`,
       )
-      return
     }
 
     // If all status controls unexpectedly exist, verify distinctness via the
@@ -94,9 +86,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       'Independent read shows statuses are not persisted as distinct enums (Gap #1/#2 confirmed).',
     )
   } catch (err) {

@@ -19,9 +19,9 @@ import {
   readOrgContext,
   readPatientIdByName,
   SEED_PATIENTS,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
+  recordJourneySkipped,
 } from './_journey-helpers'
 
 const META: JourneyMeta = {
@@ -33,49 +33,49 @@ const META: JourneyMeta = {
 }
 
 test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+  // Environment precondition (hoisted before try/catch so an honest skip is not
+  // swallowed and re-recorded as ERROR). No seeded ceph image ⇒ storage/MinIO is
+  // absent in this environment (e.g. CI has no MinIO) ⇒ skip honestly. A genuine
+  // read failure here throws uncaught (real RED), which is correct.
+  const { branchId } = await readOrgContext(apiReader)
+  const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.miguel)
+
+  // branchId is required by the listPatientImages handler.
+  const imgsResp = await apiReader.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
+  const imgs = imgsResp.ok() ? await imgsResp.json() : []
+  const list: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? [])
+  const ceph = list.find((i) =>
+    /cephalometric/i.test(i.modality ?? i.imageModality ?? ''),
+  )
+  if (!ceph) {
+    const reason = 'No seeded ceph image (storage/MinIO unavailable in this environment).'
+    recordJourneySkipped(META, reason)
+    test.skip(true, reason)
+    return
+  }
+  const imageId = ceph.id ?? ceph.imageId
+
   try {
-    const { branchId } = await readOrgContext(apiReader)
-    const patientId = await readPatientIdByName(apiReader, branchId, SEED_PATIENTS.miguel)
-
-    // branchId is required by the listPatientImages handler.
-    const imgsResp = await apiReader.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
-    const imgs = imgsResp.ok() ? await imgsResp.json() : []
-    const list: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? [])
-    const ceph = list.find((i) =>
-      /cephalometric/i.test(i.modality ?? i.imageModality ?? ''),
-    )
-    if (!ceph) {
-      await expectJourneyBroken(page, META, 'No seeded ceph image — precondition missing.')
-      return
-    }
-    const imageId = ceph.id ?? ceph.imageId
-
     // Independent read of landmarks; find one that is `locked` (the seed
     // confirms A/B/Go/Po — they may or may not be locked). If none locked,
     // lock the precondition is unmet for the seeded identity.
     const lmResp = await apiReader.get(`/dental/imaging/images/${imageId}/ceph/landmarks`)
     if (lmResp.status() === 403) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Ceph landmarks → 403: seeded identity on free tier; paid tier ' +
           'required to exercise B03 (DONE_WITH_CONCERNS).',
       )
-      return
     }
     const lmBody = lmResp.ok() ? await lmResp.json() : { items: [] }
     const landmarks: any[] = lmBody.items ?? lmBody
     const locked = landmarks.find((l) => l.status === 'locked')
 
     if (!locked) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'No landmark in `locked` status for the seeded ceph image — ' +
           'precondition for B03 not satisfied by the demo seed ' +
           '(DONE_WITH_CONCERNS: needs a seeded locked landmark).',
       )
-      return
     }
     const beforeX = locked.x
     const beforeY = locked.y
@@ -97,12 +97,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     const cephToggle = page.getByRole('button', { name: 'Toggle ceph panel' })
     if (!(await cephToggle.count())) {
-      await expectJourneyBroken(
-        page,
-        META,
+      throw new Error(
         'Ceph workspace did not mount — cannot attempt locked-landmark edit.',
       )
-      return
     }
     await cephToggle.click()
 
@@ -126,9 +123,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       return
     }
 
-    await expectJourneyBroken(
-      page,
-      META,
+    throw new Error(
       !unchanged
         ? `Locked landmark ${code} changed (x ${beforeX}→${afterLm?.x}, status ` +
             `${afterLm?.status}) — CIMG-004 immutability violated.`

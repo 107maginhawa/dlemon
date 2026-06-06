@@ -27,9 +27,9 @@ import {
   FREE_EMAIL,
   FREE_PASSWORD,
   pwRequest,
-  expectJourneyBroken,
   recordJourneyPass,
   recordJourneyError,
+  recordJourneySkipped,
 } from './_journey-helpers'
 
 const META: JourneyMeta = {
@@ -44,37 +44,38 @@ test(`${META.id} — ${META.name}`, async ({ page }) => {
   // Independent-read client authenticated as the FREE clinic owner (its own org,
   // not the demo seed owner). Used for the post-UI gate assertion.
   const freeApi = await pwRequest.newContext({ baseURL: API })
+
+  // Environment precondition (hoisted before try/catch so an honest skip is not
+  // swallowed and re-recorded as ERROR). No seeded free-tier ceph image ⇒
+  // storage/MinIO is absent in this environment (e.g. CI has no MinIO) ⇒ skip
+  // honestly. A genuine sign-in/read failure here throws uncaught (real RED).
+  const signIn = await freeApi.post('/auth/sign-in/email', {
+    data: { email: FREE_EMAIL, password: FREE_PASSWORD },
+  })
+  if (!signIn.ok()) {
+    throw new Error(
+      `Free-tier clinic sign-in failed (${signIn.status()}). Is the demo seed present? Run \`bun run db:reseed\`.`,
+    )
+  }
+
+  const { branchId } = await readOrgContext(freeApi)
+  const patientId = await readPatientIdByName(freeApi, branchId, 'Free Patient')
+
+  // Resolve the seeded free-tier cephalometric image (independent read).
+  const imgsResp = await freeApi.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
+  const imgs = imgsResp.ok() ? await imgsResp.json() : []
+  const items: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? imgs.data ?? [])
+  const ceph = items.find((i) => /cephalometric/i.test(i.modality ?? i.imageModality ?? ''))
+  if (!ceph) {
+    const reason = 'No seeded free-tier ceph image (storage/MinIO unavailable in this environment).'
+    recordJourneySkipped(META, reason)
+    await freeApi.dispose()
+    test.skip(true, reason)
+    return
+  }
+  const imageId = ceph.id ?? ceph.imageId
+
   try {
-    const signIn = await freeApi.post('/auth/sign-in/email', {
-      data: { email: FREE_EMAIL, password: FREE_PASSWORD },
-    })
-    if (!signIn.ok()) {
-      await expectJourneyBroken(
-        page,
-        META,
-        `Free-tier clinic sign-in failed (${signIn.status()}). Is the demo seed present? Run \`bun run db:reseed\`.`,
-      )
-      return
-    }
-
-    const { branchId } = await readOrgContext(freeApi)
-    const patientId = await readPatientIdByName(freeApi, branchId, 'Free Patient')
-
-    // Resolve the seeded free-tier cephalometric image (independent read).
-    const imgsResp = await freeApi.get(`/dental/patients/${patientId}/images?branchId=${branchId}`)
-    const imgs = imgsResp.ok() ? await imgsResp.json() : []
-    const items: any[] = Array.isArray(imgs) ? imgs : (imgs.items ?? imgs.data ?? [])
-    const ceph = items.find((i) => /cephalometric/i.test(i.modality ?? i.imageModality ?? ''))
-    if (!ceph) {
-      await expectJourneyBroken(
-        page,
-        META,
-        'No seeded free-tier cephalometric image for "Free Patient" — precondition missing (run `bun run db:reseed`).',
-      )
-      return
-    }
-    const imageId = ceph.id ?? ceph.imageId
-
     // ── DOM-only journey (as the free-tier dentist) ───────────────────────────
     await pinAuth(page, 'freeDentist', { email: FREE_EMAIL, password: FREE_PASSWORD })
     await openWorkspace(page, patientId)
