@@ -126,6 +126,7 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
             </p>
           </div>
           <button
+            data-testid="sign-out-btn"
             onClick={handleSignOut}
             disabled={signOut.isPending}
             className="shrink-0 p-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"

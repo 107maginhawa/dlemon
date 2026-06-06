@@ -242,6 +242,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
                 invoices.map((inv) => (
                   <tr
                     key={inv.id}
+                    data-testid={`invoice-row-${inv.id}`}
                     onClick={() => onInvoiceClick?.(inv)}
                     className="cursor-pointer hover:bg-lemon-soft transition-colors border-t border-border first:border-t-0"
                   >

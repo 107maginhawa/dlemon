@@ -185,6 +185,7 @@ export function TreatmentTable({
             return (
               <React.Fragment key={t.id}>
                 <tr
+                  data-testid={`treatment-row-${t.id}`}
                   onClick={() => onSelectTreatment?.(t.id)}
                   className={[
                     'border-t border-border/40 transition-colors',
