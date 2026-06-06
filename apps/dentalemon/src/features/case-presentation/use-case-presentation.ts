@@ -6,12 +6,22 @@
  * under the staff bearerAuth session (operatory iPad); the public by-token path is
  * deferred to Phase 2.
  *
+ * SDK-only data access: the generated TanStack Query hooks own the URL/auth/transport
+ * (the OpenAPI contract is the source of truth). This hook only maps the SDK aggregate
+ * into the view-model the presentational components consume.
+ *
  * API: GET  /dental/patients/:patientId/case-presentations/:presentationId
  *      POST /dental/patients/:patientId/case-presentations/:presentationId/accept
  *      POST /dental/patients/:patientId/case-presentations/:presentationId/reject
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  getCasePresentationOptions,
+  getCasePresentationQueryKey,
+  acceptCasePresentationMutation,
+  rejectCasePresentationMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type { DentalPatientFinanceModuleCasePresentationAggregate } from '@monobase/sdk-ts/generated';
 
 export interface CasePresentationLineItem {
   id: string;
@@ -61,72 +71,93 @@ export interface CasePresentationAggregate {
   grandTotalCents: number;
 }
 
-function presentationQueryKey(patientId: string, presentationId: string) {
-  return ['dental-case-presentation', patientId, presentationId] as const;
+type SdkAggregate = DentalPatientFinanceModuleCasePresentationAggregate;
+
+// Map the SDK aggregate into the narrow, string-dated view-model the presentational
+// components consume. The SDK presentation record carries the full BaseEntity; the
+// view only needs id/patientId/treatmentPlanId/status/decision, and treats an
+// undecided presentation as decision=null (the SDK enum omits the null variant).
+function toViewModel(agg: SdkAggregate): CasePresentationAggregate {
+  return {
+    presentation: {
+      id: agg.presentation.id,
+      patientId: agg.presentation.patientId,
+      treatmentPlanId: agg.presentation.treatmentPlanId,
+      status: agg.presentation.status,
+      decision: agg.presentation.decision ?? null,
+    },
+    plan: {
+      id: agg.plan.id,
+      status: agg.plan.status,
+      totalEstimateCents: agg.plan.totalEstimateCents,
+    },
+    patientFirstName: agg.patientFirstName,
+    phases: agg.phases.map((p) => ({
+      phase: p.phase,
+      subtotalCents: p.subtotalCents,
+      items: p.items.map(toLineItem),
+    })),
+    optionGroups: agg.optionGroups.map((g) => ({
+      optionGroupId: g.optionGroupId,
+      options: g.options.map(toLineItem),
+    })),
+    images: agg.images.map((img) => ({
+      id: img.id,
+      imageType: img.imageType,
+      toothNumber: img.toothNumber,
+      findingCount: img.findingCount,
+    })),
+    grandTotalCents: agg.grandTotalCents,
+  };
+}
+
+function toLineItem(item: SdkAggregate['phases'][number]['items'][number]): CasePresentationLineItem {
+  return {
+    id: item.id,
+    toothNumber: item.toothNumber,
+    surfaces: item.surfaces,
+    description: item.description,
+    cdtCode: item.cdtCode,
+    status: item.status,
+    priceCents: item.priceCents,
+    optionGroupId: item.optionGroupId,
+    recommended: item.recommended,
+  };
 }
 
 export function useCasePresentation(patientId: string, presentationId: string) {
   const qc = useQueryClient();
+  const path = { patientId, presentationId };
+  const queryKey = getCasePresentationQueryKey({ path });
 
   const query = useQuery({
-    queryKey: presentationQueryKey(patientId, presentationId),
-    queryFn: async (): Promise<CasePresentationAggregate> => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/patients/${patientId}/case-presentations/${presentationId}`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) throw new Error(`Failed to load case presentation (${res.status})`);
-      return res.json() as Promise<CasePresentationAggregate>;
-    },
+    ...getCasePresentationOptions({ path }),
     enabled: Boolean(patientId && presentationId),
     staleTime: 15_000,
+    select: (data): CasePresentationAggregate => toViewModel(data as SdkAggregate),
   });
 
+  const invalidate = () => qc.invalidateQueries({ queryKey });
+
   const accept = useMutation({
-    mutationFn: async (input: { signerName: string; signatureData: string }) => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/patients/${patientId}/case-presentations/${presentationId}/accept`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        },
-      );
-      if (!res.ok) throw new Error(`Failed to accept case presentation (${res.status})`);
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: presentationQueryKey(patientId, presentationId) });
-    },
+    ...acceptCasePresentationMutation(),
+    onSuccess: invalidate,
   });
 
   const reject = useMutation({
-    mutationFn: async (input: { rejectionReason?: string }) => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/patients/${patientId}/case-presentations/${presentationId}/reject`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        },
-      );
-      if (!res.ok) throw new Error(`Failed to reject case presentation (${res.status})`);
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: presentationQueryKey(patientId, presentationId) });
-    },
+    ...rejectCasePresentationMutation(),
+    onSuccess: invalidate,
   });
 
   return {
     aggregate: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
-    accept: (input: { signerName: string; signatureData: string }) => accept.mutateAsync(input),
+    accept: (input: { signerName: string; signatureData: string }) =>
+      accept.mutateAsync({ path, body: input }),
     isAccepting: accept.isPending,
-    reject: (input: { rejectionReason?: string }) => reject.mutateAsync(input),
+    reject: (input: { rejectionReason?: string }) =>
+      reject.mutateAsync({ path, body: input }),
     isRejecting: reject.isPending,
   };
 }

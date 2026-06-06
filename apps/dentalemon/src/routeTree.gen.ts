@@ -30,6 +30,7 @@ import { Route as DashboardCalendarRouteImport } from './routes/_dashboard/calen
 import { Route as DashboardBillingRouteImport } from './routes/_dashboard/billing'
 import { Route as AuthPinEntryMemberIdRouteImport } from './routes/auth/pin-entry.$memberId'
 import { Route as DashboardPatientsPatientIdRouteImport } from './routes/_dashboard/patients_/$patientId'
+import { Route as WorkspacePatientIdCasePresentationPresentationIdRouteImport } from './routes/_workspace/$patientId.case-presentation.$presentationId'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -136,6 +137,12 @@ const DashboardPatientsPatientIdRoute =
     path: '/patients/$patientId',
     getParentRoute: () => DashboardRoute,
   } as any)
+const WorkspacePatientIdCasePresentationPresentationIdRoute =
+  WorkspacePatientIdCasePresentationPresentationIdRouteImport.update({
+    id: '/case-presentation/$presentationId',
+    path: '/case-presentation/$presentationId',
+    getParentRoute: () => WorkspacePatientIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -149,7 +156,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof DashboardReportsRoute
   '/settings': typeof DashboardSettingsRoute
   '/staff': typeof DashboardStaffRoute
-  '/$patientId': typeof WorkspacePatientIdRoute
+  '/$patientId': typeof WorkspacePatientIdRouteWithChildren
   '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
+  '/$patientId/case-presentation/$presentationId': typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -170,7 +178,7 @@ export interface FileRoutesByTo {
   '/reports': typeof DashboardReportsRoute
   '/settings': typeof DashboardSettingsRoute
   '/staff': typeof DashboardStaffRoute
-  '/$patientId': typeof WorkspacePatientIdRoute
+  '/$patientId': typeof WorkspacePatientIdRouteWithChildren
   '/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
@@ -178,6 +186,7 @@ export interface FileRoutesByTo {
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
+  '/$patientId/case-presentation/$presentationId': typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -194,7 +203,7 @@ export interface FileRoutesById {
   '/_dashboard/reports': typeof DashboardReportsRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/staff': typeof DashboardStaffRoute
-  '/_workspace/$patientId': typeof WorkspacePatientIdRoute
+  '/_workspace/$patientId': typeof WorkspacePatientIdRouteWithChildren
   '/_workspace/queue-board': typeof WorkspaceQueueBoardRoute
   '/auth/$authView': typeof AuthAuthViewRoute
   '/auth/pin-select': typeof AuthPinSelectRoute
@@ -202,6 +211,7 @@ export interface FileRoutesById {
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/_dashboard/patients_/$patientId': typeof DashboardPatientsPatientIdRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
+  '/_workspace/$patientId/case-presentation/$presentationId': typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
+    | '/$patientId/case-presentation/$presentationId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
     | '/auth/pin-entry/$memberId'
+    | '/$patientId/case-presentation/$presentationId'
   id:
     | '__root__'
     | '/'
@@ -269,6 +281,7 @@ export interface FileRouteTypes {
     | '/imaging-ceph-report/$imageId'
     | '/_dashboard/patients_/$patientId'
     | '/auth/pin-entry/$memberId'
+    | '/_workspace/$patientId/case-presentation/$presentationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -434,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPatientsPatientIdRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_workspace/$patientId/case-presentation/$presentationId': {
+      id: '/_workspace/$patientId/case-presentation/$presentationId'
+      path: '/case-presentation/$presentationId'
+      fullPath: '/$patientId/case-presentation/$presentationId'
+      preLoaderRoute: typeof WorkspacePatientIdCasePresentationPresentationIdRouteImport
+      parentRoute: typeof WorkspacePatientIdRoute
+    }
   }
 }
 
@@ -463,13 +483,25 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface WorkspacePatientIdRouteChildren {
+  WorkspacePatientIdCasePresentationPresentationIdRoute: typeof WorkspacePatientIdCasePresentationPresentationIdRoute
+}
+
+const WorkspacePatientIdRouteChildren: WorkspacePatientIdRouteChildren = {
+  WorkspacePatientIdCasePresentationPresentationIdRoute:
+    WorkspacePatientIdCasePresentationPresentationIdRoute,
+}
+
+const WorkspacePatientIdRouteWithChildren =
+  WorkspacePatientIdRoute._addFileChildren(WorkspacePatientIdRouteChildren)
+
 interface WorkspaceRouteChildren {
-  WorkspacePatientIdRoute: typeof WorkspacePatientIdRoute
+  WorkspacePatientIdRoute: typeof WorkspacePatientIdRouteWithChildren
   WorkspaceQueueBoardRoute: typeof WorkspaceQueueBoardRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
-  WorkspacePatientIdRoute: WorkspacePatientIdRoute,
+  WorkspacePatientIdRoute: WorkspacePatientIdRouteWithChildren,
   WorkspaceQueueBoardRoute: WorkspaceQueueBoardRoute,
 }
 

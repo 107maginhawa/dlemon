@@ -5,6 +5,7 @@
  * FSM: draft → presented → approved → partially_completed → completed | cancelled
  */
 import React from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { X, ClipboardList } from 'lucide-react';
 import {
@@ -225,10 +226,22 @@ function OptionGroupCard({ patientId, optionGroupId }: { patientId: string; opti
 export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }: TreatmentPlansSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
+  const navigate = useNavigate();
 
   const { plans, isLoading, isError, updatePlan, isUpdating } = useTreatmentPlans(patientId);
   // P1-20: mint a patient-facing case presentation from a presented plan.
   const { present, isPresenting } = useCasePresentations(patientId);
+
+  // After minting, navigate to the patient-facing surface so staff can hand the
+  // operatory iPad to the patient to review + accept/decline the plan.
+  const presentAndOpen = async (planId: string) => {
+    const created = await present(planId);
+    onClose();
+    void navigate({
+      to: '/$patientId/case-presentation/$presentationId',
+      params: { patientId, presentationId: created.id },
+    });
+  };
 
   if (!open) return null;
 
@@ -297,7 +310,7 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
                   plan={plan}
                   onUpdate={(id, body) => updatePlan(id, body)}
                   isUpdating={isUpdating}
-                  onPresent={(id) => { void present(id); }}
+                  onPresent={(id) => { void presentAndOpen(id); }}
                   isPresenting={isPresenting}
                 />
               ))}
