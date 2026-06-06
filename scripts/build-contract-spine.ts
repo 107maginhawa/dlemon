@@ -15,7 +15,7 @@
  *   - specs/api/dist/openapi/openapi.json            operationId ⇄ method+path
  *   - services/api-ts/src/generated/openapi/registry.ts  operationId ⇄ handler file
  *   - packages/sdk-ts/src/generated/@tanstack/react-query.gen.ts  operationId ⇄ SDK hook
- *   - apps/dentalemon/src/features/**                operationId ⇄ frontend consumers
+ *   - apps/dentalemon/src/**                          operationId ⇄ frontend consumers
  *
  * Run AFTER any `/understand` regeneration (it is a deterministic post-step, not part
  * of the LLM analysis pass). Idempotent: prunes prior `operation` nodes/edges first.
@@ -28,7 +28,8 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const OPENAPI = `${ROOT}specs/api/dist/openapi/openapi.json`;
 const REGISTRY = `${ROOT}services/api-ts/src/generated/openapi/registry.ts`;
 const RQ = `${ROOT}packages/sdk-ts/src/generated/@tanstack/react-query.gen.ts`;
-const FEATURES_DIR = `${ROOT}apps/dentalemon/src/features`;
+const SDK = `${ROOT}packages/sdk-ts/src/generated/sdk.gen.ts`;
+const APP_SRC_DIR = `${ROOT}apps/dentalemon/src`;
 const GRAPH = `${ROOT}.understand-anything/knowledge-graph.json`;
 const SPINE_OUT = `${ROOT}.understand-anything/contract-spine.json`;
 
@@ -38,7 +39,8 @@ interface SpineEntry {
   path: string;
   handler: string | null; // repo-relative handler file
   sdkHooks: string[]; // generated react-query export names
-  consumers: string[]; // repo-relative frontend files that use the SDK hook(s)
+  sdkClientFn: string | null; // generated base SDK client function (sdk.gen.ts export)
+  consumers: string[]; // repo-relative frontend files that use the SDK hook(s) or client fn
 }
 
 // ── 1. operationId ⇄ method+path (OpenAPI is authoritative) ──────────────────
@@ -53,6 +55,7 @@ for (const [path, methods] of Object.entries<Record<string, any>>(openapi.paths 
       path,
       handler: null,
       sdkHooks: [],
+      sdkClientFn: null,
       consumers: [],
     });
   }
@@ -91,21 +94,44 @@ for (const entry of ops.values()) {
   if (hooks) entry.sdkHooks = [...hooks].sort();
 }
 
-// ── 4. operationId ⇄ frontend consumers (scan features for SDK hook usage) ───
-const featureFiles: { rel: string; text: string }[] = [];
+// ── 3b. operationId ⇄ base SDK client function (generated sdk.gen.ts exports) ─
+// Many features call the plain generated client fn (e.g. `acceptTreatmentPlan`)
+// wrapped in a hand-rolled useMutation, instead of the tanstack `…Mutation` hook.
+// Capture that fn name too so consumer detection sees those call sites.
+const sdkSrc = await Bun.file(SDK).text();
+const clientFns = new Set<string>();
+const clientRe = /export const (\w+) =/g;
+while ((m = clientRe.exec(sdkSrc))) clientFns.add(m[1]);
+for (const entry of ops.values()) {
+  const fn = clientFns.has(entry.operationId)
+    ? entry.operationId
+    : clientFns.has(toSdkBase(entry.operationId))
+      ? toSdkBase(entry.operationId)
+      : null;
+  entry.sdkClientFn = fn;
+}
+
+// ── 4. operationId ⇄ frontend consumers (scan ALL app source for SDK hook usage) ─
+// Scan the whole `apps/dentalemon/src` tree, not just `features/`: real consumers
+// also live in `routes/`, `components/`, `hooks/`, and `lib/`. Restricting to
+// `features/` previously undercounted consumers (and overstated orphans). Matching
+// is on the generated SDK hook identifiers, so a hit is an authoritative consumer.
+const consumerFiles: { rel: string; text: string }[] = [];
 const glob = new Glob('**/*.{ts,tsx}');
-for await (const f of glob.scan({ cwd: FEATURES_DIR, onlyFiles: true })) {
+for await (const f of glob.scan({ cwd: APP_SRC_DIR, onlyFiles: true })) {
   if (f.endsWith('.test.ts') || f.endsWith('.test.tsx')) continue;
-  const abs = `${FEATURES_DIR}/${f}`;
-  featureFiles.push({ rel: `apps/dentalemon/src/features/${f}`, text: await Bun.file(abs).text() });
+  if (f.endsWith('.gen.ts') || f.endsWith('.gen.tsx')) continue; // generated (routeTree etc.)
+  if (f === 'test-setup.ts' || f === 'test-utils.ts') continue;
+  const abs = `${APP_SRC_DIR}/${f}`;
+  consumerFiles.push({ rel: `apps/dentalemon/src/${f}`, text: await Bun.file(abs).text() });
 }
 for (const entry of ops.values()) {
-  if (entry.sdkHooks.length === 0) continue;
-  for (const { rel, text } of featureFiles) {
-    // A consumer references one of the generated hook names by identifier.
-    if (entry.sdkHooks.some((h) => new RegExp(`\\b${h}\\b`).test(text))) {
-      entry.consumers.push(rel);
-    }
+  // Consumer identifiers: the tanstack hooks AND the base client fn.
+  const ids = [...entry.sdkHooks, ...(entry.sdkClientFn ? [entry.sdkClientFn] : [])];
+  if (ids.length === 0) continue;
+  const res = ids.map((h) => new RegExp(`\\b${h}\\b`));
+  for (const { rel, text } of consumerFiles) {
+    if (res.some((re) => re.test(text))) entry.consumers.push(rel);
   }
   entry.consumers.sort();
 }
@@ -114,14 +140,21 @@ for (const entry of ops.values()) {
 const spine = [...ops.values()].sort((a, b) => a.operationId.localeCompare(b.operationId));
 const withHandler = spine.filter((s) => s.handler).length;
 const withSdk = spine.filter((s) => s.sdkHooks.length).length;
+const withSdkClientFn = spine.filter((s) => s.sdkClientFn).length;
 const withConsumers = spine.filter((s) => s.consumers.length).length;
 await Bun.write(
   SPINE_OUT,
   JSON.stringify(
     {
       version: 1,
-      generatedFrom: ['openapi.json', 'registry.ts', 'react-query.gen.ts', 'features/**'],
-      counts: { operations: spine.length, withHandler, withSdk, withConsumers },
+      generatedFrom: [
+        'openapi.json',
+        'registry.ts',
+        'react-query.gen.ts',
+        'sdk.gen.ts',
+        'apps/dentalemon/src/**',
+      ],
+      counts: { operations: spine.length, withHandler, withSdk, withSdkClientFn, withConsumers },
       operations: spine,
     },
     null,
@@ -146,12 +179,13 @@ for (const s of spine) {
     id: opNodeId,
     type: 'operation',
     name: s.operationId,
-    summary: `${s.method} ${s.path} — wired by codegen registry to its handler; consumed via SDK hook(s) ${s.sdkHooks.join(', ') || '(none)'}.`,
+    summary: `${s.method} ${s.path} — wired by codegen registry to its handler; consumed via SDK hook(s) ${s.sdkHooks.join(', ') || '(none)'} / client fn ${s.sdkClientFn ?? '(none)'}.`,
     tags: ['contract', 'operation', s.method.toLowerCase()],
     method: s.method,
     path: s.path,
     handler: s.handler,
     sdkHooks: s.sdkHooks,
+    sdkClientFn: s.sdkClientFn,
   });
   // handler --implements_operation--> operation  (kills the "orphan handler" lie)
   const handlerId = s.handler ? `file:${s.handler}` : null;

@@ -39,15 +39,17 @@ any codebase — see the deferred backlog (§4) for what is *known* and open.
 | Operations | **352** | every OpenAPI operation |
 | With handler | **352 / 352** | 100% wired — no orphan routes |
 | With SDK hook | **344 / 352** | the 8 without are intentional integration-only surfaces (PMD import/export, `listEMRPatients`) — documented in [INTEGRATION_ENDPOINTS.md](../architecture/INTEGRATION_ENDPOINTS.md) |
-| With FE consumer | **76 / 352** (static lower bound) | see caveat |
+| With FE consumer | **130 / 352** (corrected 2026-06-06; was 76) | see note below |
 
-> **Consumer-count caveat (read this).** "76 with consumers / 276 without" is a
-> **static-scan lower bound**, not "276 dead endpoints." The spine counts only
-> *direct* SDK-hook references under `features/**`. Hooks wrapped one layer deep,
-> calls made via E2E API-assist, and not-yet-surfaced admin operations all read
-> as "0 consumers" while being perfectly live (e.g. `cancelAppointment`,
-> `applyDentalDiscount`). The reliable columns are **handler (352/352)** and
-> **SDK (344/352)**; treat the consumer column as a floor.
+> **Consumer-count — corrected 2026-06-06.** The original "76" was a static-scan
+> **lower bound**: the spine scanned only `features/**` and matched only TanStack
+> hook names, missing consumers in `routes/`/`components/`/`hooks/` and the very
+> common pattern of calling the base SDK client fn wrapped in a hand-rolled
+> `useQuery`/`useMutation`. `scripts/build-contract-spine.ts` now scans all of
+> `apps/dentalemon/src` and matches both the hook **and** the `sdk.gen.ts` client
+> fn → **130 / 352**. The remaining 214 break down as 92 base-platform primitives
+> (unused by the dental UI, expected), 122 dental backend-built / FE-pending, and 8
+> integration-only. Full analysis: [CONTRACT_SPINE_ACCURACY_2026-06-06.md](./CONTRACT_SPINE_ACCURACY_2026-06-06.md).
 
 ### Coverage is asserted, not mocked
 Per the companion E2E assessment: 39 of 52 non-journey E2E specs seed real
