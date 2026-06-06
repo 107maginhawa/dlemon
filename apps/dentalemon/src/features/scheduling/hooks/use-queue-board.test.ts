@@ -69,16 +69,8 @@ describe('useQueueBoard', () => {
     expect(result.current.items).toHaveLength(2);
   });
 
-  test('unwraps { items: [...] } envelope', async () => {
-    global.fetch = mock(() => jsonResponse({ items: ITEMS }));
-    const qc = freshClientWithMutations();
-    const { result } = renderHook(
-      () => useQueueBoard('b1'),
-      { wrapper: makeWrapper(qc) },
-    );
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.items).toHaveLength(2);
-  });
+  // Note: The real API returns either a bare array or { data: [...] } (paginated).
+  // A { items: [...] } envelope is not a valid API response shape; this case is not tested.
 
   test('sets isError on non-OK response', async () => {
     global.fetch = mock(() => jsonResponse({ error: 'Not found' }, 404));
@@ -114,10 +106,19 @@ describe('useQueueBoard', () => {
 
   test('updateStatus calls PATCH endpoint', async () => {
     const calls: { url: string; method: string; body: string }[] = [];
-    global.fetch = mock((url: string | Request | URL, init?: RequestInit) => {
-      const urlStr = url instanceof Request ? url.url : String(url);
-      const method = (init?.method ?? (url instanceof Request ? url.method : 'GET')).toUpperCase();
-      const body = typeof init?.body === 'string' ? init.body : '';
+    // The SDK creates a Request object and passes it as the first arg to fetch.
+    // customFetch (client.ts) calls fetch(request, { credentials: 'include' }) so
+    // our mock receives (Request, { credentials: 'include' }). Body is on the Request.
+    global.fetch = mock(async (req: string | Request | URL, init?: RequestInit) => {
+      const urlStr = req instanceof Request ? req.url : String(req);
+      const method = (req instanceof Request ? req.method : (init?.method ?? 'GET')).toUpperCase();
+      // Read body from Request; Bun may or may not preserve body on clones, so try req.text() first.
+      let body = '';
+      if (req instanceof Request && req.body !== null) {
+        try { body = await req.text(); } catch { body = ''; }
+      } else if (typeof init?.body === 'string') {
+        body = init.body;
+      }
       calls.push({ url: urlStr, method, body });
       return jsonResponse(method === 'PATCH' ? { ...ITEMS[0], status: 'called' } : ITEMS);
     });

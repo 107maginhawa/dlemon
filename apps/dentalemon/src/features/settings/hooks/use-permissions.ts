@@ -2,13 +2,18 @@
  * usePermissionGrid — GET /dental/org/permissions?organizationId=
  * useUpdatePermissions — PUT overrides
  *
- * Backs the granular feature-permission grid (P2-17). Follows the raw-fetch
- * pattern used by the other dental-org settings hooks.
+ * Backs the granular feature-permission grid (P2-17).
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
-
-const API = apiBaseUrl;
+import {
+  getPermissionGridOptions,
+  getPermissionGridQueryKey,
+  updatePermissionsMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type {
+  DentalOrgModulePermissionGridResponse,
+  DentalOrgModulePermissionOverrideInput,
+} from '@monobase/sdk-ts/generated';
 
 export interface PermissionCatalogEntry {
   feature: string;
@@ -37,43 +42,25 @@ export interface PermissionOverrideInput {
 }
 
 export function permissionGridKey(orgId: string | null) {
-  return ['permission-grid', orgId] as const;
+  return orgId
+    ? getPermissionGridQueryKey({ query: { organizationId: orgId } })
+    : (['permission-grid', null] as const);
 }
 
-async function fetchGrid(orgId: string): Promise<PermissionGrid> {
-  const res = await fetch(`${API}/dental/org/permissions?organizationId=${encodeURIComponent(orgId)}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`Failed to load permissions (${res.status})`);
-  return res.json();
-}
+// PermissionGrid is a view-model alias; cast via intersection so tsc still checks
+// SDK-modelled fields and doesn't silently miss contract drift.
+type PermissionGridCompat = DentalOrgModulePermissionGridResponse & PermissionGrid;
 
-async function putOverrides(orgId: string, overrides: PermissionOverrideInput[]): Promise<PermissionGrid> {
-  const res = await fetch(`${API}/dental/org/permissions?organizationId=${encodeURIComponent(orgId)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ overrides }),
-  });
-  if (!res.ok) {
-    let message = `Failed to save permissions (${res.status})`;
-    try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
-    } catch {
-      /* keep default message */
-    }
-    throw new Error(message);
-  }
-  return res.json();
+function toGrid(raw: DentalOrgModulePermissionGridResponse): PermissionGrid {
+  return raw as PermissionGridCompat;
 }
 
 export function usePermissionGrid(orgId: string | null) {
   const query = useQuery({
-    queryKey: permissionGridKey(orgId),
-    queryFn: () => fetchGrid(orgId as string),
+    ...getPermissionGridOptions({ query: { organizationId: orgId ?? undefined } }),
     enabled: !!orgId,
     staleTime: 30_000,
+    select: (data): PermissionGrid => toGrid(data),
   });
   return {
     grid: query.data ?? null,
@@ -86,13 +73,18 @@ export function usePermissionGrid(orgId: string | null) {
 export function useUpdatePermissions(orgId: string | null) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (overrides: PermissionOverrideInput[]) => putOverrides(orgId as string, overrides),
-    onSuccess: (grid) => {
+    ...updatePermissionsMutation(),
+    onSuccess: (raw) => {
+      const grid = toGrid(raw as DentalOrgModulePermissionGridResponse);
       queryClient.setQueryData(permissionGridKey(orgId), grid);
     },
   });
   return {
-    save: mutation.mutateAsync,
+    save: (overrides: PermissionOverrideInput[]) =>
+      mutation.mutateAsync({
+        ...(orgId ? { query: { organizationId: orgId } } : {}),
+        body: { overrides: overrides as DentalOrgModulePermissionOverrideInput[] },
+      }),
     isSaving: mutation.isPending,
     saveError: mutation.error as Error | null,
     isSuccess: mutation.isSuccess,

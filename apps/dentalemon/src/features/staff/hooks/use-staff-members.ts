@@ -2,12 +2,17 @@
  * useStaffMembers — TanStack Query hook for GET /dental/org/members?branchId=
  * useStaffMutations — create (POST + PIN reset) and deactivate (DELETE) mutations
  *
- * Both mutations invalidate ['staff-members', branchId] on success.
+ * Both mutations invalidate the listMembers cache on success.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
-
-const API = apiBaseUrl;
+import {
+  listMembersOptions,
+  listMembersQueryKey,
+  createMemberMutation,
+  resetMemberPinMutation,
+  deactivateMemberMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type { DentalOrgModuleDentalMembership, DentalOrgModuleCreateFlatMemberRequest } from '@monobase/sdk-ts/generated';
 
 export type MemberRole = 'dentist_owner' | 'dentist_associate' | 'staff_full' | 'staff_scheduling';
 
@@ -30,58 +35,35 @@ export interface CreateMemberInput {
 // ─── Query key ───────────────────────────────────────────────────────────────
 
 export function staffMembersKey(branchId: string) {
-  return ['staff-members', branchId] as const;
+  return listMembersQueryKey({ query: { branchId } });
 }
 
-// ─── Fetch helpers ────────────────────────────────────────────────────────────
+// ─── View-model mapper ────────────────────────────────────────────────────────
 
-async function fetchStaffMembers(branchId: string): Promise<Member[]> {
-  const res = await fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`Failed to load staff members (${res.status})`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : (data.data ?? data.items ?? data.members ?? []);
-}
-
-async function createMember(branchId: string, input: CreateMemberInput): Promise<Member> {
-  const createRes = await fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ displayName: input.displayName, role: input.role }),
-  });
-  if (!createRes.ok) throw new Error(`Failed to create staff member (${createRes.status})`);
-  const created: Member = await createRes.json();
-
-  const pinRes = await fetch(`${API}/dental/org/members/${created.id}/reset-pin`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ newPin: input.pin }),
-  });
-  if (!pinRes.ok) throw new Error('Staff member created but PIN setup failed. Use reset PIN to set the PIN.');
-
-  return created;
-}
-
-async function deactivateMember(memberId: string): Promise<void> {
-  const res = await fetch(`${API}/dental/org/members/${memberId}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`Failed to deactivate member (${res.status})`);
+function toMember(m: DentalOrgModuleDentalMembership): Member {
+  return {
+    id: m.id,
+    branchId: m.branchId,
+    displayName: m.displayName,
+    role: m.role as MemberRole,
+    status: m.status as 'active' | 'inactive',
+    avatarUrl: m.avatarUrl ?? null,
+    createdAt: typeof m.createdAt === 'string' ? m.createdAt : (m.createdAt as Date).toISOString(),
+  };
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useStaffMembers(branchId: string) {
   const query = useQuery({
-    queryKey: staffMembersKey(branchId),
-    queryFn: () => fetchStaffMembers(branchId),
+    ...listMembersOptions({ query: { branchId } }),
     enabled: !!branchId,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+    select: (data): Member[] => {
+      const items = Array.isArray(data) ? data : (data?.data ?? []);
+      return items.map(toMember);
+    },
   });
 
   return {
@@ -98,24 +80,46 @@ export function useStaffMutations(branchId: string) {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: staffMembersKey(branchId) });
 
-  const createMutation = useMutation({
-    mutationFn: (input: CreateMemberInput) => createMember(branchId, input),
+  // create = POST /dental/org/members, then reset-pin immediately after
+  const createMut = useMutation({
+    ...createMemberMutation(),
     onSuccess: invalidate,
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: (memberId: string) => deactivateMember(memberId),
+  const resetPinMut = useMutation({
+    ...resetMemberPinMutation(),
+  });
+
+  const deactivateMut = useMutation({
+    ...deactivateMemberMutation(),
     onSuccess: invalidate,
   });
+
+  async function create(input: CreateMemberInput): Promise<Member> {
+    const created = await createMut.mutateAsync({
+      body: { displayName: input.displayName, role: input.role as DentalOrgModuleCreateFlatMemberRequest['role'] },
+    });
+    // Set PIN immediately — narrow union: created is DentalOrgModuleDentalMembership on 201
+    const member = created as DentalOrgModuleDentalMembership;
+    try {
+      await resetPinMut.mutateAsync({
+        path: { memberId: member.id },
+        body: { newPin: input.pin },
+      });
+    } catch {
+      throw new Error('Staff member created but PIN setup failed. Use reset PIN to set the PIN.');
+    }
+    return toMember(member);
+  }
 
   return {
-    create: createMutation.mutateAsync,
-    isCreating: createMutation.isPending,
-    createError: createMutation.error as Error | null,
-    resetCreate: createMutation.reset,
+    create,
+    isCreating: createMut.isPending || resetPinMut.isPending,
+    createError: (createMut.error ?? resetPinMut.error) as Error | null,
+    resetCreate: () => { createMut.reset(); resetPinMut.reset(); },
 
-    deactivate: deactivateMutation.mutateAsync,
-    isDeactivating: deactivateMutation.isPending,
-    deactivateError: deactivateMutation.error as Error | null,
+    deactivate: (memberId: string) => deactivateMut.mutateAsync({ path: { memberId } }),
+    isDeactivating: deactivateMut.isPending,
+    deactivateError: deactivateMut.error as Error | null,
   };
 }

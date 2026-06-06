@@ -6,86 +6,55 @@
  *      PATCH /dental/patients/:patientId/recalls/:recallId
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  listPatientRecallsOptions,
+  listPatientRecallsQueryKey,
+  createRecallMutation,
+  updateRecallMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type {
+  DentalPatientEngagementModuleRecall,
+  DentalPatientEngagementModuleCreateRecallRequest,
+  DentalPatientEngagementModuleUpdateRecallRequest,
+} from '@monobase/sdk-ts/generated';
 
-export type RecallStatus = 'pending' | 'sent' | 'completed' | 'cancelled';
-export type RecallType = 'cleaning' | 'checkup' | 'treatment' | 'other';
-
-export interface DentalRecall {
-  id: string;
-  patientId: string;
-  type: RecallType;
-  status: RecallStatus;
-  dueDate: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateRecallBody {
-  type: RecallType;
-  dueDate: string;
-  notes?: string;
-}
-
-export interface UpdateRecallBody {
-  status?: RecallStatus;
-  notes?: string;
-  dueDate?: string;
-}
-
-function recallsQueryKey(patientId: string) {
-  return ['dental-recalls', patientId] as const;
-}
+// Re-export SDK types under the original public names so consumers stay green.
+export type RecallStatus = DentalPatientEngagementModuleRecall['status'];
+export type RecallType = DentalPatientEngagementModuleRecall['type'];
+export type DentalRecall = DentalPatientEngagementModuleRecall;
+export type CreateRecallBody = DentalPatientEngagementModuleCreateRecallRequest;
+export type UpdateRecallBody = DentalPatientEngagementModuleUpdateRecallRequest;
 
 export function useRecalls(patientId: string) {
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: recallsQueryKey(patientId),
-    queryFn: async (): Promise<DentalRecall[]> => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Failed to fetch recalls (${res.status})`);
-      const data: unknown = await res.json();
-      if (Array.isArray(data)) return data as DentalRecall[];
-      const obj = data as Record<string, unknown>;
-      return (Array.isArray(obj.data) ? obj.data : (obj.recalls ?? [])) as DentalRecall[];
-    },
+    ...listPatientRecallsOptions({ path: { patientId } }),
     enabled: Boolean(patientId),
     staleTime: 30_000,
+    select: (data): DentalRecall[] => {
+      // SDK response is Array<DentalPatientEngagementModuleRecall> | ErrorResponse.
+      // Narrow to the array branch; ErrorResponse is a non-array object.
+      // Also handle paginated wrapper { data: [...] } from the server.
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data: unknown }).data)) {
+        return (data as { data: DentalRecall[] }).data;
+      }
+      return [];
+    },
   });
 
   const createRecall = useMutation({
-    mutationFn: async (body: CreateRecallBody) => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`Failed to create recall (${res.status})`);
-      return res.json() as Promise<DentalRecall>;
-    },
+    ...createRecallMutation(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: recallsQueryKey(patientId) });
+      qc.invalidateQueries({ queryKey: listPatientRecallsQueryKey({ path: { patientId } }) });
     },
   });
 
   const updateRecall = useMutation({
-    mutationFn: async ({ recallId, body }: { recallId: string; body: UpdateRecallBody }) => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/recalls/${recallId}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`Failed to update recall (${res.status})`);
-      return res.json() as Promise<DentalRecall>;
-    },
+    ...updateRecallMutation(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: recallsQueryKey(patientId) });
+      qc.invalidateQueries({ queryKey: listPatientRecallsQueryKey({ path: { patientId } }) });
     },
   });
 
@@ -93,9 +62,10 @@ export function useRecalls(patientId: string) {
     recalls: query.data ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
-    createRecall: (body: CreateRecallBody) => createRecall.mutate(body),
+    createRecall: (body: CreateRecallBody) =>
+      createRecall.mutate({ path: { patientId }, body }),
     updateRecall: (recallId: string, body: UpdateRecallBody) =>
-      updateRecall.mutate({ recallId, body }),
+      updateRecall.mutate({ path: { patientId, recallId }, body }),
     isCreating: createRecall.isPending,
     isUpdating: updateRecall.isPending,
   };

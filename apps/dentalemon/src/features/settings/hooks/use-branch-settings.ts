@@ -8,9 +8,12 @@
  * One query + one mutation covers all three panels.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
-
-const API = apiBaseUrl;
+import {
+  getBranchSettingsOptions,
+  getBranchSettingsQueryKey,
+  updateBranchSettingsMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type { DentalOrgModuleDentalBranchSettings } from '@monobase/sdk-ts/generated';
 
 export interface BranchSettings {
   // Clinic info
@@ -34,42 +37,27 @@ export interface BranchSettings {
   [key: string]: unknown;
 }
 
-interface BranchSettingsResponse {
-  settings: BranchSettings;
-}
+// BranchSettings is a superset view-model; the SDK type satisfies it structurally.
+// Cast via intersection rather than `as unknown as` to keep tsc checking SDK fields.
+type BranchSettingsCompat = DentalOrgModuleDentalBranchSettings & BranchSettings;
 
-async function fetchBranchSettings(branchId: string): Promise<BranchSettings> {
-  const res = await fetch(`${API}/dental/branches/${branchId}/settings`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
-  const data: BranchSettingsResponse = await res.json();
-  return data.settings ?? {};
-}
-
-async function putBranchSettings(branchId: string, settings: Partial<BranchSettings>): Promise<BranchSettings> {
-  const res = await fetch(`${API}/dental/branches/${branchId}/settings`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings),
-  });
-  if (!res.ok) throw new Error(`Failed to save settings (${res.status})`);
-  const data = await res.json();
-  return data.settings ?? settings;
+function toSettings(raw: DentalOrgModuleDentalBranchSettings): BranchSettings {
+  return raw as BranchSettingsCompat;
 }
 
 export function branchSettingsKey(branchId: string | null) {
-  return ['branch-settings', branchId] as const;
+  return branchId
+    ? getBranchSettingsQueryKey({ path: { branchId } })
+    : (['branch-settings', null] as const);
 }
 
 export function useBranchSettings(branchId: string | null) {
   const query = useQuery({
-    queryKey: branchSettingsKey(branchId),
-    queryFn: () => fetchBranchSettings(branchId!),
+    ...getBranchSettingsOptions({ path: { branchId: branchId! } }),
     enabled: !!branchId,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    select: (data): BranchSettings => toSettings(data),
   });
 
   return {
@@ -84,17 +72,24 @@ export function useUpdateBranchSettings(branchId: string | null) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (settings: Partial<BranchSettings>) => {
-      if (!branchId) return Promise.reject(new Error('No branch selected'));
-      return putBranchSettings(branchId, settings);
-    },
+    ...updateBranchSettingsMutation(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: branchSettingsKey(branchId) });
+      if (branchId) {
+        queryClient.invalidateQueries({
+          queryKey: getBranchSettingsQueryKey({ path: { branchId } }),
+        });
+      }
     },
   });
 
   return {
-    update: mutation.mutateAsync,
+    update: (settings: Partial<BranchSettings>) => {
+      if (!branchId) return Promise.reject(new Error('No branch selected'));
+      return mutation.mutateAsync({
+        path: { branchId },
+        body: settings as DentalOrgModuleDentalBranchSettings,
+      });
+    },
     isPending: mutation.isPending,
     isSuccess: mutation.isSuccess,
     error: mutation.error as Error | null,

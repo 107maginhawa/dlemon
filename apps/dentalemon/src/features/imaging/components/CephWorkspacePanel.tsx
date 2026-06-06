@@ -9,8 +9,8 @@ import {
   SelectValue,
 } from '@monobase/ui'
 import { ANALYSIS_TYPES, NORM_POPULATIONS, DEFAULT_POPULATION, getPopulationLabel } from '@monobase/ceph-math'
-import { apiBaseUrl } from '@/lib/config'
 import { useMutation } from '@tanstack/react-query'
+import { cephMgmtCreateCephReport } from '@monobase/sdk-ts/generated'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephLandmarkCode } from '../hooks/use-ceph-landmarks'
@@ -95,13 +95,12 @@ export function CephWorkspacePanel({
 
   const createReport = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/reports`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const { data } = await cephMgmtCreateCephReport({
+        path: { imageId },
+        throwOnError: true,
       })
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ version: number }>
+      // data is DentalImagingModuleCephReport | ErrorResponse; narrow via 'version'.
+      return data as { version: number }
     },
     onSuccess: (data) => {
       setCreatedVersion(data.version)

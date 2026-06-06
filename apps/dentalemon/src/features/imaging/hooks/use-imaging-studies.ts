@@ -1,20 +1,69 @@
+/**
+ * useImagingStudies — TanStack Query hook for patient image list
+ *
+ * API: GET /dental/patients/{patientId}/images?branchId=
+ */
 import { useQuery } from '@tanstack/react-query'
-import type { components } from '@monobase/api-spec/types'
-import { apiBaseUrl } from '@/lib/config'
+import {
+  patientImageMgmtListPatientImagesOptions,
+} from '@monobase/sdk-ts/generated/react-query'
+import type { DentalImagingModulePatientImageItem } from '@monobase/sdk-ts/generated'
 
-export type PatientImageItem = components['schemas']['DentalImagingModule.PatientImageItem']
+// String-dated, number-sized view-model the image-list consumers + E2E fixtures
+// expect. The SDK models fileSizeBytes as bigint and createdAt as Date; we
+// normalize both at the edge so consumers (and JSON-serializable test fixtures)
+// keep working against plain primitives.
+export interface PatientImageItem {
+  id: string
+  source: DentalImagingModulePatientImageItem['source']
+  modality: DentalImagingModulePatientImageItem['modality']
+  fileName: string
+  mimeType: string
+  fileSizeBytes: number
+  studyId: string | null
+  visitId: string | null
+  toothNumbers: number[]
+  createdAt: string
+  downloadUrl: string | null
+  isVolume?: boolean
+  frameCount?: number | null
+  viewerKind?: DentalImagingModulePatientImageItem['viewerKind']
+}
+
+const toIso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : String(d))
+
+function toViewModel(item: DentalImagingModulePatientImageItem): PatientImageItem {
+  return {
+    id: item.id,
+    source: item.source,
+    modality: item.modality,
+    fileName: item.fileName,
+    mimeType: item.mimeType,
+    fileSizeBytes: Number(item.fileSizeBytes),
+    studyId: item.studyId,
+    visitId: item.visitId,
+    toothNumbers: item.toothNumbers,
+    createdAt: toIso(item.createdAt),
+    downloadUrl: item.downloadUrl,
+    ...(item.isVolume !== undefined ? { isVolume: item.isVolume } : {}),
+    ...(item.frameCount !== undefined ? { frameCount: item.frameCount } : {}),
+    ...(item.viewerKind !== undefined ? { viewerKind: item.viewerKind } : {}),
+  }
+}
 
 export function useImagingStudies(patientId: string, branchId?: string) {
   return useQuery({
-    queryKey: ['imaging', 'patient', patientId, branchId],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      if (branchId) params.set('branchId', branchId)
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/images?${params}`, { credentials: 'include' })
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ items: PatientImageItem[]; total: number }>
-    },
+    ...patientImageMgmtListPatientImagesOptions({
+      path: { patientId },
+      query: { branchId: branchId! },
+    }),
     enabled: Boolean(patientId) && Boolean(branchId),
     staleTime: 30_000,
+    select: (data): { items: PatientImageItem[]; total: number } => {
+      // SDK returns DentalImagingModuleListPatientImagesResponse | ErrorResponse
+      // (the latter discriminated by a top-level `error` object).
+      if (!data || 'error' in data) return { items: [], total: 0 }
+      return { items: data.items.map(toViewModel), total: data.total }
+    },
   })
 }

@@ -6,10 +6,9 @@
  * Wireframe: docs/prd/context/wireframes/payment-plan.html
  */
 
-import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/lib/config';
-
-const API = apiBaseUrl;
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getDentalPaymentPlanOptions } from '@monobase/sdk-ts/generated/react-query';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +24,9 @@ interface Installment {
   status: string;
 }
 
+// The SDK's DentalPaymentPlan type does not yet include installments[], paidCents,
+// remainingCents, installmentsCount, or nextDueDate (backend enrichments not in spec).
+// We cast via `select` — same pattern as use-invoices.ts.
 interface PaymentPlan {
   id: string;
   invoiceId: string;
@@ -85,7 +87,7 @@ export function isInstallmentOverdue(installment: { status: string }): boolean {
 
 function formatCents(cents: number): string {
   const pesos = cents / 100;
-  return `\u20B1${pesos.toFixed(2)}`;
+  return `₱${pesos.toFixed(2)}`;
 }
 
 function formatPlanStatus(status: string): string {
@@ -139,32 +141,21 @@ function formatInstallmentStatus(status: string): string {
 // ---------------------------------------------------------------------------
 
 export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewProps) {
-  const [plan, setPlan] = useState<PaymentPlan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const planQuery = useQuery({
+    ...getDentalPaymentPlanOptions({ path: { invoiceId } }),
+    enabled: open && !!invoiceId,
+    // The SDK DentalPaymentPlan type is a subset of the backend-enriched response.
+    // Cast to the local PaymentPlan shape via select — same pattern as InvoiceData above.
+    select: (data): PaymentPlan => data as unknown as PaymentPlan,
+  });
 
-  useEffect(() => {
-    if (open && invoiceId) loadPlan();
-  }, [open, invoiceId]);
+  const plan = planQuery.data ?? null;
+  const loading = planQuery.isLoading;
+  const error = planQuery.isError
+    ? (planQuery.error instanceof Error ? planQuery.error.message : 'Failed to load payment plan')
+    : null;
 
   if (!open) return null;
-
-  async function loadPlan() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/plan`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to load payment plan');
-      const data = await res.json();
-      setPlan(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Payment Plan">
@@ -306,10 +297,10 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
                           {formatCents(inst.amountCents)}
                         </td>
                         <td className="px-4 h-12 align-middle text-[13px] tabular-nums text-muted-foreground">
-                          {inst.paidDate ? new Date(inst.paidDate).toLocaleDateString() : '\u2014'}
+                          {inst.paidDate ? new Date(inst.paidDate).toLocaleDateString() : '—'}
                         </td>
                         <td className="px-4 h-12 align-middle text-[13px] text-muted-foreground">
-                          {inst.method ?? '\u2014'}
+                          {inst.method ?? '—'}
                         </td>
                         <td className="px-4 h-12 align-middle pr-5">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${getInstallmentBadgeClass(inst.status)}`}>

@@ -4,11 +4,38 @@
  * Covers the query (happy path, disabled, error) and the two mutations
  * (createMeasurement with optimistic update, deleteMeasurement with optimistic update).
  * Network fetch is mocked via global.fetch override — no MSW.
+ *
+ * NOTE: The SDK calls fetch(Request) — extract URL/method/body from the Request
+ * object when present. Helper functions normalise both call forms.
+ * Cache seeding uses the SDK query key (imagingMgmtListMeasurementsQueryKey).
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
 import { useMeasurements, type ImagingAnnotation } from './use-measurements';
+import { imagingMgmtListMeasurementsQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
+
+/** Normalise both fetch(url, init) and fetch(Request) call shapes. */
+function reqUrl(req: Request | string | URL): string {
+  return req instanceof Request ? req.url : String(req);
+}
+function reqMethod(req: Request | string | URL, init?: RequestInit): string {
+  return req instanceof Request ? req.method : (init?.method ?? 'GET');
+}
+async function reqBody(req: Request | string | URL, init?: RequestInit): Promise<unknown> {
+  if (req instanceof Request) {
+    try { return await req.json(); } catch { return null; }
+  }
+  if (typeof init?.body === 'string') {
+    try { return JSON.parse(init.body); } catch { return null; }
+  }
+  return null;
+}
+
+/** SDK query key for measurements — must match what useMeasurements uses internally. */
+function measurementsQueryKey(imageId: string) {
+  return imagingMgmtListMeasurementsQueryKey({ path: { imageId } });
+}
 
 function makeAnnotation(overrides: Partial<ImagingAnnotation> = {}): ImagingAnnotation {
   return {
@@ -36,6 +63,7 @@ describe('useMeasurements — query', () => {
 
   test('returns measurements on successful fetch', async () => {
     const items = [makeAnnotation({ id: 'ann-1' }), makeAnnotation({ id: 'ann-2' })];
+    // SDK response shape: { items: DentalImagingModuleImagingAnnotation[] }
     global.fetch = mock(() => jsonResponse({ items }));
 
     const qc = freshClient();
@@ -68,7 +96,7 @@ describe('useMeasurements — query', () => {
   test('hits the correct URL with imageId', async () => {
     let capturedUrl = '';
     global.fetch = mock((req: Request | string | URL) => {
-      capturedUrl = req instanceof Request ? req.url : String(req);
+      capturedUrl = reqUrl(req);
       return jsonResponse({ items: [] });
     });
 
@@ -124,13 +152,12 @@ describe('useMeasurements — createMeasurement', () => {
   test('succeeds and calls POST with JSON body', async () => {
     const created = makeAnnotation({ id: 'ann-new', type: 'angle', measurementValue: 30 });
     let capturedUrl = '';
-    let capturedInit: RequestInit | undefined;
+    let capturedBody: unknown;
 
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = req instanceof Request ? req.url : String(req);
-      if (init?.method === 'POST') {
-        capturedUrl = url;
-        capturedInit = init;
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') {
+        capturedUrl = reqUrl(req);
+        capturedBody = await reqBody(req, init);
         return jsonResponse(created);
       }
       return jsonResponse({ items: [] });
@@ -154,9 +181,8 @@ describe('useMeasurements — createMeasurement', () => {
     await waitFor(() => expect(result.current.createMeasurement.isSuccess).toBe(true));
 
     expect(capturedUrl).toContain('/dental/imaging/images/img-1/measurements');
-    const body = JSON.parse(capturedInit?.body as string);
-    expect(body.type).toBe('angle');
-    expect(body.measurementValue).toBe(30);
+    expect((capturedBody as Record<string, unknown>).type).toBe('angle');
+    expect((capturedBody as Record<string, unknown>).measurementValue).toBe(30);
   });
 
   test('applies optimistic update before server responds', async () => {
@@ -165,8 +191,8 @@ describe('useMeasurements — createMeasurement', () => {
     let resolvePost!: (r: Response) => void;
     const postPromise = new Promise<Response>((res) => { resolvePost = res; });
 
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') return postPromise;
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') return postPromise;
       return jsonResponse({ items: [] });
     });
 
@@ -176,18 +202,18 @@ describe('useMeasurements — createMeasurement', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // Seed the cache with one existing item
-    qc.setQueryData<ImagingAnnotation[]>(['measurements', 'img-1'], [
+    // Seed the cache using the SDK query key
+    qc.setQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'), [
       makeAnnotation({ id: 'existing' }),
     ]);
 
     await act(async () => {
-      result.current.createMeasurement.mutate({ type: 'line', geometry: {} });
+      result.current.createMeasurement.mutate({ type: 'distance', geometry: {} });
     });
 
     // Optimistic item should be in cache immediately (temp-* id)
     await waitFor(() => {
-      const cached = qc.getQueryData<ImagingAnnotation[]>(['measurements', 'img-1']);
+      const cached = qc.getQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'));
       return (cached?.length ?? 0) === 2 && cached?.some((m) => m.id.startsWith('temp-'));
     });
 
@@ -203,8 +229,8 @@ describe('useMeasurements — createMeasurement', () => {
   });
 
   test('rolls back optimistic update on server error', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') return jsonResponse({ message: 'error' }, 500);
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') return jsonResponse({ message: 'error' }, 500);
       return jsonResponse({ items: [makeAnnotation({ id: 'existing' })] });
     });
 
@@ -217,15 +243,15 @@ describe('useMeasurements — createMeasurement', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
-      result.current.createMeasurement.mutate({ type: 'line', geometry: {} });
+      result.current.createMeasurement.mutate({ type: 'distance', geometry: {} });
     });
 
     await waitFor(() => expect(result.current.createMeasurement.isError).toBe(true));
   });
 
   test('sets isError on server error', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') return jsonResponse({ message: 'Bad request' }, 400);
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') return jsonResponse({ message: 'Bad request' }, 400);
       return jsonResponse({ items: [] });
     });
 
@@ -236,7 +262,7 @@ describe('useMeasurements — createMeasurement', () => {
     );
 
     await act(async () => {
-      result.current.createMeasurement.mutate({ type: 'polygon', geometry: {} });
+      result.current.createMeasurement.mutate({ type: 'area', geometry: {} });
     });
 
     await waitFor(() => expect(result.current.createMeasurement.isError).toBe(true));
@@ -253,14 +279,13 @@ describe('useMeasurements — deleteMeasurement', () => {
     cleanup();
   });
 
-  test('succeeds on 200 and calls DELETE on correct URL', async () => {
+  test('succeeds on 204 and calls DELETE on correct URL (primary delete success path)', async () => {
     let capturedUrl = '';
 
     global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = req instanceof Request ? req.url : String(req);
-      if (init?.method === 'DELETE') {
-        capturedUrl = url;
-        return jsonResponse({}, 200);
+      if (reqMethod(req, init) === 'DELETE') {
+        capturedUrl = reqUrl(req);
+        return Promise.resolve(new Response(null, { status: 204 }));
       }
       return jsonResponse({ items: [] });
     });
@@ -280,8 +305,8 @@ describe('useMeasurements — deleteMeasurement', () => {
   });
 
   test('succeeds on 204 no-content response', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'DELETE') {
         return Promise.resolve(new Response(null, { status: 204 }));
       }
       return jsonResponse({ items: [] });
@@ -304,8 +329,8 @@ describe('useMeasurements — deleteMeasurement', () => {
     let resolveDelete!: (r: Response) => void;
     const deletePromise = new Promise<Response>((res) => { resolveDelete = res; });
 
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') return deletePromise;
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'DELETE') return deletePromise;
       return jsonResponse({ items: [] });
     });
 
@@ -315,8 +340,8 @@ describe('useMeasurements — deleteMeasurement', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // Seed cache with two items
-    qc.setQueryData<ImagingAnnotation[]>(['measurements', 'img-1'], [
+    // Seed cache with two items using the SDK query key
+    qc.setQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'), [
       makeAnnotation({ id: 'ann-keep' }),
       makeAnnotation({ id: 'ann-delete' }),
     ]);
@@ -327,7 +352,7 @@ describe('useMeasurements — deleteMeasurement', () => {
 
     // Optimistic removal: only 'ann-keep' should remain
     await waitFor(() => {
-      const cached = qc.getQueryData<ImagingAnnotation[]>(['measurements', 'img-1']);
+      const cached = qc.getQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'));
       return cached?.length === 1 && cached[0]?.id === 'ann-keep';
     });
 
@@ -336,8 +361,8 @@ describe('useMeasurements — deleteMeasurement', () => {
   });
 
   test('rolls back optimistic removal on server error', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') return jsonResponse({ message: 'Server error' }, 500);
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'DELETE') return jsonResponse({ message: 'Server error' }, 500);
       return jsonResponse({ items: [] });
     });
 
@@ -348,7 +373,7 @@ describe('useMeasurements — deleteMeasurement', () => {
     );
 
     // Seed cache
-    qc.setQueryData<ImagingAnnotation[]>(['measurements', 'img-1'], [
+    qc.setQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'), [
       makeAnnotation({ id: 'ann-1' }),
     ]);
 
@@ -360,8 +385,8 @@ describe('useMeasurements — deleteMeasurement', () => {
   });
 
   test('sets isError on non-ok, non-204 response', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') return jsonResponse({ message: 'Not found' }, 404);
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'DELETE') return jsonResponse({ message: 'Not found' }, 404);
       return jsonResponse({ items: [] });
     });
 

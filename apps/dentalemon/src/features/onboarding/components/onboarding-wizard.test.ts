@@ -17,8 +17,26 @@ import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnboardingWizard } from './onboarding-wizard';
 import { useOrgContextStore } from '@/stores/org-context.store';
+// Install the error interceptor so SdkError is thrown (same as what ApiProvider does at runtime).
+// Without this, the SDK throws the raw JSON body (no status code) and the onboarding wizard's
+// 409/403/429 error handling code can never run in tests.
+import { client as sdkClient } from '@monobase/sdk-ts/generated/client.gen';
+import { errorInterceptor } from '@monobase/sdk-ts/client';
+
+// Guard: only install once per process, matching ApiProvider's useRef guard.
+let _interceptorInstalled = false;
+if (!_interceptorInstalled) {
+  sdkClient.interceptors.error.use(errorInterceptor);
+  _interceptorInstalled = true;
+}
+
+function makeWrapper(children: React.ReactNode) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return React.createElement(QueryClientProvider, { client: qc }, children);
+}
 
 interface FetchCall { url: string; method: string; body: any }
 
@@ -80,7 +98,7 @@ describe('OnboardingWizard — shipped component', () => {
     const user = userEvent.setup();
     const f = installFetch();
     try {
-      render(React.createElement(OnboardingWizard, { onComplete: () => {} }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete: () => {} })));
       await user.click(screen.getByRole('button', { name: /^next$/i }));
       expect(screen.getByText('Clinic name is required')).not.toBeNull();
       // still on clinic step — no network calls
@@ -94,7 +112,7 @@ describe('OnboardingWizard — shipped component', () => {
     const user = userEvent.setup();
     const f = installFetch();
     try {
-      render(React.createElement(OnboardingWizard, { onComplete: () => {} }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete: () => {} })));
       await fillClinicAndAdvance(user);
       await waitFor(() => expect(screen.getByLabelText('6-digit PIN')).not.toBeNull());
       await user.type(screen.getByLabelText('Full Name'), 'Dr. Ana Reyes');
@@ -111,7 +129,7 @@ describe('OnboardingWizard — shipped component', () => {
     const onComplete = mock(() => {});
     const f = installFetch();
     try {
-      render(React.createElement(OnboardingWizard, { onComplete }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete })));
       await fillClinicAndAdvance(user);
       await fillDentistAndAdvance(user);
       await advanceFees(user);
@@ -158,7 +176,7 @@ describe('OnboardingWizard — shipped component', () => {
     const onComplete = mock(() => {});
     const f = installFetch();
     try {
-      render(React.createElement(OnboardingWizard, { onComplete }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete })));
       await fillClinicAndAdvance(user);
       await fillDentistAndAdvance(user);
       await advanceFees(user);
@@ -180,7 +198,7 @@ describe('OnboardingWizard — shipped component', () => {
     const onComplete = mock(() => {});
     const f = installFetch({ kind: 'fail', on: 'onboarding' });
     try {
-      render(React.createElement(OnboardingWizard, { onComplete }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete })));
       await fillClinicAndAdvance(user);
       await fillDentistAndAdvance(user);
       await advanceFees(user);
@@ -201,7 +219,7 @@ describe('OnboardingWizard — shipped component', () => {
     const onComplete = mock(() => {});
     const f = installFetch({ kind: 'status', status: 409, body: { code: 'ORG_LIMIT_REACHED', message: 'You already have an active clinic' } });
     try {
-      render(React.createElement(OnboardingWizard, { onComplete }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete })));
       await fillClinicAndAdvance(user);
       await fillDentistAndAdvance(user);
       await advanceFees(user);
@@ -220,7 +238,7 @@ describe('OnboardingWizard — shipped component', () => {
     const onComplete = mock(() => {});
     const f = installFetch({ kind: 'status', status: 403, body: { code: 'EMAIL_NOT_VERIFIED', message: 'forbidden' } });
     try {
-      render(React.createElement(OnboardingWizard, { onComplete }));
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete })));
       await fillClinicAndAdvance(user);
       await fillDentistAndAdvance(user);
       await advanceFees(user);

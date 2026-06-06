@@ -5,12 +5,36 @@
  * (initiate failure, storage failure with cleanup), and abort support.
  * Network fetch is mocked via global.fetch override — no MSW.
  *
+ * NOTE: The SDK calls fetch(Request) for the initiate POST — helpers below
+ * normalise both call forms. The presigned PUT to S3/MinIO is still raw fetch.
+ *
  * @BR-027
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
 import { useImagingUpload, type UploadOptions } from './use-imaging-upload';
 import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
+
+/** Normalise both fetch(url, init) and fetch(Request) call shapes. */
+function reqUrl(req: Request | string | URL): string {
+  return req instanceof Request ? req.url : String(req);
+}
+function reqMethod(req: Request | string | URL, init?: RequestInit): string {
+  return req instanceof Request ? req.method : (init?.method ?? 'GET');
+}
+async function reqBodyAsync(req: Request | string | URL, init?: RequestInit): Promise<unknown> {
+  if (req instanceof Request) {
+    try { return await req.json(); } catch { return null; }
+  }
+  if (typeof init?.body === 'string') {
+    try { return JSON.parse(init.body); } catch { return null; }
+  }
+  return null;
+}
+function reqSignal(req: Request | string | URL, init?: RequestInit): AbortSignal | undefined | null {
+  if (req instanceof Request) return req.signal;
+  return init?.signal;
+}
 
 const defaultOptions: UploadOptions = {
   patientId: 'p1',
@@ -38,15 +62,14 @@ describe('useImagingUpload — happy path', () => {
   test('upload completes, returns studyId, progress goes 0→10→100, isUploading transitions true→false', async () => {
     // @BR-027
     const progressSnapshots: number[] = [];
-    let callIndex = 0;
     let resolveStorage!: (r: Response) => void;
     const storagePromise = new Promise<Response>((res) => {
       resolveStorage = res;
     });
 
-    global.fetch = mock(() => {
-      callIndex++;
-      if (callIndex === 1) {
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = reqUrl(req);
+      if (url.includes('/dental/imaging/studies')) {
         // Initiate response
         return jsonResponse({
           study: { id: 'study-1' },
@@ -101,10 +124,10 @@ describe('useImagingUpload — happy path', () => {
     // @BR-027
     let capturedBody: unknown;
 
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = req instanceof Request ? req.url : String(req);
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
       if (url.includes('/dental/imaging/studies')) {
-        capturedBody = JSON.parse(init?.body as string ?? (req instanceof Request ? '' : ''));
+        capturedBody = await reqBodyAsync(req, init);
         return jsonResponse({
           study: { id: 'study-1' },
           uploadUrl: 'https://s3.example.com/presigned',
@@ -124,6 +147,9 @@ describe('useImagingUpload — happy path', () => {
       await result.current.upload(makeFile('tooth.dcm', 2048), defaultOptions);
     });
 
+    // The SDK's jsonBodySerializer converts BigInt → string on the wire.
+    // file.size (number) is wrapped in BigInt() to satisfy the SDK type, so
+    // the serialized value is the string "2048" not the number 2048.
     expect(capturedBody).toMatchObject({
       patientId: 'p1',
       branchId: 'b1',
@@ -131,7 +157,7 @@ describe('useImagingUpload — happy path', () => {
       modality: 'xray',
       filename: 'tooth.dcm',
       mimeType: 'application/dicom',
-      size: 2048,
+      size: '2048',
       toothNumbers: [14],
     });
   });
@@ -186,15 +212,14 @@ describe('useImagingUpload — storage upload failure', () => {
 
   test('second fetch returns 500, hook errors, cleanup DELETE to abort endpoint is called', async () => {
     // @BR-027
-    let callIndex = 0;
     let abortCalled = false;
     let abortUrl = '';
 
     global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      callIndex++;
-      const url = req instanceof Request ? req.url : String(req);
+      const url = reqUrl(req);
+      const method = reqMethod(req, init);
 
-      if (callIndex === 1) {
+      if (url.includes('/dental/imaging/studies')) {
         // Initiate succeeds
         return jsonResponse({
           study: { id: 'study-1' },
@@ -204,7 +229,7 @@ describe('useImagingUpload — storage upload failure', () => {
         });
       }
 
-      if (init?.method === 'DELETE' || (req instanceof Request && req.method === 'DELETE')) {
+      if (method === 'DELETE' || url.includes('/abort')) {
         abortCalled = true;
         abortUrl = url;
         return jsonResponse({}, 200);
@@ -256,11 +281,10 @@ describe('useImagingUpload — abort mid-upload', () => {
     const storagePromise = new Promise<Response>((res) => {
       resolveStorage = res;
     });
-    let callIndex = 0;
 
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      callIndex++;
-      if (callIndex === 1) {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
+      if (url.includes('/dental/imaging/studies')) {
         // Initiate succeeds
         return jsonResponse({
           study: { id: 'study-1' },
@@ -269,8 +293,8 @@ describe('useImagingUpload — abort mid-upload', () => {
           fileId: 'file-1',
         });
       }
-      // Check if signal is present
-      const signal = init?.signal;
+      // Check if signal is present (may be on Request or init)
+      const signal = reqSignal(req, init);
       if (signal) {
         return new Promise<Response>((resolve, reject) => {
           signal.addEventListener('abort', () => {

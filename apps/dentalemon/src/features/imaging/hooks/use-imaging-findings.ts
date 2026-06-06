@@ -1,26 +1,29 @@
+/**
+ * useImagingFindings — TanStack Query hook for imaging findings CRUD
+ *
+ * API: GET/POST /dental/imaging/images/{imageId}/findings
+ *      PATCH /dental/imaging/findings/{findingId}
+ *      DELETE /dental/imaging/findings/{findingId}
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiBaseUrl } from '@/lib/config'
+import {
+  imagingFindingsMgmtListFindingsOptions,
+  imagingFindingsMgmtListFindingsQueryKey,
+} from '@monobase/sdk-ts/generated/react-query'
+import {
+  imagingFindingsMgmtCreateFinding,
+  imagingFindingsMgmtUpdateFinding,
+  imagingFindingsMgmtDeleteFinding,
+  type DentalImagingModuleImagingFinding,
+  type DentalImagingModuleImagingFindingType,
+  type DentalImagingModuleImagingFindingStatus,
+} from '@monobase/sdk-ts/generated'
 
-export type ImagingFindingType =
-  | 'caries'
-  | 'secondary_caries'
-  | 'bone_loss'
-  | 'furcation_involvement'
-  | 'periapical_lesion'
-  | 'root_resorption'
-  | 'calculus'
-  | 'crown_fracture'
-  | 'root_fracture'
-  | 'impacted_tooth'
-  | 'over_eruption'
-  | 'open_contact'
-  | 'overhang'
-  | 'crown_needed'
-  | 'implant_needed'
+// Re-export SDK types so consumers keep the same import path.
+export type ImagingFindingType = DentalImagingModuleImagingFindingType
+export type ImagingFindingStatus = DentalImagingModuleImagingFindingStatus
 
-// V-IMG-007: SM-01 finding lifecycle is draft → confirmed → resolved (spec §8 / §11).
-export type ImagingFindingStatus = 'draft' | 'confirmed' | 'resolved'
-
+// View-model: match the SDK shape but with string dates (consumers use ISO strings).
 export interface ImagingFinding {
   id: string
   imageId: string
@@ -38,6 +41,26 @@ export interface ImagingFinding {
   updatedAt: string
 }
 
+const toIso = (d: Date | string | undefined | null): string =>
+  d == null ? '' : d instanceof Date ? d.toISOString() : String(d)
+
+const toViewModel = (f: DentalImagingModuleImagingFinding): ImagingFinding => ({
+  id: f.id,
+  imageId: f.imageId,
+  annotationId: f.annotationId,
+  treatmentId: f.treatmentId,
+  visitId: f.visitId,
+  patientId: f.patientId,
+  branchId: f.branchId,
+  type: f.type,
+  status: f.status,
+  toothNumber: f.toothNumber,
+  surfaces: f.surfaces ?? null,
+  note: f.note,
+  createdAt: toIso(f.createdAt),
+  updatedAt: toIso(f.updatedAt),
+})
+
 interface CreateFindingInput {
   type: ImagingFindingType
   status?: ImagingFindingStatus
@@ -45,6 +68,11 @@ interface CreateFindingInput {
   surfaces?: string[] | null
   note?: string | null
   annotationId?: string | null
+  // visitId/patientId/branchId are required by the backend but callers that have
+  // already scoped to an image may omit them; they are forwarded if provided.
+  visitId?: string
+  patientId?: string
+  branchId?: string
 }
 
 interface UpdateFindingInput {
@@ -58,33 +86,48 @@ interface UpdateFindingInput {
 // useImagingFindings — TanStack Query hook for imaging findings CRUD
 export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }) {
   const queryClient = useQueryClient()
-  const queryKey = ['imaging-findings', imageId]
   const enabled = (opts?.enabled ?? true) && Boolean(imageId)
 
+  const listOptions = imagingFindingsMgmtListFindingsOptions({
+    path: { imageId },
+  })
+
+  const queryKey = imagingFindingsMgmtListFindingsQueryKey({ path: { imageId } })
+
   const query = useQuery({
-    queryKey,
-    queryFn: async (): Promise<ImagingFinding[]> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/findings`, {
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error(await res.text())
-      const data = (await res.json()) as { data: ImagingFinding[] }
-      return data.data
-    },
+    ...listOptions,
     enabled,
     staleTime: 30_000,
+    select: (data): ImagingFinding[] => {
+      // SDK returns DentalImagingModuleImagingFindingListResponse | ErrorResponse.
+      // Narrow to the success shape: { items: [...] }.
+      if (!data || 'error' in data) return []
+      return data.items.map(toViewModel)
+    },
   })
 
   const createFinding = useMutation({
     mutationFn: async (input: CreateFindingInput): Promise<ImagingFinding> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/findings`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+      const { data } = await imagingFindingsMgmtCreateFinding({
+        path: { imageId },
+        body: {
+          type: input.type,
+          ...(input.status != null ? { status: input.status } : {}),
+          ...(input.toothNumber != null ? { toothNumber: input.toothNumber } : {}),
+          ...(input.surfaces != null ? { surfaces: input.surfaces } : {}),
+          ...(input.note != null ? { note: input.note } : {}),
+          ...(input.annotationId != null ? { annotationId: input.annotationId } : {}),
+          // The backend requires these fields; callers should provide them. If absent
+          // they are omitted from the body and the server will 422 — that is correct.
+          ...(input.visitId != null ? { visitId: input.visitId } : {}),
+          ...(input.patientId != null ? { patientId: input.patientId } : {}),
+          ...(input.branchId != null ? { branchId: input.branchId } : {}),
+        } as Parameters<typeof imagingFindingsMgmtCreateFinding>[0]['body'],
+        throwOnError: true,
       })
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<ImagingFinding>
+      // data is DentalImagingModuleImagingFinding | ErrorResponse — narrow first.
+      if (!data || 'error' in data) throw new Error('Unexpected error response from createFinding')
+      return toViewModel(data)
     },
     onError: (e) => console.error('[imaging-findings]', e),
     onSettled: () => {
@@ -95,19 +138,25 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
   const updateFinding = useMutation({
     mutationFn: async ({
       findingId,
-      data,
+      data: input,
     }: {
       findingId: string
       data: UpdateFindingInput
     }): Promise<ImagingFinding> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/findings/${findingId}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      const { data } = await imagingFindingsMgmtUpdateFinding({
+        path: { findingId },
+        body: {
+          ...(input.type != null ? { type: input.type } : {}),
+          ...(input.status != null ? { status: input.status } : {}),
+          ...(input.toothNumber != null ? { toothNumber: input.toothNumber } : {}),
+          ...(input.surfaces != null ? { surfaces: input.surfaces } : {}),
+          ...(input.note != null ? { note: input.note } : {}),
+        },
+        throwOnError: true,
       })
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<ImagingFinding>
+      // data is DentalImagingModuleImagingFinding | ErrorResponse — narrow first.
+      if (!data || 'error' in data) throw new Error('Unexpected error response from updateFinding')
+      return toViewModel(data)
     },
     onError: (e) => console.error('[imaging-findings]', e),
     onSettled: () => {
@@ -117,11 +166,10 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
 
   const deleteFinding = useMutation({
     mutationFn: async (findingId: string): Promise<void> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/findings/${findingId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+      await imagingFindingsMgmtDeleteFinding({
+        path: { findingId },
+        throwOnError: true,
       })
-      if (!res.ok && res.status !== 204) throw new Error(await res.text())
     },
     onError: (e) => console.error('[imaging-findings]', e),
     onSettled: () => {

@@ -6,7 +6,12 @@
  * Polls every 15s.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  listQueueBoardOptions,
+  listQueueBoardQueryKey,
+  updateQueueItemStatusMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type { DentalQueueModuleQueueItem } from '@monobase/sdk-ts/generated';
 
 export type QueueItemStatus = 'waiting' | 'called' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -21,45 +26,42 @@ export interface QueueItem {
   updatedAt: string;
 }
 
-function queueBoardQueryKey(branchId: string) {
-  return ['dental-queue-board', branchId] as const;
+function toQueueItem(raw: DentalQueueModuleQueueItem): QueueItem {
+  return {
+    id: raw.id,
+    branchId: raw.branchId,
+    patientId: raw.patientId,
+    patientName: (raw as DentalQueueModuleQueueItem & { patientName?: string }).patientName,
+    status: raw.status as QueueItemStatus,
+    notes: raw.notes ?? undefined,
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : (raw.createdAt as Date).toISOString(),
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : (raw.updatedAt as Date).toISOString(),
+  };
+}
+
+function queueBoardKey(branchId: string) {
+  return listQueueBoardQueryKey({ path: { branchId } });
 }
 
 export function useQueueBoard(branchId: string) {
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: queueBoardQueryKey(branchId),
-    queryFn: async (): Promise<QueueItem[]> => {
-      // QA-005: cross-origin (:3003→:7213) auth-gated GET — must send the session
-      // cookie or it 401s (→ false-empty board). Mirrors the recalls/plans fix.
-      const res = await fetch(`${apiBaseUrl}/dental/branches/${branchId}/queue-board`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Failed to fetch queue board (${res.status})`);
-      const data: unknown = await res.json();
-      if (Array.isArray(data)) return data as QueueItem[];
-      const obj = data as Record<string, unknown>;
-      return (Array.isArray(obj.data) ? obj.data : (obj.items ?? [])) as QueueItem[];
-    },
+    ...listQueueBoardOptions({ path: { branchId } }),
     enabled: Boolean(branchId),
     staleTime: 10_000,
     refetchInterval: 15_000,
+    select: (data): QueueItem[] => {
+      // Response is Array<QueueItem> | ErrorResponse union — narrow to array
+      const arr = Array.isArray(data) ? data : ((data as { data?: DentalQueueModuleQueueItem[] })?.data ?? []);
+      return (arr as DentalQueueModuleQueueItem[]).map(toQueueItem);
+    },
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ itemId, status }: { itemId: string; status: QueueItemStatus }) => {
-      const res = await fetch(`${apiBaseUrl}/dental/queue-items/${itemId}/status`, {
-        method: 'PATCH',
-        credentials: 'include', // QA-005: auth-gated mutation — send the session cookie
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error(`Failed to update queue item status (${res.status})`);
-      return res.json() as Promise<QueueItem>;
-    },
+    ...updateQueueItemStatusMutation(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queueBoardQueryKey(branchId) });
+      qc.invalidateQueries({ queryKey: queueBoardKey(branchId) });
     },
   });
 
@@ -68,7 +70,7 @@ export function useQueueBoard(branchId: string) {
     isLoading: query.isLoading,
     isError: query.isError,
     updateStatus: (itemId: string, status: QueueItemStatus) =>
-      updateStatus.mutate({ itemId, status }),
+      updateStatus.mutate({ path: { itemId }, body: { status } }),
     isUpdating: updateStatus.isPending,
   };
 }

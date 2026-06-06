@@ -1,11 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useMemo } from 'react'
-import { apiBaseUrl } from '@/lib/config'
+import {
+  cephMgmtListCephLandmarks,
+  cephMgmtUpdateCephLandmark,
+  cephMgmtBatchUpsertCephLandmarks,
+  cephMgmtDeleteCephLandmark,
+  cephMgmtDetectCephLandmarks,
+} from '@monobase/sdk-ts/generated'
+import type {
+  DentalImagingModuleCephLandmark,
+  DentalImagingModuleCephAnalysis,
+  DentalImagingModuleCephLandmarkListResponse,
+  DentalImagingModuleCephLandmarkDetectionResult,
+  DentalImagingModuleCephLandmarkInput,
+} from '@monobase/sdk-ts/generated'
 
 export type CephLandmarkCode = 'S' | 'N' | 'A' | 'B' | 'ANS' | 'PNS' | 'Go' | 'Po' | 'Me' | 'Or' | 'Pog' | 'Gn' | 'U1T' | 'U1A' | 'L1T' | 'L1A'
 export type CephLandmarkSource = 'manual' | 'ai' | 'ai_corrected'
 export type CephLandmarkStatus = 'placed' | 'confirmed' | 'locked'
 
+// View-model: timestamps as ISO strings (consumers treat them as strings).
+// SDK types them as Date; we normalize in the queryFn below.
 export interface CephLandmark {
   id: string
   imageId: string
@@ -77,6 +92,68 @@ export interface CephDetectionResult {
  */
 export const CEPH_LOW_CONFIDENCE_THRESHOLD = 0.6
 
+// SDK transforms Date fields; normalize to ISO strings for the view-model.
+const toIso = (d: Date | string | undefined | null): string =>
+  d == null ? '' : d instanceof Date ? d.toISOString() : String(d)
+
+function sdkLandmarkToViewModel(l: DentalImagingModuleCephLandmark): CephLandmark {
+  return {
+    id: l.id,
+    imageId: l.imageId,
+    landmarkCode: l.landmarkCode as CephLandmarkCode,
+    x: l.x,
+    y: l.y,
+    source: l.source as CephLandmarkSource,
+    confidence: l.confidence,
+    status: l.status as CephLandmarkStatus,
+    createdAt: toIso(l.createdAt),
+    updatedAt: toIso(l.updatedAt),
+  }
+}
+
+function sdkAnalysisToViewModel(a: DentalImagingModuleCephAnalysis): CephAnalysis {
+  return {
+    imageId: a.imageId,
+    analysisType: a.analysisType,
+    measurements: a.measurements as Record<string, number | null>,
+    missing: a.missing,
+    uncalibrated: a.uncalibrated,
+    calibrationValue: a.calibrationValue,
+    calibrationMethod: a.calibrationMethod,
+    calibratedAt: a.calibratedAt != null ? toIso(a.calibratedAt) : null,
+    calibratedBy: a.calibratedBy,
+    updatedAt: toIso(a.updatedAt),
+  }
+}
+
+function sdkResponseToViewModel(
+  raw: DentalImagingModuleCephLandmarkListResponse,
+): CephLandmarksResponse {
+  return {
+    items: raw.items.map(sdkLandmarkToViewModel),
+    analysis: sdkAnalysisToViewModel(raw.analysis),
+  }
+}
+
+/** Narrow data from DentalImagingModuleCephLandmarkListResponse | ErrorResponse to the success type. */
+function narrowLandmarkResponse(
+  data: DentalImagingModuleCephLandmarkListResponse | { error: unknown },
+): DentalImagingModuleCephLandmarkListResponse {
+  if ('error' in data) throw new Error(String((data as { error: unknown }).error))
+  return data as DentalImagingModuleCephLandmarkListResponse
+}
+
+/** Normalize a non-Error thrown value (SDK throws parsed body on non-2xx) to an Error. */
+function normalizeThrown(e: unknown): never {
+  if (e instanceof Error) throw e
+  const msg = typeof e === 'string'
+    ? e
+    : (e as Record<string, unknown>)?.code != null
+      ? String((e as Record<string, unknown>).code)
+      : JSON.stringify(e)
+  throw new Error(msg)
+}
+
 export function useCephLandmarks(imageId: string) {
   const queryClient = useQueryClient()
   const seqRef = useRef(0)
@@ -88,11 +165,12 @@ export function useCephLandmarks(imageId: string) {
   const query = useQuery({
     queryKey: landmarksQueryKey,
     queryFn: async (): Promise<CephLandmarksResponse> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks`, {
-        credentials: 'include',
+      const { data } = await cephMgmtListCephLandmarks({
+        path: { imageId },
+        throwOnError: true,
       })
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<CephLandmarksResponse>
+      // With throwOnError: true, ErrorResponse is thrown; narrow for TypeScript.
+      return sdkResponseToViewModel(narrowLandmarkResponse(data))
     },
     enabled,
     staleTime: 30_000,
@@ -121,20 +199,17 @@ export function useCephLandmarks(imageId: string) {
   >({
     mutationFn: async (vars) => {
       const seq = seqRef.current
-      const body: Record<string, unknown> = { x: vars.x, y: vars.y }
-      if (vars.status) body.status = vars.status
-      const res = await fetch(
-        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/${vars.code}`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+      const { data } = await cephMgmtUpdateCephLandmark({
+        path: { imageId, landmarkCode: vars.code },
+        body: {
+          x: vars.x,
+          y: vars.y,
+          ...(vars.status ? { status: vars.status } : {}),
         },
-      )
-      if (!res.ok) throw new Error(await res.text())
-      const data = (await res.json()) as CephLandmarksResponse
-      return { ...data, _seq: seq }
+        throwOnError: true,
+      })
+      const normalized = sdkResponseToViewModel(narrowLandmarkResponse(data))
+      return { ...normalized, _seq: seq }
     },
     onMutate: async (vars) => {
       seqRef.current += 1
@@ -170,14 +245,25 @@ export function useCephLandmarks(imageId: string) {
 
   const batchUpsert = useMutation({
     mutationFn: async (landmarks: CephLandmarkInput[]): Promise<CephLandmarksResponse> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ landmarks }),
-      })
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<CephLandmarksResponse>
+      // Map local input to SDK input: drop null confidence (SDK accepts undefined only).
+      const sdkLandmarks: DentalImagingModuleCephLandmarkInput[] = landmarks.map((l) => ({
+        landmarkCode: l.landmarkCode,
+        x: l.x,
+        y: l.y,
+        ...(l.source ? { source: l.source } : {}),
+        ...(l.confidence != null ? { confidence: l.confidence } : {}),
+        ...(l.status ? { status: l.status } : {}),
+      }))
+      try {
+        const { data } = await cephMgmtBatchUpsertCephLandmarks({
+          path: { imageId },
+          body: { landmarks: sdkLandmarks },
+          throwOnError: true,
+        })
+        return sdkResponseToViewModel(narrowLandmarkResponse(data))
+      } catch (e: unknown) {
+        normalizeThrown(e)
+      }
     },
     onSuccess: (data) => {
       queryClient.setQueryData<CephLandmarksResponse>(landmarksQueryKey, data)
@@ -191,11 +277,10 @@ export function useCephLandmarks(imageId: string) {
 
   const deleteLandmark = useMutation({
     mutationFn: async (code: CephLandmarkCode): Promise<void> => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/${code}`,
-        { method: 'DELETE', credentials: 'include' },
-      )
-      if (!res.ok && res.status !== 204) throw new Error(await res.text())
+      await cephMgmtDeleteCephLandmark({
+        path: { imageId, landmarkCode: code },
+        throwOnError: true,
+      })
     },
     onMutate: async (code) => {
       await queryClient.cancelQueries({ queryKey: landmarksQueryKey })
@@ -223,12 +308,32 @@ export function useCephLandmarks(imageId: string) {
   // gating surfaces as a thrown error (reuses isAddonError / FEATURE_DISABLED).
   const autoDetect = useMutation<CephDetectionResult, Error, void>({
     mutationFn: async (): Promise<CephDetectionResult> => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/landmarks/detect`,
-        { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } },
-      )
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<CephDetectionResult>
+      try {
+        const { data } = await cephMgmtDetectCephLandmarks({
+          path: { imageId },
+          throwOnError: true,
+        })
+        // data is DentalImagingModuleCephLandmarkDetectionResult | ErrorResponse.
+        if ('error' in data) throw new Error(String((data as { error: unknown }).error))
+        const raw = data as DentalImagingModuleCephLandmarkDetectionResult
+        return {
+          jobId: raw.jobId,
+          status: raw.status,
+          modelVersion: raw.modelVersion,
+          provider: raw.provider,
+          predictions: raw.predictions.map((p) => ({
+            landmarkCode: p.landmarkCode as CephLandmarkCode,
+            x: p.x,
+            y: p.y,
+            confidence: p.confidence,
+          })),
+          items: raw.items.map(sdkLandmarkToViewModel),
+          analysis: raw.analysis ? sdkAnalysisToViewModel(raw.analysis) : null,
+          error: raw.error,
+        }
+      } catch (e: unknown) {
+        normalizeThrown(e)
+      }
     },
     onSuccess: (data) => {
       if (data.analysis) {

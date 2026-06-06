@@ -11,7 +11,13 @@ import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PMDImport } from './pmd-import';
+
+function makeWrapper(children: React.ReactNode) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return React.createElement(QueryClientProvider, { client: qc }, children);
+}
 
 function installFetch(ok = true) {
   const calls: Array<{ url: string; method: string; body: any }> = [];
@@ -32,13 +38,13 @@ function installFetch(ok = true) {
 function renderImport(props: Partial<React.ComponentProps<typeof PMDImport>> = {}) {
   const onImported = props.onImported ?? mock(() => {});
   render(
-    React.createElement(PMDImport, {
+    makeWrapper(React.createElement(PMDImport, {
       patientId: 'p-1',
       open: true,
       onClose: () => {},
       onImported,
       ...props,
-    }),
+    })),
   );
   return { onImported };
 }

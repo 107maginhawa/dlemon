@@ -9,56 +9,43 @@
  *      POST /dental/patients/:patientId/treatment-options/:optionGroupId/accept
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  listTreatmentOptionGroupOptions,
+  listTreatmentOptionGroupQueryKey,
+  acceptTreatmentOptionMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type {
+  DentalPatientFinanceModuleTreatmentOptionGroup,
+  DentalPatientFinanceModuleTreatmentOption,
+} from '@monobase/sdk-ts/generated';
 
-export interface TreatmentOption {
-  id: string;
-  status: string;
-  recommended: boolean;
-}
-
-export interface TreatmentOptionGroup {
-  optionGroupId: string;
-  options: TreatmentOption[];
-}
-
-function optionGroupQueryKey(patientId: string, optionGroupId: string) {
-  return ['dental-treatment-option-group', patientId, optionGroupId] as const;
-}
+// Re-export SDK types under the original public names so consumers stay green.
+export type TreatmentOption = DentalPatientFinanceModuleTreatmentOption;
+export type TreatmentOptionGroup = DentalPatientFinanceModuleTreatmentOptionGroup;
 
 export function useTreatmentOptions(patientId: string, optionGroupId: string) {
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: optionGroupQueryKey(patientId, optionGroupId),
-    queryFn: async (): Promise<TreatmentOptionGroup> => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/patients/${patientId}/treatment-options/${optionGroupId}`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) throw new Error(`Failed to fetch treatment options (${res.status})`);
-      return res.json() as Promise<TreatmentOptionGroup>;
-    },
+    ...listTreatmentOptionGroupOptions({ path: { patientId, optionGroupId } }),
     enabled: Boolean(patientId && optionGroupId),
     staleTime: 30_000,
+    select: (data): TreatmentOptionGroup | undefined => {
+      // SDK response is DentalPatientFinanceModuleTreatmentOptionGroup | ErrorResponse.
+      // Narrow to the group branch; ErrorResponse lacks an 'optionGroupId' field.
+      if (data && typeof data === 'object' && 'optionGroupId' in data) {
+        return data as TreatmentOptionGroup;
+      }
+      return undefined;
+    },
   });
 
   const accept = useMutation({
-    mutationFn: async (chosenTreatmentId: string) => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/patients/${patientId}/treatment-options/${optionGroupId}/accept`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chosenTreatmentId }),
-        },
-      );
-      if (!res.ok) throw new Error(`Failed to accept treatment option (${res.status})`);
-      return res.json();
-    },
+    ...acceptTreatmentOptionMutation(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: optionGroupQueryKey(patientId, optionGroupId) });
+      qc.invalidateQueries({
+        queryKey: listTreatmentOptionGroupQueryKey({ path: { patientId, optionGroupId } }),
+      });
     },
   });
 
@@ -66,7 +53,8 @@ export function useTreatmentOptions(patientId: string, optionGroupId: string) {
     optionGroup: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
-    acceptOption: (chosenTreatmentId: string) => accept.mutate(chosenTreatmentId),
+    acceptOption: (chosenTreatmentId: string) =>
+      accept.mutate({ path: { patientId, optionGroupId }, body: { chosenTreatmentId } }),
     isAccepting: accept.isPending,
   };
 }

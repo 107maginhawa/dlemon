@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@monobase/ui';
-import { apiBaseUrl } from '@/lib/config';
+import { useMutation } from '@tanstack/react-query';
+import {
+  createOnboardingMutation,
+  dentalMembershipManagementSetPinMutation,
+  createDentalPatientMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type {
+  DentalOrgModuleOnboardingResponse,
+} from '@monobase/sdk-ts/generated';
+import { SdkError } from '@monobase/sdk-ts/client';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { ClinicStep } from './wizard-step-clinic';
 import { DentistStep } from './wizard-step-dentist';
 import { FeesStep, type FeeEntry, DEFAULT_FEES } from './wizard-step-fees';
 import { PatientStep } from './wizard-step-patient';
-
-const API = apiBaseUrl;
 
 type Step = 'clinic' | 'dentist' | 'fees' | 'patient';
 const STEPS: Step[] = ['clinic', 'dentist', 'fees', 'patient'];
@@ -80,6 +87,11 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const stepIndex = STEPS.indexOf(step);
   const isLast = stepIndex === STEPS.length - 1;
 
+  // SDK mutations — transport configured globally via ApiProvider
+  const onboardMut = useMutation(createOnboardingMutation());
+  const setPinMut = useMutation(dentalMembershipManagementSetPinMutation());
+  const createPatientMut = useMutation(createDentalPatientMutation());
+
   useEffect(() => {
     saveState({ step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees });
   }, [step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees]);
@@ -125,64 +137,89 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       // ONE atomic self-service call provisions org + default branch + owner
       // membership (replaces the old org→branch→member sequence that could leave a
       // half-provisioned tenant and trap a localStorage resume into a 409).
-      const onbRes = await fetch(`${API}/dental/onboarding`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({
-          organizationName: clinicName.trim(),
-          tier: 'solo',
-          countryCode,
-          branchName: 'Main Branch',
-          timezone: 'Asia/Manila',
-          address: address.trim() || undefined,
-          phone: clinicPhone.trim() || undefined,
-          ownerDisplayName: dentistName.trim() || undefined,
-        }),
-      });
-
-      if (onbRes.status === 409) {
-        // Already have an active clinic — the tenant is fully provisioned, so it is
-        // always safe to drop straight into the dashboard.
-        localStorage.removeItem(STORAGE_KEY);
-        onComplete();
-        return;
+      let onb: DentalOrgModuleOnboardingResponse;
+      try {
+        const result = await onboardMut.mutateAsync({
+          body: {
+            organizationName: clinicName.trim(),
+            tier: 'solo',
+            countryCode,
+            branchName: 'Main Branch',
+            timezone: 'Asia/Manila',
+            address: address.trim() || undefined,
+            phone: clinicPhone.trim() || undefined,
+            ownerDisplayName: dentistName.trim() || undefined,
+          },
+        });
+        // result is DentalOrgModuleOnboardingResponse | ErrorResponse union (200 | 201)
+        // When 201, it has organizationId/branchId/membershipId
+        onb = result as DentalOrgModuleOnboardingResponse;
+      } catch (err) {
+        // Preserve the bespoke 409/403/429 semantics exactly as the raw-fetch version did.
+        if (err instanceof SdkError) {
+          if (err.status === 409) {
+            // Already have an active clinic — fully provisioned, drop to dashboard.
+            localStorage.removeItem(STORAGE_KEY);
+            onComplete();
+            return;
+          }
+          const body = err.body as { code?: string; message?: string } | null;
+          const code = body?.code;
+          if (err.status === 403 && code === 'EMAIL_NOT_VERIFIED') {
+            throw new Error('Please verify your email address before creating a clinic.');
+          }
+          if (err.status === 403 && code === 'TIER_NOT_SELF_SERVICE') {
+            throw new Error('Group and enterprise plans are set up by our team — please contact support.');
+          }
+          if (err.status === 429) {
+            throw new Error('Too many attempts. Please wait a moment and try again.');
+          }
+          throw new Error(body?.message || `Clinic setup failed (${err.status})`);
+        }
+        throw err;
       }
-      if (!onbRes.ok) {
-        const e = await onbRes.json().catch(() => ({}));
-        const code = e.code as string | undefined;
-        if (onbRes.status === 403 && code === 'EMAIL_NOT_VERIFIED') {
-          throw new Error('Please verify your email address before creating a clinic.');
-        }
-        if (onbRes.status === 403 && code === 'TIER_NOT_SELF_SERVICE') {
-          throw new Error('Group and enterprise plans are set up by our team — please contact support.');
-        }
-        if (onbRes.status === 429) {
-          throw new Error('Too many attempts. Please wait a moment and try again.');
-        }
-        throw new Error(e.message || `Clinic setup failed (${onbRes.status})`);
-      }
-      const onb = await onbRes.json() as { organizationId: string; branchId: string; membershipId: string };
 
       useOrgContextStore.getState().setContext({ orgId: onb.organizationId, branchId: onb.branchId, memberId: onb.membershipId });
 
       // Set the owner's PIN on the membership the onboarding call created.
-      const pinRes = await fetch(`${API}/dental/organizations/${onb.organizationId}/branches/${onb.branchId}/members/${onb.membershipId}/set-pin`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ pin }),
-      });
-      if (!pinRes.ok) { const e = await pinRes.json().catch(() => ({})); throw new Error(e.message || `PIN setup failed (${pinRes.status})`); }
+      try {
+        await setPinMut.mutateAsync({
+          path: {
+            orgId: onb.organizationId,
+            branchId: onb.branchId,
+            membershipId: onb.membershipId,
+          },
+          body: { pin },
+        });
+      } catch (err) {
+        if (err instanceof SdkError) {
+          const body = err.body as { message?: string } | null;
+          throw new Error(body?.message || `PIN setup failed (${err.status})`);
+        }
+        throw err;
+      }
 
       if (!skipPatient && patientName.trim()) {
         // createDentalPatient REQUIRES branchId AND consentGiven=true (else
         // CONSENT_REQUIRED). Registering the first patient implies the owner
         // captured registration consent. Surface a failure rather than silently
         // dropping the patient the user just entered.
-        const patRes = await fetch(`${API}/dental/patients`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ displayName: patientName.trim(), dateOfBirth: birthDate, gender, branchId: onb.branchId, consentGiven: true }),
-        });
-        if (!patRes.ok) {
-          const e = await patRes.json().catch(() => ({}));
-          throw new Error(e.message || `First patient could not be created (${patRes.status})`);
+        try {
+          await createPatientMut.mutateAsync({
+            body: {
+              displayName: patientName.trim(),
+              dateOfBirth: birthDate,
+              gender,
+              branchId: onb.branchId,
+              consentGiven: true,
+            },
+          });
+        } catch (err) {
+          if (err instanceof SdkError) {
+            const body = err.body as { message?: string } | null;
+            throw new Error(body?.message || `First patient could not be created (${err.status})`);
+          }
+          throw err;
         }
       }
 

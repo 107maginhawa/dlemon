@@ -1,6 +1,25 @@
+/**
+ * useImagingUpload — hook for uploading imaging files
+ *
+ * Split-case migration (mirrors use-attachments gold standard):
+ *   MIGRATED to SDK: POST /dental/imaging/studies → imagingMgmtCreateImagingStudy
+ *   KEPT RAW (binary upload flow):
+ *     - presigned single PUT to uploadUrl (S3/MinIO, no auth cookie)
+ *     - presigned multipart PUTs to partUrls[i] (S3/MinIO, no auth cookie)
+ *     - POST /storage/multipart/{fileId}/complete (multipart completion)
+ *     - DELETE /storage/multipart/{fileId}/abort (error cleanup)
+ *
+ * The storage endpoints ride a separate binary-upload flow and must stay as raw
+ * fetch — they either go direct to S3/MinIO (no session) or carry a specific
+ * Content-Type that the SDK JSON transport would corrupt.
+ */
 import { useState, useRef } from 'react'
 import { apiBaseUrl } from '@/lib/config'
 import { DICOM_MIME_TYPE, isDicomMimeType, parseDicomPixelSpacing } from '@/features/imaging/lib/dicom'
+import {
+  imagingMgmtCreateImagingStudy,
+  type DentalImagingModuleModalityEnum,
+} from '@monobase/sdk-ts/generated'
 
 export interface UploadOptions {
   patientId: string
@@ -8,17 +27,6 @@ export interface UploadOptions {
   visitId?: string
   modality?: string
   toothNumbers?: number[]
-}
-
-interface InitResponse {
-  study: { id: string }
-  uploadUrl: string
-  uploadMethod: string
-  fileId: string
-  uploadId?: string
-  partSize?: number
-  partCount?: number
-  partUrls?: string[]
 }
 
 export function useImagingUpload() {
@@ -51,56 +59,61 @@ export function useImagingUpload() {
         }
       }
 
-      // 1. Initiate imaging study + get the upload envelope (single PUT or multipart)
-      // QA-006: auth-gated API POST — must send the session cookie or it 401s.
-      const initRes = await fetch(`${apiBaseUrl}/dental/imaging/studies`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // 1. Initiate imaging study + get the upload envelope (single PUT or multipart).
+      //    MIGRATED: was raw fetch → now SDK call (handles auth cookie via ApiProvider).
+      const { data: initData } = await imagingMgmtCreateImagingStudy({
+        body: {
           patientId: options.patientId,
           branchId: options.branchId,
-          visitId: options.visitId,
-          modality: options.modality ?? 'other',
+          ...(options.visitId ? { visitId: options.visitId } : {}),
+          modality: (options.modality ?? 'other') as DentalImagingModuleModalityEnum,
           filename: file.name,
           mimeType,
-          size: file.size,
+          size: BigInt(file.size),
           toothNumbers: options.toothNumbers ?? [],
           ...(pixelSpacingMm != null ? { pixelSpacingMm } : {}),
-        }),
-        signal,
+        },
+        throwOnError: true,
       })
-      if (!initRes.ok) throw new Error(await initRes.text())
-      const init = (await initRes.json()) as InitResponse
-      const { study, uploadUrl, uploadMethod } = init
-      fileId = init.fileId
+
+      // Narrow union: DentalImagingModuleCreateImagingStudyResponse | ErrorResponse.
+      // ErrorResponse is discriminated by a top-level `error` object.
+      if (!initData || 'error' in initData) {
+        throw new Error(initData?.error?.message ?? 'Failed to initiate imaging study')
+      }
+
+      const { study, uploadUrl, uploadMethod } = initData
+      fileId = initData.fileId
 
       setProgress(10)
 
-      if (uploadMethod === 'MULTIPART' && init.uploadId && init.partUrls?.length) {
+      if (uploadMethod === 'MULTIPART' && initData.uploadId && initData.partUrls?.length) {
         // 2a. Large DICOM/CBCT: upload each part to its presigned URL, collect ETags,
         //     then complete the multipart upload via the storage endpoint.
-        const partSize = init.partSize ?? 5 * 1024 * 1024
+        //     KEPT RAW: presigned S3/MinIO PUTs carry no session cookie.
+        const partSize = initData.partSize != null ? Number(initData.partSize) : 5 * 1024 * 1024
         const parts: { partNumber: number; etag: string }[] = []
-        for (let i = 0; i < init.partUrls.length; i++) {
+        for (let i = 0; i < initData.partUrls.length; i++) {
           const start = i * partSize
           const chunk = file.slice(start, Math.min(start + partSize, file.size))
-          const partRes = await fetch(init.partUrls[i]!, { method: 'PUT', body: chunk, signal })
+          const partRes = await fetch(initData.partUrls[i]!, { method: 'PUT', body: chunk, signal })
           if (!partRes.ok) throw new Error('Storage multipart part upload failed')
           const etag = partRes.headers.get('ETag') ?? partRes.headers.get('etag') ?? ''
           parts.push({ partNumber: i + 1, etag })
-          setProgress(10 + Math.round(((i + 1) / init.partUrls.length) * 85))
+          setProgress(10 + Math.round(((i + 1) / initData.partUrls.length) * 85))
         }
+        // KEPT RAW: /storage/multipart/complete is a storage-layer endpoint, not dental API.
         const completeRes = await fetch(`${apiBaseUrl}/storage/multipart/${fileId}/complete`, {
           method: 'POST',
           credentials: 'include', // QA-006: auth-gated API call
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uploadId: init.uploadId, parts }),
+          body: JSON.stringify({ uploadId: initData.uploadId, parts }),
           signal,
         })
         if (!completeRes.ok) throw new Error('Storage multipart completion failed')
       } else {
         // 2b. Single PUT (unchanged for ordinary X-ray/photo uploads).
+        //     KEPT RAW: presigned S3/MinIO PUT carries no session cookie.
         const uploadRes = await fetch(uploadUrl, { method: uploadMethod, body: file, signal })
         if (!uploadRes.ok) throw new Error('Storage upload failed')
       }
@@ -109,6 +122,7 @@ export function useImagingUpload() {
       return { studyId: study.id }
     } catch (err) {
       // On error: abort any partial multipart at storage layer (DELETE /storage/multipart/{fileId}/abort)
+      // KEPT RAW: storage abort endpoint, not dental API.
       if (fileId) {
         fetch(`${apiBaseUrl}/storage/multipart/${fileId}/abort`, {
           method: 'DELETE',

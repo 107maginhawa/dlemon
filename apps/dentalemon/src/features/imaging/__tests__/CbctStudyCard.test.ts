@@ -87,7 +87,8 @@ describe('CbctStudyCard', () => {
 
     // The viewer-link endpoint (not a flat image) was hit.
     const fetchMock = global.fetch as unknown as { mock: { calls: unknown[][] } };
-    const url = fetchMock.mock.calls[0]?.[0] as string;
+    const firstArg = fetchMock.mock.calls[0]?.[0];
+    const url = firstArg instanceof Request ? firstArg.url : String(firstArg);
     expect(url).toMatch(/\/dental\/imaging\/studies\/study-cbct-1\/cbct\/viewer-link$/);
   });
 

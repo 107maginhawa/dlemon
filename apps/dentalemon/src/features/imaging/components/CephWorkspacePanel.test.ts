@@ -11,7 +11,13 @@ import {
 import type { CephLandmark, CephLandmarksResponse } from '../hooks/use-ceph-landmarks'
 import type { CephAnalysis } from '../hooks/use-ceph-analysis'
 
-afterEach(cleanup)
+// Restore the real fetch between tests so a per-test mock never leaks into a
+// sibling file when the whole suite runs (defense against cross-test pollution).
+const realFetch = globalThis.fetch
+afterEach(() => {
+  cleanup()
+  globalThis.fetch = realFetch
+})
 
 function mkAnalysis(): CephAnalysis {
   return {
@@ -47,7 +53,9 @@ function mk(
 }
 
 function setFetch(landmarksResp: () => Promise<Response>, analysisResp: () => Promise<Response>) {
-  global.fetch = mock((url: string) => {
+  global.fetch = mock((req: Request | string | URL) => {
+    // SDK calls fetch(Request); extract the URL string from whatever arg type arrives.
+    const url = req instanceof Request ? req.url : String(req)
     if (url.includes('/ceph/analysis')) return analysisResp()
     return landmarksResp()
   }) as unknown as typeof fetch
@@ -315,7 +323,9 @@ describe('CephWorkspacePanel — Auto-detect (P1-10)', () => {
       createdAt: '',
       updatedAt: '',
     }
-    global.fetch = mock((url: string, init?: RequestInit) => {
+    global.fetch = mock((req: Request | string | URL) => {
+      // SDK calls fetch(Request); extract URL string regardless of arg type.
+      const url = req instanceof Request ? req.url : String(req)
       if (url.includes('/ceph/landmarks/detect')) {
         detectCalled = true
         return jsonResponse({
@@ -340,15 +350,20 @@ describe('CephWorkspacePanel — Auto-detect (P1-10)', () => {
     })) as HTMLButtonElement
     const user = userEvent.setup()
     await user.click(btn)
-    await waitFor(() => expect(detectCalled).toBe(true))
+    // The detect mutation goes through the SDK (async Request build + transformers),
+    // so give the assertions headroom beyond waitFor's 1s default to avoid flaking
+    // under full-suite CPU contention.
+    await waitFor(() => expect(detectCalled).toBe(true), { timeout: 4000 })
     // The AI point lands in the palette as "AI · unconfirmed".
-    await waitFor(() =>
-      expect(container.querySelector('[data-ai-unconfirmed="S"]')).not.toBeNull(),
+    await waitFor(
+      () => expect(container.querySelector('[data-ai-unconfirmed="S"]')).not.toBeNull(),
+      { timeout: 4000 },
     )
   })
 
   test('surfaces FEATURE_DISABLED kill-switch error distinctly', async () => {
-    global.fetch = mock((url: string) => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req)
       if (url.includes('/ceph/landmarks/detect'))
         return jsonResponse({ error: 'disabled', code: 'FEATURE_DISABLED' }, 403)
       if (url.includes('/ceph/analysis')) return jsonResponse({ items: [], analysis: mkAnalysis() })
@@ -361,10 +376,12 @@ describe('CephWorkspacePanel — Auto-detect (P1-10)', () => {
     })) as HTMLButtonElement
     const user = userEvent.setup()
     await user.click(btn)
-    await waitFor(() =>
-      expect(container.querySelector('[data-ai-detect-error]')?.textContent).toContain(
-        'disabled',
-      ),
+    await waitFor(
+      () =>
+        expect(container.querySelector('[data-ai-detect-error]')?.textContent).toContain(
+          'disabled',
+        ),
+      { timeout: 4000 },
     )
   })
 })

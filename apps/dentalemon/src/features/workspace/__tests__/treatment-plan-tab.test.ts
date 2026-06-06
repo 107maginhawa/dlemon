@@ -162,13 +162,24 @@ describe('TreatmentPlanTab', () => {
 
   test('J06: changing the phase selector PATCHes the treatment phase', async () => {
     const calls: Array<{ url: string; method?: string; body: Record<string, unknown> | undefined }> = [];
-    global.fetch = mock((async (url: string, init?: RequestInit) => {
-      calls.push({
-        url,
-        method: init?.method,
-        body: init?.body ? JSON.parse(init.body as string) : undefined,
-      });
-      if (init?.method === 'PATCH') return jsonResponse({ ...DIAGNOSED_ITEM, phase: 'definitive' });
+    // assignPhase goes through the SDK, which issues fetch(new Request(...)).
+    // Normalize both the Request form and the legacy (url, init) form so the
+    // assertions still verify URL + method + body exactly.
+    global.fetch = mock((async (input: RequestInfo | URL, init?: RequestInit) => {
+      let url: string;
+      let method: string | undefined;
+      let bodyText: string | undefined;
+      if (input instanceof Request) {
+        url = input.url;
+        method = input.method;
+        bodyText = input.body ? await input.clone().text() : undefined;
+      } else {
+        url = String(input);
+        method = init?.method;
+        bodyText = init?.body as string | undefined;
+      }
+      calls.push({ url, method, body: bodyText ? JSON.parse(bodyText) : undefined });
+      if (method === 'PATCH') return jsonResponse({ ...DIAGNOSED_ITEM, phase: 'definitive' });
       return jsonResponse(PLAN_RESPONSE);
     }) as Parameters<typeof mock>[0]);
     const qc = freshClient();

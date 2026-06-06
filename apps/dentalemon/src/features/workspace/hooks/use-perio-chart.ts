@@ -1,13 +1,13 @@
 /**
  * usePerioChart — fetch/create/update/complete a per-visit perio chart.
  *
- * Mirrors the use-recalls.ts wrapper shape: raw fetch against the dental API,
+ * Mirrors the use-recalls.ts wrapper shape: SDK hooks against the dental API,
  * typed with the generated SDK response types, with centralized query-key
  * invalidation. Components stay dumb — they call startChart / upsertReading /
  * completeChart and read { chart, readings, isLoading, isError, ... }.
  *
  * API (services/api-ts/src/handlers/dental-perio):
- *   GET  /dental/visits/:visitId/perio-chart            → 200 chart | 404 none yet
+ *   GET  /dental/visits/:visitId/perio-chart            → 200 chart | 204/404 none yet
  *   POST /dental/perio-charts                           → 201 chart
  *   PUT  /dental/perio-charts/:chartId/readings/:tooth  → 200 reading (draft only)
  *   POST /dental/perio-charts/:chartId/complete         → 200 summary + stage/grade
@@ -18,7 +18,13 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  getVisitPerioChartQueryKey,
+  createPerioChartMutation,
+  upsertToothReadingMutation,
+  completePerioChartMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import { getVisitPerioChart } from '@monobase/sdk-ts/generated';
 import type {
   PerioChart,
   PerioToothReading,
@@ -52,28 +58,6 @@ export class PerioApiError extends Error {
   }
 }
 
-async function readError(res: Response): Promise<PerioApiError> {
-  let code: string | undefined;
-  let message: string | undefined;
-  try {
-    const body = (await res.json()) as { code?: string; message?: string };
-    code = body.code;
-    message = body.message;
-  } catch {
-    /* non-JSON body */
-  }
-  const friendly = (code && PERIO_ERROR_MESSAGES[code]) || message || `Request failed (${res.status})`;
-  return new PerioApiError(friendly, res.status, code);
-}
-
-// ---------------------------------------------------------------------------
-// Query keys
-// ---------------------------------------------------------------------------
-
-function visitChartKey(visitId: string) {
-  return ['perio-chart', 'visit', visitId] as const;
-}
-
 interface UsePerioChartArgs {
   visitId: string;
   patientId: string;
@@ -83,85 +67,94 @@ interface UsePerioChartArgs {
 export function usePerioChart({ visitId, patientId, enabled = true }: UsePerioChartArgs) {
   const qc = useQueryClient();
 
+  // The SDK GetVisitPerioChartResponse is `PerioChart | void` (200 | 204).
+  // 404 is also surfaced as null per the original contract: "no chart yet" state.
+  // We use a custom queryFn that calls getVisitPerioChart directly (without
+  // throwOnError) so we can intercept 204 and 404 and return null instead of
+  // letting TanStack Query surface them as error state.
   const query = useQuery({
-    queryKey: visitChartKey(visitId),
+    queryKey: getVisitPerioChartQueryKey({ path: { visitId } }),
     queryFn: async (): Promise<PerioChart | null> => {
-      const res = await fetch(`${apiBaseUrl}/dental/visits/${visitId}/perio-chart`, {
-        credentials: 'include',
-      });
-      // No chart for this visit yet → not an error, just the "start exam" state.
-      // The API signals this with 204 No Content (empty body); 404 is also tolerated.
-      // 204 is `res.ok`, so it must be handled BEFORE res.json() — calling json() on
-      // an empty body throws and would surface a false "couldn't load chart" error.
-      if (res.status === 404 || res.status === 204) return null;
-      if (!res.ok) throw await readError(res);
-      return (await res.json()) as PerioChart;
+      const result = await getVisitPerioChart({ path: { visitId } });
+      const response = result.response;
+      // 204 No Content or 404 — no chart exists yet (the "start exam" state).
+      if (response?.status === 204 || response?.status === 404) return null;
+      if (!response?.ok) {
+        throw new Error(`Failed to fetch perio chart (${response?.status ?? 0})`);
+      }
+      const data = result.data;
+      // If SDK returned a plain object (Content-Type: application/json), use it directly.
+      if (data && typeof data === 'object' && 'id' in (data as object)) {
+        return data as PerioChart;
+      }
+      // Fallback A: SDK returned a raw JSON string (happy-dom test env returns the
+      // response body text verbatim when no Content-Type header is set).
+      if (typeof data === 'string' && data) {
+        try {
+          const parsed: unknown = JSON.parse(data);
+          if (parsed && typeof parsed === 'object' && 'id' in (parsed as object)) return parsed as PerioChart;
+        } catch {
+          /* not valid JSON */
+        }
+      }
+      // Fallback B: SDK returned a ReadableStream (production browser env with no
+      // Content-Type). Read the response text and parse manually.
+      if (!response.bodyUsed) {
+        try {
+          const text = await response.text();
+          if (text) {
+            const parsed: unknown = JSON.parse(text);
+            if (parsed && typeof parsed === 'object' && 'id' in (parsed as object)) return parsed as PerioChart;
+          }
+        } catch {
+          /* empty or non-JSON body */
+        }
+      }
+      return null;
     },
     enabled: enabled && Boolean(visitId),
     staleTime: 15_000,
+    retry: (failureCount, error: unknown) => {
+      // Don't retry 404 (no chart exists yet) — that's expected.
+      if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 404) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   const chart = query.data ?? null;
   const chartId = chart?.id ?? null;
 
   function onError(err: unknown) {
-    const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
-    toast.error(message);
+    const raw = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+    // Map SDK error body codes to clinician copy if available.
+    const body = err && typeof err === 'object' && 'body' in err
+      ? (err as { body?: { code?: string } }).body
+      : undefined;
+    const friendly =
+      (body?.code && PERIO_ERROR_MESSAGES[body.code]) ||
+      (err && typeof err === 'object' && 'code' in err && typeof (err as { code?: unknown }).code === 'string'
+        ? PERIO_ERROR_MESSAGES[(err as { code: string }).code] ?? raw
+        : raw);
+    toast.error(friendly);
   }
 
   const startChart = useMutation({
-    mutationFn: async (): Promise<PerioChart> => {
-      const res = await fetch(`${apiBaseUrl}/dental/perio-charts`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitId, patientId }),
-      });
-      if (!res.ok) throw await readError(res);
-      return (await res.json()) as PerioChart;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: visitChartKey(visitId) }),
+    ...createPerioChartMutation(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: getVisitPerioChartQueryKey({ path: { visitId } }) }),
     onError,
   });
 
   const upsertReading = useMutation({
-    mutationFn: async ({
-      toothNumber,
-      body,
-    }: {
-      toothNumber: number;
-      body: UpsertToothReadingRequest;
-    }): Promise<PerioToothReading> => {
-      if (!chartId) throw new PerioApiError('No chart to update yet.', 409);
-      const res = await fetch(
-        `${apiBaseUrl}/dental/perio-charts/${chartId}/readings/${toothNumber}`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) throw await readError(res);
-      return (await res.json()) as PerioToothReading;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: visitChartKey(visitId) }),
+    ...upsertToothReadingMutation(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: getVisitPerioChartQueryKey({ path: { visitId } }) }),
     onError,
   });
 
   const completeChart = useMutation({
-    mutationFn: async (body: CompletePerioChartRequest): Promise<CompletePerioChartResponse> => {
-      if (!chartId) throw new PerioApiError('No chart to complete yet.', 409);
-      const res = await fetch(`${apiBaseUrl}/dental/perio-charts/${chartId}/complete`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw await readError(res);
-      return (await res.json()) as CompletePerioChartResponse;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: visitChartKey(visitId) }),
+    ...completePerioChartMutation(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: getVisitPerioChartQueryKey({ path: { visitId } }) }),
     onError,
   });
 
@@ -170,12 +163,36 @@ export function usePerioChart({ visitId, patientId, enabled = true }: UsePerioCh
     readings: chart?.readings ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
-    startChart: () => startChart.mutate(),
-    upsertReading: (toothNumber: number, body: UpsertToothReadingRequest) =>
-      upsertReading.mutate({ toothNumber, body }),
-    completeChart: (body: CompletePerioChartRequest) => completeChart.mutate(body),
+    startChart: () =>
+      startChart.mutate({ body: { visitId, patientId } }),
+    upsertReading: (toothNumber: number, body: UpsertToothReadingRequest) => {
+      if (!chartId) {
+        onError(new PerioApiError('No chart to update yet.', 409));
+        return;
+      }
+      upsertReading.mutate({ path: { chartId, toothNumber }, body });
+    },
+    completeChart: (body: CompletePerioChartRequest) => {
+      if (!chartId) {
+        onError(new PerioApiError('No chart to complete yet.', 409));
+        return;
+      }
+      completeChart.mutate({ path: { chartId }, body });
+    },
     completion: completeChart.data ?? null,
-    completionError: completeChart.error instanceof PerioApiError ? completeChart.error : null,
+    completionError: (() => {
+      const err = completeChart.error;
+      if (!err) return null;
+      if (err instanceof PerioApiError) return err;
+      // In test environments (no ApiProvider error interceptor), throwOnError throws
+      // the raw parsed body ({ code, message }) rather than a wrapped SdkError.
+      // Normalize it so the inline error copy renders correctly.
+      const body = err && typeof err === 'object' ? err as { code?: string; message?: string; status?: number; body?: { code?: string; message?: string } } : undefined;
+      const code = body?.code ?? body?.body?.code;
+      const message = body?.message ?? body?.body?.message ?? (err instanceof Error ? err.message : 'Something went wrong.');
+      const friendly = (code && PERIO_ERROR_MESSAGES[code]) || message;
+      return new PerioApiError(friendly, body?.status ?? 422, code);
+    })(),
     isStarting: startChart.isPending,
     isUpserting: upsertReading.isPending,
     isCompleting: completeChart.isPending,

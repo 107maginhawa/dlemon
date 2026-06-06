@@ -1,5 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { apiBaseUrl } from '@/lib/config'
+import {
+  cephMgmtPreviewCephSuperimposition,
+  cephMgmtGetCephReport,
+} from '@monobase/sdk-ts/generated'
 import type { SimilarityTransform } from '@monobase/ceph-math'
 
 /** Registration reference. v1 supports `cranial_base` only. */
@@ -52,17 +55,45 @@ export function useCephSuperimpositionPreview() {
   return useMutation({
     mutationKey: ['ceph-superimposition-preview'],
     mutationFn: async (input: SuperimpositionInput): Promise<CephSuperimposition> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/ceph/superimpositions/preview`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+      const { data } = await cephMgmtPreviewCephSuperimposition({
+        body: input,
+        throwOnError: true,
       })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Superimposition failed (${res.status})`)
+      // data is DentalImagingModuleCephSuperimposition | ErrorResponse;
+      // narrow via 'patientId' discriminant (absent in ErrorResponse).
+      const raw = data as {
+        id: string | null
+        patientId: string
+        reportFromId: string
+        reportToId: string
+        reference: SuperimpositionReference
+        transform: SimilarityTransform
+        landmarkDeltas: CephLandmarkDelta[]
+        metricDeltas: CephMetricDelta[]
+        uncalibrated: boolean
+        calibrationBasis: Record<string, unknown>
+        label: string
+        createdAt: Date | string | null
       }
-      return (await res.json()) as CephSuperimposition
+      return {
+        id: raw.id,
+        patientId: raw.patientId,
+        reportFromId: raw.reportFromId,
+        reportToId: raw.reportToId,
+        reference: raw.reference,
+        transform: raw.transform,
+        landmarkDeltas: raw.landmarkDeltas,
+        metricDeltas: raw.metricDeltas,
+        uncalibrated: raw.uncalibrated,
+        calibrationBasis: raw.calibrationBasis,
+        label: raw.label,
+        createdAt:
+          raw.createdAt == null
+            ? null
+            : raw.createdAt instanceof Date
+            ? raw.createdAt.toISOString()
+            : String(raw.createdAt),
+      }
     },
   })
 }
@@ -82,13 +113,31 @@ export function useLatestCephReport(imageId: string | undefined) {
   return useQuery({
     queryKey: ['ceph-report-latest', imageId],
     queryFn: async (): Promise<LatestCephReport | null> => {
-      const res = await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/ceph/reports`, {
-        credentials: 'include',
+      // 404→null: use throwOnError: false so we get the response status from
+      // the result object (compatible with both the SdkError interceptor path
+      // in production and the bare mock-fetch path in unit tests).
+      const result = await cephMgmtGetCephReport({
+        path: { imageId: imageId! },
+        throwOnError: false,
       })
-      if (res.status === 404) return null
-      if (!res.ok) throw new Error(await res.text())
-      const data = (await res.json()) as { id: string; version: number; createdAt: string }
-      return { id: data.id, version: data.version, createdAt: data.createdAt }
+      // Access the raw HTTP response status from the resolved result.
+      const httpStatus = (result as { response?: Response }).response?.status
+      if (httpStatus === 404) return null
+      // Surface other non-2xx errors to TanStack Query's error boundary.
+      if (result.error != null) {
+        throw new Error(
+          typeof result.error === 'string'
+            ? result.error
+            : JSON.stringify(result.error),
+        )
+      }
+      const raw = result.data as { id: string; version: number; createdAt: Date | string }
+      return {
+        id: raw.id,
+        version: raw.version,
+        createdAt:
+          raw.createdAt instanceof Date ? raw.createdAt.toISOString() : String(raw.createdAt),
+      }
     },
     enabled: Boolean(imageId),
     staleTime: 30_000,

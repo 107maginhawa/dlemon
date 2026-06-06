@@ -18,7 +18,7 @@ import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
 import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
 import { BRAND_GOLD } from '@/constants/brand'
-import { apiBaseUrl } from '@/lib/config'
+import { imagingMgmtUpdateImageCalibration } from '@monobase/sdk-ts/generated'
 import {
   processToolClick,
   buildLabelMeasurement,
@@ -296,11 +296,10 @@ export function ImagingWorkspace({
     async (actualMm: number) => {
       if (calibrationPixelDist <= 0 || actualMm <= 0) return
       const pxMm = actualMm / calibrationPixelDist
-      await fetch(`${apiBaseUrl}/dental/imaging/images/${imageId}/calibration`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pixelSpacingMm: pxMm }),
+      await imagingMgmtUpdateImageCalibration({
+        path: { imageId },
+        body: { pixelSpacingMm: pxMm },
+        throwOnError: true,
       })
       setInternalPixelSpacingMm(pxMm)
       onCalibrationSaved?.(pxMm)

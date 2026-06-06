@@ -4,24 +4,37 @@
  * Covers the query happy path, empty result, disabled state (no patientId),
  * URL shape, and error handling.
  * Network fetch is mocked via global.fetch override — no MSW.
+ *
+ * NOTE: The SDK calls fetch(Request) — extract URL from the Request object
+ * when present. The SDK-generated query key differs from the old raw-fetch key;
+ * we check cache via the SDK key helper (patientImageMgmtListPatientImagesQueryKey).
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
 import { useImagingStudies, type PatientImageItem } from './use-imaging-studies';
+import { patientImageMgmtListPatientImagesQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
-function makeImageItem(overrides: Partial<PatientImageItem> = {}): PatientImageItem {
+// makeImageItem produces a wire-format shape (what the server sends over JSON).
+// fileSizeBytes is a plain number on the wire (SDK transforms to BigInt after parsing,
+// but there is no responseTransformer registered for this endpoint so the mock
+// represents raw JSON — and JSON.stringify cannot serialise BigInt literals).
+// createdAt is an ISO string on the wire (Date objects also aren't JSON-serialisable).
+function makeImageItem(overrides: Partial<Record<string, unknown>> = {}): PatientImageItem {
   return {
     id: 'img-1',
-    patientId: 'p1',
+    source: 'imaging',
     studyId: 'study-1',
-    type: 'periapical',
-    capturedAt: '2026-01-01T10:00:00Z',
-    thumbnailUrl: null,
-    fullUrl: null,
-    toothNumber: null,
+    visitId: null,
+    modality: 'periapical',
+    fileName: 'tooth.jpg',
+    mimeType: 'image/jpeg',
+    fileSizeBytes: 1024,           // wire format: number, not BigInt
+    toothNumbers: [],
+    createdAt: '2026-01-01T10:00:00.000Z',  // wire format: ISO string, not Date
+    downloadUrl: null,
     ...overrides,
-  } as PatientImageItem;
+  } as unknown as PatientImageItem;
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -128,7 +141,7 @@ describe('useImagingStudies', () => {
     expect(result.current.error).not.toBeNull();
   });
 
-  test('uses correct query key structure', async () => {
+  test('uses correct query key structure (SDK-keyed, per patient+branch)', async () => {
     global.fetch = mock(() => jsonResponse({ items: [], total: 0 }));
 
     const qc = freshClient();
@@ -137,9 +150,13 @@ describe('useImagingStudies', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // Query key includes patientId + branchId so cache is per-patient per-branch
+    // The SDK query key embeds patientId + branchId so cache is per-patient per-branch.
+    const sdkKey = patientImageMgmtListPatientImagesQueryKey({
+      path: { patientId: 'p1' },
+      query: { branchId: 'branch-1' },
+    });
     await waitFor(() =>
-      expect(qc.getQueryData(['imaging', 'patient', 'p1', 'branch-1'])).not.toBeUndefined(),
+      expect(qc.getQueryData(sdkKey)).not.toBeUndefined(),
     );
   });
 });

@@ -47,8 +47,8 @@ const DEFAULT_PROPS = {
 };
 
 beforeEach(() => {
-  // Default: GET returns empty findings list
-  global.fetch = mock(() => jsonResponse({ data: [] }));
+  // Default: GET returns empty findings list (SDK response shape: { items: [] })
+  global.fetch = mock(() => jsonResponse({ items: [] }));
 });
 
 afterEach(() => {
@@ -79,7 +79,7 @@ describe('FindingsSidebar', () => {
   });
 
   test('renders type labels for findings', async () => {
-    global.fetch = mock(() => jsonResponse({ data: [
+    global.fetch = mock(() => jsonResponse({ items: [
       makeFinding({ id: 'f1', type: 'secondary_caries' }),
       makeFinding({ id: 'f2', type: 'furcation_involvement' }),
     ] }));
@@ -92,15 +92,20 @@ describe('FindingsSidebar', () => {
     let patchUrl = '';
     let patchBody: Record<string, unknown> = {};
 
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
       const url = req instanceof Request ? req.url : String(req);
       const method = req instanceof Request ? req.method : (init?.method ?? 'GET');
       if (method === 'PATCH') {
         patchUrl = url;
-        patchBody = JSON.parse(init?.body as string ?? '{}');
+        // SDK passes body via Request object; raw fetch passes via init.body
+        if (req instanceof Request) {
+          try { patchBody = await req.json(); } catch { patchBody = {}; }
+        } else {
+          patchBody = JSON.parse(init?.body as string ?? '{}');
+        }
         return jsonResponse(makeFinding({ id: 'f1', status: 'confirmed' }));
       }
-      return jsonResponse({ data: [makeFinding({ id: 'f1', status: 'draft' })] });
+      return jsonResponse({ items: [makeFinding({ id: 'f1', status: 'draft' })] });
     });
 
     const user = userEvent.setup();
@@ -136,7 +141,7 @@ describe('FindingsSidebar', () => {
   });
 
   test('renders status badge text for findings', async () => {
-    global.fetch = mock(() => jsonResponse({ data: [makeFinding({ id: 'f1', status: 'confirmed' })] }));
+    global.fetch = mock(() => jsonResponse({ items: [makeFinding({ id: 'f1', status: 'confirmed' })] }));
     render(React.createElement(FindingsSidebar, DEFAULT_PROPS), { wrapper: makeWrapper() });
     await waitFor(() => expect(screen.getByText('confirmed')).not.toBeNull());
   });
@@ -151,7 +156,7 @@ describe('FindingsSidebar', () => {
         deleteUrl = url;
         return Promise.resolve(new Response(null, { status: 204 }));
       }
-      return jsonResponse({ data: [makeFinding({ id: 'f-del' })] });
+      return jsonResponse({ items: [makeFinding({ id: 'f-del' })] });
     });
 
     const user = userEvent.setup();

@@ -13,6 +13,7 @@ import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceDetail } from './invoice-detail';
 
 function baseInvoice(status: string) {
@@ -58,14 +59,19 @@ afterEach(cleanup);
 
 function renderDetail(props: Partial<React.ComponentProps<typeof InvoiceDetail>> = {}) {
   const onUpdated = props.onUpdated ?? mock(() => {});
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
-    React.createElement(InvoiceDetail, {
-      invoiceId: 'inv-1',
-      open: true,
-      onClose: () => {},
-      onUpdated,
-      ...props,
-    }),
+    React.createElement(
+      QueryClientProvider,
+      { client: qc },
+      React.createElement(InvoiceDetail, {
+        invoiceId: 'inv-1',
+        open: true,
+        onClose: () => {},
+        onUpdated,
+        ...props,
+      }),
+    ),
   );
   return { onUpdated };
 }

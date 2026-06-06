@@ -7,8 +7,16 @@
  * Wireframe: docs/prd/context/wireframes/invoice-detail.html
  */
 
-import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/lib/config';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getDentalInvoiceOptions,
+  getDentalInvoiceQueryKey,
+  issueDentalInvoiceMutation,
+  voidDentalInvoiceMutation,
+  markUncollectibleMutation,
+  recordDentalPaymentMutation,
+} from '@monobase/sdk-ts/generated/react-query';
 import {
   type InvoiceData,
   showIssueButton, showVoidButton, showRecordButton, showMarkUncollectibleButton,
@@ -23,8 +31,6 @@ export {
   showIssueButton, showVoidButton, showRecordButton,
   validatePaymentForm, buildPaymentPayload, calcChangeAmount,
 } from './invoice-detail.helpers';
-
-const API = apiBaseUrl;
 
 export interface InvoiceDetailProps {
   invoiceId: string;
@@ -45,135 +51,168 @@ export interface InvoiceDetailProps {
 }
 
 export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true }: InvoiceDetailProps) {
-  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [receiptNumber, setReceiptNumber] = useState('');
   const [paymentErrors, setPaymentErrors] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
   const [showVoidForm, setShowVoidForm] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
   const [showUncollectibleForm, setShowUncollectibleForm] = useState(false);
   const [uncollectibleError, setUncollectibleError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open && invoiceId) loadInvoice();
-  }, [open, invoiceId]);
+  const qc = useQueryClient();
+
+  // ---------------------------------------------------------------------------
+  // GET invoice — replaces the manual useEffect+setState fetch
+  // The SDK DentalInvoice type does not yet include lineItems/payments/patientName/
+  // visitDate (backend enrichments not in spec). We cast via `select` and convert
+  // Date fields back to strings (the SDK transformer converts dueDate/issuedAt to
+  // Date objects; InvoiceData consumers expect strings, per the pre-migration contract).
+  // Same pattern as use-visits.ts.
+  // ---------------------------------------------------------------------------
+  const invoiceQuery = useQuery({
+    ...getDentalInvoiceOptions({ path: { invoiceId } }),
+    enabled: open && !!invoiceId,
+    select: (data): InvoiceData => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = data as any;
+      const toStr = (d: Date | string | undefined): string | undefined =>
+        d == null ? undefined : d instanceof Date ? d.toISOString() : String(d);
+      return {
+        ...raw,
+        dueDate: toStr(raw.dueDate),
+        issueDate: toStr(raw.issuedAt ?? raw.issueDate),
+        // Backend enrichments (payments[].createdAt) are plain JSON strings from the
+        // server — no transformer touches nested arrays — so no conversion needed there.
+      } as InvoiceData;
+    },
+  });
+
+  const invoice = invoiceQuery.data ?? null;
+  const loading = invoiceQuery.isLoading;
+  const error = invoiceQuery.isError
+    ? (invoiceQuery.error instanceof Error ? invoiceQuery.error.message : 'Failed to load invoice')
+    : null;
+
+  const invoiceQueryKey = getDentalInvoiceQueryKey({ path: { invoiceId } });
+
+  function invalidateInvoice() {
+    qc.invalidateQueries({ queryKey: invoiceQueryKey });
+  }
+
+  // ---------------------------------------------------------------------------
+  // PATCH /issue
+  // ---------------------------------------------------------------------------
+  const issueMutation = useMutation({
+    ...issueDentalInvoiceMutation(),
+    onSuccess: () => {
+      invalidateInvoice();
+      onUpdated?.();
+    },
+    onError: (_err) => {
+      // error surfaces via invoiceQuery.isError banner
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /void
+  // Contract (API_CONTRACTS §void): reason is required (min 5) so the void is
+  // auditable. Guard client-side before sending.
+  // ---------------------------------------------------------------------------
+  const voidMutation = useMutation({
+    ...voidDentalInvoiceMutation(),
+    onSuccess: () => {
+      setShowVoidForm(false);
+      setVoidReason('');
+      invalidateInvoice();
+      onUpdated?.();
+    },
+    onError: (err) => {
+      setVoidError(err instanceof Error ? err.message : 'Failed');
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /uncollectible
+  // BR-013: write off the invoice. Owner-only + transition guard enforced server-side.
+  // ---------------------------------------------------------------------------
+  const uncollectibleMutation = useMutation({
+    ...markUncollectibleMutation(),
+    onSuccess: () => {
+      setShowUncollectibleForm(false);
+      invalidateInvoice();
+      onUpdated?.();
+    },
+    onError: (err) => {
+      setUncollectibleError(err instanceof Error ? err.message : 'Failed');
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /payments
+  // ---------------------------------------------------------------------------
+  const recordPaymentMutation = useMutation({
+    ...recordDentalPaymentMutation(),
+    onSuccess: () => {
+      setShowPaymentForm(false);
+      setPaymentAmount('');
+      setPaymentMethod('cash');
+      setReceiptNumber('');
+      invalidateInvoice();
+      onUpdated?.();
+    },
+    onError: (err) => {
+      setPaymentErrors([err instanceof Error ? err.message : 'Failed']);
+    },
+  });
+
+  const saving =
+    issueMutation.isPending ||
+    voidMutation.isPending ||
+    uncollectibleMutation.isPending ||
+    recordPaymentMutation.isPending;
 
   if (!open) return null;
 
-  async function loadInvoice() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load invoice');
-      const data = await res.json();
-      setInvoice(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
+  function handleIssue() {
+    if (!invoice) return;
+    issueMutation.mutate({ path: { invoiceId } });
   }
 
-  async function handleIssue() {
+  function handleVoid() {
     if (!invoice) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/issue`, { method: 'PATCH', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to issue invoice');
-      await loadInvoice();
-      onUpdated?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleVoid() {
-    if (!invoice) return;
-    // Contract (API_CONTRACTS §void): reason is required (min 5) so the void is
-    // auditable. Guard client-side before sending.
     const reason = voidReason.trim();
     if (reason.length < 5) {
       setVoidError('Please enter a void reason (at least 5 characters).');
       return;
     }
     setVoidError(null);
-    setSaving(true);
-    try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/void`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ reason }),
-      });
-      if (!res.ok) throw new Error('Failed to void invoice');
-      setShowVoidForm(false);
-      setVoidReason('');
-      await loadInvoice();
-      onUpdated?.();
-    } catch (err) {
-      setVoidError(err instanceof Error ? err.message : 'Failed');
-    } finally {
-      setSaving(false);
-    }
+    voidMutation.mutate({ path: { invoiceId }, body: { reason } });
   }
 
-  async function handleMarkUncollectible() {
+  function handleMarkUncollectible() {
     if (!invoice) return;
-    // BR-013: write off the invoice. Owner-only + transition guard are enforced
-    // server-side; no request body. Terminal — the UI confirms before sending.
     setUncollectibleError(null);
-    setSaving(true);
-    try {
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/uncollectible`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to mark invoice uncollectible');
-      setShowUncollectibleForm(false);
-      await loadInvoice();
-      onUpdated?.();
-    } catch (err) {
-      setUncollectibleError(err instanceof Error ? err.message : 'Failed');
-    } finally {
-      setSaving(false);
-    }
+    uncollectibleMutation.mutate({ path: { invoiceId } });
   }
 
-  async function handleRecordPayment() {
+  function handleRecordPayment() {
     const amountCents = Math.round(parseFloat(paymentAmount || '0') * 100);
     const errs = validatePaymentForm({ amountCents, method: paymentMethod, receiptNumber });
     if (errs.length > 0) { setPaymentErrors(errs); return; }
     setPaymentErrors([]);
-    setSaving(true);
-    try {
-      const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId: '' });
-      const res = await fetch(`${API}/dental/billing/invoices/${invoiceId}/payments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to record payment');
-      setShowPaymentForm(false);
-      setPaymentAmount('');
-      setPaymentMethod('cash');
-      setReceiptNumber('');
-      await loadInvoice();
-      onUpdated?.();
-    } catch (err) {
-      setPaymentErrors([err instanceof Error ? err.message : 'Failed']);
-    } finally {
-      setSaving(false);
-    }
+    const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId: '' });
+    recordPaymentMutation.mutate({
+      path: { invoiceId },
+      body: {
+        amountCents: payload.amountCents,
+        method: payload.method as Parameters<typeof recordPaymentMutation.mutate>[0]['body']['method'],
+        receiptNumber: payload.receiptNumber,
+        recordedByMemberId: payload.recordedByMemberId,
+      },
+    });
   }
 
   function handleClose() {
@@ -182,7 +221,6 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     setShowVoidForm(false);
     setVoidReason('');
     setVoidError(null);
-    setError(null);
     onClose();
   }
 

@@ -5,6 +5,8 @@
  * Tests verify observable frontend behavior that enforces the rule.
  *
  * @BR-023 @BR-025 @BR-028 @BR-029 @BR-032 @BR-035
+ *
+ * NOTE: The SDK calls fetch(Request) — helpers below normalise both call forms.
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
@@ -12,6 +14,23 @@ import { useImagingFindings } from './use-imaging-findings';
 import { useImagingStudies } from './use-imaging-studies';
 import { useImagingUpload } from './use-imaging-upload';
 import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
+
+/** Normalise both fetch(url, init) and fetch(Request) call shapes. */
+function reqUrl(req: Request | string | URL): string {
+  return req instanceof Request ? req.url : String(req);
+}
+function reqMethod(req: Request | string | URL, init?: RequestInit): string {
+  return req instanceof Request ? req.method : (init?.method ?? 'GET');
+}
+async function reqBodyAsync(req: Request | string | URL, init?: RequestInit): Promise<unknown> {
+  if (req instanceof Request) {
+    try { return await req.json(); } catch { return null; }
+  }
+  if (typeof init?.body === 'string') {
+    try { return JSON.parse(init.body); } catch { return null; }
+  }
+  return null;
+}
 
 const originalFetch = global.fetch;
 afterEach(() => {
@@ -24,8 +43,8 @@ afterEach(() => {
 describe('BR-023: Annotations non-destructive', () => {
   test('createFinding POSTs to /findings endpoint — never modifies image resource', async () => {
     let capturedUrl: string | undefined;
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = reqUrl(req);
       return jsonResponse({ id: 'f1', imageId: 'img-1', type: 'caries', status: 'draft',
         visitId: 'v1', patientId: 'p1', branchId: 'b1', annotationId: null, treatmentId: null,
         toothNumber: null, surfaces: null, note: null, createdAt: '', updatedAt: '' });
@@ -52,7 +71,8 @@ describe('BR-023: Annotations non-destructive', () => {
       visitId: 'v1', patientId: 'p1', branchId: 'b1', annotationId: null, treatmentId: null,
       toothNumber: null, surfaces: null, note: null, createdAt: '', updatedAt: '',
     }];
-    global.fetch = mock(() => jsonResponse({ data: findings }));
+    // SDK list response shape: { items: [...] }
+    global.fetch = mock(() => jsonResponse({ items: findings }));
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -74,8 +94,8 @@ describe('BR-023: Annotations non-destructive', () => {
 describe('BR-025: Image linked to patient; visit + tooth optional', () => {
   test('useImagingStudies requires patientId in URL', async () => {
     let capturedUrl: string | undefined;
-    global.fetch = mock((url: string) => {
-      capturedUrl = url;
+    global.fetch = mock((req: Request | string | URL) => {
+      capturedUrl = reqUrl(req);
       return jsonResponse({ items: [], total: 0 });
     });
 
@@ -105,10 +125,13 @@ describe('BR-025: Image linked to patient; visit + tooth optional', () => {
   });
 
   test('upload accepts image without visitId or toothNumbers (both optional)', async () => {
-    const calls: Array<{ url: string; body: any }> = [];
-    global.fetch = mock((url: string, init?: RequestInit) => {
-      const rawBody = init?.body;
-      calls.push({ url, body: typeof rawBody === 'string' ? JSON.parse(rawBody) : null });
+    interface CapturedCall { url: string; body: unknown }
+    const calls: CapturedCall[] = [];
+
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
+      const body = await reqBodyAsync(req, init);
+      calls.push({ url, body });
       if (url.includes('/studies')) {
         return jsonResponse({ study: { id: 'study-1' }, uploadUrl: 'http://s3/put', uploadMethod: 'PUT', fileId: 'file-1' });
       }
@@ -127,9 +150,9 @@ describe('BR-025: Image linked to patient; visit + tooth optional', () => {
     const studyCall = calls.find((c) => c.url.includes('/studies'));
     expect(studyCall).not.toBeNull();
     // visitId absent — should not be in body (or undefined)
-    expect(studyCall!.body.visitId).toBeUndefined();
+    expect((studyCall!.body as Record<string, unknown> | null)?.visitId).toBeUndefined();
     // toothNumbers defaults to empty array (present but optional)
-    expect(studyCall!.body.toothNumbers).toEqual([]);
+    expect((studyCall!.body as Record<string, unknown> | null)?.toothNumbers).toEqual([]);
   });
 });
 
@@ -137,11 +160,12 @@ describe('BR-025: Image linked to patient; visit + tooth optional', () => {
 
 describe('BR-028: Soft delete only — backend concern enforced at API layer', () => {
   test('deleteFinding uses DELETE method — no local cache purge (backend handles soft delete)', async () => {
-    const calls: Array<{ url: string; method: string }> = [];
-    global.fetch = mock((url: string, init?: RequestInit) => {
-      calls.push({ url, method: init?.method ?? 'GET' });
-      if (init?.method === 'DELETE') return new Response(null, { status: 204 });
-      return jsonResponse({ data: [] }); // GET findings
+    interface CapturedCall { url: string; method: string }
+    const calls: CapturedCall[] = [];
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      calls.push({ url: reqUrl(req), method: reqMethod(req, init) });
+      if (reqMethod(req, init) === 'DELETE') return new Response(null, { status: 204 });
+      return jsonResponse({ items: [] }); // GET findings
     });
 
     const qc = freshClient();
@@ -166,10 +190,12 @@ describe('BR-028: Soft delete only — backend concern enforced at API layer', (
 
 describe('BR-029: Branch isolation', () => {
   test('upload always sends branchId in the request body', async () => {
-    const calls: Array<{ url: string; body: any }> = [];
-    global.fetch = mock((url: string, init?: RequestInit) => {
-      const rawBody = init?.body;
-      calls.push({ url, body: typeof rawBody === 'string' ? JSON.parse(rawBody) : null });
+    interface CapturedCall { url: string; body: unknown }
+    const calls: CapturedCall[] = [];
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
+      const body = await reqBodyAsync(req, init);
+      calls.push({ url, body });
       if (url.includes('/studies')) {
         return jsonResponse({ study: { id: 'study-1' }, uploadUrl: 'http://s3/put', uploadMethod: 'PUT', fileId: 'file-1' });
       }
@@ -185,7 +211,7 @@ describe('BR-029: Branch isolation', () => {
     });
 
     const studyCall = calls.find((c) => c.url.includes('/studies'));
-    expect(studyCall!.body.branchId).toBe('branch-xyz');
+    expect((studyCall!.body as Record<string, unknown>).branchId).toBe('branch-xyz');
   });
 });
 
@@ -193,10 +219,12 @@ describe('BR-029: Branch isolation', () => {
 
 describe('BR-032: Modality non-nullable; defaults to "other"', () => {
   test('upload sends modality="other" when no modality is specified', async () => {
-    const calls: Array<{ url: string; body: any }> = [];
-    global.fetch = mock((url: string, init?: RequestInit) => {
-      const rawBody = init?.body;
-      calls.push({ url, body: typeof rawBody === 'string' ? JSON.parse(rawBody) : null });
+    interface CapturedCall { url: string; body: unknown }
+    const calls: CapturedCall[] = [];
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
+      const body = await reqBodyAsync(req, init);
+      calls.push({ url, body });
       if (url.includes('/studies')) {
         return jsonResponse({ study: { id: 'study-1' }, uploadUrl: 'http://s3/put', uploadMethod: 'PUT', fileId: 'file-1' });
       }
@@ -213,14 +241,16 @@ describe('BR-032: Modality non-nullable; defaults to "other"', () => {
     });
 
     const studyCall = calls.find((c) => c.url.includes('/studies'));
-    expect(studyCall!.body.modality).toBe('other');
+    expect((studyCall!.body as Record<string, unknown>).modality).toBe('other');
   });
 
   test('upload preserves explicitly provided modality (e.g. "periapical")', async () => {
-    const calls: Array<{ url: string; body: any }> = [];
-    global.fetch = mock((url: string, init?: RequestInit) => {
-      const rawBody = init?.body;
-      calls.push({ url, body: typeof rawBody === 'string' ? JSON.parse(rawBody) : null });
+    interface CapturedCall { url: string; body: unknown }
+    const calls: CapturedCall[] = [];
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
+      const body = await reqBodyAsync(req, init);
+      calls.push({ url, body });
       if (url.includes('/studies')) {
         return jsonResponse({ study: { id: 'study-1' }, uploadUrl: 'http://s3/put', uploadMethod: 'PUT', fileId: 'file-1' });
       }
@@ -236,7 +266,7 @@ describe('BR-032: Modality non-nullable; defaults to "other"', () => {
     });
 
     const studyCall = calls.find((c) => c.url.includes('/studies'));
-    expect(studyCall!.body.modality).toBe('periapical');
+    expect((studyCall!.body as Record<string, unknown>).modality).toBe('periapical');
   });
 });
 
@@ -247,10 +277,11 @@ describe('BR-035: Concurrent annotation edits — LWW', () => {
   // The frontend hook always sends the latest PATCH — it is the API's responsibility
   // to apply LWW semantics. This test confirms the hook sends the full update payload.
   test('updateFinding sends PATCH with the latest data (backend enforces LWW via timestamp)', async () => {
-    const calls: Array<{ method: string; body: any }> = [];
-    global.fetch = mock((_url: string, init?: RequestInit) => {
-      const rawBody = init?.body;
-      calls.push({ method: init?.method ?? 'GET', body: typeof rawBody === 'string' ? JSON.parse(rawBody) : null });
+    interface CapturedCall { method: string; body: unknown }
+    const calls: CapturedCall[] = [];
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const body = await reqBodyAsync(req, init);
+      calls.push({ method: reqMethod(req, init), body });
       return jsonResponse({ id: 'f1', type: 'caries', status: 'confirmed',
         imageId: 'img-1', visitId: 'v1', patientId: 'p1', branchId: 'b1',
         annotationId: null, treatmentId: null, toothNumber: null, surfaces: null,
@@ -272,7 +303,7 @@ describe('BR-035: Concurrent annotation edits — LWW', () => {
 
     const patchCall = calls.find((c) => c.method === 'PATCH');
     expect(patchCall).not.toBeNull();
-    expect(patchCall!.body.status).toBe('confirmed');
-    expect(patchCall!.body.note).toBe('Confirmed caries on mesial');
+    expect((patchCall!.body as Record<string, unknown>).status).toBe('confirmed');
+    expect((patchCall!.body as Record<string, unknown>).note).toBe('Confirmed caries on mesial');
   });
 });

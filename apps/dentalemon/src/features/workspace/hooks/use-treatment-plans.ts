@@ -9,99 +9,50 @@
  *      PATCH /dental/patients/:patientId/treatment-plans/:planId
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  listPatientTreatmentPlansOptions,
+  listPatientTreatmentPlansQueryKey,
+  createTreatmentPlanMutation,
+  updateTreatmentPlanMutation,
+} from '@monobase/sdk-ts/generated/react-query';
+import type {
+  DentalPatientFinanceModuleTreatmentPlan,
+  DentalPatientFinanceModuleCreateTreatmentPlanRequest,
+  DentalPatientFinanceModuleUpdateTreatmentPlanRequest,
+} from '@monobase/sdk-ts/generated';
 
-export type TreatmentPlanStatus =
-  | 'draft'
-  | 'presented'
-  | 'approved'
-  // P2-8: explicit case-acceptance + scheduling states.
-  | 'rejected'
-  | 'scheduled'
-  | 'partially_completed'
-  | 'completed'
-  | 'cancelled';
-
-export interface TreatmentPlanDoc {
-  id: string;
-  patientId: string;
-  providerId: string;
-  status: TreatmentPlanStatus;
-  totalEstimateCents?: number;
-  notes?: string;
-  /** P2-10: ADA CDT code-set year the plan's codes were authored against. */
-  cdtCodeSetYear?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateTreatmentPlanBody {
-  providerId: string;
-  totalEstimateCents?: number;
-  notes?: string;
-}
-
-export interface UpdateTreatmentPlanBody {
-  status?: TreatmentPlanStatus;
-  notes?: string;
-  totalEstimateCents?: number;
-}
-
-function treatmentPlansQueryKey(patientId: string) {
-  return ['dental-treatment-plans', patientId] as const;
-}
+// Re-export SDK types under the original public names so consumers stay green.
+export type TreatmentPlanStatus = DentalPatientFinanceModuleTreatmentPlan['status'];
+export type TreatmentPlanDoc = DentalPatientFinanceModuleTreatmentPlan;
+export type CreateTreatmentPlanBody = DentalPatientFinanceModuleCreateTreatmentPlanRequest;
+export type UpdateTreatmentPlanBody = DentalPatientFinanceModuleUpdateTreatmentPlanRequest;
 
 export function useTreatmentPlans(patientId: string) {
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: treatmentPlansQueryKey(patientId),
-    queryFn: async (): Promise<TreatmentPlanDoc[]> => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/treatment-plans`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Failed to fetch treatment plans (${res.status})`);
-      const data: unknown = await res.json();
-      if (Array.isArray(data)) return data as TreatmentPlanDoc[];
-      const obj = data as Record<string, unknown>;
-      return (Array.isArray(obj.data) ? obj.data : (obj.plans ?? [])) as TreatmentPlanDoc[];
-    },
+    ...listPatientTreatmentPlansOptions({ path: { patientId } }),
     enabled: Boolean(patientId),
     staleTime: 30_000,
+    select: (data): TreatmentPlanDoc[] => {
+      // SDK response is Array<DentalPatientFinanceModuleTreatmentPlan> | ErrorResponse.
+      // Narrow to the array branch; ErrorResponse is a non-array object.
+      if (Array.isArray(data)) return data;
+      return [];
+    },
   });
 
   const createPlan = useMutation({
-    mutationFn: async (body: CreateTreatmentPlanBody) => {
-      const res = await fetch(`${apiBaseUrl}/dental/patients/${patientId}/treatment-plans`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`Failed to create treatment plan (${res.status})`);
-      return res.json() as Promise<TreatmentPlanDoc>;
-    },
+    ...createTreatmentPlanMutation(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: treatmentPlansQueryKey(patientId) });
+      qc.invalidateQueries({ queryKey: listPatientTreatmentPlansQueryKey({ path: { patientId } }) });
     },
   });
 
   const updatePlan = useMutation({
-    mutationFn: async ({ planId, body }: { planId: string; body: UpdateTreatmentPlanBody }) => {
-      const res = await fetch(
-        `${apiBaseUrl}/dental/patients/${patientId}/treatment-plans/${planId}`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) throw new Error(`Failed to update treatment plan (${res.status})`);
-      return res.json() as Promise<TreatmentPlanDoc>;
-    },
+    ...updateTreatmentPlanMutation(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: treatmentPlansQueryKey(patientId) });
+      qc.invalidateQueries({ queryKey: listPatientTreatmentPlansQueryKey({ path: { patientId } }) });
     },
   });
 
@@ -109,9 +60,10 @@ export function useTreatmentPlans(patientId: string) {
     plans: query.data ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
-    createPlan: (body: CreateTreatmentPlanBody) => createPlan.mutate(body),
+    createPlan: (body: CreateTreatmentPlanBody) =>
+      createPlan.mutate({ path: { patientId }, body }),
     updatePlan: (planId: string, body: UpdateTreatmentPlanBody) =>
-      updatePlan.mutate({ planId, body }),
+      updatePlan.mutate({ path: { patientId, planId }, body }),
     isCreating: createPlan.isPending,
     isUpdating: updatePlan.isPending,
   };

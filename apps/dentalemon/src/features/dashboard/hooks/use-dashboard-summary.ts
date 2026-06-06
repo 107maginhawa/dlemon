@@ -6,9 +6,12 @@
  * roles) overdue invoices and daily collections.
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
-
-const API = apiBaseUrl;
+import {
+  listAppointments,
+  getDashboardSummary,
+  listDentalInvoices,
+} from '@monobase/sdk-ts/generated';
+import type { DentalAppointment, DentalInvoice } from '@monobase/sdk-ts/generated';
 
 export interface DashboardAppointment {
   id: string;
@@ -52,9 +55,40 @@ interface UseDashboardSummaryOptions {
   showFinancials: boolean;
 }
 
-function toAppointments(data: any): DashboardAppointment[] {
-  if (Array.isArray(data)) return data;
-  return data?.appointments ?? [];
+function toAppointment(a: DentalAppointment): DashboardAppointment {
+  const startAt = typeof a.startAt === 'string' ? a.startAt : (a.startAt as Date).toISOString();
+  const endAt = a.endAt
+    ? (typeof a.endAt === 'string' ? a.endAt : (a.endAt as Date).toISOString())
+    : undefined;
+  const durationMinutes = endAt
+    ? Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000)
+    : undefined;
+  return {
+    id: a.id,
+    patientId: a.patientId,
+    patientName: (a as DentalAppointment & { patientName?: string }).patientName,
+    scheduledAt: startAt,
+    durationMinutes,
+    status: a.status,
+    serviceType: (a as DentalAppointment & { serviceType?: string }).serviceType,
+  };
+}
+
+function toInvoice(inv: DentalInvoice): DashboardInvoice {
+  return {
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    patientId: inv.patientId,
+    patientName: (inv as DentalInvoice & { patientName?: string }).patientName,
+    totalCents: inv.totalCents,
+    paidCents: inv.paidCents,
+    balanceCents: inv.balanceCents,
+    status: inv.status,
+    dueDate: inv.dueDate
+      ? (typeof inv.dueDate === 'string' ? inv.dueDate : (inv.dueDate as Date).toISOString().slice(0, 10))
+      : undefined,
+    createdAt: typeof inv.createdAt === 'string' ? inv.createdAt : (inv.createdAt as Date).toISOString(),
+  };
 }
 
 async function fetchDashboardSummary(
@@ -64,63 +98,53 @@ async function fetchDashboardSummary(
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
-  const b = encodeURIComponent(branchId);
-  const fetches: Promise<Response>[] = [
-    fetch(`${API}/dental/appointments?date_from=${today}&date_to=${today}&branchId=${b}`, { credentials: 'include' }),
-    fetch(`${API}/dental/appointments?date_from=${tomorrow}&date_to=${tomorrow}&branchId=${b}`, { credentials: 'include' }),
-    fetch(`${API}/dental/dashboard/summary?branchId=${b}`, { credentials: 'include' }),
+  // Parallel fetches via SDK — throwOnError propagates HTTP failures as SdkError
+  const fetches: Promise<unknown>[] = [
+    listAppointments({ query: { branchId, date_from: today, date_to: today }, throwOnError: true }),
+    listAppointments({ query: { branchId, date_from: tomorrow, date_to: tomorrow }, throwOnError: true }),
+    getDashboardSummary({ query: { branchId }, throwOnError: true }),
   ];
 
   if (showFinancials) {
     fetches.push(
-      fetch(`${API}/dental/billing/invoices?status=overdue&branchId=${b}`, { credentials: 'include' }),
-      fetch(`${API}/dental/billing/invoices?branchId=${b}`, { credentials: 'include' }),
+      listDentalInvoices({ query: { status: 'overdue', branchId }, throwOnError: true }),
+      listDentalInvoices({ query: { branchId }, throwOnError: true }),
     );
   }
 
-  const responses = await Promise.all(fetches);
+  const results = await Promise.all(fetches);
 
-  // Check ALL responses — no silent swallowing on any fetch failure
-  const labels = [
-    'today appointments',
-    'tomorrow appointments',
-    'dashboard summary',
-    'overdue invoices',
-    'all invoices',
-  ];
-  for (let i = 0; i < responses.length; i++) {
-    if (!responses[i]!.ok) {
-      throw new Error(
-        `Failed to load ${labels[i] ?? `response[${i}]`} (HTTP ${responses[i]!.status})`,
-      );
-    }
-  }
+  // Each SDK call returns { data } when throwOnError is true (throws on error, so data is defined here)
+  const todayData = (results[0] as { data: unknown }).data;
+  const tomorrowData = (results[1] as { data: unknown }).data;
+  const summaryData = (results[2] as { data: unknown }).data as Record<string, unknown> | null;
 
-  const todayData = await responses[0]!.json();
-  const tomorrowData = await responses[1]!.json();
-  const summaryData = await responses[2]!.json();
+  const toAppts = (raw: unknown): DashboardAppointment[] => {
+    const arr = Array.isArray(raw) ? raw : ((raw as { appointments?: DentalAppointment[] })?.appointments ?? []);
+    return (arr as DentalAppointment[]).map(toAppointment);
+  };
 
-  const todayAppointments = toAppointments(todayData);
-  const tomorrowAppointments = toAppointments(tomorrowData);
+  const todayAppointments = toAppts(todayData);
+  const tomorrowAppointments = toAppts(tomorrowData);
 
-  const activePaymentPlans = summaryData?.activePaymentPlans?.count ?? null;
-  const paymentPlansBehind = summaryData?.activePaymentPlans?.behindCount ?? null;
-  const pendingLabOrders = summaryData?.labOrders?.totalPending ?? null;
-  const overdueLabOrders = summaryData?.labOrders?.overdueDelivery ?? null;
+  const activePaymentPlans = (summaryData?.activePaymentPlans as { count?: number } | null)?.count ?? null;
+  const paymentPlansBehind = (summaryData?.activePaymentPlans as { behindCount?: number } | null)?.behindCount ?? null;
+  const pendingLabOrders = (summaryData?.labOrders as { totalPending?: number } | null)?.totalPending ?? null;
+  const overdueLabOrders = (summaryData?.labOrders as { overdueDelivery?: number } | null)?.overdueDelivery ?? null;
 
   let overdueInvoices: DashboardInvoice[] = [];
   let dailyCollectionsCents: number | null = null;
 
-  if (showFinancials && responses[3]) {
-    const invoiceData = await responses[3].json();
-    overdueInvoices = Array.isArray(invoiceData) ? invoiceData : invoiceData.invoices ?? [];
+  if (showFinancials && results[3]) {
+    const overdueRaw = (results[3] as { data: unknown }).data;
+    const arr = Array.isArray(overdueRaw) ? overdueRaw : ((overdueRaw as { data?: DentalInvoice[] })?.data ?? []);
+    overdueInvoices = (arr as DentalInvoice[]).map(toInvoice);
   }
 
-  if (showFinancials && responses[4]) {
-    const allInvoicesData = await responses[4].json();
-    const allInvoices: DashboardInvoice[] = Array.isArray(allInvoicesData)
-      ? allInvoicesData
-      : allInvoicesData.invoices ?? [];
+  if (showFinancials && results[4]) {
+    const allRaw = (results[4] as { data: unknown }).data;
+    const arr = Array.isArray(allRaw) ? allRaw : ((allRaw as { data?: DentalInvoice[] })?.data ?? []);
+    const allInvoices = (arr as DentalInvoice[]).map(toInvoice);
     dailyCollectionsCents = allInvoices
       .filter((inv) => inv.status === 'paid' || inv.status === 'partial')
       .filter((inv) => inv.createdAt?.slice(0, 10) === today)

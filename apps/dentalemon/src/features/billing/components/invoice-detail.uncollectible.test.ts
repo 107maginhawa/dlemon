@@ -11,6 +11,7 @@ import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceDetail } from './invoice-detail';
 
 const OUTSTANDING_INVOICE = {
@@ -54,12 +55,17 @@ function installFetch() {
 afterEach(cleanup);
 
 function renderDetail() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
-    React.createElement(InvoiceDetail, {
-      invoiceId: 'inv-1',
-      open: true,
-      onClose: () => {},
-    }),
+    React.createElement(
+      QueryClientProvider,
+      { client: qc },
+      React.createElement(InvoiceDetail, {
+        invoiceId: 'inv-1',
+        open: true,
+        onClose: () => {},
+      }),
+    ),
   );
 }
 

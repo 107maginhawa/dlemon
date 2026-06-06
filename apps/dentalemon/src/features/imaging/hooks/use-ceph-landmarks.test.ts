@@ -148,9 +148,10 @@ describe('useCephLandmarks — dragLandmark (pointer-up-only commit)', () => {
   test('commitLandmark on pointer-up fires exactly 1 PATCH', async () => {
     const landmarks = [makeLandmark({ landmarkCode: 'S', x: 100, y: 200 })]
     const patchCalls: string[] = []
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const request = req instanceof Request ? req : null
       const url = req instanceof Request ? req.url : String(req)
-      if (init?.method === 'PATCH') patchCalls.push(url)
+      if (request?.method === 'PATCH') patchCalls.push(url)
       return jsonResponse(makeResponse(landmarks))
     })
 
@@ -185,8 +186,9 @@ describe('useCephLandmarks — commitLandmark out-of-order response', () => {
     const d2 = deferred<CephLandmarksResponse>()  // PATCH2 (second, arrives first)
 
     let patchCount = 0
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'PATCH') {
+    global.fetch = mock((req: Request | string | URL) => {
+      const method = req instanceof Request ? req.method : undefined
+      if (method === 'PATCH') {
         patchCount++
         if (patchCount === 1) return d1.promise.then(v => jsonResponse(v))
         return d2.promise.then(v => jsonResponse(v))
@@ -246,11 +248,12 @@ describe('useCephLandmarks — batchUpsert', () => {
       makeLandmark({ landmarkCode: 'S', x: 100, y: 200 }),
       makeLandmark({ landmarkCode: 'N', x: 300, y: 200 }),
     ]
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+    global.fetch = mock(async (req: Request | string | URL) => {
+      const request = req instanceof Request ? req : null
       const url = req instanceof Request ? req.url : String(req)
-      if (init?.method === 'POST') {
+      if (request?.method === 'POST') {
         capturedUrl = url
-        capturedBody = JSON.parse(init.body as string)
+        capturedBody = await request.clone().json()
         return jsonResponse(makeResponse(createdLandmarks))
       }
       return jsonResponse(makeResponse())
@@ -275,8 +278,8 @@ describe('useCephLandmarks — batchUpsert', () => {
   test('seeds landmarks and analysis caches on success', async () => {
     const landmarks = [makeLandmark({ landmarkCode: 'S' })]
     const analysis = makeAnalysis({ measurements: { sna: 82, snb: 80, anb: 2 } })
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') return jsonResponse(makeResponse(landmarks, analysis))
+    global.fetch = mock((req: Request | string | URL) => {
+      if (req instanceof Request && req.method === 'POST') return jsonResponse(makeResponse(landmarks, analysis))
       return jsonResponse(makeResponse())
     })
 
@@ -297,8 +300,8 @@ describe('useCephLandmarks — batchUpsert', () => {
   // CONF-IMG-L2-001 (V-IMG-004): a tier-block / validation failure on batchUpsert
   // must be surfaced via the hook result, not swallowed into console.error only.
   test('surfaces the failure via mutationError when batchUpsert is tier-blocked', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') {
+    global.fetch = mock((req: Request | string | URL) => {
+      if (req instanceof Request && req.method === 'POST') {
         return Promise.resolve(new Response('IMAGING_TIER_REQUIRED', { status: 403 }))
       }
       return jsonResponse(makeResponse())
@@ -326,9 +329,10 @@ describe('useCephLandmarks — deleteLandmark', () => {
   test('sends DELETE to correct URL', async () => {
     let capturedUrl = ''
     const landmarks = [makeLandmark({ landmarkCode: 'S' })]
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const request = req instanceof Request ? req : null
       const url = req instanceof Request ? req.url : String(req)
-      if (init?.method === 'DELETE') {
+      if (request?.method === 'DELETE') {
         capturedUrl = url
         return Promise.resolve(new Response(null, { status: 204 }))
       }
@@ -351,8 +355,8 @@ describe('useCephLandmarks — deleteLandmark', () => {
       makeLandmark({ id: 'lm-2', landmarkCode: 'N' }),
     ]
     const d = deferred<void>()
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') return d.promise.then(() => new Response(null, { status: 204 }))
+    global.fetch = mock((req: Request | string | URL) => {
+      if (req instanceof Request && req.method === 'DELETE') return d.promise.then(() => new Response(null, { status: 204 }))
       return jsonResponse(makeResponse(landmarks))
     })
 
@@ -386,11 +390,11 @@ describe('useCephLandmarks — autoDetect (P1-10)', () => {
       confidence: 0.94,
       status: 'placed',
     })
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = typeof req === 'string' ? req : req.toString()
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = typeof req === 'string' ? req : req instanceof Request ? req.url : req.toString()
       if (url.includes('/ceph/landmarks/detect')) {
         detectUrl = url
-        detectMethod = init?.method ?? ''
+        detectMethod = req instanceof Request ? req.method : 'GET'
         detected = true
         return jsonResponse({
           jobId: 'job-1',
@@ -424,7 +428,7 @@ describe('useCephLandmarks — autoDetect (P1-10)', () => {
 
   test('exposes the detect error on failure (tier/flag gate)', async () => {
     global.fetch = mock((req: Request | string | URL) => {
-      const url = typeof req === 'string' ? req : req.toString()
+      const url = req instanceof Request ? req.url : typeof req === 'string' ? req : req.toString()
       if (url.includes('/ceph/landmarks/detect'))
         return jsonResponse({ error: 'disabled', code: 'FEATURE_DISABLED' }, 403)
       return jsonResponse(makeResponse([]))

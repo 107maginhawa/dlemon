@@ -4,6 +4,9 @@
  * Covers the query (happy path, disabled states, error) and the three
  * mutations (createFinding, updateFinding, deleteFinding).
  * Network fetch is mocked via global.fetch override — no MSW.
+ *
+ * NOTE: The SDK calls fetch(Request) — extract URL/method/body from the Request
+ * object when present. Helper `reqInfo` normalises both call forms.
  */
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
@@ -14,6 +17,23 @@ import {
   type ImagingFindingStatus,
 } from './use-imaging-findings';
 import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
+
+/** Normalise both fetch(url, init) and fetch(Request) call shapes. */
+function reqUrl(req: Request | string | URL): string {
+  return req instanceof Request ? req.url : String(req);
+}
+function reqMethod(req: Request | string | URL, init?: RequestInit): string {
+  return req instanceof Request ? req.method : (init?.method ?? 'GET');
+}
+async function reqBody(req: Request | string | URL, init?: RequestInit): Promise<unknown> {
+  if (req instanceof Request) {
+    try { return await req.json(); } catch { return null; }
+  }
+  if (typeof init?.body === 'string') {
+    try { return JSON.parse(init.body); } catch { return null; }
+  }
+  return null;
+}
 
 function makeFinding(overrides: Partial<ImagingFinding> = {}): ImagingFinding {
   return {
@@ -46,8 +66,9 @@ describe('useImagingFindings — query', () => {
   });
 
   test('returns findings on successful fetch', async () => {
-    const findings = [makeFinding({ id: 'f1', type: 'caries' })];
-    global.fetch = mock(() => jsonResponse({ data: findings }));
+    // SDK list response shape: { items: DentalImagingModuleImagingFinding[] }
+    const findings = [makeFinding({ id: 'f1', type: 'caries', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' })];
+    global.fetch = mock(() => jsonResponse({ items: findings }));
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -62,8 +83,8 @@ describe('useImagingFindings — query', () => {
     expect(result.current.findings[0]!.id).toBe('f1');
   });
 
-  test('returns empty array when data.data is empty', async () => {
-    global.fetch = mock(() => jsonResponse({ data: [] }));
+  test('returns empty array when items is empty', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [] }));
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -78,8 +99,8 @@ describe('useImagingFindings — query', () => {
   test('hits the correct URL', async () => {
     let capturedUrl = '';
     global.fetch = mock((req: Request | string | URL) => {
-      capturedUrl = req instanceof Request ? req.url : String(req);
-      return jsonResponse({ data: [] });
+      capturedUrl = reqUrl(req);
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -93,7 +114,7 @@ describe('useImagingFindings — query', () => {
   });
 
   test('is disabled when imageId is empty string', async () => {
-    const fetchSpy = mock(() => jsonResponse({ data: [] }));
+    const fetchSpy = mock(() => jsonResponse({ items: [] }));
     global.fetch = fetchSpy;
 
     const qc = freshClient();
@@ -109,7 +130,7 @@ describe('useImagingFindings — query', () => {
   });
 
   test('is disabled when opts.enabled is false', async () => {
-    const fetchSpy = mock(() => jsonResponse({ data: [] }));
+    const fetchSpy = mock(() => jsonResponse({ items: [] }));
     global.fetch = fetchSpy;
 
     const qc = freshClient();
@@ -151,15 +172,17 @@ describe('useImagingFindings — createFinding', () => {
 
   test('succeeds and calls POST with JSON body', async () => {
     const created = makeFinding({ id: 'f-new', type: 'bone_loss' });
-    let capturedInit: RequestInit | undefined;
+    let capturedBody: unknown;
+    let capturedMethod: string | undefined;
 
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = req instanceof Request ? req.url : String(req);
-      if (url.includes('/findings') && (!init || !init.method || init?.method === 'GET')) {
-        return jsonResponse({ data: [] });
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const method = reqMethod(req, init);
+      if (method === 'POST') {
+        capturedMethod = method;
+        capturedBody = await reqBody(req, init);
+        return jsonResponse(created);
       }
-      capturedInit = init;
-      return jsonResponse(created);
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -174,18 +197,17 @@ describe('useImagingFindings — createFinding', () => {
 
     await waitFor(() => expect(result.current.createFinding.isSuccess).toBe(true));
 
-    expect(capturedInit?.method).toBe('POST');
-    const body = JSON.parse(capturedInit?.body as string);
-    expect(body.type).toBe('bone_loss');
-    expect(body.toothNumber).toBe(3);
+    expect(capturedMethod).toBe('POST');
+    expect((capturedBody as Record<string, unknown>).type).toBe('bone_loss');
+    expect((capturedBody as Record<string, unknown>).toothNumber).toBe(3);
   });
 
   test('sets isError on server error', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') {
         return jsonResponse({ message: 'Server error' }, 500);
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -204,11 +226,11 @@ describe('useImagingFindings — createFinding', () => {
   // CONF-IMG-L2-001 (V-IMG-004): a failed mutation (tier-block 403 / validation
   // 422) must be surfaced via the hook result, not swallowed into console.error.
   test('surfaces the failure via mutationError when createFinding is tier-blocked', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'POST') {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') {
         return jsonResponse({ message: 'IMAGING_TIER_REQUIRED' }, 403);
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -239,16 +261,15 @@ describe('useImagingFindings — updateFinding', () => {
   test('succeeds and calls PATCH on correct URL', async () => {
     const updated = makeFinding({ id: 'f1', status: 'confirmed' });
     let capturedUrl = '';
-    let capturedInit: RequestInit | undefined;
+    let capturedBody: unknown;
 
-    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = req instanceof Request ? req.url : String(req);
-      if (init?.method === 'PATCH') {
-        capturedUrl = url;
-        capturedInit = init;
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'PATCH') {
+        capturedUrl = reqUrl(req);
+        capturedBody = await reqBody(req, init);
         return jsonResponse(updated);
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -264,16 +285,15 @@ describe('useImagingFindings — updateFinding', () => {
     await waitFor(() => expect(result.current.updateFinding.isSuccess).toBe(true));
 
     expect(capturedUrl).toContain('/dental/imaging/findings/f1');
-    const body = JSON.parse(capturedInit?.body as string);
-    expect(body.status).toBe('confirmed');
+    expect((capturedBody as Record<string, unknown>).status).toBe('confirmed');
   });
 
   test('sets isError on server error', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'PATCH') {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'PATCH') {
         return jsonResponse({ message: 'Conflict' }, 409);
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -300,16 +320,15 @@ describe('useImagingFindings — deleteFinding', () => {
     cleanup();
   });
 
-  test('succeeds on 200 response', async () => {
+  test('succeeds on 204 no-content response (primary delete success path)', async () => {
     let capturedUrl = '';
 
     global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
-      const url = req instanceof Request ? req.url : String(req);
-      if (init?.method === 'DELETE') {
-        capturedUrl = url;
-        return jsonResponse({}, 200);
+      if (reqMethod(req, init) === 'DELETE') {
+        capturedUrl = reqUrl(req);
+        return Promise.resolve(new Response(null, { status: 204 }));
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -327,11 +346,11 @@ describe('useImagingFindings — deleteFinding', () => {
   });
 
   test('succeeds on 204 no-content response', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'DELETE') {
         return Promise.resolve(new Response(null, { status: 204 }));
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();
@@ -348,11 +367,11 @@ describe('useImagingFindings — deleteFinding', () => {
   });
 
   test('sets isError on server error', async () => {
-    global.fetch = mock((_req: Request | string | URL, init?: RequestInit) => {
-      if (init?.method === 'DELETE') {
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'DELETE') {
         return jsonResponse({ message: 'Not found' }, 404);
       }
-      return jsonResponse({ data: [] });
+      return jsonResponse({ items: [] });
     });
 
     const qc = freshClient();

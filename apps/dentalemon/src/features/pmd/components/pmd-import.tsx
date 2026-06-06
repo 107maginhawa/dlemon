@@ -5,7 +5,8 @@
  */
 
 import React, { useState } from 'react';
-import { apiBaseUrl } from '@/lib/config';
+import { useMutation } from '@tanstack/react-query';
+import { importPmdMutation } from '@monobase/sdk-ts/generated/react-query';
 
 interface SafetyFloorPreview {
   conditions: string[];
@@ -45,6 +46,8 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const importMut = useMutation(importPmdMutation());
+
   if (!open) return null;
 
   function validate(): string[] {
@@ -70,21 +73,21 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   async function handleConfirm() {
     setSaving(true);
     try {
-      const res = await fetch(`${apiBaseUrl}/dental/pmd/import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      await importMut.mutateAsync({
+        body: {
           patientId,
           sourceFacility: sourceFacility.trim(),
           sourceReference: sourceReference.trim() || undefined,
           sourceDescription: sourceDescription.trim(),
+          // content is a JSON string field — send as-is (not multipart)
           content: content.trim(),
-        }),
+        },
       });
-      if (!res.ok) { setErrors(['Failed to import PMD']); setStep('form'); return; }
       setStep('done');
       onImported?.();
+    } catch {
+      setErrors(['Failed to import PMD']);
+      setStep('form');
     } finally {
       setSaving(false);
     }

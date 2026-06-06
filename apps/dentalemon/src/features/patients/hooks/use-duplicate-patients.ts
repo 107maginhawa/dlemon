@@ -6,7 +6,10 @@
  * API: GET /dental/patients/duplicates?branchId=...
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl } from '@/lib/config';
+import {
+  detectDuplicatePatientsOptions,
+} from '@monobase/sdk-ts/generated/react-query';
+import type { DentalPatientModuleDuplicateCandidatesResponse } from '@monobase/sdk-ts/generated';
 
 export interface DuplicateCandidatePatient {
   id: string;
@@ -28,18 +31,29 @@ export interface DuplicateCandidatesData {
   groupCount: number;
 }
 
+function toData(raw: DentalPatientModuleDuplicateCandidatesResponse): DuplicateCandidatesData {
+  return {
+    groups: raw.groups.map((g) => ({
+      matchType: g.matchType as 'strong' | 'name',
+      matchKey: g.matchKey,
+      patients: g.patients.map((p) => ({
+        id: p.id,
+        displayName: p.displayName,
+        dateOfBirth: p.dateOfBirth,
+        email: p.email,
+        phone: p.phone,
+        createdAt: p.createdAt,
+      })),
+    })),
+    groupCount: raw.groupCount,
+  };
+}
+
 export function useDuplicatePatients({ branchId }: { branchId: string | null }) {
   const query = useQuery({
-    queryKey: ['dental-duplicate-patients', branchId],
-    queryFn: async (): Promise<DuplicateCandidatesData> => {
-      if (!branchId) throw new Error('branchId is required');
-      const res = await fetch(`${apiBaseUrl}/dental/patients/duplicates?branchId=${branchId}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Failed to fetch duplicate candidates (${res.status})`);
-      return res.json();
-    },
+    ...detectDuplicatePatientsOptions({ query: { branchId: branchId! } }),
     enabled: !!branchId,
+    select: (data): DuplicateCandidatesData => toData(data),
   });
 
   return {
