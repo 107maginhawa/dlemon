@@ -26,12 +26,21 @@ interface UseRecallDueListOptions {
   to?: string;
 }
 
+/**
+ * Front-desk recare floor: the due endpoint defaults `from` to today, which
+ * silently drops OVERDUE recalls (dueDate in the past) — exactly the patients
+ * who most need outreach and a V1-required "Overdue" recare category. The chase
+ * queue must look back, so default `from` to a far-past floor unless the caller
+ * scopes a narrower window. `to` is left to the backend default (today + 30d).
+ */
+const RECARE_DUE_FROM_FLOOR = '2000-01-01';
+
 export function useRecallDueList({ branchId, from, to }: UseRecallDueListOptions) {
   const query = useQuery({
     ...listDueRecallsOptions({
       query: {
         branchId: branchId as string,
-        ...(from ? { from } : {}),
+        from: from ?? RECARE_DUE_FROM_FLOOR,
         ...(to ? { to } : {}),
       },
     }),
