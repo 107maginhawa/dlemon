@@ -115,6 +115,10 @@ describe('useStaffMutations — create', () => {
     });
     expect(methods[0]).toBe('POST');
     expect(urls[0]).toContain('/dental/org/members');
+    // Contract pin: POST /dental/org/members requires the branchId query param —
+    // the handler 400s without it. (The contract once omitted it entirely, so the
+    // SDK could not send it and every real create failed; mocks hid the drift.)
+    expect(urls[0]).toContain(`branchId=${BRANCH_ID}`);
     expect(urls[1]).toContain('reset-pin');
   });
 

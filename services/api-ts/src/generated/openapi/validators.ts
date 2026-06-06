@@ -1868,7 +1868,7 @@ export const DentalImagingModuleUpdateLandmarkBodySchema = z.object({
   status: DentalImagingModuleCephLandmarkStatusSchema.optional()
 });
 
-export const DentalInvoiceStatusSchema = z.enum(["draft", "issued", "partial", "paid", "overdue", "voided"]);
+export const DentalInvoiceStatusSchema = z.enum(["draft", "issued", "partial", "paid", "overdue", "voided", "uncollectible"]);
 
 export const DentalInvoiceSchema = z.object({
   id: UUIDSchema,
@@ -3330,7 +3330,8 @@ export const DentalTreatmentSchema = z.object({
   autoDismissed: z.boolean().optional(),
   clinicalNotes: z.string().optional(),
   phase: z.enum(["systemic", "disease_control", "re_evaluation", "definitive", "maintenance"]).optional(),
-  priority: z.number().int()
+  priority: z.number().int(),
+  appointmentId: z.string().uuid().optional()
 });
 
 export const DentalTreatmentPhaseSchema = z.enum(["systemic", "disease_control", "re_evaluation", "definitive", "maintenance"]);
@@ -18800,7 +18801,10 @@ export const ToothHistoryEntrySchema = z.object({
   state: ToothStateSchema,
   conditionCode: z.string().optional(),
   treatmentCdtCode: z.string().optional(),
-  treatmentDescription: z.string().optional()
+  treatmentDescription: z.string().optional(),
+  surfaces: z.array(ToothSurfaceCodeSchema).optional(),
+  treatmentStatus: DentalTreatmentStatusSchema.optional(),
+  treatmentPriceCents: z.number().int().optional()
 });
 
 export const TreatmentPlanResponseSchema = z.object({
@@ -20625,6 +20629,11 @@ export const ListMembersResponse = z.object({
   hasPreviousPage: z.boolean()
 })
 });
+
+export const CreateMemberQuery = z.object({
+  branchId: UUIDSchema.optional(),
+});
+export type CreateMemberQuery = z.infer<typeof CreateMemberQuery>;
 
 export const CreateMemberBody = DentalOrgModuleCreateFlatMemberRequestSchema;
 export type CreateMemberBody = z.infer<typeof CreateMemberBody>;

@@ -67153,7 +67153,9 @@ export type ListMembersResponse = ListMembersResponses[keyof ListMembersResponse
 export type CreateMemberData = {
     body: DentalOrgModuleCreateFlatMemberRequest;
     path?: never;
-    query?: never;
+    query?: {
+        branchId?: Uuid;
+    };
     url: '/dental/org/members';
 };
 

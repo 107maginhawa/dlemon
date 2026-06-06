@@ -830,6 +830,7 @@ namespace DentalOrgModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("createMember")
     createMember(
+      @query branchId?: UUID,
       @body body: CreateFlatMemberRequest
     ): ApiCreatedResponse<DentalMembership>
       | ApiBadRequestResponse

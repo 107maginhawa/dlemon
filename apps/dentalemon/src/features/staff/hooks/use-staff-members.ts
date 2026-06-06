@@ -97,6 +97,11 @@ export function useStaffMutations(branchId: string) {
 
   async function create(input: CreateMemberInput): Promise<Member> {
     const created = await createMut.mutateAsync({
+      // branchId is a required query param on POST /dental/org/members (the
+      // handler 400s without it). It was absent from the contract until the
+      // createMember op gained @query branchId — without this the SDK cannot
+      // scope the new member to a branch and every create fails 400.
+      query: { branchId },
       body: { displayName: input.displayName, role: input.role as DentalOrgModuleCreateFlatMemberRequest['role'] },
     });
     // Set PIN immediately — narrow union: created is DentalOrgModuleDentalMembership on 201

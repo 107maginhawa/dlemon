@@ -1144,6 +1144,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   // createMember
   app.post('/dental/org/members',
     authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.CreateMemberQuery, validationErrorHandler),
     zValidator('json', validators.CreateMemberBody, validationErrorHandler),
     registry.createMember as unknown as Handler
   );
