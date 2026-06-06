@@ -39,9 +39,6 @@ export default [
     ignores: [
       '**/*.test.ts',
       '**/*.test.tsx',
-      // Pre-existing migratable raw fetch carried on a separate change set; drop
-      // this exclusion once revenue-report is moved onto listDentalInvoices.
-      'src/features/reports/components/revenue-report.tsx',
     ],
     rules: {
       'no-restricted-syntax': ['error', ...NO_RAW_FETCH_RULES],

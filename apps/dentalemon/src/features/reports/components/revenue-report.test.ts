@@ -86,6 +86,53 @@ function formatCSVRow(values: string[]): string {
   }).join(',');
 }
 
+// toDateKey: mirrors RevenueReport's normalizer. Post-SDK-migration the
+// listDentalInvoices transformer returns `createdAt` as a Date, not the ISO
+// string the raw fetch gave — date-range filtering must handle both shapes or
+// the report silently shows nothing (the original always-empty regression).
+function toDateKey(value: string | Date): string {
+  return (value instanceof Date ? value : new Date(value)).toISOString().slice(0, 10);
+}
+
+function filterByDateRange<T extends { createdAt: string | Date }>(
+  invoices: T[], start: string, end: string,
+): T[] {
+  return invoices.filter((i) => {
+    const d = toDateKey(i.createdAt);
+    return d >= start && d <= end;
+  });
+}
+
+describe('Revenue Report — toDateKey (SDK Date normalization)', () => {
+  test('extracts YYYY-MM-DD from an ISO string', () => {
+    expect(toDateKey('2026-01-15T14:00:00Z')).toBe('2026-01-15');
+  });
+
+  test('extracts YYYY-MM-DD from a Date (SDK transformer output)', () => {
+    expect(toDateKey(new Date('2026-01-15T14:00:00Z'))).toBe('2026-01-15');
+  });
+});
+
+describe('Revenue Report — filterByDateRange', () => {
+  test('keeps in-range Date-typed invoices (regresses always-empty bug)', () => {
+    const invoices = [
+      { id: '1', createdAt: new Date('2026-01-05T10:00:00Z') },
+      { id: '2', createdAt: new Date('2026-02-10T10:00:00Z') },
+    ];
+    const result = filterByDateRange(invoices, '2026-01-01', '2026-01-31');
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('1');
+  });
+
+  test('handles string createdAt identically', () => {
+    const invoices = [
+      { id: '1', createdAt: '2026-01-05T10:00:00Z' },
+      { id: '2', createdAt: '2026-03-10T10:00:00Z' },
+    ];
+    expect(filterByDateRange(invoices, '2026-01-01', '2026-01-31')).toHaveLength(1);
+  });
+});
+
 describe('Revenue Report — formatDateRange', () => {
   test('formats same month range', () => {
     const result = formatDateRange('2026-01-01', '2026-01-31');

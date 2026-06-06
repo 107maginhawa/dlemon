@@ -1,19 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { apiBaseUrl } from '@/lib/config';
+import React, { useState } from 'react';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
+import { useInvoices } from '@/features/billing/hooks/use-invoices';
 import { InvoiceDetailSheet } from './invoice-detail-sheet';
-
-const API = apiBaseUrl;
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  totalCents: number;
-  paidCents: number;
-  balanceCents: number;
-  status: string;
-  createdAt: string;
-}
 
 export interface RevenueReportProps {
   branchId: string;
@@ -23,34 +11,29 @@ export function formatCents(cents: number): string {
   return `${CURRENCY_SYMBOL}${(cents / 100).toLocaleString(APP_LOCALE, { minimumFractionDigits: 2 })}`;
 }
 
+// The SDK response transformer hands back `createdAt` as a Date (raw fetch gave a
+// string). Normalize to a UTC `YYYY-MM-DD` key so date-range comparisons keep the
+// pre-migration semantics regardless of which shape arrives.
+export function toDateKey(value: string | Date): string {
+  return (value instanceof Date ? value : new Date(value)).toISOString().slice(0, 10);
+}
+
 export function RevenueReport({ branchId }: RevenueReportProps) {
   const today = new Date().toISOString().slice(0, 10);
   const monthStart = today.slice(0, 7) + '-01';
 
   const [startDate, setStartDate] = useState(monthStart);
   const [endDate, setEndDate] = useState(today);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API}/dental/billing/invoices?branchId=${branchId}`, { credentials: 'include' })
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
-      .then((body: Invoice[] | { data?: Invoice[] }) => {
-        // GET /dental/billing/invoices returns { data, pagination } — extract the
-        // array. (Previously this assumed a bare array, so `data.filter` threw and
-        // the silent catch below left every revenue report permanently empty.)
-        const list = Array.isArray(body) ? body : (body.data ?? []);
-        const filtered = list.filter(i => {
-          const d = i.createdAt.slice(0, 10);
-          return d >= startDate && d <= endDate;
-        });
-        setInvoices(filtered);
-      })
-      .catch(() => setInvoices([]))
-      .finally(() => setLoading(false));
-  }, [branchId, startDate, endDate]);
+  // SDK-only data access: listDentalInvoices via the canonical billing hook (it
+  // unwraps the { data, pagination } envelope and gates on branchId). Date-range
+  // narrowing stays client-side, matching the prior behaviour.
+  const { invoices: allInvoices, isLoading: loading } = useInvoices({ branchId });
+  const invoices = allInvoices.filter((i) => {
+    const d = toDateKey(i.createdAt);
+    return d >= startDate && d <= endDate;
+  });
 
   const totalBilled = invoices.reduce((s, i) => s + i.totalCents, 0);
   const totalCollected = invoices.reduce((s, i) => s + i.paidCents, 0);
@@ -60,7 +43,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
   // Group by day
   const dayMap = new Map<string, { billed: number; collected: number }>();
   for (const inv of invoices) {
-    const date = inv.createdAt.slice(0, 10);
+    const date = toDateKey(inv.createdAt);
     const existing = dayMap.get(date) ?? { billed: 0, collected: 0 };
     existing.billed += inv.totalCents;
     existing.collected += inv.paidCents;
@@ -177,11 +160,11 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                     className="border-b last:border-0 cursor-pointer hover:bg-secondary/50 transition-colors"
                     onClick={() => setSelectedInvoiceId(inv.id)}
                   >
-                    <td className="px-4 py-2.5 font-medium text-primary">
+                    <td className="px-4 py-2.5 font-medium text-primary" data-testid="revenue-invoice-number">
                       {inv.invoiceNumber}
                     </td>
                     <td className="px-4 py-2.5 hidden sm:table-cell text-muted-foreground">
-                      {inv.createdAt.slice(0, 10)}
+                      {toDateKey(inv.createdAt)}
                     </td>
                     <td className="px-4 py-2.5 hidden sm:table-cell capitalize">
                       {inv.status}
