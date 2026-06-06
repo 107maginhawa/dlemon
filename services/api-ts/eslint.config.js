@@ -37,4 +37,25 @@ const boundaryRule = {
   },
 };
 
-export default [...config, boundaryRule];
+/**
+ * Test-file `any` policy (api-ts only — does NOT touch the frontend, which
+ * consumes the shared base config directly).
+ *
+ * `@typescript-eslint/no-explicit-any` is a `warn` in the shared base. In this
+ * service ~85% of `any` usages live in `*.test.ts` (mock bodies, fixture
+ * builders, type-shims) where strict typing adds noise, not safety. Silencing
+ * the rule in tests turns a ~4,479-warning firehose into the ~566 *production*
+ * occurrences — a trackable signal instead of alarm fatigue.
+ *
+ * Production stance (ratchet, not rewrite): no NEW prod `any`; burn down the
+ * existing surface opportunistically when touching a file. The rule stays a
+ * `warn` (not `error`) for prod so the gate isn't blocked on pre-existing usage.
+ */
+const testAnyOverride = {
+  files: ['**/*.test.ts', '**/*.test-*.ts'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off',
+  },
+};
+
+export default [...config, boundaryRule, testAnyOverride];
