@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
+import { MedicalHistorySheet } from '@/features/workspace/components/medical-history-sheet';
 import { PreCompletionChecklist } from '@/features/workspace/components/pre-completion-checklist';
 import { RxSheet } from '@/features/workspace/components/rx-sheet';
 import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
@@ -61,6 +62,7 @@ function WorkspacePage() {
   const [labOrdersSheetOpen, setLabOrdersSheetOpen] = useState(false);
   const [pmdViewerOpen, setPmdViewerOpen] = useState(false);
   const [pmdImportOpen, setPmdImportOpen] = useState(false);
+  const [medicalHistoryOpen, setMedicalHistoryOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [notesSheetOpen, setNotesSheetOpen] = useState(false);
@@ -394,10 +396,17 @@ function WorkspacePage() {
           onClose={() => setNotesSheetOpen(false)}
           onOpenMedicalHistory={() => {
             setNotesSheetOpen(false);
-            setPmdImportOpen(true);
+            setMedicalHistoryOpen(true);
           }}
         />
       )}
+
+      {/* Medical history intake (conditions/meds/allergies/ASA) — opened from SoapNotesSheet */}
+      <MedicalHistorySheet
+        patientId={patientId}
+        open={medicalHistoryOpen}
+        onClose={() => setMedicalHistoryOpen(false)}
+      />
 
       {/* Treatment Plan sheet (from top bar) */}
       {treatmentPlanSheetOpen && (
