@@ -47,9 +47,25 @@ const boundaryRule = {
  * the rule in tests turns a ~4,479-warning firehose into the ~566 *production*
  * occurrences — a trackable signal instead of alarm fatigue.
  *
- * Production stance (ratchet, not rewrite): no NEW prod `any`; burn down the
- * existing surface opportunistically when touching a file. The rule stays a
- * `warn` (not `error`) for prod so the gate isn't blocked on pre-existing usage.
+ * Production stance (hard ratchet as of 2026-06-07): the ~513 production `any`
+ * occurrences were burned down to a small, fully-suppressed residue, so the rule
+ * is now an `error` for non-test source. New production `any` is blocked at the
+ * gate; the only escape is an explicit, reasoned `// eslint-disable-next-line`
+ * (see prodAnyError below). `generated/` and `*.d.ts` are exempt via the shared
+ * base `ignores`, so the count can only go down.
+ */
+const prodAnyError = {
+  files: ['src/**/*.ts'],
+  ignores: ['src/**/*.test.ts', 'src/**/*.test-*.ts', 'src/generated/**'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'error',
+  },
+};
+
+/**
+ * Test files keep `any` off entirely — mock bodies, fixture builders, and
+ * type-shims are where strict typing adds noise, not safety. This override comes
+ * AFTER prodAnyError so tests win (flat-config: later wins).
  */
 const testAnyOverride = {
   files: ['**/*.test.ts', '**/*.test-*.ts'],
@@ -58,4 +74,4 @@ const testAnyOverride = {
   },
 };
 
-export default [...config, boundaryRule, testAnyOverride];
+export default [...config, boundaryRule, prodAnyError, testAnyOverride];
