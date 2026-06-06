@@ -1,10 +1,10 @@
 /**
  * authed-route-sweep.spec.ts — real-page route-error sweep.
  *
- * The oli-runtime-loop sweep reuses storageState across fresh pages, but the PIN
+ * A storageState-only sweep reuses cookies across fresh pages, but the PIN
  * session is IN-MEMORY (cannot be seeded), so it lands on the PIN gate for every
- * _dashboard/_workspace route and never tests real pages — which is why it never
- * caught the calendar grid 400. This sweep PIN-unlocks ONCE and SPA-navigates each
+ * _dashboard/_workspace route and never tests real pages — which is why that
+ * approach never caught the calendar grid 400. This sweep PIN-unlocks ONCE and SPA-navigates each
  * authed route in a single page (PIN session persists), asserting that no page
  * hard-errors: no blocking 4xx/5xx to /dental/ (400 = malformed request / missing
  * required param — the calendar-class bug; 401/403 = auth; 5xx = server) and no
@@ -12,7 +12,7 @@
  * not created yet).
  */
 import { test, expect, type Page } from '@playwright/test';
-import { authAdapter } from './oli-runtime.auth';
+import { authAdapter } from './route-sweep.auth';
 import { setMemberPin, spaNavigate, APP } from './helpers/perio-e2e';
 
 const PIN = '123456';

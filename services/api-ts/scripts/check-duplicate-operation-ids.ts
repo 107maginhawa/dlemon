@@ -8,7 +8,7 @@
  * or the same HTTP method+path to appear twice, this script fails CI so the
  * duplication is caught before it reaches production.
  *
- * Closes finding #4 from docs/audits/STRUCT_AUDIT_REPORT.md.
+ * Guards against duplicate operationIds across TypeSpec modules.
  *
  * Two checks:
  *   1. No operationId comment (`  // identifier`) appears more than once.

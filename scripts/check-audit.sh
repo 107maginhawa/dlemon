@@ -3,7 +3,7 @@
 # Accepted advisories (triaged baseline) are allowed through silently.
 set -euo pipefail
 
-ADVISORIES_FILE="${1:-docs/audits/SECURITY_ADVISORIES.md}"
+ADVISORIES_FILE="${1:-docs/security/SECURITY_ADVISORIES.md}"
 
 if [[ ! -f "$ADVISORIES_FILE" ]]; then
   echo "❌ Advisory file not found: $ADVISORIES_FILE"

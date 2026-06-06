@@ -5,8 +5,7 @@
 # shared infrastructure consumed by most of the codebase. A rename or
 # schema change here is a mass-refactor event.
 #
-# Source: docs/audits/STRUCT_AUDIT_REPORT.md §5 Dependency Graph Health
-# Fan-in counts measured 2026-05-28.
+# Source: dependency-graph fan-in analysis (counts measured 2026-05-28).
 
 # SA-API-HUB-001 — fan-in 65: central patient record, consumed by every dental module
 services/api-ts/src/handlers/patient/repos/patient.schema.ts @eladventures

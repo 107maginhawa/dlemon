@@ -2,7 +2,7 @@
 /**
  * audit-traceability.ts
  *
- * Regenerates docs/audits/TRACEABILITY_MATRIX.md by scanning:
+ * Regenerates docs/testing/TRACEABILITY_MATRIX_AUTO.md by scanning:
  *   - docs/prd/BUSINESS_RULES.md          → BR codes + status
  *   - docs/prd/ACCEPTANCE_CRITERIA.md     → AC codes
  *   - services/api-ts/src/handlers/       → handler presence
@@ -327,7 +327,6 @@ function buildReport(
   lines.push(`## Acceptance Criteria`);
   lines.push(``);
   lines.push(`_Note: AC coverage requires BR tags in tests to auto-detect._`);
-  lines.push(`_The full hand-maintained AC coverage table is in \`docs/audits/TRACEABILITY_MATRIX.md\`._`);
   lines.push(``);
   lines.push(`| AC | Summary |`);
   lines.push(`|----|---------|`);
@@ -387,10 +386,9 @@ async function main() {
   const generatedAt = new Date().toISOString().split("T")[0];
   const report = buildReport(brs, acs, coverageMap, generatedAt);
 
-  const outPath = join(ROOT, "docs/audits/TRACEABILITY_MATRIX_AUTO.md");
+  const outPath = join(ROOT, "docs/testing/TRACEABILITY_MATRIX_AUTO.md");
   await writeFile(outPath, report, "utf8");
   console.log(`\n✅ Written: ${relative(ROOT, outPath)}`);
-  console.log(`   (Hand-maintained version: docs/audits/TRACEABILITY_MATRIX.md)`);
 
   if (CI_MODE) {
     const passed = checkCIGate(brs, coverageMap);
