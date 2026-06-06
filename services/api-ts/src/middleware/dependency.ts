@@ -13,6 +13,7 @@ import type { Config } from '@/core/config';
  */
 export function createDependencyInjection(app: App, config: Config) {
   const { logger, database, storage, auth, jobs, notifs, audit, email, ws, billing } = app;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internalServiceToken is attached via Object.assign in createApp but not in the App type definition
   const internalServiceToken = (app as any).internalServiceToken;
 
   return async function dependencyInjection(ctx: AppContext, next: Next) {

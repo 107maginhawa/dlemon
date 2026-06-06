@@ -4,7 +4,7 @@
  */
 
 import { Hono } from 'hono';
-import type { Variables, App } from '@/types/app';
+import type { Variables, App, BaseContext } from '@/types/app';
 import type { Config } from '@/core/config';
 
 // Core dependencies
@@ -121,18 +121,18 @@ export function createApp(config: Config): App {
 
   // Dev-only: mark current session user's email as verified (for E2E tests)
   if (process.env['NODE_ENV'] !== 'production') {
-    (app as any).post('/dev/verify-email',
+    app.post('/dev/verify-email',
       authMiddleware({ roles: ['user'] }),
-      async (c: any) => {
+      async (c: BaseContext) => {
         const sessionUser = c.get('user');
-        await database.update(userTable).set({ emailVerified: true }).where(eq(userTable.id, sessionUser.id));
+        await database.update(userTable).set({ emailVerified: true }).where(eq(userTable.id, sessionUser!.id));
         return c.json({ ok: true });
       }
     );
   }
   // /dental/branches (user's branches) — MIGRATED to TypeSpec codegen (TR-DG-002):
   // emits from dental-org.tsp BranchConfigManagement.getBranchesByUser in main.tsp.
-  (app as any).get('/dental/visits/history/:patientId/teeth/:toothNumber',
+  app.get('/dental/visits/history/:patientId/teeth/:toothNumber',
     authMiddleware({ roles: ['user'] }),
     getToothHistory
   );
@@ -144,13 +144,13 @@ export function createApp(config: Config): App {
   // (TR-DG-002): emits from dental-ops-extras.tsp → FeeScheduleMgmt in main.tsp.
   // EM-AUD-006: Audit log is append-only — DELETE/PUT/PATCH on individual records are not permitted.
   // V-AUD-005: code is AUDIT_EVENT_IMMUTABLE (matches ERROR_TAXONOMY §5 dental-audit).
-  (app as any).delete('/dental/audit-events/:id', (c: any) =>
+  app.delete('/dental/audit-events/:id', (c: BaseContext) =>
     c.json({ error: 'Audit log is append-only. Records cannot be deleted.', code: 'AUDIT_EVENT_IMMUTABLE' }, 405)
   );
-  (app as any).put('/dental/audit-events/:id', (c: any) =>
+  app.put('/dental/audit-events/:id', (c: BaseContext) =>
     c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_EVENT_IMMUTABLE' }, 405)
   );
-  (app as any).patch('/dental/audit-events/:id', (c: any) =>
+  app.patch('/dental/audit-events/:id', (c: BaseContext) =>
     c.json({ error: 'Audit log is append-only. Records cannot be modified.', code: 'AUDIT_EVENT_IMMUTABLE' }, 405)
   );
 
@@ -158,13 +158,13 @@ export function createApp(config: Config): App {
   // /dental/pmd/imported/:id must return 405 IMPORTED_PMD_IMMUTABLE. The generated routes
   // only expose GET; these guards shadow any mutating verb so it never falls through to a
   // default 404. Mirrors the append-only audit-event guard style above.
-  (app as any).patch('/dental/pmd/imported/:id', (c: any) =>
+  app.patch('/dental/pmd/imported/:id', (c: BaseContext) =>
     c.json({ error: 'Imported PMDs are immutable and cannot be modified.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
   );
-  (app as any).put('/dental/pmd/imported/:id', (c: any) =>
+  app.put('/dental/pmd/imported/:id', (c: BaseContext) =>
     c.json({ error: 'Imported PMDs are immutable and cannot be modified.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
   );
-  (app as any).delete('/dental/pmd/imported/:id', (c: any) =>
+  app.delete('/dental/pmd/imported/:id', (c: BaseContext) =>
     c.json({ error: 'Imported PMDs are immutable and cannot be deleted.', code: 'IMPORTED_PMD_IMMUTABLE' }, 405)
   );
   // V-DG-002: right-to-erasure (WFG-006) — MIGRATED to TypeSpec codegen
@@ -190,12 +190,12 @@ export function createApp(config: Config): App {
   // re-export shims of dental-visit's getTreatmentPlan/acceptTreatmentPlan, whose
   // operationIds already emit via the singular /treatment-plan route — codegen
   // forbids duplicate operationIds, so these two routes remain Cat-1 manual keeps.
-  (app as any).get('/dental/patients/:patientId/treatment-plans/:planId',
+  app.get('/dental/patients/:patientId/treatment-plans/:planId',
     authMiddleware({ roles: ['user'] }),
     zValidator('param', TreatmentPlanPlanParams),
     getTreatmentPlan
   );
-  (app as any).post('/dental/patients/:patientId/treatment-plans/:planId/accept',
+  app.post('/dental/patients/:patientId/treatment-plans/:planId/accept',
     authMiddleware({ roles: ['user'] }),
     zValidator('param', TreatmentPlanPlanParams),
     acceptTreatmentPlan
@@ -214,7 +214,7 @@ export function createApp(config: Config): App {
   // EM-ORG-001: Shadow the generated recoverPin route (which lacks authMiddleware)
   // with an authenticated version. Hono matches first-registered route, so this
   // shadow takes priority over the generated routes registered below.
-  (app as any).post('/dental/org/members/:memberId/recover-pin',
+  app.post('/dental/org/members/:memberId/recover-pin',
     authMiddleware({ roles: ['user'] }),
     zValidator('param', RecoverPinParams),
     zValidator('json', RecoverPinBody),
@@ -226,6 +226,7 @@ export function createApp(config: Config): App {
   // The former hand-registration here was removed to avoid a duplicate route.
 
   // Register API routes
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- registerOpenAPIRoutes accepts Hono<any>; generated function uses a broader type than App
   registerOpenAPIRoutes(app as any);
 
   // Register WebSocket handlers

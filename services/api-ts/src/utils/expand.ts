@@ -132,17 +132,20 @@ export async function applyExpands<T>(
   if (Array.isArray(data)) {
     return Promise.all(
       data.map(item => applyExpands(item, expandPaths, schemaName, ctx, currentDepth))
-    ) as any;
+    ) as unknown as Promise<T>;
   }
 
   // Handle paginated responses (has 'data' array property)
-  if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as any).data)) {
-    const paginatedData = data as any;
-    paginatedData.data = await Promise.all(
-      paginatedData.data.map((item: any) =>
-        applyExpands(item, expandPaths, schemaName, ctx, currentDepth)
-      )
-    );
+  if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as Record<string, unknown>)['data'])) {
+    const paginatedData = data as Record<string, unknown[]>;
+    const inner = paginatedData['data'];
+    if (Array.isArray(inner)) {
+      paginatedData['data'] = await Promise.all(
+        inner.map((item: unknown) =>
+          applyExpands(item, expandPaths, schemaName, ctx, currentDepth)
+        )
+      );
+    }
     return data;
   }
 
@@ -152,7 +155,8 @@ export async function applyExpands<T>(
   }
 
   // Get schema metadata from OpenAPI spec
-  const schema = (openapiSpec as any).components.schemas[schemaName];
+  const spec = openapiSpec as { components: { schemas: Record<string, unknown> } };
+  const schema = spec.components.schemas[schemaName];
   if (!schema) {
     logger.warn({ schemaName }, 'Schema not found in OpenAPI spec');
     return data;
@@ -173,7 +177,7 @@ export async function applyExpands<T>(
     }
 
     await expandField(
-      data as any,
+      data as Record<string, unknown>,
       fieldName,
       remainingPaths,
       schema,
@@ -185,14 +189,18 @@ export async function applyExpands<T>(
   return data;
 }
 
+type OpenAPIProperty = { 'x-expandable-field'?: { opId?: string }; anyOf?: Array<{ $ref?: string }> };
+type OpenAPISchema = { properties?: Record<string, OpenAPIProperty> };
+
 /**
  * Infer expandable fields from schema properties
  */
-function getExpandableFields(schema: any): string[] {
+function getExpandableFields(schema: unknown): string[] {
   const expandableFields: string[] = [];
+  const s = schema as OpenAPISchema;
 
-  for (const [fieldName, property] of Object.entries(schema.properties || {})) {
-    if ((property as any)['x-expandable-field']?.opId) {
+  for (const [fieldName, property] of Object.entries(s.properties || {})) {
+    if (property['x-expandable-field']?.opId) {
       expandableFields.push(fieldName);
     }
   }
@@ -200,13 +208,18 @@ function getExpandableFields(schema: any): string[] {
   return expandableFields;
 }
 
+type OpenAPIOperation = { operationId?: string };
+type OpenAPIPathItem = Record<string, OpenAPIOperation>;
+type OpenAPIPaths = Record<string, OpenAPIPathItem>;
+
 /**
  * Find route by operation ID in OpenAPI spec
  */
 function findRouteByOperationId(operationId: string): { path: string; method: string } | null {
-  for (const [path, methods] of Object.entries((openapiSpec as any).paths)) {
-    for (const [method, operation] of Object.entries(methods as any)) {
-      if ((operation as any).operationId === operationId) {
+  const paths = (openapiSpec as { paths: OpenAPIPaths }).paths;
+  for (const [path, methods] of Object.entries(paths)) {
+    for (const [method, operation] of Object.entries(methods)) {
+      if (operation.operationId === operationId) {
         return { path, method: method.toUpperCase() };
       }
     }
@@ -218,14 +231,15 @@ function findRouteByOperationId(operationId: string): { path: string; method: st
  * Expand a single field in the data object
  */
 async function expandField(
-  data: any,
+  data: Record<string, unknown>,
   fieldName: string,
   remainingPaths: ExpandPath[],
-  schema: any,
+  schema: unknown,
   ctx: Context,
   currentDepth: number
 ): Promise<void> {
-  const property = schema.properties?.[fieldName];
+  const s = schema as OpenAPISchema;
+  const property = s.properties?.[fieldName];
   if (!property) return;
 
   // Get expand metadata
@@ -233,7 +247,7 @@ async function expandField(
   if (!expandMetadata?.opId) return;
 
   // Extract target schema from anyOf pattern
-  const targetSchemaRef = property.anyOf?.find((item: any) => item.$ref)?.$ref;
+  const targetSchemaRef = property.anyOf?.find((item) => item.$ref)?.$ref;
   if (!targetSchemaRef) return;
 
   const targetSchema = targetSchemaRef.split('/').pop();
@@ -285,7 +299,7 @@ async function expandSingleField(
   remainingPaths: ExpandPath[],
   ctx: Context,
   currentDepth: number
-): Promise<any> {
+): Promise<unknown> {
   const logger = ctx.get('logger');
 
   // Find the route for this operation
@@ -344,13 +358,13 @@ async function expandSingleField(
  * TODO: Consider implementing batch expand endpoint for better performance
  */
 async function expandArrayField(
-  fieldValues: any[],
+  fieldValues: unknown[],
   targetSchema: string,
   operationId: string,
   remainingPaths: ExpandPath[],
   ctx: Context,
   currentDepth: number
-): Promise<any[]> {
+): Promise<unknown[]> {
   // Collect all IDs
   const ids = fieldValues.filter(v => typeof v === 'string');
   if (ids.length === 0) return fieldValues;

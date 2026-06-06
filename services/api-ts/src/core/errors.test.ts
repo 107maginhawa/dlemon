@@ -76,48 +76,48 @@ describe('Error classes', () => {
     const err = new RateLimitError('slow down', { retryAfter: 30 });
     expect(err.statusCode).toBe(429);
     expect(err.code).toBe('RATE_LIMIT');
-    expect(err.details?.retryAfter).toBe(30);
+    expect(err.details?.['retryAfter']).toBe(30);
   });
 
   test('AuthenticationError has 401 status with scheme details', () => {
     const err = new AuthenticationError('bad creds', 'bearer', ['bearer', 'basic']);
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe('AUTHENTICATION_ERROR');
-    expect(err.details?.scheme).toBe('bearer');
-    expect(err.details?.supportedSchemes).toEqual(['bearer', 'basic']);
+    expect(err.details?.['scheme']).toBe('bearer');
+    expect(err.details?.['supportedSchemes']).toEqual(['bearer', 'basic']);
   });
 
   test('AuthorizationError has 403 status with permission details', () => {
     const err = new AuthorizationError('no access', 'admin:write', ['user:read'], 'invoice');
     expect(err.statusCode).toBe(403);
     expect(err.code).toBe('AUTHORIZATION_ERROR');
-    expect(err.details?.requiredPermission).toBe('admin:write');
-    expect(err.details?.resource).toBe('invoice');
+    expect(err.details?.['requiredPermission']).toBe('admin:write');
+    expect(err.details?.['resource']).toBe('invoice');
   });
 
   test('HipaaComplianceError has 400 status with hipaa details', () => {
     const err = new HipaaComplianceError('PHI exposed', '164.502', 'privacy');
     expect(err.statusCode).toBe(400);
     expect(err.code).toBe('HIPAA_COMPLIANCE_ERROR');
-    expect(err.details?.hipaaRule).toBe('164.502');
-    expect(err.details?.violationType).toBe('privacy');
+    expect(err.details?.['hipaaRule']).toBe('164.502');
+    expect(err.details?.['violationType']).toBe('privacy');
   });
 
   test('TimeoutError has 408 status', () => {
     const err = new TimeoutError('timed out', 5000, 'db-query', true);
     expect(err.statusCode).toBe(408);
     expect(err.code).toBe('TIMEOUT_ERROR');
-    expect(err.details?.timeoutMs).toBe(5000);
-    expect(err.details?.retryable).toBe(true);
+    expect(err.details?.['timeoutMs']).toBe(5000);
+    expect(err.details?.['retryable']).toBe(true);
   });
 
   test('ExternalServiceError has 503 status', () => {
     const err = new ExternalServiceError('stripe down', 'stripe', 'charge', 'E100', 'fail', true, 120);
     expect(err.statusCode).toBe(503);
     expect(err.code).toBe('EXTERNAL_SERVICE_ERROR');
-    expect(err.details?.service).toBe('stripe');
-    expect(err.details?.retryable).toBe(true);
-    expect(err.details?.retryAfter).toBe(120);
+    expect(err.details?.['service']).toBe('stripe');
+    expect(err.details?.['retryable']).toBe(true);
+    expect(err.details?.['retryAfter']).toBe(120);
   });
 
   test('NotFoundError has 404 status with options', () => {
@@ -128,8 +128,8 @@ describe('Error classes', () => {
     });
     expect(err.statusCode).toBe(404);
     expect(err.code).toBe('NOT_FOUND');
-    expect(err.details?.resourceType).toBe('user');
-    expect(err.details?.suggestions).toEqual(['check id']);
+    expect(err.details?.['resourceType']).toBe('user');
+    expect(err.details?.['suggestions']).toEqual(['check id']);
   });
 
   test('all error classes extend AppError', () => {

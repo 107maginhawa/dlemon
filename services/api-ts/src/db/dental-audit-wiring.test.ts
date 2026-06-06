@@ -22,7 +22,6 @@ const RESOURCE_ID = '00000000-0000-0000-0000-000000000099';
 
 let teardown: () => Promise<void>;
 let repo: DentalAuditRepository;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any;
 
 beforeEach(async () => {

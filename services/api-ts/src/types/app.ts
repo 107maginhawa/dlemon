@@ -36,6 +36,7 @@ export type Variables = {
   ws: WebSocketService;
   billing: BillingService;
   config: Config;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- App self-references Hono<{ Variables }> which creates a circular type; any avoids infinite instantiation
   app?: any; // Hono app instance
 
   // Auth context

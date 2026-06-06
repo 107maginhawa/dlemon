@@ -344,6 +344,7 @@ export class BillingService {
       const paymentIntent = await stripe.paymentIntents.capture(
         paymentIntentId,
         { metadata },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Stripe SDK type for RequestOptions does not expose stripeAccount in its declared overload
         { stripeAccount: connectedAccountId } as any
       );
 

@@ -94,7 +94,8 @@ const MAX_VERSION_RETRIES = 5;
 const PG_UNIQUE_VIOLATION = '23505';
 
 function isUniqueViolation(err: unknown): boolean {
-  const code = (err as any)?.cause?.code ?? (err as any)?.code;
+  const code = (err as { cause?: { code?: string }; code?: string })?.cause?.code
+    ?? (err as { code?: string })?.code;
   return code === PG_UNIQUE_VIOLATION;
 }
 
@@ -120,7 +121,6 @@ function isUniqueViolation(err: unknown): boolean {
  */
 export async function createSnapshotVersion(
   db: NodePgDatabase,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   table: AnyTable,
   parentColumn: AnyColumn,
   versionColumn: AnyColumn,
