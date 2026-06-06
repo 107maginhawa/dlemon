@@ -160,7 +160,7 @@ test.describe('Invoice: Created from completed visit (AC-INV-01, AC-INV-03)', ()
 // ─── AC-INV-04: View invoice from completed visit ─────────────────────────
 
 test.describe('Invoice: View from completed visit (AC-INV-04)', () => {
-  test('invoice appears in billing list linked to completed visit', async ({ page }) => {
+  test('seeded invoice RENDERS in the billing list and its detail sheet shows line items', async ({ page }) => {
     const { branchId, memberId } = await setupDentalOrg(page);
     const patientId = await createDentalPatient(page, { displayName: 'Inv04 Patient', branchId });
     const { visitId } = await seedCompletedVisit(page, { patientId, branchId, memberId });
@@ -179,12 +179,24 @@ test.describe('Invoice: View from completed visit (AC-INV-04)', () => {
 
     expect(invoiceId).toBeTruthy();
 
-    // Navigate to billing list and verify invoice is visible
     await gotoApp(page, `/billing`);
-    await page.waitForLoadState('networkidle');
-    // Billing page loads without a server error (note: "500" in peso amounts is fine)
-    await expect(page.locator('body')).not.toContainText('Internal Server Error');
-    await expect(page.locator('body')).not.toContainText('Something went wrong');
+    await expect(page.getByTestId('billing-list')).toBeVisible();
+
+    // The seeded invoice must actually RENDER as a row — a broken invoices query
+    // would collapse to the empty "No invoices found" state (the old assertion of
+    // "no error text" would still have passed, hiding such a regression).
+    const row = page.getByTestId(`invoice-row-${invoiceId}`);
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('Inv04 Patient');
+
+    // Open the detail sheet → line items render from the real seeded treatment
+    // (D1110 Prophylaxis Adult @ ₱1,500). This asserts the FE invoice-detail fetch
+    // + line-item render, not just an API 201.
+    await row.click();
+    const detail = page.getByTestId('invoice-detail');
+    await expect(detail).toBeVisible();
+    await expect(detail).toContainText('Prophylaxis Adult');
+    await expect(detail).toContainText('D1110');
   });
 });
 

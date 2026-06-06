@@ -11,7 +11,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { API, signUpOnboardAndUnlock } from './helpers/e2e-seed';
+import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 import { signVisitConsent } from './fixtures';
 
 async function setup(page: Page) {
@@ -162,6 +162,36 @@ test.describe('Payment Plan', () => {
     expect(planRes.status).toBe(201);
     expect(planRes.body.status).toBe('on_track');
     expect(planRes.body.installments).toHaveLength(3);
+  });
+
+  test('payment plan installment schedule RENDERS in the UI (3 installments)', async ({ page }) => {
+    const { patientId, branchId, memberId } = await setup(page);
+    const visitId = await createAndCompleteVisit(page, patientId, branchId, memberId);
+
+    const invoiceId = await page.evaluate(async ({ api, visitId, patientId, branchId, memberId }) => {
+      const inv = await fetch(`${api}/dental/billing/invoices`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ visitId, patientId, branchId, dentistMemberId: memberId }),
+      }).then((r) => r.json() as any);
+      await fetch(`${api}/dental/billing/invoices/${inv.id}/issue`, { method: 'PATCH', credentials: 'include' });
+      await fetch(`${api}/dental/billing/invoices/${inv.id}/plan`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ patientId, frequency: 'monthly', numberOfInstallments: 3, startDate: new Date().toISOString() }),
+      });
+      return inv.id as string;
+    }, { api: API, visitId, patientId, branchId, memberId });
+
+    // Drive the real billing UI: invoice list → detail sheet → View Payment Plan.
+    await spaNavigate(page, '/billing');
+    await page.getByTestId(`invoice-row-${invoiceId}`).click();
+    await expect(page.getByTestId('invoice-detail')).toBeVisible();
+    await page.getByRole('button', { name: 'View Payment Plan' }).click();
+
+    // The plan's 3 installments must RENDER (not just exist in the API response).
+    const planView = page.getByTestId('payment-plan-view');
+    await expect(planView).toBeVisible();
+    await expect(planView.getByText('Installment Schedule')).toBeVisible();
+    await expect(planView.locator('tbody tr')).toHaveCount(3);
   });
 
   test('BR-011: cannot void invoice with active payment plan (AC-PAY-03)', async ({ page }) => {

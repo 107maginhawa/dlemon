@@ -172,4 +172,50 @@ test.describe('Insurance / Revenue-Cycle (P1-26)', () => {
     await page.getByRole('tab', { name: /invoices/i }).click();
     await expect(page.getByTestId('billing-list')).toBeVisible();
   });
+
+  test('a seeded claim RENDERS in the worklist (claim number + billed amount), not the empty state', async ({ page }) => {
+    const { branchId } = await signUpAndSeed(page);
+
+    // Seed: patient → insurance profile → claim with one inline line.
+    const claim = await page.evaluate(async ({ api, branchId }) => {
+      const h = { 'Content-Type': 'application/json' };
+      const patient = await fetch(`${api}/dental/patients`, {
+        method: 'POST', headers: h, credentials: 'include',
+        body: JSON.stringify({ displayName: 'Claim Carla', branchId, consentGiven: true }),
+      }).then((r) => r.json() as any);
+      await fetch(`${api}/dental/patients/${patient.id}`, {
+        method: 'PATCH', headers: h, credentials: 'include',
+        body: JSON.stringify({ preferredBranchId: branchId }),
+      });
+      const profile = await fetch(`${api}/dental/patients/${patient.id}/insurance-profiles`, {
+        method: 'POST', headers: h, credentials: 'include',
+        body: JSON.stringify({ insurerName: 'Maxicare', policyNumber: 'POL-2026-001', subscriberName: 'Claim Carla', payerType: 'hmo' }),
+      }).then((r) => r.json() as any);
+      const res = await fetch(`${api}/dental/billing/claims`, {
+        method: 'POST', headers: h, credentials: 'include',
+        body: JSON.stringify({
+          patientId: patient.id,
+          insuranceProfileId: profile.id,
+          lines: [{ cdtCode: 'D2391', description: 'Resin Composite 1 surface', billedAmountCents: 250000 }],
+        }),
+      });
+      const body = await res.json() as any;
+      return { status: res.status, claimNumber: body.claimNumber as string };
+    }, { api: API, branchId });
+
+    expect(claim.status, JSON.stringify(claim)).toBe(201);
+    expect(claim.claimNumber).toBeTruthy();
+
+    await spaNavigate(page, '/billing');
+    await page.getByRole('tab', { name: /insurance/i }).click();
+
+    const worklist = page.getByTestId('claims-worklist');
+    await expect(worklist).toBeVisible();
+    // The real claim must RENDER — a broken claims query would show the empty state
+    // (the existing empty-state test would still pass, masking the regression).
+    await expect(page.getByTestId('claims-empty')).toHaveCount(0);
+    await expect(worklist.getByText(claim.claimNumber)).toBeVisible();
+    // Billed amount renders from the seeded ₱2,500 line (formatPeso → en-PH).
+    await expect(worklist.getByText('₱2,500.00').first()).toBeVisible();
+  });
 });
