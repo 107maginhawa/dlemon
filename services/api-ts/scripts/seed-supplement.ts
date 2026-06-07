@@ -34,6 +34,8 @@ import {
   type NewDentalTreatment, type NewVisitNotes,
 } from '@/handlers/dental-visit/repos/treatment.schema';
 import { dentalPatientChartBaselines } from '@/handlers/dental-visit/repos/dental-chart-baseline.schema';
+import { dentalPerioCharts } from '@/handlers/dental-perio/repos/perio-chart.schema';
+import { dentalPerioToothReadings } from '@/handlers/dental-perio/repos/perio-reading.schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
@@ -951,6 +953,78 @@ async function seed() {
       }
     }
     log(`\n  Σ Longitudinal: ${totalVisitsInserted} visits across ${arcs.length} patients`);
+
+    // ── Perio multi-exam history (demoable longitudinal comparison) ──────────
+    // Claudia Bautista's perio arc gets two FINALIZED perio charts — an initial
+    // exam (deeper pockets, high BOP) and a maintenance exam ~20 months later
+    // (mostly improved, with one relapsed site #35) — so the perio "History"
+    // comparison view has a real improving trend to render out of the box.
+    const claudiaId = longPatientMap.get('Claudia Bautista');
+    if (claudiaId) {
+      const PERIO_TEETH = [16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 36, 46, 35, 45];
+      const isMolar = (t: number) => [6, 7, 8].includes(t % 10);
+      const siteDepths = (tooth: number, profile: 'initial' | 'stable'): number[] => {
+        if (profile === 'initial') return isMolar(tooth) ? [5, 4, 6, 4, 5, 5] : [3, 3, 4, 3, 3, 3];
+        if (tooth === 35) return [3, 4, 5, 3, 3, 3]; // relapsed site → "worse" (red) in the grid
+        return isMolar(tooth) ? [3, 3, 4, 3, 3, 3] : [2, 2, 3, 2, 2, 2];
+      };
+      const DEEP = 5; // ≥5mm = deep pocket (matches completePerioChart threshold)
+
+      // Each finalized perio chart belongs to its own visit (one-chart-per-visit
+      // unique constraint): the initial exam → v1, the maintenance exam → v4.
+      const perioExams: { key: string; visitKey: string; daysAgoN: number; status: 'completed' | 'locked'; profile: 'initial' | 'stable' }[] = [
+        { key: 'long-p11-perio-initial', visitKey: 'long-p11-v1', daysAgoN: 719, status: 'locked', profile: 'initial' },
+        { key: 'long-p11-perio-maint', visitKey: 'long-p11-v4', daysAgoN: 119, status: 'completed', profile: 'stable' },
+      ];
+
+      for (const ex of perioExams) {
+        const chartId = detUuid(`perio-chart:${ex.key}`);
+        const completedAt = daysAgo(ex.daysAgoN);
+        // Generate readings + roll up the summary stats the chart row stores.
+        let depthSum = 0, depthCount = 0, deepCount = 0, bopTrue = 0, bopTotal = 0;
+        const sites = ['BM', 'BC', 'BD', 'LM', 'LC', 'LD'] as const;
+        const readingRows = PERIO_TEETH.map((tooth) => {
+          const d = siteDepths(tooth, ex.profile);
+          // No explicit id — defaultRandom() PK + the (chartId,toothNumber)
+          // unique index keep re-runs idempotent (detUuid collides on these
+          // tooth-numbered seeds, which silently dropped rows).
+          const row: Record<string, unknown> = {
+            chartId, toothNumber: tooth,
+            createdBy: owner.personId ?? null, updatedBy: owner.personId ?? null,
+          };
+          sites.forEach((s, i) => {
+            const depth = d[i]!;
+            row[`depth${s}`] = depth;
+            const bleeds = depth >= (ex.profile === 'initial' ? 4 : DEEP);
+            row[`bop${s}`] = bleeds;
+            depthSum += depth; depthCount += 1;
+            if (depth >= DEEP) deepCount += 1;
+            bopTotal += 1; if (bleeds) bopTrue += 1;
+          });
+          return row;
+        });
+        const meanDepth = depthCount > 0 ? depthSum / depthCount : 0;
+        const bopPercent = bopTotal > 0 ? (bopTrue / bopTotal) * 100 : 0;
+
+        await db.insert(dentalPerioCharts).values({
+          id: chartId,
+          // one chart per visit (unique); the chart's completedAt drives ordering.
+          visitId: detUuid(`visit:${ex.visitKey}`),
+          patientId: claudiaId,
+          branchId: branch.id,
+          examinerMemberId: owner.id,
+          status: ex.status,
+          completedAt,
+          summaryBopPercent: bopPercent.toFixed(2),
+          summaryMeanDepth: meanDepth.toFixed(2),
+          summaryDeepPocketCount: deepCount,
+          createdBy: owner.personId ?? null,
+          updatedBy: owner.personId ?? null,
+        }).onConflictDoNothing();
+        await db.insert(dentalPerioToothReadings).values(readingRows as any).onConflictDoNothing();
+      }
+      log(`  ✓ Perio history: 2 exams for Claudia Bautista (improving trend, 1 relapsed site)`);
+    }
   }
 
   console.log('\n✓ Supplement seed complete.\n');
