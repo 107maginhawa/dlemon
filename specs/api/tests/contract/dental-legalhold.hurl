@@ -7,8 +7,12 @@
 #
 # Design note: the legal-hold table has no FK constraints on tenantId or
 # subjectPersonId (by design — mirrors audit/erasure decoupling per schema
-# comment). This lets the contract suite run with placeholder UUIDs rather
-# than bootstrapping a full org + patient chain.
+# comment). To keep list assertions deterministic across re-runs (the contract
+# DB persists between runs — only stale dental VISITS are swept, not holds),
+# we use a RUN-UNIQUE subjectPersonId: a throwaway user signed up with a
+# {{suffix}}-scoped email, whose server-issued user.id is a real, fresh UUID.
+# Scoping every list query to that subjectPersonId means the result is exactly
+# the hold(s) this run created — so `count == 1` proves identity, not coincidence.
 
 # ============================================================
 # Scenario 1: 401 gates — run BEFORE any sign-up so the cookie jar is empty.
@@ -41,11 +45,33 @@ jsonpath "$.code" == "UNAUTHORIZED"
 
 
 # ============================================================
-# Scenario 2: Sign in as the admin user.
+# Scenario 2a: Sign up the legal-hold SUBJECT (a non-admin user).
+# Its server-issued user.id is a fresh UUID, unique to this run — we use it as
+# the subjectPersonId so list filters scope to exactly this run's hold. This
+# same non-admin user is re-used (via sign-in) for the role-gate in Scenario 7.
+# ============================================================
+
+POST {{api}}/auth/sign-up/email
+Content-Type: application/json
+Origin: {{api}}
+{
+  "email": "legalhold-subject-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest",
+  "name": "Legal Hold Subject"
+}
+HTTP 200
+[Captures]
+subject_person_id: jsonpath "$.user.id"
+[Asserts]
+jsonpath "$.user.id" isString
+jsonpath "$.user.role" == "user"
+
+
+# ============================================================
+# Scenario 2b: Sign in as the admin user.
 # The runner's preflight already mints the admin session and injects
-# {{admin_token}} + {{admin_email}} + {{admin_password}}. We re-sign-in
-# here explicitly so the Hurl cookie jar carries the admin session for
-# all subsequent requests in this file.
+# {{admin_email}} + {{admin_password}}. Signing in here puts the admin session
+# in the Hurl cookie jar (replacing the subject's) for the admin-only flow.
 # ============================================================
 
 POST {{api}}/auth/sign-in/email
@@ -64,10 +90,9 @@ jsonpath "$.user.role" == "admin"
 
 
 # ============================================================
-# Scenario 3: Place a legal hold (201).
-# Uses placeholder UUIDs for tenantId / subjectPersonId (no FK constraints
-# in the legal-hold table — intentional decoupling from org/patient layers).
-# Assert: 201, status=active, name/reason echoed, releasedBy/releasedAt null.
+# Scenario 3: Place a legal hold (201) on the run-unique subject.
+# Assert: 201, status=active, name/reason/note echoed, initiatedBy=admin,
+# releasedBy/releasedAt null.
 # ============================================================
 
 POST {{api}}/dental/legal-holds
@@ -75,7 +100,7 @@ Cookie: better-auth.session_token={{admin_session}}
 Content-Type: application/json
 {
   "tenantId": "a1000000-0000-4000-8000-000000000001",
-  "subjectPersonId": "b2000000-0000-4000-8000-000000000002",
+  "subjectPersonId": "{{subject_person_id}}",
   "name": "LH Contract {{suffix}}",
   "reason": "Litigation hold for contract test {{suffix}}",
   "note": "Placed by automated contract suite"
@@ -90,7 +115,7 @@ jsonpath "$.name" == "LH Contract {{suffix}}"
 jsonpath "$.reason" == "Litigation hold for contract test {{suffix}}"
 jsonpath "$.note" == "Placed by automated contract suite"
 jsonpath "$.tenantId" == "a1000000-0000-4000-8000-000000000001"
-jsonpath "$.subjectPersonId" == "b2000000-0000-4000-8000-000000000002"
+jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
 jsonpath "$.initiatedBy" == "{{admin_user_id}}"
 jsonpath "$.releasedBy" == null
 jsonpath "$.releasedAt" == null
@@ -100,35 +125,45 @@ jsonpath "$.updatedAt" isString
 
 # ============================================================
 # Scenario 4: GET /dental/legal-holds (200) — list after placing one hold.
-# The response is a plain JSON array (not paginated). Filter by
-# subjectPersonId to scope to our fixture and assert the hold is present.
+# Response is a plain JSON array (not paginated). Scoped to the run-unique
+# subjectPersonId, the list must be EXACTLY the one hold we just placed —
+# count == 1 and the [0] record's id matches our captured hold_id.
 # ============================================================
 
-GET {{api}}/dental/legal-holds?subjectPersonId=b2000000-0000-4000-8000-000000000002
+GET {{api}}/dental/legal-holds?subjectPersonId={{subject_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
-# Response is a collection with at least the hold we just placed.
 jsonpath "$" isCollection
-jsonpath "$" count >= 1
-# Verify the required fields are present on every returned record.
-jsonpath "$[0].id" isString
-jsonpath "$[0].status" isString
-jsonpath "$[0].tenantId" isString
-jsonpath "$[0].subjectPersonId" == "b2000000-0000-4000-8000-000000000002"
-jsonpath "$[0].initiatedBy" isString
+jsonpath "$" count == 1
+jsonpath "$[0].id" == "{{hold_id}}"
+jsonpath "$[0].status" == "active"
+jsonpath "$[0].tenantId" == "a1000000-0000-4000-8000-000000000001"
+jsonpath "$[0].subjectPersonId" == "{{subject_person_id}}"
+jsonpath "$[0].initiatedBy" == "{{admin_user_id}}"
 jsonpath "$[0].createdAt" isString
 
 
-# GET with status=active filter — assert our just-placed hold appears.
-# Capture by hold_id to assert identity even when other holds exist.
-GET {{api}}/dental/legal-holds?status=active&subjectPersonId=b2000000-0000-4000-8000-000000000002
+# GET with status=active filter — same hold, proving the status filter is a
+# (non-vacuous) subset that still contains exactly our hold.
+GET {{api}}/dental/legal-holds?status=active&subjectPersonId={{subject_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
 jsonpath "$" isCollection
-jsonpath "$" count >= 1
+jsonpath "$" count == 1
+jsonpath "$[0].id" == "{{hold_id}}"
 jsonpath "$[0].status" == "active"
+
+
+# status=released filter — must be EMPTY before release (proves the filter
+# actually discriminates, not just echoes the whole table).
+GET {{api}}/dental/legal-holds?status=released&subjectPersonId={{subject_person_id}}
+Cookie: better-auth.session_token={{admin_session}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+jsonpath "$" count == 0
 
 
 # ============================================================
@@ -149,17 +184,27 @@ jsonpath "$.releasedAt" != null
 jsonpath "$.name" == "LH Contract {{suffix}}"
 jsonpath "$.reason" == "Litigation hold for contract test {{suffix}}"
 jsonpath "$.tenantId" == "a1000000-0000-4000-8000-000000000001"
-jsonpath "$.subjectPersonId" == "b2000000-0000-4000-8000-000000000002"
+jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
 
 
-# GET with status=released filter — our hold must now appear.
-GET {{api}}/dental/legal-holds?status=released&subjectPersonId=b2000000-0000-4000-8000-000000000002
+# After release: status=released now contains exactly our hold; status=active
+# is now empty. Both directions verify the filter tracks the lifecycle change.
+GET {{api}}/dental/legal-holds?status=released&subjectPersonId={{subject_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
 jsonpath "$" isCollection
-jsonpath "$" count >= 1
+jsonpath "$" count == 1
+jsonpath "$[0].id" == "{{hold_id}}"
 jsonpath "$[0].status" == "released"
+
+
+GET {{api}}/dental/legal-holds?status=active&subjectPersonId={{subject_person_id}}
+Cookie: better-auth.session_token={{admin_session}}
+HTTP 200
+[Asserts]
+jsonpath "$" isCollection
+jsonpath "$" count == 0
 
 
 # ============================================================
@@ -175,30 +220,35 @@ jsonpath "$.message" contains "released"
 
 
 # ============================================================
-# Scenario 7: Role gate — a freshly signed-up (non-admin) user must receive
-# 403 on every legal-hold operation. The message confirms admin-only policy.
+# Scenario 7: Role gate — the non-admin subject user (signed up in 2a) must
+# receive 403 on every legal-hold operation. The message confirms admin-only.
+#
+# Sign in as the non-admin first so the Hurl cookie jar carries THEIR session
+# (the jar currently holds the admin session from the flow above; an explicit
+# Cookie header alone does not reliably override the jar's session cookie).
 # ============================================================
 
-POST {{api}}/auth/sign-up/email
+POST {{api}}/auth/sign-in/email
 Content-Type: application/json
 Origin: {{api}}
 {
-  "email": "legalhold-nonadmin-{{suffix}}@example.org",
-  "password": "Sup3rSecret!ContractTest",
-  "name": "Non-Admin User"
+  "email": "legalhold-subject-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest"
 }
 HTTP 200
 [Captures]
-nonadmin_session: cookie "better-auth.session_token"
+nonadmin_session2: cookie "better-auth.session_token"
+[Asserts]
+jsonpath "$.user.role" == "user"
 
 
 # Non-admin cannot place a hold.
 POST {{api}}/dental/legal-holds
-Cookie: better-auth.session_token={{nonadmin_session}}
+Cookie: better-auth.session_token={{nonadmin_session2}}
 Content-Type: application/json
 {
   "tenantId": "a1000000-0000-4000-8000-000000000001",
-  "subjectPersonId": "b2000000-0000-4000-8000-000000000002",
+  "subjectPersonId": "{{subject_person_id}}",
   "name": "Unauthorized Hold",
   "reason": "Should be blocked"
 }
@@ -209,7 +259,7 @@ jsonpath "$.code" == "FORBIDDEN"
 
 # Non-admin cannot list holds.
 GET {{api}}/dental/legal-holds
-Cookie: better-auth.session_token={{nonadmin_session}}
+Cookie: better-auth.session_token={{nonadmin_session2}}
 HTTP 403
 [Asserts]
 jsonpath "$.code" == "FORBIDDEN"
@@ -217,7 +267,7 @@ jsonpath "$.code" == "FORBIDDEN"
 
 # Non-admin cannot release a hold.
 POST {{api}}/dental/legal-holds/{{hold_id}}/release
-Cookie: better-auth.session_token={{nonadmin_session}}
+Cookie: better-auth.session_token={{nonadmin_session2}}
 HTTP 403
 [Asserts]
 jsonpath "$.code" == "FORBIDDEN"
@@ -225,9 +275,8 @@ jsonpath "$.code" == "FORBIDDEN"
 
 # ============================================================
 # Re-sign-in as admin to refresh the Hurl cookie jar before edge-case tests.
-# After the non-admin sign-up in Scenario 7, the jar holds a non-admin cookie.
-# An explicit re-sign-in replaces the jar entry so Scenarios 8-10 use the
-# admin session cleanly (same pattern as provider.hurl step 4).
+# The role-gate requests above left the non-admin cookie in the jar; an explicit
+# re-sign-in replaces it so Scenarios 8-10 run as admin (cf. provider.hurl).
 # ============================================================
 
 POST {{api}}/auth/sign-in/email
@@ -280,6 +329,11 @@ Content-Type: application/json
 HTTP 400
 [Asserts]
 jsonpath "$.code" == "VALIDATION_ERROR"
-# At least subjectPersonId, name, reason are required.
+# PlaceLegalHoldBody requires subjectPersonId, name, reason — sending only
+# tenantId must surface all three as missing, so expect >= 3 field errors and
+# verify each required field is among the errored fields.
 jsonpath "$.fieldErrors" isCollection
-jsonpath "$.fieldErrors" count >= 1
+jsonpath "$.fieldErrors" count >= 3
+jsonpath "$.fieldErrors[*].field" contains "subjectPersonId"
+jsonpath "$.fieldErrors[*].field" contains "name"
+jsonpath "$.fieldErrors[*].field" contains "reason"
