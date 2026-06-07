@@ -163,6 +163,13 @@ jobs:
         with:
           bun-version: 1.2.21
       - run: bun install --frozen-lockfile
+      # The Playwright webServer boots api-ts, which imports the generated
+      # OpenAPI document — build the spec + codegen first or the API exits with
+      # "Cannot find module '@monobase/api-spec/openapi.json'".
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
       - name: Install Playwright browsers
         run: cd apps/dentalemon && bunx playwright install --with-deps chromium
       - name: Run E2E tests
