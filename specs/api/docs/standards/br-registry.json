@@ -39,8 +39,9 @@
           "id": "BR-006",
           "description": "Treatment state transitions are forward-only: diagnosed → planned → performed → verified. dismissed is reachable from any non-terminal state. No reversal is permitted.",
           "type": "state-guard",
-          "status": "partial",
-          "source": "treatment.schema.ts — TREATMENT_TRANSITIONS"
+          "status": "implemented",
+          "source": "treatment.schema.ts — TREATMENT_TRANSITIONS",
+          "notes": "Forward-only enforcement + dismissed-from-any-non-terminal + reversal rejection are tested in treatment.fsm.property.test.ts, dental-visit.treatment-status-transitions.test.ts, and treatment-fsm-http.test.ts (illegal transitions assert 4xx). Status corrected partial→implemented (TRACEABILITY 2026-06-08)."
         },
         {
           "id": "BR-007",
@@ -137,10 +138,10 @@
         },
         {
           "id": "BR-018",
-          "description": "Lab order state lifecycle: ordered → in_progress → completed / cancelled. A completed order cannot transition to any other state.",
+          "description": "Lab order state lifecycle: ordered → in_fabrication → delivered → fitted / cancelled. A terminal order cannot transition to any other state; the `delivered` transition is the LabOrderCompleted (DE-015) marker. (Description corrected from stale ordered→in_progress→completed wording — TRACEABILITY 2026-06-08.)",
           "type": "state-machine",
           "status": "implemented",
-          "source": "dental-clinical handlers"
+          "source": "dental-clinical handlers — lab-orders/updateLabOrder.ts; tested in clinical-consent-lab.test.ts"
         }
       ]
     },
