@@ -20,6 +20,13 @@
 #    The auth gate fires before any resource lookup; placeholder UUIDs suffice.
 # ============================================================
 
+POST {{api}}/providers
+Content-Type: application/json
+{
+  "providerType": "dentist"
+}
+HTTP 401
+
 GET {{api}}/providers/practitioners
 HTTP 401
 
@@ -110,8 +117,8 @@ jsonpath "$.user.role" == "admin"
 
 # ============================================================
 # 5. POST /providers/practitioners — register a new practitioner.
-#    providerId is an app-layer extension (not in TypeSpec) linking the
-#    FHIR Practitioner to the pre-FHIR Provider record.
+#    providerId is a required field in the CreatePractitionerRequest schema,
+#    linking the FHIR Practitioner to the pre-FHIR Provider record.
 # ============================================================
 
 POST {{api}}/providers/practitioners

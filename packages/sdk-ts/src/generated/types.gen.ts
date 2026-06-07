@@ -2177,6 +2177,10 @@ export type CreatePerioChartRequest = {
  */
 export type CreatePractitionerRequest = {
     /**
+     * The Provider (pre-FHIR organization/provider record) this practitioner belongs to
+     */
+    providerId: string;
+    /**
      * The name(s) associated with the practitioner (at least one required)
      */
     name: Array<HealthcareCoreHumanName>;
@@ -2226,6 +2230,10 @@ export type CreatePractitionerRequest = {
  * Request body for creating a new practitioner role assignment
  */
 export type CreatePractitionerRoleRequest = {
+    /**
+     * The Practitioner record this role belongs to
+     */
+    practitionerId: string;
     /**
      * Reference to the Practitioner
      */
@@ -2322,6 +2330,32 @@ export type CreatePrescriptionRequest = {
     controlledSubstanceSchedule?: ControlledSubstanceSchedule;
     prescriberDea?: string;
     prescriberNpi?: string;
+};
+
+/**
+ * Request body for creating a provider profile for the authenticated user
+ */
+export type CreateProviderRequest = {
+    /**
+     * Provider type
+     */
+    providerType: 'dentist' | 'hygienist' | 'orthodontist' | 'endodontist' | 'periodontist' | 'oral_surgeon' | 'pediatric_dentist' | 'pharmacist' | 'other';
+    /**
+     * Years of experience
+     */
+    yearsOfExperience?: number;
+    /**
+     * Professional biography
+     */
+    biography?: string;
+    /**
+     * Minor ailments specialties
+     */
+    minorAilmentsSpecialties?: Array<string>;
+    /**
+     * Minor ailment practice locations
+     */
+    minorAilmentsPracticeLocations?: Array<string>;
 };
 
 /**
@@ -74434,6 +74468,43 @@ export type UpdatePersonResponses = {
 };
 
 export type UpdatePersonResponse = UpdatePersonResponses[keyof UpdatePersonResponses];
+
+export type CreateProviderData = {
+    body: CreateProviderRequest;
+    path?: never;
+    query?: never;
+    url: '/providers';
+};
+
+export type CreateProviderErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type CreateProviderError = CreateProviderErrors[keyof CreateProviderErrors];
+
+export type CreateProviderResponses = {
+    /**
+     * Resource created response
+     */
+    201: Provider;
+};
+
+export type CreateProviderResponse = CreateProviderResponses[keyof CreateProviderResponses];
 
 export type ListPractitionerRolesData = {
     body?: never;
