@@ -49,7 +49,7 @@ export async function createAppointment(ctx: HandlerContext) {
 
   // V-SCH-007: visit_type is a constrained enum.
   if (!isVisitType(body.visitType)) {
-    throw new ValidationError('visitType must be one of: checkup, treatment, emergency, recall');
+    throw new ValidationError('visitType must be one of: checkup, treatment, emergency, recall, hygiene');
   }
 
   const scheduledAt = startAt;

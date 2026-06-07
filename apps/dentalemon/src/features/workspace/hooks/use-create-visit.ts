@@ -21,7 +21,10 @@ import { toastError } from '@/lib/error-toast';
 // subset — patientId/branchId/dentistMemberId are all required) and let the SDK
 // response (DentalVisit) flow through. The previous `as Parameters<…>['body']` +
 // `as unknown as CreatedVisit` casts disabled tsc at both ends.
-type CreateVisitInput = Pick<CreateDentalVisitRequest, 'patientId' | 'branchId' | 'dentistMemberId'>;
+// E3: visitType is optional (defaults to 'general' server-side). A hygienist starts
+// a hygiene-typed visit they are authorized to create; dentists send 'general'
+// (or omit it, unchanged). It is already part of CreateDentalVisitRequest.
+type CreateVisitInput = Pick<CreateDentalVisitRequest, 'patientId' | 'branchId' | 'dentistMemberId' | 'visitType'>;
 
 export function useCreateVisit(patientId: string) {
   const queryClient = useQueryClient();

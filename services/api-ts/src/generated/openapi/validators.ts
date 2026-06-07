@@ -468,7 +468,7 @@ export const BookingEventUpdateRequestSchema = z.object({
   dailyConfigs: z.record(z.string(), z.unknown()).optional()
 });
 
-export const VisitTypeSchema = z.enum(["checkup", "treatment", "emergency", "recall"]);
+export const VisitTypeSchema = z.enum(["checkup", "treatment", "emergency", "recall", "hygiene"]);
 
 export const BookingLookupResponseSchema = z.object({
   confirmationCode: z.string(),
@@ -900,6 +900,7 @@ export const CreateDentalVisitRequestSchema = z.object({
   branchId: UUIDSchema,
   dentistMemberId: UUIDSchema,
   chiefComplaint: z.string().optional(),
+  visitType: z.enum(["general", "hygiene"]).optional(),
   localId: z.string().optional()
 });
 
@@ -3357,11 +3358,14 @@ export const DentalVisitSchema = z.object({
   branchId: UUIDSchema,
   dentistMemberId: UUIDSchema,
   status: DentalVisitStatusSchema,
+  visitType: z.enum(["general", "hygiene"]),
   activatedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   completedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   lockedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   chiefComplaint: z.string().optional()
 });
+
+export const DentalVisitTypeSchema = z.enum(["general", "hygiene"]);
 
 export const DentalWaitlistModuleWaitlistUrgencySchema = z.enum(["routine", "soon", "asap"]);
 

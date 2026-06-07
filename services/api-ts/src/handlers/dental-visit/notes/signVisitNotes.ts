@@ -30,7 +30,14 @@ export async function signVisitNotes(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E3: signing a GENERAL visit's notes stays dentist-only (owner/associate).
+  // On a HYGIENE-typed visit, the hygienist may sign their own notes. The hygienist
+  // is added to the allowed set ONLY when the visit is hygiene-typed — never on general.
+  const signRoles =
+    visit.visitType === 'hygiene'
+      ? (['dentist_owner', 'dentist_associate', 'hygienist'] as const)
+      : (['dentist_owner', 'dentist_associate'] as const);
+  await assertBranchRole(db, user.id, visit.branchId, [...signRoles]);
 
   const repo = new VisitNotesRepository(db);
   const note = await repo.findByVisit(visitId);

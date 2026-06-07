@@ -24,8 +24,17 @@ export async function createDentalVisit(
   const body = ctx.req.valid('json');
 
   const db = ctx.get('database') as DatabaseInstance;
-  // V-VIS-002: ROLE_PERMISSION_MATRIX restricts visit creation to owner + associate.
-  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
+  // E3: visitType scopes who may create the visit.
+  //   'general' (default, dentist-led) → owner/associate only (V-VIS-002, unchanged).
+  //   'hygiene' (hygienist-led recall/prophy/perio) → owner/associate OR hygienist.
+  // The allowed set is computed CONDITIONALLY on visitType — hygienist is never
+  // granted general-visit authority.
+  const visitType = body.visitType ?? 'general';
+  const allowedRoles =
+    visitType === 'hygiene'
+      ? (['dentist_owner', 'dentist_associate', 'hygienist'] as const)
+      : (['dentist_owner', 'dentist_associate'] as const);
+  await assertBranchRole(db, user.id, body.branchId, [...allowedRoles]);
 
   const repo = new VisitRepository(db);
 
@@ -43,6 +52,7 @@ export async function createDentalVisit(
     patientId: body.patientId,
     branchId: body.branchId,
     dentistMemberId: body.dentistMemberId,
+    visitType,
     chiefComplaint: body.chiefComplaint,
     // GAP-001: persist optional client-generated id for offline-first idempotent sync.
     // syncStatus stays at its 'synced' default — a server-acknowledged write is synced.
@@ -65,7 +75,7 @@ export async function createDentalVisit(
     action: 'visit.create',
     resourceType: 'dental_visit',
     resourceId: visit.id,
-    metadata: { patientId: visit.patientId, branchId: visit.branchId },
+    metadata: { patientId: visit.patientId, branchId: visit.branchId, visitType: visit.visitType },
   });
 
   // Auto-create empty notes row so GET /notes on any new visit returns 200

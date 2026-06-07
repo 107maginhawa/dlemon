@@ -15,7 +15,7 @@
 
 import type { DentalAppointment } from './repos/dental-appointment.schema';
 
-export const VISIT_TYPES = ['checkup', 'treatment', 'emergency', 'recall'] as const;
+export const VISIT_TYPES = ['checkup', 'treatment', 'emergency', 'recall', 'hygiene'] as const;
 export type VisitType = (typeof VISIT_TYPES)[number];
 
 export function isVisitType(value: unknown): value is VisitType {

@@ -279,11 +279,76 @@ export function canEditChart(role: DentalRole): boolean {
 }
 
 /**
- * SIGN/lock visit notes (signVisitNotes). Dentists only — dental_assistant
- * may draft but must NEVER sign.
+ * SIGN/lock visit notes (signVisitNotes) on a GENERAL (dentist-led) visit.
+ * Dentists only — dental_assistant may draft but must NEVER sign.
+ *
+ * For hygiene-typed visits the hygienist may also sign — use
+ * {@link canSignNotesForVisitType} when the visit type is known.
  */
 export function canSignNotes(role: DentalRole): boolean {
   return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+// ─── E3: hygienist hygiene-led visit capability helpers ─────────────────────
+//
+// A hygienist gains create/sign authority ONLY on a HYGIENE-typed visit. These
+// helpers take the visit type so the workspace can surface hygiene affordances
+// without ever loosening the GENERAL-visit gates. They mirror the backend
+// conditional assertBranchRole logic exactly.
+
+export type VisitTypeCapability = 'general' | 'hygiene';
+
+/**
+ * Create/own a HYGIENE-typed visit (createDentalVisit with visitType=hygiene,
+ * or check-in of a hygiene appointment). Dentists OR hygienist. A general visit
+ * is still owner/associate-only — see {@link canCreateGeneralVisit}.
+ */
+export function canCreateHygieneVisit(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist'
+  );
+}
+
+/**
+ * Create a GENERAL (dentist-led) visit. Dentists only — unchanged gate.
+ */
+export function canCreateGeneralVisit(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * SIGN a HYGIENE-typed visit's notes. Dentists OR hygienist. General visits
+ * stay dentist-only. The hygienist is granted sign authority ONLY when the
+ * visit is hygiene-typed.
+ */
+export function canSignHygieneNotes(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist'
+  );
+}
+
+/**
+ * Resolve sign capability for a known visit type:
+ *   general → canSignNotes (owner/associate)
+ *   hygiene → canSignHygieneNotes (owner/associate/hygienist)
+ * This is the single helper the workspace should use when the visit type is known.
+ */
+export function canSignNotesForVisitType(role: DentalRole, visitType: VisitTypeCapability): boolean {
+  return visitType === 'hygiene' ? canSignHygieneNotes(role) : canSignNotes(role);
+}
+
+/**
+ * Resolve DRAFT capability for a known visit type:
+ *   general → canDraftNotes (owner/associate/dental_assistant)
+ *   hygiene → the above PLUS hygienist
+ */
+export function canDraftNotesForVisitType(role: DentalRole, visitType: VisitTypeCapability): boolean {
+  if (visitType === 'hygiene' && role === 'hygienist') return true;
+  return canDraftNotes(role);
 }
 
 /**

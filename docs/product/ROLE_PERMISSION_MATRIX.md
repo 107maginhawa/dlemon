@@ -20,6 +20,17 @@ oli: oli-prd-audit v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentalemon
 > appointments), that must be revisited as a **deliberate, documented matrix amendment** — updating
 > the Clinical Write Operations table here first — **not** reintroduced as silent code drift.
 
+> **✅ E3 amendment (2026-06-08) — hygienist-led HYGIENE visits, scoped by `visitType`.**
+> Product approved hygiene-led recall/prophy/perio. The fix is **type-scoped**, not a blanket
+> re-grant: dental visits now carry a `visitType` (`general` | `hygiene`, default `general`).
+> A hygienist gains authority **only** on a `hygiene`-typed visit; **GENERAL (dentist-led) visit
+> gates are UNCHANGED**. Specifically, for `hygiene` visits the hygienist MAY: create/own the visit
+> (`createDentalVisit` with `visitType: hygiene`), be checked in (a `hygiene` appointment derives a
+> hygiene visit on `checkInAppointment`), draft notes, and **sign** notes. `dentistMemberId`
+> (provider-of-record) on a hygiene visit MAY be the hygienist's own membership id. On `general`
+> visits the hygienist remains DENIED create/check-in/draft/sign exactly as before. The Clinical
+> Write Operations table below is annotated accordingly (✅ᴴ = hygiene-typed visits only).
+
 ---
 
 ## Actors
@@ -95,17 +106,25 @@ The `member_role` enum (`dental-org/repos/membership.schema.ts`) defines **5 add
 
 ### Clinical Write Operations
 
-| Operation | dentist_owner | dentist_associate | staff_full | staff_scheduling |
-|-----------|:---:|:---:|:---:|:---:|
-| Create/edit visit | ✅ | ✅ | ❌ | ❌ |
-| Add treatment | ✅ | ✅ | ❌ | ❌ |
-| Update treatment status | ✅ | ✅ | ❌ | ❌ |
-| Write prescription | ✅ | ✅ (prescriberMemberId req) | ❌ | ❌ |
-| Create lab order | ✅ | ✅ | ❌ | ❌ |
-| Sign visit notes | ✅ | ✅ | ❌ | ❌ |
-| Create consent form | ✅ | ✅ | ❌ | ❌ |
-| Upload attachment | ✅ | ✅ | ✅ | ❌ |
-| Create amendment | ✅ | ✅ | ❌ | ❌ |
+| Operation | dentist_owner | dentist_associate | staff_full | staff_scheduling | hygienist |
+|-----------|:---:|:---:|:---:|:---:|:---:|
+| Create/edit visit | ✅ | ✅ | ❌ | ❌ | ✅ᴴ |
+| Add treatment | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Update treatment status | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Write prescription | ✅ | ✅ (prescriberMemberId req) | ❌ | ❌ | ❌ |
+| Create lab order | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Draft visit notes | ✅ | ✅ | ❌ | ❌ | ✅ᴴ |
+| Sign visit notes | ✅ | ✅ | ❌ | ❌ | ✅ᴴ |
+| Create consent form | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Upload attachment | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Create amendment | ✅ | ✅ | ❌ | ❌ | ❌ |
+
+> **✅ᴴ = HYGIENE-typed visits only (E3).** The hygienist may create/own/check-in, draft, and sign
+> a visit **only** when its `visitType` is `hygiene`. On `general` (dentist-led) visits these cells
+> are ❌ for the hygienist — the dentist-only gates are unchanged. `dental_assistant` may also draft
+> notes (under supervision, see E2) but may never sign. The backend enforces this with a conditional
+> `assertBranchRole` that computes the allowed role set from the visit's `visitType`
+> (`createDentalVisit`, `checkInAppointment`, `upsertVisitNotes`, `signVisitNotes`).
 
 ### Billing Write Operations
 
@@ -133,6 +152,12 @@ The `member_role` enum (`dental-org/repos/membership.schema.ts`) defines **5 add
 | View calendar | ✅ | ✅ | ✅ | ✅ |
 | Cancel appointment | ✅ | ❌ | ✅ | ❌ |
 | Check-in (creates visit) | ✅ | ✅ | ✅ | ❌ |
+
+> **E3 check-in note:** `checkInAppointment` derives the created visit's `visitType` from the
+> appointment's service type (`hygiene` → hygiene visit; everything else → general visit). A
+> **hygienist MAY check in a `hygiene` appointment** (producing a hygiene visit it is authorized to
+> own) but is **DENIED** check-in of any general appointment. The owner/associate/staff_full
+> check-in grants above are unchanged.
 
 ### Administrative Operations
 

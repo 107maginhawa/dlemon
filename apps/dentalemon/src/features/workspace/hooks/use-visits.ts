@@ -18,6 +18,9 @@ export interface Visit {
   id: string;
   patientId: string;
   status: DentalVisit['status'];
+  // E3: 'general' (dentist-led) or 'hygiene' (hygienist-led). Scopes which roles
+  // may sign the visit's notes — see canSignNotesForVisitType.
+  visitType: DentalVisit['visitType'];
   chiefComplaint?: string;
   createdAt: string;
   activatedAt?: string;
@@ -51,6 +54,7 @@ export function useVisits({ patientId, branchId }: UseVisitsOptions) {
         id: v.id,
         patientId: v.patientId,
         status: v.status,
+        visitType: v.visitType,
         chiefComplaint: v.chiefComplaint,
         createdAt: toIso(v.createdAt) ?? '',
         activatedAt: toIso(v.activatedAt),

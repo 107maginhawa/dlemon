@@ -1861,6 +1861,11 @@ export type CreateDentalVisitRequest = {
     dentistMemberId: Uuid;
     chiefComplaint?: string;
     /**
+     * E3: 'general' (default, dentist-led) or 'hygiene' (hygienist-led recall/prophy/perio).
+     * A hygienist may only create a 'hygiene'-typed visit; 'general' stays owner/associate-only.
+     */
+    visitType?: 'general' | 'hygiene';
+    /**
      * GAP-001: optional client-generated id for offline-first idempotent sync
      */
     localId?: string;
@@ -7700,6 +7705,10 @@ export type DentalVisit = {
     branchId: Uuid;
     dentistMemberId: Uuid;
     status: DentalVisitStatus;
+    /**
+     * E3: 'general' (dentist-led, default) or 'hygiene' (hygienist-led).
+     */
+    visitType: 'general' | 'hygiene';
     activatedAt?: Date;
     completedAt?: Date;
     lockedAt?: Date;
@@ -7707,6 +7716,8 @@ export type DentalVisit = {
 };
 
 export type DentalVisitStatus = 'draft' | 'active' | 'completed' | 'locked';
+
+export type DentalVisitType = 'general' | 'hygiene';
 
 /**
  * Body to add a patient to the waitlist
@@ -61521,7 +61532,7 @@ export type VisitNotes = {
     lockedAt?: Date;
 };
 
-export type VisitType = 'checkup' | 'treatment' | 'emergency' | 'recall';
+export type VisitType = 'checkup' | 'treatment' | 'emergency' | 'recall' | 'hygiene';
 
 /**
  * Vital signs measurements with standardized units

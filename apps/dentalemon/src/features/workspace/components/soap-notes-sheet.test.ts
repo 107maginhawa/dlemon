@@ -1,8 +1,13 @@
 /**
- * SoapNotesSheet — E2 role-gated affordance test.
+ * SoapNotesSheet — E2/E3 role-gated affordance test.
  *
- * The Sign & Lock button is dentist-only. dental_assistant may DRAFT (Save is
- * still present) but must NOT see Sign & Lock. dentist_owner sees both.
+ * E2: On a GENERAL visit the Sign & Lock button is dentist-only. dental_assistant
+ * may DRAFT (Save is still present) but must NOT see Sign & Lock. dentist_owner
+ * sees both.
+ *
+ * E3: On a HYGIENE visit the hygienist may ALSO sign — Sign & Lock is shown for
+ * the hygienist on hygiene visits, but NOT on general visits. This keeps the UI
+ * honest with the visitType-scoped backend signVisitNotes gate.
  */
 
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
@@ -35,14 +40,14 @@ function unsignedNoteResponse() {
 }
 const mockFetch = mock(unsignedNoteResponse);
 
-function renderSheet(role: DentalRole) {
+function renderSheet(role: DentalRole, visitType: 'general' | 'hygiene' = 'general') {
   useOrgContextStore.setState({ role });
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     React.createElement(
       QueryClientProvider,
       { client: qc },
-      React.createElement(SoapNotesSheet, { visitId: 'v-1', open: true, onClose: () => {} }),
+      React.createElement(SoapNotesSheet, { visitId: 'v-1', open: true, onClose: () => {}, visitType }),
     ),
   );
 }
@@ -74,5 +79,24 @@ describe('SoapNotesSheet — Sign & Lock role gate (E2)', () => {
     await waitFor(() => expect(screen.getByLabelText('Save SOAP notes')).not.toBeNull());
     // Sign & Lock must NOT be in the DOM for the assistant.
     expect(screen.queryByTestId('sign-lock-btn')).toBeNull();
+  });
+
+  // ─── E3: hygienist sign authority is scoped to hygiene visits ───────────────
+
+  test('hygienist CANNOT see Sign & Lock on a GENERAL visit', async () => {
+    renderSheet('hygienist', 'general');
+    await waitFor(() => expect(screen.getByLabelText('Save SOAP notes')).not.toBeNull());
+    expect(screen.queryByTestId('sign-lock-btn')).toBeNull();
+  });
+
+  test('hygienist CAN see Sign & Lock on a HYGIENE visit', async () => {
+    renderSheet('hygienist', 'hygiene');
+    expect(await screen.findByTestId('sign-lock-btn')).not.toBeNull();
+    expect(screen.getByLabelText('Save SOAP notes')).not.toBeNull();
+  });
+
+  test('dentist_owner SEES Sign & Lock on a hygiene visit too (gate is not narrower)', async () => {
+    renderSheet('dentist_owner', 'hygiene');
+    expect(await screen.findByTestId('sign-lock-btn')).not.toBeNull();
   });
 });

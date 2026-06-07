@@ -388,3 +388,124 @@ HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
 jsonpath "$.pagination" isCollection
+
+
+# ============================================================
+# E3 — hygienist-led HYGIENE visits (visitType scoping)
+# ============================================================
+# The contract suite runs as the org owner (dentist_owner); PIN-only context
+# roles (hygienist) have no cloud session, so the hygienist DENY paths are
+# covered by the backend unit suite (hygienist.hygiene-visit.test.ts). Here we
+# pin the wire contract: a hygiene-typed visit can be created, round-trips its
+# visitType, and its notes can be signed.
+
+# E3-0 — fresh patient for the hygiene flow (the original patient already has an
+# active visit; the active-visit guard would 409 a second create).
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Hygiene Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+hygiene_patient_id: jsonpath "$.id"
+
+
+# E3-1 — create a HYGIENE-typed visit (visitType persists)
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{hygiene_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "visitType": "hygiene",
+  "chiefComplaint": "6-month recall + prophy"
+}
+HTTP 201
+[Captures]
+hygiene_visit_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.visitType" == "hygiene"
+jsonpath "$.status" == "draft"
+
+
+# E3-1a — default visitType is 'general' when omitted (back-compat). Uses a fresh
+# patient so the active-visit guard doesn't interfere with the assertion.
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Default Type Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+default_type_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{default_type_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Default visit type check"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.visitType" == "general"
+
+
+# E3-2 — GET round-trips the hygiene visitType
+GET {{api}}/dental/visits/{{hygiene_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{hygiene_visit_id}}"
+jsonpath "$.visitType" == "hygiene"
+
+
+# E3-3 — activate the hygiene visit (fresh patient → no active-visit conflict)
+PATCH {{api}}/dental/visits/{{hygiene_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "active"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "active"
+jsonpath "$.visitType" == "hygiene"
+
+
+# E3-4 — draft notes on the hygiene visit
+POST {{api}}/dental/visits/{{hygiene_visit_id}}/notes
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{hygiene_visit_id}}",
+  "subjective": "Recall — no complaints",
+  "objective": "BOP 8%, light calculus lower anteriors",
+  "assessment": "Localised gingivitis",
+  "plan": "Prophy completed; 6-month recall",
+  "notes": "OHI reinforced"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.visitId" == "{{hygiene_visit_id}}"
+
+
+# E3-5 — sign the hygiene visit's notes (happy path)
+POST {{api}}/dental/visits/{{hygiene_visit_id}}/notes/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 200
+[Asserts]
+jsonpath "$.signed" == true
+jsonpath "$.signedAt" isString

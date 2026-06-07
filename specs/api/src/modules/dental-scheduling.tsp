@@ -33,13 +33,17 @@ enum AppointmentStatus {
   no_show,
 }
 
-// V-SCH-007: visit_type is a constrained enum (checkup/treatment/emergency/recall),
+// V-SCH-007: visit_type is a constrained enum (checkup/treatment/emergency/recall/hygiene),
 // not free-text. Wire field name is `visitType` (camelCase per repo convention).
+// E3: 'hygiene' marks a hygienist-led recall/prophy/perio appointment — on check-in it
+// derives a hygiene-typed dental_visit, which is the only context where a hygienist may
+// create/own a visit. All other service types derive a 'general' (dentist-led) visit.
 enum VisitType {
   checkup,
   treatment,
   emergency,
   recall,
+  hygiene,
 }
 
 // ---------------------------------------------------------------------------

@@ -31,6 +31,14 @@ enum DentalVisitStatus {
   locked,
 }
 
+// E3: visit type scopes which roles may create/own/sign a visit.
+//   general → dentist-led (owner/associate only); the default for all rows
+//   hygiene → hygienist-led recall/prophy/perio (hygienist may create/check-in/sign)
+enum DentalVisitType {
+  general,
+  hygiene,
+}
+
 enum DentalTreatmentStatus {
   diagnosed,
   planned,
@@ -91,6 +99,7 @@ enum ChartEntryClassification {
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
   dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
   status: DentalVisitStatus.active,
+  visitType: DentalVisitType.general,
   activatedAt: utcDateTime.fromISO("2026-03-15T09:05:00Z"),
   chiefComplaint: "Tooth sensitivity on lower left molar",
 }, #{ title: "Active dental visit" })
@@ -103,6 +112,9 @@ model DentalVisit {
   branchId: UUID;
   dentistMemberId: UUID;
   status: DentalVisitStatus;
+
+  /** E3: 'general' (dentist-led, default) or 'hygiene' (hygienist-led). */
+  visitType: DentalVisitType;
   activatedAt?: utcDateTime;
   completedAt?: utcDateTime;
   lockedAt?: utcDateTime;
@@ -114,6 +126,12 @@ model CreateDentalVisitRequest {
   branchId: UUID;
   dentistMemberId: UUID;
   chiefComplaint?: string;
+
+  /**
+   * E3: 'general' (default, dentist-led) or 'hygiene' (hygienist-led recall/prophy/perio).
+   * A hygienist may only create a 'hygiene'-typed visit; 'general' stays owner/associate-only.
+   */
+  visitType?: DentalVisitType;
 
   /** GAP-001: optional client-generated id for offline-first idempotent sync */
   localId?: string;

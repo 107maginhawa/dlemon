@@ -41,6 +41,7 @@ import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow
 import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatment-done';
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@/lib/rbac';
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
@@ -144,14 +145,24 @@ function WorkspacePage() {
   }
 
   function handleNewVisit() {
-    const { branchId: localBranchId, memberId: dentistMemberId } = useOrgContextStore.getState();
+    const { branchId: localBranchId, memberId: dentistMemberId, role } = useOrgContextStore.getState();
     if (!localBranchId || !dentistMemberId) {
       // CR-01: surface the failure instead of silently returning.
       toast.error('Branch context unavailable — re-select your branch to start a visit.');
       return;
     }
+    // E3: choose a visitType the caller is actually authorized to create so the
+    // affordance is honest. A hygienist (who lacks general-create authority) starts
+    // a HYGIENE visit — the only visit type they may own. Dentists create GENERAL
+    // visits exactly as before. (Roles that can create neither are a pre-existing
+    // concern handled by the hook-level error toast — not expanded here.)
+    const dentalRole = role as DentalRole | null;
+    const visitType: 'general' | 'hygiene' =
+      dentalRole && !canCreateGeneralVisit(dentalRole) && canCreateHygieneVisit(dentalRole)
+        ? 'hygiene'
+        : 'general';
     createVisitMutation.mutate(
-      { patientId, branchId: localBranchId, dentistMemberId },
+      { patientId, branchId: localBranchId, dentistMemberId, visitType },
       {
         // Navigation-only callback; error feedback is handled hook-level in
         // useCreateVisit (V-FE-ERR-001) — a call-site onError here would
@@ -370,6 +381,7 @@ function WorkspacePage() {
       {currentVisitId && (
         <SoapNotesSheet
           visitId={currentVisitId}
+          visitType={currentVisit?.visitType === 'hygiene' ? 'hygiene' : 'general'}
           open={notesSheetOpen}
           onClose={() => setNotesSheetOpen(false)}
           onOpenMedicalHistory={() => {

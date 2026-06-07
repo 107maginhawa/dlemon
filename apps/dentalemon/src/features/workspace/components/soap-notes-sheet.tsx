@@ -15,13 +15,19 @@ import { Button, Input, Textarea } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
 import { APP_LOCALE } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
-import { canSignNotes, type DentalRole } from '@/lib/rbac';
+import { canSignNotesForVisitType, type DentalRole, type VisitTypeCapability } from '@/lib/rbac';
 
 export interface SoapNotesSheetProps {
   visitId: string;
   open: boolean;
   onClose: () => void;
   onOpenMedicalHistory?: () => void;
+  /**
+   * E3: the visit's type. 'general' (default) keeps signing dentist-only;
+   * 'hygiene' also lets a hygienist sign. Defaults to 'general' so an unknown
+   * type never widens authority.
+   */
+  visitType?: VisitTypeCapability;
 }
 
 interface SoapForm {
@@ -52,6 +58,7 @@ export function SoapNotesSheet({
   open,
   onClose,
   onOpenMedicalHistory,
+  visitType = 'general',
 }: SoapNotesSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
@@ -59,11 +66,13 @@ export function SoapNotesSheet({
   const { notes, isLoading, save, isSaving, sign, isSigning, addendum, isAddingAddendum, history } =
     useVisitNotes(visitId);
 
-  // E2: dental_assistant may DRAFT (Save) but must NOT SIGN. Hide the Sign & Lock
-  // affordance for roles without the sign capability (the backend signVisitNotes
-  // gate is the hard guarantee; this keeps the UI honest).
+  // E2/E3: dental_assistant may DRAFT (Save) but must NOT SIGN. Sign authority is
+  // scoped by visit type: GENERAL visits stay dentist-only; on a HYGIENE visit the
+  // hygienist may also sign. Hide the Sign & Lock affordance for roles without the
+  // sign capability for THIS visit type (the backend signVisitNotes gate is the hard
+  // guarantee; this keeps the UI honest).
   const role = useOrgContextStore((s) => s.role) as DentalRole | null;
-  const allowSign = role ? canSignNotes(role) : false;
+  const allowSign = role ? canSignNotesForVisitType(role, visitType) : false;
 
   const [form, setForm] = useState<SoapForm>(EMPTY_FORM);
   const [showAddendum, setShowAddendum] = useState(false);
