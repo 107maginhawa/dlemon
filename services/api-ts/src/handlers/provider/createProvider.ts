@@ -18,13 +18,14 @@ import { addUserRole } from '@/utils/auth';
  * 
  * Path: POST /providers
  * OperationId: createProvider
- * Security: bearerAuth with role ["owner"]
+ * Security: bearerAuth with role ["user"] — any authenticated user may create
+ * their OWN provider profile; the person is derived from the session user.
  */
 export async function createProvider(ctx: HandlerContext) {
   // Get authenticated user (guaranteed by middleware)
   const user = ctx.get('user') as User;
-  
-  // Owner role - user can only create provider profile for themselves
+
+  // Self-service: user can only create a provider profile for themselves
   if (!user.id) {
     throw new BusinessLogicError('User must have a person profile before creating provider profile', 'MISSING_PERSON_PROFILE');
   }

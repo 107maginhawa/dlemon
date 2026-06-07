@@ -334,6 +334,7 @@ import { listPersons } from '../../handlers/person/listPersons';
 import { updatePerson } from '../../handlers/person/updatePerson';
 import { createPractitioner } from '../../handlers/provider/createPractitioner';
 import { createPractitionerRole } from '../../handlers/provider/createPractitionerRole';
+import { createProvider } from '../../handlers/provider/createProvider';
 import { deactivatePractitioner } from '../../handlers/provider/deactivatePractitioner';
 import { deactivatePractitionerRole } from '../../handlers/provider/deactivatePractitionerRole';
 import { getPractitioner } from '../../handlers/provider/getPractitioner';
@@ -732,6 +733,7 @@ export const registry = {
   // Provider handlers
   createPractitioner,
   createPractitionerRole,
+  createProvider,
   deactivatePractitioner,
   deactivatePractitionerRole,
   getPractitioner,

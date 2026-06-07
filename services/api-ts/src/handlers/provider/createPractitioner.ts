@@ -23,12 +23,12 @@ export async function createPractitioner(
     throw new UnauthorizedError();
   }
 
-  // providerId is an app-layer extension not present in the OpenAPI schema
-  const body = ctx.req.valid('json') as CreatePractitionerBody & { providerId?: string };
+  const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // providerId must be supplied by the caller (FHIR: Practitioner belongs to an organization/provider)
+  // providerId links the FHIR Practitioner to its pre-FHIR Provider record
+  // (FHIR: a Practitioner belongs to an organization/provider).
   const providerId = body.providerId;
   if (!providerId) {
     throw new NotFoundError('providerId is required in request body', {

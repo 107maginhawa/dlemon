@@ -693,6 +693,10 @@ namespace MonobaseAPI {
   // Provider
   @tag("Provider")
   @route("/providers")
+  interface ProviderManagement extends ProviderModule.ProviderManagement {}
+
+  @tag("Provider")
+  @route("/providers")
   interface PractitionerManagement extends ProviderModule.PractitionerManagement {}
 
   @tag("Provider")

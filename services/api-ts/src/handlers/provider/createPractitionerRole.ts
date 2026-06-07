@@ -22,12 +22,11 @@ export async function createPractitionerRole(
     throw new UnauthorizedError();
   }
 
-  // practitionerId is an app-layer extension not present in the OpenAPI schema
-  const body = ctx.req.valid('json') as CreatePractitionerRoleBody & { practitionerId?: string };
+  const body = ctx.req.valid('json');
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // practitionerId must be supplied — links FHIR PractitionerRole to our practitioner row
+  // practitionerId links the FHIR PractitionerRole to our practitioner row
   const practitionerId = body.practitionerId;
   if (!practitionerId) {
     throw new NotFoundError('practitionerId is required in request body', {

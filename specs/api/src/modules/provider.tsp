@@ -219,6 +219,9 @@ model PractitionerRole extends HealthcareBaseEntity {
  */
 @doc("Request body for registering a new practitioner")
 model CreatePractitionerRequest {
+  @doc("The Provider (pre-FHIR organization/provider record) this practitioner belongs to")
+  providerId: UUID;
+
   @doc("The name(s) associated with the practitioner (at least one required)")
   name: HumanName[];
 
@@ -297,6 +300,9 @@ model UpdatePractitionerRequest {
  */
 @doc("Request body for creating a new practitioner role assignment")
 model CreatePractitionerRoleRequest {
+  @doc("The Practitioner record this role belongs to")
+  practitionerId: UUID;
+
   @doc("Reference to the Practitioner")
   practitioner: Reference;
 
@@ -421,9 +427,54 @@ model Provider extends BaseEntity {
   minorAilmentsPracticeLocations?: string[];
 }
 
+/**
+ * Provider create request
+ *
+ * The authenticated user's `person` is derived server-side, so it is not part
+ * of the request body.
+ */
+@doc("Request body for creating a provider profile for the authenticated user")
+model CreateProviderRequest {
+  @doc("Provider type")
+  providerType: ProviderType;
+
+  @doc("Years of experience")
+  @minValue(0)
+  @maxValue(70)
+  yearsOfExperience?: int32;
+
+  @doc("Professional biography")
+  @maxLength(2000)
+  biography?: string;
+
+  @doc("Minor ailments specialties")
+  minorAilmentsSpecialties?: string[];
+
+  @doc("Minor ailment practice locations")
+  minorAilmentsPracticeLocations?: string[];
+}
+
 @route("/providers")
 @tag("Provider")
 namespace ProviderModule {
+  /**
+   * Provider profile management interface
+   */
+  interface ProviderManagement {
+    @doc("Create a provider profile for the authenticated user. Assigns the 'provider' role and invalidates the current session.")
+    @operationId("createProvider")
+    @post
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    createProvider(
+      @body provider: CreateProviderRequest
+    ): ApiCreatedResponse<Provider>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse
+      | ApiForbiddenResponse
+      | ApiConflictResponse;
+  }
+
   /**
    * Practitioner management interface
    */

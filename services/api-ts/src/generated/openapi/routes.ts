@@ -2455,6 +2455,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.updatePerson as unknown as Handler
   );
 
+  // createProvider
+  app.post('/providers',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreateProviderBody, validationErrorHandler),
+    createExpandMiddleware("Provider"),
+    registry.createProvider as unknown as Handler
+  );
+
   // createPractitionerRole
   app.post('/providers/practitioner-roles',
     authMiddleware({ roles: ["admin", "credentialing"] }),

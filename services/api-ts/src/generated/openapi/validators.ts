@@ -1164,6 +1164,7 @@ export const PractitionerCredentialSchema = z.object({
 });
 
 export const CreatePractitionerRequestSchema = z.object({
+  providerId: z.string().uuid(),
   name: z.array(HealthcareCoreHumanNameSchema),
   active: z.boolean().optional(),
   telecom: z.array(HealthcareCoreContactPointSchema).optional(),
@@ -1186,6 +1187,7 @@ export const NotAvailableTimeSchema = z.object({
 });
 
 export const CreatePractitionerRoleRequestSchema = z.object({
+  practitionerId: z.string().uuid(),
   practitioner: z.object({
   resourceType: z.string(),
   id: z.string().uuid(),
@@ -1225,6 +1227,14 @@ export const CreatePrescriptionRequestSchema = z.object({
   controlledSubstanceSchedule: ControlledSubstanceScheduleSchema.optional(),
   prescriberDea: z.string().optional(),
   prescriberNpi: z.string().optional()
+});
+
+export const CreateProviderRequestSchema = z.object({
+  providerType: z.enum(["dentist", "hygienist", "orthodontist", "endodontist", "periodontist", "oral_surgeon", "pediatric_dentist", "pharmacist", "other"]),
+  yearsOfExperience: z.number().int().gte(0).lte(70).optional(),
+  biography: z.string().max(2000).optional(),
+  minorAilmentsSpecialties: z.array(z.string()).optional(),
+  minorAilmentsPracticeLocations: z.array(z.string()).optional()
 });
 
 export const CreateReviewRequestSchema = z.object({
@@ -22465,6 +22475,11 @@ export const UpdatePersonBody = PersonUpdateRequestSchema;
 export type UpdatePersonBody = z.infer<typeof UpdatePersonBody>;
 
 export const UpdatePersonResponse = PersonSchema;
+
+export const CreateProviderBody = CreateProviderRequestSchema;
+export type CreateProviderBody = z.infer<typeof CreateProviderBody>;
+
+export const CreateProviderResponse = ProviderSchema;
 
 export const CreatePractitionerRoleBody = CreatePractitionerRoleRequestSchema;
 export type CreatePractitionerRoleBody = z.infer<typeof CreatePractitionerRoleBody>;
