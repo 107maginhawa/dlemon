@@ -23,7 +23,7 @@
     "infra:down": "docker compose -f services/api-ts/docker-compose.deps.yml down",
     "infra:reset": "docker compose -f services/api-ts/docker-compose.deps.yml down -v && docker compose -f services/api-ts/docker-compose.deps.yml up -d --wait",
     "infra:logs": "docker compose -f services/api-ts/docker-compose.deps.yml logs -f",
-    "typecheck": "bun run --filter dentalemon typecheck",
+    "typecheck": "bun run --filter dentalemon --filter '@monobase/api-ts' typecheck",
     "lint": "bun run --filter dentalemon --filter '@monobase/api-ts' lint && bun run check:fsm-tokens",
     "check:fsm-tokens": "bun scripts/check-fsm-tokens.ts",
     "test": "bun run --filter dentalemon test",
