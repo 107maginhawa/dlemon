@@ -1764,6 +1764,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.createPerioChart as unknown as Handler
   );
 
+  // listPerioChartsForPatient
+  app.get('/dental/perio-charts',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListPerioChartsForPatientQuery, validationErrorHandler),
+    registry.listPerioChartsForPatient as unknown as Handler
+  );
+
   // getPerioChart
   app.get('/dental/perio-charts/:chartId',
     authMiddleware({ roles: ["user"] }),

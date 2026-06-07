@@ -58829,6 +58829,13 @@ export type PerioChart = {
     updatedAt: Date;
 };
 
+/**
+ * Longitudinal history: a patient's completed/locked perio charts (most recent first), each with full readings, for multi-exam comparison.
+ */
+export type PerioChartHistory = {
+    data: Array<PerioChart>;
+};
+
 export type PerioChartStatus = 'draft' | 'completed' | 'locked';
 
 /**
@@ -70161,6 +70168,37 @@ export type ListPatientVisitsResponses = {
 };
 
 export type ListPatientVisitsResponse = ListPatientVisitsResponses[keyof ListPatientVisitsResponses];
+
+export type ListPerioChartsForPatientData = {
+    body?: never;
+    path?: never;
+    query: {
+        patientId: Uuid;
+    };
+    url: '/dental/perio-charts';
+};
+
+export type ListPerioChartsForPatientErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ListPerioChartsForPatientError = ListPerioChartsForPatientErrors[keyof ListPerioChartsForPatientErrors];
+
+export type ListPerioChartsForPatientResponses = {
+    /**
+     * Success response with data
+     */
+    200: PerioChartHistory;
+};
+
+export type ListPerioChartsForPatientResponse = ListPerioChartsForPatientResponses[keyof ListPerioChartsForPatientResponses];
 
 export type CreatePerioChartData = {
     body: CreatePerioChartRequest;

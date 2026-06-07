@@ -18344,6 +18344,10 @@ export const PerioChartSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const PerioChartHistorySchema = z.object({
+  data: z.array(PerioChartSchema)
+});
+
 export const PerioExtentSchema = z.enum(["localized", "generalized", "molar_incisor"]);
 
 export const PerioGradeSchema = z.enum(["A", "B", "C"]);
@@ -21419,6 +21423,13 @@ export const CreatePerioChartBody = CreatePerioChartRequestSchema;
 export type CreatePerioChartBody = z.infer<typeof CreatePerioChartBody>;
 
 export const CreatePerioChartResponse = PerioChartSchema;
+
+export const ListPerioChartsForPatientQuery = z.object({
+  patientId: UUIDSchema,
+});
+export type ListPerioChartsForPatientQuery = z.infer<typeof ListPerioChartsForPatientQuery>;
+
+export const ListPerioChartsForPatientResponse = PerioChartHistorySchema;
 
 export const GetPerioChartParams = z.object({
   chartId: UUIDSchema,

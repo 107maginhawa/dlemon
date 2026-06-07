@@ -254,6 +254,11 @@ model PerioChart {
   updatedAt: utcDateTime;
 }
 
+@doc("Longitudinal history: a patient's completed/locked perio charts (most recent first), each with full readings, for multi-exam comparison.")
+model PerioChartHistory {
+  data: PerioChart[];
+}
+
 model CreatePerioChartRequest {
   visitId: UUID;
   patientId: UUID;
@@ -346,6 +351,17 @@ namespace DentalPerioModule {
     create(
       @body body: CreatePerioChartRequest
     ): ApiCreatedResponse<PerioChart>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listPerioChartsForPatient")
+    @doc("Multi-exam comparison: list a patient's completed/locked perio charts (most recent first), each with readings.")
+    listForPatient(
+      @query patientId: UUID
+    ): ApiOkResponse<PerioChartHistory>
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 

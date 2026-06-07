@@ -270,6 +270,7 @@ import { completePerioChart } from '../../handlers/dental-perio/completePerioCha
 import { createPerioChart } from '../../handlers/dental-perio/createPerioChart';
 import { getPerioChart } from '../../handlers/dental-perio/getPerioChart';
 import { getVisitPerioChart } from '../../handlers/dental-perio/getVisitPerioChart';
+import { listPerioChartsForPatient } from '../../handlers/dental-perio/listPerioChartsForPatient';
 import { upsertToothReading } from '../../handlers/dental-perio/upsertToothReading';
 import { exportPMD } from '../../handlers/dental-pmd/exportPMD';
 import { exportPatientCareRecord } from '../../handlers/dental-pmd/exportPatientCareRecord';
@@ -651,6 +652,7 @@ export const registry = {
   createPerioChart,
   getPerioChart,
   getVisitPerioChart,
+  listPerioChartsForPatient,
   upsertToothReading,
 
   // Dental-pmd handlers
