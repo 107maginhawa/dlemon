@@ -34,7 +34,8 @@ export async function updateTooth(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E2: dental_assistant may write tooth/surface CONDITIONS under dentist supervision.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'dental_assistant']);
 
   // EF-VIS-002: completed/locked visits cannot be modified — lock gate
   if (visit.status === 'completed' || visit.status === 'locked') {

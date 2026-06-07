@@ -231,6 +231,86 @@ export function canPresentCase(role: DentalRole): boolean {
   );
 }
 
+// ─── Clinical-write capability helpers (E2: dental_assistant scope) ──────────
+//
+// These mirror the backend assertBranchRole gates so the workspace only shows
+// affordances a role can actually exercise. The dental_assistant works UNDER
+// dentist supervision: it may CAPTURE imaging, DRAFT notes, and EDIT chart
+// conditions — but it may NOT SIGN notes, ADD treatments, or PRESCRIBE.
+
+/**
+ * Capture/upload imaging (createImagingStudy). Clinicians, hygienist, and
+ * dental_assistant under dentist supervision. (CBCT *finalize* stays
+ * dentist-only on the backend and has no separate affordance here.)
+ */
+export function canCaptureImaging(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist' ||
+    role === 'dental_assistant'
+  );
+}
+
+/**
+ * DRAFT visit notes (upsertVisitNotes). Clinicians + dental_assistant.
+ * Signing is a separate, stricter capability — see canSignNotes.
+ */
+export function canDraftNotes(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'dental_assistant'
+  );
+}
+
+/**
+ * Write tooth/surface CHART CONDITIONS (upsertDentalChart / updateTooth /
+ * initializeDentition). Clinicians, hygienist, and dental_assistant. This is
+ * condition charting only — adding/finalizing TREATMENTS is canAddTreatment.
+ */
+export function canEditChart(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist' ||
+    role === 'dental_assistant'
+  );
+}
+
+/**
+ * SIGN/lock visit notes (signVisitNotes). Dentists only — dental_assistant
+ * may draft but must NEVER sign.
+ */
+export function canSignNotes(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Add / finalize a treatment (createDentalTreatment). Dentists only —
+ * dental_assistant must NOT add or finalize treatments.
+ */
+export function canAddTreatment(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Prescribe medication (Rx). Dentists only — dental_assistant must NOT
+ * prescribe.
+ */
+export function canPrescribe(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Capture (create) a consent form for a visit. Dentists only — mirrors the
+ * backend createConsentForm gate (['dentist_owner','dentist_associate']).
+ * dental_assistant must NOT capture consent.
+ */
+export function canCaptureConsent(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
 /**
  * Check if a role can manage staff
  */

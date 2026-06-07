@@ -17,6 +17,13 @@ import {
   canManageStaff,
   canAccessReports,
   canPresentCase,
+  canCaptureImaging,
+  canDraftNotes,
+  canEditChart,
+  canSignNotes,
+  canAddTreatment,
+  canPrescribe,
+  canCaptureConsent,
   type DentalRole,
   type DentalModule,
 } from './rbac';
@@ -236,4 +243,103 @@ describe('canPresentCase', () => {
       expect(canPresentCase(role)).toBe(expected[role]);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// E2: dental_assistant clinical-assist capability helpers.
+// Each truth table mirrors the backend assertBranchRole gate for the operation.
+// ---------------------------------------------------------------------------
+
+const CLINICAL_CAPS: Record<
+  string,
+  { fn: (r: DentalRole) => boolean; expected: Record<DentalRole, boolean> }
+> = {
+  // ALLOW assistant — capture imaging (createImagingStudy)
+  canCaptureImaging: {
+    fn: canCaptureImaging,
+    expected: {
+      dentist_owner: true, dentist_associate: true, hygienist: true, dental_assistant: true,
+      staff_full: false, staff_scheduling: false, treatment_coordinator: false,
+      front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // ALLOW assistant — draft notes (upsertVisitNotes)
+  canDraftNotes: {
+    fn: canDraftNotes,
+    expected: {
+      dentist_owner: true, dentist_associate: true, dental_assistant: true,
+      hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // ALLOW assistant — chart-condition writes (upsertDentalChart/updateTooth/initializeDentition)
+  canEditChart: {
+    fn: canEditChart,
+    expected: {
+      dentist_owner: true, dentist_associate: true, hygienist: true, dental_assistant: true,
+      staff_full: false, staff_scheduling: false, treatment_coordinator: false,
+      front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — sign notes (signVisitNotes)
+  canSignNotes: {
+    fn: canSignNotes,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — add/finalize treatment (createDentalTreatment)
+  canAddTreatment: {
+    fn: canAddTreatment,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — prescribe (Rx)
+  canPrescribe: {
+    fn: canPrescribe,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — capture consent (createConsentForm); dentists only
+  canCaptureConsent: {
+    fn: canCaptureConsent,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+};
+
+for (const [name, { fn, expected }] of Object.entries(CLINICAL_CAPS)) {
+  describe(name, () => {
+    for (const role of ALL_ROLES) {
+      test(`${name}("${role}") === ${expected[role]}`, () => {
+        expect(fn(role)).toBe(expected[role]);
+      });
+    }
+  });
+}
+
+// Explicit dental_assistant scope summary (the heart of E2).
+describe('dental_assistant clinical-assist scope', () => {
+  test('ALLOW: capture imaging, draft notes, edit chart conditions', () => {
+    expect(canCaptureImaging('dental_assistant')).toBe(true);
+    expect(canDraftNotes('dental_assistant')).toBe(true);
+    expect(canEditChart('dental_assistant')).toBe(true);
+  });
+  test('DENY: sign notes, add treatment, prescribe, capture consent', () => {
+    expect(canSignNotes('dental_assistant')).toBe(false);
+    expect(canAddTreatment('dental_assistant')).toBe(false);
+    expect(canPrescribe('dental_assistant')).toBe(false);
+    expect(canCaptureConsent('dental_assistant')).toBe(false);
+  });
 });

@@ -78,7 +78,9 @@ export async function initializeDentition(ctx: Context): Promise<Response> {
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(body.visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E2: dental_assistant may scaffold the dentition (a chart-condition write) under
+  // dentist supervision. This populates healthy teeth only — no treatment/diagnosis.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'dental_assistant']);
 
   const age = getAgeYears(body.dateOfBirth);
 

@@ -29,7 +29,9 @@ export async function upsertVisitNotes(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E2: dental_assistant may DRAFT visit notes under dentist supervision.
+  // Signing (signVisitNotes) remains dentist-only — assistant must NOT sign.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'dental_assistant']);
 
   // EM-VIS-007: completed OR locked visits cannot be modified — lock gate
   if (visit.status === 'completed' || visit.status === 'locked') {

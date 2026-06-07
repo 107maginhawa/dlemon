@@ -340,13 +340,17 @@ describe('createImagingStudy', () => {
     expect(body.code).toBe('UNSUPPORTED_MIME_TYPE');
   });
 
-  test('403 when caller is a hygienist (not in CLINICAL_WRITE roles)', async () => {
+  // E2 / doc-vs-code reconciliation: imaging CAPTURE is allowed for hygienist and
+  // dental_assistant (under dentist supervision), matching the handler doc-comment.
+  // (CBCT *finalize* and image management — delete/calibration/modality — stay
+  // dentist-only and keep their hygienist-403 tests below.)
+  test('201 when caller is a hygienist (imaging capture is clinical-write)', async () => {
     const app = buildTestApp(HYGIENIST);
     const res = await app.request('/dental/imaging/studies', {
       method: 'POST',
       ...json({ patientId: PATIENT_ID, branchId: BRANCH_ID, filename: 'f.png', mimeType: 'image/png', size: 1 }),
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(201);
   });
 
   test('403 when caller has no membership in the branch', async () => {

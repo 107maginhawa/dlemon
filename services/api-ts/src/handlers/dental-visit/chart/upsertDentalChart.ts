@@ -30,7 +30,8 @@ export async function upsertDentalChart(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
+  // E2: dental_assistant may write chart CONDITIONS under dentist supervision.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'dental_assistant']);
 
   // EF-VIS-003: completed/locked visits cannot be modified — lock gate
   if (visit.status === 'completed' || visit.status === 'locked') {

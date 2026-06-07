@@ -13,6 +13,8 @@ import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, Check
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { BRAND_GOLD_TEXT } from '@/constants/brand';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { canPrescribe, canAddTreatment, canCaptureConsent, type DentalRole } from '@/lib/rbac';
 
 interface WorkspaceTopBarProps {
   patientId: string;
@@ -96,6 +98,15 @@ export function WorkspaceTopBar({
   const { data: profile } = usePatientProfile({ patientId });
   const { entries } = useMedicalHistory(patientId);
 
+  // E2: hide dentist-only affordances for dental_assistant. The assistant works
+  // under dentist supervision: it may draft notes + manage attachments (kept),
+  // but must NOT prescribe, add/finalize treatments, or capture consent.
+  // (Backend gates are the hard guarantee; this keeps the UI honest.)
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null;
+  const allowRx = role ? canPrescribe(role) : true;
+  const allowTreatmentPlan = role ? canAddTreatment(role) : true;
+  const allowConsent = role ? canCaptureConsent(role) : true;
+
   const firstName = profile?.firstName ?? '';
   const lastName = profile?.lastName ?? '';
   const initials = (
@@ -162,21 +173,27 @@ export function WorkspaceTopBar({
         {visitDate && (
           <span className="text-xs text-muted-foreground mr-2">{visitDate}</span>
         )}
-        <IconButton label="Write prescription" onClick={onRx}>
-          <Pill className="h-4 w-4" />
-        </IconButton>
-        <IconButton label="Consent" onClick={onConsent}>
-          <FileSignature className="h-4 w-4" />
-        </IconButton>
+        {allowRx && (
+          <IconButton label="Write prescription" onClick={onRx}>
+            <Pill className="h-4 w-4" />
+          </IconButton>
+        )}
+        {allowConsent && (
+          <IconButton label="Consent" onClick={onConsent}>
+            <FileSignature className="h-4 w-4" />
+          </IconButton>
+        )}
         <IconButton label="Notes / Medical History" onClick={onNotes}>
           <Pencil className="h-4 w-4" />
         </IconButton>
         <IconButton label="Attachments" onClick={onAttachments}>
           <Paperclip className="h-4 w-4" />
         </IconButton>
-        <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>
-          <List className="h-4 w-4" />
-        </IconButton>
+        {allowTreatmentPlan && (
+          <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>
+            <List className="h-4 w-4" />
+          </IconButton>
+        )}
         <IconButton
           label="Complete visit"
           onClick={onCompleteVisit}
