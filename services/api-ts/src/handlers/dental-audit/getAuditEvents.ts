@@ -17,13 +17,12 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import {
   UnauthorizedError,
-  ForbiddenError,
   ValidationError,
   BusinessLogicError,
 } from '@/core/errors';
 import { AuditLogRepository } from './repos/audit-log.repo';
 import type { DentalAuditLog } from './repos/audit-log.schema';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 
@@ -74,13 +73,6 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  // dentist_owner role only
-  const userRole: string = user.role ?? '';
-  const roles = userRole.split(',').map((r: string) => r.trim());
-  if (!roles.includes('dentist_owner')) {
-    throw new ForbiddenError('dentist_owner role required to access audit log');
-  }
-
   const db = ctx.get('database') as DatabaseInstance;
 
   // Contract params (MODULE_SPEC §10). Legacy aliases retained for back-compat
@@ -107,6 +99,7 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   // V-AUD-002: validate the date range up front (no DB work needed). from>to
   // previously returned an empty set silently, masking a malformed query.
   // Reject with 422 INVALID_DATE_RANGE. Unparseable dates are 400.
+  // Done before the role DB lookup so callers get fast input-error feedback.
   let fromDate: Date | undefined;
   let toDate: Date | undefined;
   if (from) {
@@ -128,8 +121,12 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
     );
   }
 
-  // Branch-level isolation: dentist_owner must have active membership in the queried branch
-  await assertBranchAccess(db, user.id, branchId);
+  // V-AUD-NEW / AC-AUD-003: dentist_owner only. Use assertBranchRole (checks the
+  // dental_membership table) — the same pattern every other dental handler uses.
+  // The old check used user.role (Better-Auth session field) which is never set
+  // to dentist_owner by the self-service onboarding flow, making this endpoint
+  // inaccessible to all legitimately onboarded clinic owners (BUG: EM-AUD-009).
+  await assertBranchRole(db, user.id, branchId, ['dentist_owner']);
 
   const limit = Math.min(Number(ctx.req.query('limit') ?? 50), 200);
   const offset = Number(ctx.req.query('offset') ?? 0);
