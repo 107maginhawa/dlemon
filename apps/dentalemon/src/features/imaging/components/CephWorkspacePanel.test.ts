@@ -111,6 +111,26 @@ describe('CephWorkspacePanel', () => {
     expect(container.textContent).toContain('steiner_hybrid_sn')
   })
 
+  test('controlled analysisType prop drives the analysis query (keeps canvas arcs and table in sync)', async () => {
+    // The bug: the measurements panel and the on-canvas angle arcs each ran their
+    // own useCephAnalysis with independent analysisType, so switching protocol
+    // updated the table but not the arcs. The workspace must be able to own a single
+    // analysisType and feed it to both. This asserts the panel honors a controlled value.
+    const urls: string[] = []
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req)
+      urls.push(url)
+      if (url.includes('/ceph/analysis')) return jsonResponse({ items: [], analysis: mkAnalysis() })
+      return jsonResponse(okLandmarks([]))
+    }) as unknown as typeof fetch
+    renderPanel({ analysisType: 'ricketts', onAnalysisTypeChange: mock(() => {}) })
+    await waitFor(() =>
+      expect(
+        urls.some((u) => u.includes('/ceph/analysis') && u.includes('analysisType=ricketts')),
+      ).toBe(true),
+    )
+  })
+
   test('shows close button with aria-label', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([])),

@@ -33,6 +33,14 @@ export interface CephWorkspacePanelProps {
    */
   selectedCode?: CephLandmarkCode | null
   onSelectCode?: (code: CephLandmarkCode | null) => void
+  /**
+   * Controlled analysis protocol. When provided, the workspace owns the selected
+   * analysisType so the on-canvas angle arcs (driven by the workspace's own
+   * useCephAnalysis) and this panel's measurements table read the SAME protocol.
+   * Omit for the uncontrolled fallback (internal state) used by isolated tests.
+   */
+  analysisType?: string
+  onAnalysisTypeChange?: (analysisType: string) => void
 }
 
 // D-L: report gate landmarks
@@ -72,10 +80,16 @@ export function CephWorkspacePanel({
   onLayerChange,
   selectedCode: controlledSelectedCode,
   onSelectCode,
+  analysisType: controlledAnalysisType,
+  onAnalysisTypeChange,
 }: CephWorkspacePanelProps) {
   const { landmarks, commitLandmark, autoDetect } = useCephLandmarks(imageId)
   // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
-  const [analysisType, setAnalysisType] = useState<string>('steiner_hybrid_sn')
+  // Controlled/uncontrolled (mirrors selectedCode): when the workspace owns
+  // analysisType it shares the value with the canvas arc layer so both stay in sync.
+  const [internalAnalysisType, setInternalAnalysisType] = useState<string>('steiner_hybrid_sn')
+  const analysisType = controlledAnalysisType ?? internalAnalysisType
+  const setAnalysisType = onAnalysisTypeChange ?? setInternalAnalysisType
   // P2-6: reference-population selector for norm display (default = classic literature).
   const [population, setPopulation] = useState<string>(DEFAULT_POPULATION)
   const { analysis, isError } = useCephAnalysis(imageId, analysisType)

@@ -89,6 +89,10 @@ export function ImagingWorkspace({
   // Pointer position (main-canvas px) for the magnifier loupe; null when off the image.
   const [cephPointer, setCephPointer] = useState<{ x: number; y: number } | null>(null)
   const [cephLayers, setCephLayers] = useState<LayerState>({ landmarks: true, tracing: true, arcs: true })
+  // Single source of truth for the analysis protocol, shared between the canvas
+  // angle-arc layer (below) and the panel's measurements table. Without this the
+  // two ran separate useCephAnalysis queries and the arcs ignored the switcher.
+  const [cephAnalysisType, setCephAnalysisType] = useState<string>('steiner_hybrid_sn')
 
   const isCeph = modality === 'cephalometric'
   const { landmarks: cephLandmarks, dragLandmark, commitLandmark } = useCephLandmarks(
@@ -96,6 +100,7 @@ export function ImagingWorkspace({
   )
   const { analysis: cephAnalysis } = useCephAnalysis(
     isCeph && cephPanelOpen ? imageId : '',
+    cephAnalysisType,
   )
 
   const pixelSpacingMm = externalPixelSpacingMm ?? internalPixelSpacingMm
@@ -501,6 +506,8 @@ export function ImagingWorkspace({
           onExportPng={(v) => void handleExportPng(v)}
           selectedCode={cephSelectedCode}
           onSelectCode={setCephSelectedCode}
+          analysisType={cephAnalysisType}
+          onAnalysisTypeChange={setCephAnalysisType}
         />
       </div>
 
