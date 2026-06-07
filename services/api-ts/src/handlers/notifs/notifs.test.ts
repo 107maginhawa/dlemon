@@ -78,8 +78,12 @@ function buildTestApp(user?: typeof USER_A) {
     ctx.set('database', db);
     ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
     if (user) {
+      // NOTE: the notifs handlers read the authed identity from ctx.get('user')
+      // directly (NOT session.user, unlike the reviews handlers). The 'session'
+      // here is set only to mirror real middleware; a refactor that switches
+      // these handlers to session.user would need this 'user' set too.
       ctx.set('user', user);
-      ctx.set('session', { id: 'test-session-nf01' });
+      ctx.set('session', { id: 'test-session-nf01', user });
     }
     await next();
   });
@@ -135,11 +139,16 @@ async function truncateNotifications() {
 describe('getNotification', () => {
   afterEach(truncateNotifications);
 
-  test('unauthenticated (no user set) → 500 (user.id access throws before repo)', async () => {
-    // getNotification does ctx.get('user') then user.id — if no user, TypeError → 500
+  test('unauthenticated (no user set) → 401 UNAUTHORIZED', async () => {
+    // getNotification guards: ctx.get('user') null → UnauthorizedError.
+    // (In production the auth middleware already 401s before the handler;
+    // this in-handler guard is defensive and keeps behavior consistent
+    // with the reviews handlers.)
     const app = buildTestApp(undefined);
     const res = await app.request(`/notifications/${NOTIF_ID_1}`);
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(401);
+    const body = await res.json() as any;
+    expect(body.code).toBe('UNAUTHORIZED');
   });
 
   test('notification not found for user → 404 NOT_FOUND', async () => {
@@ -182,10 +191,13 @@ describe('getNotification', () => {
 describe('listNotifications', () => {
   afterEach(truncateNotifications);
 
-  test('unauthenticated (no user set) → 500 (user.id access throws)', async () => {
+  test('unauthenticated (no user set) → 401 UNAUTHORIZED', async () => {
+    // listNotifications guards: ctx.get('user') null → UnauthorizedError.
     const app = buildTestApp(undefined);
     const res = await app.request('/notifications');
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(401);
+    const body = await res.json() as any;
+    expect(body.code).toBe('UNAUTHORIZED');
   });
 
   test('happy path empty → 200 with empty data array and pagination', async () => {
@@ -255,20 +267,22 @@ describe('listNotifications', () => {
 describe('markAllNotificationsAsRead', () => {
   afterEach(truncateNotifications);
 
-  test('unauthenticated (no user set) → 500 (user.id access throws)', async () => {
+  test('unauthenticated (no user set) → 401 UNAUTHORIZED', async () => {
+    // markAllNotificationsAsRead guards: ctx.get('user') null → UnauthorizedError.
     const app = buildTestApp(undefined);
     const res = await app.request('/notifications/read-all', { method: 'POST' });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(401);
+    const body = await res.json() as any;
+    expect(body.code).toBe('UNAUTHORIZED');
   });
 
-  test('no unread notifications → 200 with markedCount 0', async () => {
+  test('no unread notifications → 200 with markedCount exactly 0', async () => {
     // RED verified: user has no notifications → markedCount is 0
     const app = buildTestApp(USER_A);
     const res = await app.request('/notifications/read-all', { method: 'POST' });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(typeof body.markedCount).toBe('number');
-    expect(body.markedCount).toBeGreaterThanOrEqual(0);
+    expect(body.markedCount).toBe(0);
   });
 
   test('marks sent/delivered notifications as read → 200 with correct markedCount', async () => {
@@ -309,5 +323,20 @@ describe('markAllNotificationsAsRead', () => {
     // security notification should NOT be marked by the billing filter
     const [secNotif] = await db.select().from(notifications).where(eq(notifications.id, NOTIF_ID_2));
     expect(secNotif!.status).toBe('sent');
+  });
+
+  test('queued notification is NOT marked (only sent/delivered) → row stays queued', async () => {
+    // M3: proves markAllAsRead deliberately skips queued (scheduled/not-yet-sent)
+    // notifications. Seed ONE queued row, mark-all, and assert it is untouched.
+    await seedNotification(NOTIF_ID_1, USER_A.id, { status: 'queued', type: 'billing' });
+    const app = buildTestApp(USER_A);
+    const res = await app.request('/notifications/read-all', { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    // Nothing eligible to mark — the queued row is excluded.
+    expect(body.markedCount).toBe(0);
+    const [row] = await db.select().from(notifications).where(eq(notifications.id, NOTIF_ID_1));
+    expect(row!.status).toBe('queued');
+    expect(row!.readAt).toBeNull();
   });
 });

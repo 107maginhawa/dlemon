@@ -2,6 +2,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { ListNotificationsQuery } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
+import { UnauthorizedError } from '@/core/errors';
 import { parsePagination, buildPaginationMeta, parseFilters } from '@/utils/query';
 import { NotificationRepository } from './repos/notification.repo';
 import type { NotificationFilters } from './repos/notification.schema';
@@ -17,7 +18,10 @@ export async function listNotifications(
   ctx: ValidatedContext<never, ListNotificationsQuery, never>
 ): Promise<Response> {
   // Get authenticated user and check authorization
-  const user = ctx.get('user') as User;
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) {
+    throw new UnauthorizedError();
+  }
 
   // Extract validated query parameters
   const query = ctx.req.valid('query');

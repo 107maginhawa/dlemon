@@ -2,7 +2,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { GetNotificationParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
-import { NotFoundError, ForbiddenError } from '@/core/errors';
+import { NotFoundError, ForbiddenError, UnauthorizedError } from '@/core/errors';
 import { NotificationRepository } from './repos/notification.repo';
 
 /**
@@ -16,8 +16,11 @@ export async function getNotification(
   ctx: ValidatedContext<never, never, GetNotificationParams>
 ): Promise<Response> {
   // Get authenticated user and check authorization
-  const user = ctx.get('user') as User;
-  
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) {
+    throw new UnauthorizedError();
+  }
+
   // Extract validated parameters
   const params = ctx.req.valid('param') as { notif: string };
 

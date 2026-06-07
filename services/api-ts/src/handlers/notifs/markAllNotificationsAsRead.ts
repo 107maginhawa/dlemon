@@ -2,6 +2,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { MarkAllNotificationsAsReadQuery } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
+import { UnauthorizedError } from '@/core/errors';
 import { NotificationRepository } from './repos/notification.repo';
 
 /**
@@ -15,8 +16,11 @@ export async function markAllNotificationsAsRead(
   ctx: ValidatedContext<never, MarkAllNotificationsAsReadQuery, never>
 ): Promise<Response> {
   // Get authenticated user and check authorization
-  const user = ctx.get('user') as User;
-  
+  const user = ctx.get('user') as User | undefined;
+  if (!user?.id) {
+    throw new UnauthorizedError();
+  }
+
   // Extract validated query parameters
   const query = ctx.req.valid('query') as { type?: string };
   

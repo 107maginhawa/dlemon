@@ -196,12 +196,25 @@ async function seedVideoCallMessage(
   return readback!;
 }
 
+// Track rooms created with server-generated UUIDs (happy-path createChatRoom,
+// upsert) so afterEach can clean them up. A leaked room with [USER_A, USER_B]
+// participants would otherwise pollute the 409-conflict / upsert tests
+// (findRoomWithParticipants uses LIMIT 1) and cause cross-test 409s.
+const createdRoomIds = new Set<string>();
+
 async function truncateComms() {
   await db.delete(chatMessages).where(eq(chatMessages.chatRoom, ROOM_ID_1));
   await db.delete(chatMessages).where(eq(chatMessages.chatRoom, ROOM_ID_2));
   await db.delete(chatMessages).where(eq(chatMessages.id, MSG_ID_1));
   await db.delete(chatRooms).where(eq(chatRooms.id, ROOM_ID_1));
   await db.delete(chatRooms).where(eq(chatRooms.id, ROOM_ID_2));
+
+  // Clean up any rooms created with server-generated UUIDs (+ their messages)
+  for (const roomId of createdRoomIds) {
+    await db.delete(chatMessages).where(eq(chatMessages.chatRoom, roomId));
+    await db.delete(chatRooms).where(eq(chatRooms.id, roomId));
+  }
+  createdRoomIds.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +292,8 @@ describe('createChatRoom', () => {
     const body = await res.json() as any;
     expect(typeof body.id).toBe('string');
     expect(body.id.length).toBeGreaterThan(0);
+    // Track the server-generated room ID for cleanup in afterEach
+    createdRoomIds.add(body.id);
     expect(body.participants).toContain(USER_A.id);
     expect(body.participants).toContain(USER_B.id);
     expect(body.created).toBe(true);
@@ -678,7 +693,9 @@ describe('leaveVideoCall', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.message).toBeDefined();
-    expect(typeof body.callStillActive).toBe('boolean');
-    expect(typeof body.remainingParticipants).toBe('number');
+    // USER_A was the only call participant — once they leave, the call
+    // auto-ends with zero remaining participants.
+    expect(body.callStillActive).toBe(false);
+    expect(body.remainingParticipants).toBe(0);
   });
 });
