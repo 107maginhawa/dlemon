@@ -2,7 +2,8 @@
  * getPatientHousehold — GET /dental/patients/{patientId}/household
  *
  * P1-27: fetch the household a patient belongs to (+ members), for the patient
- * profile surface. 404 if the patient is not in any household.
+ * profile surface. 204 if the patient is not in any household (404 only if the
+ * patient itself does not exist).
  */
 
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
@@ -26,7 +27,10 @@ export async function getPatientHousehold(ctx: HandlerContext): Promise<Response
 
   const repo = new HouseholdRepository(db, logger);
   const household = await repo.findByPatientId(patientId);
-  if (!household) throw new NotFoundError('Patient does not belong to a household');
+  // Absent optional sub-resource → 204 (matches getVisitPerioChart). The patient
+  // exists (404 above otherwise); they're just in no household, so the client
+  // reads "none" without a console-noise 404.
+  if (!household) return new Response(null, { status: 204 });
 
   const members = await repo.findMembers(household.id);
   members.sort((a, b) => Number(b.isGuarantor) - Number(a.isGuarantor));

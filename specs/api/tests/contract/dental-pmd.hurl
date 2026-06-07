@@ -83,6 +83,12 @@ HTTP 201
 visit_id: jsonpath "$.id"
 
 
+# 1a. The visit exists but has no PMD yet → 204 No Content (not 404).
+GET {{api}}/dental/visits/{{visit_id}}/pmd
+Cookie: better-auth.session_token={{session_token}}
+HTTP 204
+
+
 # 2. Activate the visit
 PATCH {{api}}/dental/visits/{{visit_id}}
 Cookie: better-auth.session_token={{session_token}}

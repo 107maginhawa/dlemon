@@ -173,6 +173,7 @@ namespace DentalPMDModule {
     getForVisit(
       @path visitId: UUID
     ): ApiOkResponse<PMDDocument>
+      | ApiNoContentResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 

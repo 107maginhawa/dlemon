@@ -65,8 +65,10 @@ export function useHousehold({ patientId }: { patientId: string | null }) {
         path: { patientId },
         throwOnError: false,
       });
-      // 404 = patient simply isn't in a household — a normal, non-error state.
-      if (result.response?.status === 404) return null;
+      // 204 (no household) or 404 (legacy) = patient simply isn't in a
+      // household — a normal, non-error state, not a fetch failure.
+      const status = result.response?.status;
+      if (status === 204 || status === 404) return null;
       if (result.error) {
         // Re-throw non-404 errors so TanStack Query sets error state
         const status = result.response?.status;
