@@ -265,9 +265,16 @@ export function canDraftNotes(role: DentalRole): boolean {
 }
 
 /**
- * Write tooth/surface CHART CONDITIONS (upsertDentalChart / updateTooth /
- * initializeDentition). Clinicians, hygienist, and dental_assistant. This is
- * condition charting only — adding/finalizing TREATMENTS is canAddTreatment.
+ * Write tooth/surface CHART CONDITIONS. Clinicians, hygienist (partial), and
+ * dental_assistant. This is condition charting only — adding/finalizing
+ * TREATMENTS is canAddTreatment.
+ *
+ * NOTE — backend asymmetry (E2): this helper returns true for hygienist,
+ * matching `upsertDentalChart` (full-chart bulk write). However, the hygienist
+ * is NOT in the `updateTooth` or `initializeDentition` gates — those two
+ * endpoints are owner/associate/dental_assistant only. If you need to gate a
+ * single-tooth or dentition-init affordance specifically, check for hygienist
+ * explicitly: `canEditChart(role) && role !== 'hygienist'`.
  */
 export function canEditChart(role: DentalRole): boolean {
   return (
