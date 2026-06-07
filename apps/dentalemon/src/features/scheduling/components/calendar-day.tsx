@@ -6,6 +6,12 @@
 
 import React from 'react';
 import { AppointmentCard, type Appointment } from './appointment-card';
+import { computeAppointmentColumns, type AppointmentColumn } from '../utils/appointment-layout';
+
+/** Horizontal gutter (px) matching the legacy left-2/right-2 inset. */
+const COLUMN_GUTTER_PX = 8;
+/** Gap (px) between side-by-side overlapping appointment columns. */
+const COLUMN_GAP_PX = 4;
 
 const SLOT_HEIGHT_PX = 48;
 const DAY_START_HOUR = 7;
@@ -100,6 +106,7 @@ export interface CalendarDayProps {
 
 export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClick, onCheckIn, onConfirm, onReschedule }: CalendarDayProps) {
   const slots = generateTimeSlots();
+  const columns = React.useMemo(() => computeAppointmentColumns(appointments), [appointments]);
 
   // Current time indicator
   const now = new Date();
@@ -156,13 +163,14 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
             </div>
           ))}
 
-          {/* Appointment blocks */}
+          {/* Appointment blocks — overlapping appointments split into columns */}
           {appointments.map(appt => (
             <DraggableAppointment
               key={appt.id}
               appt={appt}
               top={getTopPx(appt.scheduledAt)}
               height={Math.max(getHeightPx(appt.durationMinutes), 36)}
+              column={columns.get(appt.id) ?? { col: 0, cols: 1 }}
               onAppointmentClick={onAppointmentClick}
               onCheckIn={onCheckIn}
               onConfirm={onConfirm}
@@ -196,10 +204,29 @@ interface DraggableAppointmentProps {
   appt: Appointment;
   top: number;
   height: number;
+  /** Horizontal column placement for overlapping appointments. */
+  column: AppointmentColumn;
   onAppointmentClick: (appointment: Appointment) => void;
   onCheckIn: (appointmentId: string) => void;
   onConfirm?: (appointmentId: string) => void;
   onReschedule?: (appointmentId: string, newStartAt: string, newDurationMinutes: number) => void;
+}
+
+/**
+ * Horizontal positioning for an appointment block. A lone appointment (cols===1)
+ * keeps the legacy full-width inset (8px each side) so the common case is
+ * visually unchanged; concurrent appointments split the available width into
+ * equal side-by-side columns.
+ */
+function columnStyle({ col, cols }: AppointmentColumn): React.CSSProperties {
+  if (cols <= 1) {
+    return { left: COLUMN_GUTTER_PX, right: COLUMN_GUTTER_PX };
+  }
+  const avail = `(100% - ${2 * COLUMN_GUTTER_PX}px)`;
+  return {
+    left: `calc(${COLUMN_GUTTER_PX}px + ${col} * (${avail} / ${cols}))`,
+    width: `calc(${avail} / ${cols} - ${COLUMN_GAP_PX}px)`,
+  };
 }
 
 /**
@@ -209,7 +236,7 @@ interface DraggableAppointmentProps {
  * statuses (checked-in / completed / cancelled / no-show).
  */
 function DraggableAppointment({
-  appt, top, height, onAppointmentClick, onCheckIn, onConfirm, onReschedule,
+  appt, top, height, column, onAppointmentClick, onCheckIn, onConfirm, onReschedule,
 }: DraggableAppointmentProps) {
   const dragEnabled = !!onReschedule && canReschedule(appt.status);
   const [offsetY, setOffsetY] = React.useState(0);
@@ -262,8 +289,10 @@ function DraggableAppointment({
 
   return (
     <div
-      className="absolute left-2 right-2 z-[2] touch-none"
-      style={{ top: top + offsetY, height: Math.max(height + extraHeight, 36) }}
+      className="absolute z-[2] touch-none"
+      style={{ top: top + offsetY, height: Math.max(height + extraHeight, 36), ...columnStyle(column) }}
+      data-appt-cols={column.cols}
+      data-appt-col={column.col}
       onPointerMove={dragEnabled ? handlePointerMove : undefined}
       onPointerUp={dragEnabled ? handlePointerUp : undefined}
     >

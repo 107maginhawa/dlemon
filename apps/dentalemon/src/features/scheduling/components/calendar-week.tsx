@@ -6,11 +6,27 @@
 
 import React from 'react';
 import type { Appointment } from './appointment-card';
+import { computeAppointmentColumns, type AppointmentColumn } from '../utils/appointment-layout';
 
 const SLOT_HEIGHT_PX = 48;
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 19;
 const TOTAL_SLOTS = (DAY_END_HOUR - DAY_START_HOUR) * 2;
+
+/** Horizontal inset (px) inside a day column, matching the legacy left/right-[3px]. */
+const WEEK_GUTTER_PX = 3;
+/** Gap (px) between side-by-side overlapping chips within a day column. */
+const WEEK_COLUMN_GAP_PX = 2;
+
+/** Horizontal placement for a week-view chip; lone chips keep the full-width inset. */
+function weekChipStyle({ col, cols }: AppointmentColumn): React.CSSProperties {
+  if (cols <= 1) return { left: WEEK_GUTTER_PX, right: WEEK_GUTTER_PX };
+  const avail = `(100% - ${2 * WEEK_GUTTER_PX}px)`;
+  return {
+    left: `calc(${WEEK_GUTTER_PX}px + ${col} * (${avail} / ${cols}))`,
+    width: `calc(${avail} / ${cols} - ${WEEK_COLUMN_GAP_PX}px)`,
+  };
+}
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -172,16 +188,17 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                   <div key={i} className="border-b border-border/40" style={{ height: SLOT_HEIGHT_PX }} />
                 ))}
 
-                {/* Appointment chips */}
-                {dayAppts.map(appt => {
+                {/* Appointment chips — overlapping chips split into columns */}
+                {(() => { const dayColumns = computeAppointmentColumns(dayAppts); return dayAppts.map(appt => {
                   const top = getTopPx(appt.scheduledAt);
                   const height = getHeightPx(appt.durationMinutes);
                   const chipStyle = statusChipStyle[appt.status] || statusChipStyle.scheduled;
+                  const column = dayColumns.get(appt.id) ?? { col: 0, cols: 1 };
                   return (
                     <div
                       key={appt.id}
-                      className={`absolute left-[3px] right-[3px] border-l-[3px] rounded-[5px] px-1.5 py-1 cursor-pointer overflow-hidden z-[2] hover:brightness-95 transition-all min-h-[30px] ${chipStyle}`}
-                      style={{ top, height }}
+                      className={`absolute border-l-[3px] rounded-[5px] px-1.5 py-1 cursor-pointer overflow-hidden z-[2] hover:brightness-95 transition-all min-h-[30px] ${chipStyle}`}
+                      style={{ top, height, ...weekChipStyle(column) }}
                       role="button"
                       tabIndex={0}
                       aria-label={`${truncateId(appt.patientId)}, ${formatChipTime(appt.scheduledAt)}`}
@@ -191,7 +208,7 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                       <div className="text-[10px] text-muted-foreground tabular-nums">{formatChipTime(appt.scheduledAt)}</div>
                     </div>
                   );
-                })}
+                }); })()}
 
                 {/* Empty state */}
                 {dayAppts.length === 0 && (
