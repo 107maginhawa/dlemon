@@ -14,7 +14,7 @@ import { PatientRepository, type PatientFilters, type ArchiveResult } from './pa
 
 /** Re-exported so dental-patient handlers can type patient payloads without
  *  importing the patient schema directly (Phase 10 boundary lint). */
-export type { FollowUpNote, PatientWithPerson } from './patient.schema';
+export type { FollowUpNote, PatientWithPerson, Patient, EmergencyContact, CommunicationPreferences } from './patient.schema';
 
 /** Lookup patient for branch authorization. Returns { id, preferredBranchId, status } or null. */
 export async function getPatientForDentalPatient(
@@ -91,7 +91,7 @@ export async function findDuplicatePatientGroups(
         dateOfBirth: p.person.dateOfBirth ?? null,
         email: contact?.email ?? null,
         phone: contact?.phone ?? null,
-        createdAt: (p.createdAt instanceof Date ? p.createdAt : new Date(p.createdAt as any)).toISOString(),
+        createdAt: (p.createdAt instanceof Date ? p.createdAt : new Date(p.createdAt as string)).toISOString(),
       };
     }),
   }));

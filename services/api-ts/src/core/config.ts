@@ -104,7 +104,7 @@ export function parseConfig(): Config {
   const parseLogLevel = (value: string | undefined): Config['logging']['level'] => {
     const validLevels: Config['logging']['level'][] = ['debug', 'info', 'warn', 'error'];
     const level = value?.toLowerCase();
-    return validLevels.includes(level as any) ? level as Config['logging']['level'] : 'info';
+    return validLevels.includes(level as Config['logging']['level']) ? level as Config['logging']['level'] : 'info';
   };
 
   // Parse server configuration

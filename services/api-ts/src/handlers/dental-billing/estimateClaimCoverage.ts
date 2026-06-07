@@ -7,6 +7,7 @@
  * the estimate is approval-driven; otherwise it falls back to a cash estimate.
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import {
@@ -15,7 +16,7 @@ import {
 } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { estimateCoverage, type EstimateLineInput } from './utils/coverage-estimate';
 
-export async function estimateClaimCoverage(ctx: any): Promise<Response> {
+export async function estimateClaimCoverage(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 

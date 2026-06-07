@@ -5,6 +5,7 @@
  * submission date into current / 31–60 / 61–90 / 90+ buckets, grouped by payer.
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -12,7 +13,7 @@ import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.r
 import { getInsurerNamesForBilling } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { computePayerAging, type AgingClaim } from './utils/aging';
 
-export async function getPayerArAging(ctx: any): Promise<Response> {
+export async function getPayerArAging(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 

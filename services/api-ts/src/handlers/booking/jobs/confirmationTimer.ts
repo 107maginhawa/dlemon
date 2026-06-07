@@ -5,6 +5,7 @@
 
 import type { JobContext } from '@/core/jobs';
 import type { NotificationService } from '@/core/notifs';
+import type { Booking } from '../repos/booking.schema';
 
 // Extended job context that includes notification service
 interface ExtendedJobContext extends JobContext {
@@ -170,7 +171,7 @@ export async function confirmationTimerJob(context: ExtendedJobContext): Promise
  * Queue notifications for auto-rejected bookings
  */
 async function queueAutoRejectionNotifications(
-  booking: any,
+  booking: Booking,
   context: ExtendedJobContext
 ): Promise<void> {
   const { logger, notificationService } = context;
@@ -179,36 +180,24 @@ async function queueAutoRejectionNotifications(
     // Client notification - booking was auto-rejected
     await notificationService.createNotification({
       recipient: booking.client,
-      type: 'booking_auto_rejected',
+      type: 'booking.cancelled',
+      channel: 'in-app',
       title: 'Booking Request Expired',
       message: 'Your booking request has expired as the host did not confirm within 15 minutes.',
-      data: {
-        bookingId: booking.id,
-        hostId: booking.host,
-        scheduledAt: booking.scheduledAt?.toISOString(),
-        autoRejectedAt: new Date().toISOString(),
-        reason: 'Provider did not confirm within 15 minutes'
-      },
-      channels: ['in-app', 'email', 'sms'],
-      priority: 'high'
-    } as any);
-    
+      relatedEntityType: 'booking',
+      relatedEntity: booking.id,
+    });
+
     // Provider notification - booking expired
     await notificationService.createNotification({
       recipient: booking.host,
-      type: 'booking_expired',
+      type: 'booking.cancelled',
+      channel: 'in-app',
       title: 'Booking Request Expired',
       message: 'A booking request has expired due to no confirmation within the time limit.',
-      data: {
-        bookingId: booking.id,
-        clientId: booking.client,
-        scheduledAt: booking.scheduledAt?.toISOString(),
-        autoRejectedAt: new Date().toISOString(),
-        missedDeadline: true
-      },
-      channels: ['in-app', 'email'],
-      priority: 'normal'
-    } as any);
+      relatedEntityType: 'booking',
+      relatedEntity: booking.id,
+    });
 
     logger.info({
       bookingId: booking.id,
@@ -230,7 +219,7 @@ async function queueAutoRejectionNotifications(
  * Used for manual checks or UI display
  */
 export function isEligibleForAutoRejection(
-  booking: any,
+  booking: Booking,
   confirmationWindowMinutes: number = 15
 ): boolean {
   if (booking.status !== 'pending') {
@@ -250,7 +239,7 @@ export function isEligibleForAutoRejection(
  * Returns null if not applicable
  */
 export function getTimeUntilAutoRejection(
-  booking: any,
+  booking: Booking,
   confirmationWindowMinutes: number = 15
 ): number | null {
   if (booking.status !== 'pending' || booking.confirmationTimestamp) {

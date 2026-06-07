@@ -4,6 +4,7 @@
 
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalHouseholds,
   dentalHouseholdMembers,
@@ -16,7 +17,7 @@ import {
 export class HouseholdRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async findOneById(id: string): Promise<DentalHousehold | null> {

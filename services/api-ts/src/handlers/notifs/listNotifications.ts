@@ -37,10 +37,10 @@ export async function listNotifications(
 
   // Convert string dates to Date objects if present
   if (filters['startDate']) {
-    filters['startDate'] = new Date(filters['startDate']);
+    filters['startDate'] = new Date(filters['startDate'] as string);
   }
   if (filters['endDate']) {
-    filters['endDate'] = new Date(filters['endDate']);
+    filters['endDate'] = new Date(filters['endDate'] as string);
   }
 
   // Instantiate repositories

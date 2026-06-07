@@ -2,16 +2,17 @@
  * getInsuranceClaim — GET /dental/billing/claims/:claimId
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 
-export async function getInsuranceClaim(ctx: any): Promise<Response> {
+export async function getInsuranceClaim(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { claimId } = ctx.req.valid('param');
+  const { claimId } = ctx.req.valid('param') as { claimId: string };
   const db = ctx.get('database') as DatabaseInstance;
 
   const repo = new DentalInsuranceClaimRepository(db);

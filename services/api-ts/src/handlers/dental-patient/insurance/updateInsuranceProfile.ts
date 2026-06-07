@@ -4,16 +4,18 @@
 
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
+import type { DentalInsuranceProfile } from '../repos/insurance-profile.schema';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateInsuranceProfile(ctx: any): Promise<Response> {
+export async function updateInsuranceProfile(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, profileId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, profileId } = ctx.req.valid('param') as { patientId: string; profileId: string };
+  const body = ctx.req.valid('json') as Partial<DentalInsuranceProfile>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

@@ -1,5 +1,6 @@
 CREATE TYPE "public"."controlled_substance_schedule" AS ENUM('none', 'II', 'III', 'IV', 'V');--> statement-breakpoint
 CREATE TYPE "public"."dental_treatment_phase" AS ENUM('systemic', 'disease_control', 're_evaluation', 'definitive', 'maintenance');--> statement-breakpoint
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."appointment_status" ADD VALUE 'confirmed' BEFORE 'checked_in';--> statement-breakpoint
 CREATE TABLE "dental_feature_permission" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

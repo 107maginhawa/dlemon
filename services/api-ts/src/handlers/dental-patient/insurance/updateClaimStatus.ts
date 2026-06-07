@@ -4,16 +4,17 @@
 
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import { ClaimDraftRepository } from '../repos/claim-draft.repo';
-import { CLAIM_DRAFT_FSM, type ClaimDraftStatus } from '../repos/claim-draft.schema';
+import { CLAIM_DRAFT_FSM, type ClaimDraftStatus, type DentalClaimDraft } from '../repos/claim-draft.schema';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateClaimStatus(ctx: any): Promise<Response> {
+export async function updateClaimStatus(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, claimId } = ctx.req.valid('param');
+  const { patientId, claimId } = ctx.req.valid('param') as { patientId: string; claimId: string };
   const { status: newStatus } = ctx.req.valid('json') as { status: ClaimDraftStatus };
 
   const db = ctx.get('database') as DatabaseInstance;
@@ -44,9 +45,9 @@ export async function updateClaimStatus(ctx: any): Promise<Response> {
     );
   }
 
-  const updateFields: Record<string, any> = { status: newStatus };
+  const updateFields: Partial<Pick<DentalClaimDraft, 'status' | 'submittedAt'>> = { status: newStatus };
   if (newStatus === 'submitted') {
-    updateFields['submittedAt'] = new Date();
+    updateFields.submittedAt = new Date();
   }
 
   const updated = await repo.update(claimId, patientId, updateFields);

@@ -4,16 +4,17 @@
  * Add a per-procedure line to a draft claim and recompute the billed total.
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 
-export async function addInsuranceClaimLine(ctx: any): Promise<Response> {
+export async function addInsuranceClaimLine(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { claimId } = ctx.req.valid('param');
+  const { claimId } = ctx.req.valid('param') as { claimId: string };
   const body = ctx.req.valid('json') as {
     treatmentId?: string;
     invoiceLineItemId?: string;

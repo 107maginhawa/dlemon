@@ -9,7 +9,7 @@ import {
   ConflictError
 } from '@/core/errors';
 import { ChatRoomRepository } from './repos/chatRoom.repo';
-import { type CreateChatRoomRequest } from './repos/comms.schema';
+import { type CreateChatRoomRequest, type ChatRoom } from './repos/comms.schema';
 
 /**
  * createChatRoom
@@ -82,7 +82,7 @@ export async function createChatRoom(
 
   if (room && body.upsert) {
     // Room exists and upsert is true - update with new settings if needed
-    const updates: any = {};
+    const updates: Partial<ChatRoom> = {};
 
     // Update admins if different
     const currentAdmins = new Set(room.admins);

@@ -3,6 +3,7 @@
  */
 
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import type { User } from '@/types/auth';
 import type { Booking } from '../repos/booking.schema';
 
@@ -11,7 +12,7 @@ import type { Booking } from '../repos/booking.schema';
  */
 export async function checkBookingOwnership(
   db: DatabaseInstance,
-  logger: any,
+  logger: Logger | undefined,
   user: User,
   booking: Booking
 ): Promise<boolean> {
@@ -31,7 +32,7 @@ export async function checkBookingOwnership(
  */
 export async function checkBookingHostOwnership(
   db: DatabaseInstance,
-  logger: any,
+  logger: Logger | undefined,
   user: User,
   booking: Booking
 ): Promise<boolean> {
@@ -65,7 +66,7 @@ export async function checkBookingHostOwnership(
  */
 export async function checkBookingClientOwnership(
   db: DatabaseInstance,
-  logger: any,
+  logger: Logger | undefined,
   user: User,
   booking: Booking
 ): Promise<boolean> {
@@ -77,7 +78,7 @@ export async function checkBookingClientOwnership(
  */
 export async function getBookingUserType(
   db: DatabaseInstance,
-  logger: any,
+  logger: Logger | undefined,
   user: User,
   booking: Booking
 ): Promise<'client' | 'host' | null> {

@@ -12,6 +12,7 @@ import { DentalChartRepository } from '../repos/dental-chart.repo';
 import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 import type { UpdateToothBody, UpdateToothParams } from '@/generated/openapi/validators';
+import type { ChartEntryClassification } from '../repos/dental-chart.schema';
 
 export async function updateTooth(
   ctx: ValidatedContext<UpdateToothBody, never, UpdateToothParams>
@@ -51,7 +52,7 @@ export async function updateTooth(
     conditionCode: body.conditionCode,
     note: body.note,
     surfaceConditionMap: body.surfaceConditionMap,
-    entryClassification: body.entryClassification as any,
+    entryClassification: body.entryClassification as ChartEntryClassification | undefined,
   });
 
   return ctx.json(updated);

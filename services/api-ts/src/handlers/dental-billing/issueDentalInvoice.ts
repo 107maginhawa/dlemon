@@ -11,13 +11,14 @@
  */
 
 import type { ValidatedContext } from '@/types/app';
+import type { IssueDentalInvoiceParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 export async function issueDentalInvoice(
-  ctx: ValidatedContext<never, never, any>
+  ctx: ValidatedContext<never, never, IssueDentalInvoiceParams>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

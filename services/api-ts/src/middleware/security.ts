@@ -5,6 +5,7 @@
 
 import { secureHeaders } from 'hono/secure-headers';
 import { cors } from 'hono/cors';
+import type { Context, Next } from 'hono';
 import type { Config } from '@/core/config';
 import type { Logger } from '@/types/logger';
 import { createOriginValidator } from '@/utils/cors';
@@ -67,8 +68,8 @@ export function createCorsMiddleware(config: Config, logger?: Logger) {
 const PHI_EXEMPT_PREFIXES = ['/health', '/auth', '/docs', '/scalar', '/openapi'];
 
 export function createPhiCacheHeaders() {
-  return async function phiCacheHeaders(c: any, next: () => Promise<void>): Promise<void> {
-    const path = c.req.path as string;
+  return async function phiCacheHeaders(c: Context, next: Next): Promise<void> {
+    const path = c.req.path;
     const isExempt = PHI_EXEMPT_PREFIXES.some(p => path.startsWith(p));
     await next();
     if (!isExempt) {
@@ -96,8 +97,8 @@ const CSRF_UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 export function createCsrfGuard(config: Config, logger?: Logger) {
   const originValidator = createOriginValidator(config.cors, logger);
 
-  return async function csrfGuard(c: any, next: () => Promise<void>): Promise<Response | void> {
-    const method = (c.req.method as string).toUpperCase();
+  return async function csrfGuard(c: Context, next: Next): Promise<Response | void> {
+    const method = c.req.method.toUpperCase();
 
     // Safe methods never need CSRF protection
     if (!CSRF_UNSAFE_METHODS.has(method)) {
@@ -106,13 +107,13 @@ export function createCsrfGuard(config: Config, logger?: Logger) {
 
     // Path-based exemptions: Better-Auth manages its own CSRF; Stripe webhook
     // is not auth-gated and uses signature verification instead
-    const path = c.req.path as string;
+    const path = c.req.path;
     if (path.startsWith('/auth/') || path === '/billing/webhooks/stripe') {
       return next();
     }
 
-    const authHeader = (c.req.header('Authorization') as string | undefined) ?? '';
-    const internalToken = (c.req.header('X-Internal-Service-Token') as string | undefined) ?? '';
+    const authHeader = c.req.header('Authorization') ?? '';
+    const internalToken = c.req.header('X-Internal-Service-Token') ?? '';
 
     // Bearer token: non-browser client — attackers cannot set Authorization
     // cross-origin, so no CSRF risk
@@ -125,9 +126,9 @@ export function createCsrfGuard(config: Config, logger?: Logger) {
       return next();
     }
 
-    const secFetchSite = (c.req.header('Sec-Fetch-Site') as string | undefined) ?? '';
-    const origin = (c.req.header('Origin') as string | undefined) ?? '';
-    const referer = (c.req.header('Referer') as string | undefined) ?? '';
+    const secFetchSite = c.req.header('Sec-Fetch-Site') ?? '';
+    const origin = c.req.header('Origin') ?? '';
+    const referer = c.req.header('Referer') ?? '';
 
     // NORMATIVE INVARIANT (see above): no browser signals → non-browser client → ALLOW
     if (!secFetchSite && !origin && !referer) {

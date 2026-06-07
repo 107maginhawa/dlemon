@@ -148,6 +148,7 @@ export const bookingEvents = pgTable('booking_event', {
 }));
 
 // Time Slots - Individual bookable slots generated from booking events
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- circular Drizzle FK: timeSlots ↔ bookings requires deferred type
 export const timeSlots: any = pgTable('time_slot', {
   // Base entity fields
   ...baseEntityFields,
@@ -206,6 +207,7 @@ export const timeSlots: any = pgTable('time_slot', {
 }));
 
 // Bookings - Confirmed booking instances between client and host
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- circular Drizzle FK: bookings ↔ timeSlots requires deferred type
 export const bookings: any = pgTable('booking', {
   // Base entity fields
   ...baseEntityFields,
@@ -415,12 +417,12 @@ export interface RecurrencePattern {
   maxOccurrences?: number; // Maximum number of occurrences
 }// Form response data for booking creation - matches TypeSpec
 export interface FormResponseData {
-  data: Record<string, any>; // Form field responses
+  data: Record<string, unknown>; // Form field responses
 }
 
 // Complete form responses with metadata - matches TypeSpec
 export interface FormResponses {
-  data: Record<string, any>; // Form field responses
+  data: Record<string, unknown>; // Form field responses
   metadata?: {
     submittedAt?: string; // When the form was submitted (utcDateTime)
     completionTimeSeconds?: number; // Time taken to complete the form in seconds
@@ -482,8 +484,8 @@ export interface BookingActionRequest {
 
 // Helper types for queries with joined data
 export interface BookingWithDetails extends Booking {
-  client?: any; // Client details
-  host?: any; // Host details
+  client?: Record<string, unknown>; // Client details
+  host?: Record<string, unknown>; // Host details
   slot?: TimeSlot; // Time slot details
 }
 

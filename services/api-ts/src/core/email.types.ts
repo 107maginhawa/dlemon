@@ -23,8 +23,8 @@ export interface QueueEmailRequest {
   templateTags?: string[]; // Template tags for dynamic resolution (alternative to template)
   recipient: string;
   recipientName?: string;
-  variables: Record<string, any>;
-  metadata?: Record<string, any>;
+  variables: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   priority?: number;
   scheduledAt?: Date;
 }
@@ -38,8 +38,8 @@ export interface EmailQueueItem {
   templateTags: string[] | null;
   recipientEmail: string;
   recipientName: string | null;
-  variables: Record<string, any>;
-  metadata: Record<string, any> | null;
+  variables: Record<string, unknown>;
+  metadata: Record<string, unknown> | null;
   status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
   priority: number;
   scheduledAt: Date | null;
@@ -71,7 +71,7 @@ export interface EmailTemplate {
   bodyHtml: string;
   bodyText: string | null;
   tags: string[] | null;
-  variables: any[];
+  variables: unknown[];
   fromName: string | null;
   fromEmail: string | null;
   replyToEmail: string | null;

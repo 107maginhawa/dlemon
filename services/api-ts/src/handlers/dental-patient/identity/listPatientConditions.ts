@@ -16,6 +16,14 @@ import { getChartForPatientVisit, getTreatmentsForPatientConditions } from '@/ha
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
+interface ChartTooth {
+  toothNumber?: number | string | null;
+  state?: string | null;
+  surfaces?: string | null;
+  conditionCode?: string | null;
+  entryClassification?: string | null;
+}
+
 function mapEntryClassification(ec?: string | null): string {
   if (!ec) return 'condition';
   if (ec === 'treatment_plan') return 'planned';
@@ -42,7 +50,7 @@ export async function listPatientConditions(ctx: HandlerContext) {
     // Chart tooth entries
     const chart = await getChartForPatientVisit(db, visit.id);
     for (const tooth of chart?.teeth ?? []) {
-      const t = tooth as any;
+      const t = tooth as ChartTooth;
       allEntries.push({
         id: `tooth-${visit.id}-${t.toothNumber}`,
         visitId: visit.id,

@@ -1,6 +1,7 @@
 import { eq, and, notInArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   dentalQueueItems,
   type DentalQueueItem,
@@ -14,7 +15,7 @@ export interface QueueItemFilters {
 }
 
 export class QueueItemRepository extends DatabaseRepository<DentalQueueItem, NewDentalQueueItem, QueueItemFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalQueueItems, logger);
   }
 

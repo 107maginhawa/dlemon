@@ -6,6 +6,7 @@
  */
 
 import type { DatabaseInstance } from './database';
+import type { Logger } from '@/types/logger';
 import { DentalAuditRepository } from '@/db/audit.repo';
 import { AuditLogRepository } from '@/handlers/dental-audit/repos/audit-log.repo';
 import { sanitizeAuditField } from './audit-phi-sanitizer';
@@ -73,8 +74,7 @@ async function withConnectionRetry<T>(fn: () => Promise<T>): Promise<T> {
  */
 function sanitizeAuditObject(
   obj: Record<string, unknown> | null | undefined,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  logger: any,
+  logger: Logger | null | undefined,
   event: AuditEvent,
   field: string,
 ): Record<string, unknown> | null {
@@ -93,8 +93,7 @@ function sanitizeAuditObject(
 
 function sanitizeAuditMetadata(
   metadata: Record<string, unknown> | null | undefined,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  logger: any,
+  logger: Logger | null | undefined,
   event: AuditEvent,
 ): Record<string, unknown> | null {
   return sanitizeAuditObject(metadata, logger, event, 'metadata');
@@ -121,8 +120,7 @@ function safeAuditLogFields(event: AuditEvent) {
 
 export async function logAuditEvent(
   db: DatabaseInstance,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  logger: any,
+  logger: Logger | null | undefined,
   event: AuditEvent,
 ): Promise<void> {
   // Pino log — safe identifiers only (T-001: never the PHI-bearing snapshots/metadata).

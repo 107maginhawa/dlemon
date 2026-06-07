@@ -292,6 +292,7 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
         if (logger) {
           const logFn = logger[level as keyof typeof logger];
           if (typeof logFn === 'function') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- logFn is retrieved by dynamic key from pino logger; its call signature is unknown at this point
             (logFn as any).call(logger, message, ...args);
           }
         }

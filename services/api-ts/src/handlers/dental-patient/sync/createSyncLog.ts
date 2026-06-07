@@ -7,13 +7,15 @@
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { SyncLogRepository } from '../repos/sync-log.repo';
+import type { DentalSyncLog } from '../repos/sync-log.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createSyncLog(ctx: any): Promise<Response> {
+export async function createSyncLog(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const body = ctx.req.valid('json');
+  const body = ctx.req.valid('json') as Partial<DentalSyncLog>;
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
@@ -24,9 +26,9 @@ export async function createSyncLog(ctx: any): Promise<Response> {
 
   const repo = new SyncLogRepository(db, logger);
   const log = await repo.create({
-    localId: body.localId,
-    entityType: body.entityType,
-    entityId: body.entityId,
+    localId: body.localId ?? '',
+    entityType: body.entityType ?? '',
+    entityId: body.entityId ?? '',
     serverId: body.serverId ?? null,
     branchId: body.branchId ?? null,
     syncStatus: 'pending',

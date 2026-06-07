@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { ValidatedContext } from '@/types/app';
+import type { RecordDentalPaymentBody, RecordDentalPaymentParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -16,7 +17,7 @@ import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { logAuditEvent } from '@/core/audit-logger';
 
 export async function recordDentalPayment(
-  ctx: ValidatedContext<any, never, any>
+  ctx: ValidatedContext<RecordDentalPaymentBody, never, RecordDentalPaymentParams>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

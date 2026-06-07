@@ -14,7 +14,7 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 export async function updateDentalPaymentPlan(
-  ctx: ValidatedContext<any, never, any>
+  ctx: ValidatedContext<{ status: 'on_track' | 'behind' | 'completed' | 'defaulted' }, never, { planId: string }>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

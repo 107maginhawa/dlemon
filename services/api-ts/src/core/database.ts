@@ -191,6 +191,7 @@ export async function checkDatabaseConnection(
  */
 export async function closeDatabaseConnection(dbInstance: DatabaseInstance): Promise<void> {
   // Access the underlying pg.Pool and close it
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle NodePgDatabase does not expose $client in its type; runtime access only
   const pool = (dbInstance as any).$client;
   if (pool && typeof pool.end === 'function') {
     await pool.end();
@@ -202,12 +203,12 @@ export async function closeDatabaseConnection(dbInstance: DatabaseInstance): Pro
  * Helper function to get database instance from Hono context
  * Returns the Drizzle instance directly for database operations
  */
-export function getDatabaseFromContext(ctx: any): DatabaseInstance {
+export function getDatabaseFromContext(ctx: { get(key: string): unknown }): DatabaseInstance {
   const database = ctx.get('database');
   if (!database) {
     throw new Error('Database instance not found in context. Make sure dependency injection middleware is properly configured.');
   }
-  return database;
+  return database as DatabaseInstance;
 }
 
 /**

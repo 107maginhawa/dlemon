@@ -8,6 +8,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq, and, sql, lte, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalInvoices,
   dentalInvoiceLineItems,
@@ -25,7 +26,7 @@ export interface InvoiceFilters {
 }
 
 export class DentalInvoiceRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   /**
    * Generate an invoice number: INV-{year}-{8-char UUID slice}.
@@ -164,6 +165,7 @@ export class DentalInvoiceRepository {
           ELSE ${dentalInvoices.paidAt}
         END`,
         updatedAt: new Date(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle cannot type sql<> literals mixed with column values in set()
       } as any)
       .where(eq(dentalInvoices.id, invoiceId))
       .returning();
@@ -189,6 +191,7 @@ export class DentalInvoiceRepository {
         END`,
         paidAt: null,
         updatedAt: new Date(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle cannot type sql<> literals mixed with column values in set()
       } as any)
       .where(eq(dentalInvoices.id, invoiceId))
       .returning();

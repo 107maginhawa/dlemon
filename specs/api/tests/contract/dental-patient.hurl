@@ -88,6 +88,12 @@ jsonpath "$.id" == "{{patient_id}}"
 jsonpath "$.status" == "active"
 
 
+# 4a. The patient exists but is in no household → 204 No Content (not 404).
+GET {{api}}/dental/patients/{{patient_id}}/household
+Cookie: better-auth.session_token={{session_token}}
+HTTP 204
+
+
 # 5. Update dental-specific fields
 PATCH {{api}}/dental/patients/{{patient_id}}
 Cookie: better-auth.session_token={{session_token}}

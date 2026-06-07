@@ -69112,6 +69112,10 @@ export type GetPatientHouseholdResponses = {
      * Success response with data
      */
     200: DentalPatientFinanceModuleHouseholdWithMembers | ErrorResponse;
+    /**
+     * Success response with no content
+     */
+    204: void;
 };
 
 export type GetPatientHouseholdResponse = GetPatientHouseholdResponses[keyof GetPatientHouseholdResponses];
@@ -72383,6 +72387,10 @@ export type GetPmdForVisitResponses = {
      * Success response with data
      */
     200: PmdDocument;
+    /**
+     * Success response with no content
+     */
+    204: void;
 };
 
 export type GetPmdForVisitResponse = GetPmdForVisitResponses[keyof GetPmdForVisitResponses];

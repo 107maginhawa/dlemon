@@ -6,12 +6,13 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function getClaimReadiness(ctx: any): Promise<Response> {
+export async function getClaimReadiness(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, claimId } = ctx.req.valid('param');
+  const { patientId, claimId } = ctx.req.valid('param') as { patientId: string; claimId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

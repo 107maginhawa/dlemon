@@ -30,7 +30,7 @@ export async function deleteAttachment(ctx: HandlerContext) {
   const deleted = await repo.softDelete(attachmentId);
   if (!deleted) throw new NotFoundError('Attachment');
 
-  const audit = ctx.get('audit') as any;
+  const audit = ctx.get('audit');
   if (audit?.logEvent) {
     await audit.logEvent({
       eventType: 'data-modification',

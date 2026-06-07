@@ -8,12 +8,13 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { HouseholdRepository } from '../repos/household.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function getHousehold(ctx: any): Promise<Response> {
+export async function getHousehold(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const { householdId } = ctx.req.valid('param');
+  const { householdId } = ctx.req.valid('param') as { householdId: string };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

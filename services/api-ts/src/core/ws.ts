@@ -28,9 +28,9 @@ export interface WebSocketHandler {
   description?: string;
   middleware?: Array<(ctx: Context, next: Next) => Promise<void>>;
   onConnect?: (ctx: Context, ws: WSContext) => Promise<void>;
-  onMessage?: (ctx: Context, ws: WSContext, message: any) => Promise<void>;
+  onMessage?: (ctx: Context, ws: WSContext, message: MessageEvent) => Promise<void>;
   onClose?: (ctx: Context, ws: WSContext) => Promise<void>;
-  onError?: (ctx: Context, ws: WSContext, error: any) => Promise<void>;
+  onError?: (ctx: Context, ws: WSContext, error: unknown) => Promise<void>;
 }
 
 /**
@@ -39,7 +39,7 @@ export interface WebSocketHandler {
  */
 export interface WebSocketMessage {
   event: string;
-  payload?: any;
+  payload?: unknown;
 }
 
 /**
@@ -56,8 +56,14 @@ interface ConnectionMetadata {
  * Manages WebSocket connections and provides publishing API
  */
 export class WebSocketService {
+  // Forwarded from Hono's Bun WS adapter. Kept loosely typed at this boundary:
+  // the generated websocket registry passes MessageEvent-typed handlers that are
+  // narrower than Hono's WSEvents (Event) params, which the precise adapter type
+  // rejects. The generated registry is the only caller.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bun WS adapter boundary; generated registry handler shape is narrower than Hono WSEvents
   public upgradeWebSocket: any;
-  public websocket: any; // For Bun.serve()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bun WS adapter boundary (Bun.serve websocket handler)
+  public websocket: any;
 
   private logger: Logger;
 
@@ -87,7 +93,7 @@ export class WebSocketService {
    * @param event - Event type/name
    * @param payload - Optional event data
    */
-  async publishToUser(userId: string, event: string, payload?: any): Promise<boolean> {
+  async publishToUser(userId: string, event: string, payload?: unknown): Promise<boolean> {
     const ws = this.connections.byUser.get(userId);
 
     if (!ws) {
@@ -109,7 +115,7 @@ export class WebSocketService {
    * @param payload - Optional event data
    * @param excludeWs - Optional WebSocket connection to exclude (don't echo to sender)
    */
-  async publishToChannel(channelId: string, event: string, payload?: any, excludeWs?: WSContext): Promise<number> {
+  async publishToChannel(channelId: string, event: string, payload?: unknown, excludeWs?: WSContext): Promise<number> {
     const connections = this.connections.byChannel.get(channelId);
 
     if (!connections || connections.size === 0) {
@@ -122,9 +128,11 @@ export class WebSocketService {
 
     let sent = 0;
     let excluded = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __wsId is a runtime-attached property with no type declaration
     const excludeId = excludeWs ? (excludeWs.raw as any).__wsId : null;
 
     connections.forEach(ws => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __wsId is a runtime-attached property with no type declaration
       const wsId = (ws.raw as any).__wsId;
       // Skip the excluded connection (sender) using unique ID
       if (excludeId && wsId === excludeId) {

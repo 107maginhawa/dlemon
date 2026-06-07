@@ -44,7 +44,10 @@ export interface JobScheduler {
   shutdown(): Promise<void>;
 
   // Job operations
-  trigger(name: string, data?: any): Promise<string>;
+  // `data` accepts any structured payload object (typed event-payload
+  // interfaces included); it is JSON-serialized onto the queue and surfaces
+  // as JobContext.data (Record<string, unknown>) for handlers to narrow.
+  trigger(name: string, data?: object): Promise<string>;
   cancel(jobId: string): Promise<void>;
 
   // Monitoring
@@ -61,7 +64,7 @@ export interface JobContext {
   logger: Logger;
   jobId: string;
   jobName: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 /**
@@ -104,6 +107,7 @@ class PgBossScheduler implements JobScheduler {
     this.logger = logger;
     
     // Extract the underlying pg.Pool from Drizzle
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle NodePgDatabase does not expose $client in its type; runtime access only
     const pool = (db as any).$client;
     if (!pool) {
       throw new Error('Unable to access pg.Pool from Drizzle instance');
@@ -111,13 +115,14 @@ class PgBossScheduler implements JobScheduler {
     
     // Create an adapter that pg-boss expects
     const pgBossDb = {
-      executeSql: async (text: string, values?: any[]) => {
+      executeSql: async (text: string, values?: unknown[]) => {
         return await pool.query(text, values);
       }
     };
-    
+
     // Initialize pg-boss with the adapter
     this.boss = new PgBoss({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pg-boss db adapter type is not publicly exported
       db: pgBossDb as any,
       
       // pg-boss configuration
@@ -336,7 +341,7 @@ class PgBossScheduler implements JobScheduler {
           logger: this.logger.child({ job: name, jobId: job.id }),
           jobId: job.id,
           jobName: name,
-          data: job.data,
+          data: job.data as Record<string, unknown>,
         };
         
         try {
@@ -404,7 +409,7 @@ class PgBossScheduler implements JobScheduler {
             logger: this.logger.child({ job: name, jobId: job.id }),
             jobId: job.id,
             jobName: name,
-            data: job.data,
+            data: job.data as Record<string, unknown>,
           };
           
           try {
@@ -488,7 +493,7 @@ class PgBossScheduler implements JobScheduler {
   /**
    * Manually trigger a job
    */
-  async trigger(name: string, data?: any): Promise<string> {
+  async trigger(name: string, data?: object): Promise<string> {
     if (!this.isStarted) {
       throw new Error('Job scheduler not started');
     }

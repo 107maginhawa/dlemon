@@ -18,6 +18,7 @@ import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { findVisits } from '@/handlers/dental-visit/utils/visit.service';
 import { getChartForPatientVisit } from '@/handlers/dental-visit/repos/visit-dental-patient.facade';
+import type { ToothChartState } from '@/handlers/dental-visit/repos/visit-dental-patient.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { User } from '@/types/auth';
 
@@ -44,7 +45,7 @@ export async function listPatientVisits(ctx: HandlerContext) {
   const patientVisitRecords = await Promise.all(
     visits.map(async (visit) => {
       const chart = await getChartForPatientVisit(db, visit.id);
-      const teeth = (chart?.teeth ?? []).map((t: any) => ({
+      const teeth = (chart?.teeth ?? []).map((t: ToothChartState) => ({
         toothNumber: t.toothNumber,
         state: t.state,
         status: mapEntryClassification(t.entryClassification),

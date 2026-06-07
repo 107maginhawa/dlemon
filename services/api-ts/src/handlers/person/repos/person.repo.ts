@@ -6,6 +6,7 @@
 import { eq, and, or, ilike, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { 
   persons, 
   type Person, 
@@ -23,7 +24,7 @@ export interface PersonFilters {
 export class PersonRepository extends DatabaseRepository<Person, NewPerson, PersonFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, persons, logger);
   }

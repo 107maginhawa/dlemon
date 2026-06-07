@@ -182,10 +182,13 @@ describe('P1-27 — household / guarantor', () => {
     expect(body.members[0].isGuarantor).toBe(true);
   });
 
-  test('P1-27-AC6: getPatientHousehold 404 for a patient with no household', async () => {
+  test('P1-27-AC6: getPatientHousehold 204 for a patient with no household', async () => {
+    // An absent optional sub-resource returns 204 (matches the perio-chart
+    // precedent) so the client treats it as "no household" without a
+    // console-noise 404. Genuine patient-not-found still 404 (see handler).
     const app = buildApp();
     await makeHousehold(app);
     const res = await app.request(`/dental/patients/${OUTSIDER_PT}/household`);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(204);
   });
 });

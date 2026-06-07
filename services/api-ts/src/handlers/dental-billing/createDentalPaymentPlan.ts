@@ -6,6 +6,7 @@
  */
 
 import type { ValidatedContext } from '@/types/app';
+import type { CreateDentalPaymentPlanBody, CreateDentalPaymentPlanParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -13,7 +14,7 @@ import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 
 export async function createDentalPaymentPlan(
-  ctx: ValidatedContext<any, never, any>
+  ctx: ValidatedContext<CreateDentalPaymentPlanBody, never, CreateDentalPaymentPlanParams>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

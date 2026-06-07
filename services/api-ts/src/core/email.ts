@@ -286,12 +286,12 @@ export interface EmailService {
   /**
    * Preview a template with variables
    */
-  previewTemplate(templateId: string, variables?: Record<string, any>): Promise<TemplatePreviewResult>;
+  previewTemplate(templateId: string, variables?: Record<string, unknown>): Promise<TemplatePreviewResult>;
   
   /**
    * Render a template (used by job processor)
    */
-  renderTemplate(templateId: string, variables: Record<string, any>): Promise<TemplatePreviewResult>;
+  renderTemplate(templateId: string, variables: Record<string, unknown>): Promise<TemplatePreviewResult>;
   
   /**
    * Process pending emails (called by job)
@@ -394,14 +394,14 @@ class EmailServiceImpl implements EmailService {
   /**
    * Preview a template with variables
    */
-  async previewTemplate(templateId: string, variables?: Record<string, any>): Promise<TemplatePreviewResult> {
+  async previewTemplate(templateId: string, variables?: Record<string, unknown>): Promise<TemplatePreviewResult> {
     return this.templateRepo.previewTemplate(templateId, variables);
   }
   
   /**
    * Render a template with variables
    */
-  async renderTemplate(templateId: string, variables: Record<string, any>): Promise<TemplatePreviewResult> {
+  async renderTemplate(templateId: string, variables: Record<string, unknown>): Promise<TemplatePreviewResult> {
     return this.templateRepo.renderTemplate(templateId, variables);
   }
   

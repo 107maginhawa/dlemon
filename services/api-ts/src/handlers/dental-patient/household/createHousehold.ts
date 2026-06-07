@@ -12,12 +12,13 @@ import { HouseholdRepository } from '../repos/household.repo';
 import { logAuditEvent } from '@/core/audit-logger';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createHousehold(ctx: any): Promise<Response> {
+export async function createHousehold(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
-  const body = ctx.req.valid('json');
+  const body = ctx.req.valid('json') as { branchId: string; guarantorPatientId: string; name: string; notes?: string | null };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 

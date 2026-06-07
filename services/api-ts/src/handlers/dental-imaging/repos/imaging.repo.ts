@@ -15,6 +15,7 @@ import {
   type NewImagingStudyImage,
   type ImagingAnnotation,
   type NewImagingAnnotation,
+  type ImagingModality,
 } from './imaging.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { getFileSizesByIds } from '@/handlers/storage/repos/storage-imaging.facade';
@@ -155,7 +156,7 @@ export class ImagingRepository {
         frameCount: data.frameCount,
         seriesInstanceUid: data.seriesInstanceUid,
         studyInstanceUid: data.studyInstanceUid,
-        ...(data.modality ? { modality: data.modality as any } : {}),
+        ...(data.modality ? { modality: data.modality as ImagingModality } : {}),
         dicomMetadata: data.dicomMetadata,
         updatedAt: new Date(),
       })
@@ -168,7 +169,7 @@ export class ImagingRepository {
   async updateModality(id: string, modality: string): Promise<ImagingStudyImage> {
     const [updated] = await this.db
       .update(imagingStudyImages)
-      .set({ modality: modality as any, updatedAt: new Date() })
+      .set({ modality: modality as ImagingModality, updatedAt: new Date() })
       .where(eq(imagingStudyImages.id, id))
       .returning();
     if (!updated) throw new Error(`Image ${id} not found`);

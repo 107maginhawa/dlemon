@@ -7,6 +7,7 @@
 
 import { eq, and, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalInventoryItems,
   dentalInventoryAdjustments,
@@ -19,7 +20,7 @@ import {
 export class InventoryRepository {
   constructor(
     private readonly db: DatabaseInstance,
-    private readonly logger?: any,
+    private readonly logger?: Logger,
   ) {}
 
   async findByBranchId(branchId: string): Promise<DentalInventoryItem[]> {

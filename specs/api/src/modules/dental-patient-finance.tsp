@@ -527,7 +527,7 @@ namespace DentalPatientFinanceModule {
 
   @doc("Patient → household lookup (P1-27)")
   interface PatientHouseholdManagement {
-    @doc("Get the household a patient belongs to (404 if none)")
+    @doc("Get the household a patient belongs to (204 if patient is in no household)")
     @operationId("getPatientHousehold")
     @get
     @route("/{patientId}/household")
@@ -535,6 +535,7 @@ namespace DentalPatientFinanceModule {
     @extension("x-security-required-roles", #["user"])
     getPatientHousehold(@path patientId: UUID):
       | ApiOkResponse<HouseholdWithMembers>
+      | ApiNoContentResponse
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse

@@ -6,6 +6,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { dentalAttachments, type DentalAttachment, type NewDentalAttachment } from './attachment.schema';
+import type { Logger } from '@/types/logger';
 
 export interface AttachmentFilters {
   visitId?: string;
@@ -13,7 +14,7 @@ export interface AttachmentFilters {
 }
 
 export class AttachmentRepository extends DatabaseRepository<DentalAttachment, NewDentalAttachment, AttachmentFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalAttachments, logger);
   }
 

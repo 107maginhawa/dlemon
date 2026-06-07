@@ -327,10 +327,19 @@ describe('getPMDForVisit handler [AC-PMD-02]', () => {
     expect(res.status).toBe(401);
   });
 
-  test('returns 404 when no PMD exists for visit', async () => {
+  test('returns 204 when visit exists but no PMD has been generated yet', async () => {
+    // Absent optional sub-resource → 204 (matches the perio-chart precedent),
+    // so the client reads "no PMD" without a console-noise 404. A genuinely
+    // nonexistent visit still 404s (getVisitOrThrow).
     const visit = await seedCompletedVisit();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}/pmd`);
+    expect(res.status).toBe(204);
+  });
+
+  test('returns 404 when the visit itself does not exist', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${NONEXISTENT_ID}/pmd`);
     expect(res.status).toBe(404);
   });
 

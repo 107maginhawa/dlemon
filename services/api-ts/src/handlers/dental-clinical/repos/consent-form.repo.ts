@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { consentForms, type ConsentForm, type NewConsentForm } from './consent-form.schema';
+import type { Logger } from '@/types/logger';
 
 export interface ConsentFormFilters {
   visitId?: string;
@@ -15,7 +16,7 @@ export interface ConsentFormFilters {
 }
 
 export class ConsentFormRepository extends DatabaseRepository<ConsentForm, NewConsentForm, ConsentFormFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, consentForms, logger);
   }
 

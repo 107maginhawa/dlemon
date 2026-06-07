@@ -5,6 +5,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   dentalLegalHolds,
   type DentalLegalHold,
@@ -23,7 +24,7 @@ export class LegalHoldRepository extends DatabaseRepository<
   NewDentalLegalHold,
   LegalHoldFilters
 > {
-  constructor(db: DatabaseInstance, logger?: unknown) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalLegalHolds, logger);
   }
 

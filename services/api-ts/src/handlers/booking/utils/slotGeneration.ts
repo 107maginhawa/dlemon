@@ -5,7 +5,7 @@
 
 import { addDays, addMinutes, format, isAfter, isBefore, isWithinInterval, parseISO, startOfDay, setHours, setMinutes, differenceInMinutes, set, addHours } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
-import type { BookingEvent, NewTimeSlot, DayOfWeek } from '../repos/booking.schema';
+import type { BookingEvent, NewTimeSlot, DayOfWeek, DailyConfig } from '../repos/booking.schema';
 
 export interface SlotGenerationConfig {
   event: BookingEvent;
@@ -78,7 +78,7 @@ function getDayKey(dayNumber: number): string {
  */
 function generateSlotsForDay(params: {
   event: BookingEvent;
-  dailyConfig: any;
+  dailyConfig: DailyConfig;
   date: Date;
   timezone: string;
   existingSlotIds: Set<string>;
@@ -96,10 +96,10 @@ function generateSlotsForDay(params: {
     // Parse start and end times
     const [startHour, startMinute] = timeBlock.startTime.split(':').map(Number);
     const [endHour, endMinute] = timeBlock.endTime.split(':').map(Number);
-    
+
     // Create start and end datetime in the event owner's timezone
-    let slotStart = setMinutes(setHours(date, startHour), startMinute);
-    const dayEnd = setMinutes(setHours(date, endHour), endMinute);
+    let slotStart = setMinutes(setHours(date, startHour ?? 0), startMinute ?? 0);
+    const dayEnd = setMinutes(setHours(date, endHour ?? 0), endMinute ?? 0);
     
     // Convert to UTC for storage
     const slotDuration = timeBlock.slotDuration || 30; // Default 30 minutes
@@ -108,9 +108,11 @@ function generateSlotsForDay(params: {
     
     // Check minimum booking hours constraint
     const now = new Date();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- legacy field not yet promoted to BookingEvent schema
     const minBookingTime = addMinutes(now, ((event as any).minBookingHours || 0) * 60);
-    
+
     // Check advance booking constraint
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- legacy field not yet promoted to BookingEvent schema
     const maxBookingDate = addDays(now, (event as any).advanceBookingDays || 365);
     if (isAfter(date, maxBookingDate)) {
       continue; // Beyond advance booking window

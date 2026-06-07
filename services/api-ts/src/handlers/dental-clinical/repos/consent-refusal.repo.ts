@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { consentRefusals, type ConsentRefusal, type NewConsentRefusal } from './consent-refusal.schema';
+import type { Logger } from '@/types/logger';
 
 export interface ConsentRefusalFilters {
   visitId?: string;
@@ -15,7 +16,7 @@ export interface ConsentRefusalFilters {
 }
 
 export class ConsentRefusalRepository extends DatabaseRepository<ConsentRefusal, NewConsentRefusal, ConsentRefusalFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, consentRefusals, logger);
   }
 

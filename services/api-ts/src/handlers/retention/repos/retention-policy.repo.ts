@@ -5,6 +5,7 @@
 import { eq, and, isNull } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   dentalRetentionPolicies,
   type DentalRetentionPolicy,
@@ -24,7 +25,7 @@ export class RetentionPolicyRepository extends DatabaseRepository<
   NewDentalRetentionPolicy,
   RetentionPolicyFilters
 > {
-  constructor(db: DatabaseInstance, logger?: unknown) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, dentalRetentionPolicies, logger);
   }
 

@@ -33,11 +33,14 @@ type MessageType =
 
 /**
  * WebRTC signaling message structure
+ * `data` carries RTCSessionDescriptionInit or RTCIceCandidateInit from the browser WebRTC API.
+ * These types are DOM-only and not available in Bun's server runtime; `unknown` is the
+ * correct type here — the server relays the payload opaquely without inspecting it.
  */
 interface SignalMessage {
   type: 'video.offer' | 'video.answer' | 'video.ice-candidate';
   from: string;
-  data: any; // RTCSessionDescriptionInit | RTCIceCandidateInit from WebRTC API
+  data: unknown;
 }
 
 export const config: WebSocketHandler = {
@@ -99,17 +102,19 @@ export const config: WebSocketHandler = {
     logger.info({ userId: user.id, roomId }, 'User connected to chat room WebSocket');
   },
 
-  async onMessage(ctx: Context, ws: WSContext, message: any) {
+  async onMessage(ctx: Context, ws: WSContext, message: MessageEvent) {
     const roomId = ctx.req.param('room')!;
     const user = ctx.get('user') as User;
     const db = ctx.get('database') as DatabaseInstance;
     const wsService = ctx.get('ws');
     const logger = ctx.get('logger');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __wsId is a runtime-tagged property set by the WS adapter, not exposed in WSContext types
     const wsId = (ws.raw as any).__wsId;
-    logger.debug({ userId: user.id, roomId, wsId, messageType: message.type }, 'Processing WebSocket message');
+    logger.debug({ userId: user.id, roomId, wsId, messageType: (message as unknown as { type?: string }).type }, 'Processing WebSocket message');
 
-    const { type, data } = message as { type: MessageType; data: any };
+    // Messages arrive pre-parsed as JSON objects by the WS middleware
+    const { type, data } = message as unknown as { type: MessageType; data: unknown };
     const channel = `chat-rooms/${roomId}`;
 
     switch (type) {
@@ -123,10 +128,11 @@ export const config: WebSocketHandler = {
         const messageRepo = new ChatMessageRepository(db, logger);
         const roomRepo = new ChatRoomRepository(db, logger);
 
+        const chatData = data as { text: string };
         const savedMessage = await messageRepo.createTextMessage(
           roomId,
           user.id,
-          data.text
+          chatData.text
         );
 
         // Update room metadata
@@ -139,12 +145,15 @@ export const config: WebSocketHandler = {
         break;
       }
 
-      case 'chat.typing':
+      case 'chat.typing': {
         // Relay typing indicator to channel
+        const typingData = data as { isTyping: boolean };
         await wsService.publishToChannel(channel, 'chat.typing', {
           from: user.id,
-          isTyping: data.isTyping,
+          isTyping: typingData.isTyping,
         });
+        break;
+      }
         break;
 
       case 'video.offer':

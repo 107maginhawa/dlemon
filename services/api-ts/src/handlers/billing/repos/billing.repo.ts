@@ -5,6 +5,7 @@
 
 import { eq, and, like, desc, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
   invoices,
@@ -32,7 +33,7 @@ import { findMerchantAccountWithPerson } from './billing-person.facade';
 export class InvoiceRepository extends DatabaseRepository<Invoice, NewInvoice, InvoiceFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, invoices, logger);
   }
@@ -226,7 +227,7 @@ export class InvoiceRepository extends DatabaseRepository<Invoice, NewInvoice, I
 export class MerchantAccountRepository extends DatabaseRepository<MerchantAccount, NewMerchantAccount, MerchantAccountFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, merchantAccounts, logger);
   }

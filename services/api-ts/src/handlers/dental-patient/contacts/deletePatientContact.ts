@@ -10,12 +10,14 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { PatientContactRepository } from '../repos/patient-contact.repo';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
+import type { DeletePatientContactParams } from '@/generated/openapi/validators';
 
-export async function deletePatientContact(ctx: any): Promise<Response> {
+export async function deletePatientContact(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, contactId } = ctx.req.valid('param');
+  const { patientId, contactId } = ctx.req.valid('param') as DeletePatientContactParams;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

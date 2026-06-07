@@ -53,7 +53,7 @@ export async function cancelAppointment(
   if (!result) throw new NotFoundError('Appointment');
 
   // AL-008: appointment cancellation audit trail — persisted to dental_audit + dental_audit_log
-  const logger = ctx.get('logger') as any | undefined;
+  const logger = ctx.get('logger');
   await logAuditEvent(db, logger, {
     personId: user.id,
     tenantId: result.branchId,

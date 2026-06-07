@@ -37,4 +37,41 @@ const boundaryRule = {
   },
 };
 
-export default [...config, boundaryRule];
+/**
+ * Test-file `any` policy (api-ts only — does NOT touch the frontend, which
+ * consumes the shared base config directly).
+ *
+ * `@typescript-eslint/no-explicit-any` is a `warn` in the shared base. In this
+ * service ~85% of `any` usages live in `*.test.ts` (mock bodies, fixture
+ * builders, type-shims) where strict typing adds noise, not safety. Silencing
+ * the rule in tests turns a ~4,479-warning firehose into the ~566 *production*
+ * occurrences — a trackable signal instead of alarm fatigue.
+ *
+ * Production stance (hard ratchet as of 2026-06-07): the ~513 production `any`
+ * occurrences were burned down to a small, fully-suppressed residue, so the rule
+ * is now an `error` for non-test source. New production `any` is blocked at the
+ * gate; the only escape is an explicit, reasoned `// eslint-disable-next-line`
+ * (see prodAnyError below). `generated/` and `*.d.ts` are exempt via the shared
+ * base `ignores`, so the count can only go down.
+ */
+const prodAnyError = {
+  files: ['src/**/*.ts'],
+  ignores: ['src/**/*.test.ts', 'src/**/*.test-*.ts', 'src/generated/**'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'error',
+  },
+};
+
+/**
+ * Test files keep `any` off entirely — mock bodies, fixture builders, and
+ * type-shims are where strict typing adds noise, not safety. This override comes
+ * AFTER prodAnyError so tests win (flat-config: later wins).
+ */
+const testAnyOverride = {
+  files: ['**/*.test.ts', '**/*.test-*.ts'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off',
+  },
+};
+
+export default [...config, boundaryRule, prodAnyError, testAnyOverride];

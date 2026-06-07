@@ -13,13 +13,14 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { appointmentExistsForPatient } from '../repos/appointment-link.facade';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function attachTreatmentAppointment(ctx: any): Promise<Response> {
+export async function attachTreatmentAppointment(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, treatmentId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, treatmentId } = ctx.req.valid('param') as { patientId: string; treatmentId: string };
+  const body = ctx.req.valid('json') as { appointmentId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

@@ -1138,7 +1138,9 @@ export const getVisitPerioChartResponseTransformer = async (data: any): Promise<
 };
 
 export const getPmdForVisitResponseTransformer = async (data: any): Promise<GetPmdForVisitResponse> => {
-    data = pmdDocumentSchemaResponseTransformer(data);
+    if (data) {
+        data = pmdDocumentSchemaResponseTransformer(data);
+    }
     return data;
 };
 

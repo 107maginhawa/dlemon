@@ -2258,7 +2258,7 @@ export const initializeDentition = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * Get the household a patient belongs to (404 if none) Requires role: 'user'
+ * Get the household a patient belongs to (204 if patient is in no household) Requires role: 'user'
  */
 export const getPatientHousehold = <ThrowOnError extends boolean = false>(options: Options<GetPatientHouseholdData, ThrowOnError>) => (options.client ?? client).get<GetPatientHouseholdResponses, GetPatientHouseholdErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

@@ -7,6 +7,7 @@ import {
   BusinessLogicError
 } from '@/core/errors';
 import { PatientRepository } from './repos/patient.repo';
+import type { ProviderInfo, PharmacyInfo } from './repos/patient.schema';
 import { findPersonById, ensurePersonForUser } from '../person/repos/person-provisioning.facade';
 import { addUserRole } from '@/utils/auth';
 import type { User } from '@/types/auth';
@@ -29,14 +30,15 @@ export async function createPatient(ctx: HandlerContext) {
   
   // Get validated request body (FHIR-aligned CreatePatientRequest)
   // Also accepts dental-friendly fields: displayName, personId (for staff-created patients)
+  type GenderValue = 'male' | 'female' | 'non-binary' | 'other' | 'prefer-not-to-say';
   const body = ctx.req.valid('json') as {
     name?: Array<{ use?: string; family?: string; given?: string[] }>;
     birthDate?: string;
     gender?: string;
     preferredBranchId?: string;
     dentalHistorySummary?: string;
-    primaryProvider?: any;
-    primaryPharmacy?: any;
+    primaryProvider?: ProviderInfo;
+    primaryPharmacy?: PharmacyInfo;
     // Dental staff creation — pass personId to link to an existing person
     personId?: string;
     // Simple dental registration fields — split into person record
@@ -61,7 +63,7 @@ export async function createPatient(ctx: HandlerContext) {
   } else {
     // Map FHIR name to person fields (or split displayName for simple dental registration)
     const officialName = body.name?.[0];
-    let personData: { firstName: string; lastName?: string; dateOfBirth?: string; gender?: any } | undefined;
+    let personData: { firstName: string; lastName?: string; dateOfBirth?: string; gender?: GenderValue } | undefined;
 
     if (body.displayName) {
       const parts = body.displayName.trim().split(/\s+/);
@@ -69,14 +71,14 @@ export async function createPatient(ctx: HandlerContext) {
         firstName: parts[0] ?? 'Unknown',
         lastName: parts.slice(1).join(' ') || undefined,
         dateOfBirth: body.birthDate,
-        gender: body.gender as any,
+        gender: body.gender as GenderValue | undefined,
       };
     } else if (officialName) {
       personData = {
         firstName: officialName.given?.[0] ?? 'Unknown',
         lastName: officialName.family,
         dateOfBirth: body.birthDate,
-        gender: body.gender as any,
+        gender: body.gender as GenderValue | undefined,
       };
     }
 
@@ -102,7 +104,7 @@ export async function createPatient(ctx: HandlerContext) {
   // Assign patient role for self-registration (skip for admin/staff/clinician)
   // Role takes effect on next session creation — no session revocation needed
   const staffRoles = ['admin', 'clinician', 'registrar', 'support'];
-  const userRole = (user as any).role || 'user';
+  const userRole = user.role || 'user';
   const isStaffCreation = staffRoles.some(r =>
     userRole.split(',').map((s: string) => s.trim()).includes(r)
   );

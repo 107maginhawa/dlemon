@@ -5,6 +5,7 @@
 
 import { eq, and, or, gte, lte, sql, desc, asc, inArray, isNull, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
   timeSlots,
@@ -48,7 +49,7 @@ export interface AvailabilityQuery {
 export class TimeSlotRepository extends DatabaseRepository<TimeSlot, NewTimeSlot, TimeSlotFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, timeSlots, logger);
   }
@@ -286,7 +287,7 @@ export class TimeSlotRepository extends DatabaseRepository<TimeSlot, NewTimeSlot
           .onConflictDoNothing({
             target: [timeSlots.event, timeSlots.startTime]
           })
-          .returning() as any[];
+          .returning() as TimeSlot[];
 
         created.push(...batchCreated);
         duplicates += (batch.length - batchCreated.length);

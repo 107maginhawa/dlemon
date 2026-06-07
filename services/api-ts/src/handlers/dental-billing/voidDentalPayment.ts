@@ -6,6 +6,7 @@
  */
 
 import type { ValidatedContext } from '@/types/app';
+import type { VoidDentalPaymentBody, VoidDentalPaymentParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -15,7 +16,7 @@ import { getActiveMembershipId, getBranchOrgId } from '@/handlers/dental-org/rep
 import { logAuditEvent } from '@/core/audit-logger';
 
 export async function voidDentalPayment(
-  ctx: ValidatedContext<any, never, any>
+  ctx: ValidatedContext<VoidDentalPaymentBody, never, VoidDentalPaymentParams>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

@@ -3,9 +3,10 @@
  * Provides common CRUD operations that can be extended by specific repositories
  */
 
-import { eq, and, sql, isNull, type SQL } from 'drizzle-orm';
+import { eq, and, sql, isNull, type SQL, type SQLWrapper } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import type { Logger } from '@/types/logger';
 
 /**
  * Pagination options interface
@@ -20,7 +21,9 @@ export interface PaginationOptions {
  */
 export interface FindManyOptions {
   pagination?: PaginationOptions;
-  orderBy?: any;
+  // A raw Drizzle SQL expression, or a {field, direction} descriptor as
+  // produced by parseSort() (forwarded to Drizzle's orderBy as-is).
+  orderBy?: SQL | SQLWrapper | { field: string; direction: 'asc' | 'desc' };
 }
 
 /**
@@ -38,11 +41,11 @@ export interface PaginatedResult<TEntity> {
  * @template TNewEntity - The new entity type for insertions (inferred from table)
  * @template TFilters - The filters interface for this entity type
  */
-export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<string, any>> {
+export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<string, unknown>> {
   constructor(
     protected db: DatabaseInstance,
     protected table: PgTable,
-    protected logger?: any
+    protected logger?: Logger
   ) {}
 
   /**
@@ -59,15 +62,15 @@ export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<
   async createOne(data: TNewEntity): Promise<TEntity> {
     this.logger?.debug({ data }, 'Creating new record');
 
-    const [created] = await this.db
-      .insert(this.table)
-      .values(data as any)
-      .returning();
+    const insertData = data as unknown;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access; values() requires concrete insert type
+    const [created] = await this.db.insert(this.table).values(insertData as any).returning();
 
     if (!created) {
       throw new Error('Failed to create record');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
     this.logger?.debug({ id: (created as any)['id'] }, 'Record created successfully');
 
     return created as TEntity;
@@ -79,11 +82,9 @@ export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<
   async findOneById(id: string): Promise<TEntity | null> {
     this.logger?.debug({ id }, 'Finding record by ID');
 
-    const [record] = await this.db
-      .select()
-      .from(this.table)
-      .where(eq((this.table as any).id, id))
-      .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
+    const tableAny = this.table as any;
+    const [record] = await this.db.select().from(this.table).where(eq(tableAny.id, id)).limit(1);
 
     this.logger?.debug({ id, found: !!record }, 'Record lookup completed');
 
@@ -127,7 +128,9 @@ export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<
 
     const [updated] = await this.db
       .update(this.table)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
       .set(updateData as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
       .where(eq((this.table as any).id, id))
       .returning();
 
@@ -149,6 +152,7 @@ export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<
 
     await this.db
       .delete(this.table)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
       .where(eq((this.table as any).id, id));
 
     this.logger?.info({ id, actorId }, 'Record deleted successfully');
@@ -204,8 +208,14 @@ export abstract class DatabaseRepository<TEntity, TNewEntity, TFilters = Record<
 
     // Apply ordering (default to createdAt if available)
     if (options?.orderBy) {
-      query.orderBy(options.orderBy);
+      // Forward as-is: orderBy may be a raw SQL expression or a {field,
+      // direction} descriptor. The PgSelect.orderBy overload is narrower than
+      // our accepted union, so cast at this single dynamic-forwarding boundary.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic orderBy forwarding; accepted union wider than Drizzle's orderBy overload
+      query.orderBy(options.orderBy as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
     } else if ((this.table as any).createdAt) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle generic PgTable has no typed column access
       query.orderBy((this.table as any).createdAt);
     }
 

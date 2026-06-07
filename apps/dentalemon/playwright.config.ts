@@ -79,7 +79,12 @@ export default defineConfig({
       command: 'bun run dev',
       cwd: '../../services/api-ts',
       url: 'http://localhost:7213/livez',
-      reuseExistingServer: !process.env.CI,
+      // Always reuse an already-running API. The journey-verification CI job
+      // boots api-ts itself (so it can seed before the specs run); without this
+      // Playwright would try to spawn a second api-ts on :7213 and fail with
+      // "address already in use". When no API is running (the e2e job) Playwright
+      // still boots one, so this is safe in both jobs and locally.
+      reuseExistingServer: true,
       timeout: 120 * 1000,
     },
     {

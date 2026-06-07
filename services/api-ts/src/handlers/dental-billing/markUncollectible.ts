@@ -10,6 +10,7 @@
  */
 
 import type { ValidatedContext } from '@/types/app';
+import type { MarkUncollectibleParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -22,7 +23,7 @@ import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 const WRITE_OFF_FROM = new Set(['issued', 'partial', 'overdue']);
 
 export async function markUncollectible(
-  ctx: ValidatedContext<never, never, any>
+  ctx: ValidatedContext<never, never, MarkUncollectibleParams>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

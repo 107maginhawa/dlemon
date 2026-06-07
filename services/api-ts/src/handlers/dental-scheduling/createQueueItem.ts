@@ -9,13 +9,14 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { QueueItemRepository } from './repos/queue-item.repo';
 import { assertBranchAccess } from './utils/assert-branch-access';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createQueueItem(ctx: any): Promise<Response> {
+export async function createQueueItem(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { appointmentId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { appointmentId } = ctx.req.valid('param') as { appointmentId: string };
+  const body = ctx.req.valid('json') as { notes?: string | null };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

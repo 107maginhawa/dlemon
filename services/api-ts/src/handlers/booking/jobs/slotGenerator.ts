@@ -4,6 +4,8 @@
  */
 
 import type { JobContext } from '@/core/jobs';
+import type { Logger } from '@/types/logger';
+import type { DatabaseInstance } from '@/core/database';
 import { TimeSlotRepository } from '../repos/timeSlot.repo';
 import { BookingEventRepository } from '../repos/bookingEvent.repo';
 import { ScheduleExceptionRepository } from '../repos/scheduleException.repo';
@@ -178,16 +180,16 @@ async function generateSlotsFromEvent(
   event: BookingEvent,
   startDate: Date,
   endDate: Date,
-  logger?: any,
+  logger?: Logger,
   scheduleExceptions?: ScheduleException[]
 ): Promise<NewTimeSlot[]> {
-  logger?.debug(`Generating slots from event ${event.id}`, {
+  logger?.debug({
     eventId: event.id,
     owner: event.owner,
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
     exceptionsCount: scheduleExceptions?.length || 0
-  });
+  }, `Generating slots from event ${event.id}`);
 
   const slots: NewTimeSlot[] = [];
 
@@ -295,7 +297,7 @@ function generateSlotsFromTimeBlock(
   event: BookingEvent,
   day: Date,
   timeBlock: TimeBlock,
-  logger?: any
+  logger?: Logger
 ): NewTimeSlot[] {
   const slots: NewTimeSlot[] = [];
   const slotDuration = timeBlock.slotDuration || 30; // Default 30 minutes
@@ -402,11 +404,11 @@ function generateRecurrenceOccurrences(
  * Used when a single event is created or updated
  */
 export async function regenerateEventSlots(
-  db: any,
+  db: DatabaseInstance,
   eventId: string,
   fromDate?: Date
 ): Promise<void> {
-  const logger = console; // Use proper logger in production
+  const logger = console as unknown as Logger; // Use proper logger in production
 
   const timeSlotRepo = new TimeSlotRepository(db, logger);
   const eventRepo = new BookingEventRepository(db, logger);
@@ -422,9 +424,9 @@ export async function regenerateEventSlots(
     }
 
     if (event.status !== 'active') {
-      logger.info(`Skipping slot generation for non-active event ${eventId}`, {
+      logger.info({
         status: event.status
-      });
+      }, `Skipping slot generation for non-active event ${eventId}`);
       return;
     }
 
@@ -443,12 +445,12 @@ export async function regenerateEventSlots(
     
     const endDate = addDays(startDate, 30);
 
-    logger.info(`Regenerating slots for event ${eventId}`, {
+    logger.info({
       eventId,
       timezone: event.timezone,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString()
-    });
+    }, `Regenerating slots for event ${eventId}`);
 
     // Fetch schedule exceptions for this event in the date range
     const exceptions = await exceptionRepo.findMany({
@@ -456,10 +458,10 @@ export async function regenerateEventSlots(
       dateRange: { start: startDate, end: endDate }
     });
 
-    logger.info(`Found ${exceptions.length} schedule exceptions for event ${eventId}`, {
+    logger.info({
       eventId,
       exceptionsCount: exceptions.length
-    });
+    }, `Found ${exceptions.length} schedule exceptions for event ${eventId}`);
 
     // Delete existing future available slots for THIS event only
     const deletedSlots = await db
@@ -480,21 +482,21 @@ export async function regenerateEventSlots(
     if (slots.length > 0) {
       const createResult = await timeSlotRepo.bulkCreateSlots(slots);
       
-      logger.info(`Slot regeneration completed for event ${eventId}`, {
+      logger.info({
         eventId,
         generated: slots.length,
         created: createResult.created.length,
         duplicates: createResult.duplicates
-      });
+      }, `Slot regeneration completed for event ${eventId}`);
     } else {
-      logger.debug(`No slots generated for event ${eventId}`, { eventId });
+      logger.debug({ eventId }, `No slots generated for event ${eventId}`);
     }
 
   } catch (error) {
-    logger.error(`Slot regeneration failed for event ${eventId}`, {
+    logger.error({
       eventId,
       error: error instanceof Error ? error.message : String(error)
-    });
+    }, `Slot regeneration failed for event ${eventId}`);
     throw error;
   }
 }

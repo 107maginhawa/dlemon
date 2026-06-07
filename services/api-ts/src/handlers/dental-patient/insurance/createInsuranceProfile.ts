@@ -6,14 +6,16 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
+import type { DentalInsuranceProfile } from '../repos/insurance-profile.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createInsuranceProfile(ctx: any): Promise<Response> {
+export async function createInsuranceProfile(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as { patientId: string };
+  const body = ctx.req.valid('json') as Partial<DentalInsuranceProfile>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -33,10 +35,10 @@ export async function createInsuranceProfile(ctx: any): Promise<Response> {
   const repo = new InsuranceProfileRepository(db, logger);
   const profile = await repo.create({
     patientId,
-    insurerName: body.insurerName,
-    policyNumber: body.policyNumber,
+    insurerName: body.insurerName ?? '',
+    policyNumber: body.policyNumber ?? '',
     groupNumber: body.groupNumber ?? null,
-    subscriberName: body.subscriberName,
+    subscriberName: body.subscriberName ?? '',
     subscriberDob: body.subscriberDob ?? null,
     relationship: body.relationship ?? 'self',
     active: true,

@@ -6,6 +6,7 @@
  */
 
 import type { ValidatedContext } from '@/types/app';
+import type { ListDentalPaymentsParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -14,7 +15,7 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
 
 export async function listDentalPayments(
-  ctx: ValidatedContext<never, never, any>
+  ctx: ValidatedContext<never, never, ListDentalPaymentsParams>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

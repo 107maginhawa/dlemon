@@ -6,13 +6,14 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { InventoryRepository } from '../repos/inventory.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function updateInventoryItem(ctx: any): Promise<Response> {
+export async function updateInventoryItem(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { branchId, itemId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { branchId, itemId } = ctx.req.valid('param') as { branchId: string; itemId: string };
+  const body = ctx.req.valid('json') as Record<string, unknown>;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -34,6 +35,7 @@ export async function updateInventoryItem(ctx: any): Promise<Response> {
   if (body['notes'] !== undefined) updates['notes'] = body['notes'];
   updates['updatedBy'] = user.id;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- key/value pairs are pre-validated against schema field names above
   const item = await repo.updateItem(itemId, branchId, updates as any);
   if (!item) throw new NotFoundError('Inventory item not found');
 

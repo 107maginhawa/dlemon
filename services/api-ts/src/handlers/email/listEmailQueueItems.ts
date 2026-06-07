@@ -5,7 +5,7 @@ import type { User, Session } from '@/types/auth';
 import { ForbiddenError } from '@/core/errors';
 import { EmailQueueRepository } from './repos/queue.repo';
 import { parsePagination, buildPaginationMeta, parseFilters } from '@/utils/query';
-import type { EmailQueueFilters } from './repos/email.schema';
+import type { EmailQueueFilters, EmailQueueItem } from './repos/email.schema';
 
 /**
  * listEmailQueueItems
@@ -50,12 +50,12 @@ export async function listEmailQueueItems(
   
   if (query.status) {
     if (Array.isArray(query.status)) {
-      filters.status = query.status as any[];
+      filters.status = query.status as EmailQueueItem['status'][];
     } else if (query.status.includes(',')) {
       // Parse CSV format: "pending,processing,sent"
-      filters.status = query.status.split(',').map(s => s.trim()) as any[];
+      filters.status = query.status.split(',').map(s => s.trim()) as EmailQueueItem['status'][];
     } else {
-      filters.status = query.status as any;
+      filters.status = query.status as EmailQueueItem['status'];
     }
   }
   

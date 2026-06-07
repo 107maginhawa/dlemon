@@ -7,6 +7,7 @@
  * patient. Lines may be supplied inline or derived from invoice line items.
  */
 
+import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
@@ -17,7 +18,7 @@ import {
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
-import type { NewDentalInsuranceClaimLine } from './repos/dental-insurance-claim.schema';
+import { SUBMISSION_CHANNELS, type NewDentalInsuranceClaimLine, type SubmissionChannel } from './repos/dental-insurance-claim.schema';
 
 interface ClaimLineInput {
   treatmentId?: string;
@@ -27,7 +28,7 @@ interface ClaimLineInput {
   billedAmountCents: number;
 }
 
-export async function createInsuranceClaim(ctx: any): Promise<Response> {
+export async function createInsuranceClaim(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
@@ -102,7 +103,7 @@ export async function createInsuranceClaim(ctx: any): Promise<Response> {
     authorizationId: body.authorizationId ?? null,
     claimNumber: claimRepo.generateClaimNumber(),
     status: 'draft',
-    submissionChannel: (body.submissionChannel as any) ?? null,
+    submissionChannel: (body.submissionChannel && SUBMISSION_CHANNELS.includes(body.submissionChannel as SubmissionChannel) ? body.submissionChannel as SubmissionChannel : null),
     billedAmountCents,
     paidByPayerCents: 0,
     patientPortionCents: billedAmountCents,

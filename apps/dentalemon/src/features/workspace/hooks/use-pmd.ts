@@ -40,11 +40,12 @@ export function usePMD(visitId: string | null) {
   // the useQuery overload and `data` silently falls back to `PmdDocument`.
   return useQuery<PmdDocument | null, Error, PMDDocument | null, typeof options.queryKey>({
     queryKey: options.queryKey,
-    // A visit with no PMD yet returns 404 — that's "none", not an error. Honor
-    // the documented "null if not found" contract (matches app.tsx person-404).
+    // A visit with no PMD yet returns 204 (no content) → undefined data, which
+    // we coalesce to null ("none", not an error). A legacy/edge 404 is also
+    // treated as null. Honors the documented "null if not found" contract.
     queryFn: async (ctx) => {
       try {
-        return await options.queryFn!(ctx);
+        return (await options.queryFn!(ctx)) ?? null;
       } catch (error) {
         if (error instanceof SdkError && error.status === 404) return null;
         throw error;

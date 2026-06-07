@@ -7,12 +7,13 @@ import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { OcclusionScreeningRepository } from '../repos/occlusion-screening.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function listOcclusionScreenings(ctx: any): Promise<Response> {
+export async function listOcclusionScreenings(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
+  const { patientId } = ctx.req.valid('param') as { patientId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

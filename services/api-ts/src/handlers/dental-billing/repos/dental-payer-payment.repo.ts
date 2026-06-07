@@ -4,6 +4,7 @@
 
 import { eq, and, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import {
   dentalPayerPayments,
   type DentalPayerPayment,
@@ -11,7 +12,7 @@ import {
 } from './dental-payer-payment.schema';
 
 export class DentalPayerPaymentRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   async createOne(data: NewDentalPayerPayment): Promise<DentalPayerPayment> {
     const [row] = await this.db.insert(dentalPayerPayments).values(data).returning();

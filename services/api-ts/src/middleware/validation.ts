@@ -6,14 +6,17 @@
 import type { Context } from 'hono';
 import { ZodError } from 'zod';
 
+type ZodIssueInput = ConstructorParameters<typeof ZodError>[0];
+
 /**
  * Custom error handler for zValidator that formats validation errors
  * Returns TypeSpec-compliant ValidationError format
  */
-export function validationErrorHandler(result: any, c: Context): Response | undefined {
+export function validationErrorHandler(result: { success: boolean; error?: { issues?: unknown[]; errors?: unknown[] } }, c: Context): Response | undefined {
   if (!result.success) {
     // result.error is the ZodError, but we need to access its issues
-    const zodError = new ZodError(result.error.issues || result.error.errors || []);
+    const rawIssues = (result.error?.issues || result.error?.errors || []) as ZodIssueInput;
+    const zodError = new ZodError(rawIssues);
     
     // Format field errors according to TypeSpec FieldError model
     const fieldErrors: Array<{
@@ -30,7 +33,7 @@ export function validationErrorHandler(result: any, c: Context): Response | unde
       if (issue.path.length > 0) {
         fieldErrors.push({
           field: issue.path.join('.'),
-          value: 'received' in issue ? (issue as any).received : undefined,
+          value: 'received' in issue ? (issue as { received?: unknown }).received : undefined,
           code: issue.code,
           message: issue.message,
           context: 'fatal' in issue && issue.fatal !== undefined ? { fatal: issue.fatal } : undefined,
@@ -51,6 +54,7 @@ export function validationErrorHandler(result: any, c: Context): Response | unde
       : 'Validation failed';
 
     const timestamp = new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono context.get() requires string key but Variables is not indexable
     const requestId = c.get('requestId' as any) || c.req.header('X-Request-ID') || crypto.randomUUID();
 
     // Return ValidationError matching TypeSpec model

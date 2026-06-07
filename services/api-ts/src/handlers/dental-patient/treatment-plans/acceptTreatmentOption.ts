@@ -12,13 +12,14 @@ import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-den
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function acceptTreatmentOption(ctx: any): Promise<Response> {
+export async function acceptTreatmentOption(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId, optionGroupId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId, optionGroupId } = ctx.req.valid('param') as { patientId: string; optionGroupId: string };
+  const body = ctx.req.valid('json') as { chosenTreatmentId: string };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

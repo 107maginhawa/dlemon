@@ -6,6 +6,7 @@
 import { eq, and, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import { storedFiles, type StoredFile, type NewStoredFile } from './file.schema';
 
 export interface ListFilesFilters {
@@ -26,7 +27,7 @@ export interface ListFilesResult {
 export class StorageFileRepository extends DatabaseRepository<StoredFile, NewStoredFile, ListFilesFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any // Logger interface - using 'any' to match existing pattern
+    logger?: Logger
   ) {
     super(db, storedFiles, logger);
   }

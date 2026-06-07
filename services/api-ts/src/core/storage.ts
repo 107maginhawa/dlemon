@@ -216,8 +216,9 @@ export class S3StorageProvider implements StorageProvider {
     try {
       await this.client.send(command);
       return true;
-    } catch (error: any) {
-      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+    } catch (error: unknown) {
+      const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (e.name === 'NotFound' || e.$metadata?.httpStatusCode === 404) {
         return false;
       }
       this.logger?.error({ error, fileId }, 'Error checking file existence');
@@ -238,24 +239,26 @@ export class S3StorageProvider implements StorageProvider {
       
       await this.client.send(headCommand);
       this.logger?.debug({ bucket: this.config.bucket }, 'Bucket already exists');
-    } catch (error: any) {
+    } catch (error: unknown) {
       // MinIO returns 400 for non-existent buckets in some cases, treat it as NotFound
-      const isNotFound = error.name === 'NotFound' || 
-                        error.$metadata?.httpStatusCode === 404 ||
-                        (error.$metadata?.httpStatusCode === 400 && this.config.provider === 'minio');
-      
+      const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      const isNotFound = e.name === 'NotFound' ||
+                        e.$metadata?.httpStatusCode === 404 ||
+                        (e.$metadata?.httpStatusCode === 400 && this.config.provider === 'minio');
+
       if (isNotFound) {
         // Create bucket if it doesn't exist
         try {
           const createCommand = new CreateBucketCommand({
             Bucket: this.config.bucket,
           });
-          
+
           await this.client.send(createCommand);
           this.logger?.info({ bucket: this.config.bucket }, 'Bucket created successfully');
-        } catch (createError: any) {
+        } catch (createError: unknown) {
           // Ignore error if bucket already exists (race condition)
-          if (createError.name === 'BucketAlreadyOwnedByYou' || createError.name === 'BucketAlreadyExists') {
+          const ce = createError as { name?: string };
+          if (ce.name === 'BucketAlreadyOwnedByYou' || ce.name === 'BucketAlreadyExists') {
             this.logger?.debug({ bucket: this.config.bucket }, 'Bucket already exists (race condition)');
           } else {
             this.logger?.error({ error: createError, bucket: this.config.bucket }, 'Failed to create bucket');

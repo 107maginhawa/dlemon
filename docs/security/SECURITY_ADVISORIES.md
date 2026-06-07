@@ -44,6 +44,34 @@ This document records known advisories that have been triaged and accepted as pa
 | GHSA-q3j6-qgpj-74h6 | fast-uri <=3.1.1 | high | fast-uri vulnerable to path traversal via percent-encoded dot segments | Same as above — build toolchain transitive, not in production runtime. | 2026-05-19 |
 | GHSA-hmx5-qpq5-p643 | swiper >=6.5.1 <12.1.2 | critical | Prototype pollution in swiper | swiper used in dentalemon/sample-workspace UI only (client-side). No user-controlled input reaches swiper config; prototype pollution risk is negligible in this context. Upgrade to >=12.1.2 tracked. | 2026-05-20 |
 
+## Rust (`cargo audit`) — Tracked Remediation (not yet accepted)
+
+Audited: 2026-06-07. The `rust-security` job (`quality.yml:rust-security`) runs `cargo audit`
+against `services/cadence` and `services/api-ts-embedded`. **`api-ts-embedded` is clean.**
+`services/cadence` currently reports **12 advisories**. These are *not* accepted — they are a
+tracked remediation task. Cadence is the Rust P2P sync engine, built only for the optional
+Tauri desktop/mobile packaging (not the web app or the `api-ts` HTTP path).
+
+A plain `cargo update` clears ~half; the rest are transitive via `iroh` (transport) and need
+coordinated major bumps of `rustls` / `rustls-webpki` / `aws-lc-sys` / `hickory-proto`, which
+risk breaking changes and require a `cargo check` + `cargo test` (Postgres + Valkey) pass.
+This belongs in a dedicated Rust dependency PR, not folded into unrelated work.
+
+| ID / Crate | Type | Solution | Notes |
+|------------|------|----------|-------|
+| RUSTSEC aws-lc-sys (name-constraint bypass; CRL scope logic) | vuln ×2 | upgrade aws-lc-sys ≥0.39.0 | transitive via rustls stack |
+| RUSTSEC rustls-webpki (CRL parse panic; URI/wildcard name constraints; DP matching) | vuln ×4 | upgrade rustls-webpki ≥0.103.13 | transitive via rustls/iroh |
+| RUSTSEC hickory-proto (O(n²) name compression CPU exhaustion) | vuln | upgrade ≥0.26.1 | transitive via iroh DNS |
+| RUSTSEC hickory-proto (NSEC3 unbounded loop) | vuln | **no fix available** | will require an `ignore` w/ justification until upstream fix |
+| RUSTSEC lru (`IterMut` Stacked-Borrows UB) | vuln | upgrade | transitive |
+| RUSTSEC-2026-0097 rand (unsound w/ custom logger + `rand::rng()`) | unsound | none | cadence does not use that pattern |
+| atomic-polyfill, backoff, instant, paste | unmaintained ×4 | n/a | informational warnings |
+
+**Owner action:** open a `chore(cadence): rust security dependency upgrade` PR that bumps the
+`iroh`/`rustls` stack, runs `cargo check` + `cargo test` against the dep containers, and adds a
+`services/cadence/.cargo/audit.toml` `ignore` list (with justification) for any residual
+no-fix-available advisory. Until then this job stays red and is a known, scoped exception.
+
 ## Process
 
 When CI reports a new advisory not in this table, the team must either:

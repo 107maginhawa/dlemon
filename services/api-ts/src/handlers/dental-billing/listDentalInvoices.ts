@@ -7,6 +7,7 @@
  */
 
 import type { ValidatedContext } from '@/types/app';
+import type { ListDentalInvoicesQuery } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -18,7 +19,7 @@ import { getPatientWithPersonForInvoice } from '@/handlers/patient/repos/patient
 import { getVisitForBilling } from '@/handlers/dental-visit/repos/visit-billing.facade';
 
 export async function listDentalInvoices(
-  ctx: ValidatedContext<never, any, never>
+  ctx: ValidatedContext<never, ListDentalInvoicesQuery, never>
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();

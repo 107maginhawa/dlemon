@@ -8,6 +8,7 @@
 
 import { eq, and, inArray, asc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { createSnapshotVersion } from '@/core/database.schema';
 import {
   dentalTreatments,
@@ -34,7 +35,7 @@ export interface CreateCarryOverInput {
 }
 
 export class TreatmentRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   async createOne(data: NewDentalTreatment): Promise<DentalTreatment> {
     const [row] = await this.db
@@ -154,7 +155,7 @@ export class TreatmentRepository {
 
 // VisitNotes repo methods (kept in same file for simplicity)
 export class VisitNotesRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   async upsert(data: NewVisitNotes): Promise<VisitNotes> {
     const existing = await this.findByVisit(data.visitId!);
@@ -206,7 +207,7 @@ export class VisitNotesRepository {
     };
 
     const version = await createSnapshotVersion(
-      this.db as any,
+      this.db,
       visitNoteVersions,
       visitNoteVersions.noteId,
       visitNoteVersions.version,
@@ -221,7 +222,7 @@ export class VisitNotesRepository {
   async addendum(noteId: string, content: string, reason: string, createdBy: string): Promise<VisitNoteVersion> {
     const snapshot: Record<string, unknown> = { type: 'addendum', reason, content, addendumBy: createdBy, addendumAt: new Date().toISOString() };
     return await createSnapshotVersion(
-      this.db as any,
+      this.db,
       visitNoteVersions,
       visitNoteVersions.noteId,
       visitNoteVersions.version,

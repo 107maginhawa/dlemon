@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { importedPmds, type ImportedPMD, type NewImportedPMD } from './pmd-document.schema';
+import type { Logger } from '@/types/logger';
 
 export interface ImportedPMDFilters {
   patientId?: string;
@@ -15,7 +16,7 @@ export interface ImportedPMDFilters {
 }
 
 export class ImportedPMDRepository extends DatabaseRepository<ImportedPMD, NewImportedPMD, ImportedPMDFilters> {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, importedPmds, logger);
   }
 

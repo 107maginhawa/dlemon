@@ -7,6 +7,7 @@
 
 import { eq } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { createSnapshotVersion } from '@/core/database.schema';
 import {
   dentalCharts,
@@ -37,7 +38,7 @@ export interface UpdateToothInput {
 }
 
 export class DentalChartRepository {
-  constructor(private db: DatabaseInstance, private logger?: any) {}
+  constructor(private db: DatabaseInstance, private logger?: Logger) {}
 
   async upsert(input: UpsertChartInput): Promise<DentalChart> {
     const existing = await this.findByVisit(input.visitId);
@@ -131,7 +132,7 @@ export class DentalChartRepository {
 
   async saveVersion(chartId: string, teeth: ToothChartState[], savedBy?: string): Promise<DentalChartVersion> {
     return createSnapshotVersion(
-      this.db as any,
+      this.db,
       dentalChartVersions,
       dentalChartVersions.chartId,
       dentalChartVersions.version,

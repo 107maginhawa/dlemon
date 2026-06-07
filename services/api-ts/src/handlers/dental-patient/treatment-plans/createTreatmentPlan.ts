@@ -10,13 +10,14 @@ import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-acces
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { DEFAULT_CDT_CODE_SET_YEAR } from '../repos/treatment-plan.schema';
 import type { DatabaseInstance } from '@/core/database';
+import type { HandlerContext } from '@/types/app';
 
-export async function createTreatmentPlan(ctx: any): Promise<Response> {
+export async function createTreatmentPlan(ctx: HandlerContext): Promise<Response> {
   const user = ctx.get('user');
   if (!user) throw new UnauthorizedError('Authentication required');
 
-  const { patientId } = ctx.req.valid('param');
-  const body = ctx.req.valid('json');
+  const { patientId } = ctx.req.valid('param') as { patientId: string };
+  const body = ctx.req.valid('json') as { providerId: string; totalEstimateCents?: number; notes?: string | null; cdtCodeSetYear?: number };
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');

@@ -5,6 +5,7 @@
 import { eq, and, ilike, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   practitioners,
   type Practitioner,
@@ -25,7 +26,7 @@ export class PractitionerRepository extends DatabaseRepository<
   NewPractitioner,
   PractitionerFilters
 > {
-  constructor(db: DatabaseInstance, logger?: any) {
+  constructor(db: DatabaseInstance, logger?: Logger) {
     super(db, practitioners, logger);
   }
 

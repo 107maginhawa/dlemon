@@ -20,7 +20,7 @@ import { UnauthorizedError, ForbiddenError, BusinessLogicError } from '@/core/er
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { ImagingRepository } from './repos/imaging.repo';
-import { ALLOWED_IMAGING_MIME_TYPES } from './repos/imaging.schema';
+import { ALLOWED_IMAGING_MIME_TYPES, type AllowedImagingMimeType, type ImagingModality } from './repos/imaging.schema';
 import { logAuditEvent } from '@/core/audit-logger';
 
 // P1-9: route large DICOM/CBCT payloads (~50 MB pano) through the S3 multipart
@@ -53,7 +53,7 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
 
   // V-IMG-003 / §15: unsupported MIME → 422 UNSUPPORTED_MIME_TYPE (not 400 VALIDATION_ERROR).
   // BR-034: MIME type allowlist check (before any other work)
-  if (!ALLOWED_IMAGING_MIME_TYPES.includes(body.mimeType as any)) {
+  if (!ALLOWED_IMAGING_MIME_TYPES.includes(body.mimeType as AllowedImagingMimeType)) {
     throw new BusinessLogicError(
       `Unsupported image format. Allowed: ${ALLOWED_IMAGING_MIME_TYPES.join(', ')}`,
       'UNSUPPORTED_MIME_TYPE',
@@ -120,7 +120,7 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     visitId: body.visitId ?? null,
     branchId: body.branchId,
     acquiredBy: user.id,
-    modality: (body.modality ?? 'other') as any,
+    modality: (body.modality ?? 'other') as ImagingModality,
   });
 
   const fileId = uuidv4();
@@ -175,7 +175,7 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
   const image = await repo.createImage({
     studyId: study.id,
     fileId,
-    modality: (body.modality ?? 'other') as any,
+    modality: (body.modality ?? 'other') as ImagingModality,
     pixelSpacingMm: dicomSpacing,
     dicomMetadata,
     sequenceNumber: body.sequenceNumber ?? 0,

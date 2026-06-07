@@ -5,6 +5,7 @@
 
 import { eq, and, or, gte, lte, inArray, isNull, desc, asc, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import {
   bookings,
@@ -29,14 +30,14 @@ export interface BookingFilters {
 }
 
 export interface BookingWithDetails extends Booking {
-  clientDetails?: any;
-  hostDetails?: any;
+  clientDetails?: Record<string, unknown>;
+  hostDetails?: Record<string, unknown>;
   slotDetails?: TimeSlot;
 }
 
 export class BookingRepository extends DatabaseRepository<Booking, NewBooking, BookingFilters> {  constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, bookings, logger);
   }

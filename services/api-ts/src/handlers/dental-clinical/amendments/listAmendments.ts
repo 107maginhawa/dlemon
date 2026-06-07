@@ -31,7 +31,7 @@ export async function listAmendments(ctx: HandlerContext) {
   const totalCount = items.length;
   const page = items.slice(offset, offset + limit);
 
-  const audit = ctx.get('audit') as any;
+  const audit = ctx.get('audit');
   if (audit?.logEvent) {
     await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'amendment', resource: visitId, description: 'Amendments listed for visit', details: { resultCount: items.length }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
   }

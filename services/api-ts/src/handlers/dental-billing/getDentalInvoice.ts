@@ -5,7 +5,7 @@
  * Returns invoice with line items and payments.
  */
 
-import type { ValidatedContext } from '@/types/app';
+import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -15,12 +15,12 @@ import { getPatientWithPersonForInvoice } from '@/handlers/patient/repos/patient
 import { getVisitForBilling } from '@/handlers/dental-visit/repos/visit-billing.facade';
 
 export async function getDentalInvoice(
-  ctx: ValidatedContext<never, never, any>
+  ctx: HandlerContext
 ): Promise<Response> {
   const session = ctx.get('session');
   if (!session) throw new UnauthorizedError();
 
-  const { invoiceId } = ctx.req.valid('param');
+  const { invoiceId } = ctx.req.valid('param') as { invoiceId: string };
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new DentalInvoiceRepository(db);
   const paymentRepo = new DentalPaymentRepository(db);
@@ -53,7 +53,7 @@ export async function getDentalInvoice(
     priceCents: item.amountCents,
   }));
 
-  const audit = ctx.get('audit') as any;
+  const audit = ctx.get('audit');
   if (audit?.logEvent) {
     await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: session.userId, userType: 'client', resourceType: 'invoice', resource: invoiceId, description: 'Invoice retrieved', details: { resultCount: 1 }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, session.userId);
   }

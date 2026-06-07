@@ -3835,7 +3835,7 @@ export const initializeDentitionMutation = (options?: Partial<Options<Initialize
 export const getPatientHouseholdQueryKey = (options: Options<GetPatientHouseholdData>) => createQueryKey('getPatientHousehold', options);
 
 /**
- * Get the household a patient belongs to (404 if none) Requires role: 'user'
+ * Get the household a patient belongs to (204 if patient is in no household) Requires role: 'user'
  */
 export const getPatientHouseholdOptions = (options: Options<GetPatientHouseholdData>) => queryOptions<GetPatientHouseholdResponse, GetPatientHouseholdError, GetPatientHouseholdResponse, ReturnType<typeof getPatientHouseholdQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

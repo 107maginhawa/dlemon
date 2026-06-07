@@ -22,12 +22,13 @@ export async function createPractitionerRole(
     throw new UnauthorizedError();
   }
 
-  const body = ctx.req.valid('json');
+  // practitionerId is an app-layer extension not present in the OpenAPI schema
+  const body = ctx.req.valid('json') as CreatePractitionerRoleBody & { practitionerId?: string };
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
   // practitionerId must be supplied — links FHIR PractitionerRole to our practitioner row
-  const practitionerId = (body as any).practitionerId as string | undefined;
+  const practitionerId = body.practitionerId;
   if (!practitionerId) {
     throw new NotFoundError('practitionerId is required in request body', {
       resourceType: 'practitioner',
@@ -50,16 +51,16 @@ export async function createPractitionerRole(
 
   const role = await repo.createOne({
     practitionerId,
-    active: (body as any).active ?? true,
-    practitionerRef: (body as any).practitioner,
-    organizationRef: (body as any).organization,
-    code: (body as any).code ?? [],
-    specialty: (body as any).specialty ?? [],
-    periodStart: (body as any).period?.start ? new Date((body as any).period.start) : null,
-    periodEnd: (body as any).period?.end ? new Date((body as any).period.end) : null,
-    location: (body as any).location ?? null,
-    healthcareService: (body as any).healthcareService ?? null,
-    telecom: (body as any).telecom ?? null,
+    active: body.active ?? true,
+    practitionerRef: body.practitioner,
+    organizationRef: body.organization,
+    code: body.code ?? [],
+    specialty: body.specialty ?? [],
+    periodStart: body.period?.start ?? null,
+    periodEnd: body.period?.end ?? null,
+    location: body.location ?? null,
+    healthcareService: body.healthcareService ?? null,
+    telecom: body.telecom ?? null,
     availableTime: null,
     notAvailable: null,
   });

@@ -6,6 +6,7 @@
 import { eq, and, gte, lte, desc, asc, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
+import type { Logger } from '@/types/logger';
 import {
   chatMessages,
   type ChatMessage,
@@ -21,7 +22,7 @@ import { differenceInMinutes, max } from 'date-fns';
 export class ChatMessageRepository extends DatabaseRepository<ChatMessage, NewChatMessage, ChatMessageFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, chatMessages, logger);
   }
@@ -54,7 +55,7 @@ export class ChatMessageRepository extends DatabaseRepository<ChatMessage, NewCh
       conditions.push(lte(chatMessages.timestamp, new Date(filters.timestampTo)));
     }
     
-    return conditions.length > 0 ? and(...conditions as any) : undefined;
+    return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
   /**
@@ -281,7 +282,7 @@ export class ChatMessageRepository extends DatabaseRepository<ChatMessage, NewCh
     updatedParticipants[participantIndex] = {
       ...updatedParticipants[participantIndex],
       ...updates
-    } as any;
+    } as CallParticipant;
     
     return await this.updateVideoCallData(messageId, {
       participants: updatedParticipants

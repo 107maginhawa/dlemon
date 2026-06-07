@@ -101,7 +101,7 @@ export async function seedAuditWorkspace(db: Db) {
   // Treatments inserted directly at each status (UI cannot produce these).
   const tx = (id: string, status: string, cdt: string, desc: string, tooth: number) => ({
     id, visitId: a.visitActive, patientId: a.patient, toothNumber: tooth,
-    cdtCode: cdt, description: desc, status: status as any,
+    cdtCode: cdt, description: desc, status: status as typeof dentalTreatments.$inferInsert['status'],
     priceCents: 12000, carriedOver: false, ...by,
   });
   await db.insert(dentalTreatments).values([

@@ -11,7 +11,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { dentalTreatments, TREATMENT_PHASE_ORDER, type DentalTreatmentPhase } from '../repos/treatment.schema';
+import { dentalTreatments, TREATMENT_PHASE_ORDER, type DentalTreatmentPhase, type DentalTreatment } from '../repos/treatment.schema';
 import { dentalVisits } from '../repos/visit.schema';
 import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
 import { eq, and, inArray, desc } from 'drizzle-orm';
@@ -78,7 +78,8 @@ export async function getTreatmentPlan(ctx: BaseContext) {
   });
 
   // Group by tooth
-  const byTooth: Record<string | number, any[]> = {};
+  type TreatmentPlanItem = Pick<DentalTreatment, 'id' | 'cdtCode' | 'description' | 'surfaces' | 'priceCents' | 'status' | 'conditionCode' | 'visitId' | 'phase' | 'priority'> & { reason?: string };
+  const byTooth: Record<string | number, TreatmentPlanItem[]> = {};
   for (const t of pendingTreatments) {
     const key = t.toothNumber ?? 'general';
     if (!byTooth[key]) byTooth[key] = [];

@@ -6,7 +6,7 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -25,7 +25,10 @@ export async function getPMDForVisit(ctx: HandlerContext) {
   const repo = new PMDDocumentRepository(db);
 
   const pmd = await repo.findByVisit(visitId);
-  if (!pmd) throw new NotFoundError('PMD document');
+  // Absent optional sub-resource → 204 (matches getVisitPerioChart). The visit
+  // exists (getVisitOrThrow above 404s otherwise); it just has no PMD yet, so
+  // the client reads "none" without a console-noise 404.
+  if (!pmd) return new Response(null, { status: 204 });
 
   // V-PMD-008 (§6 "Download: patient own PMDs"): a patient may read their own PMD.
   // If the requester is the patient's linked person, skip the staff branch check;

@@ -15,6 +15,10 @@ import type { PaginationOptions } from '@/core/database.repo';
 import { providers, type ProviderWithPerson } from './provider.schema';
 import { persons } from '../../person/repos/person.schema';
 import type { ProviderFilters } from './provider.repo';
+import type { BookingEvent } from '../../booking/repos/booking.schema';
+
+/** ProviderWithPerson optionally joined with an active booking event. */
+export type ProviderWithEvent = ProviderWithPerson & { event?: BookingEvent };
 
 /** providers ⋈ persons by provider id. */
 export async function findProviderWithPersonById(
@@ -184,7 +188,7 @@ export async function findBookingProvidersWithActiveEvents(
   db: DatabaseInstance,
   filters?: ProviderFilters & { q?: string },
   options?: { pagination?: PaginationOptions },
-): Promise<(ProviderWithPerson & { event?: any })[]> {
+): Promise<ProviderWithEvent[]> {
   const { bookingEvents } = await import('../../booking/repos/booking.schema');
 
   let query = db
@@ -216,7 +220,7 @@ export async function findBookingProvidersWithActiveEvents(
 export async function findProviderWithPersonAndEventById(
   db: DatabaseInstance,
   providerId: string,
-): Promise<(ProviderWithPerson & { event?: any }) | null> {
+): Promise<ProviderWithEvent | null> {
   const { bookingEvents } = await import('../../booking/repos/booking.schema');
 
   const result = await db

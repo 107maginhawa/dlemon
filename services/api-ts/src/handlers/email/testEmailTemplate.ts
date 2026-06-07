@@ -39,7 +39,7 @@ export async function testEmailTemplate(
   const body = ctx.req.valid('json') as {
     recipientEmail: string;
     recipientName?: string;
-    variables?: Record<string, any>;
+    variables?: Record<string, unknown>;
   };
 
   // Validate required fields

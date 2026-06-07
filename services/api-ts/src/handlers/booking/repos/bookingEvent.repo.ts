@@ -6,6 +6,7 @@
 
 import { eq, and, or, lte, gte, isNull, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import type { Logger } from '@/types/logger';
 import { DatabaseRepository, type PaginationOptions } from '@/core/database.repo';
 import { ConflictError } from '@/core/errors';
 import {
@@ -20,7 +21,7 @@ import {
   type BillingConfig,
   DayOfWeek
 } from './booking.schema';
-import { getBookingEventWithOwnerById, findBookingEventsWithOwner } from './bookingEvent-person.facade';
+import { getBookingEventWithOwnerById, findBookingEventsWithOwner, type BookingEventWithOwner } from './bookingEvent-person.facade';
 
 export interface BookingEventFilters {
   owner?: string;
@@ -35,7 +36,7 @@ export interface BookingEventFilters {
 }export class BookingEventRepository extends DatabaseRepository<BookingEvent, NewBookingEvent, BookingEventFilters> {
   constructor(
     db: DatabaseInstance,
-    logger?: any
+    logger?: Logger
   ) {
     super(db, bookingEvents, logger);
   }
@@ -218,12 +219,12 @@ export interface BookingEventFilters {
       }
     }
 
-    const processedUpdates: any = { ...updates };
+    const processedUpdates: Partial<NewBookingEvent> = { ...updates } as Partial<NewBookingEvent>;
     if (updates.dailyConfigs) {
       processedUpdates.dailyConfigs = this.processAndValidateDailyConfigs(updates.dailyConfigs);
     }
-    if ((updates as any).effectiveFrom !== undefined && (updates as any).effectiveFrom) {
-      processedUpdates.effectiveFrom = new Date((updates as any).effectiveFrom);
+    if ((updates as BookingEventUpdateRequest & { effectiveFrom?: string }).effectiveFrom) {
+      processedUpdates.effectiveFrom = new Date((updates as BookingEventUpdateRequest & { effectiveFrom?: string }).effectiveFrom as string);
     }
     if (updates.effectiveTo !== undefined) {
       processedUpdates.effectiveTo = updates.effectiveTo ? new Date(updates.effectiveTo) : null;
@@ -446,8 +447,8 @@ export interface BookingEventFilters {
     if ('dailyConfigs' in config && config.dailyConfigs) {
       try {
         this.processAndValidateDailyConfigs(config.dailyConfigs);
-      } catch (error: any) {
-        errors.push(`Daily configuration validation failed: ${error.message}`);
+      } catch (error: unknown) {
+        errors.push(`Daily configuration validation failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -480,14 +481,14 @@ export interface BookingEventFilters {
   /**
    * Find booking event by ID with owner (person) data joined
    */
-  async findOneByIdWithOwner(eventId: string): Promise<any | null> {
+  async findOneByIdWithOwner(eventId: string): Promise<BookingEventWithOwner | null> {
     return getBookingEventWithOwnerById(this.db, eventId);
   }
 
   /**
    * Find many booking events with owner (person) data joined
    */
-  async findManyWithOwner(filters?: BookingEventFilters, options?: PaginationOptions): Promise<any[]> {
+  async findManyWithOwner(filters?: BookingEventFilters, options?: PaginationOptions): Promise<BookingEventWithOwner[]> {
     this.logger?.debug({ filters, options }, 'Finding booking events with owner data');
 
     const whereConditions = this.buildWhereConditions(filters);

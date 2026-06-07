@@ -14,7 +14,7 @@ export class AppError extends Error {
     message: string,
     public code: string = 'INTERNAL_ERROR',
     public statusCode: number = 500,
-    public details?: any
+    public details?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'AppError';
@@ -96,14 +96,14 @@ export interface NotFoundErrorOptions {
 
 export class NotFoundError extends AppError {
   constructor(message: string = 'Resource not found', opts?: NotFoundErrorOptions) {
-    super(message, 'NOT_FOUND', 404, opts);
+    super(message, 'NOT_FOUND', 404, opts as Record<string, unknown> | undefined);
   }
 }
 
 /**
  * Security filtering utility to remove sensitive fields in production
  */
-function applySecurity(obj: Record<string, any>, config?: Config): Record<string, any> {
+function applySecurity(obj: Record<string, unknown>, config?: Config): Record<string, unknown> {
   const isProduction = process.env.NODE_ENV === 'production';
   const isDebugMode = config?.logging?.level === 'debug';
   
@@ -129,8 +129,9 @@ function applySecurity(obj: Record<string, any>, config?: Config): Record<string
  */
 function createBaseErrorFields(c: Context, err: { message: string; code?: string }, statusCode: number, config?: Config) {
   const timestamp = new Date().toISOString();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono context.get() requires string key but Variables is not indexable
   const requestId = c.get('requestId' as any) || c.req.header('X-Request-ID') || crypto.randomUUID();
-  
+
   const isProduction = process.env.NODE_ENV === 'production';
   const isDebugMode = config?.logging?.level === 'debug';
   
@@ -153,8 +154,10 @@ function createBaseErrorFields(c: Context, err: { message: string; code?: string
 export function createErrorHandler(config: Config) {
   return (err: Error, c: Context) => {
     // Get logger from context (injected by dependency middleware)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono context.get() requires string key but Variables is not indexable
     const logger = c.get('logger' as any);
     const timestamp = new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono context.get() requires string key but Variables is not indexable
     const requestId = c.get('requestId' as any) || c.req.header('X-Request-ID') || crypto.randomUUID();
     
     // Create a child logger with request context
@@ -178,6 +181,7 @@ export function createErrorHandler(config: Config) {
         ...createBaseErrorFields(c, { message: err.message, code: err.name || 'HTTP_ERROR' }, err.status, config),
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
       return c.json(applySecurity(errorResponse, config), err.status as any);
     }
 
@@ -194,7 +198,8 @@ export function createErrorHandler(config: Config) {
 
       // Handle RateLimitError with specialized TypeSpec model
       if (err instanceof RateLimitError) {
-        const retryAfter = err.details?.retryAfter || 60;
+        const d = err.details as { retryAfter?: number } | undefined;
+        const retryAfter = d?.retryAfter || 60;
         c.header('Retry-After', String(retryAfter));
 
         const rateLimitResponse = {
@@ -206,85 +211,98 @@ export function createErrorHandler(config: Config) {
           windowSize: 60, // 60 seconds window
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(rateLimitResponse, config), err.statusCode as any);
       }
 
       // Handle AuthenticationError with specialized TypeSpec model
       if (err instanceof AuthenticationError) {
+        const d = err.details as { scheme?: string; supportedSchemes?: string[] } | undefined;
         const authResponse = {
           ...createBaseErrorFields(c, err, err.statusCode, config),
-          scheme: err.details?.scheme,
-          supportedSchemes: err.details?.supportedSchemes,
+          scheme: d?.scheme,
+          supportedSchemes: d?.supportedSchemes,
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(authResponse, config), err.statusCode as any);
       }
 
-      // Handle AuthorizationError with specialized TypeSpec model  
+      // Handle AuthorizationError with specialized TypeSpec model
       if (err instanceof AuthorizationError) {
+        const d = err.details as { requiredPermission?: string; userPermissions?: string[]; resource?: string } | undefined;
         const authzResponse = {
           ...createBaseErrorFields(c, err, err.statusCode, config),
-          requiredPermission: err.details?.requiredPermission,
-          userPermissions: err.details?.userPermissions,
-          resource: err.details?.resource,
+          requiredPermission: d?.requiredPermission,
+          userPermissions: d?.userPermissions,
+          resource: d?.resource,
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(authzResponse, config), err.statusCode as any);
       }
 
       // Handle HipaaComplianceError with specialized TypeSpec model
       if (err instanceof HipaaComplianceError) {
+        const d = err.details as { hipaaRule?: string; violationType?: string; auditLog?: string; remediationRequired?: string[] } | undefined;
         const hipaaResponse = {
           ...createBaseErrorFields(c, err, err.statusCode, config),
-          hipaaRule: err.details?.hipaaRule,
-          violationType: err.details?.violationType,
-          auditLog: err.details?.auditLog,
-          remediationRequired: err.details?.remediationRequired,
+          hipaaRule: d?.hipaaRule,
+          violationType: d?.violationType,
+          auditLog: d?.auditLog,
+          remediationRequired: d?.remediationRequired,
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(hipaaResponse, config), err.statusCode as any);
       }
 
       // Handle TimeoutError with specialized TypeSpec model
       if (err instanceof TimeoutError) {
+        const d = err.details as { timeoutMs?: number; operation?: string; retryable?: boolean } | undefined;
         const timeoutResponse = {
           ...createBaseErrorFields(c, err, err.statusCode, config),
-          timeoutMs: err.details?.timeoutMs,
-          operation: err.details?.operation,
-          retryable: err.details?.retryable,
+          timeoutMs: d?.timeoutMs,
+          operation: d?.operation,
+          retryable: d?.retryable,
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(timeoutResponse, config), err.statusCode as any);
       }
 
       // Handle ExternalServiceError with specialized TypeSpec model
       if (err instanceof ExternalServiceError) {
-        if (err.details?.retryAfter) {
-          c.header('Retry-After', String(err.details.retryAfter));
+        const d = err.details as { service?: string; operation?: string; externalCode?: string; externalMessage?: string; retryable?: boolean; retryAfter?: number } | undefined;
+        if (d?.retryAfter) {
+          c.header('Retry-After', String(d.retryAfter));
         }
 
         const externalServiceResponse = {
           ...createBaseErrorFields(c, err, err.statusCode, config),
-          service: err.details?.service,
-          operation: err.details?.operation,
-          externalCode: err.details?.externalCode,
-          externalMessage: err.details?.externalMessage,
-          retryable: err.details?.retryable,
-          retryAfter: err.details?.retryAfter,
+          service: d?.service,
+          operation: d?.operation,
+          externalCode: d?.externalCode,
+          externalMessage: d?.externalMessage,
+          retryable: d?.retryable,
+          retryAfter: d?.retryAfter,
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(externalServiceResponse, config), err.statusCode as any);
       }
 
       // Handle NotFoundError with specialized TypeSpec model
       if (err instanceof NotFoundError) {
+        const d = err.details as NotFoundErrorOptions | undefined;
         const notFoundResponse = {
           ...createBaseErrorFields(c, err, err.statusCode, config),
-          resourceType: err.details?.resourceType,
-          resource: err.details?.resource,
-          suggestions: err.details?.suggestions,
+          resourceType: d?.resourceType,
+          resource: d?.resource,
+          suggestions: d?.suggestions,
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
         return c.json(applySecurity(notFoundResponse, config), err.statusCode as any);
       }
 
@@ -294,6 +312,7 @@ export function createErrorHandler(config: Config) {
         details: err.details,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
       return c.json(applySecurity(errorResponse, config), err.statusCode as any);
     }
 
@@ -312,14 +331,14 @@ export function createErrorHandler(config: Config) {
       
       const globalErrors: string[] = [];
       
-      zodError.issues.forEach((issue: any) => {
+      zodError.issues.forEach((issue) => {
         if (issue.path.length > 0) {
           fieldErrors.push({
             field: issue.path.join('.'),
-            value: 'received' in issue ? (issue as any).received : undefined,
+            value: 'received' in issue ? (issue as { received?: unknown }).received : undefined,
             code: issue.code,
             message: issue.message,
-            context: issue.fatal !== undefined ? { fatal: issue.fatal } : undefined,
+            context: 'fatal' in issue && issue.fatal !== undefined ? { fatal: issue.fatal } : undefined,
           });
         } else {
           globalErrors.push(issue.message);
@@ -358,7 +377,7 @@ export function createErrorHandler(config: Config) {
     // Handle Postgres encoding errors (e.g. null bytes in input). pg
     // wraps these in DrizzleQueryError; we map to 400 because the input
     // is fundamentally invalid rather than the server being broken.
-    const pgCode = (err as any)?.cause?.code ?? (err as any)?.code;
+    const pgCode = (err as { cause?: { code?: string }; code?: string })?.cause?.code ?? (err as { code?: string })?.code;
     if (pgCode === '22021') {
       log?.warn({ error: { message: err.message, pgCode } }, 'Postgres encoding error');
       const validationResponse = {
@@ -368,8 +387,8 @@ export function createErrorHandler(config: Config) {
     }
 
     // Handle errors with statusCode property (but not HTTPException or AppError)
-    if ('statusCode' in err && typeof (err as any).statusCode === 'number') {
-      const statusCode = (err as any).statusCode;
+    if ('statusCode' in err && typeof (err as { statusCode?: unknown }).statusCode === 'number') {
+      const statusCode = (err as { statusCode: number }).statusCode;
       
       log?.warn({
         error: {
@@ -383,6 +402,7 @@ export function createErrorHandler(config: Config) {
         ...createBaseErrorFields(c, { message: err.message, code: err.name || 'ERROR' }, statusCode, config),
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.json() status must be a literal union; dynamic number requires cast
       return c.json(applySecurity(errorResponse, config), statusCode as any);
     }
 
