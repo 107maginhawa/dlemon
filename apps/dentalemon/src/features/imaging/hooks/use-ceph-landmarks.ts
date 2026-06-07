@@ -143,14 +143,32 @@ function narrowLandmarkResponse(
   return data as DentalImagingModuleCephLandmarkListResponse
 }
 
-/** Normalize a non-Error thrown value (SDK throws parsed body on non-2xx) to an Error. */
+/** Normalize a thrown value to an Error whose message carries the API error code.
+ *
+ * The SDK throws two shapes depending on whether the error interceptor is active:
+ *   - the raw parsed body `{ error, code }` (no interceptor), or
+ *   - an `SdkError` wrapping that body under `.body` (interceptor active — the
+ *     production configuration).
+ * Both must surface the body's `code` (e.g. `FEATURE_DISABLED`) so the UI can
+ * distinguish the kill-switch from a tier gate. Re-throwing the bare `SdkError`
+ * loses the code and shows the wrong message in prod (P1-10 kill-switch).
+ */
+function codeFromBody(body: unknown): string | undefined {
+  if (body && typeof body === 'object' && 'code' in body) {
+    const code = (body as Record<string, unknown>).code
+    if (code != null) return String(code)
+  }
+  return undefined
+}
+
 function normalizeThrown(e: unknown): never {
-  if (e instanceof Error) throw e
+  if (e instanceof Error) {
+    const code = codeFromBody((e as { body?: unknown }).body)
+    throw code != null ? new Error(code) : e
+  }
   const msg = typeof e === 'string'
     ? e
-    : (e as Record<string, unknown>)?.code != null
-      ? String((e as Record<string, unknown>).code)
-      : JSON.stringify(e)
+    : codeFromBody(e) ?? JSON.stringify(e)
   throw new Error(msg)
 }
 
