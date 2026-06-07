@@ -115,13 +115,29 @@ export function TreatmentTable({
     }
   }, [isMarkDoneError]);
 
+  // Reset the completed-toggle when switching visits. The component is reused (not
+  // remounted) as the carousel changes visitId, so without this a "Hide/Show" choice
+  // would leak from one visit to the next.
+  useEffect(() => {
+    setShowCompleted(false);
+  }, [visitId]);
+
   const hasRows = treatments.length > 0 || carriedOverItems.length > 0;
   const completedCount = treatments.filter(
     (t) => t.status === 'performed' || t.status === 'verified',
   ).length;
+  // A visit is "pending" if it has any not-yet-done work. When nothing is pending
+  // (e.g. a finished/locked historical visit), there are no rows to focus on, so the
+  // hide-completed default would leave the table empty under a real money total.
+  const hasPending = treatments.some(
+    (t) => t.status !== 'performed' && t.status !== 'verified',
+  );
 
   // TXTBL-01: subtotal computations
   // price contract: priceCents (API) ÷ 100 → dollars (display); t.priceAmount already in dollars
+  // NOTE: this sums ALL treatments, including dismissed/declined-priced ones. Those rows
+  // also render (the filter below only hides performed/verified), so visible rows still
+  // match this total. Whether declined work should be billed is a separate product call.
   const thisVisitTotal = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
   const carriedOverTotal = carriedOverItems.reduce(
     (sum, i) => sum + (i.priceCents / 100), // price contract: priceCents (API) ÷ 100 → dollars (display)
@@ -129,8 +145,11 @@ export function TreatmentTable({
   );
   const grandTotal = thisVisitTotal + carriedOverTotal;
 
-  // TXTBL-05: filter displayed treatments
-  const displayedTreatments = showCompleted
+  // TXTBL-05: filter displayed treatments.
+  // Force-show completed rows when nothing is pending, so an all-completed visit never
+  // renders an empty body beneath a non-zero Grand Total.
+  const effectiveShowCompleted = showCompleted || !hasPending;
+  const displayedTreatments = effectiveShowCompleted
     ? treatments
     : treatments.filter((t) => t.status !== 'performed' && t.status !== 'verified');
 
@@ -146,7 +165,12 @@ export function TreatmentTable({
     <div className="border border-border/50 rounded-lg overflow-hidden bg-card mx-4 my-3">
       <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border/50">
         <span className="text-sm font-semibold">Treatment Breakdown</span>
-        {completedCount > 0 && (
+        {/* Only show the toggle when it has a job: there is completed work to hide AND
+            pending work to fall back to. On an all-completed visit the rows are always
+            shown (effectiveShowCompleted), so a no-op toggle is hidden. Edge: if the last
+            pending item is marked done mid-session the toggle disappears and completed
+            rows stay visible — acceptable, the table is never left empty. */}
+        {hasPending && completedCount > 0 && (
           <button
             type="button"
             data-testid="view-completed-btn"
