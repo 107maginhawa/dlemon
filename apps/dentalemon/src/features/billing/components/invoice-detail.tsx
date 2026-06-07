@@ -24,6 +24,7 @@ import {
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
+import { useOrgContextStore } from '@/stores/org-context.store';
 
 export type { LineItem, Payment, InvoiceData } from './invoice-detail.helpers';
 export {
@@ -63,6 +64,10 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [uncollectibleError, setUncollectibleError] = useState<string | null>(null);
 
   const qc = useQueryClient();
+  // The recording staff member comes from the PIN-authenticated org context.
+  // Without it the POST sends an empty recordedByMemberId and the backend
+  // rejects it with 400 "Invalid UUID" (mirrors useWorkspacePayment / QA-008).
+  const recordedByMemberId = useOrgContextStore((s) => s.memberId);
 
   // ---------------------------------------------------------------------------
   // GET invoice — replaces the manual useEffect+setState fetch
@@ -202,8 +207,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     const amountCents = Math.round(parseFloat(paymentAmount || '0') * 100);
     const errs = validatePaymentForm({ amountCents, method: paymentMethod, receiptNumber });
     if (errs.length > 0) { setPaymentErrors(errs); return; }
+    if (!recordedByMemberId) {
+      setPaymentErrors(['No active staff member context — please re-select your profile and try again.']);
+      return;
+    }
     setPaymentErrors([]);
-    const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId: '' });
+    const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId });
     recordPaymentMutation.mutate({
       path: { invoiceId },
       body: {

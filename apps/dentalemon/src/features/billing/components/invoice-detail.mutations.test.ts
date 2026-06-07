@@ -9,12 +9,16 @@
  * drive both.
  */
 
-import { describe, test, expect, afterEach, mock } from 'bun:test';
+import { describe, test, expect, afterEach, beforeEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceDetail } from './invoice-detail';
+import { useOrgContextStore } from '@/stores/org-context.store';
+
+// The recording staff member is sourced from the PIN-authenticated org context.
+const TEST_MEMBER_ID = '11111111-1111-4111-8111-111111111111';
 
 function baseInvoice(status: string) {
   return {
@@ -55,7 +59,15 @@ function installFetch(initialStatus: string) {
   return { calls, restore: () => { global.fetch = original; } };
 }
 
-afterEach(cleanup);
+beforeEach(() => {
+  // After login the org context store holds the active membership id; payment
+  // recording must send it as recordedByMemberId.
+  useOrgContextStore.setState({ memberId: TEST_MEMBER_ID, branchId: 'b-1', orgId: 'o-1', role: 'dentist_owner' });
+});
+afterEach(() => {
+  cleanup();
+  useOrgContextStore.setState({ memberId: null, branchId: null, orgId: null, role: null });
+});
 
 function renderDetail(props: Partial<React.ComponentProps<typeof InvoiceDetail>> = {}) {
   const onUpdated = props.onUpdated ?? mock(() => {});
@@ -131,7 +143,29 @@ describe('InvoiceDetail — record payment', () => {
       expect(post.body.amountCents).toBe(10000);
       expect(post.body.method).toBe('cash');
       expect(post.body.receiptNumber).toBe('R-A-0001');
+      // Regression: the backend rejects an empty recordedByMemberId with
+      // 400 "Invalid UUID", so the UI must send the active member id.
+      expect(post.body.recordedByMemberId).toBe(TEST_MEMBER_ID);
       await waitFor(() => expect((onUpdated as any).mock.calls.length).toBeGreaterThanOrEqual(1));
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('blocks submit with an error when there is no member context', async () => {
+    useOrgContextStore.setState({ memberId: null });
+    const user = userEvent.setup();
+    const f = installFetch('issued');
+    try {
+      renderDetail();
+      await user.click(await screen.findByRole('button', { name: /record payment/i }));
+      await user.type(screen.getByLabelText(/amount/i), '100.00');
+      await user.type(screen.getByLabelText(/receipt/i), 'R-A-0002');
+      await user.click(screen.getByRole('button', { name: /^record$/i }));
+
+      // Must NOT fire a POST with an empty recordedByMemberId (would 400).
+      await new Promise((r) => setTimeout(r, 150));
+      expect(f.calls.some(c => c.method === 'POST' && c.url.endsWith('/payments'))).toBe(false);
     } finally {
       f.restore();
     }
