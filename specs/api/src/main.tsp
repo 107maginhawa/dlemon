@@ -39,6 +39,7 @@ import "./modules/dental-patient-engagement.tsp";
 import "./modules/dental-patient-finance.tsp";
 import "./modules/dental-clinical-ops.tsp";
 import "./modules/dental-ops-extras.tsp";
+import "./modules/dental-portal.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -315,6 +316,9 @@ using TypeSpec.OpenAPI;
 // versioned client SDK surface. See docs/observability/README.md.
 @tagMetadata("Dental:Perio", #{
   description: "Periodontal charting. Per-visit full perio chart with 6-site probing depths (FDI notation), bleeding on probing, recession, mobility, and furcation. One chart per visit; immutable after visit locked. Summary statistics (BOP%, mean depth, deep-pocket count) computed on completion."
+})
+@tagMetadata("Dental:Portal", #{
+  description: "Patient self-service portal (E4 Phase 1, read-only). Self-scoped reads for the authenticated patient (Better-Auth role `user`, no membership): their own appointments, invoices, and outstanding balance. Patient identity is derived server-side from the session — no client-supplied patientId — so a patient can only ever read their own data (IDOR-free by construction)."
 })
 namespace MonobaseAPI {
 
@@ -608,6 +612,13 @@ namespace MonobaseAPI {
   @tag("Dental:Scheduling")
   @route("/dental/waitlist")
   interface WaitlistPromotionMgmt extends DentalWaitlistModule.WaitlistPromotion {}
+
+  // ── E4: patient self-service portal (read-only foundation) ───────────────
+  // Self-scoped reads for the authenticated patient. Identity is derived
+  // server-side from the session (NO patientId param) → IDOR-free by design.
+  @tag("Dental:Portal")
+  @route("/me")
+  interface DentalPortalSelfReads extends DentalPortalModule.PortalSelfReads {}
 
   // ========================================================================
   // PLATFORM INFRASTRUCTURE

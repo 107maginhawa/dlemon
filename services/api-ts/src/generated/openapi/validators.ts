@@ -3291,6 +3291,35 @@ export const DentalPaymentReceiptResponseSchema = z.object({
   patientId: UUIDSchema
 });
 
+export const DentalPortalModuleMyAppointmentSchema = z.object({
+  id: z.string().uuid(),
+  branchId: z.string().uuid(),
+  startAt: z.string().datetime().transform((str) => new Date(str)),
+  endAt: z.string().datetime().transform((str) => new Date(str)),
+  visitType: z.string(),
+  status: z.string(),
+  confirmedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+});
+
+export const DentalPortalModuleMyBalanceSchema = z.object({
+  totalBilledCents: z.number().int(),
+  totalPaidCents: z.number().int(),
+  outstandingBalanceCents: z.number().int(),
+  overdueAmountCents: z.number().int(),
+  invoiceCount: z.number().int()
+});
+
+export const DentalPortalModuleMyInvoiceSchema = z.object({
+  id: z.string().uuid(),
+  invoiceNumber: z.string(),
+  status: z.string(),
+  totalCents: z.number().int(),
+  paidCents: z.number().int(),
+  balanceCents: z.number().int(),
+  dueDate: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  issuedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()])
+});
+
 export const DentalQueueModuleCreateQueueItemRequestSchema = z.object({
   notes: z.string().optional()
 });
@@ -22311,6 +22340,12 @@ export const ListEMRPatientsResponse = z.object({
   hasPreviousPage: z.boolean()
 })
 });
+
+export const ListMyAppointmentsResponse = z.array(DentalPortalModuleMyAppointmentSchema);
+
+export const GetMyBalanceResponse = DentalPortalModuleMyBalanceSchema;
+
+export const ListMyInvoicesResponse = z.array(DentalPortalModuleMyInvoiceSchema);
 
 export const ListNotificationsQuery = z.object({
   type: NotificationTypeSchema.optional(),

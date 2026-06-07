@@ -84,6 +84,7 @@ const _lucideMock = {
   Phone: _makeIcon('phone'),
   Pill: _makeIcon('pill'),
   Plus: _makeIcon('plus'),
+  Receipt: _makeIcon('receipt'),
   RefreshCw: _makeIcon('refreshcw'),
   Search: _makeIcon('search'),
   Shield: _makeIcon('shield'),

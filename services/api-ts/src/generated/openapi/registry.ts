@@ -317,6 +317,9 @@ import { getConsultation } from '../../handlers/emr/getConsultation';
 import { listConsultations } from '../../handlers/emr/listConsultations';
 import { listEMRPatients } from '../../handlers/emr/listEMRPatients';
 import { updateConsultation } from '../../handlers/emr/updateConsultation';
+import { getMyBalance } from '../../handlers/dental-portal/getMyBalance';
+import { listMyAppointments } from '../../handlers/dental-portal/listMyAppointments';
+import { listMyInvoices } from '../../handlers/dental-portal/listMyInvoices';
 import { getNotification } from '../../handlers/notifs/getNotification';
 import { listNotifications } from '../../handlers/notifs/listNotifications';
 import { markAllNotificationsAsRead } from '../../handlers/notifs/markAllNotificationsAsRead';
@@ -708,6 +711,11 @@ export const registry = {
   listConsultations,
   listEMRPatients,
   updateConsultation,
+
+  // Dental-portal handlers
+  getMyBalance,
+  listMyAppointments,
+  listMyInvoices,
 
   // Notifs handlers
   getNotification,

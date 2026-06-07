@@ -2348,6 +2348,24 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listEMRPatients as unknown as Handler
   );
 
+  // listMyAppointments
+  app.get('/me/appointments',
+    authMiddleware({ roles: ["user"] }),
+    registry.listMyAppointments as unknown as Handler
+  );
+
+  // getMyBalance
+  app.get('/me/balance',
+    authMiddleware({ roles: ["user"] }),
+    registry.getMyBalance as unknown as Handler
+  );
+
+  // listMyInvoices
+  app.get('/me/invoices',
+    authMiddleware({ roles: ["user"] }),
+    registry.listMyInvoices as unknown as Handler
+  );
+
   // listNotifications
   app.get('/notifs',
     authMiddleware({ roles: ["user", "admin"] }),

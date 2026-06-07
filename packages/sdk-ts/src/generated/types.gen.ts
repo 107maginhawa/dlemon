@@ -7563,6 +7563,104 @@ export type DentalPaymentReceiptResponse = {
 };
 
 /**
+ * A patient-appropriate projection of one of the patient's own appointments
+ */
+export type DentalPortalModuleMyAppointment = {
+    /**
+     * Appointment id
+     */
+    id: string;
+    /**
+     * Branch the appointment is at
+     */
+    branchId: string;
+    /**
+     * Appointment start (ISO 8601 UTC)
+     */
+    startAt: Date;
+    /**
+     * Appointment end (ISO 8601 UTC)
+     */
+    endAt: Date;
+    /**
+     * Visit type (checkup / treatment / emergency / recall / hygiene)
+     */
+    visitType: string;
+    /**
+     * Lifecycle status (scheduled / confirmed / checked_in / completed / cancelled / no_show)
+     */
+    status: string;
+    /**
+     * When the appointment was confirmed, if it has been (ISO 8601 UTC)
+     */
+    confirmedAt: Date | null;
+};
+
+/**
+ * The authenticated patient's outstanding-balance summary
+ */
+export type DentalPortalModuleMyBalance = {
+    /**
+     * Sum of all non-voided invoice totals in cents
+     */
+    totalBilledCents: number;
+    /**
+     * Sum of all non-voided invoice payments in cents
+     */
+    totalPaidCents: number;
+    /**
+     * Sum of all non-voided invoice balances in cents
+     */
+    outstandingBalanceCents: number;
+    /**
+     * Sum of overdue invoice balances in cents
+     */
+    overdueAmountCents: number;
+    /**
+     * Count of non-voided invoices
+     */
+    invoiceCount: number;
+};
+
+/**
+ * A patient-appropriate projection of one of the patient's own invoices
+ */
+export type DentalPortalModuleMyInvoice = {
+    /**
+     * Invoice id
+     */
+    id: string;
+    /**
+     * Human-readable invoice number
+     */
+    invoiceNumber: string;
+    /**
+     * Lifecycle status (draft / issued / partial / paid / overdue / voided)
+     */
+    status: string;
+    /**
+     * Invoice total in cents
+     */
+    totalCents: number;
+    /**
+     * Amount paid so far in cents
+     */
+    paidCents: number;
+    /**
+     * Outstanding balance in cents
+     */
+    balanceCents: number;
+    /**
+     * Due date, if set (ISO 8601 UTC)
+     */
+    dueDate: Date | null;
+    /**
+     * When the invoice was issued, if it has been (ISO 8601 UTC)
+     */
+    issuedAt: Date | null;
+};
+
+/**
  * Body to add an appointment to the queue board
  */
 export type DentalQueueModuleCreateQueueItemRequest = {
@@ -73695,6 +73793,93 @@ export type ListEmrPatientsResponses = {
 };
 
 export type ListEmrPatientsResponse = ListEmrPatientsResponses[keyof ListEmrPatientsResponses];
+
+export type ListMyAppointmentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/appointments';
+};
+
+export type ListMyAppointmentsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListMyAppointmentsError = ListMyAppointmentsErrors[keyof ListMyAppointmentsErrors];
+
+export type ListMyAppointmentsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPortalModuleMyAppointment>;
+};
+
+export type ListMyAppointmentsResponse = ListMyAppointmentsResponses[keyof ListMyAppointmentsResponses];
+
+export type GetMyBalanceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/balance';
+};
+
+export type GetMyBalanceErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type GetMyBalanceError = GetMyBalanceErrors[keyof GetMyBalanceErrors];
+
+export type GetMyBalanceResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPortalModuleMyBalance;
+};
+
+export type GetMyBalanceResponse = GetMyBalanceResponses[keyof GetMyBalanceResponses];
+
+export type ListMyInvoicesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/invoices';
+};
+
+export type ListMyInvoicesErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListMyInvoicesError = ListMyInvoicesErrors[keyof ListMyInvoicesErrors];
+
+export type ListMyInvoicesResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPortalModuleMyInvoice>;
+};
+
+export type ListMyInvoicesResponse = ListMyInvoicesResponses[keyof ListMyInvoicesResponses];
 
 export type ListNotificationsData = {
     body?: never;
