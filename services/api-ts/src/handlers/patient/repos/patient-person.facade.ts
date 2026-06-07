@@ -39,8 +39,17 @@ function listConditions(filters?: PatientFilters): SQL<unknown>[] {
   if (filters?.person) conditions.push(eq(patients.person, filters.person));
   if (filters?.ids && filters.ids.length > 0) conditions.push(inArray(patients.id, filters.ids));
   if (filters?.q) {
+    // Match the term against firstName, lastName, OR the full "first last"
+    // display name. Without the concat clause a natural full-name query
+    // ("Maria Santos") matches neither field in isolation and returns 0 — see
+    // FR2.2 full-name regression test in dental-patient.test.ts.
+    const term = `%${filters.q}%`;
     conditions.push(
-      or(ilike(persons.firstName, `%${filters.q}%`), ilike(persons.lastName, `%${filters.q}%`)) as SQL<unknown>,
+      or(
+        ilike(persons.firstName, term),
+        ilike(persons.lastName, term),
+        ilike(sql`${persons.firstName} || ' ' || coalesce(${persons.lastName}, '')`, term),
+      ) as SQL<unknown>,
     );
   }
   // STRICT per-branch scope (data isolation). Previously this OR'd in

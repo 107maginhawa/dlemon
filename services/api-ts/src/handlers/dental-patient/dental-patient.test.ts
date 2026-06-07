@@ -232,6 +232,31 @@ describe('FR2.2: patient search via ?q= param', () => {
     const body = await res.json() as any;
     expect(body.data.length).toBe(0);
   });
+
+  // FR2.2 regression: a clinic user naturally types a patient's FULL name into
+  // the search box ("Maria Santos"). The match must span first+last name, not
+  // just each field in isolation — otherwise every full-name query returns 0.
+  test('finds patient by full name spanning first + last', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Maria Santos');
+    await createPatient(app, 'Roberto Lim');
+
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=${encodeURIComponent('Maria Santos')}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.some((p: any) => p.displayName === 'Maria Santos')).toBe(true);
+  });
+
+  // Full-name match must remain branch-scoped and not over-match unrelated rows.
+  test('full-name search excludes non-matching patients', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Maria Santos');
+    await createPatient(app, 'Roberto Lim');
+
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=${encodeURIComponent('Maria Santos')}`);
+    const body = await res.json() as any;
+    expect(body.data.some((p: any) => p.displayName === 'Roberto Lim')).toBe(false);
+  });
 });
 
 // =============================================================================
