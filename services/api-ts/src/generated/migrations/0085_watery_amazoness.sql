@@ -1,7 +1,12 @@
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."notification_channel" ADD VALUE 'sms';--> statement-breakpoint
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."notification_type" ADD VALUE 'appointment.reminder';--> statement-breakpoint
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."notification_type" ADD VALUE 'appointment.confirmation-request';--> statement-breakpoint
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."notification_type" ADD VALUE 'recall.due';--> statement-breakpoint
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."notification_type" ADD VALUE 'recall.reminder';--> statement-breakpoint
 ALTER TABLE "dental_recall" ADD COLUMN "interval_months" integer;--> statement-breakpoint
 ALTER TABLE "dental_recall" ADD COLUMN "last_sent_at" timestamp;--> statement-breakpoint

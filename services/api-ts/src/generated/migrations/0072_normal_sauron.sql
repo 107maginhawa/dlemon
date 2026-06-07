@@ -1,3 +1,4 @@
+-- MIGRATION-SAFETY: PG16 — ALTER TYPE ADD VALUE is non-destructive and additive; the new enum value is not referenced within this migration.
 ALTER TYPE "public"."imaging_modality" ADD VALUE 'cbct' BEFORE 'intraoral_photo';--> statement-breakpoint
 ALTER TABLE "imported_pmd" DROP CONSTRAINT "imported_pmd_patient_id_patient_id_fk";
 --> statement-breakpoint
