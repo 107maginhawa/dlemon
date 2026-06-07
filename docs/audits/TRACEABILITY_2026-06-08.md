@@ -87,7 +87,44 @@ All edits are **doc/comment/registry only — zero runtime behavior change**, ea
 
 **Ship as-is.** Traceability is **healthy**: the test column is uniformly strong and adversarial; the remaining PARTIALs are overwhelmingly a single, low-severity knowledge-graph completeness limitation, now documented. The only *correctness*-adjacent items (Bucket C) are pre-existing, tracked, and intentional. Doc/registry drift that could mislead future contributors has been corrected.
 
-Optional follow-ups, by value: (1) enrich the domain-graph generator to model alternate/terminal flow steps + emr-consultation (closes ~28 Bucket-A PARTIALs); (2) reconcile the `flow:dedupe-merge-patient` over-claim with the 501-stub reality; (3) if passkey/magic-link/overdue-notifications are real roadmap items, file them as PRD additions rather than leaving them as silent WF rows.
+Optional follow-ups are captured as backlog below.
+
+## Potential fixes (backlog)
+
+*Investigated 2026-06-08 (follow-up to the optional items above). User decision: document only — no code/spec changes this pass.*
+
+1. **Patient-merge spec over-claim — in-repo, durable fix available · DEFERRED.**
+   `specs/api/src/modules/patient.tsp:476-487` — the `@doc` for `mergePatients`/`unmergePatients`
+   advertises them as fully built ("the source patient record is marked as replaced and all references
+   are updated"; "Reverses a merge operation and restores the source patient record"), returning a
+   populated `PatientMergeResult`. Reality: `handlers/patient/mergePatients.ts` returns `501
+   NOT_IMPLEMENTED` and `unmergePatients.ts` throws `Not implemented`. **This is a contract-honesty
+   bug, not just KG noise** — the misleading `@doc` propagates into the published
+   `specs/api/dist/openapi/openapi.json` description and the generated SDK, so consumers see a working
+   merge and get a 501. It is also the origin of the `flow:dedupe-merge-patient` KG over-claim (the
+   extractor faithfully copied the spec). *Recommended fix when scheduled:* prepend `[NOT YET
+   IMPLEMENTED — 501]` to both `@doc`s (and mirror onto the `PatientMergeResult` model + handler
+   docstrings), then `cd specs/api && bun run build` → `cd services/api-ts && bun run generate` →
+   `cd packages/sdk-ts && bun run generate`. Doc-only, low risk (no type/validator change). A fuller
+   option — declaring an explicit `501` response shape in TypeSpec instead of
+   `ApiOkResponse<PatientMergeResult>` — is more correct but touches the SDK return type and the
+   existing `patient-merge-auth.test.ts`, so weigh separately.
+
+2. **Domain-graph (KG) under-modeling — NOT in-repo fixable · informational.**
+   The ~28 Bucket-A PARTIALs (alternate/terminal billing + clinical sub-steps unmodeled, and the
+   missing **emr-consultation** flow node) are an artifact of the third-party understand-anything
+   plugin that generates `.understand-anything/domain-graph.json`
+   (`~/.claude/plugins/cache/understand-anything/2.7.6/` — the `domain-analyzer` agent prompt +
+   `extract-domain-context.py`). Nothing in this repo produces or post-processes that file; it is
+   gitignored and regenerated, so hand-edits are discarded on the next regen. "Enriching the
+   generator" would mean editing third-party plugin code in a cache directory — non-durable and out
+   of scope for the codebase. The authoritative, version-controlled flow map already exists at
+   `docs/product/WORKFLOW_MAP.md`. **No in-repo action recommended;** treat `domain-graph.json` as a
+   disposable visualization.
+
+3. **Silent absent-feature WF rows.** If passkey login (WF-002), magic-link login (WF-003), or the
+   overdue/PMD-ready/lab-complete notifications are real roadmap items rather than indefinite
+   deferrals, file them as explicit PRD additions instead of leaving them as unbuilt WF rows.
 
 ---
 
