@@ -28,6 +28,7 @@ const ROLE_COLUMNS = [
   'dental_assistant',
   'front_desk',
   'billing_staff',
+  'treatment_coordinator',
   'read_only',
 ] as const;
 
@@ -40,6 +41,7 @@ const ROLE_LABELS: Record<string, string> = {
   dental_assistant: 'Assistant',
   front_desk: 'Front Desk',
   billing_staff: 'Billing',
+  treatment_coordinator: 'Coordinator',
   read_only: 'Read-only',
 };
 

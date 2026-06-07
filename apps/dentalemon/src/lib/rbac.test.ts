@@ -16,6 +16,7 @@ import {
   canWriteBilling,
   canManageStaff,
   canAccessReports,
+  canPresentCase,
   type DentalRole,
   type DentalModule,
 } from './rbac';
@@ -62,6 +63,12 @@ const EXPECTED: Record<DentalRole, Record<DentalModule, boolean>> = {
   // billing_staff: invoices/payments/fee-schedule READ; patient read floor
   billing_staff: {
     dashboard: true, workspace: false, patients: true, calendar: false,
+    billing: true, reports: false, staff: false, settings: false,
+  },
+  // treatment_coordinator: presents plans + financials → workspace + billing
+  // reachable; no staff/reports/settings admin surface. (E1)
+  treatment_coordinator: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
     billing: true, reports: false, staff: false, settings: false,
   },
   // read_only: read across granted modules (dashboard + patients + calendar).
@@ -132,6 +139,7 @@ describe('canViewFinancials', () => {
     dental_assistant: false,
     front_desk: false,
     billing_staff: false,
+    treatment_coordinator: false,
     read_only: false,
   };
   for (const role of ALL_ROLES) {
@@ -162,6 +170,7 @@ describe('canWriteBilling', () => {
     dental_assistant: false,
     front_desk: false,
     billing_staff: false,
+    treatment_coordinator: false,
     read_only: false,
   };
   for (const role of ALL_ROLES) {
@@ -202,4 +211,29 @@ describe('canAccessReports', () => {
   test('dentist_associate === false', () => {
     expect(canAccessReports('dentist_associate')).toBe(false);
   });
+});
+
+// ---------------------------------------------------------------------------
+// canPresentCase — treatment-presentation surface (E1)
+// Clinicians + treatment_coordinator. Mirrors backend createCasePresentation gate.
+// ---------------------------------------------------------------------------
+
+describe('canPresentCase', () => {
+  const expected: Record<DentalRole, boolean> = {
+    dentist_owner: true,
+    dentist_associate: true,
+    treatment_coordinator: true,
+    staff_full: false,
+    staff_scheduling: false,
+    hygienist: false,
+    dental_assistant: false,
+    front_desk: false,
+    billing_staff: false,
+    read_only: false,
+  };
+  for (const role of ALL_ROLES) {
+    test(`canPresentCase("${role}") === ${expected[role]}`, () => {
+      expect(canPresentCase(role)).toBe(expected[role]);
+    });
+  }
 });

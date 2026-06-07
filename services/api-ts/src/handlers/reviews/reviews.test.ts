@@ -108,7 +108,7 @@ function buildTestApp(user?: typeof OWNER_USER) {
 async function seedPerson(id: string, email: string) {
   await db.insert(persons).values({
     id,
-    email,
+    contactInfo: { email },
     firstName: 'Test',
     lastName: 'User',
     createdBy: id,

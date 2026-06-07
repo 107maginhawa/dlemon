@@ -16,6 +16,8 @@ import {
 import { useTreatmentOptions } from '../hooks/use-treatment-options';
 import { useCasePresentations } from '@/features/case-presentation/use-case-presentations';
 import { formatCents } from '@/lib/format-currency';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { canPresentCase, type DentalRole } from '@/lib/rbac';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -231,6 +233,10 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
   const { plans, isLoading, isError, updatePlan, isUpdating } = useTreatmentPlans(patientId);
   // P1-20: mint a patient-facing case presentation from a presented plan.
   const { present, isPresenting } = useCasePresentations(patientId);
+  // E1: only the treatment-presentation roles (clinicians + treatment coordinator)
+  // may hand a plan to the patient. Mirrors the backend createCasePresentation gate.
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null;
+  const canPresent = role ? canPresentCase(role) : false;
 
   // After minting, navigate to the patient-facing surface so staff can hand the
   // operatory iPad to the patient to review + accept/decline the plan.
@@ -310,7 +316,7 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
                   plan={plan}
                   onUpdate={(id, body) => updatePlan(id, body)}
                   isUpdating={isUpdating}
-                  onPresent={(id) => { void presentAndOpen(id); }}
+                  onPresent={canPresent ? (id) => { void presentAndOpen(id); } : undefined}
                   isPresenting={isPresenting}
                 />
               ))}

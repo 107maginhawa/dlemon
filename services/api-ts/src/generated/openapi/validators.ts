@@ -1971,7 +1971,7 @@ export const DentalOrgModuleCreateDentalConsentTemplateRequestSchema = z.object(
 
 export const DentalOrgModuleCreateFlatMemberRequestSchema = z.object({
   displayName: z.string(),
-  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
   personId: z.string().uuid().optional(),
   avatarUrl: z.string().optional()
 });
@@ -1979,7 +1979,7 @@ export const DentalOrgModuleCreateFlatMemberRequestSchema = z.object({
 export const DentalOrgModuleCreateMembershipRequestSchema = z.object({
   personId: z.string().uuid().optional(),
   displayName: z.string(),
-  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
   avatarUrl: z.string().optional()
 });
 
@@ -2031,7 +2031,7 @@ export const DentalOrgModuleDentalMembershipSchema = z.object({
   branchId: z.string().uuid(),
   personId: z.string().uuid().optional(),
   displayName: z.string().min(1).max(80),
-  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
   pinHash: z.string().optional(),
   pinLockedUntil: z.string().datetime().transform((str) => new Date(str)).optional(),
   pinFailedAttempts: z.number().int(),
@@ -2075,7 +2075,7 @@ export const DentalOrgModuleDentalWorkingHoursSchema = z.object({
 
 export const DentalOrgModuleImagingTierSchema = z.enum(["free", "basic", "addon"]);
 
-export const DentalOrgModuleMemberRoleSchema = z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]);
+export const DentalOrgModuleMemberRoleSchema = z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]);
 
 export const DentalOrgModuleMemberStatusSchema = z.enum(["active", "inactive"]);
 
@@ -2117,7 +2117,7 @@ export const DentalOrgModulePermissionCatalogEntrySchema = z.object({
 });
 
 export const DentalOrgModulePermissionGridCellSchema = z.object({
-  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
   feature: z.string(),
   allowed: z.boolean(),
   source: z.string()
@@ -2130,7 +2130,7 @@ export const DentalOrgModulePermissionGridResponseSchema = z.object({
 });
 
 export const DentalOrgModulePermissionOverrideInputSchema = z.object({
-  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
   feature: z.string(),
   allowed: z.boolean()
 });
@@ -2173,7 +2173,7 @@ export const DentalOrgModuleUpdateDentalConsentTemplateRequestSchema = z.object(
 
 export const DentalOrgModuleUpdateMemberRequestSchema = z.object({
   displayName: z.string().min(1).max(80).optional(),
-  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "read_only"]).optional(),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]).optional(),
   avatarUrl: z.string().optional(),
   licenseNumber: z.string().max(64).optional(),
   npi: z.string().regex(/^\d{10}$/).optional(),

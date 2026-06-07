@@ -12,7 +12,7 @@
 
 import { UnauthorizedError, NotFoundError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { CasePresentationRepository } from '../repos/case-presentation.repo';
 import type { DatabaseInstance } from '@/core/database';
@@ -31,7 +31,13 @@ export async function createCasePresentation(ctx: HandlerContext): Promise<Respo
 
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
-  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
+  // E1: minting a patient-facing case presentation is a presentation/financial
+  // action — restrict to the clinicians + the treatment coordinator who present
+  // plans and money to patients. (Branchless patients deny via no membership.)
+  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+  await assertBranchRole(db, user.id, patient.preferredBranchId, [
+    'dentist_owner', 'dentist_associate', 'treatment_coordinator',
+  ]);
   if (patient.status === 'archived') {
     throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }

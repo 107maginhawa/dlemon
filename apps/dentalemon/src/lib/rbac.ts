@@ -16,6 +16,7 @@ export type DentalRole =
   | 'dental_assistant'
   | 'front_desk'
   | 'billing_staff'
+  | 'treatment_coordinator'
   | 'read_only';
 export type DentalModule = 'dashboard' | 'workspace' | 'patients' | 'calendar' | 'billing' | 'reports' | 'staff' | 'settings';
 
@@ -103,6 +104,20 @@ const ACCESS_MATRIX: Record<DentalRole, Record<DentalModule, boolean>> = {
     workspace: false,
     patients: true,
     calendar: false,
+    billing: true,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  // treatment_coordinator: presents treatment plans + financials to patients.
+  // Needs the workspace (treatment plans / case presentation), patients,
+  // calendar (to schedule accepted plans), and billing (to present cost +
+  // payment options). No staff/reports/settings admin surface.
+  treatment_coordinator: {
+    dashboard: true,
+    workspace: true,
+    patients: true,
+    calendar: true,
     billing: true,
     reports: false,
     staff: false,
@@ -200,6 +215,20 @@ export function canViewFinancials(role: DentalRole): boolean {
  */
 export function canWriteBilling(role: DentalRole): boolean {
   return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Check if a role can PRESENT a treatment plan / case presentation to a patient
+ * (the treatment-presentation surface). Mirrors the backend gate on
+ * createCasePresentation + the plan "presented" transition: clinicians plus the
+ * treatment coordinator. (E1)
+ */
+export function canPresentCase(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'treatment_coordinator'
+  );
 }
 
 /**

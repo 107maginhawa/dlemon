@@ -44,6 +44,11 @@ const PATIENT_ID = 'd0000000-0000-1000-8000-0000000000c5';
 const PERSON_ID = 'e0000000-0000-1000-8000-0000000000c5';
 const VISIT_ID = 'f0000000-0000-1000-8000-0000000000c5';
 
+// E1: role-gating fixtures — extra branch members with distinct roles.
+const COORDINATOR_USER = { id: 'a2000000-0000-1000-8000-0000000000c5', email: 'coord@clinic.com' };
+const SCHEDULER_USER = { id: 'a3000000-0000-1000-8000-0000000000c5', email: 'sched@clinic.com' };
+const FRONTDESK_USER = { id: 'a4000000-0000-1000-8000-0000000000c5', email: 'fd@clinic.com' };
+
 const ve = (result: any, c: any) => {
   if (!result.success) {
     return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
@@ -72,6 +77,25 @@ beforeAll(async () => {
     id: 'a1000000-0000-1000-8000-0000000000c5',
     branchId: BRANCH_ID, personId: TEST_USER.id,
     displayName: 'Dentist', role: 'dentist_owner', status: 'active',
+    pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  // E1 role-gating fixtures
+  await db.insert(dentalMemberships).values({
+    id: 'a2100000-0000-1000-8000-0000000000c5',
+    branchId: BRANCH_ID, personId: COORDINATOR_USER.id,
+    displayName: 'Coordinator', role: 'treatment_coordinator', status: 'active',
+    pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'a3100000-0000-1000-8000-0000000000c5',
+    branchId: BRANCH_ID, personId: SCHEDULER_USER.id,
+    displayName: 'Scheduler', role: 'staff_scheduling', status: 'active',
+    pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'a4100000-0000-1000-8000-0000000000c5',
+    branchId: BRANCH_ID, personId: FRONTDESK_USER.id,
+    displayName: 'Front Desk', role: 'front_desk', status: 'active',
     pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
   await db.insert(persons).values({
@@ -340,5 +364,74 @@ describe('P1-20 — FSM + guards', () => {
     } finally {
       await db.update(patients).set({ status: 'active' }).where(eq(patients.id, PATIENT_ID));
     }
+  });
+});
+
+describe('E1 — treatment_coordinator role gating', () => {
+  test('create: treatment_coordinator is allowed (201)', async () => {
+    const app = buildTestApp(COORDINATOR_USER);
+    const plan = await seedPresentedPlan();
+    const { res, body } = await createPresentation(app, plan.id);
+    expect(res.status).toBe(201);
+    expect(body.status).toBe('draft');
+  });
+
+  test('create: dentist_owner is allowed (201)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await seedPresentedPlan();
+    const { res } = await createPresentation(app, plan.id);
+    expect(res.status).toBe(201);
+  });
+
+  test('create: staff_scheduling is denied (403)', async () => {
+    const app = buildTestApp(SCHEDULER_USER);
+    const plan = await seedPresentedPlan();
+    const { res } = await createPresentation(app, plan.id);
+    expect(res.status).toBe(403);
+  });
+
+  test('accept: chairside front_desk can capture signature (200)', async () => {
+    // create as a presenter, accept as chairside front_desk.
+    const presenterApp = buildTestApp(COORDINATOR_USER);
+    const plan = await seedPresentedPlan();
+    const { body: created } = await createPresentation(presenterApp, plan.id);
+
+    const fdApp = buildTestApp(FRONTDESK_USER);
+    const res = await fdApp.request(`/dental/patients/${PATIENT_ID}/case-presentations/${created.id}/accept`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signerName: 'Maria', signatureData: 'sig' }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test('reject: chairside front_desk can capture decline (200)', async () => {
+    const presenterApp = buildTestApp(COORDINATOR_USER);
+    const plan = await seedPresentedPlan();
+    const { body: created } = await createPresentation(presenterApp, plan.id);
+
+    const fdApp = buildTestApp(FRONTDESK_USER);
+    const res = await fdApp.request(`/dental/patients/${PATIENT_ID}/case-presentations/${created.id}/reject`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rejectionReason: 'Too expensive' }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test('list: front_desk (chairside read set) can read (200)', async () => {
+    const presenterApp = buildTestApp(COORDINATOR_USER);
+    const plan = await seedPresentedPlan();
+    await createPresentation(presenterApp, plan.id);
+
+    const fdApp = buildTestApp(FRONTDESK_USER);
+    const res = await fdApp.request(`/dental/patients/${PATIENT_ID}/case-presentations`);
+    expect(res.status).toBe(200);
+  });
+
+  test('get: treatment_coordinator can read the aggregate (200)', async () => {
+    const app = buildTestApp(COORDINATOR_USER);
+    const plan = await seedPresentedPlan();
+    const { body: created } = await createPresentation(app, plan.id);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/case-presentations/${created.id}`);
+    expect(res.status).toBe(200);
   });
 });

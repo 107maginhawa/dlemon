@@ -42,6 +42,15 @@ const PATIENT_ID = 'd0000000-0000-1000-8000-000000000033';
 const PERSON_ID = 'e0000000-0000-1000-8000-000000000033';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
 
+// I1/I2 authz fixtures:
+// - SCHEDULER_USER: active member of the patient's branch, non-presenter role.
+// - OUTSIDER_USER:  authenticated user with NO membership in the patient's branch
+//                   (a different org entirely) — proves the cross-tenant floor.
+const SCHEDULER_USER = { id: 'a3000000-0000-1000-8000-000000000033', email: 'sched@clinic.com' };
+const OUTSIDER_USER = { id: 'a9000000-0000-1000-8000-000000000099', email: 'outsider@other.org' };
+const OTHER_ORG_ID = 'c9000000-0000-1000-8000-000000000099';
+const OTHER_BRANCH_ID = 'b9000000-0000-1000-8000-000000000099';
+
 const ve = (result: any, c: any) => {
   if (!result.success) {
     return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
@@ -72,6 +81,33 @@ beforeAll(async () => {
     branchId: BRANCH_ID, personId: TEST_USER.id,
     displayName: 'Dentist', role: 'dentist_owner', status: 'active',
     pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // I2(a): non-presenter member of the patient's branch.
+  await db.insert(dentalMemberships).values({
+    id: 'a3100000-0000-1000-8000-000000000033',
+    branchId: BRANCH_ID, personId: SCHEDULER_USER.id,
+    displayName: 'Scheduler', role: 'staff_scheduling', status: 'active',
+    pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // I2(b): a separate org/branch with its own member — NOT a member of the
+  // patient's branch, proving the cross-tenant access floor.
+  await db.insert(dentalOrganizations).values({
+    id: OTHER_ORG_ID, name: 'Other Clinic', tier: 'solo',
+    ownerPersonId: OUTSIDER_USER.id, countryCode: 'PH',
+    createdBy: OUTSIDER_USER.id, updatedBy: OUTSIDER_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: OTHER_BRANCH_ID, organizationId: OTHER_ORG_ID,
+    name: 'Other Branch', timezone: 'Asia/Manila',
+    createdBy: OUTSIDER_USER.id, updatedBy: OUTSIDER_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'a9100000-0000-1000-8000-000000000099',
+    branchId: OTHER_BRANCH_ID, personId: OUTSIDER_USER.id,
+    displayName: 'Outsider Owner', role: 'dentist_owner', status: 'active',
+    pinFailedAttempts: 0, createdBy: OUTSIDER_USER.id, updatedBy: OUTSIDER_USER.id,
   }).onConflictDoNothing();
 
   await db.insert(persons).values({
@@ -363,6 +399,71 @@ describe('TreatmentPlan FSM (AC-003..AC-008)', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 
+});
+
+// =============================================================================
+// I1/I2: branch-access floor + presented-transition role gate (authz)
+// =============================================================================
+
+describe('updateTreatmentPlan authz (I1/I2)', () => {
+  async function createOwnerPlan() {
+    const ownerApp = buildTestApp(TEST_USER);
+    const res = await ownerApp.request(`/dental/patients/${PATIENT_ID}/treatment-plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId: TEST_USER.id, totalEstimateCents: 10000 }),
+    });
+    return (await res.json()) as any;
+  }
+
+  function patch(user: typeof TEST_USER | undefined, planId: string, body: object) {
+    const app = buildTestApp(user);
+    return app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${planId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  // I2(a): a member of the patient's branch but with a non-presenter role may not
+  // present the plan to the patient.
+  test('I2(a): non-presenter (staff_scheduling) PATCH {status:presented} → 403', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(SCHEDULER_USER, plan.id, { status: 'presented' });
+    expect(res.status).toBe(403);
+    // assertBranchRole (presented-only role gate) → generic FORBIDDEN, distinct
+    // from the BRANCH_ACCESS_DENIED the membership floor throws for non-members.
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('FORBIDDEN');
+  });
+
+  // A non-presenter member CAN still perform a non-presented mutation (e.g. notes) —
+  // the role gate is presented-only; the floor only requires branch membership.
+  test('non-presenter member can still PATCH notes (branch member, non-presented) → 200', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(SCHEDULER_USER, plan.id, { notes: 'scheduler note' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.notes).toBe('scheduler note');
+  });
+
+  // I2(b): the cross-tenant floor — a user from a DIFFERENT org (no membership in
+  // the patient's branch) cannot PATCH any field, even a non-status one.
+  test('I2(b): non-member (different org) PATCH {notes} → 403', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(OUTSIDER_USER, plan.id, { notes: 'cross-tenant edit' });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('BRANCH_ACCESS_DENIED');
+  });
+
+  test('I2(b): non-member (different org) PATCH {status:approved} → 403', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(OUTSIDER_USER, plan.id, { status: 'approved' });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('BRANCH_ACCESS_DENIED');
+  });
 });
 
 // =============================================================================

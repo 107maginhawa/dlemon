@@ -16,7 +16,7 @@ import {
   BusinessLogicError,
 } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { CasePresentationRepository } from '../repos/case-presentation.repo';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { TREATMENT_PLAN_FSM } from '../repos/treatment-plan.schema';
@@ -36,7 +36,13 @@ export async function rejectCasePresentation(ctx: HandlerContext): Promise<Respo
 
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
-  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
+  // E1: reject = chairside decline capture on the staff session — same broader
+  // chairside set as accept.
+  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+  await assertBranchRole(db, user.id, patient.preferredBranchId, [
+    'dentist_owner', 'dentist_associate', 'treatment_coordinator',
+    'staff_full', 'front_desk', 'dental_assistant',
+  ]);
   if (patient.status === 'archived') {
     throw new ForbiddenError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }

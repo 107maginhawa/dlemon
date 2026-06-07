@@ -16,6 +16,7 @@ export const memberRoleEnum = pgEnum('member_role', [
   'dental_assistant',
   'front_desk',
   'billing_staff',
+  'treatment_coordinator',
   'read_only',
 ]);
 
@@ -65,6 +66,7 @@ export const VALID_MEMBER_ROLES = [
   'dental_assistant',
   'front_desk',
   'billing_staff',
+  'treatment_coordinator',
   'read_only',
 ] as const;
 export type MemberRole = typeof VALID_MEMBER_ROLES[number];

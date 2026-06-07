@@ -3721,7 +3721,7 @@ export type DentalOrgModuleCreateFlatMemberRequest = {
     /**
      * Staff role
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Person ID from Better-Auth (optional for PIN-only staff)
      */
@@ -3747,7 +3747,7 @@ export type DentalOrgModuleCreateMembershipRequest = {
     /**
      * Staff role
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Profile photo URL
      */
@@ -3969,7 +3969,7 @@ export type DentalOrgModuleDentalMembership = {
     /**
      * Role within this branch
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * PIN hash (bcrypt) — null if PIN not yet set
      */
@@ -4097,7 +4097,7 @@ export type DentalOrgModuleImagingTier = 'free' | 'basic' | 'addon';
 /**
  * Staff role within a branch — drives RBAC
  */
-export type DentalOrgModuleMemberRole = 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+export type DentalOrgModuleMemberRole = 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
 
 /**
  * Membership status
@@ -4211,7 +4211,7 @@ export type DentalOrgModulePermissionGridCell = {
     /**
      * Role this cell applies to
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Feature key this cell applies to
      */
@@ -4251,7 +4251,7 @@ export type DentalOrgModulePermissionOverrideInput = {
     /**
      * Role to override
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Feature key to override
      */
@@ -4375,7 +4375,7 @@ export type DentalOrgModuleUpdateMemberRequest = {
     /**
      * New role (dentist_owner only)
      */
-    role?: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role?: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Profile photo URL
      */

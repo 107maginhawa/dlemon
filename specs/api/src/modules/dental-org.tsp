@@ -74,6 +74,9 @@ namespace DentalOrgModule {
     @doc("Billing-only staff")
     billingStaff: "billing_staff",
 
+    @doc("Treatment coordinator — presents treatment plans + financials to patients")
+    treatmentCoordinator: "treatment_coordinator",
+
     @doc("Read-only access")
     readOnly: "read_only",
   }
