@@ -27,7 +27,7 @@ import { PerioSummaryBar } from './perio-summary-bar';
 import { PerioClassificationPanel } from './perio-classification-panel';
 import { VoicePerioControls } from './voice/voice-perio-controls';
 import { WebSpeechProvider, isSpeechRecognitionSupported, type SpeechProvider } from './voice/speech-provider';
-import { DEFAULT_DEPTH_THRESHOLD, countOverThreshold } from './perio-types';
+import { DEFAULT_DEPTH_THRESHOLD, countOverThreshold, computeLivePerioSummary } from './perio-types';
 import type { CompletePerioChartRequest } from '@monobase/sdk-ts/generated';
 
 export interface PerioChartOverlayProps {
@@ -131,6 +131,12 @@ export function PerioChartOverlay({
   }
   const readingCount = readings.length;
   const overThresholdCount = useMemo(() => countOverThreshold(readings, threshold), [readings, threshold]);
+  // In draft the backend hasn't computed the summary yet. Rather than show "–" next to
+  // a live over-threshold count (incoherent mixed sources), compute BOP%/mean/deep live
+  // from the same readings with the same formula — the preview equals the finalized
+  // numbers. Once completed/locked we use the canonical persisted summary.
+  const liveSummary = useMemo(() => computeLivePerioSummary(readings), [readings]);
+  const isDraft = status === 'draft';
 
   // Stage/Grade/Extent: from the completion response, else from a chart that is
   // already completed (re-opened). The persisted chart does not carry stage, so
@@ -248,9 +254,9 @@ export function PerioChartOverlay({
         ) : (
           <div className="flex flex-col gap-4">
             <PerioSummaryBar
-              bopPercent={chart.summaryBopPercent}
-              meanDepth={chart.summaryMeanDepth}
-              deepPocketCount={chart.summaryDeepPocketCount}
+              bopPercent={isDraft ? liveSummary.bopPercent : chart.summaryBopPercent}
+              meanDepth={isDraft ? liveSummary.meanDepth : chart.summaryMeanDepth}
+              deepPocketCount={isDraft ? liveSummary.deepPocketCount : chart.summaryDeepPocketCount}
               overThresholdCount={overThresholdCount}
               stage={stage}
               grade={grade}
