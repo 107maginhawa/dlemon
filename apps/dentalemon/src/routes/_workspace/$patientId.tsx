@@ -20,6 +20,7 @@ import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
 import { LabOrdersSheet } from '@/features/workspace/components/lab-orders-sheet';
 import { AttachmentsSheet } from '@/features/workspace/components/attachments-sheet';
 import { WorkspacePaymentModal } from '@/features/workspace/components/workspace-payment-modal';
+import { PaymentSummaryBar } from '@/features/workspace/components/payment-summary-bar';
 import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
@@ -39,7 +40,6 @@ import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatment-done';
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
-import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
@@ -199,10 +199,6 @@ function WorkspacePage() {
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const totalAmount = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
-  const pendingCount = treatments.filter(
-    (t) => t.status === 'diagnosed' || t.status === 'planned',
-  ).length;
   // Teeth with completed (performed/verified) treatments — drives the chart's 'completed' layer (CR-03).
   const completedToothNumbers = new Set<number>(
     treatments
@@ -362,29 +358,11 @@ function WorkspacePage() {
       />
 
       {/* Footer */}
-      <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
-        <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
-          {pendingCount === 0
-            ? 'No pending treatments'
-            : `${pendingCount} pending · `}
-          {pendingCount > 0 && (
-            <span className="font-semibold text-foreground">
-              {CURRENCY_SYMBOL}{totalAmount.toLocaleString(APP_LOCALE)}
-            </span>
-          )}
-        </span>
-
-        {/* PAY-01/PAY-02: open payment modal inline */}
-        <button
-          type="button"
-          disabled={treatments.length === 0 && !isReadOnly}
-          onClick={() => setPaymentModalOpen(true)}
-          className="rounded-lg bg-lemon px-5 py-2 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover min-h-[44px] disabled:opacity-50"
-          data-testid="continue-to-payment-btn"
-        >
-          {isReadOnly ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
-        </button>
-      </footer>
+      <PaymentSummaryBar
+        treatments={treatments}
+        isReadOnly={isReadOnly}
+        onContinue={() => setPaymentModalOpen(true)}
+      />
 
       {/* ── Sheet overlays ──────────────────────────────────────────────────── */}
 
