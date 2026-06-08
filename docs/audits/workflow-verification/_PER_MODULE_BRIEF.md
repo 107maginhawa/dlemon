@@ -7,12 +7,24 @@
 You verify module **{M}** against its specs by DRIVING THE LIVE FRONTEND WITH WEBWRIGHT, and fix
 ONLY confirmed contract/behavior bugs via TDD. Work ONLY on {M}.
 
-## ⛔ The #1 rule that the dental-org run got wrong
-`webwright:craft` is **only STEP 3b**. When the craft skill reports "done", you are **NOT done** —
-you have only finished the drive. You MUST then continue through STEP 4 → 5 → 5b → **6 (run EVERY
-gate command)** → **7 (copy artifacts, write REPORT.md, COMMIT, return the result block)**. Never
-treat the craft skill's completion as the module's completion. A module with an uncommitted fix or
-no `result` block is a FAILED run.
+## ⛔ Execution order (LEAN single-activation flow — do NOT reorder)
+Invoking `webwright:craft` **ends your turn** (its protocol tells you to "report back"), so the
+drive must be the **LAST** thing you do, and your result must be **on disk before** it. Run in this
+exact order:
+
+1. STEP 0 → 1 → **3a** (static diff — highest-yield) → 4 → 5 (TDD-fix Type-A) → 5b (backfill
+   backend/contract/FE-unit tests for the workflows you'll drive).
+2. STEP 6 GATE — run every command **except the smoke** (typecheck, backend, `CONTRACT_ONLY={M}`
+   contract, lint, boundaries, FE-unit). All green.
+3. STEP 7a — COMMIT your fixes + backfill tests atomically. Write
+   `docs/audits/workflow-verification/runs/{M}/REPORT.md` containing the fenced `result` block (with
+   `smoke: pending-orchestrator`) + the analysis narrative.
+4. STEP 7b — **LAST**: invoke `webwright:craft` to drive the live app + author the smoke. When it
+   ends your turn, you are DONE — the orchestrator copies the crafted smoke to its canonical path,
+   runs it, fills in the smoke result, and commits it. You do **not** package the smoke yourself.
+
+A module with an uncommitted fix, or no `REPORT.md` with a `result` block on disk, is a FAILED run.
+If you have NO FE surface (STEP 0 test), skip 7b entirely — just commit + write REPORT.md.
 
 ## Operational context (stack already running — do NOT boot it)
 - Branch `chore/workflow-verification-sweep` is checked out. **Commit here. Never push / PR / switch
@@ -38,16 +50,18 @@ no `result` block is a FAILED run.
 - DB freshly reseeded before the sweep. Reseed if you mutate destructively: `bun run db:reseed`
   (needs API up; ~30s).
 
-## STEP 0 — Resolve {M}'s spec artifacts (spawn ONE Explore subagent: subagent_type Explore, mode bypassPermissions)
-Have it read + return a tight digest of:
-- `docs/context/IDEAL_DENTAL_MODULE_WORKFLOW_STANDARD.md` → {M}'s §3 context row + status; §4 journeys {M} touches; §5 BR rows; §7 perms; §8 UI; §3.14 + §12 non-goals (DO-NOT-FIX set).
+## STEP 0 — Resolve {M}'s spec artifacts
+**FIRST read the cached global digest** `docs/audits/workflow-verification/runs/_global-spec-digest.md`
+— it already distills the 5 global docs (IDEAL standard §3/§4/§7/§11/§12, personas + access matrix,
+ROLE_PERMISSION_MATRIX, DOMAIN_MODEL §6 SM-*, br-registry buckets). Find {M}'s row there for the
+owning persona, RBAC-negatives to drive, §4 seams, state machines, and DO-NOT-FIX items. Do NOT
+re-read those 5 global docs in full — only drill into a cited section if the digest is insufficient.
+Then read these **module-specific** artifacts directly (no Explore subagent needed):
 - `docs/product/modules/{M}/MODULE_SPEC.md` (workflows/BRs/perms/state-transitions/ACs/error-table). If absent → IDEAL §3 + `specs/api/src/modules/{M}.tsp` (spec-light → reduced confidence; lean on the .tsp + handler code).
-- `docs/context/personas.md` → persona ownership + per-persona module-access matrix (→ RBAC NEGATIVES: who must be DENIED).
-- `docs/product/DOMAIN_MODEL.md` §6 SM-* state machines touching {M}.
-- `specs/api/docs/standards/br-registry.json` → {M} bucket.
-- `docs/product/ROLE_PERMISSION_MATRIX.md`, `docs/product/NAVIGATION_MAP.md` (FE routes), `docs/product/ERROR_TAXONOMY.md`, `specs/api/src/modules/{M}.tsp`, `docs/product/WORKFLOW_MAP.md` (WF-IDs).
+- `specs/api/src/modules/{M}.tsp` (operations) + the {M} bucket in `specs/api/docs/standards/br-registry.json`.
 - `.understand-anything/contract-spine.json` → filter {M}'s operationIds → handler → sdkHooks → consumers under `apps/dentalemon/src/`.
 - `docs/audits/modules/MODULE_{M}_AUDIT_*.md` "Ranked Remaining Gaps" (DO-NOT-FIX / report-only).
+- {M}'s FE route in `docs/product/NAVIGATION_MAP.md`; {M} error codes in `docs/product/ERROR_TAXONOMY.md`; {M} WF-IDs in `docs/product/WORKFLOW_MAP.md`.
 **FE-SURFACE TEST**: {M} "has FE surface" iff a NAVIGATION_MAP route AND ≥1 contract-spine consumer file under `apps/dentalemon/src/`. If NOT → skip the browser drive, do STEP 3a only, and STILL backfill/gate/commit any 3a fix + return the result block.
 
 ## STEP 1 — Verification matrix (two layers)
@@ -57,9 +71,12 @@ Have it read + return a tight digest of:
 ## STEP 3a — STATIC CONTRACT DIFF (highest yield — do even with no FE surface)
 For each {M} operationId compare the shape across layers: `.tsp` ↔ generated validator (`services/api-ts/src/generated/openapi/validators.ts`) ↔ handler return ↔ SDK type (`packages/sdk-ts/src/generated/types.gen.ts`) ↔ FE consumer usage (contract-spine paths). ANY mismatch (extra/dropped field, `{data,pagination}` vs `{items}`, optional/required skew, wrong status) = CONFIRMED Type-A bug even if the UI renders fine. (This is how dental-org's 3 drifts were found.)
 
-## STEP 3b — DRIVE THE LIVE FRONTEND WITH WEBWRIGHT
-Invoke the **`webwright:craft`** skill (Skill tool) to drive the live app at http://localhost:3003
-code-as-action AND to author a committable `apps/dentalemon/tests/smoke/{M}_smoke.py`. Read
+## STEP 3b — DRIVE THE LIVE FRONTEND WITH WEBWRIGHT  ⟵ do this LAST (after 7a), it ends your turn
+This is your FINAL action — only run it once your fixes are committed and `runs/{M}/REPORT.md` (with
+the `result` block) is on disk. Invoke the **`webwright:craft`** skill (Skill tool) to drive the live
+app at http://localhost:3003 code-as-action AND to author `apps/dentalemon/tests/smoke/{M}_smoke.py`.
+Leave the crafted script in webwright's `.craft-{M}/` output — the **orchestrator** copies it to the
+canonical path, runs it, and commits it. Do NOT copy/commit the smoke yourself. Read
 `apps/dentalemon/tests/smoke/patient_registration_smoke.py` FIRST as the required template (headless
 Firefox, viewport 1280x1800, argparse `--base-url` default http://localhost:3003 + `--email/--password/
 --owner-pin/--owner-profile/--staff-pin/--staff-profile/--out`, run-unique timestamped data, prints
@@ -92,18 +109,21 @@ For EACH workflow you drove, ensure a test exists at the right layer. **GREP FIR
 - Typecheck (FE+api-ts): `cd /Users/eladventures/Desktop/dentalemon && bun run typecheck`
 - **Backend (NOTE the DB override — `.env` sets `monobase`, which the runner REFUSES):**
   `cd /Users/eladventures/Desktop/dentalemon/services/api-ts && DATABASE_URL=postgres://postgres:password@localhost:5432/monobase_test bun run scripts/test-with-db.ts src/handlers/{M}`
-- Contract (RESTART API first): `cd /Users/eladventures/Desktop/dentalemon && bun run test:contract` — pass iff `{M}.hurl` Succeeds and no NEW failures beyond the 8-file infra baseline.
+- Contract — run ONLY {M}'s file (RESTART API first if you changed backend/regen): `cd /Users/eladventures/Desktop/dentalemon && CONTRACT_ONLY={M} bun run test:contract` (the `CONTRACT_ONLY` filter runs just `{M}.hurl` in ~1s instead of the 60s full suite — the orchestrator runs the full suite on regen + at the end). Pass iff `{M}.hurl` Succeeds.
 - Lint: `cd /Users/eladventures/Desktop/dentalemon && bun run lint` (gate = 0 ERRORS; warnings OK).
 - Boundaries: `cd /Users/eladventures/Desktop/dentalemon/services/api-ts && bun run check:boundaries:{M}` if that script exists, else `bun run check:boundaries`.
 - **FE unit (uses `bun:test`, NOT vitest):** `cd /Users/eladventures/Desktop/dentalemon/apps/dentalemon && bun test <path-to-{M}-tests>`
-- Re-run the COMMITTED smoke green: `apps/dentalemon/tests/smoke/.venv/bin/python apps/dentalemon/tests/smoke/{M}_smoke.py --base-url http://localhost:3003 --out docs/audits/workflow-verification/runs/{M}`
+- (Smoke is run by the ORCHESTRATOR after your STEP 3b drive — do NOT run it here. The venv lives at `apps/dentalemon/tests/smoke/.venv/bin/python` for reference.)
 Pre-existing failure unrelated to {M} that you didn't introduce: note it; it doesn't block you. Anything YOU changed must be green.
 
-## STEP 7 — PACKAGE + COMMIT + RESULT
-1. Copy the crafted smoke: `cp apps/dentalemon/tests/smoke/.craft-{M}/final_runs/run_*/final_script.py apps/dentalemon/tests/smoke/{M}_smoke.py` (the `.craft-*` scratch dir is gitignored — don't commit it).
-2. Evidence: `mkdir -p docs/audits/workflow-verification/runs/{M}/screenshots`; copy the craft's `screenshots/*.png` + `final_script_log.txt` there; write a concise `REPORT.md` (personas, CP table, gaps fixed w/ citations, deferred-reported, gate line, evidence list).
-3. Commit atomically on the sweep branch (one `fix:`/`test:` commit per logical fix; a `test:` commit for the smoke+evidence). Do NOT push. Do NOT stage TRACKER.md.
-4. Return the `result` block below as your FINAL message.
+## STEP 7a — COMMIT + REPORT (do this BEFORE the STEP 3b drive)
+1. Commit your Type-A fixes + backfill tests atomically on the sweep branch (one `fix:`/`test:` commit per logical change). Do NOT push. Stage ONLY your files; never `git add -A`; never stage TRACKER.md.
+2. Write `docs/audits/workflow-verification/runs/{M}/REPORT.md` = the fenced `result` block below (set `smoke: pending-orchestrator`, `commits: [...]` with your real shas) followed by a concise narrative (personas, CP plan, gaps-fixed-with-citations, deferred-reported, gate results). `mkdir -p` the runs/{M}/ dir.
+3. THEN do STEP 3b (the webwright drive) as your LAST action. The orchestrator reads your REPORT.md, copies the crafted `.craft-{M}/.../final_script.py` → `apps/dentalemon/tests/smoke/{M}_smoke.py`, runs it, fills in the `smoke:` field, and commits the smoke + screenshots/log. You do NOT package or commit the smoke.
+
+If you have NO FE surface (STEP 0 test fails): skip STEP 3b; your REPORT.md `smoke: n/a (no FE surface)` and you are done after committing.
+
+The `result` block (embed it at the top of REPORT.md, fenced):
 
 ```result
 module: {M}

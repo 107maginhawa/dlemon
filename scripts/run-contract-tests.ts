@@ -46,14 +46,26 @@ if (!existsSync(contractDir)) {
 // Suffix lets each run use unique fixture identifiers (emails, etc.)
 const suffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
-// Discover .hurl files
+// Discover .hurl files. CONTRACT_ONLY=<substr>[,<substr>...] runs just the
+// matching files (e.g. CONTRACT_ONLY=dental-patient) — used by the per-module
+// verification sweep so a single module's gate doesn't pay for the whole suite
+// (incl. the storage/mail files that fail when Docker deps are down). Unset = all.
+const onlyFilters = (process.env.CONTRACT_ONLY ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 const files = readdirSync(contractDir)
   .filter((f) => f.endsWith('.hurl'))
+  .filter((f) => onlyFilters.length === 0 || onlyFilters.some((sub) => f.includes(sub)))
   .sort()
   .map((f) => join(contractDir, f))
 
 if (files.length === 0) {
-  console.error('No .hurl files found in', contractDir)
+  console.error(
+    onlyFilters.length > 0
+      ? `No .hurl files match CONTRACT_ONLY=${process.env.CONTRACT_ONLY} in ${contractDir}`
+      : `No .hurl files found in ${contractDir}`,
+  )
   process.exit(1)
 }
 

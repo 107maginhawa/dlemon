@@ -282,6 +282,18 @@ The orchestrator records these and re-gates the blast radius if any journey fix 
 
 ---
 
+## Applied optimizations (2026-06-08, after modules 1–2)
+
+Three free speed cuts are baked into `_PER_MODULE_BRIEF.md` + the runner (zero coverage loss):
+1. **Per-module contract gate runs only `{M}.hurl`** via `CONTRACT_ONLY={M} bun run test:contract`
+   (new env filter in `scripts/run-contract-tests.ts`) — ~1s vs the 60s full suite (which hangs on
+   the down Mailpit/MinIO infra files). Orchestrator runs the FULL suite on any regen + once at the end.
+2. **One subagent activation per module** — `webwright:craft` ends a subagent's turn, so the drive is
+   the subagent's LAST action; it commits fixes + writes `runs/{M}/REPORT.md` (with the `result` block)
+   to disk BEFORE the drive, and the orchestrator packages/runs/commits the smoke. No second activation.
+3. **Global specs cached once** in `runs/_global-spec-digest.md` (per-module owner/RBAC-neg/§4-seams/
+   state-machines/DO-NOT-FIX); subagents read that instead of re-reading the 5 global docs each time.
+
 ## Notes for the human running this
 
 - **Cost shape:** each module is a multi-turn webwright drive + (sometimes) TDD fixes — budget
