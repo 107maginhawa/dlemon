@@ -6,8 +6,10 @@
  *   cancelled is reachable from ordered, in_fabrication, delivered
  *   fitted and cancelled are terminal
  *
- * The prescription schema has no status FSM; LabOrder is the
- * clinical workflow FSM in the dental-clinical module.
+ * NOTE: this file's name is historical — it exercises the LabOrder FSM, not the
+ * prescription FSM. The prescription status FSM (pending → dispensed | cancelled,
+ * both terminal) DOES exist (PRESCRIPTION_TRANSITIONS, added in EM-CLI-012) and is
+ * covered by prescription.status.test.ts (incl. illegal-transition → 422 cases).
  *
  * Imports LAB_ORDER_TRANSITIONS from the schema.
  *

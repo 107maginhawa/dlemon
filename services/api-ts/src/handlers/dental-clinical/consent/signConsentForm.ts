@@ -40,6 +40,13 @@ export async function signConsentForm(
     throw new BusinessLogicError('Consent form is already signed and cannot be modified', 'CONSENT_FORM_SIGNED');
   }
 
+  // V-CLN-010: a revoked consent cannot be signed (symmetric with the signed→revoke
+  // guard in revokeConsentForm). Signing a form the patient withdrew would silently
+  // overturn the revocation and let the refused treatment proceed via the consent gate.
+  if (existing.revoked) {
+    throw new BusinessLogicError('Consent form was revoked and cannot be signed', 'CONSENT_FORM_REVOKED');
+  }
+
   const signed = await repo.sign(consentId, body.signatureData);
   if (!signed) throw new ValidationError('Could not sign consent form');
 

@@ -49,7 +49,8 @@ export class ConsentFormRepository extends DatabaseRepository<ConsentForm, NewCo
         signatureData,
         updatedAt: new Date(),
       })
-      .where(and(eq(consentForms.id, id), eq(consentForms.signed, false)))
+      // V-CLN-010: never sign a revoked form (symmetric with revoke's signed guard).
+      .where(and(eq(consentForms.id, id), eq(consentForms.signed, false), eq(consentForms.revoked, false)))
       .returning();
     return updated ?? null;
   }

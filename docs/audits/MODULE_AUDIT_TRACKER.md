@@ -14,7 +14,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 2 | dental-patient | ✅ READY | 9 (3 cross-tenant PHI holes, 1 stub 500→501, 5 doc/registry drift) | 8 test gaps + archived-sub-resource-guard product decision + KG-backlog | [MODULE_dental-patient_AUDIT_2026-06-08.md](modules/MODULE_dental-patient_AUDIT_2026-06-08.md) |
 | 3 | dental-scheduling | ✅ READY | 8 (1 RBAC bypass, 1 adversarial test, 1 stale comment, 1 wrong FSM/table doc note, 4 registry/spec/contract drift) | BR-SCH-003-on-PATCH-cancel decision + sub-feature negative-path line-audit + KG over-claim | [MODULE_dental-scheduling_AUDIT_2026-06-08.md](modules/MODULE_dental-scheduling_AUDIT_2026-06-08.md) |
 | 4 | dental-visit | ✅ READY | 10 (5 security: applyTemplate RBAC + cross-clinic template leak + 3× treatment-plan cross-tenant PHI; 5 registry/spec/contract/workflow-map drift) | carry-over cross-branch decision + TypeSpec shape reconciliation + BR-005 flag-ON test + template-CRUD RBAC + KG-backlog | [MODULE_dental-visit_AUDIT_2026-06-08.md](modules/MODULE_dental-visit_AUDIT_2026-06-08.md) |
-| 5 | dental-clinical | ⏳ pending | — | — | — |
+| 5 | dental-clinical | ✅ READY | 6 (1 consent-integrity bug: revoke-then-sign + gate ignored revoked; 5 contract/spec/registry/comment drift) | updatePrescription-on-locked-visit decision + post-sign consent-withdrawal decision + AC-CLI-005 405 pin + KG-backlog | [MODULE_dental-clinical_AUDIT_2026-06-08.md](modules/MODULE_dental-clinical_AUDIT_2026-06-08.md) |
 | 6 | dental-perio | ⏳ pending | — | — | — |
 | 7 | dental-imaging | ⏳ pending | — | — | — |
 | 8 | dental-pmd | ⏳ pending | — | — | — |
@@ -45,6 +45,20 @@ dental-portal → emr-consultation → provider → external-records-import
   - **dental-visit instance found + fixed:** `applyTemplate` was an alternate treatment-creation
     path with weaker RBAC than `createDentalTreatment` (assertBranchAccess vs assertBranchRole).
     Keep checking alternate-path writers (templates, carry-over, bulk ops) in every module.
+- **Asymmetric FSM transition guards (from dental-clinical V-CLN-010).** A state machine
+  with two terminal exits (e.g. consent signed⊥revoked) can guard one direction but not the
+  other: `revoke` blocked signed→revoke, but `sign` did **not** block revoke→sign, producing a
+  contradictory signed+revoked row that the downstream `signed=true`-only gate honored — letting
+  a treatment proceed on a revoked consent. **For every paired terminal transition, check BOTH
+  guards are symmetric AND that any read-gate filters on the full invariant (signed=true AND
+  revoked=false), not just one flag.** Recurs anywhere a status read-gate (billing, completion,
+  treatment) trusts a single boolean.
+- **Generic update handlers may skip the immutability guard the create handler enforces
+  (from dental-clinical `updatePrescription`).** All five clinical *create* handlers block
+  writes to a locked/completed visit (BR-003), but `updatePrescription` has no such guard. Check
+  every module's *update* path for the BR-003 (or equivalent immutability) guard its *create*
+  path enforces — surfaced as a product decision here (status-progression vs field-edit), but
+  the asymmetry itself is the pattern to hunt.
 - **Caller-supplied branchId is not an auth boundary (V-PAT-002 → V-VIS-011).** A `branchId`
   query param that is access-checked but never tied to the path resource (patientId) leaks
   cross-tenant. dental-patient (list visits/conditions) and dental-visit (treatment-plan

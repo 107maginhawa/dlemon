@@ -146,7 +146,9 @@ LabOrder:     ordered → in_fabrication → delivered → fitted
 ---
 
 ## 10. API Expectations
-POST /dental/visits/:id/prescriptions (BR-017), GET /dental/visits/:id/prescriptions, POST /dental/visits/:id/lab-orders (BR-018), PATCH /dental/visits/:id/lab-orders/:lid (status progression), POST /dental/visits/:id/consent-forms (BR-014), PATCH /dental/visits/:id/consent-forms/:cid/sign, PATCH /dental/visits/:id/consent-forms/:cid/revoke, POST /dental/patients/:id/medical-history (append-only), POST /dental/visits/:id/attachments, POST /dental/visits/:id/amendments
+POST /dental/visits/:visitId/prescriptions (BR-017), GET /dental/visits/:visitId/prescriptions, PATCH /dental/visits/:visitId/prescriptions/:prescriptionId (status FSM), POST /dental/visits/:visitId/lab-orders (BR-018), PATCH /dental/visits/:visitId/lab-orders/:orderId (status progression), POST /dental/visits/:visitId/consents (BR-014 — route is `/consents`, not `/consent-forms`), POST /dental/visits/:visitId/consents/:consentId/sign (POST, not PATCH), PATCH /dental/visits/:visitId/consents/:cid/revoke, POST /dental/clinical/medical-history (append-only; patientId in body, not path), POST /dental/visits/:visitId/attachments, POST /dental/visits/:visitId/amendments
+
+**Spec-behind-impl note (2026-06-08 audit):** this v1.0 spec documents only the original six entity types. The shipped module additionally implements **inventory** (`/dental/branches/:branchId/inventory…`), **occlusion screenings** (`/dental/patients/:patientId/occlusion-screenings`), **post-op instruction templates** (`/dental/branches/:branchId/postop-templates`), **consent refusals** (`/dental/visits/:visitId/consent-refusals`), **medical-history review** (`/dental/clinical/medical-history-review`), and advisory **drug-interaction / allergy cross-checks** on prescription create (non-blocking warnings). These have handlers + tests but are not yet folded into §3–§13 above.
 
 ---
 
@@ -163,7 +165,7 @@ Per ADR-006 (domain-events-descope), domain events here are audit-log-only seman
 **AC-CLI-002:** Prescription by non-dentist → 422 (assertBranchRole).
 **AC-CLI-003:** Sign consent form → status = signed, immutable (BR-014).
 **AC-CLI-004:** Lab order: in_fabrication → ordered (reversal) → 422 (BR-018).
-**AC-CLI-005:** Medical history entry → no PATCH/DELETE endpoints available (append-only).
+**AC-CLI-005:** Medical history entry is append-only. The `PATCH /dental/clinical/medical-history/:entryId` route exists but always returns `405 MEDICAL_HISTORY_IMMUTABLE`; no DELETE route is registered. Corrections flow through the amendment path (WF-038).
 **AC-CLI-006:** Write to clinical record on completed visit → 422 (BR-003).
 
 ---
@@ -225,6 +227,6 @@ CLI-S1: Prescription (BR-017) | CLI-S2: Consent form (BR-014, sign/revoke) | CLI
 ## 20. AI Instructions
 1. G-003: Replace `VisitRepository` import with a service interface call — this is Wave G1 priority.
 2. assertBranchRole(dentist) required for prescriptions — check before any Rx write.
-3. Medical history: no PATCH/DELETE routes — append-only enforced at router level.
-4. Consent form signed → all future PATCH attempts on that form must return 422.
+3. Medical history: append-only. The PATCH route is registered but hard-returns 405 MEDICAL_HISTORY_IMMUTABLE; no DELETE route exists. Corrections go through amendments.
+4. Consent form: signed and revoked are mutually-exclusive terminal states. A signed form cannot be revoked (422 CONSENT_ALREADY_SIGNED) and a revoked form cannot be signed (422 CONSENT_FORM_REVOKED, V-CLN-010). The treatment/billing consent gate (hasSignedConsentForVisit) counts a form only when signed=true AND revoked=false.
 5. Follow ARCHITECTURE.md, CONTRIBUTING.md, VERTICAL_TDD.md.

@@ -179,10 +179,11 @@
       "rules": [
         {
           "id": "BR-014",
-          "description": "Consent form is immutable once signed. No edits, no re-signing, no deletion. The signed record is append-only.",
+          "description": "Consent form is immutable once signed. No edits, no re-signing (422 CONSENT_FORM_SIGNED), no deletion. The signed record is append-only. signed and revoked are mutually-exclusive terminal states: a signed form cannot be revoked (422 CONSENT_ALREADY_SIGNED) and — symmetrically — a revoked form cannot be signed (422 CONSENT_FORM_REVOKED, V-CLN-010).",
           "type": "compliance",
           "status": "implemented",
-          "source": "dental-clinical handlers + consent-sheet.tsx"
+          "source": "dental-clinical handlers (signConsentForm.ts, revokeConsentForm.ts, consent-form.repo.ts) + consent-sheet.tsx",
+          "test": "dental-clinical/clinical-consent-lab.test.ts; dental-clinical/repos/consent-form.test.ts"
         },
         {
           "id": "BR-015",
@@ -204,6 +205,14 @@
           "type": "state-machine",
           "status": "implemented",
           "source": "dental-clinical handlers — lab-orders/updateLabOrder.ts; tested in clinical-consent-lab.test.ts"
+        },
+        {
+          "id": "V-CLN-010",
+          "description": "A revoked consent form can never become signed (symmetric with the signed→revoke guard). Enforced in three layers: signConsentForm rejects existing.revoked → 422 CONSENT_FORM_REVOKED; ConsentFormRepository.sign() adds revoked=false to its WHERE (race-safe); and the treatment/billing consent gate hasSignedConsentForVisit matches signed=true AND revoked=false so a revoked consent never satisfies the treatment status=performed or billing guard (WF-035: patient revokes → treatment blocked). Closes a consent-integrity hole where revoke-then-sign produced a signed+revoked row that the signed-only gate would have honored.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "dental-clinical/consent/signConsentForm.ts; repos/consent-form.repo.ts; repos/clinical-visit.facade.ts; repos/consent-billing.facade.ts",
+          "test": "dental-clinical/clinical-consent-lab.test.ts; dental-clinical/repos/consent-form.test.ts; dental-clinical/repos/clinical-visit.facade.test.ts"
         }
       ]
     },

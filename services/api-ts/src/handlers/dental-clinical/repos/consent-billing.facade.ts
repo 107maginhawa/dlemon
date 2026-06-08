@@ -16,7 +16,8 @@ export async function hasSignedConsentForVisit(
   const [row] = await db
     .select({ id: consentForms.id })
     .from(consentForms)
-    .where(and(eq(consentForms.visitId, visitId), eq(consentForms.signed, true)))
+    // V-CLN-010: a revoked consent never satisfies the billing gate either.
+    .where(and(eq(consentForms.visitId, visitId), eq(consentForms.signed, true), eq(consentForms.revoked, false)))
     .limit(1);
   return row != null;
 }

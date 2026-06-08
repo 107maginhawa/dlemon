@@ -116,9 +116,9 @@ Update lab order status (progression through FSM).
 
 ---
 
-### POST /api/v1/dental/visits/:id/consent-forms
+### POST /api/v1/dental/visits/:visitId/consents
 
-Create a consent form for signing.
+Create a consent form for signing. (Route is `/consents`, not `/consent-forms`.)
 
 **Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
 **Path params:** `id` (visit uuid)
@@ -144,35 +144,34 @@ Create a consent form for signing.
 
 ---
 
-### PATCH /api/v1/dental/visits/:id/consent-forms/:cid/sign
+### POST /api/v1/dental/visits/:visitId/consents/:consentId/sign
 
-Patient signs consent form.
+Patient signs consent form. (Method is **POST**, not PATCH; route is `/consents`.)
 
-**Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
-**Path params:** `id` (visit uuid), `cid` (consent form uuid)
+**Auth:** `dentist_associate`, `dentist_owner` (assertBranchRole on the consent form's parent visit)
+**Path params:** `visitId` (visit uuid), `consentId` (consent form uuid)
 
 **Request body:**
 
 | Field | Type | Nullable | Required | Notes |
 |-------|------|----------|----------|-------|
-| `signature_data` | string | YES | NO | Base64 PNG or `"witnessed"` for paper |
-| `signed_by` | string | NO | YES | `"patient"` or `"guardian"` |
+| `signature_data` | string | NO | YES | Base64 PNG or `"witnessed"` for paper |
 
-**Response 200:** `{ data: { ok: true, signed_at: "ISO8601" } }`
+**Response 200:** `{ data: ConsentForm }` (signed=true, signedAt set)
 
-**PATCH after signed:** Returns `CONSENT_FORM_SIGNED(422)`
-
-**Errors:** `NOT_FOUND(404)`, `CONSENT_FORM_SIGNED(422)`, `FORBIDDEN(403)`
+**Errors:** `NOT_FOUND(404)`, `CONSENT_FORM_SIGNED(422)` (already signed — immutable, V-CLN-005), `CONSENT_FORM_REVOKED(422)` (form was revoked and cannot be signed — symmetric with revoke's signed→revoke guard, V-CLN-010), `FORBIDDEN(403)`
 **Events emitted:** DE-012 ConsentSigned
 
 ---
 
-### PATCH /api/v1/dental/visits/:id/consent-forms/:cid/revoke
+### PATCH /api/v1/dental/visits/:visitId/consents/:cid/revoke
 
-Revoke a consent form.
+Revoke a consent form. (Route is `/consents`, not `/consent-forms`.) Only a
+still-pending (unsigned) consent can be revoked; the signed and revoked states
+are mutually exclusive terminal states (see sign's `CONSENT_FORM_REVOKED`).
 
 **Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (visit uuid), `cid` (consent form uuid)
+**Path params:** `visitId` (visit uuid), `cid` (consent form uuid)
 
 **Request body:**
 
@@ -187,12 +186,15 @@ Revoke a consent form.
 
 ---
 
-### POST /api/v1/dental/patients/:id/medical-history
+### POST /api/v1/dental/clinical/medical-history
 
-Append a medical history entry (append-only — no PATCH/DELETE).
+Append a medical history entry (append-only). The real route is
+`/dental/clinical/medical-history` — the patient is identified by `patient_id`
+in the **body**, not in the path. Authorization derives the branch from the
+patient's `preferredBranchId` (not a caller-supplied branch).
 
-**Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
-**Path params:** `id` (patient uuid)
+**Auth:** `staff_full`, `dentist_associate`, `dentist_owner` (assertBranchRole on the patient's branch)
+**Path params:** none (patient_id is in the body)
 
 **Request body:**
 
@@ -206,7 +208,7 @@ Append a medical history entry (append-only — no PATCH/DELETE).
 
 **Response 201:** `{ data: MedicalHistoryEntry }`
 
-**PATCH/DELETE:** Returns `405 MEDICAL_HISTORY_IMMUTABLE`
+**PATCH `/dental/clinical/medical-history/:entryId`:** the route exists but always returns `405 MEDICAL_HISTORY_IMMUTABLE` (entries are immutable; corrections flow through the amendment path). No DELETE route is registered.
 
 **Errors:** `NOT_FOUND(404)`, `VALIDATION_ERROR(400)`, `FORBIDDEN(403)`
 
