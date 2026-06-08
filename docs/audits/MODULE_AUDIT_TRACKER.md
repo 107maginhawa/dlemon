@@ -24,7 +24,120 @@ dental-portal → emr-consultation → provider → external-records-import
 | 12 | dental-portal | ✅ GAPS (honest — Phase-1 read-only foundation; what's built is GREEN) | 3 (1 REAL adversarial-test pin: IDOR-tamper-inert + empty-self-scope ×6; 2 doc/registry drift: whole module ABSENT from br-registry → added 5-rule V-PORTAL-001..005 block, WORKFLOW_MAP WF-078 over-described unbuilt Phase-2 + omitted built reads → reconciled) | guardian/household-dependent portal access + self-booking + online self-pay + /me imaging/clinical/treatment-plan reads + secure-messaging/consent-mgmt + dental-portal MODULE_SPEC anchor — all Phase-2 DEFERRED/surfaced (NOT built); route-level role-reject belt-and-suspenders pin | [MODULE_dental-portal_AUDIT_2026-06-08.md](modules/MODULE_dental-portal_AUDIT_2026-06-08.md) |
 | 13 | emr-consultation | ✅ READY | 2 (1 REAL adversarial-test pin: cross-owner list self-scoping ×5 — provider/patient list excludes foreign owner both directions + cross-patient `?patient=`→403 + own-id allowed; 1 registry drift: whole module ABSENT from br-registry → added 5-rule `emr-consultation` block V-EMR-OWN/001/AUTH/CTX/005) | no `emr.hurl` contract file + KG under-models the module (no emr node) — both surfaced; amend-after-finalize is a documented non-goal (V-EMR-001); route-level role-reject belt-and-suspenders pin | [MODULE_emr-consultation_AUDIT_2026-06-08.md](modules/MODULE_emr-consultation_AUDIT_2026-06-08.md) |
 | 14 | provider | ✅ READY | 2 (1 REAL test gap: credential field-visibility — privileged read returns full NPI/DEA/license verbatim + unauth → 401, no public read; 1 registry drift: whole module ABSENT from br-registry → added 4-rule `provider` block V-PROV-001..004) | 4 orphan handlers (getProvider/listProviders/updateProvider/deleteProvider — dead code, no route/registry/tsp) + `practitioner:owner` non-functional role (no person link, no handler check, never granted — latent IDOR unreachable today) + no product MODULE_SPEC + KG conflation (flow:manage-providers points at dental-org route) + credential-status-FSM non-goal | [MODULE_provider_AUDIT_2026-06-08.md](modules/MODULE_provider_AUDIT_2026-06-08.md) |
-| 15 | external-records-import | ⏳ pending | — | — | — |
+| 15 | external-records-import | ✅ READY | 2 (1 REAL test gap: bulk-import cross-tenant + role-gating + ingestion-safety — 7 adversarial pins; 1 registry drift: whole import bridge ABSENT from br-registry → added 4-rule `external-records-import` block V-XRI-001..004) | FHIR/CDA/PDF `/dental/emr-import` bridge UNBUILT (Phase-3+ by design — needs ingestion-hardening review: file-type/MIME + XXE-safe XML + zip-bomb/path-traversal + size cap) + no server-side row-COUNT cap on bulk import (DoS-class, product decision) + naive `split(',')` CSV (RFC-4180) + KG-backlog (bulk patient-import + FHIR bridge unmodeled; PMD-import flow node IS accurate) | [MODULE_external-records-import_AUDIT_2026-06-08.md](modules/MODULE_external-records-import_AUDIT_2026-06-08.md) |
+
+---
+
+# 🏁 SERIES ROLLUP — 15-Module Deep Audit (2026-06-08)
+
+**The single hand-off artifact.** 15 modules audited end-to-end (adversarial; every claim verified against
+source). Branch `feat/module-workflow-alignment`. One docs commit per module; every real behavioral fix is a
+SEPARATE `fix()` commit.
+
+## Aggregate verdicts
+
+| Verdict | Count | Modules |
+|---------|-------|---------|
+| ✅ **READY** | 14 | dental-org, dental-patient, dental-scheduling, dental-visit, dental-clinical, dental-perio, dental-imaging, dental-pmd, dental-billing, dental-audit, erasure/legal-hold/retention, emr-consultation, provider, external-records-import |
+| ✅ **GAPS (honest)** | 1 | dental-portal (Phase-1 read-only foundation; what's BUILT is GREEN; Phase-2 features well-surfaced as deferred) |
+| ❌ BLOCKED | 0 | — |
+
+**14 READY / 1 honest-GAPS / 0 BLOCKED.** No module shipped a reachable, unmitigated security hole at the close
+of its round.
+
+## Real behavioral bugs FOUND + FIXED across the series (8)
+
+All proven RED-before-GREEN; security fixes are separate `fix()` commits (or folded into the module's docs commit
+where the fix + its test were inseparable from the audit). Verified against `git log`:
+
+| # | Module | Bug | Class | Commit |
+|---|--------|-----|-------|--------|
+| 1 | dental-patient | `listPatientVisits` + `listPatientConditions` took a caller-supplied `branchId` that was access-checked but never tied to the path patient → **cross-tenant PHI read** (V-PAT-002) | cross-tenant PHI | `f1a03342` (folded) |
+| 2 | dental-patient | `removeHouseholdMember` had no `archived`-guard while its sibling `addHouseholdMember` did (asymmetry) | state-guard | `27bfb0ee` |
+| 3 | dental-visit | `getTreatmentPlan` / `getTreatmentPlanVersion` / `acceptTreatmentPlan` — same caller-supplied-branchId **cross-tenant PHI** (×3) | cross-tenant PHI | `cf008532` (folded) |
+| 4 | dental-visit | `applyTemplate` was an alternate treatment-creation path with **weaker RBAC** than `createDentalTreatment` (assertBranchAccess vs assertBranchRole) + cross-clinic template leak | RBAC bypass | `cf008532` (folded) |
+| 5 | dental-clinical | Consent **revoke-then-sign** produced a contradictory signed+revoked row that the `signed=true`-only gate honored → treatment could proceed on a revoked consent (asymmetric FSM terminal guard) | consent integrity | `088332f1` (folded) |
+| 6 | dental-clinical | `updatePrescription` (BR-003) skipped the locked/completed-visit **immutability guard** that all five create handlers enforce | immutability | `27bfb0ee` |
+| 7 | dental-perio | `classifyChart` defaulted `remainingTeeth` to the count of teeth *charted* on a partial exam → a fully-dentate patient charted on <20 teeth was **over-staged to Stage IV** (a test had enshrined the wrong result) | clinical correctness | `90ee0555` |
+| 8 | dental-billing | **EM-BIL-002** — 5 report/aggregate endpoints treated `branchId` as an OPTIONAL filter; omitting it applied NO scope → **full multi-tenant financial + PHI aggregate** | cross-tenant money+PHI | `825bffbb` |
+
+**Breakdown:** 5 cross-tenant isolation holes (dental-patient ×2 reads, dental-visit ×3 + RBAC, dental-billing
+×5 endpoints) · 1 consent-integrity FSM hole · 1 immutability-guard gap · 1 clinical-scoring correctness bug.
+**provider, dental-org, dental-scheduling, dental-imaging, dental-pmd, dental-audit, erasure/legal-hold/retention,
+dental-portal, emr-consultation, external-records-import = NO behavioral hole found** (guards already correct;
+those rounds added the missing adversarial PINS).
+
+## Test gaps closed (adversarial pins added)
+
+~**40+ adversarial tests** added across the series (cross-tenant 2-org denials, immutability 405s, FSM illegal
+transitions, role-reject 403s, credential field-visibility, IDOR-tamper-inert self-scope, ingestion-safety 4xx,
+empty-scope zero-rows). Per-round gap counts: org 1 · patient 8 · scheduling 1 · visit (folded) · clinical 1 ·
+perio 1 (+cascade) · imaging 1 · pmd 1 · billing 2 · audit 1 · governance 2 · portal 1 · emr 1 · provider 1 ·
+import 7. Highest-value class: the **2-org `OTHER_BRANCH` cross-tenant-denial** pin (the cheap test that would
+have caught bugs #1, #3, #8 had it existed first) and the **zero-rows-written-on-403** assertion (proves the guard
+runs before the write/tx).
+
+## Registry / doc drifts fixed
+
+- **br-registry blocks added for 6 entirely-absent modules:** dental-perio, dental-audit,
+  erasure-legal-hold-retention, dental-portal, emr-consultation, provider, external-records-import (the recurring
+  "whole module missing from br-registry" class — cross-cutting/governance/platform/bridge modules that don't map
+  1:1 to a `dental-<x>` dir are the most likely to be absent).
+- **Rule corrections:** dental-imaging CIMG-001/002 (tier gate understated `basic` as allowed → strict `!== 'addon'`),
+  dental-billing BR-010/012/014/015, dental-pmd 2→7 rules + phantom-column purge, dental-audit response-field
+  snake_case→camelCase.
+- **MODULE_SPEC / API_CONTRACTS / WORKFLOW_MAP reconciliations:** dental-pmd §7/§10 phantom columns + wrong list
+  route, dental-billing §8 FSM / §10 routes, dental-scheduling FSM/table note, dental-visit shape reconciliation,
+  governance WFG-006 three stale "Gap/no-implementation" spots + 2 stale "no legal-hold store yet" source comments,
+  dental-portal WF-078 over-description, dental-clinical/scheduling stale comments.
+
+## Security-class dispositions (FINAL)
+
+| Class | Disposition | Where closed |
+|-------|-------------|--------------|
+| **Optional-branchId / caller-supplied-branchId (cross-tenant)** | ✅ **CLOSED.** Holes found+fixed in dental-patient + dental-visit (caller-supplied) and dental-billing (optional-omitted). Targeted cross-module sweep ([SWEEP_optional-branchid_2026-06-08.md](SWEEP_optional-branchid_2026-06-08.md)) proved the optional-omitted variant UNIQUE to billing. portal/emr/provider/import = N/A by design (no branch param or no branch dimension). All 15 contexts audited — no chase targets remain. | rounds 2,4,9,13 + sweep |
+| **Audit-row-invariant (right actor/action/target/tenant + PHI-sanitized)** | ✅ **CLOSED AT-SOURCE** in dental-audit (round 10): the `logAuditEvent` mechanism writes a correct, PHI-clean `dental_audit_log` row with actor=session.userId (no forgeable actor field) + append-only enforced by BOTH a 405 HTTP guard AND a DB BEFORE-UPDATE/DELETE trigger. Per-module "handler X writes a row" is now belt-and-suspenders. | round 10 |
+| **Legal-hold blocks erasure** | ✅ **ENFORCED + tested** on 4 axes (round 11); the cross-cutting governance layer is substantially complete (3 handler dirs, 8 codegen ops, env-gated retention cron, 77 tests). | round 11 |
+| **IDOR / portal self-scope** | ✅ **CLEAR.** Patient-facing surfaces (portal, emr, provider-self) resolve identity server-side from the session (`resolveSelfPatientIdOrThrow` / owner-from-session); no route accepts a client-supplied patientId; `?patientId=` tamper is INERT. The latent `practitioner:owner` IDOR in provider is **unreachable** (role never granted, no person link, no handler check — surfaced as spec drift). | rounds 12,13,14 |
+| **Immutability / append-only (imported originals, audit log, signed consent)** | ✅ **ENFORCED.** Imported-PMD (405 + verbatim store, round 8), audit log (405 + DB trigger, round 10), signed consent (symmetric terminal-FSM guards after the round-5 fix). | rounds 5,8,10 |
+| **Ingestion safety (untrusted external import)** | ✅ **CLEAR for built surfaces** (bulk patient import → specific 4xx not 500; PMD checksum 422; both pinned). The future FHIR/CDA bridge MUST add file-type/MIME + XXE-safe XML + zip-bomb/path-traversal + size + row-count guards when built. | round 15 |
+
+## Consolidated DEFERRED / SURFACED backlog (the one actionable list)
+
+Grouped across all 15 rounds — none auto-built (each needs a product decision, a schema migration, or new scope).
+
+**A. Absent / future-phase features (build when scheduled):**
+1. **external-records-import FHIR/CDA/PDF bridge** (`/dental/emr-import`, `emr_record`) — Phase-3+; needs ingestion-hardening review (round 15).
+2. **dental-portal Phase-2** — guardian/household-dependent access, self-booking, online self-pay, `/me` imaging/clinical/treatment-plan reads, secure messaging, consent management (round 12). Guardian access MUST check the household relationship server-side.
+3. **dental-perio** — WF-P03 chart amendment + WF-P05 PDF export; calculus/MGJ/per-site fields (rounds 6, clinical-standards).
+4. **dental-pmd** — async/presigned/multipart upload + import notification (round 8).
+5. **dental-imaging** — AI auto-tracing / DICOM / structural-superimposition (intentional non-goals — do NOT propose).
+6. **emr-consultation** — amend-after-finalize is a documented non-goal (V-EMR-001); the `amended` enum is reserved/unreachable.
+7. **provider** — credential-verification FSM (pending→verified) is an upstream non-goal; 4 orphan Provider read/update/delete handlers (dead code — wire-or-delete decision).
+8. **erasure/legal-hold** — extra erasure targets + Art.20 data-portability; retention enforcement is env-gated-OFF by default.
+
+**B. Product decisions needed (behavior change — surfaced, not made):**
+9. **dental-billing** — `recordedByMemberId` server-validation (currently client-supplied on payment record).
+10. **dental-scheduling** — BR-SCH-003 reason-requirement on the generic `PATCH {status:'cancelled'}` (the dedicated cancel endpoint enforces it; the PATCH path bypasses).
+11. **dental-patient** — archived-patient sub-resource read-guard scope (writes are guarded; reads are not).
+12. **dental-pmd** — `getImportedPMD` patient-self detail-read access.
+13. **erasure** — cross-tenant admin-scope is by-design (DPO model) but should be ratified as a tracked decision.
+14. **external-records-import** — bulk-import row-COUNT cap (DoS) + partial-vs-all-or-nothing semantics for oversized files; RFC-4180 CSV parsing.
+15. **dental-clinical** — post-sign consent-withdrawal handling (ratified as-is this series).
+
+**C. KG-backlog (query-only — flag for next `/understand` regeneration, never hand-edit):**
+16. **Phantom routes** in KG node summaries: dental-audit (`/dental/audit/events`), dental-billing (ar/aging), governance (`/dental/data-governance/*`), dental-pmd (`/dental/pmd/generate`).
+17. **Conflations / under-models:** provider (`flow:manage-providers` points at the dental-org route; FHIR directory unmodeled), dental-pmd ("PMD"="Patient medical data" wrong expansion + "recall management" over-claim), external-records-import (bulk patient-import + FHIR bridge unmodeled).
+18. **Accurate KG nodes (no drift):** dental-portal (`flow:patient-self-service-read`), external-records-import (`flow:import-external-pmd`) — confirmed correct.
+
+**D. Missing test infrastructure (low priority):**
+19. `emr.hurl` contract file absent (round 13); product MODULE_SPEC/API_CONTRACTS absent for platform modules (emr, provider) — expected, not gaps.
+
+## Cross-module learnings (reusable lenses) → see the detailed carry-forward section below
+
+The richest reusable findings, distilled: **(1) caller-supplied branchId is not an auth boundary** — authorize against the resource's own branch; **(2) optional-filter omission → unscoped all-tenant aggregate** — an omitted optional scope must default to the caller's accessible set; **(3) paired terminal FSM transitions need symmetric guards** AND read-gates must filter the full invariant, not one boolean; **(4) generic update/PATCH paths may skip the create-path guard** (immutability, RBAC, reason-requirement); **(5) absence-of-evidence ≠ a clinical signal** in derived scores; **(6) cross-cutting/platform/bridge modules are the most likely to be registry-absent**; **(7) an `:owner` role can be declared-but-non-functional** (verify handler-check + schema link + grant path all exist); **(8) orphan handler files typecheck but are dead** — diff the handler set against the operationId set + routes; **(9) test with a *different-branch full-role* member, not just a no-membership outsider** (they deny for different reasons); **(10) assert zero-rows-written on a 403** (proves the guard precedes the write).
+
+---
 
 ## Cross-module carry-forward
 
@@ -279,3 +392,23 @@ dental-portal → emr-consultation → provider → external-records-import
   route / wrong-store over-claim / lossy under-model), `domain:patient-portal` + `flow:patient-self-service-read`
   are accurate: correct routes (`GET /me/appointments|/me/invoices|/me/balance`), the IDOR claim verbatim,
   and the right file/facade citations. **A KG node CAN be trustworthy — verify (don't assume drift either way).**
+- **A "module" can be a CROSS-CUTTING bridge with no handler dir, resolved across several artifacts (from
+  external-records-import round 15).** `external-records-import` is not a dir — it is (a) a FUTURE-PHASE FHIR/CDA
+  bridge specced under `docs/product/modules/` with NO code, (b) the single-record `importPMD` (round 8), and (c)
+  the FR7.2 bulk-patient import living inside `dental-patient/identity/`. **When a module name doesn't grep to a
+  handler dir, resolve it across the spec docs + sibling handlers before concluding it's "absent" — part of it may
+  be built under another module's dir, part future-phase.** The distinct, un-audited piece (bulk import) was the
+  real target; the PMD piece was cross-referenced, not re-audited.
+- **Ingestion-safety lens (from external-records-import round 15).** For any untrusted-external-input surface,
+  the adversarial pins are: malformed payload → specific 4xx (not 500); empty/wrong-shape → 4xx; oversized FIELD
+  values tolerated without crash; cross-tenant write authorized against the caller's OWN branch ownership BEFORE
+  the tx (403 + **zero rows written** — assert the row count, not just the status); role-gating (non-owner → 403);
+  identity-binding only matters when the import BINDS to an existing record (bulk import creates fresh rows → N/A;
+  single PMD import binds to an existing patientId → server-validate its branch). **The surfaced (not-fixed)
+  ingestion gaps were a missing row-COUNT cap (DoS) + naive `split(',')` CSV — both behavior-change product
+  decisions, not safe in-place fixes. A future file-based FHIR/CDA importer MUST additionally guard file-type/MIME +
+  XXE-safe XML + zip-bomb/path-traversal + size cap.**
+- **SERIES COMPLETE (round 15).** All 15 modules audited; 8 real behavioral bugs found+fixed (5 cross-tenant, 1
+  consent-FSM, 1 immutability, 1 clinical-scoring); ~40+ adversarial pins added; 6 absent br-registry blocks added;
+  all 6 security classes dispositioned (see the SERIES ROLLUP above). The optional/caller-supplied-branchId class,
+  the audit-row invariant, legal-hold-blocks-erasure, and IDOR/portal self-scope are all CLOSED/ENFORCED/CLEAR.
