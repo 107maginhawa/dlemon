@@ -23,7 +23,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 11 | erasure/legal-hold/retention | ✅ READY | 5 (2 REAL test gaps: audit-survives-erasure pin + AC-LH-004 release-already-released/nonexistent FSM pins; 3 doc/registry drift: whole governance layer ABSENT from br-registry → added 6-rule block, 2 stale "no legal-hold store exists yet" source comments contradicted by the code, WORKFLOW_MAP WFG-006 three stale "Gap/no-implementation/PHI-purge/store-remaining" spots → RESOLVED) | dental-erasure MODULE_SPEC anchor absent + cross-tenant admin-scope product decision + retention enforcement env-gated-off + extra targets/Art.20-portability deferred + erasure fail-closed-audit pin + KG-backlog (phantom /dental/data-governance/* routes, retention unmodeled, Pino-not-store) | [MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md](modules/MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md) |
 | 12 | dental-portal | ✅ GAPS (honest — Phase-1 read-only foundation; what's built is GREEN) | 3 (1 REAL adversarial-test pin: IDOR-tamper-inert + empty-self-scope ×6; 2 doc/registry drift: whole module ABSENT from br-registry → added 5-rule V-PORTAL-001..005 block, WORKFLOW_MAP WF-078 over-described unbuilt Phase-2 + omitted built reads → reconciled) | guardian/household-dependent portal access + self-booking + online self-pay + /me imaging/clinical/treatment-plan reads + secure-messaging/consent-mgmt + dental-portal MODULE_SPEC anchor — all Phase-2 DEFERRED/surfaced (NOT built); route-level role-reject belt-and-suspenders pin | [MODULE_dental-portal_AUDIT_2026-06-08.md](modules/MODULE_dental-portal_AUDIT_2026-06-08.md) |
 | 13 | emr-consultation | ✅ READY | 2 (1 REAL adversarial-test pin: cross-owner list self-scoping ×5 — provider/patient list excludes foreign owner both directions + cross-patient `?patient=`→403 + own-id allowed; 1 registry drift: whole module ABSENT from br-registry → added 5-rule `emr-consultation` block V-EMR-OWN/001/AUTH/CTX/005) | no `emr.hurl` contract file + KG under-models the module (no emr node) — both surfaced; amend-after-finalize is a documented non-goal (V-EMR-001); route-level role-reject belt-and-suspenders pin | [MODULE_emr-consultation_AUDIT_2026-06-08.md](modules/MODULE_emr-consultation_AUDIT_2026-06-08.md) |
-| 14 | provider | ⏳ pending | — | — | — |
+| 14 | provider | ✅ READY | 2 (1 REAL test gap: credential field-visibility — privileged read returns full NPI/DEA/license verbatim + unauth → 401, no public read; 1 registry drift: whole module ABSENT from br-registry → added 4-rule `provider` block V-PROV-001..004) | 4 orphan handlers (getProvider/listProviders/updateProvider/deleteProvider — dead code, no route/registry/tsp) + `practitioner:owner` non-functional role (no person link, no handler check, never granted — latent IDOR unreachable today) + no product MODULE_SPEC + KG conflation (flow:manage-providers points at dental-org route) + credential-status-FSM non-goal | [MODULE_provider_AUDIT_2026-06-08.md](modules/MODULE_provider_AUDIT_2026-06-08.md) |
 | 15 | external-records-import | ⏳ pending | — | — | — |
 
 ## Cross-module carry-forward
@@ -247,6 +247,34 @@ dental-portal → emr-consultation → provider → external-records-import
   /PHI surface (high-risk; needs product decisions). Guardian-over-scope is N/A when no guardian access is
   built — there's no over-broad scope to leak; building it later MUST check the household relationship
   server-side (a guardian sees ONLY their own dependents, never trusted from the client).
+- **An `:owner` ownership ROLE can be declared in TypeSpec/routes yet be NON-FUNCTIONAL (from provider round 14).**
+  The round-13 EMR pattern said "the route-level `:owner` role is non-gating by design — authMiddleware delegates to
+  the handler, which is the real boundary." Provider is the inverse failure mode: `practitioner:owner` is declared on
+  get/update practitioner, so `authMiddleware` passes through to the handler — BUT the handler does NO ownership check,
+  the `practitioners` schema has NO person link to compute ownership against, and the role is NEVER granted to any user.
+  So the "owner" path is aspirational/dead: the latent IDOR (a bare `practitioner:owner` token reading/updating any
+  practitioner) is **unreachable today** because the role is unassignable. **When a route lists an `:owner` role, verify
+  ALL THREE: (a) a handler-level ownership check exists, (b) the resource schema actually has a link to resolve ownership
+  (a person/user FK), and (c) the role is ever granted. If any is missing, the role is non-functional — surface it as
+  spec drift, and if a self-service surface is later built it MUST add the link + the check + a grant path (the EMR pattern).**
+- **A module can ship ORPHAN handler files (no TypeSpec op, no registry import, no route) — dead code that still typechecks
+  (from provider round 14).** `getProvider`/`listProviders`/`updateProvider`/`deleteProvider` exist (and contain a correct
+  owner-check), but only `createProvider` + the 10 FHIR ops are wired; the live Provider surface is create-only. The orphans
+  typecheck cleanly, so `tsc` does NOT catch them. **When auditing, diff the handler-file set against (a) the TypeSpec
+  `@operationId` set and (b) the generated routes/registry — extra files are orphan/dead code (surface, don't auto-delete:
+  deleting may remove intended-but-unfinished work; needs a product decision).** Module-review's "operationId ↔ handler"
+  check passes on the LIVE set; it does not flag the reverse (handler with no op).
+- **The KG can CONFLATE two same-named domains (from provider round 14).** `flow:manage-providers` in domain-graph.json
+  points at `POST /dental/providers` (the dental-org STAFF flow) and mentions treatment_coordinator/dental_assistant — it
+  models dental-org, NOT the platform FHIR `/providers` + `/providers/practitioners` directory, which is unmodeled. **When two
+  modules share a noun ("provider" = dental-org staff vs platform FHIR practitioner directory), check the KG node's
+  entryPoint route to see WHICH one it actually models — a same-named node may belong to the sibling.** Query-only — flag for
+  regeneration, never hand-edit.
+- **OPTIONAL-BRANCHID CLASS — provider is a 4th N/A-by-design module (round 14, class already CLOSED round 13).** Provider has
+  NO branch/tenant dimension at all (no `branchId` param anywhere; `tenant_id` defaults to 'default'; governance is purely the
+  platform role list). Neither the caller-supplied-branchId variant nor the optional-branchId-omitted variant can apply. Confirms
+  the round-13 disposition: the optional-filter-omission hazard remains live ONLY for cross-resource aggregate/report endpoints
+  with an optional-only scope — a shape unique to billing (fixed). No new chase target.
 - **First clean-KG round (dental-portal round 12).** Unlike every prior round (each carried a phantom
   route / wrong-store over-claim / lossy under-model), `domain:patient-portal` + `flow:patient-self-service-read`
   are accurate: correct routes (`GET /me/appointments|/me/invoices|/me/balance`), the IDOR claim verbatim,

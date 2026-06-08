@@ -1019,6 +1019,53 @@
           ]
         }
       ]
+    },
+    "provider": {
+      "description": "Provider / Practitioner directory — the upstream Monobase platform module at namespace /providers (handlers under services/api-ts/src/handlers/provider/). A PLATFORM-LEVEL, FHIR R4-aligned module governed by Better-Auth roles (user/admin/credentialing/clinician/support, with practitioner:owner) — NOT the dental membership/branch matrix. Three surfaces: (1) Provider — a pre-FHIR self-service profile created by the authenticated user for THEMSELVES (POST /providers, role 'user'; the person is derived server-side, the 'provider' role is granted and the session invalidated; PROVIDER_EXISTS 409 if one already exists). The Provider model carries NO confidential fields (providerType/yearsOfExperience/biography/specialties only). (2) Practitioner — the FHIR Practitioner record carrying CONFIDENTIAL credentials (NPI/DEA/state-license numbers) + qualifications; CRUD is admin/credentialing-managed and reads are admin/clinician/support-gated. There is NO public or patient-facing read of a practitioner, so the credential numbers are never exposed outside clinical/credentialing staff (confidentiality is the ROUTE ROLE GATE, not a handler projection). (3) PractitionerRole — FHIR PractitionerRole (location/availability/role assignment), same admin/credentialing governance. Live surface = 11 codegen-registered ops (createProvider + 5 practitioner ops + 5 practitioner-role ops). NOTE: getProvider/listProviders/updateProvider/deleteProvider handler files exist but are ORPHAN (no TypeSpec op, not in the registry, no route) — the live Provider surface is create-only; provider reads happen via person-expansion and the EMR facade.",
+      "rules": [
+        {
+          "id": "V-PROV-001 (Provider profile is self-service — created for the session user only)",
+          "description": "POST /providers creates a provider profile for the AUTHENTICATED user only — the person is derived server-side from the session (demographics are NOT accepted in the body), so a user cannot create a profile for someone else. A second create for the same person → 409 PROVIDER_EXISTS. On success the 'provider' role is granted and the current session is revoked (forces re-auth with the new role).",
+          "type": "security",
+          "status": "implemented",
+          "source": "createProvider.ts:22-115 (person from ensurePersonForUser(user); PROVIDER_EXISTS 409; addUserRole 'provider'; revokeSession)",
+          "tests": [
+            "provider.hurl (POST /providers as fresh user → 201 with derived person; re-sign-in shows role contains 'provider')"
+          ]
+        },
+        {
+          "id": "V-PROV-002 (Practitioner credentials are privileged-read-only — no public/patient projection)",
+          "description": "The FHIR Practitioner record carries confidential credentials (NPI/DEA/state-license numbers) and qualification license identifiers. Every read path (GET /providers/practitioners, GET /providers/practitioners/{id}) is role-gated to admin|clinician|support|practitioner:owner — there is NO public or patient-facing route returning a practitioner. The handler returns the FULL record verbatim (no redaction): confidentiality of the license numbers depends ENTIRELY on the route role gate, never on a handler-level field projection. If a credential-bearing public/patient read is ever added, the projection MUST change to exclude credential.number/qualification.identifier.",
+          "type": "privacy",
+          "status": "implemented",
+          "source": "routes.ts (GET /providers/practitioners[/:id] gated admin|clinician|support[|practitioner:owner]); getPractitioner.ts:19-41 (full record, session-floor only); listPractitioners.ts (no public route)",
+          "tests": [
+            "getPractitioner.test.ts (returns full credential + qualification identifier to an authorized session — privileged projection)",
+            "getPractitioner.test.ts (unauthenticated request → 401 even when the practitioner exists — no public read of credentials)"
+          ]
+        },
+        {
+          "id": "V-PROV-003 (Practitioner / PractitionerRole writes are admin/credentialing role-gated)",
+          "description": "Create/update of practitioners and practitioner-roles requires admin|credentialing; deactivate (soft-delete, sets active=false; records retained for audit/legal) requires admin. These role gates are the security boundary (enforced by the route authMiddleware). The route-level practitioner:owner role on get/update is non-gating by design (authMiddleware delegates ownership to the handler) — BUT the practitioner schema has NO person link and the handlers perform NO ownership check, and practitioner:owner is never granted to any user, so it is currently a non-functional/aspirational role (latent: were it ever granted on a bare token it would IDOR-read/update any practitioner — surfaced as spec drift, not exploitable today).",
+          "type": "security",
+          "status": "implemented",
+          "source": "routes.ts (POST/PATCH practitioners[-roles] admin|credentialing; DELETE admin); middleware/auth.ts:183-191 (owner roles delegate to handler); createPractitioner.ts/updatePractitioner.ts/deactivatePractitioner.ts (session-floor only; no ownership check)",
+          "tests": [
+            "provider.hurl (auth-gate: POST/GET practitioners[-roles] unauthenticated → 401; full admin CRUD lifecycle 201/200/204)"
+          ]
+        },
+        {
+          "id": "V-PROV-004 (deactivate is a soft-delete — records retained)",
+          "description": "DELETE /providers/practitioners/{id} and /providers/practitioner-roles/{id} are SOFT deletes — they set active=false + deactivatedAt=now() and return 204; the row is retained for audit and legal purposes (FHIR active flag). A non-existent id → 404.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "deactivatePractitioner.ts:30-43 (404 if missing; deactivateById sets active=false/deactivatedAt); practitioner.repo.ts:54-59",
+          "tests": [
+            "practitioner.repo.test.ts (deactivateById sets active=false and deactivatedAt not null)",
+            "provider.hurl (DELETE practitioner/role → 204)"
+          ]
+        }
+      ]
     }
   }
 }
