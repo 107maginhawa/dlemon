@@ -519,7 +519,7 @@ Applied to the 10 highest-impact core workflows:
 | Visit | Locked (completed + time) | Immutable archive | Indefinite (clinical record) | HIPAA/RA-10173 |
 | Treatment | Verified or dismissed | Soft-state in visit | Indefinite | Clinical record |
 | Invoice | Paid, void, uncollectible | Archived | 7 years (financial) | Local tax law |
-| Patient | GDPR erasure request | PHI purge — **Gap WFG-006** | 0 after erasure | GDPR Art. 17 |
+| Patient | GDPR erasure request | PHI **anonymized** (not hard-deleted) — WFG-006 implemented (V-DG-002, `dental-erasure`) | PII redacted, de-identified clinical/billing record + audit trail retained | GDPR Art. 17 |
 | Appointment | Cancelled, completed | Soft-delete | 1 year | Admin |
 | PMD | N/A (snapshot, immutable) | Patient retains | Indefinite | Portable record |
 | Consent Form | Revoked | Revoked state persists | Indefinite (audit trail) | HIPAA |
@@ -527,11 +527,11 @@ Applied to the 10 highest-impact core workflows:
 | Staff Membership | Removed | Deactivated | Indefinite (audit) | — |
 | Imaging Study | N/A | No delete defined | Indefinite | Clinical |
 
-**WF-088 [INFERRED]: GDPR Patient Erasure**
-- Triggered by: Patient request
-- Actors: Platform Admin, Dentist-Owner
-- Actions: PHI purge across patient, visit, clinical, billing records; audit log entry preserved
-- Gap: No implementation in any module. **WFG-006.**
+**WF-088: GDPR Patient Erasure — IMPLEMENTED (V-DG-002, `handlers/dental-erasure/`)**
+- Triggered by: Patient request → admin-filed `dental_erasure_request`
+- Actors: Platform Admin (admin-role; place/approve/reject — cross-tenant admin scope is a known product decision, see IDEAL standard)
+- Actions: Two-step audited workflow (request → approve/reject). Approval runs the anonymize engine — PII is **anonymized in place** across Person/Patient/ConsentForm/Imaging (never hard-deleted), radiograph S3 objects physically deleted, and the **audit trail is preserved** (the erasure events outlive the erased identity — no FK cascade). An active legal hold blocks erasure.
+- Status: **RESOLVED (WFG-006).** Remaining (deferred, not gaps): additional entity targets as needed; Art. 20 bulk portability export blocked on a PRD format decision (see DATA_GOVERNANCE §4).
 
 ---
 
@@ -602,7 +602,7 @@ Applied to the 10 highest-impact core workflows:
 | WFG-003 | Missing error path | BR-001 concurrent visit conflict — client recovery UX undefined | MEDIUM | BR-001 |
 | WFG-004 | Missing error path | Concurrent invoice creation for same visit — two invoices possible | HIGH — billing integrity | BR-009, BR-012 |
 | WFG-005 | SLA undefined | PMD generation SLA unspecified — sync or async unclear | MEDIUM — UX impact | BR-021 |
-| WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/dental-erasure/` (Person+Patient targets, two-step audited, legal-hold blocks) + admin HTTP endpoints `/dental/erasure-requests`. Remaining: more entity targets, real LegalHold store | RESOLVED | — |
+| WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/dental-erasure/` (Person/Patient/ConsentForm/Imaging targets + radiograph S3 delete, two-step audited, real `dental_legal_hold` store blocks erasure) + admin HTTP endpoints `/dental/erasure-requests` & `/dental/legal-holds`. Retention enforcement (`handlers/retention/`) complements it (env-gated cron, legal-hold-excluded). Deferred (not gaps): more entity targets; Art. 20 bulk portability (PRD format decision). | RESOLVED | — |
 | WFG-007 | Missing workflow | Patient merge (BR-020) — no workflow, no cross-module cascade defined | HIGH — data integrity | BR-020 |
 | WFG-008 | ~~Orphan BR~~ **Implemented** | BR-013 markUncollectible — **IMPLEMENTED** 2026-06-04 (owner-only write-off; outstanding → `uncollectible`, else 422; AC-BIL-005). Tests in `dental-billing.test.ts` + `business-rules.test.ts`. | RESOLVED (implemented) | BR-013 |
 | WFG-009 | Missing notification | Appointment reminder (24h) — not implemented | LOW–MEDIUM | — |

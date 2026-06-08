@@ -18,8 +18,9 @@ export type RequestErasureBodyType = z.infer<typeof RequestErasureBody>;
 
 export const ApproveErasureBody = z
   .object({
-    // Reviewer asserts whether the subject is under an active legal hold.
-    // (No LegalHold store exists yet — caller-supplied predicate.)
+    // Optional reviewer-asserted legal hold (out-of-band). NOTE: approval ALSO
+    // consults the real `dental_legal_hold` store (isPersonUnderLegalHold); an
+    // active stored hold blocks erasure even when this flag is absent/false.
     legalHold: z.boolean().optional(),
   })
   .strict()

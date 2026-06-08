@@ -823,6 +823,82 @@
           ]
         }
       ]
+    },
+    "erasure-legal-hold-retention": {
+      "description": "Cross-cutting data-governance layer (WFG-006 / GDPR Art.17 / RA 10173 §34). Three cooperating handler dirs: dental-erasure (right-to-erasure: request→approve/reject anonymize workflow over dental_erasure_request), dental-legalhold (place/list/release holds over dental_legal_hold), retention (env-gated cron that soft-archives/anonymizes records past their dental_retention_policy period). Admin-only HTTP surface (cross-tenant platform-admin scope — a known product decision, not per-branch RBAC). Headline invariant: an ACTIVE legal hold blocks erasure AND excludes the subject from retention. Hard safety invariants live in the engines (anonymize-not-delete, never-touch-audit, dry-run default, soft-archive-over-hard-delete) so a bad policy/caller cannot cause data loss.",
+      "rules": [
+        {
+          "id": "V-DG-002-LH (legal-hold blocks erasure — headline invariant)",
+          "description": "A subject under an ACTIVE legal hold is NEVER anonymized. approveErasure consults the real dental_legal_hold store (isPersonUnderLegalHold) — OR a reviewer-asserted flag — and on a hold marks the request 'rejected' with legalHoldBlocked=true, touching no subject data; the engine short-circuits before any target runs (audited erasure.blocked_legal_hold). Releasing the hold then allows a fresh request to anonymize. Never bypassable.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "erasure-engine.ts:117-122 (legal-hold short-circuit); erasure-service.ts:106-137 (consults isPersonUnderLegalHold store)",
+          "tests": [
+            "erasure-legalhold.test.ts (real store: active hold blocks approval, subject kept; release → anonymizes)",
+            "erasure-engine.test.ts (LEGAL-HOLD blocks erasure: no target touched, refusal audited)",
+            "erasure-service.test.ts (legal hold blocks approval: rejected, subject NOT anonymized)",
+            "erasure-routes.test.ts (legal hold on approve → request rejected, subject kept)"
+          ]
+        },
+        {
+          "id": "V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)",
+          "description": "Approval redacts PII in place and keeps the de-identified row across Person (name→[ERASED] pseudonym, contactInfo nulled), Patient (emergency contact/provider/pharmacy/history/prefs nulled), ConsentForm (signer identity redacted, state kept), and Imaging (DICOM/finding/annotation identifiers nulled). Engine is DRY-RUN by default — real anonymization only on explicit dryRun:false (approval is the opt-in). Idempotent (a re-run anonymizes 0 → noop, still audited). The ONLY hard delete is the physical S3 radiograph object + its storage file row (DATA_GOVERNANCE §3), performed fail-open at handler scope after the anonymization commits.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "erasure-engine.ts:95-157 (dry-run default, anonymize loop); erasure-targets.ts (Person/Patient/ConsentForm/Imaging facades); erasure-storage.ts (physical S3 + file-row delete, fail-open)",
+          "tests": [
+            "erasure-service.test.ts (approve anonymizes person+patient: firstName=[ERASED], contactInfo/emergencyContact null)",
+            "erasure-engine.test.ts (dry-run default touches nothing; idempotent noop still audited)",
+            "erasure-s3-delete.test.ts (S3 object + storage row deleted; FAIL-OPEN on deleteFile throw → file left pending, idempotent retry)"
+          ]
+        },
+        {
+          "id": "V-DG-002-AU (erasure audited AND the audit trail survives the erasure)",
+          "description": "Every erasure transition writes an audit event (erasure.requested / erasure.anonymized [security, fail-closed] / erasure.rejected / erasure.blocked_legal_hold / erasure.s3_deleted) via the append-only sink. The engine has NO purge/modify path for the audit trail — it only APPENDS. dental_audit_log has no FK to person and erasure anonymizes (never hard-deletes) the subject, so the audit row recording the erasure OUTLIVES the erased identity (DATA_GOVERNANCE §3 'Audit Trail Preserved? Yes').",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "erasure-engine.ts:154-188 (writeAudit appends, eventType=security); erasure-service.ts:70-79,177-186; audit-log.schema.ts (no FK to person)",
+          "tests": [
+            "erasure-service.test.ts (the erasure audit trail SURVIVES the anonymization: erasure.anonymized row with actorId=reviewer + erasure.requested row both persist after subject is [ERASED])",
+            "erasure-engine.test.ts (every run APPENDS exactly one audit event; dry-run/block/noop all audited)"
+          ]
+        },
+        {
+          "id": "AC-RET-001..006 (retention enforcement: dry-run, soft-archive, protected, legal-hold-excluded)",
+          "description": "The retention engine evaluates enabled dental_retention_policy rows on a daily cron and enforces hard invariants regardless of policy data: DRY-RUN unless RETENTION_ENFORCEMENT_ENABLED='true' AND dryRun:false; the 'audit' target is protected (never read/actioned) and the 'retain' action is refused; 'delete' is DOWNGRADED to soft-archive (no hard-delete path); records whose owning Person is under an active legal hold are excluded (legalHoldExempt policy flag is NEVER a bypass). Appointment eligibility filters on scheduledAt (V-DG-003, 1yr). One policy per (tenant, branch, entityType).",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "retention-engine.ts:111-226 (dry-run default, effectiveActionFor downgrade, protected-skip, legal-hold filter); retention-targets.ts (attachment/appointment/audit-protected + personsUnderLegalHold); jobs/index.ts (env-gated cron)",
+          "tests": [
+            "retention-engine.test.ts (dry-run default; delete→archive; protected/retain skipped; legal-held excluded)",
+            "retention-legalhold.test.ts (real store: held subject's attachment excluded)",
+            "retention-defaults.test.ts (audit seeded as retain/never-purge; targetless types disabled)",
+            "retention-appointment.test.ts (scheduledAt 1-year cutoff, V-DG-003)"
+          ]
+        },
+        {
+          "id": "AC-LH-001..004 (legal-hold workflow + RBAC + FSM)",
+          "description": "Place/list/release legal holds, admin-only (non-admin → 403). A hold is created 'active'; active→released is terminal — releasing an already-released hold is rejected (ValidationError 'already released'), releasing a non-existent hold → NotFound. Every transition writes a compliance audit event (legal_hold.placed / legal_hold.released). subject/actor refs are bare UUIDs (no DB FK, mirrors audit/erasure decoupling).",
+          "type": "security",
+          "status": "implemented",
+          "source": "placeLegalHoldHandler.ts / releaseLegalHoldHandler.ts / listLegalHoldsHandler.ts (admin RBAC); legal-hold-service.ts:61-93 (active-only release guard + audit)",
+          "tests": [
+            "legal-hold-routes.test.ts (place→list→release lifecycle; non-admin → 403; missing name → 400)",
+            "legal-hold.test.ts (isPersonUnderLegalHold predicate; AC-LH-004 release-already-released rejected; release non-existent → not found)"
+          ]
+        },
+        {
+          "id": "EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)",
+          "description": "Every erasure and legal-hold endpoint is gated on the platform admin role (user.role==='admin', the Better-Auth admin plugin) — a non-admin caller → 403 on request/approve/reject/place/release/list/get. The admin scope is platform-level (cross-tenant) BY DESIGN for a data-governance/DPO function; tenantId/subjectPersonId come from the request body, not a per-branch membership. (Cross-tenant admin scope is a tracked product decision — see IDEAL standard 'Erasure / legal-hold cross-tenant admin scope'.)",
+          "type": "security",
+          "status": "implemented",
+          "source": "requestErasureHandler.ts:18 / approveErasureHandler.ts:22 / rejectErasureHandler.ts:18 / get+listErasureRequestsHandler / placeLegalHoldHandler.ts:18 / releaseLegalHoldHandler / listLegalHoldsHandler (user.role!=='admin' → ForbiddenError)",
+          "tests": [
+            "erasure-routes.test.ts (non-admin is forbidden 403)",
+            "legal-hold-routes.test.ts (non-admin forbidden 403)"
+          ]
+        }
+      ]
     }
   }
 }

@@ -20,7 +20,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 8 | dental-pmd | ✅ READY | 5 (1 cross-branch PHI isolation test; 4 doc/registry drift: MODULE_SPEC §7/§7.2 phantom columns, §10 wrong list route + multipart, §15 error table, br-registry enriched 2→7 rules) | getImportedPMD-patient-self-detail decision + async/presigned/multipart/notif deferred + 2 test gaps (detail-read audit row, care-record superseded-exclusion) + KG over-claim (PMD mis-expansion / phantom route / recall claim) | [MODULE_dental-pmd_AUDIT_2026-06-08.md](modules/MODULE_dental-pmd_AUDIT_2026-06-08.md) |
 | 9 | dental-billing | ✅ READY (1 security fix) | 6 (1 REAL cross-tenant money+PHI hole on 5 optional-branchId report endpoints; 5 doc/registry drift: br-registry +BR-014/BR-015/EM-BIL-002 & BR-010/012 stale, MODULE_SPEC §8 FSM / §10 routes, API_CONTRACTS plan-frequency enum) | recordedByMemberId server-validation product decision + 2 test gaps (empty-membership pin, DE-008 partial-negative pin) + KG-backlog (phantom ar/aging route) | [MODULE_dental-billing_AUDIT_2026-06-08.md](modules/MODULE_dental-billing_AUDIT_2026-06-08.md) |
 | 10 | dental-audit | ✅ READY | 6 (1 REAL test gap: cross-tenant audit-read denial pin; 5 doc/registry drift: br-registry whole-module ABSENT → added 6 rules, MODULE_SPEC §9 banner legacy-table-name + §6/§11/§17 pg-boss/no-self-audit, API_CONTRACTS response field table snake_case→camelCase) | fail-closed-on-security-event pin + legacy-table dual-write coverage + retention→round-11 + self-audit tenantId-echo decision + KG-backlog (phantom `/dental/audit/events` route) | [MODULE_dental-audit_AUDIT_2026-06-08.md](modules/MODULE_dental-audit_AUDIT_2026-06-08.md) |
-| 11 | erasure/legal-hold/retention | ⏳ pending | — | — | — |
+| 11 | erasure/legal-hold/retention | ✅ READY | 5 (2 REAL test gaps: audit-survives-erasure pin + AC-LH-004 release-already-released/nonexistent FSM pins; 3 doc/registry drift: whole governance layer ABSENT from br-registry → added 6-rule block, 2 stale "no legal-hold store exists yet" source comments contradicted by the code, WORKFLOW_MAP WFG-006 three stale "Gap/no-implementation/PHI-purge/store-remaining" spots → RESOLVED) | dental-erasure MODULE_SPEC anchor absent + cross-tenant admin-scope product decision + retention enforcement env-gated-off + extra targets/Art.20-portability deferred + erasure fail-closed-audit pin + KG-backlog (phantom /dental/data-governance/* routes, retention unmodeled, Pino-not-store) | [MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md](modules/MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md) |
 | 12 | dental-portal | ⏳ pending | — | — | — |
 | 13 | emr-consultation | ⏳ pending | — | — | — |
 | 14 | provider | ⏳ pending | — | — | — |
@@ -78,7 +78,29 @@ dental-portal → emr-consultation → provider → external-records-import
   are present. **RECURRED at dental-audit (round 10):** dental-audit (the 10th dental module) was also
   entirely absent (only 9 of 10 registered) despite being the compliance source-of-truth — added a
   6-rule block this round. Pattern confirmed: registry coverage lags module creation; always check
-  presence-of-block first.
+  presence-of-block first. **RECURRED AGAIN at erasure/legal-hold/retention (round 11):** the entire
+  cross-cutting data-governance layer (3 handler dirs) had NO br-registry block (11 module blocks, none
+  for governance) — added a 6-rule `erasure-legal-hold-retention` block. **Cross-cutting/governance
+  concerns are the MOST likely to be registry-absent because they don't map 1:1 to a `dental-<x>` dir.**
+- **A "deferred P1" memory note can badly understate a since-built module (round 11).** Prior MEMORY
+  flagged "erasure/retention" as a deferred/partial data-governance item — but the audit found a
+  substantially COMPLETE, well-tested layer (3 handler dirs, 8 codegen ops, env-gated cron, 77 tests,
+  the legal-hold-blocks-erasure invariant enforced + tested on 4 axes). **Resolve artifacts against
+  source before trusting a "deferred/absent" summary** — the headline finding was over-completeness,
+  not absence. The same staleness appeared IN-SOURCE: two comments ("no legal-hold store exists yet")
+  and three WORKFLOW_MAP spots ("Gap WFG-006 / no implementation") contradicted the code below them.
+  **For a governance/safety module, grep the source comments + WORKFLOW_MAP for "yet/Gap/no implementation"
+  against what the code actually does — these stale-past notes survive precisely because the code that
+  obsoleted them was added in a separate later pass.**
+- **A platform-`admin`-gated cross-tenant endpoint is NOT the optional-branchId hole (round 11).**
+  Erasure/legal-hold gate on the Better-Auth platform `admin` superuser role and take `tenantId` from the
+  request BODY (cross-tenant by design — the DPO/data-controller model). This is NOT the EM-BIL-002
+  "optional branchId omitted → all-tenants" class: there is no per-branch boundary to leak past, the scope
+  is intentionally global, and it's RBAC-gated to `admin` + recorded as a tracked product decision (IDEAL
+  standard §342). **When a list/report endpoint returns cross-tenant rows, first establish whether it's a
+  branch-scoped resource leaking (a hole) or a platform-admin function operating globally (by design) —
+  the test is whether a non-superuser role can reach it.** The right RBAC pin for the latter is non-admin → 403,
+  not a 2-org cross-branch denial.
 - **The recurring "audit-row assertion gap" is now CLOSED AT-SOURCE (dental-audit round 10).**
   Rounds 6–9 repeatedly deferred an "audit-row assertion gap": handlers were confirmed to CALL
   `logAuditEvent` by source, but few tests asserted the row is actually WRITTEN with the right

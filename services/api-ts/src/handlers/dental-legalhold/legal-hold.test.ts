@@ -54,4 +54,23 @@ describe('legal-hold store', () => {
     expect(released.releasedAt).not.toBeNull();
     expect(await isPersonUnderLegalHold(db, PERSON)).toBe(false);
   });
+
+  test('AC-LH-004: releasing an already-released hold is rejected (illegal FSM transition)', async () => {
+    const hold = await placeLegalHold(db, noopLogger, holdInput);
+    await releaseLegalHold(db, noopLogger, hold.id, { releasedBy: ACTOR });
+
+    // active → released is terminal; a second release must throw, not silently
+    // re-stamp releasedBy/releasedAt or resurrect the hold.
+    await expect(releaseLegalHold(db, noopLogger, hold.id, { releasedBy: ACTOR })).rejects.toThrow(
+      /already released/i,
+    );
+    // The subject stays NOT-held (the double-release didn't corrupt state).
+    expect(await isPersonUnderLegalHold(db, PERSON)).toBe(false);
+  });
+
+  test('releasing a non-existent hold → not found', async () => {
+    await expect(
+      releaseLegalHold(db, noopLogger, 'd4000000-0000-4000-8000-0000000000ff', { releasedBy: ACTOR }),
+    ).rejects.toThrow(/not found/i);
+  });
 });
