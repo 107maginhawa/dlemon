@@ -47,7 +47,7 @@ function PatientsPage() {
   const { archive, isPending: isArchivePending } = useArchivePatient();
   const { restore, isPending: isRestorePending } = useRestorePatient();
   const { bulkArchive, isPending: isBulkPending } = useBulkArchive();
-  const { exportPatients, isExporting } = useExportPatients();
+  const { exportPatients, isExporting } = useExportPatients(branchId);
 
   const { patients, isLoading, error, refetch } = usePatients({
     branchId,

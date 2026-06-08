@@ -245,7 +245,7 @@ describe('useExportPatients', () => {
     document.createElement = createElementSpy as typeof document.createElement;
 
     const qc = freshClient();
-    const { result } = renderHook(() => useExportPatients(), {
+    const { result } = renderHook(() => useExportPatients('branch-xyz'), {
       wrapper: makeWrapper(qc),
     });
 
@@ -255,6 +255,10 @@ describe('useExportPatients', () => {
     });
 
     await waitFor(() => expect(capturedUrl).toContain('/dental/patients/export'));
+    // The export request MUST include branchId — the handler 400s without it,
+    // so the UI export button was non-functional for every role when it was
+    // omitted. (EM-PAT-001 cross-branch scope; export is dentist_owner-only.)
+    expect(capturedUrl).toContain('branchId=branch-xyz');
     expect(exportData).not.toBeNull();
 
     // Verify CSV format (FR2.13)

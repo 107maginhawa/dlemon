@@ -94,13 +94,19 @@ export function useBulkArchive() {
 
 // ─── useExportPatients ──────────────────────────────────────────────────
 
-export function useExportPatients() {
+export function useExportPatients(branchId?: string) {
   const [isExporting, setIsExporting] = useState(false);
 
   const exportPatients = useCallback(async () => {
     setIsExporting(true);
     try {
-      const { data } = await exportDentalPatients({ throwOnError: true });
+      // GET /dental/patients/export REQUIRES branchId (it 400s without it, to
+      // prevent cross-branch leaks). The export call previously omitted it, so
+      // the UI export button 400'd for every role. Pass the active branch.
+      const { data } = await exportDentalPatients({
+        query: { branchId: branchId ?? '' },
+        throwOnError: true,
+      });
       // Serialize to CSV (FR2.13)
       const headers = ['id', 'name', 'status', 'createdAt'];
       const rows = (data?.patients ?? []).map((p) => [
@@ -127,7 +133,7 @@ export function useExportPatients() {
     } finally {
       setIsExporting(false);
     }
-  }, []);
+  }, [branchId]);
 
   return {
     exportPatients,
