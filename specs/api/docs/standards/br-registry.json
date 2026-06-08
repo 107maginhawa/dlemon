@@ -8,7 +8,7 @@
       "rules": [
         {
           "id": "BR-001",
-          "description": "A patient cannot have two active visits simultaneously. Enforced globally per patient (across all branches) via a partial unique index on (patient_id, status) WHERE status='active' plus the findActiveByPatient app guard — stricter than the original 'same branch' wording.",
+          "description": "A patient cannot have two active visits simultaneously. Enforced globally per patient (across all branches) via a partial unique index on (patient_id, status) WHERE status='active' plus the findActiveByPatient app guard \u2014 stricter than the original 'same branch' wording.",
           "type": "conflict-prevention",
           "status": "implemented",
           "source": "createDentalVisit.ts:43-49, updateDentalVisit.ts:76-82, visit.schema.ts (activePatientUnique)",
@@ -16,7 +16,7 @@
         },
         {
           "id": "BR-002",
-          "description": "Visit state transitions are strictly linear: draft → active → completed → locked. No state reversal is permitted.",
+          "description": "Visit state transitions are strictly linear: draft \u2192 active \u2192 completed \u2192 locked. No state reversal is permitted.",
           "type": "state-guard",
           "status": "implemented",
           "source": "dental-visit handlers"
@@ -26,7 +26,7 @@
           "description": "A visit is immutable after status reaches completed or locked. Chart entries, treatments, prescriptions, and lab orders cannot be added, edited, or deleted.",
           "type": "state-guard",
           "status": "implemented",
-          "source": "_workspace/$patientId.tsx — isReadOnly flag"
+          "source": "_workspace/$patientId.tsx \u2014 isReadOnly flag"
         },
         {
           "id": "BR-005",
@@ -34,23 +34,23 @@
           "type": "lifecycle-guard",
           "status": "implemented-flag-gated",
           "source": "updateDentalVisit.ts:113-133 (DENTAL_VISIT_AUTO_DISCARD env flag)",
-          "notes": "Status corrected not-implemented→implemented-flag-gated (TRACEABILITY 2026-06-08). Default OFF; the discarded state + VISIT_TRANSITIONS active→discarded exist in schema."
+          "notes": "Status corrected not-implemented\u2192implemented-flag-gated (TRACEABILITY 2026-06-08). Default OFF; the discarded state + VISIT_TRANSITIONS active\u2192discarded exist in schema."
         },
         {
           "id": "BR-006",
-          "description": "Treatment state transitions are forward-only: diagnosed → planned → performed → verified. dismissed is reachable from any non-terminal state. No reversal is permitted.",
+          "description": "Treatment state transitions are forward-only: diagnosed \u2192 planned \u2192 performed \u2192 verified. dismissed is reachable from any non-terminal state. No reversal is permitted.",
           "type": "state-guard",
           "status": "implemented",
-          "source": "treatment.schema.ts — TREATMENT_TRANSITIONS",
-          "notes": "Forward-only enforcement + dismissed-from-any-non-terminal + reversal rejection are tested in treatment.fsm.property.test.ts, dental-visit.treatment-status-transitions.test.ts, and treatment-fsm-http.test.ts (illegal transitions assert 4xx). Status corrected partial→implemented (TRACEABILITY 2026-06-08)."
+          "source": "treatment.schema.ts \u2014 TREATMENT_TRANSITIONS",
+          "notes": "Forward-only enforcement + dismissed-from-any-non-terminal + reversal rejection are tested in treatment.fsm.property.test.ts, dental-visit.treatment-status-transitions.test.ts, and treatment-fsm-http.test.ts (illegal transitions assert 4xx). Status corrected partial\u2192implemented (TRACEABILITY 2026-06-08)."
         },
         {
           "id": "BR-007",
-          "description": "A performed/verified treatment is field-immutable — its procedure code, tooth, surface, and price cannot be changed (status transitions remain allowed).",
+          "description": "A performed/verified treatment is field-immutable \u2014 its procedure code, tooth, surface, and price cannot be changed (status transitions remain allowed).",
           "type": "state-guard",
           "status": "implemented",
-          "source": "updateDentalTreatment.ts:52-55 (performed/verified field-edit → 422 TREATMENT_IMMUTABLE)",
-          "test": "dental-visit.treatment-status-transitions.test.ts; dental-treatment.test.ts (AC-VIS-003 cdt_code edit on performed → 422)"
+          "source": "updateDentalTreatment.ts:52-55 (performed/verified field-edit \u2192 422 TREATMENT_IMMUTABLE)",
+          "test": "dental-visit.treatment-status-transitions.test.ts; dental-treatment.test.ts (AC-VIS-003 cdt_code edit on performed \u2192 422)"
         },
         {
           "id": "BR-008",
@@ -62,12 +62,12 @@
         },
         {
           "id": "BR-VIS-009",
-          "description": "Applying a treatment template (POST /visits/{id}/apply-template/{tid}) creates billable treatments and is gated on the clinical role (dentist_owner/dentist_associate), parity with createDentalTreatment; the template must belong to the visit's branch (foreign-branch template → 404, no cross-clinic leak).",
+          "description": "Applying a treatment template (POST /visits/{id}/apply-template/{tid}) creates billable treatments and is gated on the clinical role (dentist_owner/dentist_associate), parity with createDentalTreatment; the template must belong to the visit's branch (foreign-branch template \u2192 404, no cross-clinic leak).",
           "type": "authorization",
           "status": "implemented",
           "source": "utils/treatmentTemplates.ts applyTemplate (assertBranchRole + template.branchId === visit.branchId)",
-          "test": "dental-visit.cross-tenant-rbac.test.ts (staff_full → 403; foreign-branch template → 404; owner same-branch → 201)",
-          "notes": "Fixed audit 2026-06-08: assertBranchAccess (any member) → assertBranchRole + branch-match guard."
+          "test": "dental-visit.cross-tenant-rbac.test.ts (staff_full \u2192 403; foreign-branch template \u2192 404; owner same-branch \u2192 201)",
+          "notes": "Fixed audit 2026-06-08: assertBranchAccess (any member) \u2192 assertBranchRole + branch-match guard."
         },
         {
           "id": "BR-VIS-010",
@@ -75,8 +75,8 @@
           "type": "authorization",
           "status": "implemented",
           "source": "getTreatmentPlan.ts, acceptTreatmentPlan.ts, getTreatmentPlanVersion.ts (assertPatientBranchAccess)",
-          "test": "dental-visit.cross-tenant-rbac.test.ts (foreign-branch owner → 403 on plan/accept/version; patient-branch owner → 200)",
-          "notes": "Fixed audit 2026-06-08 (V-VIS-011): cross-tenant PHI leak — branchId query param was access-checked but never tied to the patient. Mirrors V-PAT-002."
+          "test": "dental-visit.cross-tenant-rbac.test.ts (foreign-branch owner \u2192 403 on plan/accept/version; patient-branch owner \u2192 200)",
+          "notes": "Fixed audit 2026-06-08 (V-VIS-011): cross-tenant PHI leak \u2014 branchId query param was access-checked but never tied to the patient. Mirrors V-PAT-002."
         }
       ]
     },
@@ -138,7 +138,7 @@
       "rules": [
         {
           "id": "BR-009",
-          "description": "An invoice requires at least one performed/verified treatment. Creating an invoice with zero billable treatments → 422 NO_BILLABLE_TREATMENTS. A treatment already billed on a prior invoice → 422 TREATMENT_ALREADY_BILLED (double-billing prevention, S1-T7).",
+          "description": "An invoice requires at least one performed/verified treatment. Creating an invoice with zero billable treatments \u2192 422 NO_BILLABLE_TREATMENTS. A treatment already billed on a prior invoice \u2192 422 TREATMENT_ALREADY_BILLED (double-billing prevention, S1-T7).",
           "type": "validation",
           "status": "implemented",
           "source": "createDentalInvoice.ts:46-60 (billable filter status in {performed, verified}; alreadyBilled guard)",
@@ -146,15 +146,15 @@
         },
         {
           "id": "BR-010",
-          "description": "Tax is always 0. Fee schedule prices are pre-tax. taxRate is server-controlled (NOT caller-supplied — EM-BILL-001 privilege-escalation guard); per-country tax is a Phase-2 stub gated by dental_billing_tax_enabled.",
+          "description": "Tax is always 0. Fee schedule prices are pre-tax. taxRate is server-controlled (NOT caller-supplied \u2014 EM-BILL-001 privilege-escalation guard); per-country tax is a Phase-2 stub gated by dental_billing_tax_enabled.",
           "type": "calculation-stub",
           "status": "partial",
-          "source": "createDentalInvoice.ts:69-74 (taxRate/taxCents hardcoded 0, EM-BILL-001 comment — no TODO)",
+          "source": "createDentalInvoice.ts:69-74 (taxRate/taxCents hardcoded 0, EM-BILL-001 comment \u2014 no TODO)",
           "notes": "Registry reconciled 2026-06-08: prior source cited a 'TODO comment' that no longer exists; tax is hardcoded with the EM-BILL-001 server-control guard. AC-BIL-004 pins taxCents==0 in all responses."
         },
         {
           "id": "BR-011",
-          "description": "An active payment plan blocks invoice archival (void or uncollectible) → 409 ACTIVE_PAYMENT_PLAN. Staff must resolve the plan before voiding/writing off.",
+          "description": "An active payment plan blocks invoice archival (void or uncollectible) \u2192 409 ACTIVE_PAYMENT_PLAN. Staff must resolve the plan before voiding/writing off.",
           "type": "lifecycle-guard",
           "status": "implemented",
           "source": "voidDentalInvoice.ts, markUncollectible.ts (active-plan guard)",
@@ -162,7 +162,7 @@
         },
         {
           "id": "BR-012",
-          "description": "Invoice state lifecycle: draft → issued → paid / partial / overdue / voided. Payments are valid only on issued/partial/overdue (draft → 422 INVALID_STATUS_TRANSITION); payment on paid/voided → 422 INVOICE_IMMUTABLE; overpayment → 422 PAYMENT_EXCEEDS_BALANCE.",
+          "description": "Invoice state lifecycle: draft \u2192 issued \u2192 paid / partial / overdue / voided. Payments are valid only on issued/partial/overdue (draft \u2192 422 INVALID_STATUS_TRANSITION); payment on paid/voided \u2192 422 INVOICE_IMMUTABLE; overpayment \u2192 422 PAYMENT_EXCEEDS_BALANCE.",
           "type": "state-machine",
           "status": "implemented",
           "source": "recordDentalPayment.ts:44-68; invoice.fsm.property.test.ts",
@@ -179,7 +179,7 @@
         },
         {
           "id": "BR-014",
-          "description": "A signed consent form is required before invoicing a visit → 422 CONSENT_REQUIRED (V-BIL-007; previously mislabeled BR-011 in code).",
+          "description": "A signed consent form is required before invoicing a visit \u2192 422 CONSENT_REQUIRED (V-BIL-007; previously mislabeled BR-011 in code).",
           "type": "lifecycle-guard",
           "status": "implemented",
           "source": "createDentalInvoice.ts:36-41 (hasSignedConsentForVisit gate)",
@@ -187,20 +187,20 @@
         },
         {
           "id": "BR-015",
-          "description": "Money-integrity bounds (V-BIL-001/002/010): discount percentageRate must be 0–100 (else 422 INVALID_DISCOUNT_RATE — an out-of-range rate drives totals negative); installment count must be 2–24 (else 422 INVALID_INSTALLMENT_COUNT — guards division-by-zero); payment amountCents ≥ 1 (else 422 INVALID_AMOUNT). Each is enforced in the handler as defense-in-depth even if the schema validator is bypassed.",
+          "description": "Money-integrity bounds (V-BIL-001/002/010): discount percentageRate must be 0\u2013100 (else 422 INVALID_DISCOUNT_RATE \u2014 an out-of-range rate drives totals negative); installment count must be 2\u201324 (else 422 INVALID_INSTALLMENT_COUNT \u2014 guards division-by-zero); payment amountCents \u2265 1 (else 422 INVALID_AMOUNT). Each is enforced in the handler as defense-in-depth even if the schema validator is bypassed.",
           "type": "validation",
           "status": "implemented",
-          "source": "applyDentalDiscount.ts:50-60, createDentalPaymentPlan.ts (2–24), recordDentalPayment.ts:38-40",
+          "source": "applyDentalDiscount.ts:50-60, createDentalPaymentPlan.ts (2\u201324), recordDentalPayment.ts:38-40",
           "test": "dental-billing.test.ts (discount-on-discount + bounds), dental-billing.payment-plan-fsm.test.ts, utils/rounding.test.ts"
         },
         {
           "id": "EM-BIL-002",
-          "description": "Cross-tenant report scoping: the five billing report/list endpoints whose branchId filter is OPTIONAL (AR aging, collections summary, payer aging, claim worklist, statement batch) MUST scope results to the caller's own active branches when branchId is omitted — NEVER the whole multi-tenant DB. Omitting branchId previously aggregated every org's invoices/payments/claims/balances + patient PHI.",
+          "description": "Cross-tenant report scoping: the five billing report/list endpoints whose branchId filter is OPTIONAL (AR aging, collections summary, payer aging, claim worklist, statement batch) MUST scope results to the caller's own active branches when branchId is omitted \u2014 NEVER the whole multi-tenant DB. Omitting branchId previously aggregated every org's invoices/payments/claims/balances + patient PHI.",
           "type": "authorization",
           "status": "implemented",
-          "source": "getArAging.ts, getCollectionsSummary.ts, getPayerArAging.ts, listInsuranceClaims.ts, generateStatementBatch.ts (getActiveBranchIdsForPerson → inArray scoping); org-billing.facade.ts getActiveBranchIdsForPerson",
+          "source": "getArAging.ts, getCollectionsSummary.ts, getPayerArAging.ts, listInsuranceClaims.ts, generateStatementBatch.ts (getActiveBranchIdsForPerson \u2192 inArray scoping); org-billing.facade.ts getActiveBranchIdsForPerson",
           "test": "dental-billing.cross-tenant-reports.test.ts (ORG_A caller omitting branchId excludes ORG_B claims/invoices/payments/balances on all 5 endpoints)",
-          "notes": "Found + fixed 2026-06-08 (dental-billing audit). Same class as V-PAT-002 / V-VIS-011 (caller-supplied branchId not an auth boundary) but the stronger 'omitted → unscoped' variant."
+          "notes": "Found + fixed 2026-06-08 (dental-billing audit). Same class as V-PAT-002 / V-VIS-011 (caller-supplied branchId not an auth boundary) but the stronger 'omitted \u2192 unscoped' variant."
         }
       ]
     },
@@ -209,7 +209,7 @@
       "rules": [
         {
           "id": "BR-014",
-          "description": "Consent form is immutable once signed. No edits, no re-signing (422 CONSENT_FORM_SIGNED), no deletion. The signed record is append-only. signed and revoked are mutually-exclusive terminal states: a signed form cannot be revoked (422 CONSENT_ALREADY_SIGNED) and — symmetrically — a revoked form cannot be signed (422 CONSENT_FORM_REVOKED, V-CLN-010).",
+          "description": "Consent form is immutable once signed. No edits, no re-signing (422 CONSENT_FORM_SIGNED), no deletion. The signed record is append-only. signed and revoked are mutually-exclusive terminal states: a signed form cannot be revoked (422 CONSENT_ALREADY_SIGNED) and \u2014 symmetrically \u2014 a revoked form cannot be signed (422 CONSENT_FORM_REVOKED, V-CLN-010).",
           "type": "compliance",
           "status": "implemented",
           "source": "dental-clinical handlers (signConsentForm.ts, revokeConsentForm.ts, consent-form.repo.ts) + consent-sheet.tsx",
@@ -224,21 +224,21 @@
         },
         {
           "id": "BR-017",
-          "description": "Prescription creation requires a prescriberMemberId — the ID of a dentist-role member. Non-dentist staff cannot write prescriptions.",
+          "description": "Prescription creation requires a prescriberMemberId \u2014 the ID of a dentist-role member. Non-dentist staff cannot write prescriptions.",
           "type": "authorization",
           "status": "implemented",
           "source": "dental-clinical handlers + rx-sheet.tsx"
         },
         {
           "id": "BR-018",
-          "description": "Lab order state lifecycle: ordered → in_fabrication → delivered → fitted / cancelled. A terminal order cannot transition to any other state; the `delivered` transition is the LabOrderCompleted (DE-015) marker. (Description corrected from stale ordered→in_progress→completed wording — TRACEABILITY 2026-06-08.)",
+          "description": "Lab order state lifecycle: ordered \u2192 in_fabrication \u2192 delivered \u2192 fitted / cancelled. A terminal order cannot transition to any other state; the `delivered` transition is the LabOrderCompleted (DE-015) marker. (Description corrected from stale ordered\u2192in_progress\u2192completed wording \u2014 TRACEABILITY 2026-06-08.)",
           "type": "state-machine",
           "status": "implemented",
-          "source": "dental-clinical handlers — lab-orders/updateLabOrder.ts; tested in clinical-consent-lab.test.ts"
+          "source": "dental-clinical handlers \u2014 lab-orders/updateLabOrder.ts; tested in clinical-consent-lab.test.ts"
         },
         {
           "id": "V-CLN-010",
-          "description": "A revoked consent form can never become signed (symmetric with the signed→revoke guard). Enforced in three layers: signConsentForm rejects existing.revoked → 422 CONSENT_FORM_REVOKED; ConsentFormRepository.sign() adds revoked=false to its WHERE (race-safe); and the treatment/billing consent gate hasSignedConsentForVisit matches signed=true AND revoked=false so a revoked consent never satisfies the treatment status=performed or billing guard (WF-035: patient revokes → treatment blocked). Closes a consent-integrity hole where revoke-then-sign produced a signed+revoked row that the signed-only gate would have honored.",
+          "description": "A revoked consent form can never become signed (symmetric with the signed\u2192revoke guard). Enforced in three layers: signConsentForm rejects existing.revoked \u2192 422 CONSENT_FORM_REVOKED; ConsentFormRepository.sign() adds revoked=false to its WHERE (race-safe); and the treatment/billing consent gate hasSignedConsentForVisit matches signed=true AND revoked=false so a revoked consent never satisfies the treatment status=performed or billing guard (WF-035: patient revokes \u2192 treatment blocked). Closes a consent-integrity hole where revoke-then-sign produced a signed+revoked row that the signed-only gate would have honored.",
           "type": "compliance",
           "status": "implemented",
           "source": "dental-clinical/consent/signConsentForm.ts; repos/consent-form.repo.ts; repos/clinical-visit.facade.ts; repos/consent-billing.facade.ts",
@@ -271,7 +271,7 @@
       "rules": [
         {
           "id": "BR-015",
-          "description": "Patient registration requires explicit consent (consentGiven: true), else 422 CONSENT_REQUIRED. Single-consent model (V-PAT-004): registration captures ONE consent flag persisted as a JSONB consent object { registrationConsent, capturedAt } on the person record — NOT the legacy 4-flag marketing/data_sharing/sms/email split (never implemented, removed). Per-channel communication consent is a separate endpoint (P1-28).",
+          "description": "Patient registration requires explicit consent (consentGiven: true), else 422 CONSENT_REQUIRED. Single-consent model (V-PAT-004): registration captures ONE consent flag persisted as a JSONB consent object { registrationConsent, capturedAt } on the person record \u2014 NOT the legacy 4-flag marketing/data_sharing/sms/email split (never implemented, removed). Per-channel communication consent is a separate endpoint (P1-28).",
           "type": "validation",
           "status": "implemented",
           "source": "dental-patient/identity/createDentalPatient.ts:38",
@@ -284,11 +284,11 @@
           "status": "implemented",
           "source": "dental-patient/identity/updateDentalPatient.ts:35; engagement/followUpNotes.ts:63",
           "test": "dental-patient.test.ts:1282-1350",
-          "notes": "Enforced on the demographics/follow-up/recall write paths; sub-resource handlers (insurance/contacts/alerts/tasks/household) do not carry the archived-write guard — tracked test/impl backlog."
+          "notes": "Enforced on the demographics/follow-up/recall write paths; sub-resource handlers (insurance/contacts/alerts/tasks/household) do not carry the archived-write guard \u2014 tracked test/impl backlog."
         },
         {
           "id": "BR-015c",
-          "description": "Follow-up notes are append-only — only GET (list) and POST (add) routes exist; there is no PATCH/DELETE route, so edits/deletes cannot occur.",
+          "description": "Follow-up notes are append-only \u2014 only GET (list) and POST (add) routes exist; there is no PATCH/DELETE route, so edits/deletes cannot occur.",
           "type": "compliance",
           "status": "implemented",
           "source": "dental-patient/engagement/followUpNotes.ts (list + add only); generated routes register GET+POST only",
@@ -296,10 +296,10 @@
         },
         {
           "id": "BR-019",
-          "description": "Clinical records are immutable and append-only. Corrections are additive amendments — the original entry is preserved.",
+          "description": "Clinical records are immutable and append-only. Corrections are additive amendments \u2014 the original entry is preserved.",
           "type": "compliance",
           "status": "partial",
-          "source": "Per V3 PRD §2.3 constraints",
+          "source": "Per V3 PRD \u00a72.3 constraints",
           "notes": "Enforced at API level; no amendment UI yet"
         },
         {
@@ -312,7 +312,7 @@
         },
         {
           "id": "TP-BR-005",
-          "description": "Completing one treatment-plan item must NOT complete the whole plan unless ALL items are complete. Plan status is derived from linked treatments: all done→completed, some done→partially_completed, none→approved; dismissed/declined treatments are excluded from the denominator.",
+          "description": "Completing one treatment-plan item must NOT complete the whole plan unless ALL items are complete. Plan status is derived from linked treatments: all done\u2192completed, some done\u2192partially_completed, none\u2192approved; dismissed/declined treatments are excluded from the denominator.",
           "type": "state-machine",
           "status": "implemented",
           "source": "dental-patient/treatment-plans/repos/treatment-plan.schema.ts:56 deriveTreatmentPlanStatus; treatment-plan.repo.ts:82 recomputeStatus",
@@ -321,11 +321,11 @@
       ]
     },
     "dental-pmd": {
-      "description": "Portable Medical Document (canonical expansion; V-PMD-009) rules — per-visit immutable signed snapshots, external PMD import + immutability, checksum integrity, identity binding, patient-self access, continuity-of-care export.",
+      "description": "Portable Medical Document (canonical expansion; V-PMD-009) rules \u2014 per-visit immutable signed snapshots, external PMD import + immutability, checksum integrity, identity binding, patient-self access, continuity-of-care export.",
       "rules": [
         {
           "id": "BR-021",
-          "description": "A PMD is an immutable per-visit snapshot generated ONLY from a completed or locked visit (otherwise 422 VISIT_NOT_COMPLETED). Content is SHA-256 checksummed (sha256-<hex>) and sealed; future changes to the source visit do NOT alter the PMD. Re-generation supersedes the prior row (generated→superseded) and never mutates a superseded row's content/checksum.",
+          "description": "A PMD is an immutable per-visit snapshot generated ONLY from a completed or locked visit (otherwise 422 VISIT_NOT_COMPLETED). Content is SHA-256 checksummed (sha256-<hex>) and sealed; future changes to the source visit do NOT alter the PMD. Re-generation supersedes the prior row (generated\u2192superseded) and never mutates a superseded row's content/checksum.",
           "type": "compliance",
           "status": "implemented",
           "source": "generatePMD.ts (VISIT_NOT_COMPLETED guard, sha256Hex, supersede)",
@@ -336,18 +336,18 @@
         },
         {
           "id": "BR-022",
-          "description": "An imported external PMD is stored verbatim and is READ-ONLY after creation. PATCH/PUT/DELETE on /dental/pmd/imported/:id are rejected at the route level with 405 IMPORTED_PMD_IMMUTABLE (not 403 — there is no GET-only generated mutate route; the guard lives in app.ts). Its data is never auto-merged into the patient's editable records; the Safety Floor merge is add-only and never mutates imported content.",
+          "description": "An imported external PMD is stored verbatim and is READ-ONLY after creation. PATCH/PUT/DELETE on /dental/pmd/imported/:id are rejected at the route level with 405 IMPORTED_PMD_IMMUTABLE (not 403 \u2014 there is no GET-only generated mutate route; the guard lives in app.ts). Its data is never auto-merged into the patient's editable records; the Safety Floor merge is add-only and never mutates imported content.",
           "type": "data-integrity",
           "status": "implemented",
           "source": "app.ts (405 IMPORTED_PMD_IMMUTABLE guard), importPMD.ts (verbatim store)",
           "tests": [
-            "imported-pmd-immutable.test.ts (real-app PATCH/PUT/DELETE → 405)",
+            "imported-pmd-immutable.test.ts (real-app PATCH/PUT/DELETE \u2192 405)",
             "dental-pmd.test.ts (AC-PMD-03 verbatim)"
           ]
         },
         {
           "id": "N-PMD-02",
-          "description": "Identity binding: the PMD's patientId is derived from the VISIT (single source of truth), never the request body. A body.patientId disagreeing with visit.patientId → 422 PATIENT_VISIT_MISMATCH; the checksum-sealed content always carries visit.patientId so no client-controllable id can leak into a non-repudiation record.",
+          "description": "Identity binding: the PMD's patientId is derived from the VISIT (single source of truth), never the request body. A body.patientId disagreeing with visit.patientId \u2192 422 PATIENT_VISIT_MISMATCH; the checksum-sealed content always carries visit.patientId so no client-controllable id can leak into a non-repudiation record.",
           "type": "security",
           "status": "implemented",
           "source": "generatePMD.ts (PATIENT_VISIT_MISMATCH; patientId = visit.patientId)",
@@ -358,7 +358,7 @@
         },
         {
           "id": "EF-PMD-001",
-          "description": "Import checksum verification: when body.checksum is supplied, the server recomputes sha256-<hex> of body.content and rejects a mismatch with 422 CHECKSUM_MISMATCH. checksum is optional (import without one → 201).",
+          "description": "Import checksum verification: when body.checksum is supplied, the server recomputes sha256-<hex> of body.content and rejects a mismatch with 422 CHECKSUM_MISMATCH. checksum is optional (import without one \u2192 201).",
           "type": "data-integrity",
           "status": "implemented",
           "source": "importPMD.ts (computeChecksum, CHECKSUM_MISMATCH)",
@@ -368,7 +368,7 @@
         },
         {
           "id": "EF-PMD-005",
-          "description": "sourceDescription is REQUIRED on import (identifies the originating software system, e.g. 'Open Dental v21.1') for data-provenance audit; persisted and returned. Capped at 200 chars (V-PMD-010) → 422 VALIDATION_ERROR if exceeded.",
+          "description": "sourceDescription is REQUIRED on import (identifies the originating software system, e.g. 'Open Dental v21.1') for data-provenance audit; persisted and returned. Capped at 200 chars (V-PMD-010) \u2192 422 VALIDATION_ERROR if exceeded.",
           "type": "compliance",
           "status": "implemented",
           "source": "importPMD.ts (sourceDescription required + 200-char guard)",
@@ -411,28 +411,28 @@
         },
         {
           "id": "BR-P02",
-          "description": "Perio chart is immutable once the parent visit is completed/locked. Writes (create/upsert/complete) on a sealed visit are rejected: create→422 VISIT_LOCKED, upsert→422 VISIT_IMMUTABLE, complete→422 VISIT_LOCKED. A completed/locked chart itself rejects further writes as a 409 CHART_COMPLETED state conflict (N-PER-01).",
+          "description": "Perio chart is immutable once the parent visit is completed/locked. Writes (create/upsert/complete) on a sealed visit are rejected: create\u2192422 VISIT_LOCKED, upsert\u2192422 VISIT_IMMUTABLE, complete\u2192422 VISIT_LOCKED. A completed/locked chart itself rejects further writes as a 409 CHART_COMPLETED state conflict (N-PER-01).",
           "type": "data-integrity",
           "status": "implemented",
           "source": "createPerioChart.ts:39-41; upsertToothReading.ts:59-68; completePerioChart.ts:64-73; dental-perio-coverage.test.ts:231,374,531,624"
         },
         {
           "id": "BR-P03",
-          "description": "Probing depths must be integers 0-20mm per site; recession -5..20mm. Out of range → 422 INVALID_DEPTH.",
+          "description": "Probing depths must be integers 0-20mm per site; recession -5..20mm. Out of range \u2192 422 INVALID_DEPTH.",
           "type": "validation",
           "status": "implemented",
           "source": "utils/perio-validation.ts assertValidDepths; perio-validation.test.ts"
         },
         {
           "id": "BR-P04",
-          "description": "FDI tooth number must fall in a valid quadrant range (adult 11-18/21-28/31-38/41-48; primary 51-55/61-65/71-75/81-85). Cross-quadrant gaps (e.g. 19) → 422 INVALID_TOOTH_NUMBER. The TypeSpec @minValue/@maxValue only bounds 11-85; the precise disjoint check is in the handler.",
+          "description": "FDI tooth number must fall in a valid quadrant range (adult 11-18/21-28/31-38/41-48; primary 51-55/61-65/71-75/81-85). Cross-quadrant gaps (e.g. 19) \u2192 422 INVALID_TOOTH_NUMBER. The TypeSpec @minValue/@maxValue only bounds 11-85; the precise disjoint check is in the handler.",
           "type": "validation",
           "status": "implemented",
           "source": "utils/perio-validation.ts isValidFdiToothNumber; dental-perio-coverage.test.ts:427"
         },
         {
           "id": "BR-P05",
-          "description": "Chart create/upsert/complete require a clinical role (dentist_owner, dentist_associate, hygienist) on the chart's branch. Non-clinical branch members (staff_scheduling/staff_full) and non-members → 403. Read (get/list) additionally allows staff_full; staff_scheduling is excluded from all perio access (EF-PER-002).",
+          "description": "Chart create/upsert/complete require a clinical role (dentist_owner, dentist_associate, hygienist) on the chart's branch. Non-clinical branch members (staff_scheduling/staff_full) and non-members \u2192 403. Read (get/list) additionally allows staff_full; staff_scheduling is excluded from all perio access (EF-PER-002).",
           "type": "access-control",
           "status": "implemented",
           "source": "createPerioChart.ts:44; upsertToothReading.ts:71; completePerioChart.ts:75; getPerioChart.ts:34; dental-perio-coverage.test.ts:219,237(staff_scheduling create 403),362,794,813"
@@ -446,24 +446,24 @@
         },
         {
           "id": "BR-P07",
-          "description": "Completing a chart requires a minimum reading count: adult 16, primary (FDI 51-85) 8 (dentition inferred from charted tooth numbers). Below the minimum → 422 INSUFFICIENT_READINGS.",
+          "description": "Completing a chart requires a minimum reading count: adult 16, primary (FDI 51-85) 8 (dentition inferred from charted tooth numbers). Below the minimum \u2192 422 INSUFFICIENT_READINGS.",
           "type": "business-rule",
           "status": "implemented",
           "source": "completePerioChart.ts:84-93; dental-perio-coverage.test.ts:578,740,750"
         },
         {
           "id": "V-PER-007",
-          "description": "Visit-lock → chart-lock cascade. The chart `locked` state is materialized lazily on the next perio read/write: when the parent visit is completed/locked, a not-yet-locked chart transitions to `locked` and a perio.chart.locked audit marker is written (ADR-006: audit-log-only, no event bus).",
+          "description": "Visit-lock \u2192 chart-lock cascade. The chart `locked` state is materialized lazily on the next perio read/write: when the parent visit is completed/locked, a not-yet-locked chart transitions to `locked` and a perio.chart.locked audit marker is written (ADR-006: audit-log-only, no event bus).",
           "type": "state-machine",
           "status": "implemented",
           "source": "utils/perio-lock-cascade.ts; perio-chart.repo.ts lockByVisitId; dental-perio-coverage.test.ts:545"
         },
         {
           "id": "V-PER-STAGING",
-          "description": "On completion the chart is classified per the 2017 AAP/EFP system (stage from worst interdental CAL + complexity factors; grade from %bone-loss/age + smoking/diabetes modifiers; extent). Stage/extent are null without evidence; grade defaults to B. IDEAL-§343: remainingTeeth is NOT inferred from the charted-tooth count — a partial chart of a fully-dentate patient is not over-staged to IV via the <20-teeth factor.",
+          "description": "On completion the chart is classified per the 2017 AAP/EFP system (stage from worst interdental CAL + complexity factors; grade from %bone-loss/age + smoking/diabetes modifiers; extent). Stage/extent are null without evidence; grade defaults to B. IDEAL-\u00a7343: remainingTeeth is NOT inferred from the charted-tooth count \u2014 a partial chart of a fully-dentate patient is not over-staged to IV via the <20-teeth factor.",
           "type": "clinical-correctness",
           "status": "implemented",
-          "source": "utils/perio-staging.ts; utils/perio-classify-chart.ts:118; completePerioChart.ts:126; perio-staging.test.ts; perio-classify-chart.test.ts (IDEAL-§343 case)"
+          "source": "utils/perio-staging.ts; utils/perio-classify-chart.ts:118; completePerioChart.ts:126; perio-staging.test.ts; perio-classify-chart.test.ts (IDEAL-\u00a7343 case)"
         }
       ]
     },
@@ -475,7 +475,7 @@
           "description": "Annotations are non-destructive overlays on top of immutable images. Geometry is stored in imaging_annotation.data (JSONB); the underlying image record is never mutated.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "imaging.schema.ts:89–109, updateAnnotation.ts"
+          "source": "imaging.schema.ts:89\u2013109, updateAnnotation.ts"
         },
         {
           "id": "BR-024",
@@ -490,28 +490,28 @@
           "description": "An image must be linked to a patient (patient_id NOT NULL). It may optionally be linked to a visit and/or specific teeth via join table.",
           "type": "referential-integrity",
           "status": "implemented",
-          "source": "imaging.schema.ts:56–87"
+          "source": "imaging.schema.ts:56\u201387"
         },
         {
           "id": "BR-026",
           "description": "Image deletion is default-deny. Only dentist and associate roles may delete images. All other roles receive 403.",
           "type": "access-control",
           "status": "implemented",
-          "source": "deleteImage.ts:21,43–46 — ROLES_ALLOWED_TO_DELETE"
+          "source": "deleteImage.ts:21,43\u201346 \u2014 ROLES_ALLOWED_TO_DELETE"
         },
         {
           "id": "BR-027",
           "description": "An associate may only delete images they personally acquired (acquiredBy === user.id). Attempting to delete another user's image returns 403.",
           "type": "access-control",
           "status": "implemented",
-          "source": "deleteImage.ts:49–51"
+          "source": "deleteImage.ts:49\u201351"
         },
         {
           "id": "BR-028",
           "description": "Image deletion is soft-only. DELETE sets status='archived'; no row is physically removed.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "imaging.repo.ts:110–114 — archiveImage()"
+          "source": "imaging.repo.ts:110\u2013114 \u2014 archiveImage()"
         },
         {
           "id": "BR-029",
@@ -525,7 +525,7 @@
           "description": "Legacy dental_attachment records are surfaced as imaging items via a union adapter in listPatientImages. Document and deleted attachments are excluded.",
           "type": "backwards-compatibility",
           "status": "implemented",
-          "source": "listPatientImages.ts:82–130"
+          "source": "listPatientImages.ts:82\u2013130"
         },
         {
           "id": "BR-031",
@@ -554,7 +554,7 @@
           "description": "Allowed image formats: JPEG, PNG, TIFF, BMP. Uploads with other MIME types are rejected with 422.",
           "type": "validation",
           "status": "implemented",
-          "source": "createImagingStudy.ts:39–43 — ALLOWED_IMAGING_MIME_TYPES"
+          "source": "createImagingStudy.ts:39\u201343 \u2014 ALLOWED_IMAGING_MIME_TYPES"
         },
         {
           "id": "BR-035",
@@ -565,25 +565,25 @@
         },
         {
           "id": "CIMG-001",
-          "description": "Cephalometric (and CBCT) features require the 'addon' imaging tier. The gate is strict-equality `imagingTier !== 'addon'` (BR-016c), so BOTH 'free' AND 'basic' are blocked with 403 IMAGING_TIER_REQUIRED — 'basic' is 2-D-only and does NOT unlock ceph. Enforced before any DB write; cephalometric/CBCT study CREATE is gated too, not just downstream ceph endpoints.",
+          "description": "Cephalometric (and CBCT) features require the 'addon' imaging tier. The gate is strict-equality `imagingTier !== 'addon'` (BR-016c), so BOTH 'free' AND 'basic' are blocked with 403 IMAGING_TIER_REQUIRED \u2014 'basic' is 2-D-only and does NOT unlock ceph. Enforced before any DB write; cephalometric/CBCT study CREATE is gated too, not just downstream ceph endpoints.",
           "type": "access-control",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers + createImagingStudy.ts — getImagingTierForBranch, `!== 'addon'` check",
-          "notes": "Corrects the prior 'free or null' wording which omitted the 'basic'-blocked case (proved by imaging-coverage.test.ts EF-IMG-009 basic→403)."
+          "source": "All CephMgmt_*.ts handlers + createImagingStudy.ts \u2014 getImagingTierForBranch, `!== 'addon'` check",
+          "notes": "Corrects the prior 'free or null' wording which omitted the 'basic'-blocked case (proved by imaging-coverage.test.ts EF-IMG-009 basic\u2192403)."
         },
         {
           "id": "CIMG-002",
-          "description": "A null/absent imagingTier is treated as no-access (blocked, 403) — never interpreted as unlimited access. Identical outcome to 'free' and 'basic': only an explicit 'addon' unlocks ceph/CBCT.",
+          "description": "A null/absent imagingTier is treated as no-access (blocked, 403) \u2014 never interpreted as unlimited access. Identical outcome to 'free' and 'basic': only an explicit 'addon' unlocks ceph/CBCT.",
           "type": "access-control",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers — `!== 'addon'` is true for null"
+          "source": "All CephMgmt_*.ts handlers \u2014 `!== 'addon'` is true for null"
         },
         {
           "id": "CIMG-003",
-          "description": "Ceph landmark status transitions are strictly forward: placed → confirmed → locked. locked is terminal — no further status changes are permitted.",
+          "description": "Ceph landmark status transitions are strictly forward: placed \u2192 confirmed \u2192 locked. locked is terminal \u2014 no further status changes are permitted.",
           "type": "state-guard",
           "status": "implemented",
-          "source": "imaging_ceph.schema.ts — CEPH_LANDMARK_TRANSITIONS"
+          "source": "imaging_ceph.schema.ts \u2014 CEPH_LANDMARK_TRANSITIONS"
         },
         {
           "id": "CIMG-004",
@@ -594,7 +594,7 @@
         },
         {
           "id": "CIMG-005",
-          "description": "Invalid landmark status transitions (e.g., confirmed → placed, locked → confirmed) are rejected with 422 and code INVALID_STATUS_TRANSITION.",
+          "description": "Invalid landmark status transitions (e.g., confirmed \u2192 placed, locked \u2192 confirmed) are rejected with 422 and code INVALID_STATUS_TRANSITION.",
           "type": "state-guard",
           "status": "implemented",
           "source": "CephMgmt_updateCephLandmark.ts"
@@ -604,21 +604,21 @@
           "description": "Ceph report generation is gated on four required landmarks (A, B, Go, Po) all having status confirmed. Attempting to generate a report without all four confirmed returns a validation error.",
           "type": "business-logic",
           "status": "implemented",
-          "source": "imaging_ceph.schema.ts — CEPH_REPORT_GATE_LANDMARKS, CephMgmt_createCephReport.ts"
+          "source": "imaging_ceph.schema.ts \u2014 CEPH_REPORT_GATE_LANDMARKS, CephMgmt_createCephReport.ts"
         },
         {
           "id": "CIMG-007",
           "description": "Branch isolation applies to all ceph endpoints. A non-member requesting any CephMgmt_* endpoint receives 404 (not 403) to avoid leaking branch existence.",
           "type": "multi-tenancy",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers — assertBranchAccess"
+          "source": "All CephMgmt_*.ts handlers \u2014 assertBranchAccess"
         },
         {
           "id": "CIMG-008",
-          "description": "Ceph reports are immutable versioned snapshots. Each report has a monotonically incrementing version per image (1, 2, 3…). No update or delete handlers exist.",
+          "description": "Ceph reports are immutable versioned snapshots. Each report has a monotonically incrementing version per image (1, 2, 3\u2026). No update or delete handlers exist.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "imaging_ceph.schema.ts — imagingCephReports (no update handler)"
+          "source": "imaging_ceph.schema.ts \u2014 imagingCephReports (no update handler)"
         },
         {
           "id": "CIMG-009",
@@ -629,11 +629,11 @@
         },
         {
           "id": "CIMG-010",
-          "description": "analysisType is selected by the ?analysisType= query param and defaults to 'steiner_hybrid_sn'. Six protocols ship (steiner_hybrid_sn, ricketts, downs, tweed, mcnamara, jarabak); an unknown value is rejected 422 UNSUPPORTED_ANALYSIS_TYPE (never silently defaulted — showing the wrong analysis is a safety bug). The response echoes the requested analysisType.",
+          "description": "analysisType is selected by the ?analysisType= query param and defaults to 'steiner_hybrid_sn'. Six protocols ship (steiner_hybrid_sn, ricketts, downs, tweed, mcnamara, jarabak); an unknown value is rejected 422 UNSUPPORTED_ANALYSIS_TYPE (never silently defaulted \u2014 showing the wrong analysis is a safety bug). The response echoes the requested analysisType.",
           "type": "response-contract",
           "status": "implemented",
           "source": "getCephAnalysis.ts / recomputeCephAnalysis.ts (ANALYSIS_TYPES guard); @monobase/ceph-math ANALYSIS_TYPES (index.ts:400)",
-          "notes": "Supersedes the prior v1.4 'only steiner_hybrid_sn' claim — multi-analysis shipped."
+          "notes": "Supersedes the prior v1.4 'only steiner_hybrid_sn' claim \u2014 multi-analysis shipped."
         },
         {
           "id": "CIMG-011",
@@ -644,49 +644,49 @@
         },
         {
           "id": "CIMG-012",
-          "description": "Version numbers for ceph reports are monotonically increasing per image (1, 2, 3…). A DB unique constraint on (imageId, version) prevents duplicate versions.",
+          "description": "Version numbers for ceph reports are monotonically increasing per image (1, 2, 3\u2026). A DB unique constraint on (imageId, version) prevents duplicate versions.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "imaging_ceph.schema.ts — unique index on (imageId, version); createReportVersion()"
+          "source": "imaging_ceph.schema.ts \u2014 unique index on (imageId, version); createReportVersion()"
         },
         {
           "id": "CIMG-013",
-          "description": "updateCephLandmark (PATCH) returns { items, analysis } — the full landmark list plus recomputed analysis, not just the patched landmark.",
+          "description": "updateCephLandmark (PATCH) returns { items, analysis } \u2014 the full landmark list plus recomputed analysis, not just the patched landmark.",
           "type": "response-contract",
           "status": "implemented",
           "source": "CephMgmt_updateCephLandmark.ts"
         },
         {
           "id": "CIMG-014",
-          "description": "A locked landmark is immutable across all three mutation axes: coordinate PATCH → 422 LANDMARK_LOCKED; status PATCH → 422 LANDMARK_LOCKED; DELETE → 422 LANDMARK_LOCKED.",
+          "description": "A locked landmark is immutable across all three mutation axes: coordinate PATCH \u2192 422 LANDMARK_LOCKED; status PATCH \u2192 422 LANDMARK_LOCKED; DELETE \u2192 422 LANDMARK_LOCKED.",
           "type": "state-guard",
           "status": "implemented",
           "source": "CephMgmt_updateCephLandmark.ts, CephMgmt_deleteCephLandmark.ts"
         },
         {
           "id": "CIMG-015",
-          "description": "recomputeCephAnalysis (POST /analysis/recompute) returns a single CephAnalysis object — not { items, analysis }. The endpoint is idempotent.",
+          "description": "recomputeCephAnalysis (POST /analysis/recompute) returns a single CephAnalysis object \u2014 not { items, analysis }. The endpoint is idempotent.",
           "type": "response-contract",
           "status": "implemented",
           "source": "CephMgmt_recomputeCephAnalysis.ts"
         },
         {
           "id": "BR-036",
-          "description": "Ceph landmark batch upsert is idempotent — upserting the same landmark id with new coordinates replaces the existing entry without creating a duplicate row. Upsert semantics are enforced at the DB layer via onConflictDoUpdate.",
+          "description": "Ceph landmark batch upsert is idempotent \u2014 upserting the same landmark id with new coordinates replaces the existing entry without creating a duplicate row. Upsert semantics are enforced at the DB layer via onConflictDoUpdate.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "CephMgmt_batchUpsertCephLandmarks.ts; imaging_ceph.repo.ts — upsertLandmarks()"
+          "source": "CephMgmt_batchUpsertCephLandmarks.ts; imaging_ceph.repo.ts \u2014 upsertLandmarks()"
         },
         {
           "id": "BR-037",
           "description": "A batch upsert of landmarks is rejected in its entirety if any landmark in the batch is locked. The handler skips locked landmarks silently (no partial application, no error). This protects locked entries without requiring the caller to pre-filter.",
           "type": "state-guard",
           "status": "implemented",
-          "source": "CephMgmt_batchUpsertCephLandmarks.ts — locked-skip logic before upsert"
+          "source": "CephMgmt_batchUpsertCephLandmarks.ts \u2014 locked-skip logic before upsert"
         },
         {
           "id": "BR-038",
-          "description": "recomputeCephAnalysis is idempotent — calling it multiple times with unchanged landmark state produces identical measurement output each time. It writes to imagingCephAnalyses only and never creates a report row.",
+          "description": "recomputeCephAnalysis is idempotent \u2014 calling it multiple times with unchanged landmark state produces identical measurement output each time. It writes to imagingCephAnalyses only and never creates a report row.",
           "type": "computation-contract",
           "status": "implemented",
           "source": "CephMgmt_recomputeCephAnalysis.ts; design decision D-I"
@@ -696,28 +696,28 @@
           "description": "Calibration provenance is captured in the report snapshot at creation time. The pixelSpacingMm value used to compute measurements is frozen into snapshot.calibration. Subsequent calibration changes do not retroactively update existing report snapshots.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "CephMgmt_createCephReport.ts snapshot builder — calibration: { value, method }"
+          "source": "CephMgmt_createCephReport.ts snapshot builder \u2014 calibration: { value, method }"
         },
         {
           "id": "BR-040",
-          "description": "Ceph analysis requires calibration (pixelSpacingMm > 0) to display mm-unit measurements. When pixelSpacingMm is null or 0, raw pixel distances are computed but the calibration method is 'not_calibrated' — clients must label uncalibrated measurements visually to prevent clinical misinterpretation.",
+          "description": "Ceph analysis requires calibration (pixelSpacingMm > 0) to display mm-unit measurements. When pixelSpacingMm is null or 0, raw pixel distances are computed but the calibration method is 'not_calibrated' \u2014 clients must label uncalibrated measurements visually to prevent clinical misinterpretation.",
           "type": "ux-guard",
           "status": "implemented",
-          "source": "CephMgmt_recomputeCephAnalysis.ts — calibrationMethod logic; CephMgmt_createCephReport.ts snapshot"
+          "source": "CephMgmt_recomputeCephAnalysis.ts \u2014 calibrationMethod logic; CephMgmt_createCephReport.ts snapshot"
         },
         {
           "id": "BR-041",
           "description": "Any CephMgmt_* operation on a non-existent image returns 404. Non-members also receive 404 (not 403) to avoid leaking image existence. 403 is never returned for missing images.",
           "type": "multi-tenancy",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers — assertBranchAccess produces 404; ImagingRepository.getById returns 404"
+          "source": "All CephMgmt_*.ts handlers \u2014 assertBranchAccess produces 404; ImagingRepository.getById returns 404"
         },
         {
           "id": "BR-042",
-          "description": "Ceph report version numbers are monotonically increasing per image (1, 2, 3…). Gaps in version numbers are not permitted. A DB unique constraint on (imageId, version) enforces this and makes concurrent report creation race-safe.",
+          "description": "Ceph report version numbers are monotonically increasing per image (1, 2, 3\u2026). Gaps in version numbers are not permitted. A DB unique constraint on (imageId, version) enforces this and makes concurrent report creation race-safe.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "imaging_ceph.schema.ts — unique index on (imageId, version); ImagingCephRepository.createReportVersion()"
+          "source": "imaging_ceph.schema.ts \u2014 unique index on (imageId, version); ImagingCephRepository.createReportVersion()"
         },
         {
           "id": "BR-043",
@@ -731,58 +731,58 @@
           "description": "DELETE /dental/imaging/images/:imageId/ceph/landmarks/:landmarkId is permitted on landmarks with status confirmed or placed. Only locked landmarks are fully protected from deletion (returns 422 LANDMARK_LOCKED). Successful deletion resets the analysis state (triggers recompute or marks stale).",
           "type": "state-guard",
           "status": "implemented",
-          "source": "CephMgmt_deleteCephLandmark.ts — lock check; CIMG-014 lock matrix"
+          "source": "CephMgmt_deleteCephLandmark.ts \u2014 lock check; CIMG-014 lock matrix"
         },
         {
           "id": "BR-045",
-          "description": "Ceph report snapshot measurement fields (sna, snb, anb, witsAppraisal, etc.) are nullable. If a required landmark is absent at report-creation time, the corresponding measurement is null in the snapshot rather than blocking report creation. Missing measurements produce null values — not errors.",
+          "description": "Ceph report snapshot measurement fields (sna, snb, anb, witsAppraisal, etc.) are nullable. If a required landmark is absent at report-creation time, the corresponding measurement is null in the snapshot rather than blocking report creation. Missing measurements produce null values \u2014 not errors.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "CephMgmt_createCephReport.ts snapshot — measurements from computeCephAnalysis; D-4 snapshot completeness"
+          "source": "CephMgmt_createCephReport.ts snapshot \u2014 measurements from computeCephAnalysis; D-4 snapshot completeness"
         },
         {
           "id": "BR-046",
-          "description": "After a landmark's coordinates are updated via PATCH, the ceph analysis is marked stale. The analysis is not automatically recomputed — the user must explicitly trigger POST /analysis/recompute. Until recomputed, the { items, analysis } response from updateCephLandmark reflects the freshly recomputed state inline (CIMG-009), but subsequent getCephAnalysis reads may reflect pre-patch data until a standalone recompute is triggered.",
+          "description": "After a landmark's coordinates are updated via PATCH, the ceph analysis is marked stale. The analysis is not automatically recomputed \u2014 the user must explicitly trigger POST /analysis/recompute. Until recomputed, the { items, analysis } response from updateCephLandmark reflects the freshly recomputed state inline (CIMG-009), but subsequent getCephAnalysis reads may reflect pre-patch data until a standalone recompute is triggered.",
           "type": "computation-contract",
           "status": "implemented",
-          "source": "CephMgmt_updateCephLandmark.ts — inline recompute on write (CIMG-009); CephMgmt_recomputeCephAnalysis.ts"
+          "source": "CephMgmt_updateCephLandmark.ts \u2014 inline recompute on write (CIMG-009); CephMgmt_recomputeCephAnalysis.ts"
         },
         {
           "id": "BR-047",
-          "description": "All image-scoped CephMgmt_* routes require a valid imageId that exists in the imagingImages table. A request for a ceph operation on an imageId that does not exist returns 404. There is no study-level ceph endpoint — all ceph operations are image-scoped.",
+          "description": "All image-scoped CephMgmt_* routes require a valid imageId that exists in the imagingImages table. A request for a ceph operation on an imageId that does not exist returns 404. There is no study-level ceph endpoint \u2014 all ceph operations are image-scoped.",
           "type": "referential-integrity",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers — ImagingRepository.getById() guard"
+          "source": "All CephMgmt_*.ts handlers \u2014 ImagingRepository.getById() guard"
         }
       ]
     },
     "dental-audit": {
-      "description": "Compliance audit trail (table: dental_audit_log) — append-only, never deleted (HIPAA 7-year retention). No PHI in the log body: actor/target are UUIDs, and metadata + before/after snapshots are recursively PHI-sanitized at a single repository choke point. Read is branch-scoped and dentist_owner-only; viewing the log is itself a self-audited security event.",
+      "description": "Compliance audit trail (table: dental_audit_log) \u2014 append-only, never deleted (HIPAA 7-year retention). No PHI in the log body: actor/target are UUIDs, and metadata + before/after snapshots are recursively PHI-sanitized at a single repository choke point. Read is branch-scoped and dentist_owner-only; viewing the log is itself a self-audited security event.",
       "rules": [
         {
           "id": "AC-AUD-002",
-          "description": "Audit events are append-only and immutable — no UPDATE or DELETE, ever. Enforced at TWO layers: (1) HTTP — PATCH/PUT/DELETE /dental/audit-events/:id → 405 AUDIT_EVENT_IMMUTABLE; (2) DB — migration 0080 installs a BEFORE UPDATE OR DELETE FOR EACH ROW trigger on dental_audit_log that RAISEs 'append-only', so a direct SQL UPDATE/DELETE (compromised credential, errant migration) is also refused (defense-in-depth). There is NO update/delete handler or route for audit rows.",
+          "description": "Audit events are append-only and immutable \u2014 no UPDATE or DELETE, ever. Enforced at TWO layers: (1) HTTP \u2014 PATCH/PUT/DELETE /dental/audit-events/:id \u2192 405 AUDIT_EVENT_IMMUTABLE; (2) DB \u2014 migration 0080 installs a BEFORE UPDATE OR DELETE FOR EACH ROW trigger on dental_audit_log that RAISEs 'append-only', so a direct SQL UPDATE/DELETE (compromised credential, errant migration) is also refused (defense-in-depth). There is NO update/delete handler or route for audit rows.",
           "type": "compliance",
           "status": "implemented",
           "source": "app.ts:147-154 (405 guards); migration 0080_audit_log_append_only (DB trigger); no update/delete handler exists",
           "tests": [
-            "audit-append-only.test.ts (real-app PATCH/PUT/DELETE → 405 AUDIT_EVENT_IMMUTABLE)",
+            "audit-append-only.test.ts (real-app PATCH/PUT/DELETE \u2192 405 AUDIT_EVENT_IMMUTABLE)",
             "audit-immutability-db.test.ts (DB trigger rejects row UPDATE + DELETE; INSERT allowed)"
           ]
         },
         {
           "id": "AC-AUD-003 / EM-AUD-002",
-          "description": "Audit-log read is branch-scoped and dentist_owner-only. branchId is REQUIRED (omitted → 400 VALIDATION_ERROR) — without it AuditLogRepository.list applies no branch condition and would return rows across ALL tenants (cross-tenant PHI-adjacent leak). Role is checked via assertBranchRole against the dental_membership table (NOT the Better-Auth session field, EM-AUD-009), so a dentist_owner of org A passing org B's branchId has no membership there → 403. A non-owner role → 403.",
+          "description": "Audit-log read is branch-scoped and dentist_owner-only. branchId is REQUIRED (omitted \u2192 400 VALIDATION_ERROR) \u2014 without it AuditLogRepository.list applies no branch condition and would return rows across ALL tenants (cross-tenant PHI-adjacent leak). Role is checked via assertBranchRole against the dental_membership table (NOT the Better-Auth session field, EM-AUD-009), so a dentist_owner of org A passing org B's branchId has no membership there \u2192 403. A non-owner role \u2192 403.",
           "type": "security",
           "status": "implemented",
           "source": "getAuditEvents.ts:80-129 (branchId-required 400 + assertBranchRole dentist_owner)",
           "tests": [
-            "getAuditEvents.test.ts (401 unauth; 403 non-owner; 400 branchId-omitted; AC-AUD-003 ORG_A owner passing ORG_B branchId → 403 cross-tenant read denied)"
+            "getAuditEvents.test.ts (401 unauth; 403 non-owner; 400 branchId-omitted; AC-AUD-003 ORG_A owner passing ORG_B branchId \u2192 403 cross-tenant read denied)"
           ]
         },
         {
           "id": "AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A",
-          "description": "No PHI in the log body. The audit store is append-only/never-deleted, so PHI baked into metadata or the before/after JSONB snapshots is unremediable. A recursive PHI-key blocklist sanitizer strips identity/demographic/clinical keys (name, email, dob, ssn, mrn, diagnosis, medications, notes, …) at any nesting depth — applied at the AuditLogRepository.insert choke point so EVERY write path is covered (not only logAuditEvent). The viewer DTO additionally OMITS the before/after snapshot columns entirely (V-AUD-003).",
+          "description": "No PHI in the log body. The audit store is append-only/never-deleted, so PHI baked into metadata or the before/after JSONB snapshots is unremediable. A recursive PHI-key blocklist sanitizer strips identity/demographic/clinical keys (name, email, dob, ssn, mrn, diagnosis, medications, notes, \u2026) at any nesting depth \u2014 applied at the AuditLogRepository.insert choke point so EVERY write path is covered (not only logAuditEvent). The viewer DTO additionally OMITS the before/after snapshot columns entirely (V-AUD-003).",
           "type": "compliance",
           "status": "implemented",
           "source": "core/audit-phi-sanitizer.ts (recursive blocklist); audit-log.repo.ts:21-49 (choke-point sanitize); getAuditEvents.ts toDTO (drops snapshots)",
@@ -793,10 +793,10 @@
         },
         {
           "id": "AUD-BR-004",
-          "description": "Every audit row carries the mandatory fields: actorId (= the session user, the TRUE actor — never a caller-supplied display field), action, targetType, tenantId, and a server-set timestamp; branchId, eventType, before/after snapshots when supplied. logAuditEvent persists these to dental_audit_log (the authoritative sink read by the viewer) and dual-writes the legacy dental_audit table.",
+          "description": "Every audit row carries the mandatory fields: actorId (= the session user, the TRUE actor \u2014 never a caller-supplied display field), action, targetType, tenantId, and a server-set timestamp; branchId, eventType, before/after snapshots when supplied. logAuditEvent persists these to dental_audit_log (the authoritative sink read by the viewer) and dual-writes the legacy dental_audit table.",
           "type": "compliance",
           "status": "implemented",
-          "source": "core/audit-logger.ts:121-196 (logAuditEvent → AuditLogRepository.insert with personId=actorId)",
+          "source": "core/audit-logger.ts:121-196 (logAuditEvent \u2192 AuditLogRepository.insert with personId=actorId)",
           "tests": [
             "audit.test.ts (AUD-BR-004 row has actorId/action/targetType/timestamp/tenantId/branchId; snapshots round-trip)",
             "getAuditEvents.test.ts (V-AUD-NEW-B self-audit ACCESSED row actorId == session user)"
@@ -804,7 +804,7 @@
         },
         {
           "id": "V-AUD-NEW-B / WF-028",
-          "description": "Viewing the audit log is itself a privileged READ that MUST be self-audited: getAuditEvents writes one security-class 'audit_log.accessed' event (actor = the viewing owner, target_type = dental_audit_log) capturing filter scope/result counts ONLY — never PHI. logAuditEvent never throws, so the self-audit cannot break the read.",
+          "description": "Viewing the audit log is itself a privileged READ that MUST be self-audited: getAuditEvents writes one security-class 'audit_log.accessed' event (actor = the viewing owner, target_type = dental_audit_log) capturing filter scope/result counts ONLY \u2014 never PHI. logAuditEvent never throws, so the self-audit cannot break the read.",
           "type": "compliance",
           "status": "implemented",
           "source": "getAuditEvents.ts:150-177 (audit_log.accessed self-audit write)",
@@ -814,7 +814,7 @@
         },
         {
           "id": "V-AUD-007 / EM-AUD-008",
-          "description": "Audit writes are durability-hardened: a transient pooled-connection drop is retried once on a fresh connection (idempotent), the row id is generated explicitly (no reliance on a drifted DB default), and security-class events FAIL-CLOSED — a failed dental_audit_log write for a security event RETHROWS (ADR-005) rather than being silently swallowed, so a compliance write is never lost unnoticed.",
+          "description": "Audit writes are durability-hardened: a transient pooled-connection drop is retried once on a fresh connection (idempotent), the row id is generated explicitly (no reliance on a drifted DB default), and security-class events FAIL-CLOSED \u2014 a failed dental_audit_log write for a security event RETHROWS (ADR-005) rather than being silently swallowed, so a compliance write is never lost unnoticed.",
           "type": "reliability",
           "status": "implemented",
           "source": "core/audit-logger.ts:41-58,144-175 (withConnectionRetry, explicit id, fail-closed rethrow)",
@@ -825,36 +825,36 @@
       ]
     },
     "erasure-legal-hold-retention": {
-      "description": "Cross-cutting data-governance layer (WFG-006 / GDPR Art.17 / RA 10173 §34). Three cooperating handler dirs: dental-erasure (right-to-erasure: request→approve/reject anonymize workflow over dental_erasure_request), dental-legalhold (place/list/release holds over dental_legal_hold), retention (env-gated cron that soft-archives/anonymizes records past their dental_retention_policy period). Admin-only HTTP surface (cross-tenant platform-admin scope — a known product decision, not per-branch RBAC). Headline invariant: an ACTIVE legal hold blocks erasure AND excludes the subject from retention. Hard safety invariants live in the engines (anonymize-not-delete, never-touch-audit, dry-run default, soft-archive-over-hard-delete) so a bad policy/caller cannot cause data loss.",
+      "description": "Cross-cutting data-governance layer (WFG-006 / GDPR Art.17 / RA 10173 \u00a734). Three cooperating handler dirs: dental-erasure (right-to-erasure: request\u2192approve/reject anonymize workflow over dental_erasure_request), dental-legalhold (place/list/release holds over dental_legal_hold), retention (env-gated cron that soft-archives/anonymizes records past their dental_retention_policy period). Admin-only HTTP surface (cross-tenant platform-admin scope \u2014 a known product decision, not per-branch RBAC). Headline invariant: an ACTIVE legal hold blocks erasure AND excludes the subject from retention. Hard safety invariants live in the engines (anonymize-not-delete, never-touch-audit, dry-run default, soft-archive-over-hard-delete) so a bad policy/caller cannot cause data loss.",
       "rules": [
         {
-          "id": "V-DG-002-LH (legal-hold blocks erasure — headline invariant)",
-          "description": "A subject under an ACTIVE legal hold is NEVER anonymized. approveErasure consults the real dental_legal_hold store (isPersonUnderLegalHold) — OR a reviewer-asserted flag — and on a hold marks the request 'rejected' with legalHoldBlocked=true, touching no subject data; the engine short-circuits before any target runs (audited erasure.blocked_legal_hold). Releasing the hold then allows a fresh request to anonymize. Never bypassable.",
+          "id": "V-DG-002-LH (legal-hold blocks erasure \u2014 headline invariant)",
+          "description": "A subject under an ACTIVE legal hold is NEVER anonymized. approveErasure consults the real dental_legal_hold store (isPersonUnderLegalHold) \u2014 OR a reviewer-asserted flag \u2014 and on a hold marks the request 'rejected' with legalHoldBlocked=true, touching no subject data; the engine short-circuits before any target runs (audited erasure.blocked_legal_hold). Releasing the hold then allows a fresh request to anonymize. Never bypassable.",
           "type": "compliance",
           "status": "implemented",
           "source": "erasure-engine.ts:117-122 (legal-hold short-circuit); erasure-service.ts:106-137 (consults isPersonUnderLegalHold store)",
           "tests": [
-            "erasure-legalhold.test.ts (real store: active hold blocks approval, subject kept; release → anonymizes)",
+            "erasure-legalhold.test.ts (real store: active hold blocks approval, subject kept; release \u2192 anonymizes)",
             "erasure-engine.test.ts (LEGAL-HOLD blocks erasure: no target touched, refusal audited)",
             "erasure-service.test.ts (legal hold blocks approval: rejected, subject NOT anonymized)",
-            "erasure-routes.test.ts (legal hold on approve → request rejected, subject kept)"
+            "erasure-routes.test.ts (legal hold on approve \u2192 request rejected, subject kept)"
           ]
         },
         {
           "id": "V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)",
-          "description": "Approval redacts PII in place and keeps the de-identified row across Person (name→[ERASED] pseudonym, contactInfo nulled), Patient (emergency contact/provider/pharmacy/history/prefs nulled), ConsentForm (signer identity redacted, state kept), and Imaging (DICOM/finding/annotation identifiers nulled). Engine is DRY-RUN by default — real anonymization only on explicit dryRun:false (approval is the opt-in). Idempotent (a re-run anonymizes 0 → noop, still audited). The ONLY hard delete is the physical S3 radiograph object + its storage file row (DATA_GOVERNANCE §3), performed fail-open at handler scope after the anonymization commits.",
+          "description": "Approval redacts PII in place and keeps the de-identified row across Person (name\u2192[ERASED] pseudonym, contactInfo nulled), Patient (emergency contact/provider/pharmacy/history/prefs nulled), ConsentForm (signer identity redacted, state kept), and Imaging (DICOM/finding/annotation identifiers nulled). Engine is DRY-RUN by default \u2014 real anonymization only on explicit dryRun:false (approval is the opt-in). Idempotent (a re-run anonymizes 0 \u2192 noop, still audited). The ONLY hard delete is the physical S3 radiograph object + its storage file row (DATA_GOVERNANCE \u00a73), performed fail-open at handler scope after the anonymization commits.",
           "type": "compliance",
           "status": "implemented",
           "source": "erasure-engine.ts:95-157 (dry-run default, anonymize loop); erasure-targets.ts (Person/Patient/ConsentForm/Imaging facades); erasure-storage.ts (physical S3 + file-row delete, fail-open)",
           "tests": [
             "erasure-service.test.ts (approve anonymizes person+patient: firstName=[ERASED], contactInfo/emergencyContact null)",
             "erasure-engine.test.ts (dry-run default touches nothing; idempotent noop still audited)",
-            "erasure-s3-delete.test.ts (S3 object + storage row deleted; FAIL-OPEN on deleteFile throw → file left pending, idempotent retry)"
+            "erasure-s3-delete.test.ts (S3 object + storage row deleted; FAIL-OPEN on deleteFile throw \u2192 file left pending, idempotent retry)"
           ]
         },
         {
           "id": "V-DG-002-AU (erasure audited AND the audit trail survives the erasure)",
-          "description": "Every erasure transition writes an audit event (erasure.requested / erasure.anonymized [security, fail-closed] / erasure.rejected / erasure.blocked_legal_hold / erasure.s3_deleted) via the append-only sink. The engine has NO purge/modify path for the audit trail — it only APPENDS. dental_audit_log has no FK to person and erasure anonymizes (never hard-deletes) the subject, so the audit row recording the erasure OUTLIVES the erased identity (DATA_GOVERNANCE §3 'Audit Trail Preserved? Yes').",
+          "description": "Every erasure transition writes an audit event (erasure.requested / erasure.anonymized [security, fail-closed] / erasure.rejected / erasure.blocked_legal_hold / erasure.s3_deleted) via the append-only sink. The engine has NO purge/modify path for the audit trail \u2014 it only APPENDS. dental_audit_log has no FK to person and erasure anonymizes (never hard-deletes) the subject, so the audit row recording the erasure OUTLIVES the erased identity (DATA_GOVERNANCE \u00a73 'Audit Trail Preserved? Yes').",
           "type": "compliance",
           "status": "implemented",
           "source": "erasure-engine.ts:154-188 (writeAudit appends, eventType=security); erasure-service.ts:70-79,177-186; audit-log.schema.ts (no FK to person)",
@@ -870,7 +870,7 @@
           "status": "implemented",
           "source": "retention-engine.ts:111-226 (dry-run default, effectiveActionFor downgrade, protected-skip, legal-hold filter); retention-targets.ts (attachment/appointment/audit-protected + personsUnderLegalHold); jobs/index.ts (env-gated cron)",
           "tests": [
-            "retention-engine.test.ts (dry-run default; delete→archive; protected/retain skipped; legal-held excluded)",
+            "retention-engine.test.ts (dry-run default; delete\u2192archive; protected/retain skipped; legal-held excluded)",
             "retention-legalhold.test.ts (real store: held subject's attachment excluded)",
             "retention-defaults.test.ts (audit seeded as retain/never-purge; targetless types disabled)",
             "retention-appointment.test.ts (scheduledAt 1-year cutoff, V-DG-003)"
@@ -878,21 +878,21 @@
         },
         {
           "id": "AC-LH-001..004 (legal-hold workflow + RBAC + FSM)",
-          "description": "Place/list/release legal holds, admin-only (non-admin → 403). A hold is created 'active'; active→released is terminal — releasing an already-released hold is rejected (ValidationError 'already released'), releasing a non-existent hold → NotFound. Every transition writes a compliance audit event (legal_hold.placed / legal_hold.released). subject/actor refs are bare UUIDs (no DB FK, mirrors audit/erasure decoupling).",
+          "description": "Place/list/release legal holds, admin-only (non-admin \u2192 403). A hold is created 'active'; active\u2192released is terminal \u2014 releasing an already-released hold is rejected (ValidationError 'already released'), releasing a non-existent hold \u2192 NotFound. Every transition writes a compliance audit event (legal_hold.placed / legal_hold.released). subject/actor refs are bare UUIDs (no DB FK, mirrors audit/erasure decoupling).",
           "type": "security",
           "status": "implemented",
           "source": "placeLegalHoldHandler.ts / releaseLegalHoldHandler.ts / listLegalHoldsHandler.ts (admin RBAC); legal-hold-service.ts:61-93 (active-only release guard + audit)",
           "tests": [
-            "legal-hold-routes.test.ts (place→list→release lifecycle; non-admin → 403; missing name → 400)",
-            "legal-hold.test.ts (isPersonUnderLegalHold predicate; AC-LH-004 release-already-released rejected; release non-existent → not found)"
+            "legal-hold-routes.test.ts (place\u2192list\u2192release lifecycle; non-admin \u2192 403; missing name \u2192 400)",
+            "legal-hold.test.ts (isPersonUnderLegalHold predicate; AC-LH-004 release-already-released rejected; release non-existent \u2192 not found)"
           ]
         },
         {
-          "id": "EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)",
-          "description": "Every erasure and legal-hold endpoint is gated on the platform admin role (user.role==='admin', the Better-Auth admin plugin) — a non-admin caller → 403 on request/approve/reject/place/release/list/get. The admin scope is platform-level (cross-tenant) BY DESIGN for a data-governance/DPO function; tenantId/subjectPersonId come from the request body, not a per-branch membership. (Cross-tenant admin scope is a tracked product decision — see IDEAL standard 'Erasure / legal-hold cross-tenant admin scope'.)",
+          "id": "EM-DG-RBAC (erasure/legal-hold admin-only; non-admin \u2192 403)",
+          "description": "Every erasure and legal-hold endpoint is gated on the platform admin role (user.role==='admin', the Better-Auth admin plugin) \u2014 a non-admin caller \u2192 403 on request/approve/reject/place/release/list/get. The admin scope is platform-level (cross-tenant) BY DESIGN for a data-governance/DPO function; tenantId/subjectPersonId come from the request body, not a per-branch membership. (Cross-tenant admin scope is a tracked product decision \u2014 see IDEAL standard 'Erasure / legal-hold cross-tenant admin scope'.)",
           "type": "security",
           "status": "implemented",
-          "source": "requestErasureHandler.ts:18 / approveErasureHandler.ts:22 / rejectErasureHandler.ts:18 / get+listErasureRequestsHandler / placeLegalHoldHandler.ts:18 / releaseLegalHoldHandler / listLegalHoldsHandler (user.role!=='admin' → ForbiddenError)",
+          "source": "requestErasureHandler.ts:18 / approveErasureHandler.ts:22 / rejectErasureHandler.ts:18 / get+listErasureRequestsHandler / placeLegalHoldHandler.ts:18 / releaseLegalHoldHandler / listLegalHoldsHandler (user.role!=='admin' \u2192 ForbiddenError)",
           "tests": [
             "erasure-routes.test.ts (non-admin is forbidden 403)",
             "legal-hold-routes.test.ts (non-admin forbidden 403)"
@@ -901,60 +901,121 @@
       ]
     },
     "dental-portal": {
-      "description": "Patient self-service portal (E4 Phase 1: read-only foundation). An EXTERNAL trust boundary: the actor is a PATIENT (Better-Auth system role 'user', linked Person + dental_patient row, NO dental_membership), not clinic staff. Three self-scoped READ endpoints — GET /me/appointments, /me/invoices, /me/balance — each handled under services/api-ts/src/handlers/dental-portal/. Headline invariant: a patient may ONLY ever read their OWN data. There is NO client-supplied patientId on any portal route; identity is derived server-side from the session via resolveSelfPatientIdOrThrow (assert-self-patient.ts), using the codebase invariant user.id === person.id → dental_patient.person_id, eliminating IDOR by construction. Routes gate authMiddleware({roles:['user']}); the staff-vs-patient distinction (a staff-only account with no linked patient → 403) is enforced in-handler, not by role. Read-only: no /me write/pay/mutate routes exist. Guardian/household-dependent access, self-booking, self-pay, secure messaging, consent management, and /me imaging/clinical reads are Phase-2 DEFERRED (not built).",
+      "description": "Patient self-service portal (E4 Phase 1: read-only foundation). An EXTERNAL trust boundary: the actor is a PATIENT (Better-Auth system role 'user', linked Person + dental_patient row, NO dental_membership), not clinic staff. Three self-scoped READ endpoints \u2014 GET /me/appointments, /me/invoices, /me/balance \u2014 each handled under services/api-ts/src/handlers/dental-portal/. Headline invariant: a patient may ONLY ever read their OWN data. There is NO client-supplied patientId on any portal route; identity is derived server-side from the session via resolveSelfPatientIdOrThrow (assert-self-patient.ts), using the codebase invariant user.id === person.id \u2192 dental_patient.person_id, eliminating IDOR by construction. Routes gate authMiddleware({roles:['user']}); the staff-vs-patient distinction (a staff-only account with no linked patient \u2192 403) is enforced in-handler, not by role. Read-only: no /me write/pay/mutate routes exist. Guardian/household-dependent access, self-booking, self-pay, secure messaging, consent management, and /me imaging/clinical reads are Phase-2 DEFERRED (not built).",
       "rules": [
         {
-          "id": "V-PORTAL-001 (IDOR-free self-scope — headline invariant)",
-          "description": "Every portal read returns ONLY the session patient's own rows. The patientId is derived server-side from the session (resolveSelfPatientIdOrThrow → patients.person === user.id); no route accepts a client-supplied patientId. A tampered ?patientId=<other> query param is INERT (the handler ignores all client input). Patient A can never read patient B's appointments/invoices/balance.",
+          "id": "V-PORTAL-001 (IDOR-free self-scope \u2014 headline invariant)",
+          "description": "Every portal read returns ONLY the session patient's own rows. The patientId is derived server-side from the session (resolveSelfPatientIdOrThrow \u2192 patients.person === user.id); no route accepts a client-supplied patientId. A tampered ?patientId=<other> query param is INERT (the handler ignores all client input). Patient A can never read patient B's appointments/invoices/balance.",
           "type": "security",
           "status": "implemented",
           "source": "assert-self-patient.ts:63-75 (resolveSelfPatientIdOrThrow); listMyAppointments.ts:29; listMyInvoices.ts:28; getMyBalance.ts:27",
           "tests": [
-            "dental-portal.test.ts (assertSelfPatient: other patient's id → 403 no leak; nonexistent → 404)",
+            "dental-portal.test.ts (assertSelfPatient: other patient's id \u2192 403 no leak; nonexistent \u2192 404)",
             "dental-portal.test.ts (each /me read: 200 returns ONLY caller's rows; B's ids/numbers absent, both directions)",
-            "dental-portal.test.ts (IDOR: A appending ?patientId=PATIENT_B still gets ONLY A's appointments/invoices/balance — tampered param inert)"
+            "dental-portal.test.ts (IDOR: A appending ?patientId=PATIENT_B still gets ONLY A's appointments/invoices/balance \u2014 tampered param inert)"
           ]
         },
         {
           "id": "V-PORTAL-002 (staff-only account denied; patient-only boundary)",
-          "description": "A caller with no linked dental_patient row (a staff-only account) is denied with 403 NOT_A_SELF_PATIENT — never another patient's data. An unauthenticated caller gets 401. The portal is reachable only by an authenticated user that owns a patient record.",
+          "description": "A caller with no linked dental_patient row (a staff-only account) is denied with 403 NOT_A_SELF_PATIENT \u2014 never another patient's data. An unauthenticated caller gets 401. The portal is reachable only by an authenticated user that owns a patient record.",
           "type": "security",
           "status": "implemented",
           "source": "assert-self-patient.ts:68-73 (ForbiddenError when no patient row); routes.ts authMiddleware({roles:['user']})",
           "tests": [
-            "dental-portal.test.ts (resolveSelfPatientIdOrThrow: staff-only user → ForbiddenError 403)",
-            "dental-portal.test.ts (each /me read: staff-only account → 403; unauthenticated → 401)"
+            "dental-portal.test.ts (resolveSelfPatientIdOrThrow: staff-only user \u2192 ForbiddenError 403)",
+            "dental-portal.test.ts (each /me read: staff-only account \u2192 403; unauthenticated \u2192 401)"
           ]
         },
         {
           "id": "V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)",
-          "description": "A real owned patient with zero appointments/invoices gets 200 [] (lists) and a zeroed balance roll-up — proving the scope is the SESSION patient's set even when empty, with no fallback to an unscoped all-patients query.",
+          "description": "A real owned patient with zero appointments/invoices gets 200 [] (lists) and a zeroed balance roll-up \u2014 proving the scope is the SESSION patient's set even when empty, with no fallback to an unscoped all-patients query.",
           "type": "security",
           "status": "implemented",
           "source": "appointment-portal.facade.ts:17-25 (eq patientId); billing-dental-patient.facade.ts:17-22 (eq patientId)",
           "tests": [
-            "dental-portal.test.ts (empty self-scope: patient C with no rows → /me/appointments [] , /me/invoices [], /me/balance zeroed)"
+            "dental-portal.test.ts (empty self-scope: patient C with no rows \u2192 /me/appointments [] , /me/invoices [], /me/balance zeroed)"
           ]
         },
         {
           "id": "V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)",
-          "description": "Portal projections expose only schedule/billing-facing fields. Internal staff fields (dentistMemberId, notes, cancellationReason, discountReason, discountedBy, line items) are NOT returned. Voided AND uncollectible (internally written-off) invoices are hidden from /me/invoices and excluded from the /me/balance roll-up — a patient is never shown debt the clinic has cancelled or written off.",
+          "description": "Portal projections expose only schedule/billing-facing fields. Internal staff fields (dentistMemberId, notes, cancellationReason, discountReason, discountedBy, line items) are NOT returned. Voided AND uncollectible (internally written-off) invoices are hidden from /me/invoices and excluded from the /me/balance roll-up \u2014 a patient is never shown debt the clinic has cancelled or written off.",
           "type": "privacy",
           "status": "implemented",
           "source": "listMyInvoices.ts:33-44 (filter voided/uncollectible + projection); getMyBalance.ts:30-39; listMyAppointments.ts:35-44 (projection)",
           "tests": [
             "dental-portal.test.ts (projection excludes dentistMemberId/notes/cancellationReason/discountReason/discountedBy)",
-            "dental-portal.test.ts (voided + uncollectible invoices hidden; balance excludes both — would be 17000/13000 if leaked)"
+            "dental-portal.test.ts (voided + uncollectible invoices hidden; balance excludes both \u2014 would be 17000/13000 if leaked)"
           ]
         },
         {
           "id": "V-PORTAL-005 (read-only; no patient write/mutate path)",
-          "description": "The portal exposes NO write/pay/mutate routes (no POST/PUT/PATCH/DELETE on /me). A patient cannot mutate clinic-owned data (mark a treatment performed, edit clinical notes, pay an invoice) through the portal. Self-booking and online self-pay are Phase-2 deferred and intentionally not built — their absence is the guarantee.",
+          "description": "The portal exposes NO write/pay/mutate routes (no POST/PUT/PATCH/DELETE on /me). A patient cannot mutate clinic-owned data (mark a treatment performed, edit clinical notes, pay an invoice) through the portal. Self-booking and online self-pay are Phase-2 deferred and intentionally not built \u2014 their absence is the guarantee.",
           "type": "security",
           "status": "implemented",
           "source": "generated/openapi/routes.ts (only GET /me/appointments|/me/invoices|/me/balance registered; no /me write route)",
           "tests": [
-            "no /me write route exists (verified: grep for app.(post|put|patch|delete)('/me/ → none)"
+            "no /me write route exists (verified: grep for app.(post|put|patch|delete)('/me/ \u2192 none)"
+          ]
+        }
+      ]
+    },
+    "emr-consultation": {
+      "description": "EMR consultation notes \u2014 the upstream Monobase telemedicine consultation-notes module at namespace /emr (table consultation_note), ported from monobase-mycure. A PLATFORM-LEVEL module governed by Better-Auth roles (provider/patient/admin, with provider:owner/patient:owner) \u2014 NOT the dental membership/branch matrix and NOT the future external-records-import bridge (/dental/emr-import). Isolation is by PROVIDER/PATIENT OWNERSHIP only: there is NO branch/tenant boundary (tenant_id is nullable and intentionally NOT the isolation mechanism; clinical PHI lives in per-user embedded SQLite and cadence P2P scope claims handle cross-device isolation). Six endpoints under services/api-ts/src/handlers/emr/: createConsultation (POST /emr/consultations), listConsultations (GET), getConsultation (GET /{id}), updateConsultation (PATCH /{id}), finalizeConsultation (POST /{id}/finalize), listEMRPatients (GET /emr/patients). Lifecycle draft \u2192 finalized is TERMINAL \u2014 no amend-after-finalize (the 'amended' enum value is reserved/unreachable, V-EMR-001). Every PHI create/read/mutation/bulk-read writes a dental_audit_log row via logAuditEvent using dotted-lowercase emr.<resource>.<verb> action names (V-EMR-006).",
+      "rules": [
+        {
+          "id": "V-EMR-OWN (ownership self-scope \u2014 headline isolation invariant)",
+          "description": "Isolation is by provider/patient ownership resolved server-side from the session \u2014 there is no branch/tenant boundary. A provider may read/update/finalize ONLY their own notes; a patient may read ONLY their own notes; admin reads all. getConsultation grants admin OR owning-provider OR owning-patient, else 403. List endpoints force the provider/patient scope from the session (provider sees own, patient sees own, admin sees all) so a provider/patient can never see another owner's rows via the list. A patient passing another patient's id in ?patient= is rejected (403) \u2014 scope cannot be widened by a client param.",
+          "type": "security",
+          "status": "implemented",
+          "source": "getConsultation.ts:70-96 (admin|provider:owner|patient:owner else 403); updateConsultation.ts:65-67; finalizeConsultation.ts:61-63; listConsultations.ts:62-93 (server-forced provider/patient scope + cross-patient 403); createConsultation.ts:59-61 (body.provider must equal caller's own provider)",
+          "tests": [
+            "emr-coverage.test.ts (getConsultation: real OTHER provider \u2192 403; owning provider/patient/admin \u2192 200)",
+            "emr-coverage.test.ts (update/finalize wrong provider \u2192 403)",
+            "emr-coverage.test.ts (listConsultations cross-owner: provider/patient list EXCLUDES another owner's note, both directions; patient ?patient=<other> \u2192 403; own id \u2192 200 own rows only)"
+          ]
+        },
+        {
+          "id": "V-EMR-001 (finalize is terminal \u2014 sign-immutability, no amend-after-finalize)",
+          "description": "draft \u2192 finalized is the ONLY valid transition and finalized is terminal. Finalizing a non-draft note \u2192 422 CONSULTATION_NOT_DRAFT; updating a finalized note \u2192 422 CONSULTATION_NOT_DRAFT (the finalized clinical record is immutable). There is NO amend endpoint; the 'amended' enum value is reserved/unreachable (no producer). The earlier draft\u2192finalized\u2192amended\u2192finalized re-finalizable machine was struck.",
+          "type": "state-guard",
+          "status": "implemented",
+          "source": "emr.repo.ts:194-209 (validateStatusTransition: draft\u2192finalized only, finalized/amended terminal); finalizeConsultation.ts:66-71 (non-draft \u2192 CONSULTATION_NOT_DRAFT); updateConsultation.ts:70-75 (finalized note not mutable)",
+          "tests": [
+            "consultation-note.fsm.property.test.ts (fast-check: ONLY (draft,finalized) valid; finalized/amended terminal; struck finalized\u2194amended rejected)",
+            "emr-coverage.test.ts (finalize already-finalized \u2192 \u2265400; update finalized \u2192 CONSULTATION_NOT_DRAFT; FSM repo rejects finalized\u2192amended)"
+          ]
+        },
+        {
+          "id": "V-EMR-AUTH (authoring/finalizing role-gated to the owning provider)",
+          "description": "Only a provider may create a consultation, and only as themselves: body.provider must resolve to the caller's own provider profile else 403; a caller with no provider profile \u2192 PROVIDER_NOT_FOUND (422). Update and finalize are provider:owner \u2014 a provider who does not own the note \u2192 403. (The route-level provider:owner role is non-gating by design \u2014 the authMiddleware delegates ownership to the handler, which is the real boundary.)",
+          "type": "security",
+          "status": "implemented",
+          "source": "createConsultation.ts:54-61 (PROVIDER_NOT_FOUND 422 / body.provider\u2260own \u2192 403); updateConsultation.ts:60-67; finalizeConsultation.ts:56-63; middleware/auth.ts:183-191 (owner roles delegate to handler)",
+          "tests": [
+            "emr-coverage.test.ts (create: wrong provider in body \u2192 403; caller without provider profile \u2192 \u2265400)",
+            "emr-coverage.test.ts (update/finalize wrong provider \u2192 403; no profile \u2192 403)"
+          ]
+        },
+        {
+          "id": "V-EMR-CTX (context idempotency key is unique)",
+          "description": "When supplied, context (an idempotency key, e.g. appointment:123) is unique across consultation notes \u2014 a duplicate context is rejected (CONSULTATION_EXISTS / DB unique-constraint conflict). context is optional; when absent, no uniqueness applies.",
+          "type": "conflict-prevention",
+          "status": "implemented",
+          "source": "emr.schema.ts:143 (consultation_notes_context_unique); createConsultation.ts:74-79 (CONSULTATION_EXISTS); emr.repo.ts:430-435",
+          "tests": [
+            "emr.repo.test.ts (prevents duplicate context values \u2192 throws)",
+            "emr-coverage.test.ts (duplicate context \u2192 \u2265400 CONSULTATION_EXISTS)"
+          ]
+        },
+        {
+          "id": "V-EMR-005 (audit tenant slot is a non-PHI sentinel, never the patient UUID)",
+          "description": "Because consultation_note.tenant_id is nullable and not the isolation mechanism, the persisted audit row's tenantId uses a non-PHI sentinel (EMR_AUDIT_TENANT_SENTINEL) when null \u2014 it NEVER falls back to the patient UUID, which would leak a PHI identifier into the append-only audit log. Update audit records changed field NAMES only, never PHI values (V-EMR-003). All six ops persist a dental_audit_log row (V-EMR-002/003/004/006).",
+          "type": "privacy",
+          "status": "implemented",
+          "source": "emr-audit.ts:11 (EMR_AUDIT_TENANT_SENTINEL); createConsultation.ts:110-123; getConsultation.ts:99-110; updateConsultation.ts:99-110 (field names only); finalizeConsultation.ts:93-105; listConsultations.ts:131-143; listEMRPatients.ts:213-224",
+          "tests": [
+            "emr-audit.test.ts (all 6 ops: row written, tenantId === sentinel, NOT patient UUID)",
+            "emr-audit.test.ts (update logs updatedFields NAMES only; serialized row does NOT contain the PHI value)"
           ]
         }
       ]

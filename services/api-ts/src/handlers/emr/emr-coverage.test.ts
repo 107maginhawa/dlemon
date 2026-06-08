@@ -399,6 +399,113 @@ describe('listConsultations handler', () => {
 });
 
 // ---------------------------------------------------------------------------
+// listConsultations — ADVERSARIAL cross-owner self-scoping (IDOR via list)
+//
+// The happy-path tests above only assert `Array.isArray(data)`. They do NOT
+// prove a provider's list EXCLUDES another provider's notes, nor that a patient
+// cannot see another patient's notes via the list. Because the EMR module has
+// NO branch/tenant boundary (isolation is purely by provider/patient ownership
+// resolved server-side from the session), the list-scoping IS the entire
+// cross-tenant isolation surface for bulk reads — so it must be pinned that
+// foreign-owner rows never appear, and that a patient cannot widen scope by
+// passing another patient's id in `?patient=`.
+// ---------------------------------------------------------------------------
+
+describe('listConsultations — cross-owner self-scoping (adversarial)', () => {
+  const SECOND_PATIENT_PERSON_ID = 'ec000000-0000-4000-8000-0000000000a1';
+  const SECOND_PATIENT_ID = 'ec000000-0000-4000-8000-0000000000a2';
+
+  // OTHER_PROVIDER_ID is linked to OTHER_PERSON_ID. Acting as that provider with
+  // role=provider lets us seed/own a note authored by a DIFFERENT provider.
+  const OTHER_PROVIDER_USER = { id: OTHER_PERSON_ID, email: 'otherprov@clinic.com', role: 'provider' };
+
+  async function seedForeignOwnerData() {
+    // A second patient (person already seeded as OTHER_PERSON? no — use a fresh person).
+    await db.insert(persons).values([
+      { id: SECOND_PATIENT_PERSON_ID, firstName: 'Second', lastName: 'Patient' },
+    ]).onConflictDoNothing();
+    await db.insert(patients).values([
+      { id: SECOND_PATIENT_ID, person: SECOND_PATIENT_PERSON_ID },
+    ]).onConflictDoNothing();
+
+    const repo = new ConsultationNoteRepository(db, logger as any);
+    // Note A: authored by PROVIDER_ID for PATIENT_ID (the "own" note).
+    const ownNote = await repo.createDirect({
+      patient: PATIENT_ID,
+      provider: PROVIDER_ID,
+      chiefComplaint: 'Provider-A note',
+      context: 'ctx-own',
+    });
+    // Note B: authored by OTHER_PROVIDER_ID for SECOND_PATIENT_ID (the "foreign" note).
+    const foreignNote = await repo.createDirect({
+      patient: SECOND_PATIENT_ID,
+      provider: OTHER_PROVIDER_ID,
+      chiefComplaint: 'Provider-B note',
+      context: 'ctx-foreign',
+    });
+    return { ownNote, foreignNote };
+  }
+
+  test("provider list returns ONLY own notes — another provider's note is ABSENT", async () => {
+    const { ownNote, foreignNote } = await seedForeignOwnerData();
+    const app = buildTestApp({ user: PROVIDER_USER });
+    const res = await app.request('/emr/consultations?limit=100');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const ids = body.data.map((c: any) => c.id);
+    expect(ids).toContain(ownNote.id);
+    // The other provider's note must NOT appear in provider A's list.
+    expect(ids).not.toContain(foreignNote.id);
+    // Every returned row is authored by provider A (no cross-provider leak).
+    expect(body.data.every((c: any) => c.provider === PROVIDER_ID)).toBe(true);
+  });
+
+  test("the OTHER provider sees ONLY their own note (isolation holds both directions)", async () => {
+    const { ownNote, foreignNote } = await seedForeignOwnerData();
+    const app = buildTestApp({ user: OTHER_PROVIDER_USER as any });
+    const res = await app.request('/emr/consultations?limit=100');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const ids = body.data.map((c: any) => c.id);
+    expect(ids).toContain(foreignNote.id);
+    expect(ids).not.toContain(ownNote.id);
+    expect(body.data.every((c: any) => c.provider === OTHER_PROVIDER_ID)).toBe(true);
+  });
+
+  test("patient list returns ONLY own notes — another patient's note is ABSENT", async () => {
+    const { ownNote, foreignNote } = await seedForeignOwnerData();
+    // PATIENT_USER owns PATIENT_ID; foreignNote belongs to SECOND_PATIENT_ID.
+    const app = buildTestApp({ user: PATIENT_USER });
+    const res = await app.request('/emr/consultations?limit=100');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const ids = body.data.map((c: any) => c.id);
+    expect(ids).toContain(ownNote.id);
+    expect(ids).not.toContain(foreignNote.id);
+    expect(body.data.every((c: any) => c.patient === PATIENT_ID)).toBe(true);
+  });
+
+  test("patient passing ANOTHER patient's id in ?patient= is rejected → 403 (cannot widen scope)", async () => {
+    await seedForeignOwnerData();
+    const app = buildTestApp({ user: PATIENT_USER });
+    // PATIENT_USER tries to scope the list to SECOND_PATIENT_ID's records.
+    const res = await app.request(`/emr/consultations?patient=${SECOND_PATIENT_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test("patient passing their OWN id in ?patient= is allowed → 200, own rows only", async () => {
+    const { ownNote, foreignNote } = await seedForeignOwnerData();
+    const app = buildTestApp({ user: PATIENT_USER });
+    const res = await app.request(`/emr/consultations?patient=${PATIENT_ID}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const ids = body.data.map((c: any) => c.id);
+    expect(ids).toContain(ownNote.id);
+    expect(ids).not.toContain(foreignNote.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // listEMRPatients
 // ---------------------------------------------------------------------------
 

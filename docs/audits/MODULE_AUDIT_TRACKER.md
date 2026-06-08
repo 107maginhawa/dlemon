@@ -22,7 +22,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 10 | dental-audit | ✅ READY | 6 (1 REAL test gap: cross-tenant audit-read denial pin; 5 doc/registry drift: br-registry whole-module ABSENT → added 6 rules, MODULE_SPEC §9 banner legacy-table-name + §6/§11/§17 pg-boss/no-self-audit, API_CONTRACTS response field table snake_case→camelCase) | fail-closed-on-security-event pin + legacy-table dual-write coverage + retention→round-11 + self-audit tenantId-echo decision + KG-backlog (phantom `/dental/audit/events` route) | [MODULE_dental-audit_AUDIT_2026-06-08.md](modules/MODULE_dental-audit_AUDIT_2026-06-08.md) |
 | 11 | erasure/legal-hold/retention | ✅ READY | 5 (2 REAL test gaps: audit-survives-erasure pin + AC-LH-004 release-already-released/nonexistent FSM pins; 3 doc/registry drift: whole governance layer ABSENT from br-registry → added 6-rule block, 2 stale "no legal-hold store exists yet" source comments contradicted by the code, WORKFLOW_MAP WFG-006 three stale "Gap/no-implementation/PHI-purge/store-remaining" spots → RESOLVED) | dental-erasure MODULE_SPEC anchor absent + cross-tenant admin-scope product decision + retention enforcement env-gated-off + extra targets/Art.20-portability deferred + erasure fail-closed-audit pin + KG-backlog (phantom /dental/data-governance/* routes, retention unmodeled, Pino-not-store) | [MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md](modules/MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md) |
 | 12 | dental-portal | ✅ GAPS (honest — Phase-1 read-only foundation; what's built is GREEN) | 3 (1 REAL adversarial-test pin: IDOR-tamper-inert + empty-self-scope ×6; 2 doc/registry drift: whole module ABSENT from br-registry → added 5-rule V-PORTAL-001..005 block, WORKFLOW_MAP WF-078 over-described unbuilt Phase-2 + omitted built reads → reconciled) | guardian/household-dependent portal access + self-booking + online self-pay + /me imaging/clinical/treatment-plan reads + secure-messaging/consent-mgmt + dental-portal MODULE_SPEC anchor — all Phase-2 DEFERRED/surfaced (NOT built); route-level role-reject belt-and-suspenders pin | [MODULE_dental-portal_AUDIT_2026-06-08.md](modules/MODULE_dental-portal_AUDIT_2026-06-08.md) |
-| 13 | emr-consultation | ⏳ pending | — | — | — |
+| 13 | emr-consultation | ✅ READY | 2 (1 REAL adversarial-test pin: cross-owner list self-scoping ×5 — provider/patient list excludes foreign owner both directions + cross-patient `?patient=`→403 + own-id allowed; 1 registry drift: whole module ABSENT from br-registry → added 5-rule `emr-consultation` block V-EMR-OWN/001/AUTH/CTX/005) | no `emr.hurl` contract file + KG under-models the module (no emr node) — both surfaced; amend-after-finalize is a documented non-goal (V-EMR-001); route-level role-reject belt-and-suspenders pin | [MODULE_emr-consultation_AUDIT_2026-06-08.md](modules/MODULE_emr-consultation_AUDIT_2026-06-08.md) |
 | 14 | provider | ⏳ pending | — | — | — |
 | 15 | external-records-import | ⏳ pending | — | — | — |
 
@@ -169,9 +169,30 @@ dental-portal → emr-consultation → provider → external-records-import
     branchId class nor the optional-branchId-omission class applies (there is no branch/tenant param to
     tamper or omit, and no cross-resource aggregate with an optional-only scope). IDOR/self-scope =
     CLEAR; the round only ADDED an IDOR-tamper-inert + empty-self-scope test.
-  - **branchId-auth-boundary class status: CLEAR for org/patient/scheduling/visit/clinical/perio/
-    imaging/pmd/audit/portal (portal N/A by design); HOLES found+fixed in dental-patient + dental-visit
-    (caller-supplied branchId) and dental-billing (omitted optional branchId). Remaining to chase: emr (the LAST module).**
+  - **emr-consultation = N/A by design (no branch/tenant dimension at all) — 2026-06-08 (round 13).** The EMR
+    module is PLATFORM-LEVEL and governed by Better-Auth roles (provider/patient/admin), NOT branch/membership.
+    `consultation_note.tenant_id` is nullable and intentionally NOT the isolation mechanism — isolation is purely
+    PROVIDER/PATIENT OWNERSHIP resolved server-side from the session (PHI lives in per-user embedded SQLite; cadence
+    P2P scope claims handle cross-device isolation). The two list endpoints (`/emr/consultations`, `/emr/patients`)
+    force the provider/patient scope from the session (admin sees all by role, intentionally global), and the lone
+    client scope param (`?patient=` on listConsultations) is validated to equal a patient caller's OWN id (403
+    otherwise). So neither the caller-supplied-branchId variant nor the optional-branchId-omission variant can apply
+    (there is no branch/tenant param to tamper or omit, and no cross-resource aggregate with an optional-only scope).
+    Cross-owner isolation + sign-immutability + authoring-role-gating + audit-row = CLEAR; the round only ADDED the
+    missing cross-owner list-isolation test (provider/patient list excludes a foreign owner both directions, + a
+    cross-patient `?patient=` → 403).
+  - **branchId-auth-boundary class status: FINAL — CLEAR for org/patient/scheduling/visit/clinical/perio/
+    imaging/pmd/audit/portal/emr (portal + emr N/A by design); HOLES found+fixed in dental-patient + dental-visit
+    (caller-supplied branchId) and dental-billing (omitted optional branchId). ALL 15 contexts audited — no remaining
+    chase targets.**
+  - **OPTIONAL-BRANCHID-CLASS CARRY-FORWARD — CLOSED (2026-06-08, round 13, emr = last flagged module).**
+    Final disposition across all modules: (1) **caller-supplied-branchId variant (V-PAT-002):** holes found+fixed in
+    dental-patient + dental-visit, CLEAR everywhere else. (2) **optional-branchId-omitted variant (EM-BIL-002 — omit →
+    unscoped all-tenant aggregate):** hole found+fixed in dental-billing (5 report endpoints); the targeted cross-module
+    sweep (`SWEEP_optional-branchid_2026-06-08.md`) proved it UNIQUE to billing. (3) **portal + emr:** N/A by design
+    (portal = patient-facing self-scope, no branch param; emr = platform-level, no branch/tenant dimension). **The
+    optional-filter-omission hazard remains live ONLY for cross-resource aggregate/report endpoints with an optional-only
+    scope — a shape that existed ONLY in billing (now fixed).** No further chase targets remain in the audit series.
   - **TARGETED CROSS-MODULE SWEEP for the optional-branchId-omission variant — CLEAN (2026-06-08).**
     After EM-BIL-002, swept all 45 list/report/aggregate/search/export endpoints across the eight
     already-audited modules (org/patient/scheduling/visit/clinical/perio/imaging/pmd) specifically for
