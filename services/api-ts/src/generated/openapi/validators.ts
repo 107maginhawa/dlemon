@@ -573,7 +573,7 @@ export const DentalAppointmentSchema = z.object({
   notes: z.string().optional(),
   cancelledAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   cancellationReason: z.string().optional(),
-  no_showAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  noShowAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   warnings: z.array(z.string()).optional()
 });
 

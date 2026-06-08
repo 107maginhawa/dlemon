@@ -27,6 +27,9 @@ export interface AppointmentWire {
   id: string;
   createdAt: Date | string;
   updatedAt: Date | string;
+  // Optimistic-lock counter (baseEntityFields). REQUIRED by the SDK/TypeSpec
+  // DentalAppointment contract — must always be present on the wire (V-SCH-006).
+  version: number;
   patientId: string;
   providerId: string;
   branchId: string;
@@ -37,6 +40,10 @@ export interface AppointmentWire {
   walkIn: boolean;
   status: string;
   confirmedAt: Date | string | null;
+  // P1-24: how the appointment was confirmed ('staff'|'sms'|'email'|'link'),
+  // NULL until a confirm action. Declared on the contract — emit it so SDK
+  // consumers don't read undefined.
+  confirmedVia: string | null;
   checkInTime: Date | string | null;
   visitId: string | null;
   notes: string | null;
@@ -70,6 +77,7 @@ export function toWire<T extends Partial<DentalAppointment> & { patientName?: st
     id: row.id as string,
     createdAt: row.createdAt as Date,
     updatedAt: row.updatedAt as Date,
+    version: (row.version as number) ?? 1,
     patientId: row.patientId as string,
     providerId: row.dentistMemberId as string,
     branchId: row.branchId as string,
@@ -80,6 +88,7 @@ export function toWire<T extends Partial<DentalAppointment> & { patientName?: st
     walkIn: (row.walkIn as boolean) ?? false,
     status: row.status as string,
     confirmedAt: (row.confirmedAt as Date) ?? null,
+    confirmedVia: (row.confirmedVia as string) ?? null,
     checkInTime: (row.checkInTime as Date) ?? null,
     visitId: (row.visitId as string) ?? null,
     notes: (row.notes as string) ?? null,

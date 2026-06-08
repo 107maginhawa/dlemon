@@ -316,6 +316,32 @@ describe('createAppointment handler', () => {
     const body = await res.json() as any;
     expect(body.walkIn).toBe(true);
   });
+
+  // STEP 3a contract-drift pin (SCH-DRIFT-001): the wire body must carry every
+  // field the SDK/TypeSpec DentalAppointment model declares. `version` is a
+  // REQUIRED field (optimistic-lock counter from baseEntityFields) but toWire
+  // was dropping it; `confirmedVia` is a declared optional field also dropped.
+  // SDK consumers typed against DentalAppointment would read undefined for both.
+  test('SCH-DRIFT-001: created appointment wire body includes contract-required version + confirmedVia key', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_APPOINTMENT_BODY),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // `version` is REQUIRED in the contract — must be a number, never undefined.
+    expect(typeof body.version).toBe('number');
+    expect(body.version).toBeGreaterThanOrEqual(1);
+    // `confirmedVia` is declared (optional) — the key must be present in the
+    // serialized shape (null until a confirm action sets it), not silently absent.
+    expect('confirmedVia' in body).toBe(true);
+    // `noShowAt` is the camelCase wire name (matches every other *At field +
+    // the existing no_show assertions at L482/L785); the TypeSpec field is
+    // likewise noShowAt post-fix.
+    expect('noShowAt' in body).toBe(true);
+  });
 });
 
 // ===========================================================================

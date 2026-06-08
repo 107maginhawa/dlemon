@@ -330,8 +330,8 @@ const dentalAppointmentSchemaResponseTransformer = (data: any) => {
     if (data.cancelledAt) {
         data.cancelledAt = new Date(data.cancelledAt);
     }
-    if (data.no_showAt) {
-        data.no_showAt = new Date(data.no_showAt);
+    if (data.noShowAt) {
+        data.noShowAt = new Date(data.noShowAt);
     }
     return data;
 };

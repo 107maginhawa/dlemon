@@ -2537,7 +2537,7 @@ export type DentalAppointment = {
     notes?: string;
     cancelledAt?: Date;
     cancellationReason?: string;
-    no_showAt?: Date;
+    noShowAt?: Date;
     warnings?: Array<string>;
 };
 
