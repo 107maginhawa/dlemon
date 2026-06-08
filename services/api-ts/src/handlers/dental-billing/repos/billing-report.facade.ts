@@ -11,21 +11,35 @@
  */
 
 import { and, eq, ne, gt, inArray, type SQL } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalInvoices } from './dental-invoice.schema';
 import { patients } from '../../patient/repos/patient.schema';
 import { persons } from '../../person/repos/person.schema';
 
-/** Outstanding (non-voided, balance>0) invoices + patient name, for AR-aging. */
+/**
+ * Outstanding (non-voided, balance>0) invoices + patient name, for AR-aging.
+ *
+ * EM-BIL-002: `allowedBranchIds` scopes the result to the caller's own
+ * branches when no specific `branchId` is supplied. Pass an EMPTY array to
+ * mean "caller belongs to no branch" → zero rows (never the whole DB).
+ */
 export async function getOutstandingInvoicesForAging(
   db: DatabaseInstance,
   branchId?: string,
+  allowedBranchIds?: string[],
 ) {
   const conditions: SQL<unknown>[] = [
     ne(dentalInvoices.status, 'voided'),
     gt(dentalInvoices.balanceCents, 0),
   ];
-  if (branchId) conditions.push(eq(dentalInvoices.branchId, branchId));
+  if (branchId) {
+    conditions.push(eq(dentalInvoices.branchId, branchId));
+  } else if (allowedBranchIds) {
+    conditions.push(
+      allowedBranchIds.length > 0 ? inArray(dentalInvoices.branchId, allowedBranchIds) : sql`false`,
+    );
+  }
 
   return db
     .select({
@@ -44,13 +58,27 @@ export async function getOutstandingInvoicesForAging(
     .where(and(...conditions));
 }
 
-/** Invoice rows + patient name for a statement batch (optional branch / patient filters). */
+/**
+ * Invoice rows + patient name for a statement batch (optional branch / patient filters).
+ *
+ * EM-BIL-002: `allowedBranchIds` scopes the result to the caller's own
+ * branches when no specific `branchId` is supplied. Pass an EMPTY array to
+ * mean "caller belongs to no branch" → zero rows (never the whole DB).
+ */
 export async function getStatementInvoices(
   db: DatabaseInstance,
-  filters: { branchId?: string; patientIds?: string[] },
+  filters: { branchId?: string; patientIds?: string[]; allowedBranchIds?: string[] },
 ) {
   const conditions: SQL<unknown>[] = [];
-  if (filters.branchId) conditions.push(eq(dentalInvoices.branchId, filters.branchId));
+  if (filters.branchId) {
+    conditions.push(eq(dentalInvoices.branchId, filters.branchId));
+  } else if (filters.allowedBranchIds) {
+    conditions.push(
+      filters.allowedBranchIds.length > 0
+        ? inArray(dentalInvoices.branchId, filters.allowedBranchIds)
+        : sql`false`,
+    );
+  }
   if (filters.patientIds && filters.patientIds.length > 0) {
     conditions.push(inArray(dentalInvoices.patientId, filters.patientIds));
   }

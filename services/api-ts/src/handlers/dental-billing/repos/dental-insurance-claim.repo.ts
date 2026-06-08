@@ -3,7 +3,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { eq, and, desc, type SQL } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import {
@@ -20,6 +20,13 @@ export interface ClaimFilters {
   patientId?: string;
   status?: DentalInsuranceClaim['status'];
   insuranceProfileId?: string;
+  /**
+   * EM-BIL-002: caller's accessible branches. Applied only when no specific
+   * `branchId` is supplied, to scope the claim worklist / payer-aging to the
+   * caller's own branches instead of every org's claims. An empty array means
+   * "caller belongs to no branch" → zero rows (never the whole DB).
+   */
+  allowedBranchIds?: string[];
 }
 
 export class DentalInsuranceClaimRepository {
@@ -65,7 +72,15 @@ export class DentalInsuranceClaimRepository {
 
   async findMany(filters?: ClaimFilters): Promise<DentalInsuranceClaim[]> {
     const conditions: SQL[] = [];
-    if (filters?.branchId) conditions.push(eq(dentalInsuranceClaims.branchId, filters.branchId));
+    if (filters?.branchId) {
+      conditions.push(eq(dentalInsuranceClaims.branchId, filters.branchId));
+    } else if (filters?.allowedBranchIds) {
+      conditions.push(
+        filters.allowedBranchIds.length > 0
+          ? inArray(dentalInsuranceClaims.branchId, filters.allowedBranchIds)
+          : sql`false`,
+      );
+    }
     if (filters?.patientId) conditions.push(eq(dentalInsuranceClaims.patientId, filters.patientId));
     if (filters?.status) conditions.push(eq(dentalInsuranceClaims.status, filters.status));
     if (filters?.insuranceProfileId) conditions.push(eq(dentalInsuranceClaims.insuranceProfileId, filters.insuranceProfileId));

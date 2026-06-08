@@ -9,6 +9,7 @@ import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import { getInsurerNamesForBilling } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { computePayerAging, type AgingClaim } from './utils/aging';
@@ -20,14 +21,20 @@ export async function getPayerArAging(ctx: HandlerContext): Promise<Response> {
   const query = ctx.req.valid('query') as { branchId?: string; asOf?: string };
   const db = ctx.get('database') as DatabaseInstance;
 
+  // EM-BIL-002: branchId is OPTIONAL. When supplied, enforce membership. When
+  // omitted, scope the payer-aging to the caller's own active branches — never
+  // every org's claims (cross-tenant financial-data + PHI leak).
+  let allowedBranchIds: string[] | undefined;
   if (query.branchId) {
     await assertBranchAccess(db, user.id, query.branchId);
+  } else {
+    allowedBranchIds = await getActiveBranchIdsForPerson(db, user.id);
   }
 
   const asOf = query.asOf ? new Date(query.asOf) : new Date();
 
   const repo = new DentalInsuranceClaimRepository(db);
-  const claims = await repo.findMany({ branchId: query.branchId });
+  const claims = await repo.findMany({ branchId: query.branchId, allowedBranchIds });
 
   const agingClaims: AgingClaim[] = claims.map((c) => ({
     insuranceProfileId: c.insuranceProfileId,

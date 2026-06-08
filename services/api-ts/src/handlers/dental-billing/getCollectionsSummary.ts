@@ -12,11 +12,12 @@
 
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
+import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { dentalPayments } from './repos/dental-payment.schema';
-import { and, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gte, lte, inArray, sql, type SQL } from 'drizzle-orm';
 
 function startOfDay(d: Date): Date {
   const s = new Date(d);
@@ -37,9 +38,14 @@ export async function getCollectionsSummary(ctx: BaseContext) {
   const logger = ctx.get('logger');
   const q = ctx.req.query();
 
-  // Branch-level authorization — optional filter; if provided, verify access
+  // EM-BIL-002: branchId is OPTIONAL. When provided, verify access. When
+  // omitted, scope to the caller's own active branches — never the whole
+  // (multi-tenant) DB, which would leak other orgs' collections totals.
+  let allowedBranchIds: string[] | undefined;
   if (q['branchId']) {
     await assertBranchAccess(db, user.id, q['branchId']);
+  } else {
+    allowedBranchIds = await getActiveBranchIdsForPerson(db, user.id);
   }
 
   const now = new Date();
@@ -66,7 +72,13 @@ export async function getCollectionsSummary(ctx: BaseContext) {
     gte(dentalInvoices.issuedAt, from),
     lte(dentalInvoices.issuedAt, to),
   ];
-  if (q['branchId']) invoiceConditions.push(eq(dentalInvoices.branchId, q['branchId']));
+  if (q['branchId']) {
+    invoiceConditions.push(eq(dentalInvoices.branchId, q['branchId']));
+  } else if (allowedBranchIds) {
+    invoiceConditions.push(
+      allowedBranchIds.length > 0 ? inArray(dentalInvoices.branchId, allowedBranchIds) : sql`false`,
+    );
+  }
 
   const issuedInvoices = await db
     .select()
@@ -78,7 +90,13 @@ export async function getCollectionsSummary(ctx: BaseContext) {
     lte(dentalPayments.createdAt, to),
     eq(dentalPayments.isVoid, false),
   ];
-  if (q['branchId']) paymentConditions.push(eq(dentalPayments.branchId, q['branchId']));
+  if (q['branchId']) {
+    paymentConditions.push(eq(dentalPayments.branchId, q['branchId']));
+  } else if (allowedBranchIds) {
+    paymentConditions.push(
+      allowedBranchIds.length > 0 ? inArray(dentalPayments.branchId, allowedBranchIds) : sql`false`,
+    );
+  }
 
   const payments = await db
     .select()

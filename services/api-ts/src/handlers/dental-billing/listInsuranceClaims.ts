@@ -9,6 +9,7 @@ import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import type { InsuranceClaimStatus } from './repos/dental-insurance-claim.schema';
 
@@ -25,10 +26,14 @@ export async function listInsuranceClaims(ctx: HandlerContext): Promise<Response
 
   const db = ctx.get('database') as DatabaseInstance;
 
-  // When a branch is specified, enforce membership; results are always
-  // branch-scoped to prevent cross-branch leakage.
+  // EM-BIL-002: branchId is OPTIONAL. When supplied, enforce membership. When
+  // omitted, scope the worklist to the caller's own active branches — never
+  // every org's claims (cross-tenant financial-data + PHI leak).
+  let allowedBranchIds: string[] | undefined;
   if (query.branchId) {
     await assertBranchAccess(db, user.id, query.branchId);
+  } else {
+    allowedBranchIds = await getActiveBranchIdsForPerson(db, user.id);
   }
 
   const repo = new DentalInsuranceClaimRepository(db);
@@ -37,6 +42,7 @@ export async function listInsuranceClaims(ctx: HandlerContext): Promise<Response
     status: query.status,
     insuranceProfileId: query.insuranceProfileId,
     patientId: query.patientId,
+    allowedBranchIds,
   });
 
   return ctx.json({ items: claims, total: claims.length }, 200);

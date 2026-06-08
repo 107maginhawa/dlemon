@@ -15,6 +15,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
 import { getOutstandingInvoicesForAging } from './repos/billing-report.facade';
 import {
   computePatientAging,
@@ -31,15 +32,21 @@ export async function getArAging(ctx: BaseContext) {
   const logger = ctx.get('logger');
   const q = ctx.req.query();
 
+  // EM-BIL-002: branchId is OPTIONAL. When supplied, assert membership. When
+  // omitted, scope to the caller's own active branches — never the whole
+  // (multi-tenant) DB, which would leak other orgs' balances + patient PHI.
+  let allowedBranchIds: string[] | undefined;
   if (q['branchId']) {
     await assertBranchAccess(db, user.id, q['branchId']);
+  } else {
+    allowedBranchIds = await getActiveBranchIdsForPerson(db, user.id);
   }
 
   const asOf = q['asOf'] ? new Date(q['asOf']) : new Date();
 
   // Pull all outstanding (non-voided, balance > 0) invoices joined to the
   // patient's display name. Branch filter applied when supplied.
-  const rows = await getOutstandingInvoicesForAging(db, q['branchId']);
+  const rows = await getOutstandingInvoicesForAging(db, q['branchId'], allowedBranchIds);
 
   // Group invoices by patient.
   const byPatient = new Map<string, { name: string; invoices: AgingInvoice[] }>();
