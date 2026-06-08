@@ -451,9 +451,16 @@ describe('FR2.8: export dental patients', () => {
     const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.data)).toBe(true);
+    // BUG-PAT-EXPORT: the JSON export response key must be `patients` to match the
+    // ExportDentalPatientsResponse contract (.tsp + SDK type + FE useExportPatients,
+    // which reads `data.patients`). The handler previously returned `{ data }`, so
+    // the FE CSV export was always empty.
+    expect(Array.isArray(body.patients)).toBe(true);
+    expect(body.patients.length).toBe(1);
+    expect(body.patients[0].displayName).toBe('Export Test Patient');
     expect(typeof body.exportedAt).toBe('string');
     expect(typeof body.total).toBe('number');
+    expect(body.total).toBe(1);
   });
 
   test('exports as CSV with correct Content-Type', async () => {
@@ -1012,6 +1019,82 @@ describe('V-PAT-002/CONF-DP-001: createDentalPatient requires a create-capable r
       body: JSON.stringify({ displayName: 'Allowed Patient', consentGiven: true, branchId: BRANCH_ID }),
     });
     expect(res.status).toBe(201);
+  });
+});
+
+// =============================================================================
+// V-PAT-002: updateDentalPatient (PATCH demographics) requires an edit-capable
+// role. Allowed: dentist_owner, dentist_associate, hygienist, staff_full.
+// DENIED (403): billing_staff, staff_scheduling — both are active branch members,
+// so a pure membership check would wrongly allow them. (Access-matrix RBAC negatives
+// from the workflow-verification brief: "billing_staff ❌ update demographics".)
+// =============================================================================
+
+describe('V-PAT-002: PATCH demographics requires an edit-capable role', () => {
+  afterEach(truncate);
+
+  async function seedMember(personId: string, membershipId: string, role: string) {
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+    await db.insert(dentalMemberships).values({
+      id: membershipId,
+      branchId: BRANCH_ID,
+      personId,
+      displayName: role,
+      role: role as any,
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoUpdate({ target: dentalMemberships.id, set: { role: role as any } });
+  }
+
+  test('billing_staff (matrix-DENIED) gets 403 on PATCH /dental/patients/:id', async () => {
+    // Owner creates the patient first.
+    const ownerApp = buildTestApp(authedUser);
+    const patient = await createPatient(ownerApp, 'Demographics Edit Target');
+
+    const BILLING_ID = 'c1000000-0000-1000-8000-0000000000b1';
+    await seedMember(BILLING_ID, 'eedd0000-0000-1000-8000-0000000000b1', 'billing_staff');
+
+    const app = buildTestApp({ id: BILLING_ID, email: 'billing-edit@clinic.com' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ needsFollowUp: true }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_scheduling (matrix-DENIED) gets 403 on PATCH /dental/patients/:id', async () => {
+    const ownerApp = buildTestApp(authedUser);
+    const patient = await createPatient(ownerApp, 'Demographics Edit Target 2');
+
+    const SCHED_ID = 'c1000000-0000-1000-8000-0000000000b2';
+    await seedMember(SCHED_ID, 'eedd0000-0000-1000-8000-0000000000b2', 'staff_scheduling');
+
+    const app = buildTestApp({ id: SCHED_ID, email: 'sched-edit@clinic.com' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dentalHistorySummary: 'should be denied' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_full (matrix-ALLOWED) gets 200 on PATCH /dental/patients/:id', async () => {
+    const ownerApp = buildTestApp(authedUser);
+    const patient = await createPatient(ownerApp, 'Demographics Edit Target 3');
+
+    const SF_ID = 'c1000000-0000-1000-8000-0000000000b3';
+    await seedMember(SF_ID, 'eedd0000-0000-1000-8000-0000000000b3', 'staff_full');
+
+    const app = buildTestApp({ id: SF_ID, email: 'sf-edit@clinic.com' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ needsFollowUp: true }),
+    });
+    expect(res.status).toBe(200);
   });
 });
 

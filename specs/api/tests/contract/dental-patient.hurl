@@ -183,12 +183,16 @@ jsonpath "$.payments" isCollection
 
 
 # 11. Export patients as JSON
+# Response key is `patients` (ExportDentalPatientsResponse) — not `data`.
+# The FE useExportPatients reads `data.patients`, and each row carries a derived
+# `displayName` for the CSV name column.
 GET {{api}}/dental/patients/export?format=json&branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
-jsonpath "$.total" >= 0
+jsonpath "$.patients" isCollection
+jsonpath "$.patients[0].displayName" isString
+jsonpath "$.total" >= 1
 jsonpath "$.exportedAt" isString
 
 

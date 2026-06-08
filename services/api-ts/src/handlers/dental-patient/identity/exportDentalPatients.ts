@@ -90,5 +90,34 @@ export async function exportDentalPatients(
     });
   }
 
-  return ctx.json({ data: filtered, exportedAt: new Date().toISOString(), total: filtered.length }, 200);
+  // Response key is `patients` per ExportDentalPatientsResponse (.tsp + SDK type +
+  // FE useExportPatients, which reads `data.patients`). Returning `data` here made
+  // the FE CSV export silently empty. Each row is shaped to DentalPatient (with a
+  // derived `displayName` the FE reads for the name column) and a DECLARED person
+  // subset — never spread the raw person row (V-PAT-014: avoids leaking undeclared PII).
+  const exported = filtered.map(p => {
+    const person = p.person;
+    const firstName = person?.firstName ?? '';
+    const lastName = person?.lastName ?? '';
+    return {
+      id: p.id,
+      displayName: [firstName, lastName].filter(Boolean).join(' ') || 'Unknown',
+      status: p.status ?? 'active',
+      needsFollowUp: p.needsFollowUp ?? false,
+      hasActivePaymentPlan: p.hasActivePaymentPlan ?? false,
+      preferredBranchId: p.preferredBranchId ?? null,
+      recallDate: p.recallDate ?? null,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      person: {
+        id: person?.id ?? null,
+        firstName,
+        lastName: lastName || null,
+        dateOfBirth: person?.dateOfBirth ?? null,
+        gender: person?.gender ?? null,
+      },
+    };
+  });
+
+  return ctx.json({ patients: exported, exportedAt: new Date().toISOString(), total: exported.length }, 200);
 }
