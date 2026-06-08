@@ -52,6 +52,14 @@ So "38/46 contract files pass" is the green baseline. A module is contract-green
 **its own `.hurl` Succeeds** and it adds no NEW failures outside this set. dental-imaging
 (#8) and the storage side of billing (#9) genuinely need MinIO → hard-require it there.
 
+> **RBAC-negative driving caveat (found in module 3).** The demo PIN-select switches the
+> FE *profile* but does NOT re-scope the *backend identity* to the selected non-owner
+> profile (e.g. Ana Santos staff_full has a NULL `membership.person_id` in the seed). So:
+> **FE-level** RBAC negatives (hidden controls, route-guard redirects) ARE drivable via PIN
+> and should be driven; **backend-authorization** RBAC negatives (API 403) must be pinned at
+> the backend-unit / contract layer, not asserted through the demo UI. Don't block DONE on a
+> backend-403 that the demo PIN can't actually exercise — pin it at the unit layer + report.
+
 ## Status legend
 
 | Status | Meaning |
@@ -79,7 +87,7 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 |---|--------|-----|-------------|--------|--------|-----------------|-------------|-------------------|----------|---------|
 | 1 | dental-org | yes | no | DONE | 🟢 | 1 (P1 shape-diff) | FE-unit + contract pins + smoke | none | runs/dental-org/ | bf88596a, 9cc7dadd |
 | 2 | person / profile + settings | yes | yes | DONE | 🟢 | 0 (no bugs) | contract pins + smoke | 3 (Type-C) | runs/person/ | eee6c6d8, d3f8f772 |
-| 3 | dental-patient | yes | no | IN-PROGRESS | — | — | — | — | — | — |
+| 3 | dental-patient | yes | no | DONE | 🟢 | 2 (P1 export×2) | contract + FE coherence pins + smoke | 3 (Type-C) | runs/dental-patient/ | 73034d6f, b74b1fe3, dc40d6cd, f27951b6, 6cd6727f |
 | 4 | dental-scheduling | yes | no | PENDING | — | — | — | — | — | — |
 | 5 | dental-visit | yes | no | DRY-RUN ✅ | 🟢 | 0 (no bugs) | n/a (dry run) | none | runs/dental-visit/ | none (report-only) |
 | 6 | dental-clinical | yes | no | PENDING | — | — | — | — | — | — |
@@ -148,3 +156,15 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 - Circuit breakers tripped: none. Ran regen: NO.
 - Evidence: docs/audits/workflow-verification/runs/person/ (REPORT.md + 4 screenshots + log)
 - Gate: typecheck ✓ · backend ✓ (38/0) · contract ✓ (person-lifecycle + person-validation Succeed) · FE unit ✓ (62/0) · lint/boundaries ✓ · smoke ✓ (5/5 CP). Env note: `requireEmailVerified` onboarding guard is ACTIVE (stale repo note saying it's disabled is wrong) — smoke uses dev `POST /dev/verify-email`.
+
+### 3. dental-patient — DONE 🟢 (most productive module — 2 real bugs)
+- Persona(s) driven: Sam (staff_full front-desk, PIN 654321); Dr. Maria Reyes (owner, PIN 123456). Two background subagent instances divided the work without conflict (see runs/dental-patient/REPORT.md reconciliation note).
+- Workflows verified (happy 4 / error 2 / RBAC-neg 2 / coherence 2 / affordance 1 / cross 1): register single-consent patient (V-PAT-004) → POST201 (smoke CP1 live-pass); full-name search; profile/demographics; CSV export; profile coherence oracles.
+- IDEAL §4 seam(s) checked: X1 register → search → open timeline (patient side).
+- Gaps fixed (Type A): **export `{data}`→`{patients}` shape drift (P1, 73034d6f)** — CSV export was always empty + rows lacked displayName (V-PAT-014 declared-PII shaping); **export sent no branchId → 400 for every role (P1, b74b1fe3)** — now sources branchId from org-context, verified live (owner 200/20 patients). Both RED→GREEN, found via STEP 3a + the live drive.
+- Tests added: dc40d6cd (BR-015 consent-422 + BR-015b archived-write-403 contract pins + V-PAT-002 demographics-edit RBAC-403 backend pins), f27951b6 (2 FE profile coherence oracles), smoke 6cd6727f.
+- Deferred-reported (Type C): patient-merge BR-020 (Phase-2, handlers 501); patient-portal Phase-2 reads + online payments; profile enrichment fields (visitCount/lastVisit/outstandingBalanceCents) absent from declared TypeSpec but FE-intersected + rendered — no BR/AC requires them in-contract.
+- Circuit breakers tripped: none. Ran regen: NO.
+- Evidence: docs/audits/workflow-verification/runs/dental-patient/ (REPORT.md + screenshots)
+- Gate: typecheck ✓ · backend ✓ (per-file clone isolation; 72/72 on export suite) · contract ✓ (dental-patient.hurl 43 req) · FE unit ✓ (132/132 incl 2 coherence pins) · lint/boundaries ✓ · smoke ⚠️ **CP1 live-pass; CP2+ register-btn selector-hardening TODO (P3)**.
+- ⚠️ Surfaced the **RBAC-PIN backend-identity caveat** now recorded in the Environment baseline above.
