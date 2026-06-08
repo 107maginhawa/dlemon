@@ -275,3 +275,6 @@ docs/prompts-erase/
 # understand-anything knowledge-graph cache (regenerable via /understand +
 # `bun run scripts/build-contract-spine.ts`). Bulky + churns every regen.
 .understand-anything/
+
+# workflow-verification smoke venv (local Playwright/Firefox; never commit)
+apps/dentalemon/tests/smoke/.venv/
