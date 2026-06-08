@@ -62,6 +62,22 @@ jsonpath "$.needsFollowUp" == false
 jsonpath "$.person" isCollection
 
 
+# 1b. BR-015 / AC-PAT-001 — registration consent is required (single-consent
+# model V-PAT-004). Omitting/falsifying consentGiven → 422 CONSENT_REQUIRED, not 201.
+# Pins the FE↔BE error contract surfaced by the registration modal.
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "No Consent {{suffix}}",
+  "consentGiven": false,
+  "branchId": "{{branch_id}}"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "CONSENT_REQUIRED"
+
+
 # 2. List dental patients
 GET {{api}}/dental/patients?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
@@ -199,6 +215,20 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "archived"
+
+
+# 13b. BR-015b / AC-PAT-002 — an archived patient record is read-only. A write
+# (PATCH demographics) against the now-archived patient → 403 PATIENT_ARCHIVED.
+# Pins the read-only guard at the wire layer (backend unit covers it; contract did not).
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "needsFollowUp": true
+}
+HTTP 403
+[Asserts]
+jsonpath "$.code" == "PATIENT_ARCHIVED"
 
 
 # 14. Restore archived patient
