@@ -59,6 +59,16 @@ export async function updatePrescription(
     return ctx.json(prescription);
   }
 
+  // BR-003: field edits are blocked once the visit is locked/completed (parity with all
+  // five clinical create handlers). Status PROGRESSION above is intentionally exempt —
+  // pending→dispensed/cancelled happens externally (pharmacy), like the lab-order §13 carve-out.
+  if (visit.status === 'locked' || visit.status === 'completed') {
+    throw new BusinessLogicError(
+      'Cannot edit prescriptions on a locked or completed visit',
+      'VISIT_IMMUTABLE',
+    );
+  }
+
   // Non-status field update (existing behaviour unchanged)
   const updated = await repo.update(prescriptionId, {
     rxNormCode: body.rxNormCode,

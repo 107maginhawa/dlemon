@@ -5,8 +5,9 @@
  * removed (reassign the guarantor or delete the household instead).
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { HouseholdRepository } from '../repos/household.repo';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
@@ -27,6 +28,13 @@ export async function removeHouseholdMember(ctx: HandlerContext): Promise<Respon
 
   if (household.guarantorPatientId === patientId) {
     throw new BusinessLogicError('Cannot remove the guarantor from the household', 'GUARANTOR_NOT_REMOVABLE');
+  }
+
+  // EF-PAT-001 symmetry: addHouseholdMember blocks archived patients, so removal must too —
+  // an archived patient's household associations are frozen (reassign/delete the household instead).
+  const patient = await getPatientForDentalPatient(db, patientId);
+  if (patient?.status === 'archived') {
+    throw new ForbiddenError('Cannot remove an archived patient from a household', 'PATIENT_ARCHIVED');
   }
 
   const removed = await repo.removeMember(householdId, patientId);

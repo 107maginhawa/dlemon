@@ -14,7 +14,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 2 | dental-patient | ✅ READY | 9 (3 cross-tenant PHI holes, 1 stub 500→501, 5 doc/registry drift) | 8 test gaps + archived-sub-resource-guard product decision + KG-backlog | [MODULE_dental-patient_AUDIT_2026-06-08.md](modules/MODULE_dental-patient_AUDIT_2026-06-08.md) |
 | 3 | dental-scheduling | ✅ READY | 8 (1 RBAC bypass, 1 adversarial test, 1 stale comment, 1 wrong FSM/table doc note, 4 registry/spec/contract drift) | BR-SCH-003-on-PATCH-cancel decision + sub-feature negative-path line-audit + KG over-claim | [MODULE_dental-scheduling_AUDIT_2026-06-08.md](modules/MODULE_dental-scheduling_AUDIT_2026-06-08.md) |
 | 4 | dental-visit | ✅ READY | 10 (5 security: applyTemplate RBAC + cross-clinic template leak + 3× treatment-plan cross-tenant PHI; 5 registry/spec/contract/workflow-map drift) | carry-over cross-branch decision + TypeSpec shape reconciliation + BR-005 flag-ON test + template-CRUD RBAC + KG-backlog | [MODULE_dental-visit_AUDIT_2026-06-08.md](modules/MODULE_dental-visit_AUDIT_2026-06-08.md) |
-| 5 | dental-clinical | ✅ READY | 6 (1 consent-integrity bug: revoke-then-sign + gate ignored revoked; 5 contract/spec/registry/comment drift) | updatePrescription-on-locked-visit decision + post-sign consent-withdrawal decision + AC-CLI-005 405 pin + KG-backlog | [MODULE_dental-clinical_AUDIT_2026-06-08.md](modules/MODULE_dental-clinical_AUDIT_2026-06-08.md) |
+| 5 | dental-clinical | ✅ READY | 6 (1 consent-integrity bug: revoke-then-sign + gate ignored revoked; 5 contract/spec/registry/comment drift). _Post-audit: updatePrescription BR-003 field-edit guard added (resolved)._ | post-sign consent-withdrawal decision (ratified as-is) + AC-CLI-005 405 pin + KG-backlog | [MODULE_dental-clinical_AUDIT_2026-06-08.md](modules/MODULE_dental-clinical_AUDIT_2026-06-08.md) |
 | 6 | dental-perio | ⏳ pending | — | — | — |
 | 7 | dental-imaging | ⏳ pending | — | — | — |
 | 8 | dental-pmd | ⏳ pending | — | — | — |
@@ -32,10 +32,12 @@ dental-portal → emr-consultation → provider → external-records-import
   Register in the **dental-imaging** round (correct module attribution).
 - **AC-ORG-002** fee-schedule → new-invoice default: dental-org proves the per-branch override;
   the invoice-time price snapshot is billing-side — verify in the **dental-billing** round.
-- **BR-015b archived = read-only (product decision)** — dental-patient enforces it only on core
-  demographics/follow-up/recall writes; sub-resource writers (insurance/contacts/alerts/tasks/
-  household) currently allow writes to an archived patient. Decide scope (extend guard + test, or
-  narrow the rule). Likely recurs for other modules' patient sub-resources.
+- ~~**BR-015b archived = read-only (product decision)**~~ **RESOLVED 2026-06-08.** Re-verification
+  shows the EF-PAT-001 guard (`patient.status==='archived'` → 403 `PATIENT_ARCHIVED`) is now
+  pervasive across all sub-resource writers (insurance/contacts/alerts/tasks/household-create/
+  treatment-plan/case-presentation/consent/follow-up) — the round-2 note was stale. The lone
+  straggler `removeHouseholdMember` (had no guard while its sibling `addHouseholdMember` did) was
+  fixed this session (403 `PATIENT_ARCHIVED` + test). Scope decision = enforce (not narrow).
 - **PATCH-status-field bypass class (from dental-scheduling)** — a generic `PATCH {status}` update
   path can bypass the narrower RBAC/validation enforced by a transition's dedicated endpoint. In
   scheduling, `PATCH {status:'cancelled'}` bypassed the owner/staff_full cancel restriction (fixed)
@@ -55,10 +57,11 @@ dental-portal → emr-consultation → provider → external-records-import
   treatment) trusts a single boolean.
 - **Generic update handlers may skip the immutability guard the create handler enforces
   (from dental-clinical `updatePrescription`).** All five clinical *create* handlers block
-  writes to a locked/completed visit (BR-003), but `updatePrescription` has no such guard. Check
-  every module's *update* path for the BR-003 (or equivalent immutability) guard its *create*
-  path enforces — surfaced as a product decision here (status-progression vs field-edit), but
-  the asymmetry itself is the pattern to hunt.
+  writes to a locked/completed visit (BR-003), but `updatePrescription` had no such guard.
+  **RESOLVED 2026-06-08:** `updatePrescription` now blocks field edits on a locked/completed
+  visit (422 `VISIT_IMMUTABLE`) while still allowing status FSM progression (dispense/cancel are
+  external, per the lab-order §13 carve-out) — tests pin both. The *pattern* still stands: check
+  every module's *update* path for the immutability guard its *create* path enforces.
 - **Caller-supplied branchId is not an auth boundary (V-PAT-002 → V-VIS-011).** A `branchId`
   query param that is access-checked but never tied to the path resource (patientId) leaks
   cross-tenant. dental-patient (list visits/conditions) and dental-visit (treatment-plan

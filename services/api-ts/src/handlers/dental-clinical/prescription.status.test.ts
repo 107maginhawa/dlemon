@@ -13,7 +13,7 @@ import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
-import { AppError, BusinessLogicError } from '@/core/errors';
+import { AppError } from '@/core/errors';
 import {
   CreatePrescriptionBody,
   CreatePrescriptionParams,
@@ -290,5 +290,61 @@ describe('EM-CLI-012: invalid transitions return 422', () => {
       },
     );
     expect(res.status).toBe(422);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BR-003: prescription FIELD edits are blocked on a locked/completed visit
+// (parity with all five create handlers). Status PROGRESSION stays allowed
+// post-lock (dispense/cancel are external, like the lab-order §13 carve-out).
+// ---------------------------------------------------------------------------
+
+async function lockVisit(visitId: string) {
+  const { dentalVisits } = await import('@/handlers/dental-visit/repos/visit.schema');
+  const { eq } = await import('drizzle-orm');
+  await db.update(dentalVisits)
+    .set({ status: 'locked', updatedBy: TEST_USER.id })
+    .where(eq(dentalVisits.id, visitId));
+}
+
+describe('BR-003: prescription writes on a locked visit', () => {
+  test('field edit on a locked visit returns 422 VISIT_IMMUTABLE', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+    const prescription = await seedPrescription(app, visit.id);
+
+    await lockVisit(visit.id);
+
+    const res = await app.request(
+      `/dental/visits/${visit.id}/prescriptions/${prescription.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dosage: '250mg', drugName: 'Amoxicillin (edited)' }),
+      },
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('status progression (→dispensed) on a locked visit still returns 200 (external dispense carve-out)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+    const prescription = await seedPrescription(app, visit.id);
+
+    await lockVisit(visit.id);
+
+    const res = await app.request(
+      `/dental/visits/${visit.id}/prescriptions/${prescription.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'dispensed' }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('dispensed');
   });
 });
