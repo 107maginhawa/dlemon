@@ -115,7 +115,7 @@ Patient records, clinical data, billing invoices, appointment scheduling (those 
 
 ### Member Role Catalog (G8-S3)
 
-The `member_role` enum (`membership.schema.ts`) defines **9** context roles scoped to a branch. Only `dentist_owner` holds admin authority; all others are scoped staff. The four marked ✦ are also enumerated in `ROLE_PERMISSION_MATRIX.md`; the five below them (previously undocumented) are catalogued here as the source of truth.
+The `member_role` enum (`membership.schema.ts`) defines **10** context roles scoped to a branch (verified against `repos/membership.schema.ts` `memberRoleEnum`). Only `dentist_owner` holds admin authority; all others are scoped staff. The four marked ✦ are also enumerated in `ROLE_PERMISSION_MATRIX.md`; the six below them (previously undocumented) are catalogued here as the source of truth.
 
 | Role | Clinical? | Summary | Typical capabilities |
 |------|-----------|---------|----------------------|
@@ -127,6 +127,7 @@ The `member_role` enum (`membership.schema.ts`) defines **9** context roles scop
 | `dental_assistant` | Yes (assist) | Chairside assistant | Clinical assist — chart updates under a dentist, imaging capture; no role/fee admin |
 | `front_desk` | No | Reception | Check-in, scheduling, patient demographics; no clinical write, no billing edits |
 | `billing_staff` | No | Billing / claims | Invoices, payments, fee-schedule **read**; no clinical, no role admin |
+| `treatment_coordinator` | No | Case presentation / financial coordinator | Present treatment plans & case presentations; billing surface to present costs + payment options; no clinical writes, no role/fee admin |
 | `read_only` | No | Auditor / observer | Read access to permitted records; no writes anywhere |
 
 > All non-`dentist_owner` roles fail `assertBranchRole(['dentist_owner'])` guards (staff/role/fee/audit-config writes). Clinical write authority for `hygienist`/`dental_assistant` is gated per clinical-module rules, not org-admin rules.
@@ -161,8 +162,8 @@ The `member_role` enum (`membership.schema.ts`) defines **9** context roles scop
 | id | Yes | UUID PK | — |
 | person_id | Yes | FK → person | — |
 | branch_id | Yes | FK → dental_branch | — |
-| member_role | Yes | dentist_owner / dentist_associate / staff_full / staff_scheduling | enum |
-| member_status | Yes | active / inactive / invited | enum |
+| member_role | Yes | One of the 10 `member_role` enum values (see §6 Member Role Catalog — the source of truth) | enum |
+| member_status | Yes | active / inactive / invited (`revoked` is a legacy enum value not used by the lifecycle — see §8) | enum |
 | pin_hash | No | Local PIN auth | bcrypt |
 | pin_failed_attempts | No | Lockout counter | default 0 |
 | pin_locked_until | No | Lockout timestamp | nullable |

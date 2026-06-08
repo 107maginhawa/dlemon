@@ -154,6 +154,14 @@
           "type": "authorization",
           "status": "implemented",
           "source": "assert-branch-access.ts"
+        },
+        {
+          "id": "BR-016b",
+          "description": "PIN-based local auth lockout: after repeated failed verify-pin attempts the membership is locked (429 with lockedUntil). Lockout escalates from a short delay at 5 attempts to a 5-minute lockout at 10 attempts; a successful verify resets the failed-attempt counter.",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "verifyPin.ts",
+          "test": "dental-org/verifyPin.test.ts"
         }
       ]
     },

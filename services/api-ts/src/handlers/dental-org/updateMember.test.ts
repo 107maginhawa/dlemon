@@ -281,4 +281,71 @@ describe('updateMember handler', () => {
     const body = await res.json() as any;
     expect(body.role).toBe('staff_scheduling');
   });
+
+  // --------------------------------------------------------------------------
+  // G7-S3: Role-change privilege escalation guard (adversarial)
+  //   assertBranchAccess alone would let any active member change roles —
+  //   including self-promotion. Only dentist_owner may change a member's role.
+  // --------------------------------------------------------------------------
+
+  const NON_OWNER_ID = 'c5000000-0000-1000-8000-0000000000aa';
+
+  test('returns 403 when a non-owner (staff_full) attempts a role change [G7-S3]', async () => {
+    const membershipRepo = await seedAll();
+    // Caller: an active, non-owner member of the branch (so assertBranchAccess PASSES)
+    await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      personId: NON_OWNER_ID,
+      displayName: 'Staff Non-Owner',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    // Target member the non-owner tries to escalate to dentist_owner
+    const target = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Target Member',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp({ id: NON_OWNER_ID, email: 'staff@clinic.com' });
+
+    const res = await app.request(`/dental/org/members/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'dentist_owner' }),
+    });
+
+    expect(res.status).toBe(403);
+    // Role must NOT have changed
+    const reloaded = await membershipRepo.findOneById(target.id);
+    expect(reloaded!.role).toBe('staff_full');
+  });
+
+  test('allows a non-owner to update their own displayName (non-role field) [G7-S3]', async () => {
+    // Guard is scoped to role changes only — non-role updates remain allowed
+    // for any active branch member.
+    const membershipRepo = await seedAll();
+    const self = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      personId: NON_OWNER_ID,
+      displayName: 'Staff Non-Owner',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp({ id: NON_OWNER_ID, email: 'staff@clinic.com' });
+
+    const res = await app.request(`/dental/org/members/${self.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Renamed Self' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.displayName).toBe('Renamed Self');
+    expect(body.role).toBe('staff_full');
+  });
 });
