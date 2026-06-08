@@ -15,7 +15,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 3 | dental-scheduling | ✅ READY | 8 (1 RBAC bypass, 1 adversarial test, 1 stale comment, 1 wrong FSM/table doc note, 4 registry/spec/contract drift) | BR-SCH-003-on-PATCH-cancel decision + sub-feature negative-path line-audit + KG over-claim | [MODULE_dental-scheduling_AUDIT_2026-06-08.md](modules/MODULE_dental-scheduling_AUDIT_2026-06-08.md) |
 | 4 | dental-visit | ✅ READY | 10 (5 security: applyTemplate RBAC + cross-clinic template leak + 3× treatment-plan cross-tenant PHI; 5 registry/spec/contract/workflow-map drift) | carry-over cross-branch decision + TypeSpec shape reconciliation + BR-005 flag-ON test + template-CRUD RBAC + KG-backlog | [MODULE_dental-visit_AUDIT_2026-06-08.md](modules/MODULE_dental-visit_AUDIT_2026-06-08.md) |
 | 5 | dental-clinical | ✅ READY | 6 (1 consent-integrity bug: revoke-then-sign + gate ignored revoked; 5 contract/spec/registry/comment drift). _Post-audit: updatePrescription BR-003 field-edit guard added (resolved)._ | post-sign consent-withdrawal decision (ratified as-is) + AC-CLI-005 405 pin + KG-backlog | [MODULE_dental-clinical_AUDIT_2026-06-08.md](modules/MODULE_dental-clinical_AUDIT_2026-06-08.md) |
-| 6 | dental-perio | ⏳ pending | — | — | — |
+| 6 | dental-perio | ✅ READY | 7 (1 clinical-correctness bug: partial-chart over-staging to IV via charted-count `remainingTeeth`; 1 wrong-role RBAC test; 1 stale comment; 4 registry/spec/contract drift incl. whole module absent from br-registry) | WF-P03 amendment + WF-P05 PDF export deferred + cascade-audit-row test gap + cross-branch positive test + KG-backlog | [MODULE_dental-perio_AUDIT_2026-06-08.md](modules/MODULE_dental-perio_AUDIT_2026-06-08.md) |
 | 7 | dental-imaging | ⏳ pending | — | — | — |
 | 8 | dental-pmd | ⏳ pending | — | — | — |
 | 9 | dental-billing | ⏳ pending | — | — | — |
@@ -62,6 +62,17 @@ dental-portal → emr-consultation → provider → external-records-import
   visit (422 `VISIT_IMMUTABLE`) while still allowing status FSM progression (dispense/cancel are
   external, per the lab-order §13 carve-out) — tests pin both. The *pattern* still stands: check
   every module's *update* path for the immutability guard its *create* path enforces.
+- **Absence-of-evidence must not be inferred as a clinical signal (from dental-perio IDEAL-§343).**
+  `classifyChart` defaulted `remainingTeeth` to the count of teeth *charted* on a (partial) perio
+  exam, so a fully-dentate patient charted on <20 teeth tripped the `<20 teeth` Stage-IV factor and
+  was over-staged — and a test had *enshrined* the wrong result. **For every derived clinical/scoring
+  default, check that an omitted optional input is treated as "no evidence" (passed through as
+  undefined), not silently substituted with a structurally-related but semantically-different value.**
+  Recurs anywhere a classifier/score fills a missing risk input from the data at hand.
+- **A whole module can be missing from br-registry (from dental-perio).** dental-perio's BR-P01..P07
+  + V-PER codes were entirely absent from `br-registry.json` (8 of 10 dental modules registered).
+  **When auditing a module, confirm it has a registry block at all** — not just that individual rules
+  are present.
 - **Caller-supplied branchId is not an auth boundary (V-PAT-002 → V-VIS-011).** A `branchId`
   query param that is access-checked but never tied to the path resource (patientId) leaks
   cross-tenant. dental-patient (list visits/conditions) and dental-visit (treatment-plan

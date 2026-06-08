@@ -309,6 +309,74 @@
         }
       ]
     },
+    "dental-perio": {
+      "description": "Periodontal charting: one-chart-per-visit, FDI/depth validation, role gate, visit-lock cascade, AAP/EFP 2017 staging/grading",
+      "rules": [
+        {
+          "id": "BR-P01",
+          "description": "One perio chart per visit. A second create for the same visitId returns 409 CHART_EXISTS.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "createPerioChart.ts:53-56; perio-chart.repo.ts findByVisitId; dental-perio-coverage.test.ts:201"
+        },
+        {
+          "id": "BR-P02",
+          "description": "Perio chart is immutable once the parent visit is completed/locked. Writes (create/upsert/complete) on a sealed visit are rejected: create→422 VISIT_LOCKED, upsert→422 VISIT_IMMUTABLE, complete→422 VISIT_LOCKED. A completed/locked chart itself rejects further writes as a 409 CHART_COMPLETED state conflict (N-PER-01).",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "createPerioChart.ts:39-41; upsertToothReading.ts:59-68; completePerioChart.ts:64-73; dental-perio-coverage.test.ts:231,374,531,624"
+        },
+        {
+          "id": "BR-P03",
+          "description": "Probing depths must be integers 0-20mm per site; recession -5..20mm. Out of range → 422 INVALID_DEPTH.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "utils/perio-validation.ts assertValidDepths; perio-validation.test.ts"
+        },
+        {
+          "id": "BR-P04",
+          "description": "FDI tooth number must fall in a valid quadrant range (adult 11-18/21-28/31-38/41-48; primary 51-55/61-65/71-75/81-85). Cross-quadrant gaps (e.g. 19) → 422 INVALID_TOOTH_NUMBER. The TypeSpec @minValue/@maxValue only bounds 11-85; the precise disjoint check is in the handler.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "utils/perio-validation.ts isValidFdiToothNumber; dental-perio-coverage.test.ts:427"
+        },
+        {
+          "id": "BR-P05",
+          "description": "Chart create/upsert/complete require a clinical role (dentist_owner, dentist_associate, hygienist) on the chart's branch. Non-clinical branch members (staff_scheduling/staff_full) and non-members → 403. Read (get/list) additionally allows staff_full; staff_scheduling is excluded from all perio access (EF-PER-002).",
+          "type": "access-control",
+          "status": "implemented",
+          "source": "createPerioChart.ts:44; upsertToothReading.ts:71; completePerioChart.ts:75; getPerioChart.ts:34; dental-perio-coverage.test.ts:219,237(staff_scheduling create 403),362,794,813"
+        },
+        {
+          "id": "BR-P06",
+          "description": "Tooth-reading upsert is idempotent on (chartId, toothNumber). A single-site PATCH writes only the columns present in the request (one atomic onConflictDoUpdate); other sites on the tooth are never replaced to null. No 409 on duplicate.",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "perio-reading.repo.ts:76-92 (PATCHABLE_READING_COLUMNS); dental-perio-coverage.test.ts:298,343"
+        },
+        {
+          "id": "BR-P07",
+          "description": "Completing a chart requires a minimum reading count: adult 16, primary (FDI 51-85) 8 (dentition inferred from charted tooth numbers). Below the minimum → 422 INSUFFICIENT_READINGS.",
+          "type": "business-rule",
+          "status": "implemented",
+          "source": "completePerioChart.ts:84-93; dental-perio-coverage.test.ts:578,740,750"
+        },
+        {
+          "id": "V-PER-007",
+          "description": "Visit-lock → chart-lock cascade. The chart `locked` state is materialized lazily on the next perio read/write: when the parent visit is completed/locked, a not-yet-locked chart transitions to `locked` and a perio.chart.locked audit marker is written (ADR-006: audit-log-only, no event bus).",
+          "type": "state-machine",
+          "status": "implemented",
+          "source": "utils/perio-lock-cascade.ts; perio-chart.repo.ts lockByVisitId; dental-perio-coverage.test.ts:545"
+        },
+        {
+          "id": "V-PER-STAGING",
+          "description": "On completion the chart is classified per the 2017 AAP/EFP system (stage from worst interdental CAL + complexity factors; grade from %bone-loss/age + smoking/diabetes modifiers; extent). Stage/extent are null without evidence; grade defaults to B. IDEAL-§343: remainingTeeth is NOT inferred from the charted-tooth count — a partial chart of a fully-dentate patient is not over-staged to IV via the <20-teeth factor.",
+          "type": "clinical-correctness",
+          "status": "implemented",
+          "source": "utils/perio-staging.ts; utils/perio-classify-chart.ts:118; completePerioChart.ts:126; perio-staging.test.ts; perio-classify-chart.test.ts (IDEAL-§343 case)"
+        }
+      ]
+    },
     "dental-imaging": {
       "description": "Imaging workspace, finding state machine, and ceph analysis rules",
       "rules": [

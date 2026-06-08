@@ -15,7 +15,10 @@
  *   @AC-PERIO-08 locked-visit→422   @AC-PERIO-09 staff_scheduling→403   @AC-PERIO-10 read readings
  *
  * All fixture IDs use `ee` UUID prefix to avoid collisions with other suites.
- * Routes registered inline — not yet wired in app.ts.
+ * Routes are wired in the generated registry/routes (generated/openapi/routes.ts
+ * — `/dental/perio-charts` + `/dental/visits/:visitId/perio-chart`); these
+ * handler tests register them inline on a bare Hono app to exercise the handlers
+ * in isolation with controlled auth context.
  */
 
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
@@ -218,6 +221,20 @@ describe('createPerioChart', () => {
 
   test('returns 403 when user has no membership', async () => {
     const app = buildApp({ id: 'ffffffff-0000-1000-8000-000000000000', email: 'ghost@test.com' });
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: VISIT_ID, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  // BR-P05 (AC-P09): chart creation requires a *clinical* role. A branch member
+  // with a non-clinical role (staff_scheduling here) is on the branch but must
+  // still be denied — assertBranchRole filters role, not mere membership. The
+  // pre-existing 403 test only covers a non-member; this pins the wrong-role case.
+  test('returns 403 for a non-clinical branch member (staff_scheduling) creating a chart', async () => {
+    const app = buildApp(NON_DENTIST);
     const res = await app.request('/dental/perio-charts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

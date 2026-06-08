@@ -10,7 +10,7 @@ oli: oli-api-contracts v1.0 | generated: 2026-05-24 | source: dental-perio MODUL
 
 ## Authentication
 
-All endpoints require Bearer token (Better-Auth session). `branchId` is derived from the visit's branch — callers must have a `DentalMembership` at that branch (`assertBranchAccess`).
+All endpoints require Bearer token (Better-Auth session). `branchId` is derived from the resource's own branch (the visit's branch for create; the chart's branch for chart-scoped ops; the patient's charts' branch for the history list) — never caller-supplied. Authorization is **role-gated** via `assertBranchRole` (not bare membership): write ops require a clinical role (dentist_owner / dentist_associate / hygienist); read ops additionally allow staff_full. `staff_scheduling` is excluded from all perio access (EF-PER-002).
 
 ---
 
@@ -108,6 +108,25 @@ Get a perio chart with all tooth readings.
 
 ---
 
+### GET /api/v1/dental/perio-charts?patientId={uuid}
+
+Multi-exam longitudinal comparison: a patient's **finalized** (completed/locked) perio charts, most recent first (bounded to 12), each with its readings (incl. computed per-site CAL). Drafts excluded.
+
+**Auth:** dentist_owner | dentist_associate | hygienist | staff_full (branch derived from the patient's own charts; empty `{ "data": [] }` is returned — with no role check — when the patient has no finalized charts)
+
+**Success 200:**
+```json
+{ "data": [ /* PerioChart objects (newest first), each with readings[] incl. gm*/cal* per-site fields */ ] }
+```
+
+**Errors:**
+| Status | Code | Condition |
+|--------|------|-----------|
+| 401 | — | Unauthenticated |
+| 403 | FORBIDDEN | Caller has no clinical-read role at the charts' branch |
+
+---
+
 ### GET /api/v1/dental/visits/:visitId/perio-chart
 
 Get the perio chart for a specific visit (convenience endpoint).
@@ -160,7 +179,7 @@ Upsert tooth-level periodontal readings. Idempotent — safe to call repeatedly.
 }
 ```
 
-All fields are optional — send only what changed. Existing values preserved for fields not included.
+All fields are optional — send only what changed. Existing values preserved for fields not included. Additional optional fields not shown above: per-site **gingival-margin** position vs CEJ (`gmBM/gmBC/gmBD/gmLM/gmLC/gmLD`, signed integers −5..20mm) which, combined with the matching probing depth, drive the **read-only per-site CAL** (`calBM…calLD`) returned on the response (never persisted).
 
 **Success 200:**
 ```json
@@ -186,12 +205,14 @@ All fields are optional — send only what changed. Existing values preserved fo
 **Errors:**
 | Status | Code | Condition |
 |--------|------|-----------|
-| 403 | FORBIDDEN | Caller not dentist role |
-| 404 | NOT_FOUND | chartId not found |
-| 422 | VISIT_LOCKED | Parent visit is locked |
-| 422 | INVALID_DEPTH | Any depth value < 0 or > 20 |
-| 422 | INVALID_TOOTH_NUMBER | toothNumber not in valid FDI set |
-| 422 | CHART_COMPLETED | Chart already completed — use amendment flow |
+| 403 | FORBIDDEN | Caller lacks clinical (dentist/hygienist) role at branch |
+| 404 | NOT_FOUND | chartId not found, or parent visit not found |
+| 409 | CHART_COMPLETED | Chart already completed/locked — immutable (state conflict, not 422) |
+| 422 | VISIT_IMMUTABLE | Parent visit is completed/locked |
+| 422 | INVALID_DEPTH | Any depth < 0 or > 20 (or recession outside −5..20) |
+| 422 | INVALID_GRADE | mobility/furcation outside 0–3 |
+| 422 | INVALID_GINGIVAL_MARGIN | a `gm*` site outside −5..20 (handler-level; the validator also bounds it → 400) |
+| 422 | INVALID_TOOTH_NUMBER | toothNumber not in valid FDI set (quadrant-gap, e.g. 19) |
 
 ---
 
@@ -201,7 +222,7 @@ Mark a perio chart as completed. Computes summary statistics.
 
 **Auth:** dentist_owner | dentist_associate | hygienist
 
-**Request Body:** `{}` (empty — no body needed)
+**Request Body:** optional. Omit entirely (`{}`) for measurement-only classification, or supply 2017 staging/grading risk factors sourced from medical history (all optional): `toothLossCount`, `remainingTeeth`, `biteCollapse`, `bonelossPercent`, `ageYears`, `fiveYearProgressionMm`, `cigarettesPerDay`, `hasDiabetes`, `hba1cPercent`, `molarIncisorPattern`. **Note (IDEAL-§343):** when `remainingTeeth` is omitted it is *not* inferred from the charted-tooth count — a partial chart is not over-staged to IV via the `<20 teeth` factor.
 
 **Success 200:**
 ```json
@@ -211,17 +232,21 @@ Mark a perio chart as completed. Computes summary statistics.
   "completedAt": "2026-05-24T10:30:00Z",
   "summaryBopPercent": 42.5,
   "summaryMeanDepth": 3.8,
-  "summaryDeepPocketCount": 3
+  "summaryDeepPocketCount": 3,
+  "stage": "III",
+  "grade": "C",
+  "extent": "generalized"
 }
 ```
+`stage` (I–IV) and `extent` (localized/generalized/molar_incisor) are `null` without evidence; `grade` (A/B/C) defaults to `B`. Computed per the 2017 AAP/EFP system; persisted in the `perio.chart.completed` audit row.
 
 **Errors:**
 | Status | Code | Condition |
 |--------|------|-----------|
-| 403 | FORBIDDEN | Caller not dentist role |
-| 404 | NOT_FOUND | Chart not found |
-| 409 | CHART_COMPLETED | Already completed |
-| 422 | VISIT_LOCKED | Parent visit is locked |
+| 403 | FORBIDDEN | Caller lacks clinical role |
+| 404 | NOT_FOUND | Chart or parent visit not found |
+| 409 | CHART_COMPLETED | Already completed/locked (state conflict) |
+| 422 | VISIT_LOCKED | Parent visit is completed/locked |
 | 422 | INSUFFICIENT_READINGS | < 16 teeth recorded (adult) or < 8 (primary) |
 
 ---

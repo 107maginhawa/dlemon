@@ -18,11 +18,13 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 | PRD Coverage | FR-PERIO-001 to FR-PERIO-007 |
 | Depends on | `dental-visit`, `dental-patient`, `dental-org` |
 | Depended on by | `dental-clinical` (cross-reference), `dental-pmd` (export) |
-| Status | PLANNED |
+| Status | IMPLEMENTED (full-stack) |
 
 **Scope:** Per-visit periodontal examination record. One chart per visit. 6-site probing depths per tooth (FDI notation). Bleeding on probing, recession, mobility, furcation per tooth. Print-layout export. Immutable after visit locked.
 
-**Out of scope (Phase 2 deferral):** AI-assisted progression tracking, voice-activated charting, automated perio staging/grading classification.
+> **Spec-behind-impl note (2026-06-08 audit):** the shipped module is wider than this v1.0 spec. Beyond the fields above it persists/derives: **per-site gingival-margin (CEJ) position** and **read-only per-site CAL** (probing depth + gingival margin, never stored — P1-5); **2017 AAP/EFP staging/grading/extent** computed on completion (`utils/perio-staging.ts` + `utils/perio-classify-chart.ts` — P1-6); and a **multi-exam longitudinal comparison** endpoint `GET /dental/perio-charts?patientId=` (`listPerioChartsForPatient`). Two items originally listed "out of scope" below have since been **built and shipped** — voice-activated charting (`apps/dentalemon/.../perio/voice/`, `use-voice-perio.ts`) and automated staging/grading classification. The only genuine perio non-goal that remains is **AI** auto-tracing / AI voice transcription (the product is local-first and intentionally no-AI).
+
+**Out of scope (genuine non-goals):** AI-assisted progression tracking / AI auto-classification (product is local-first, no-AI).
 
 ---
 
@@ -179,7 +181,7 @@ draft ──► completed ──► locked
 
 ## 9. UI/UX Requirements
 
-> **Implementation status (V-PER-011): backend-only — frontend DEFERRED.** The perio chart-grid UI (WF-P01..P05 below) is NOT yet implemented in `apps/dentalemon`. The backend slice (create/read/upsert/complete + visit-lock cascade) is complete and contract-tested; the chart-grid, input panel, progress ring, and print layout are a future frontend slice. The requirements below are the design target for that deferred slice, not a description of shipped UI.
+> **Implementation status (corrected 2026-06-08 audit): full-stack SHIPPED.** The earlier "V-PER-011 backend-only — frontend DEFERRED" note is **stale**. The perio chart-grid UI **is** implemented in `apps/dentalemon/src/features/workspace/components/perio/` (chart grid, tooth columns, per-site cells, BOP dots, CAL cells, live summary bar, classification panel, multi-exam comparison) with hooks (`use-perio-chart.ts`, `use-perio-history.ts`), voice charting (`voice/`, `use-voice-perio.ts`), and E2E journeys (`tests/e2e/journeys/03-perio-charting.journey.spec.ts`, plus `ipad-perio-charting`/`perio-voice-charting` specs). The requirements below describe the shipped UI design target.
 
 - **Chart grid**: 2 rows (maxillary / mandibular), teeth ordered FDI left-to-right per arch. Each cell shows: tooth number, max probing depth, BOP dot count.
 - **Color coding**: ≤3 mm = green background, 4–5 mm = amber, ≥6 mm = red.
@@ -303,10 +305,10 @@ Per ADR-006 (domain-events-descope), domain events here are audit-log-only seman
 
 | Step | Artifact | Status |
 |------|----------|--------|
-| 1 | TypeSpec (`dental-perio.tsp`) | ⬜ |
-| 2 | Codegen (openapi + ts types) | ⬜ |
-| 3 | Backend tests RED | ⬜ |
-| 4 | Backend impl GREEN | ⬜ |
-| 5 | Contract tests (Hurl) | ⬜ |
-| 6 | UI prototype | ⬜ |
-| 7 | E2E verify | ⬜ |
+| 1 | TypeSpec (`dental-perio.tsp`) | ✅ |
+| 2 | Codegen (openapi + ts types) | ✅ |
+| 3 | Backend tests RED | ✅ |
+| 4 | Backend impl GREEN | ✅ (`handlers/dental-perio/`, 103 tests) |
+| 5 | Contract tests (Hurl) | ✅ (`specs/api/tests/contract/dental-perio.hurl`) |
+| 6 | UI prototype | ✅ (`apps/dentalemon/.../components/perio/`) |
+| 7 | E2E verify | ✅ (`tests/e2e/journeys/03-perio-charting.journey.spec.ts`) |

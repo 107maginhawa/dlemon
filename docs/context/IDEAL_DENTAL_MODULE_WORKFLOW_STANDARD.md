@@ -340,7 +340,7 @@ accurate target backlog (cross-referenced to the audit, §8.B/D):
 | External EMR import | `external-records-import` — spec/plan only, not built. |
 | Patient merge action | Duplicate-detection exists; the merge-with-audit-trail action (BR-020) is not implemented. |
 | Erasure / legal-hold cross-tenant admin scope | Implemented but admin-role-only with no tenancy gate — needs an explicit product decision (audit §8.B). |
-| Perio partial-chart staging default | `remainingTeeth` omission inflates a partial chart to Stage IV — needs a clarified default (audit §8.B). |
+| ~~Perio partial-chart staging default~~ **RESOLVED 2026-06-08** | `classifyChart` no longer defaults `remainingTeeth` to the charted-tooth count, so a partial chart of a fully-dentate patient is no longer over-staged to IV via the `<20 teeth` Stage-IV factor; that factor now fires only when `remainingTeeth` is explicitly supplied. Fixed in `perio-classify-chart.ts` with TDD pins in `perio-classify-chart.test.ts`. |
 | List-response-shape divergences | A few list handlers still return bare arrays vs the `{data, pagination}` contract — sweep pending (audit §8.B). |
 | Advanced specialty / ortho case mgmt, supplier mgmt, GL accounting, AI imaging, full DICOM, CRM campaigns | Remain intentionally deferred per §12 non-goals. |
 
