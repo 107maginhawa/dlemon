@@ -67,7 +67,48 @@
           "description": "An appointment check-in creates a visit record. Deleting the appointment does not delete the visit.",
           "type": "lifecycle-coupling",
           "status": "implemented",
-          "source": "dental-scheduling + dental-visit handlers"
+          "source": "dental-scheduling + dental-visit handlers",
+          "test": "dental-scheduling/acceptance.scheduling-workflows.test.ts (AC-SCHED-03 visit preserved on cancel); dental-scheduling.test.ts:548 (visitId linked on check-in)"
+        },
+        {
+          "id": "BR-SCH-001",
+          "description": "All appointment operations are scoped to a branch (assertBranchRole/assertBranchAccess); a principal with no membership in the target branch is rejected 403.",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "createAppointment.ts:34, updateAppointment.ts:45, cancelAppointment.ts:36, checkInAppointment.ts:55",
+          "test": "dental-scheduling/rbac-scheduling.test.ts:366 (no-membership -> 403)"
+        },
+        {
+          "id": "BR-SCH-002",
+          "description": "Walk-in appointments (walkIn=true) bypass the configured working-hours validation.",
+          "type": "business-rule",
+          "status": "implemented",
+          "source": "createAppointment.ts:59 (if (!body.walkIn) { working-hours check })",
+          "test": "dental-scheduling/dental-scheduling.working-hours.test.ts (BR-SCH-002 closed-day walk-in -> 201)"
+        },
+        {
+          "id": "BR-SCH-003",
+          "description": "Cancellation requires a reason (DELETE query param min:5/max:500) -> 422 REASON_REQUIRED when missing/blank.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "cancelAppointment.ts:46-50",
+          "test": "dental-scheduling/dental-scheduling-transitions.test.ts:249,258 (REASON_REQUIRED 422)"
+        },
+        {
+          "id": "BR-SCH-004",
+          "description": "Non-walk-in appointments must fall within the branch's configured working hours (timezone-aware) -> 422 OUTSIDE_WORKING_HOURS.",
+          "type": "business-rule",
+          "status": "implemented",
+          "source": "createAppointment.ts:59-67, updateAppointment.ts:123-131",
+          "test": "dental-scheduling/dental-scheduling.working-hours.test.ts:296-350 (close-exceed, closed-day, boundary, timezone)"
+        },
+        {
+          "id": "FR3.7",
+          "description": "Double-booking: soft-warn at create (201 + warnings:[DOUBLE_BOOKING]); hard-block at reschedule (409 RESCHEDULE_CONFLICT). No DB unique constraint (intentional).",
+          "type": "business-rule",
+          "status": "implemented",
+          "source": "createAppointment.ts:72-86 (warn), updateAppointment.ts:132-146 (409)",
+          "test": "dental-scheduling/dental-scheduling.test.ts:631 (warning), :1056-1090 (RESCHEDULE_CONFLICT 409)"
         }
       ]
     },

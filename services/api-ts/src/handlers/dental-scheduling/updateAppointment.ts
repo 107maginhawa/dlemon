@@ -79,6 +79,11 @@ export async function updateAppointment(ctx: HandlerContext) {
   }
 
   if (body.status === 'cancelled') {
+    // EM-SCH-001 / MODULE_SPEC §6: cancellation is restricted to dentist_owner + staff_full,
+    // exactly as the dedicated DELETE cancel handler enforces. The broad write-role gate above
+    // admits staff_scheduling/dentist_associate so they can reschedule, but they must NOT be able
+    // to cancel by routing through PATCH {status:'cancelled'} — close that role bypass here.
+    await assertBranchRole(db, user.id, existing.branchId, ['dentist_owner', 'staff_full']);
     const result = await repo.cancel(appointmentId, body.cancellationReason, user.id);
     if (!result) throw new NotFoundError('Appointment');
     await expireReminders();
@@ -97,7 +102,7 @@ export async function updateAppointment(ctx: HandlerContext) {
 
   // V-SCH-007: visit_type, if provided, must be a valid enum value.
   if (body.visitType !== undefined && !isVisitType(body.visitType)) {
-    throw new ValidationError('visitType must be one of: checkup, treatment, emergency, recall');
+    throw new ValidationError('visitType must be one of: checkup, treatment, emergency, recall, hygiene');
   }
 
   // Effective start/end after the patch (fall back to existing values).

@@ -12,7 +12,7 @@ dental-portal → emr-consultation → provider → external-records-import
 |---|--------|---------|-------------|----------|--------|
 | 1 | dental-org | ✅ READY | 5 (1 test gap, 3 doc drift, 1 registry drift) | BR-016c → imaging round | [MODULE_dental-org_AUDIT_2026-06-08.md](modules/MODULE_dental-org_AUDIT_2026-06-08.md) |
 | 2 | dental-patient | ✅ READY | 9 (3 cross-tenant PHI holes, 1 stub 500→501, 5 doc/registry drift) | 8 test gaps + archived-sub-resource-guard product decision + KG-backlog | [MODULE_dental-patient_AUDIT_2026-06-08.md](modules/MODULE_dental-patient_AUDIT_2026-06-08.md) |
-| 3 | dental-scheduling | ⏳ pending | — | — | — |
+| 3 | dental-scheduling | ✅ READY | 8 (1 RBAC bypass, 1 adversarial test, 1 stale comment, 1 wrong FSM/table doc note, 4 registry/spec/contract drift) | BR-SCH-003-on-PATCH-cancel decision + sub-feature negative-path line-audit + KG over-claim | [MODULE_dental-scheduling_AUDIT_2026-06-08.md](modules/MODULE_dental-scheduling_AUDIT_2026-06-08.md) |
 | 4 | dental-visit | ⏳ pending | — | — | — |
 | 5 | dental-clinical | ⏳ pending | — | — | — |
 | 6 | dental-perio | ⏳ pending | — | — | — |
@@ -36,3 +36,9 @@ dental-portal → emr-consultation → provider → external-records-import
   demographics/follow-up/recall writes; sub-resource writers (insurance/contacts/alerts/tasks/
   household) currently allow writes to an archived patient. Decide scope (extend guard + test, or
   narrow the rule). Likely recurs for other modules' patient sub-resources.
+- **PATCH-status-field bypass class (from dental-scheduling)** — a generic `PATCH {status}` update
+  path can bypass the narrower RBAC/validation enforced by a transition's dedicated endpoint. In
+  scheduling, `PATCH {status:'cancelled'}` bypassed the owner/staff_full cancel restriction (fixed)
+  and still bypasses the BR-SCH-003 reason requirement (surfaced). **Check every module with a
+  generic status-PATCH against its dedicated transition endpoints** (visit checkout/lock, treatment-plan,
+  consent, claim FSM) for the same role/validation asymmetry.
