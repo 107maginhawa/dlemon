@@ -16,8 +16,8 @@ edit a row's Status to `DONE` without the evidence path + commit shas filled in.
 
 ## Rollup (filled at end of run)
 
-- **Run branch:** _(set by orchestrator, e.g. `chore/workflow-verification-sweep`)_
-- **Started / finished:** _(stamp after the run; scripts can't read the clock)_
+- **Run branch:** `chore/workflow-verification-sweep` (off `feat/module-workflow-alignment` @ `2680f4ec`)
+- **Started / finished:** started 2026-06-08 (Docker down → local Postgres :5432 fallback; MinIO down → `/readyz` storage=fail tolerated except imaging)
 - **DONE:** 0/18 · **NEEDS-REVIEW:** 0 · **REOPENED:** 0 · **BLOCKED:** 0
 - **Modules needing human follow-up:** _(list NEEDS-REVIEW / REOPENED / BLOCKED here)_
 - **Deferred gaps reported (not fixed):** _(aggregate the Type-C report-only items here)_
@@ -33,6 +33,24 @@ edit a row's Status to `DONE` without the evidence path + commit shas filled in.
 > runs a cross-module §4 E2E phase after the module loop.
 
 ---
+
+## Environment baseline (Docker down — read before reading any contract result)
+
+Docker is unavailable this run, so **MinIO (S3 :9000)** and **Mailpit (:8025)** are down.
+`GET /readyz` returns 503 with storage=fail (livez=200, db+jobs=pass). The full
+`bun run test:contract` suite therefore has a **standing 8-file infra-failure baseline**
+that is NOT a regression and does NOT block any non-storage module:
+
+| Failing .hurl | Root cause |
+|---|---|
+| storage.hurl, storage-edge.hurl | MinIO down — `/storage/files/upload` → ECONNREFUSED (bucket check, `core/storage.ts:270`) |
+| dental-imaging.hurl, dental-imaging-cbct.hurl, dental-assistant.hurl | image/study create → storage upload → 500 |
+| billing-lifecycle.hurl | invoice/merchant flow hits a storage upload → 500 |
+| auth-verification.hurl, auth-password-reset.hurl | Mailpit :8025 down — mail-search step unreachable |
+
+So "38/46 contract files pass" is the green baseline. A module is contract-green iff
+**its own `.hurl` Succeeds** and it adds no NEW failures outside this set. dental-imaging
+(#8) and the storage side of billing (#9) genuinely need MinIO → hard-require it there.
 
 ## Status legend
 
@@ -59,7 +77,7 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 
 | # | Module | FE? | Spec-light? | Status | Rating | Gaps fixed (P#) | Tests added | Deferred-reported | Evidence | Commits |
 |---|--------|-----|-------------|--------|--------|-----------------|-------------|-------------------|----------|---------|
-| 1 | dental-org | yes | no | PENDING | — | — | — | — | — | — |
+| 1 | dental-org | yes | no | DONE | 🟢 | 1 (P1 shape-diff) | FE-unit + contract pins + smoke | none | runs/dental-org/ | bf88596a, 9cc7dadd |
 | 2 | person / profile + settings | yes | yes | PENDING | — | — | — | — | — | — |
 | 3 | dental-patient | yes | no | PENDING | — | — | — | — | — | — |
 | 4 | dental-scheduling | yes | no | PENDING | — | — | — | — | — | — |
@@ -107,3 +125,15 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 - Evidence: docs/audits/workflow-verification/runs/{module}/
 - Gate: typecheck ✓/✗ · backend ✓/✗ · contract ✓/✗ · FE unit ✓/✗ · lint/boundaries ✓/✗ · smoke ✓/✗
 ```
+
+### 1. dental-org — DONE 🟢
+- Persona(s) driven: Alex/owner (Dr. Maria Reyes, dentist_owner, PIN 123456); Sam/front-desk (Ana Santos, staff_full, PIN 654321, RBAC-negative).
+- Workflows verified (happy 3 / error 1 / RBAC-neg 1 / coherence 2 / affordance ✓ / cross-workflow 1): owner dashboard summary; branch-settings save→reload round-trip; staff list + last-owner guard; staff_full denied owner-only admin (sidebar hidden + direct-URL redirect to /patients).
+- IDEAL §4 seam(s) checked: org-context resolution feeds every downstream module's branch scoping; dashboard summary reads billing (payment plans) + lab orders.
+- Gaps fixed (Type A): **shape-diff (P1)** — dental-org TypeSpec drifted from handler reality across `GET /dental/org/context` (flat→nested {org,branch,member}), `GET /dental/dashboard/summary` (visits/invoices→{activePaymentPlans,labOrders}), `GET/PUT /dental/branches/:id/settings` ({branchId,settings} envelope). FE branch-settings hook read the response flat → blank settings panels on read (real user-visible bug, CP2). Fixed at true source (tsp→regen→FE unwrap). Commits bf88596a (fix) + 9cc7dadd (smoke/evidence).
+- Doc fixes (Type B): none.
+- Deferred-reported (Type C): none.
+- Circuit breakers tripped: none.
+- Ran regen: YES (org-context, dashboard-summary, branch-settings GET/PUT). Orchestrator blast-radius re-gate: full typecheck clean; full contract suite — dental-org.hurl Success, no new failures beyond the 8-file infra baseline.
+- Evidence: docs/audits/workflow-verification/runs/dental-org/ (REPORT.md + 8 screenshots + drive-log.txt)
+- Gate: typecheck ✓ · backend ✓ (329/0) · contract ✓ (dental-org.hurl 31 req) · FE unit ✓ (12/0) · lint/boundaries ✓ (0 err / clean) · smoke ✓ (4/4 CP)
