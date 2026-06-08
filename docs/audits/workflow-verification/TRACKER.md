@@ -78,8 +78,8 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 | # | Module | FE? | Spec-light? | Status | Rating | Gaps fixed (P#) | Tests added | Deferred-reported | Evidence | Commits |
 |---|--------|-----|-------------|--------|--------|-----------------|-------------|-------------------|----------|---------|
 | 1 | dental-org | yes | no | DONE | 🟢 | 1 (P1 shape-diff) | FE-unit + contract pins + smoke | none | runs/dental-org/ | bf88596a, 9cc7dadd |
-| 2 | person / profile + settings | yes | yes | PENDING | — | — | — | — | — | — |
-| 3 | dental-patient | yes | no | PENDING | — | — | — | — | — | — |
+| 2 | person / profile + settings | yes | yes | DONE | 🟢 | 0 (no bugs) | contract pins + smoke | 3 (Type-C) | runs/person/ | eee6c6d8, d3f8f772 |
+| 3 | dental-patient | yes | no | IN-PROGRESS | — | — | — | — | — | — |
 | 4 | dental-scheduling | yes | no | PENDING | — | — | — | — | — | — |
 | 5 | dental-visit | yes | no | DRY-RUN ✅ | 🟢 | 0 (no bugs) | n/a (dry run) | none | runs/dental-visit/ | none (report-only) |
 | 6 | dental-clinical | yes | no | PENDING | — | — | — | — | — | — |
@@ -137,3 +137,14 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 - Ran regen: YES (org-context, dashboard-summary, branch-settings GET/PUT). Orchestrator blast-radius re-gate: full typecheck clean; full contract suite — dental-org.hurl Success, no new failures beyond the 8-file infra baseline.
 - Evidence: docs/audits/workflow-verification/runs/dental-org/ (REPORT.md + 8 screenshots + drive-log.txt)
 - Gate: typecheck ✓ · backend ✓ (329/0) · contract ✓ (dental-org.hurl 31 req) · FE unit ✓ (12/0) · lint/boundaries ✓ (0 err / clean) · smoke ✓ (4/4 CP)
+
+### 2. person / profile + settings — DONE 🟢
+- Persona(s) driven: authenticated user / owner (own-profile signup→onboarding, run-unique); RBAC-negative (cross-user 403 PII-safeguard + already-onboarded owner-guard re-entry block).
+- Workflows verified (happy 1 / error 0 / RBAC-neg 2 / coherence 1 / affordance 1 / cross 1): signup → email-verify (dev) → 2-step onboarding wizard → createPerson 201 → getPerson('me') 200 → re-onboard guard redirect. (Module's only FE surface.)
+- IDEAL §4 seam(s) checked: signup→session (better-auth auto sign-in); session→person (getPerson 'me' null→onboarding entry); person-created→dental-org (membership-less user forwarded to /dental-onboarding downstream).
+- Gaps fixed (Type A): **none** — STEP 3a static diff found zero drift across createPerson/getPerson/updatePerson/listPersons (tsp↔validator↔handler↔SDK↔FE byte-consistent); consent (marketing/data_sharing/sms/email) correctly absent from all person layers (legacy 4-flag model removed; live single-consent model is dental-patient's V-PAT-004).
+- Doc fixes (Type B): none.
+- Deferred-reported (Type C): getPerson .tsp roles broader than handler (handler owner-only = more restrictive, never leaks; no FE reads others); legacy 4-flag consent absent (correct); updatePerson/listPersons + preferences/contact-info forms half-wired base-template primitives, no FE consumer / no citation.
+- Circuit breakers tripped: none. Ran regen: NO.
+- Evidence: docs/audits/workflow-verification/runs/person/ (REPORT.md + 4 screenshots + log)
+- Gate: typecheck ✓ · backend ✓ (38/0) · contract ✓ (person-lifecycle + person-validation Succeed) · FE unit ✓ (62/0) · lint/boundaries ✓ · smoke ✓ (5/5 CP). Env note: `requireEmailVerified` onboarding guard is ACTIVE (stale repo note saying it's disabled is wrong) — smoke uses dev `POST /dev/verify-email`.
