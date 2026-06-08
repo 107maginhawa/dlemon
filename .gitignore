@@ -281,3 +281,6 @@ apps/dentalemon/tests/smoke/.venv/
 
 # webwright craft scratch dirs (per-module; never commit)
 apps/dentalemon/tests/smoke/.craft-*/
+
+# root-level webwright craft scratch
+.craft-*/
