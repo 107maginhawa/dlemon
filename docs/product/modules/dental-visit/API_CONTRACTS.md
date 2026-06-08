@@ -258,33 +258,109 @@ per visit, so the route carries no note id (V-VIS-010).
 
 ---
 
-### GET /api/v1/dental/patients/:id/treatment-plan
+### GET /api/v1/dental/patients/:patientId/treatment-plan
 
-Get cross-visit treatment plan for patient.
+Get the aggregated cross-visit treatment plan for a patient (all pending
+`diagnosed`/`planned`/`declined` treatments across the patient's visits, phase-sorted).
 
-**Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
-**Path params:** `id` (patient uuid)
-**Query params:** `branch_id` (uuid, required), `status` (enum: `diagnosed`, `planned`, `performed`)
+**Auth:** all dental roles. **V-VIS-011:** authorization is scoped to the **patient's**
+branch (`preferredBranchId`), NOT the caller-supplied `branchId` query param — a caller
+passing their own `branchId` for another branch's patient gets `403` (cross-tenant guard).
+**Path params:** `patientId` (uuid)
+**Query params:** `branchId` (uuid, required as a contract field; not the auth boundary)
 
-**Response 200:** `{ data: Treatment[] }` (all non-dismissed treatments, sorted by visit date)
+**Response 200** (real shape — NOT `Treatment[]`; the TypeSpec `TreatmentPlanResponse` model
+is a stringly-typed placeholder, see Contract Drift below):
+```jsonc
+{
+  "patientId": "…", "version": 1, "totalEstimateCents": 200000,
+  "treatmentCount": 2, "toothCount": 1,
+  "byTooth": { "16": [ … ], "general": [ … ] },
+  "treatments": [ { "id","toothNumber","cdtCode","description","surfaces",
+                    "priceCents","status","conditionCode","visitId","carriedOver",
+                    "phase","priority","reason" } ]
+}
+```
 
-**Errors:** `NOT_FOUND(404)`, `FORBIDDEN(403)`
+**Errors:** `FORBIDDEN(403)` (cross-tenant / no patient-branch access), `NOT_FOUND(404)` (patient)
 
 ---
 
-### POST /api/v1/dental/visits/:id/carry-over
+### POST /api/v1/dental/visits/:visitId/carry-over
 
-Carry over unperformed treatments from a previous visit.
+Carry over unperformed (`diagnosed`/`planned`) treatments from a previous visit into
+the current visit, optionally restoring specific dismissed treatments.
 
-**Auth:** `dentist_associate`, `dentist_owner`
-**Path params:** `id` (new visit uuid)
+**Auth:** `dentist_owner`, `dentist_associate` (assertBranchRole on the current visit's branch)
+**Path params:** `visitId` (new visit uuid)
 
-**Request body:**
+**Request body** (camelCase — TypeSpec `CarryOverTreatmentsRequest` only models `sourceVisitId`;
+`restoreDismissedIds` is accepted by the handler but missing from TypeSpec — see Contract Drift):
 
 | Field | Type | Nullable | Required | Notes |
 |-------|------|----------|----------|-------|
-| `source_visit_id` | string | NO | YES | uuid of previous visit |
+| `sourceVisitId` | string | YES | NO | uuid; when omitted, auto-discovers the patient's recent prior visits (across branches) |
+| `restoreDismissedIds` | string[] | YES | NO | dismissed treatment ids to restore as `planned` |
 
-**Response 200:** `{ data: { carried_over: N } }`
+**Response 200** (real shape — NOT `{ carried: N }`):
+```jsonc
+{ "carriedOver": [ Treatment … ], "restoredDismissed": [ Treatment … ], "message": "…" }
+```
 
-**Errors:** `NOT_FOUND(404)`, `VISIT_IMMUTABLE(422)`, `FORBIDDEN(403)`
+**Errors:** `NOT_FOUND(404)` (visit/source), `VISIT_IMMUTABLE(422)`, `INVALID_SOURCE_VISIT(422)` (different patient), `FORBIDDEN(403)`
+
+---
+
+### POST /api/v1/dental/visits/:visitId/apply-template/:templateId
+
+Apply a treatment template's items to the visit as `planned` treatments.
+
+**Auth:** `dentist_owner`, `dentist_associate` — **BR-VIS-009** (clinical-role gate, parity
+with create-treatment). The template MUST belong to the visit's branch; a foreign-branch
+template returns `404` (no cross-clinic template leak). Both fixed audit 2026-06-08.
+**Path params:** `visitId`, `templateId`
+
+**Response 201** (real shape — NOT `{ applied: int, visitId }`):
+```jsonc
+{ "applied": [ Treatment … ], "count": 2 }
+```
+
+**Errors:** `NOT_FOUND(404)` (visit / template / foreign-branch template), `VISIT_IMMUTABLE(422)` (completed/locked), `FORBIDDEN(403)` (non-clinical role)
+
+---
+
+### POST /api/v1/dental/patients/:patientId/treatment-plan/accept
+
+Snapshot the patient's current live plan as an append-only `TreatmentPlanVersion`.
+Optionally links a `consentFormId` (must belong to the same patient).
+
+**Auth:** all dental roles, **patient-branch scoped (V-VIS-011)**; archived patient → `422 PATIENT_ARCHIVED`.
+**Response 201:** `{ id, createdAt, createdBy, version, patientId, snapshot }`
+**Errors:** `FORBIDDEN(403)` (cross-tenant), `NOT_FOUND(404)` (patient / consent form), `PATIENT_ARCHIVED(422)`
+
+---
+
+### GET /api/v1/dental/patients/:patientId/treatment-plan/versions/:versionId
+
+Read one immutable plan snapshot. The `patientId` path segment must match the stored row
+(prevents cross-patient access) AND the caller must have **patient-branch** access (V-VIS-011).
+**Response 200:** `{ id, createdAt, createdBy, version, patientId, snapshot }`
+**Errors:** `FORBIDDEN(403)` (cross-tenant), `NOT_FOUND(404)`
+
+---
+
+## Contract Drift (TypeSpec ↔ implementation — surfaced audit 2026-06-08)
+
+Several treatment-plan / template / carry-over TypeSpec models are stringly-typed
+placeholders that do NOT match the richer JSON the handlers return (and that the tests
+lock). The handler shapes above are the ground truth. Reconciling the TypeSpec models
+(and regenerating the SDK) is a follow-up that needs FE-consumer verification — NOT done
+in this round to avoid breaking unverified SDK consumers:
+
+| TypeSpec model | Declares | Real response |
+|---|---|---|
+| `TreatmentPlanResponse` | `{ patientId, visits: string, treatments: string, acceptedPlanVersionId }` | `{ patientId, version, totalEstimateCents, treatmentCount, toothCount, byTooth, treatments[] }` |
+| `ApplyTemplateResponse` | `{ applied: int32, visitId }` | `{ applied: Treatment[], count: int32 }` |
+| `CarryOverTreatmentsResponse` | `{ carried: int32 }` | `{ carriedOver: Treatment[], restoredDismissed: Treatment[], message }` |
+| `CarryOverTreatmentsRequest` | `{ sourceVisitId? }` | also accepts `restoreDismissedIds: string[]` |
+| `TreatmentTemplate` | `{ …, treatments: string }` | row uses `items: TemplateTreatmentItem[]` |

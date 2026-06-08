@@ -8,10 +8,11 @@
       "rules": [
         {
           "id": "BR-001",
-          "description": "A patient cannot have two active visits simultaneously. A new check-in is blocked if an active visit already exists for that patient at the same branch.",
+          "description": "A patient cannot have two active visits simultaneously. Enforced globally per patient (across all branches) via a partial unique index on (patient_id, status) WHERE status='active' plus the findActiveByPatient app guard — stricter than the original 'same branch' wording.",
           "type": "conflict-prevention",
           "status": "implemented",
-          "source": "dental-visit handlers"
+          "source": "createDentalVisit.ts:43-49, updateDentalVisit.ts:76-82, visit.schema.ts (activePatientUnique)",
+          "test": "dental-visit.test.ts (409 ACTIVE_VISIT_EXISTS on create + on activating a second visit)"
         },
         {
           "id": "BR-002",
@@ -29,11 +30,11 @@
         },
         {
           "id": "BR-005",
-          "description": "A new visit created from the workspace carousel auto-discards if no chart entries or treatments are saved within the same session.",
+          "description": "An empty visit (no treatments, no SOAP content, no attachments) auto-discards instead of completing. Gated behind the default-OFF feature flag dental_visit_auto_discard (V-VIS-004, ADR-010): when OFF (default) empty visits complete normally; when ON, a complete redirects to discarded.",
           "type": "lifecycle-guard",
-          "status": "not-implemented",
-          "source": "not yet enforced — planned",
-          "notes": "Deferred to v1.3 — requires session timeout infrastructure"
+          "status": "implemented-flag-gated",
+          "source": "updateDentalVisit.ts:113-133 (DENTAL_VISIT_AUTO_DISCARD env flag)",
+          "notes": "Status corrected not-implemented→implemented-flag-gated (TRACEABILITY 2026-06-08). Default OFF; the discarded state + VISIT_TRANSITIONS active→discarded exist in schema."
         },
         {
           "id": "BR-006",
@@ -45,17 +46,37 @@
         },
         {
           "id": "BR-007",
-          "description": "A completed treatment is immutable — its procedure code, tooth, surface, and price cannot be changed.",
+          "description": "A performed/verified treatment is field-immutable — its procedure code, tooth, surface, and price cannot be changed (status transitions remain allowed).",
           "type": "state-guard",
           "status": "implemented",
-          "source": "dental-clinical handlers"
+          "source": "updateDentalTreatment.ts:52-55 (performed/verified field-edit → 422 TREATMENT_IMMUTABLE)",
+          "test": "dental-visit.treatment-status-transitions.test.ts; dental-treatment.test.ts (AC-VIS-003 cdt_code edit on performed → 422)"
         },
         {
           "id": "BR-008",
-          "description": "Carried-over treatments from a treatment plan appear in the workspace treatment table as a visual indicator. They are not auto-added as charges until the dentist explicitly records them in the current visit.",
+          "description": "Carry-over creates new dental_treatment rows on the next visit with carriedOver=true, sourceVisitId=<prior visit>, status preserved; not billed until status moves to performed.",
           "type": "business-logic",
           "status": "implemented",
-          "source": "_workspace/$patientId.tsx — carriedOverItems"
+          "source": "carryOverTreatments.ts:104-120",
+          "test": "dental-visit.treatment-templates.test.ts (FR1.11 carries over pending; restores dismissed; 422 on completed visit)"
+        },
+        {
+          "id": "BR-VIS-009",
+          "description": "Applying a treatment template (POST /visits/{id}/apply-template/{tid}) creates billable treatments and is gated on the clinical role (dentist_owner/dentist_associate), parity with createDentalTreatment; the template must belong to the visit's branch (foreign-branch template → 404, no cross-clinic leak).",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "utils/treatmentTemplates.ts applyTemplate (assertBranchRole + template.branchId === visit.branchId)",
+          "test": "dental-visit.cross-tenant-rbac.test.ts (staff_full → 403; foreign-branch template → 404; owner same-branch → 201)",
+          "notes": "Fixed audit 2026-06-08: assertBranchAccess (any member) → assertBranchRole + branch-match guard."
+        },
+        {
+          "id": "BR-VIS-010",
+          "description": "Treatment-plan read/accept/version endpoints (GET/POST /patients/{id}/treatment-plan*) authorize against the PATIENT's branch (preferredBranchId via assertPatientBranchAccess), never the caller-supplied branchId query param. A foreign-branch caller passing their own branchId cannot read or snapshot another branch's patient plan.",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "getTreatmentPlan.ts, acceptTreatmentPlan.ts, getTreatmentPlanVersion.ts (assertPatientBranchAccess)",
+          "test": "dental-visit.cross-tenant-rbac.test.ts (foreign-branch owner → 403 on plan/accept/version; patient-branch owner → 200)",
+          "notes": "Fixed audit 2026-06-08 (V-VIS-011): cross-tenant PHI leak — branchId query param was access-checked but never tied to the patient. Mirrors V-PAT-002."
         }
       ]
     },

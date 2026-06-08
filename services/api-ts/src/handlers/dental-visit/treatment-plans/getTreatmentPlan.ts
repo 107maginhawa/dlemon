@@ -9,8 +9,9 @@
 
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ValidationError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { UnauthorizedError, ValidationError, NotFoundError } from '@/core/errors';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { dentalTreatments, TREATMENT_PHASE_ORDER, type DentalTreatmentPhase, type DentalTreatment } from '../repos/treatment.schema';
 import { dentalVisits } from '../repos/visit.schema';
 import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
@@ -26,7 +27,14 @@ export async function getTreatmentPlan(ctx: BaseContext) {
   if (!branchId) throw new ValidationError('branchId is required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchAccess(db, user.id, branchId);
+  // V-VIS-011: authorize against the PATIENT's branch, not the caller-supplied
+  // branchId query param. Gating on the query param let a caller pass their OWN
+  // branchId and read another branch's patient plan (cross-tenant PHI leak). The
+  // branchId param remains the required contract field but is no longer the auth
+  // boundary (audit 2026-06-08; mirrors V-PAT-002).
+  const patient = await getPatientForDentalPatient(db, patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   const logger = ctx.get('logger');
 

@@ -320,11 +320,11 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 |-------|-------------|-------------|-----------|-----------|
 | BR-001 | No concurrent active visits | WF-007 | 409 — prompt staff to complete existing visit | No |
 | BR-002 | Visit transitions linear only | WF-012, WF-046 | 422 — invalid status transition | No |
-| BR-003 | Visit immutable after completed | WF-009, WF-010, WF-016, WF-017 | 403 / UI readOnly flag | No |
+| BR-003 | Visit immutable after completed | WF-009, WF-010, WF-016, WF-017 | 422 VISIT_IMMUTABLE / VISIT_LOCKED (+ UI readOnly flag) | No |
 | BR-004 | Delete appointment ≠ delete visit | WF-059 | Soft-delete appointment only | No |
-| BR-005 | Auto-discard empty visit | WF-047 [INFERRED] | **ORPHAN** — not yet enforced (ADR-010) | — |
+| BR-005 | Auto-discard empty visit | WF-047 [INFERRED] | Implemented behind default-OFF flag `dental_visit_auto_discard` (V-VIS-004, ADR-010) — when ON, an empty `completed` redirects to `discarded` | — |
 | BR-006 | Treatment transitions forward-only | WF-010, WF-048–WF-050 | 422 | No |
-| BR-007 | Completed treatment immutable | WF-010 | 403 | No |
+| BR-007 | Completed treatment immutable | WF-010 | 422 TREATMENT_IMMUTABLE | No |
 | BR-008 | Carry-over display only | WF-033 | UI indicator only | N/A |
 | BR-009 | Invoice requires ≥1 line item | WF-013 | 422 | No |
 | BR-010 | Tax = 0 stub | WF-013 | N/A (stub) | Phase 2 |
@@ -361,7 +361,7 @@ draft ──────────► active ──────────►
 | Transition | Trigger | Precondition | Side Effect |
 |-----------|---------|-------------|------------|
 | draft → active | Check-in (WF-007) | BR-001 (no other active) | Creates visitId |
-| active → completed | Complete visit (WF-012) | At least 1 chart entry | Immutable flag set |
+| active → completed | Complete visit (WF-012) | No open (diagnosed/planned) treatments; signed consent + notes present (empty visit completes, or auto-discards when the V-VIS-004 flag is ON) | Immutable flag set |
 | completed → locked | Scheduled job (WF-046) | Time elapsed | All edits blocked |
 | active → discarded | System (WF-047) | BR-005 (empty session) | Visit soft-deleted |
 
