@@ -138,39 +138,69 @@
       "rules": [
         {
           "id": "BR-009",
-          "description": "An invoice requires at least one treatment line item. Creating an invoice with zero items is rejected.",
+          "description": "An invoice requires at least one performed/verified treatment. Creating an invoice with zero billable treatments → 422 NO_BILLABLE_TREATMENTS. A treatment already billed on a prior invoice → 422 TREATMENT_ALREADY_BILLED (double-billing prevention, S1-T7).",
           "type": "validation",
           "status": "implemented",
-          "source": "dental-billing handlers"
+          "source": "createDentalInvoice.ts:46-60 (billable filter status in {performed, verified}; alreadyBilled guard)",
+          "test": "dental-billing.test.ts, billing-gate-http.test.ts (422 NO_BILLABLE_TREATMENTS)"
         },
         {
           "id": "BR-010",
-          "description": "Tax is always 0. Fee schedule prices are pre-tax. Tax calculation is a stub pending per-country tax rules in Phase 2.",
+          "description": "Tax is always 0. Fee schedule prices are pre-tax. taxRate is server-controlled (NOT caller-supplied — EM-BILL-001 privilege-escalation guard); per-country tax is a Phase-2 stub gated by dental_billing_tax_enabled.",
           "type": "calculation-stub",
           "status": "partial",
-          "source": "dental-billing/createInvoice.ts (TODO comment)"
+          "source": "createDentalInvoice.ts:69-74 (taxRate/taxCents hardcoded 0, EM-BILL-001 comment — no TODO)",
+          "notes": "Registry reconciled 2026-06-08: prior source cited a 'TODO comment' that no longer exists; tax is hardcoded with the EM-BILL-001 server-control guard. AC-BIL-004 pins taxCents==0 in all responses."
         },
         {
           "id": "BR-011",
-          "description": "An active payment plan blocks invoice archival (void or uncollectible). Staff must resolve the payment plan before voiding.",
+          "description": "An active payment plan blocks invoice archival (void or uncollectible) → 409 ACTIVE_PAYMENT_PLAN. Staff must resolve the plan before voiding/writing off.",
           "type": "lifecycle-guard",
           "status": "implemented",
-          "source": "dental-billing handlers"
+          "source": "voidDentalInvoice.ts, markUncollectible.ts (active-plan guard)",
+          "test": "dental-billing.test.ts, dental-billing.invoice-lifecycle.test.ts (409 ACTIVE_PAYMENT_PLAN)"
         },
         {
           "id": "BR-012",
-          "description": "Invoice state lifecycle: draft → sent → paid / partial / overdue / void. partial status requires a payment plan record.",
+          "description": "Invoice state lifecycle: draft → issued → paid / partial / overdue / voided. Payments are valid only on issued/partial/overdue (draft → 422 INVALID_STATUS_TRANSITION); payment on paid/voided → 422 INVOICE_IMMUTABLE; overpayment → 422 PAYMENT_EXCEEDS_BALANCE.",
           "type": "state-machine",
           "status": "implemented",
-          "source": "dental-billing handlers"
+          "source": "recordDentalPayment.ts:44-68; invoice.fsm.property.test.ts",
+          "test": "invoice.fsm.property.test.ts, dental-billing.test.ts, dental-billing.edge-cases.test.ts (INVOICE_IMMUTABLE / PAYMENT_EXCEEDS_BALANCE / draft-payment 422)",
+          "notes": "Registry reconciled 2026-06-08: legacy 'sent' state renamed 'issued' (V-BIL-015); the enum/code/contract all use 'issued'."
         },
         {
           "id": "BR-013",
-          "description": "Dental invoices support an 'uncollectible' terminal status (write-off), reachable from issued/partial/overdue; uncollectible is terminal (no further transitions).",
+          "description": "Dental invoices support an 'uncollectible' terminal status (write-off), reachable from issued/partial/overdue; uncollectible is terminal (no further transitions). Owner-only.",
           "type": "state-machine",
           "status": "implemented",
           "source": "dental-billing/markUncollectible.ts; dental-invoice.schema.ts (status enum includes 'uncollectible' + uncollectible_at); route POST /dental/billing/invoices/:invoiceId/uncollectible",
           "notes": "Covered by invoice.fsm.property.test.ts (uncollectible reachability + terminality) and dental-billing.test.ts. Registry reconciled 2026-06-05: prior 'deferred' status was stale."
+        },
+        {
+          "id": "BR-014",
+          "description": "A signed consent form is required before invoicing a visit → 422 CONSENT_REQUIRED (V-BIL-007; previously mislabeled BR-011 in code).",
+          "type": "lifecycle-guard",
+          "status": "implemented",
+          "source": "createDentalInvoice.ts:36-41 (hasSignedConsentForVisit gate)",
+          "test": "dental-billing.test.ts, billing-gate-http.test.ts (422 CONSENT_REQUIRED)"
+        },
+        {
+          "id": "BR-015",
+          "description": "Money-integrity bounds (V-BIL-001/002/010): discount percentageRate must be 0–100 (else 422 INVALID_DISCOUNT_RATE — an out-of-range rate drives totals negative); installment count must be 2–24 (else 422 INVALID_INSTALLMENT_COUNT — guards division-by-zero); payment amountCents ≥ 1 (else 422 INVALID_AMOUNT). Each is enforced in the handler as defense-in-depth even if the schema validator is bypassed.",
+          "type": "validation",
+          "status": "implemented",
+          "source": "applyDentalDiscount.ts:50-60, createDentalPaymentPlan.ts (2–24), recordDentalPayment.ts:38-40",
+          "test": "dental-billing.test.ts (discount-on-discount + bounds), dental-billing.payment-plan-fsm.test.ts, utils/rounding.test.ts"
+        },
+        {
+          "id": "EM-BIL-002",
+          "description": "Cross-tenant report scoping: the five billing report/list endpoints whose branchId filter is OPTIONAL (AR aging, collections summary, payer aging, claim worklist, statement batch) MUST scope results to the caller's own active branches when branchId is omitted — NEVER the whole multi-tenant DB. Omitting branchId previously aggregated every org's invoices/payments/claims/balances + patient PHI.",
+          "type": "authorization",
+          "status": "implemented",
+          "source": "getArAging.ts, getCollectionsSummary.ts, getPayerArAging.ts, listInsuranceClaims.ts, generateStatementBatch.ts (getActiveBranchIdsForPerson → inArray scoping); org-billing.facade.ts getActiveBranchIdsForPerson",
+          "test": "dental-billing.cross-tenant-reports.test.ts (ORG_A caller omitting branchId excludes ORG_B claims/invoices/payments/balances on all 5 endpoints)",
+          "notes": "Found + fixed 2026-06-08 (dental-billing audit). Same class as V-PAT-002 / V-VIS-011 (caller-supplied branchId not an auth boundary) but the stronger 'omitted → unscoped' variant."
         }
       ]
     },

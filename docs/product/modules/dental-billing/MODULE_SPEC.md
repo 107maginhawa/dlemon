@@ -128,12 +128,14 @@ Invoice owns LineItem, Payment, PaymentPlan, Installments. References Treatment 
 ---
 
 ## 8. State Transitions
-See DOMAIN_MODEL.md §6 SM-INVOICE (source of truth).
+See DOMAIN_MODEL.md §6 SM-INVOICE (source of truth). Terminal state value is `voided` (the `DentalInvoiceStatus` enum); the legacy `sent` term was retired in favor of `issued` (V-BIL-015).
 ```
-draft → issued → paid / partial / overdue / void
+draft → issued → paid / partial / overdue / voided
 partial → paid (plan complete)
-issued → void (BR-011: no active plan, owner only)
+issued → voided (BR-011: no active plan, owner only)
+issued / partial / overdue → uncollectible (BR-013 write-off, owner-only, terminal)
 ```
+> Payments are valid only on `issued`/`partial`/`overdue`. A payment on `draft` → 422 INVALID_STATUS_TRANSITION; on `paid`/`voided` → 422 INVOICE_IMMUTABLE.
 > **Deferred/Future:** A "Reopen" action (unvoiding an invoice) appears in screens.md but is **not implemented** in the current state machine. Voided invoices are terminal. Reopen is deferred to a future wave.
 
 ---
@@ -144,7 +146,14 @@ issued → void (BR-011: no active plan, owner only)
 ---
 
 ## 10. API Expectations
-POST /dental/invoices (BR-009), GET /dental/invoices, GET /dental/invoices/:id, PATCH /dental/invoices/:id/issue, POST /dental/invoices/:id/payments (BR-012), POST /dental/invoices/:id/void (BR-011), POST /dental/invoices/:id/payment-plans, GET /dental/patients/:id/statement
+
+> Canonical routes (per dental-billing.tsp / generated routes — all under the `/dental/billing` prefix). Reconciled 2026-06-08: prior list cited `/payment-plans` and a non-existent `GET /dental/patients/:id/statement`.
+
+**Invoice lifecycle:** `POST /dental/billing/invoices` (BR-009/BR-014), `GET /dental/billing/invoices` (branchId required → 400 otherwise, EM-BIL-001), `GET /dental/billing/invoices/:invoiceId`, `PATCH /dental/billing/invoices/:invoiceId/issue`, `POST /dental/billing/invoices/:invoiceId/void` (BR-011), `POST /dental/billing/invoices/:invoiceId/uncollectible` (BR-013, owner-only).
+**Payments:** `POST /dental/billing/invoices/:invoiceId/payments` (BR-012), `GET …/payments`, `POST …/payments/:paymentId/void`, `GET …/payments/:paymentId/receipt`.
+**Discount / plan:** `POST /dental/billing/invoices/:invoiceId/discount` (BR-015), `POST /dental/billing/invoices/:invoiceId/plan`, `GET …/plan`.
+**Reports (branchId OPTIONAL — scoped to caller's branches when omitted, EM-BIL-002):** `GET /dental/billing/patients/:patientId/balance`, `GET /dental/billing/collections/summary`, `GET /dental/billing/collections/aging`, `POST /dental/billing/statements/batch`.
+**Revenue cycle (HMO claims):** `POST /dental/billing/claims`, `GET /dental/billing/claims` (worklist), `GET /dental/billing/claims/aging`, `GET /dental/billing/claims/:claimId`, `PATCH …/status`, `POST …/lines`, `PATCH …/lines/:lineId`, `POST …/remittance`, `POST /dental/billing/estimate`.
 
 ---
 

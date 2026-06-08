@@ -18,7 +18,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 6 | dental-perio | ✅ READY | 7 (1 clinical-correctness bug: partial-chart over-staging to IV via charted-count `remainingTeeth`; 1 wrong-role RBAC test; 1 stale comment; 4 registry/spec/contract drift incl. whole module absent from br-registry) | WF-P03 amendment + WF-P05 PDF export deferred + cascade-audit-row test gap + cross-branch positive test + KG-backlog | [MODULE_dental-perio_AUDIT_2026-06-08.md](modules/MODULE_dental-perio_AUDIT_2026-06-08.md) |
 | 7 | dental-imaging | ✅ READY | 6 (1 cross-branch PHI isolation test; 5 doc/registry drift: DOMAIN_MODEL SM-01 mislabel, MODULE_SPEC §6 permissions / §13 edge-cases / §15 errors, br-registry CIMG-001/002 tier + CIMG-010 analyses) | AI auto-tracing/DICOM/structural-superimposition non-goals + imaging audit-row test gap + detect kill-switch-OFF test + 403/404-mask convention note + KG-backlog | [MODULE_dental-imaging_AUDIT_2026-06-08.md](modules/MODULE_dental-imaging_AUDIT_2026-06-08.md) |
 | 8 | dental-pmd | ✅ READY | 5 (1 cross-branch PHI isolation test; 4 doc/registry drift: MODULE_SPEC §7/§7.2 phantom columns, §10 wrong list route + multipart, §15 error table, br-registry enriched 2→7 rules) | getImportedPMD-patient-self-detail decision + async/presigned/multipart/notif deferred + 2 test gaps (detail-read audit row, care-record superseded-exclusion) + KG over-claim (PMD mis-expansion / phantom route / recall claim) | [MODULE_dental-pmd_AUDIT_2026-06-08.md](modules/MODULE_dental-pmd_AUDIT_2026-06-08.md) |
-| 9 | dental-billing | ⏳ pending | — | — | — |
+| 9 | dental-billing | ✅ READY (1 security fix) | 6 (1 REAL cross-tenant money+PHI hole on 5 optional-branchId report endpoints; 5 doc/registry drift: br-registry +BR-014/BR-015/EM-BIL-002 & BR-010/012 stale, MODULE_SPEC §8 FSM / §10 routes, API_CONTRACTS plan-frequency enum) | recordedByMemberId server-validation product decision + 2 test gaps (empty-membership pin, DE-008 partial-negative pin) + KG-backlog (phantom ar/aging route) | [MODULE_dental-billing_AUDIT_2026-06-08.md](modules/MODULE_dental-billing_AUDIT_2026-06-08.md) |
 | 10 | dental-audit | ⏳ pending | — | — | — |
 | 11 | erasure/legal-hold/retention | ⏳ pending | — | — | — |
 | 12 | dental-portal | ⏳ pending | — | — | — |
@@ -94,11 +94,25 @@ dental-portal → emr-consultation → provider → external-records-import
     `branchId` query param at all**; visit-scoped handlers derive branch from `visit.branchId`,
     patient-scoped handlers from `patient.preferredBranchId` (the patient resource's own branch,
     org-scoped so it can't cross an org boundary), then `assertBranchAccess/Role`. The round only
-    ADDED the missing cross-branch *tests* (a full-role `dentist_owner` of `OTHER_BRANCH` is denied
-    the patient's PMDs/care-record). **Carry-forward branchId-auth-boundary class is now CLEAR for
-    org/patient/scheduling/visit/clinical/perio/imaging/pmd — the holes found (and fixed) were
-    confined to dental-patient + dental-visit, which took a `branchId` *query param* untied to the
-    path resource. The remaining modules to chase are billing, portal, emr.**
+    ADDED the missing cross-branch *tests*.
+  - **dental-billing = HOLE FOUND + FIXED (EM-BIL-002) — 2026-06-08.** The *mutating* handlers are
+    SAFE (branch from `invoice.branchId`/`claim.branchId`/`patient.preferredBranchId` + assertBranchRole),
+    and `listDentalInvoices` *requires* branchId (400 otherwise). But **five REPORT/LIST endpoints**
+    (`getArAging`, `getCollectionsSummary`, `getPayerArAging`, `listInsuranceClaims`,
+    `generateStatementBatch`) treated `branchId` as an OPTIONAL filter and only `assertBranchAccess`
+    *when supplied* — so **omitting branchId applied NO branch condition and scanned every org's
+    invoices/payments/claims/balances + patient names** (cross-tenant financial-data + PHI). This is
+    a **NEW, stronger variant** of the class: not "caller-supplied branchId untied to the resource"
+    but **"optional branchId omitted → no scoping at all → full multi-tenant aggregate."** Fixed TDD:
+    omitted-branch now scopes to the caller's own active branches via `getActiveBranchIdsForPerson`
+    → `inArray` (empty membership → zero rows, never the whole DB). **NEW CARRY-FORWARD: audit EVERY
+    list/report/aggregate endpoint whose tenant/branch filter is OPTIONAL — an omitted optional scope
+    must default to the caller's accessible set, never to "unfiltered = all tenants." Check portal +
+    emr (the last two modules) for the same optional-filter-omitted pattern, not just caller-supplied
+    branchId.**
+  - **branchId-auth-boundary class status: CLEAR for org/patient/scheduling/visit/clinical/perio/
+    imaging/pmd; HOLES found+fixed in dental-patient + dental-visit (caller-supplied branchId) and
+    dental-billing (omitted optional branchId). Remaining to chase: portal, emr.**
 - **A br-registry rule can UNDERSTATE a gate, not just be absent (from dental-imaging CIMG-001).**
   CIMG-001 said the ceph tier gate blocks "free or null" — but the code is strict `!== 'addon'`, so
   `basic` is blocked too (a test already proved it). **When a registry rule enumerates the blocked
