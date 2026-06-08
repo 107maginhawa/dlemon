@@ -1702,9 +1702,9 @@ export const DentalImagingModuleCreateFindingBodySchema = z.object({
   note: z.string().optional(),
   annotationId: z.string().optional(),
   treatmentId: z.string().optional(),
-  visitId: z.string(),
-  patientId: z.string(),
-  branchId: z.string(),
+  visitId: z.string().optional(),
+  patientId: z.string().optional(),
+  branchId: z.string().optional(),
   frameIndex: z.number().int().optional()
 });
 

@@ -849,7 +849,7 @@ describe('ImagingFindingsMgmt_createFinding wrapper', () => {
 // ---------------------------------------------------------------------------
 
 describe('ImagingFindingsMgmt_listFindings wrapper', () => {
-  test('delegates to listFindings — returns 200 with data array', async () => {
+  test('delegates to listFindings — returns 200 with items array', async () => {
     const { ImagingFindingsMgmt_listFindings } = await import('./ImagingFindingsMgmt_listFindings');
     const app = buildApp(ImagingFindingsMgmt_listFindings as any, {
       user:   DENTIST_USER,
@@ -860,7 +860,7 @@ describe('ImagingFindingsMgmt_listFindings wrapper', () => {
     const res = await app.request(`/${IMAGE_ID}/findings`, { method: 'GET' });
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('returns 404 when image missing', async () => {

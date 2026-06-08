@@ -529,12 +529,38 @@ jsonpath "$.toothNumber" == 36
 jsonpath "$.status" == "draft"
 
 
-# 21. List findings for image
+# 20b. Create imaging finding the way the imaging-workspace UI does — body carries ONLY
+# {type,status,note}, NO visitId/patientId/branchId. The handler derives those from the
+# parent study (createFinding.ts), so this MUST succeed (201). Regression pin for
+# BUG-IMG-001: CreateFindingBody used to require those three fields, so the generated
+# validator rejected the real UI request with 400 before the handler ran (WF-040 broken
+# from the UI). The raw-handler integration test could not catch it (it skips the
+# generated validator); this request goes through the real validator.
+POST {{api}}/dental/imaging/images/{{image_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "type": "bone_loss",
+  "status": "draft",
+  "note": "UI-shaped body — visit/patient/branch derived from study"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.type" == "bone_loss"
+jsonpath "$.status" == "draft"
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.branchId" == "{{branch_id}}"
+
+
+# 21. List findings for image — response is { items } per ImagingFindingListResponse
+# (BUG-IMG-002: handler used to return { data, pagination }, which the FE hook
+# could not read → "Failed to load findings").
 GET {{api}}/dental/imaging/images/{{image_id}}/findings
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.items" isCollection
+jsonpath "$.items" count >= 2
 
 
 # 22. Update imaging finding

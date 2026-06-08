@@ -332,9 +332,14 @@ namespace DentalImagingModule {
     note?: string;
     annotationId?: string;
     treatmentId?: string;
-    visitId: string;
-    patientId: string;
-    branchId: string;
+    // visitId/patientId/branchId are DERIVED from the parent study by the handler
+    // (createFinding.ts) — the "derive branch from the resource, never the caller"
+    // invariant. They are optional in the contract: the handler ignores any value the
+    // caller sends. Requiring them previously rejected the imaging-workspace UI (which
+    // correctly sends only {type,status,note,...}) with a 400 before the handler ran.
+    visitId?: string;
+    patientId?: string;
+    branchId?: string;
     // P2-7 CBCT: optional slice index for a finding placed on a volume frame.
     frameIndex?: int32;
   }

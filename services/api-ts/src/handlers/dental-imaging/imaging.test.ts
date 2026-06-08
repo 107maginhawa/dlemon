@@ -1945,7 +1945,7 @@ describe('imaging findings', () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('updateFinding returns 200', async () => {

@@ -13,7 +13,6 @@ import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { logAuditEvent } from '@/core/audit-logger';
-import { buildPaginationMeta } from '@/utils/query';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingFindingRepository } from './repos/imaging_finding.repo';
 
@@ -41,7 +40,6 @@ export async function listFindings(ctx: BaseContext): Promise<Response> {
   }
 
   const items = await findingRepo.listByImage(imageId, study.branchId);
-  const total = items.length;
 
   // V-IMG-006: findings are clinical PHI — audit the read.
   await logAuditEvent(db, ctx.get('logger'), {
@@ -52,8 +50,13 @@ export async function listFindings(ctx: BaseContext): Promise<Response> {
     eventType: 'data-access',
     resourceType: 'imaging_finding',
     resourceId: imageId,
-    metadata: { patientId: study.patientId, imageId, count: total },
+    metadata: { patientId: study.patientId, imageId, count: items.length },
   });
 
-  return ctx.json({ data: items, pagination: buildPaginationMeta(items, total, total || 1, 0) }, 200);
+  // BUG-IMG-002: must match the TypeSpec ImagingFindingListResponse contract
+  // ({ items }) — the sibling list endpoints (measurements/landmarks/patient-images)
+  // and the FE hook (use-imaging-findings: `data.items`) all expect `items`. This
+  // handler previously returned `{ data, pagination }`, so the findings panel read
+  // `undefined.map()` and showed "Failed to load findings".
+  return ctx.json({ items }, 200);
 }

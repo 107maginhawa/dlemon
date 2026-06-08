@@ -3355,9 +3355,9 @@ export type DentalImagingModuleCreateFindingBody = {
     note?: string;
     annotationId?: string;
     treatmentId?: string;
-    visitId: string;
-    patientId: string;
-    branchId: string;
+    visitId?: string;
+    patientId?: string;
+    branchId?: string;
     frameIndex?: number;
 };
 

@@ -597,7 +597,11 @@ describe('createFinding', () => {
 // =============================================================================
 
 describe('listFindings', () => {
-  test('happy path: returns findings for an image with pagination meta', async () => {
+  // BUG-IMG-002: the list response must be { items } per the TypeSpec
+  // ImagingFindingListResponse contract (matching the FE hook + sibling list
+  // endpoints). The handler previously returned { data, pagination }, which the
+  // FE could not read ("Failed to load findings").
+  test('happy path: returns findings for an image as { items }', async () => {
     const { imageId } = await seedStudyWithImage();
     await seedFinding(imageId, 'draft');
     await seedFinding(imageId, 'confirmed');
@@ -607,11 +611,9 @@ describe('listFindings', () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data).toHaveLength(2);
-    expect(body.pagination.totalCount).toBe(2);
-    expect(body.pagination.count).toBe(2);
-    expect(body.data.every((f: any) => f.imageId === imageId)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items).toHaveLength(2);
+    expect(body.items.every((f: any) => f.imageId === imageId)).toBe(true);
   });
 
   test('404 when image does not exist', async () => {
@@ -701,7 +703,7 @@ describe('deleteFinding', () => {
 
     const listRes = await app.request(`/dental/imaging/images/${imageId}/findings`);
     const listBody = (await listRes.json()) as any;
-    expect(listBody.data).toHaveLength(0);
+    expect(listBody.items).toHaveLength(0);
   });
 
   test('404 when finding does not exist', async () => {
