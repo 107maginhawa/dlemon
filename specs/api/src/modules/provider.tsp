@@ -518,7 +518,7 @@ namespace ProviderModule {
     @get
     @route("/practitioners/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "clinician", "support", "practitioner:owner"])
+    @extension("x-security-required-roles", #["admin", "clinician", "support"])
     getPractitioner(
       @path @doc("Practitioner record UUID") id: UUID
     ): ApiOkResponse<Practitioner>
@@ -531,7 +531,7 @@ namespace ProviderModule {
     @patch(#{implicitOptionality: true})
     @route("/practitioners/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "credentialing", "practitioner:owner"])
+    @extension("x-security-required-roles", #["admin", "credentialing"])
     updatePractitioner(
       @path @doc("Practitioner record UUID") id: UUID,
       @body updates: UpdatePractitionerRequest
@@ -600,7 +600,7 @@ namespace ProviderModule {
     @get
     @route("/practitioner-roles/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "clinician", "support", "practitioner:owner"])
+    @extension("x-security-required-roles", #["admin", "clinician", "support"])
     getPractitionerRole(
       @path @doc("PractitionerRole record UUID") id: UUID
     ): ApiOkResponse<PractitionerRole>
@@ -613,7 +613,7 @@ namespace ProviderModule {
     @patch(#{implicitOptionality: true})
     @route("/practitioner-roles/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["admin", "credentialing", "practitioner:owner"])
+    @extension("x-security-required-roles", #["admin", "credentialing"])
     updatePractitionerRole(
       @path @doc("PractitionerRole record UUID") id: UUID,
       @body updates: UpdatePractitionerRoleRequest

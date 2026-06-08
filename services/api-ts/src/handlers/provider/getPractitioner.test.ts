@@ -117,7 +117,7 @@ describe('getPractitioner', () => {
   //
   // The Practitioner record carries SENSITIVE credentials (NPI / DEA / state
   // license numbers) and qualification identifiers. The ONLY read paths for it
-  // are gated to admin|clinician|support|practitioner:owner (route middleware) —
+  // are gated to admin|clinician|support (route middleware) —
   // there is NO public or patient-facing route that returns a practitioner
   // (the public directory surface is the credential-FREE `Provider` model).
   // These tests pin that (a) credentials/qualifications ARE returned to an

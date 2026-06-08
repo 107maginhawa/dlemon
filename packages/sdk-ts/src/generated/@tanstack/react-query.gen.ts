@@ -6358,7 +6358,7 @@ export const deactivatePractitionerRoleMutation = (options?: Partial<Options<Dea
 export const getPractitionerRoleQueryKey = (options: Options<GetPractitionerRoleData>) => createQueryKey('getPractitionerRole', options);
 
 /**
- * Retrieve a single practitioner role record by ID. Requires role: 'admin', 'clinician', 'support', 'practitioner:owner'
+ * Retrieve a single practitioner role record by ID. Requires role: 'admin', 'clinician', 'support'
  */
 export const getPractitionerRoleOptions = (options: Options<GetPractitionerRoleData>) => queryOptions<GetPractitionerRoleResponse, GetPractitionerRoleError, GetPractitionerRoleResponse, ReturnType<typeof getPractitionerRoleQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -6374,7 +6374,7 @@ export const getPractitionerRoleOptions = (options: Options<GetPractitionerRoleD
 });
 
 /**
- * Update a practitioner role record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing', 'practitioner:owner'
+ * Update a practitioner role record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing'
  */
 export const updatePractitionerRoleMutation = (options?: Partial<Options<UpdatePractitionerRoleData>>): UseMutationOptions<UpdatePractitionerRoleResponse, UpdatePractitionerRoleError, Options<UpdatePractitionerRoleData>> => {
     const mutationOptions: UseMutationOptions<UpdatePractitionerRoleResponse, UpdatePractitionerRoleError, Options<UpdatePractitionerRoleData>> = {
@@ -6472,7 +6472,7 @@ export const deactivatePractitionerMutation = (options?: Partial<Options<Deactiv
 export const getPractitionerQueryKey = (options: Options<GetPractitionerData>) => createQueryKey('getPractitioner', options);
 
 /**
- * Retrieve a single practitioner record by ID. Requires role: 'admin', 'clinician', 'support', 'practitioner:owner'
+ * Retrieve a single practitioner record by ID. Requires role: 'admin', 'clinician', 'support'
  */
 export const getPractitionerOptions = (options: Options<GetPractitionerData>) => queryOptions<GetPractitionerResponse, GetPractitionerError, GetPractitionerResponse, ReturnType<typeof getPractitionerQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -6488,7 +6488,7 @@ export const getPractitionerOptions = (options: Options<GetPractitionerData>) =>
 });
 
 /**
- * Update a practitioner record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing', 'practitioner:owner'
+ * Update a practitioner record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing'
  */
 export const updatePractitionerMutation = (options?: Partial<Options<UpdatePractitionerData>>): UseMutationOptions<UpdatePractitionerResponse, UpdatePractitionerError, Options<UpdatePractitionerData>> => {
     const mutationOptions: UseMutationOptions<UpdatePractitionerResponse, UpdatePractitionerError, Options<UpdatePractitionerData>> = {

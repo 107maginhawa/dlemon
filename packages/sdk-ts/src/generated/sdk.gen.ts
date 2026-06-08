@@ -3731,7 +3731,7 @@ export const deactivatePractitionerRole = <ThrowOnError extends boolean = false>
 });
 
 /**
- * Retrieve a single practitioner role record by ID. Requires role: 'admin', 'clinician', 'support', 'practitioner:owner'
+ * Retrieve a single practitioner role record by ID. Requires role: 'admin', 'clinician', 'support'
  */
 export const getPractitionerRole = <ThrowOnError extends boolean = false>(options: Options<GetPractitionerRoleData, ThrowOnError>) => (options.client ?? client).get<GetPractitionerRoleResponses, GetPractitionerRoleErrors, ThrowOnError>({
     responseTransformer: getPractitionerRoleResponseTransformer,
@@ -3741,7 +3741,7 @@ export const getPractitionerRole = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * Update a practitioner role record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing', 'practitioner:owner'
+ * Update a practitioner role record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing'
  */
 export const updatePractitionerRole = <ThrowOnError extends boolean = false>(options: Options<UpdatePractitionerRoleData, ThrowOnError>) => (options.client ?? client).patch<UpdatePractitionerRoleResponses, UpdatePractitionerRoleErrors, ThrowOnError>({
     responseTransformer: updatePractitionerRoleResponseTransformer,
@@ -3788,7 +3788,7 @@ export const deactivatePractitioner = <ThrowOnError extends boolean = false>(opt
 });
 
 /**
- * Retrieve a single practitioner record by ID. Requires role: 'admin', 'clinician', 'support', 'practitioner:owner'
+ * Retrieve a single practitioner record by ID. Requires role: 'admin', 'clinician', 'support'
  */
 export const getPractitioner = <ThrowOnError extends boolean = false>(options: Options<GetPractitionerData, ThrowOnError>) => (options.client ?? client).get<GetPractitionerResponses, GetPractitionerErrors, ThrowOnError>({
     responseTransformer: getPractitionerResponseTransformer,
@@ -3798,7 +3798,7 @@ export const getPractitioner = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
- * Update a practitioner record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing', 'practitioner:owner'
+ * Update a practitioner record. Provide only the fields to change; null values clear optional fields. Requires role: 'admin', 'credentialing'
  */
 export const updatePractitioner = <ThrowOnError extends boolean = false>(options: Options<UpdatePractitionerData, ThrowOnError>) => (options.client ?? client).patch<UpdatePractitionerResponses, UpdatePractitionerErrors, ThrowOnError>({
     responseTransformer: updatePractitionerResponseTransformer,

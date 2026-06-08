@@ -2497,14 +2497,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // getPractitionerRole
   app.get('/providers/practitioner-roles/:id',
-    authMiddleware({ roles: ["admin", "clinician", "support", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "clinician", "support"] }),
     zValidator('param', validators.GetPractitionerRoleParams, validationErrorHandler),
     registry.getPractitionerRole as unknown as Handler
   );
 
   // updatePractitionerRole
   app.patch('/providers/practitioner-roles/:id',
-    authMiddleware({ roles: ["admin", "credentialing", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "credentialing"] }),
     zValidator('param', validators.UpdatePractitionerRoleParams, validationErrorHandler),
     zValidator('json', validators.UpdatePractitionerRoleBody, validationErrorHandler),
     registry.updatePractitionerRole as unknown as Handler
@@ -2533,14 +2533,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // getPractitioner
   app.get('/providers/practitioners/:id',
-    authMiddleware({ roles: ["admin", "clinician", "support", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "clinician", "support"] }),
     zValidator('param', validators.GetPractitionerParams, validationErrorHandler),
     registry.getPractitioner as unknown as Handler
   );
 
   // updatePractitioner
   app.patch('/providers/practitioners/:id',
-    authMiddleware({ roles: ["admin", "credentialing", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "credentialing"] }),
     zValidator('param', validators.UpdatePractitionerParams, validationErrorHandler),
     zValidator('json', validators.UpdatePractitionerBody, validationErrorHandler),
     registry.updatePractitioner as unknown as Handler
