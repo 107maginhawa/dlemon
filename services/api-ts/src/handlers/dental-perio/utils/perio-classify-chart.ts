@@ -79,8 +79,17 @@ function toothInvolved(r: ClassifiableReading): boolean {
 
 /**
  * Derive staging/grading/extent from a chart's readings + optional risk factors,
- * then classify. `remainingTeeth` defaults to the charted tooth count when not
- * supplied.
+ * then classify.
+ *
+ * IDEAL-§343 / audit §8.B: `remainingTeeth` is NOT defaulted to the charted-tooth
+ * count. The number of teeth *charted* on a (possibly partial) perio exam is not
+ * the number of teeth *remaining* in the mouth — a 15-tooth partial chart of a
+ * fully-dentate patient must not be read as "<20 teeth remaining". Defaulting to
+ * the reading count let that absence-of-evidence trip the Stage-IV `<20 teeth`
+ * complexity factor and over-stage an advanced-but-localized case to IV. When
+ * `remainingTeeth` is omitted the factor simply does not apply (the clinician can
+ * still supply it explicitly from the medical history when the dentition is in
+ * fact reduced). Over-staging drives over-treatment, so absence is conservative.
  */
 export function classifyChart(
   readings: ClassifiableReading[],
@@ -115,7 +124,9 @@ export function classifyChart(
     toothLossCount: risk.toothLossCount,
     maxFurcationGrade: maxFurcation,
     maxMobilityGrade: maxMobility,
-    remainingTeeth: risk.remainingTeeth ?? readings.length,
+    // IDEAL-§343: pass through only when explicitly supplied — never infer
+    // "<20 teeth remaining" from the count of teeth charted on a partial exam.
+    remainingTeeth: risk.remainingTeeth,
     biteCollapse: risk.biteCollapse,
   };
 

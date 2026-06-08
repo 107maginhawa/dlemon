@@ -58,14 +58,35 @@ describe('classifyChart', () => {
     expect(result.stage).toBe('IV');
   });
 
-  test('defaults remainingTeeth to charted count', () => {
-    // 15 charted teeth < 20, but only matters once advanced. Make it advanced.
+  test('IDEAL-§343: a partial chart does NOT infer "<20 teeth" and over-stage to IV', () => {
+    // 15 charted teeth on an advanced case. The patient may well be fully dentate;
+    // we only charted 15. remainingTeeth is omitted → the <20-teeth Stage-IV
+    // complexity factor must NOT fire from the charted count alone. Stays III.
     const readings: ClassifiableReading[] = [
       { toothNumber: 16, depthBM: 6, gmBM: 2 }, // CAL 8 → Stage III
       ...Array.from({ length: 14 }, (_, i) => healthyTooth(21 + i)),
     ];
-    // remainingTeeth defaults to 15 (<20) → Stage IV on an advanced case.
     const result = classifyChart(readings);
+    expect(result.stage).toBe('III');
+  });
+
+  test('explicit remainingTeeth < 20 DOES force Stage IV on an advanced case', () => {
+    // Same advanced chart, but the clinician supplies a genuinely reduced
+    // dentition from the medical history → the Stage-IV factor correctly fires.
+    const readings: ClassifiableReading[] = [
+      { toothNumber: 16, depthBM: 6, gmBM: 2 }, // CAL 8 → Stage III
+      ...Array.from({ length: 14 }, (_, i) => healthyTooth(21 + i)),
+    ];
+    const result = classifyChart(readings, { remainingTeeth: 18 });
     expect(result.stage).toBe('IV');
+  });
+
+  test('explicit remainingTeeth ≥ 20 keeps an advanced-but-localized case at III', () => {
+    const readings: ClassifiableReading[] = [
+      { toothNumber: 16, depthBM: 6, gmBM: 2 }, // CAL 8 → Stage III
+      ...Array.from({ length: 14 }, (_, i) => healthyTooth(21 + i)),
+    ];
+    const result = classifyChart(readings, { remainingTeeth: 28 });
+    expect(result.stage).toBe('III');
   });
 });
