@@ -113,6 +113,27 @@ dental-portal → emr-consultation → provider → external-records-import
   - **branchId-auth-boundary class status: CLEAR for org/patient/scheduling/visit/clinical/perio/
     imaging/pmd; HOLES found+fixed in dental-patient + dental-visit (caller-supplied branchId) and
     dental-billing (omitted optional branchId). Remaining to chase: portal, emr.**
+  - **TARGETED CROSS-MODULE SWEEP for the optional-branchId-omission variant — CLEAN (2026-06-08).**
+    After EM-BIL-002, swept all 45 list/report/aggregate/search/export endpoints across the eight
+    already-audited modules (org/patient/scheduling/visit/clinical/perio/imaging/pmd) specifically for
+    *"optional branchId omitted → unscoped → all tenants."* **ZERO holes found** — the variant is unique
+    to dental-billing. Every list/report endpoint in these modules is either (a) **branchId-required**
+    (400/throw on omit → hard `eq(branchId)`), (b) **resource-anchored** — branch derived from a path
+    resource (visit/patient/study/image/household/chart/template) then `assertBranchAccess/Role`, the
+    query `branchId` only a further-narrowing filter (the V-PAT-002/V-VIS-011 posture), or (c) scoped to
+    the caller's **own memberships** (`getBranchesByUser`, `getPermissionGrid` org-resolution). The six
+    repos with a conditional `if (filters.branchId)` (`visit.repo:35`, `perio-chart.repo:27`,
+    `dental-appointment.repo:37`, `waitlist-entry.repo:34`, `queue-item.repo:25`, `membership.repo:62`)
+    were each traced to callers that require branchId or derive+assert it from a resource first — none
+    leaves an unfiltered all-tenant path. **Why clean, not a coverage gap:** the billing hole was
+    structural — its reports aggregate *across patients* (AR aging / collections / payer aging / claim
+    worklist / statement batch), so there is no path-resource to anchor the branch and the only scope was
+    the optional `branchId`. Every report in the other 8 modules is resource-anchored or branchId-required,
+    so there is no "cross-resource aggregate with an optional-only scope" surface to leak. **The
+    optional-filter-omission hazard therefore remains live ONLY for cross-resource aggregate/report
+    endpoints — chase it specifically in portal + emr (and any future reporting module).** Coverage proof:
+    [SWEEP_optional-branchid_2026-06-08.md](SWEEP_optional-branchid_2026-06-08.md) (full per-endpoint table,
+    negative results included).
 - **A br-registry rule can UNDERSTATE a gate, not just be absent (from dental-imaging CIMG-001).**
   CIMG-001 said the ceph tier gate blocks "free or null" — but the code is strict `!== 'addon'`, so
   `basic` is blocked too (a test already proved it). **When a registry rule enumerates the blocked
