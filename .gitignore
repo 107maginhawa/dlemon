@@ -278,3 +278,6 @@ docs/prompts-erase/
 
 # workflow-verification smoke venv (local Playwright/Firefox; never commit)
 apps/dentalemon/tests/smoke/.venv/
+
+# webwright craft scratch dirs (per-module; never commit)
+apps/dentalemon/tests/smoke/.craft-*/

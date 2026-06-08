@@ -1,0 +1,11 @@
+step 0 action: params: base_url=http://localhost:3003 email=demo@dentalemon.com owner_profile=Dr. Maria Reyes owner_pin=123456 staff_profile=Ana Santos staff_pin=654321 clinic_name=Reyes Family Dental 1780922579
+step 1 action: owner landed http://localhost:3003/dashboard -> dashboard, failed_to_load=False ok=True
+step 2 action: saved clinic_name='Reyes Family Dental 1780922579' success_banner=True
+step 2 action: after reload Clinic Name input='Reyes Family Dental 1780922579' expected='Reyes Family Dental 1780922579' roundtrip=True
+step 3 action: staff rows(incl header)=3 roles_shown=True owner_guard_label=True ok=True
+step 4 action: staff landed http://localhost:3003/patients sidebar_hides_admin=True staff_denied=True settings_denied=True ok=True
+CP1 PASS: CP1_dashboard_summary
+CP2 PASS: CP2_settings_roundtrip
+CP3 PASS: CP3_staff_list
+CP4 PASS: CP4_rbac_negative
+FINAL DATUM: 4/4 CP pass (clinic_name='Reyes Family Dental 1780922579'): CP1_dashboard_summary=PASS, CP2_settings_roundtrip=PASS, CP3_staff_list=PASS, CP4_rbac_negative=PASS
