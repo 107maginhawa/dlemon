@@ -319,6 +319,30 @@ describe('GET /dental/patients/:patientId/claims/:claimId/readiness (AC-004)', (
     expect(body.hasFee).toBe(true);
     expect(body.ready).toBe(false);
   });
+
+  // CONF-DP-002 (TRACEABILITY 2026-06-08): getClaimReadiness had NO branch/patient
+  // authorization — only an auth check — so any authenticated principal of any org
+  // could read claim-readiness PHI. Must assert patient-branch membership.
+  test('returns 403 for an authenticated non-member', async () => {
+    const owner = buildTestApp(TEST_USER);
+    const profileRes = await owner.request(`/dental/patients/${PATIENT_ID}/insurance-profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ insurerName: 'Maxicare', policyNumber: 'P-403', subscriberName: 'Carlos Reyes' }),
+    });
+    const profile = await profileRes.json() as any;
+    const claimRes = await owner.request(`/dental/patients/${PATIENT_ID}/claims`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ insuranceProfileId: profile.id, cdtCode: 'D0150', feeAmountCents: 50000 }),
+    });
+    const claim = await claimRes.json() as any;
+
+    const OUTSIDER = { id: 'a0000000-0000-1000-8000-00000000a1ff', email: 'outsider@ins01.com' };
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/claims/${claim.id}/readiness`);
+    expect(res.status).toBe(403);
+  });
 });
 
 // =============================================================================

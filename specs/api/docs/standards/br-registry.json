@@ -169,6 +169,31 @@
       "description": "Patient record rules",
       "rules": [
         {
+          "id": "BR-015",
+          "description": "Patient registration requires explicit consent (consentGiven: true), else 422 CONSENT_REQUIRED. Single-consent model (V-PAT-004): registration captures ONE consent flag persisted as a JSONB consent object { registrationConsent, capturedAt } on the person record — NOT the legacy 4-flag marketing/data_sharing/sms/email split (never implemented, removed). Per-channel communication consent is a separate endpoint (P1-28).",
+          "type": "validation",
+          "status": "implemented",
+          "source": "dental-patient/identity/createDentalPatient.ts:38",
+          "test": "dental-patient/identity/createDentalPatient.test.ts:170; dental-patient.test.ts:927"
+        },
+        {
+          "id": "BR-015b",
+          "description": "An archived patient record is read-only. Write operations (update demographics, add follow-up note, create recall) return 403 PATIENT_ARCHIVED.",
+          "type": "state-machine",
+          "status": "implemented",
+          "source": "dental-patient/identity/updateDentalPatient.ts:35; engagement/followUpNotes.ts:63",
+          "test": "dental-patient.test.ts:1282-1350",
+          "notes": "Enforced on the demographics/follow-up/recall write paths; sub-resource handlers (insurance/contacts/alerts/tasks/household) do not carry the archived-write guard — tracked test/impl backlog."
+        },
+        {
+          "id": "BR-015c",
+          "description": "Follow-up notes are append-only — only GET (list) and POST (add) routes exist; there is no PATCH/DELETE route, so edits/deletes cannot occur.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "dental-patient/engagement/followUpNotes.ts (list + add only); generated routes register GET+POST only",
+          "notes": "Append-only is enforced structurally (routes never registered) rather than by an explicit 405 guard; no test pins the absence."
+        },
+        {
           "id": "BR-019",
           "description": "Clinical records are immutable and append-only. Corrections are additive amendments — the original entry is preserved.",
           "type": "compliance",
@@ -178,10 +203,19 @@
         },
         {
           "id": "BR-020",
-          "description": "Patient merge and unmerge are not implemented. Duplicate patients must be manually managed.",
+          "description": "Patient merge and unmerge are deferred (Phase 2). Both POST /patients/merge and POST /patients/unmerge are admin-only and return a clean 501 NOT_IMPLEMENTED by design; duplicates are managed manually (detectDuplicatePatients surfaces candidates, registration returns a non-blocking 201 + warning rather than 409). The legacy dental_patient_merge_enabled feature flag is not present in code.",
           "type": "implementation-gap",
           "status": "not-implemented",
-          "source": "dental-patient/mergePatients.ts, unmergePatients.ts (TODO)"
+          "source": "handlers/patient/mergePatients.ts (501), handlers/patient/unmergePatients.ts (501)",
+          "test": "handlers/patient/patient-merge-auth.test.ts"
+        },
+        {
+          "id": "TP-BR-005",
+          "description": "Completing one treatment-plan item must NOT complete the whole plan unless ALL items are complete. Plan status is derived from linked treatments: all done→completed, some done→partially_completed, none→approved; dismissed/declined treatments are excluded from the denominator.",
+          "type": "state-machine",
+          "status": "implemented",
+          "source": "dental-patient/treatment-plans/repos/treatment-plan.schema.ts:56 deriveTreatmentPlanStatus; treatment-plan.repo.ts:82 recomputeStatus",
+          "test": "treatment-plan-derivation.test.ts:14; treatment-plan-item-completion.test.ts:89; approveTreatmentPlan.test.ts:130"
         }
       ]
     },

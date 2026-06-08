@@ -1,17 +1,11 @@
 import type { ValidatedContext } from '@/types/app';
-import {
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  BusinessLogicError,
-} from '@/core/errors';
+import { UnauthorizedError, ForbiddenError } from '@/core/errors';
 import type { User } from '@/types/auth';
 import type { UnmergePatientsBody } from '@/generated/openapi/validators';
 
 /**
  * unmergePatients
- * 
+ *
  * Path: POST /patients/unmerge
  * OperationId: unmergePatients
  */
@@ -26,16 +20,18 @@ export async function unmergePatients(
     throw new ForbiddenError('Only administrators can unmerge patients');
   }
 
-  // Extract validated request body
-  const body = ctx.req.valid('json');
-  
-  // TODO: Implement business logic
-  // Examples of throwing errors:
-  // throw new UnauthorizedError();
-  // throw new ForbiddenError('You do not have access to this resource');
-  // throw new NotFoundError('Resource');
-  // throw new ValidationError('Invalid input');
-  // throw new BusinessLogicError('Business rule violated', 'BUSINESS_ERROR');
-  
-  throw new Error('Not implemented: unmergePatients');
+  // Extract validated request body (reserved for future implementation)
+  ctx.req.valid('json');
+
+  // EM-PAT-007: patient unmerge is not yet implemented (BR-020, deferred to
+  // Phase 2 alongside merge). Return a clean 501 Not Implemented — mirroring
+  // mergePatients — rather than letting an unhandled Error surface as a
+  // misleading 500 Internal Server Error.
+  return ctx.json(
+    {
+      code: 'NOT_IMPLEMENTED',
+      message: 'Patient unmerge is not implemented yet',
+    },
+    501,
+  );
 }

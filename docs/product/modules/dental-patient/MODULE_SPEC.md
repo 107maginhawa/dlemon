@@ -70,10 +70,10 @@ Visit/treatment records (dental-visit), billing invoices (dental-billing), clini
 **Preconditions:** Branch membership active
 **Steps:**
 1. Staff opens "New Patient" form
-2. Enter name, DOB, contact info, gender
-3. Present marketing/data-sharing/SMS/email consent checkboxes (BR-015)
+2. Enter name (`displayName`), DOB, gender
+3. Capture the single registration consent flag `consentGiven` (BR-015 / V-PAT-004) — required `true`, else 422 `CONSENT_REQUIRED`. Persisted as JSONB `consent: { registrationConsent, capturedAt }` on the person record. (The legacy 4-flag marketing/data-sharing/SMS/email split was never implemented and has been removed; per-channel communication consent is a separate endpoint, P1-28.)
 4. Save → creates `person` record + `patient` record
-**Exception:** Duplicate person (same name+DOB+phone) → prompt staff to search first
+**Exception:** Duplicate person (same name+DOB+phone) → registration still succeeds (201) and returns a non-blocking `warning` object so staff can review; it does NOT hard-fail with 409.
 
 ### WF-023: Patient Search
 **Actor:** All dental roles
@@ -90,7 +90,7 @@ Visit/treatment records (dental-visit), billing invoices (dental-billing), clini
 
 | Rule ID | Rule | Applies To | Expected Behavior |
 |---------|------|-----------|-------------------|
-| BR-015 | IF registering patient THEN explicit marketing consent required | Registration | Checkbox required; defaults to unchecked |
+| BR-015 | IF registering patient THEN explicit registration consent required (`consentGiven: true`) — single-consent model (V-PAT-004), persisted as JSONB `consent: { registrationConsent, capturedAt }` on person | Registration | 422 `CONSENT_REQUIRED` if missing/false |
 | BR-015b | IF patient.status = archived THEN record is read-only | All write handlers | 403 |
 | BR-015c | IF follow-up note added THEN append-only (no edit/delete) | Follow-up notes | 405 on PATCH/DELETE |
 | BR-020 | Patient merge **intentionally deferred to Phase 2** (feature-flag `dental_patient_merge_enabled`, default false) — manual deduplication only until then; endpoint returns `501` by design, not a coverage gap (TR-PAT-020). | Merge endpoint | 501 NOT IMPLEMENTED |
@@ -148,7 +148,7 @@ not present "Approve" and "Accept" as two separate user choices.
 |--------|--------------|-----------------|-------|
 | Create patient | staff_full, dentist_owner, dentist_associate | staff_scheduling | — |
 | View patient | all dental roles | — | Branch-scoped |
-| Update demographics | staff_full, dentist_owner | staff_scheduling | — |
+| Update demographics | dentist_owner, dentist_associate, hygienist, staff_full | staff_scheduling | Clinical roles may update records (matches `updateDentalPatient.ts:44`); archive sub-path is dentist_owner-only |
 | Archive patient | dentist_owner | all others | — |
 | Export / bulk ops | dentist_owner | all others | — |
 | GDPR erasure | admin (platform) | — | — |
@@ -321,7 +321,7 @@ Then only branch A patients returned
 |---------------|-------------------|---------------------|
 | No consent checkbox | 422 CONSENT_REQUIRED | "Patient consent is required to register" |
 | Archived write attempt | 403 PATIENT_ARCHIVED | "This patient record is archived" |
-| Duplicate patient | 409 DUPLICATE_PATIENT | "A patient with this information may already exist" |
+| Possible duplicate at registration | 201 + non-blocking `warning` object (NOT 409) | "A patient with this information may already exist" |
 | Patient not found | 404 | "Patient not found" |
 | Merge not implemented | 501 | "Patient merge is not yet available" |
 

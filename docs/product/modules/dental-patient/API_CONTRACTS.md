@@ -52,7 +52,7 @@ person record: `{ registrationConsent: true, capturedAt: <ISO timestamp> }`
 | `status` | string | NO | `active`, `archived` |
 | `createdAt` | string (date-time) | NO | |
 
-**Errors:** `VALIDATION_ERROR(400)`, `CONSENT_REQUIRED(422)`, `DUPLICATE_PATIENT(409)`
+**Errors:** `VALIDATION_ERROR(400)`, `CONSENT_REQUIRED(422)`. Note: duplicate detection is **non-blocking** — a likely duplicate yields `201` + a `warning` object, NOT a `409`. (The only `409` on the patient resource is `PATIENT_ALREADY_ARCHIVED` on the archive path.)
 **Events emitted:** DE-021 PatientRegistered (audit-log-only marker per ADR-006 — written synchronously as a `patient.registered` `dental_audit_log` row; no event bus)
 
 ---

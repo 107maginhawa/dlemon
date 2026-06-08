@@ -13,8 +13,13 @@
  * AC-010  404 for non-existent patient
  * AC-011  404 for non-existent planId
  * AC-012  400 for missing providerId on create
- * BR-001  Only one 'draft' plan per patient allowed (409 on duplicate)
  * BR-002  totalEstimateCents must be non-negative
+ *
+ * NOTE (TRACEABILITY 2026-06-08): an earlier header listed "BR-001 — only one
+ * 'draft' plan per patient (409 on duplicate)". That rule is NOT implemented
+ * (no guard in createTreatmentPlan.ts, no unique partial index) and was never
+ * tested — the line was an aspirational over-claim and has been removed to keep
+ * this header honest. If the constraint is wanted, build it as a real slice.
  */
 
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';

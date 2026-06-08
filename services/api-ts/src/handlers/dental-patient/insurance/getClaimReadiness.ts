@@ -5,6 +5,8 @@
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import { InsuranceProfileRepository } from '../repos/insurance-profile.repo';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -16,6 +18,12 @@ export async function getClaimReadiness(ctx: HandlerContext): Promise<Response> 
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
+
+  // CONF-DP-002: claim readiness is patient PHI — assert the caller is a member
+  // of the patient's branch (mirrors the other insurance sub-resource handlers).
+  const patient = await getDentalPatientRecord(db, patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   const claimRepo = new ClaimDraftRepository(db, logger);
   const claim = await claimRepo.findOneById(claimId, patientId);

@@ -130,15 +130,19 @@ describe('unmergePatients admin guard', () => {
     expect(body.code).toBe('FORBIDDEN');
   });
 
-  test('admin caller passes guard and reaches the stub (not 403)', async () => {
+  test('admin caller passes guard and gets a clean 501 (not 403, not 500)', async () => {
     const app = buildTestApp(adminUser);
     const res = await app.request('/patients/unmerge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: unmergeBody,
     });
-    // unmergePatients is an unimplemented stub that throws → 500, NOT 403.
+    // EM-PAT-007 (TRACEABILITY 2026-06-08): unmerge is deferred like merge. It must
+    // return a clean 501 NOT_IMPLEMENTED — mirroring mergePatients — rather than
+    // letting an unhandled Error surface as a misleading 500.
     expect(res.status).not.toBe(403);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(501);
+    const body = await res.json() as any;
+    expect(body.code).toBe('NOT_IMPLEMENTED');
   });
 });

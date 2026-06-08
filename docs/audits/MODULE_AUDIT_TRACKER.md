@@ -11,7 +11,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | # | Module | Verdict | Gaps closed | Deferred | Report |
 |---|--------|---------|-------------|----------|--------|
 | 1 | dental-org | ✅ READY | 5 (1 test gap, 3 doc drift, 1 registry drift) | BR-016c → imaging round | [MODULE_dental-org_AUDIT_2026-06-08.md](modules/MODULE_dental-org_AUDIT_2026-06-08.md) |
-| 2 | dental-patient | ⏳ pending | — | — | — |
+| 2 | dental-patient | ✅ READY | 9 (3 cross-tenant PHI holes, 1 stub 500→501, 5 doc/registry drift) | 8 test gaps + archived-sub-resource-guard product decision + KG-backlog | [MODULE_dental-patient_AUDIT_2026-06-08.md](modules/MODULE_dental-patient_AUDIT_2026-06-08.md) |
 | 3 | dental-scheduling | ⏳ pending | — | — | — |
 | 4 | dental-visit | ⏳ pending | — | — | — |
 | 5 | dental-clinical | ⏳ pending | — | — | — |
@@ -32,3 +32,7 @@ dental-portal → emr-consultation → provider → external-records-import
   Register in the **dental-imaging** round (correct module attribution).
 - **AC-ORG-002** fee-schedule → new-invoice default: dental-org proves the per-branch override;
   the invoice-time price snapshot is billing-side — verify in the **dental-billing** round.
+- **BR-015b archived = read-only (product decision)** — dental-patient enforces it only on core
+  demographics/follow-up/recall writes; sub-resource writers (insurance/contacts/alerts/tasks/
+  household) currently allow writes to an archived patient. Decide scope (extend guard + test, or
+  narrow the rule). Likely recurs for other modules' patient sub-resources.
