@@ -1990,11 +1990,31 @@ export const DentalOrgModuleCreateOrganizationRequestSchema = z.object({
   countryCode: z.string()
 });
 
+export const DentalOrgModuleDashboardLabOrderSummarySchema = z.object({
+  totalPending: z.number().int(),
+  ordered: z.number().int(),
+  inFabrication: z.number().int(),
+  overdueDelivery: z.number().int()
+});
+
+export const DentalOrgModuleDashboardPaymentPlanSummarySchema = z.object({
+  count: z.number().int(),
+  behindCount: z.number().int(),
+  totalOutstandingCents: z.number().int()
+});
+
 export const DentalOrgModuleDashboardSummaryResponseSchema = z.object({
-  todayVisits: z.number().int(),
-  pendingInvoices: z.number().int(),
-  totalPatients: z.number().int(),
-  revenueThisMonthCents: z.number().int()
+  activePaymentPlans: z.object({
+  count: z.number().int(),
+  behindCount: z.number().int(),
+  totalOutstandingCents: z.number().int()
+}),
+  labOrders: z.object({
+  totalPending: z.number().int(),
+  ordered: z.number().int(),
+  inFabrication: z.number().int(),
+  overdueDelivery: z.number().int()
+})
 });
 
 export const DentalOrgModuleDeactivateMembershipRequestSchema = z.object({
@@ -2003,10 +2023,7 @@ export const DentalOrgModuleDeactivateMembershipRequestSchema = z.object({
 
 export const DentalOrgModuleDentalBranchSettingsSchema = z.object({
   branchId: z.string().uuid(),
-  appointmentDurationMinutes: z.number().int(),
-  currency: z.string(),
-  taxRate: z.number(),
-  appointmentReminderEnabled: z.boolean()
+  settings: z.record(z.string(), z.unknown())
 });
 
 export const DentalOrgModuleDentalConsentTemplateSchema = z.object({
@@ -2098,14 +2115,40 @@ export const DentalOrgModuleOnboardingResponseSchema = z.object({
   membershipId: z.string().uuid()
 });
 
-export const DentalOrgModuleOrgContextResponseSchema = z.object({
-  organizationId: UUIDSchema,
-  branchId: UUIDSchema,
-  memberId: UUIDSchema,
-  role: DentalOrgModuleMemberRoleSchema,
-  orgName: z.string(),
-  branchName: z.string(),
+export const DentalOrgModuleOrgContextBranchSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
   timezone: z.string()
+});
+
+export const DentalOrgModuleOrgContextMemberSchema = z.object({
+  id: z.string().uuid(),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
+  displayName: z.string()
+});
+
+export const DentalOrgModuleOrgContextOrgSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  tier: z.string()
+});
+
+export const DentalOrgModuleOrgContextResponseSchema = z.object({
+  org: z.union([z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  tier: z.string()
+}), z.null()]),
+  branch: z.union([z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  timezone: z.string()
+}), z.null()]),
+  member: z.union([z.object({
+  id: z.string().uuid(),
+  role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]),
+  displayName: z.string()
+}), z.null()])
 });
 
 export const DentalOrgModuleOrgTierSchema = z.enum(["solo", "clinic", "group", "enterprise"]);
@@ -2159,12 +2202,7 @@ export const DentalOrgModuleSetSecurityQuestionRequestSchema = z.object({
   answer: z.string()
 });
 
-export const DentalOrgModuleUpdateDentalBranchSettingsRequestSchema = z.object({
-  appointmentDurationMinutes: z.number().int().optional(),
-  currency: z.string().optional(),
-  taxRate: z.number().optional(),
-  appointmentReminderEnabled: z.boolean().optional()
-});
+export const DentalOrgModuleUpdateDentalBranchSettingsRequestSchema = z.record(z.string(), z.unknown());
 
 export const DentalOrgModuleUpdateDentalConsentTemplateRequestSchema = z.object({
   title: z.string().optional(),

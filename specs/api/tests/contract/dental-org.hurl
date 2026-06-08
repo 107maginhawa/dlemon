@@ -398,18 +398,47 @@ jsonpath "$.success" == true
 
 
 # ============================================================
+# DASHBOARD SUMMARY
+# ============================================================
+
+# Drift pin (workflow-verification): GET /dental/dashboard/summary returns the
+# { activePaymentPlans, labOrders } shape the handler + FE (use-dashboard-summary.ts)
+# actually use (FR0.7 payment plans, FR0.8 lab orders) — NOT the flat
+# { todayVisits, pendingInvoices, ... } the stale TypeSpec model used to declare.
+# Owner has a dentist_owner membership on {{branch_id}} (bootstrapped above), so the
+# owner-only dashboard guard passes.
+GET {{api}}/dental/dashboard/summary?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.activePaymentPlans" exists
+jsonpath "$.activePaymentPlans.count" isInteger
+jsonpath "$.activePaymentPlans.behindCount" isInteger
+jsonpath "$.activePaymentPlans.totalOutstandingCents" isInteger
+jsonpath "$.labOrders" exists
+jsonpath "$.labOrders.totalPending" isInteger
+jsonpath "$.labOrders.overdueDelivery" isInteger
+
+
+# ============================================================
 # ORG CONTEXT + BRANCH LOOKUP
 # ============================================================
 
 # NEW: G2.5-S6 — get org context for authenticated user. Response is nested under
 # org/branch/member (the resolved org, the caller's active branch, and their membership).
+# Drift pin (workflow-verification): OrgContextResponse is the NESTED { org, branch,
+# member } shape the handler + FE (load-org-context.ts) actually use — NOT the flat
+# { organizationId, branchId, ... } the stale TypeSpec model used to declare.
 GET {{api}}/dental/org/context
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.org.id" == "{{org_id}}"
+jsonpath "$.org.name" isString
 jsonpath "$.branch.id" isString
+jsonpath "$.branch.timezone" isString
 jsonpath "$.member.role" isString
+jsonpath "$.member.id" isString
 
 
 # NEW: G2.5-S6 — get specific branch by orgId + branchId

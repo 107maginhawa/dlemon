@@ -408,23 +408,93 @@ namespace DentalOrgModule {
   }
 
 
-  @doc("Org context for the authenticated user")
-  model OrgContextResponse {
-    organizationId: UUID;
-    branchId: UUID;
-    memberId: UUID;
-    role: MemberRole;
-    orgName: string;
-    branchName: string;
+  @doc("Resolved organization in the org-context response")
+  model OrgContextOrg {
+    @doc("Organization ID")
+    id: UUID;
+
+    @doc("Organization (practice) name")
+    name: string;
+
+    @doc("Subscription tier")
+    tier: string;
+  }
+
+  @doc("Resolved branch in the org-context response")
+  model OrgContextBranch {
+    @doc("Branch ID")
+    id: UUID;
+
+    @doc("Branch name")
+    name: string;
+
+    @doc("Branch IANA timezone")
     timezone: string;
   }
 
-  @doc("Dashboard summary metrics")
+  @doc("Resolved membership in the org-context response")
+  model OrgContextMember {
+    @doc("Membership ID")
+    id: UUID;
+
+    @doc("Member role at the resolved branch")
+    role: MemberRole;
+
+    @doc("Member display name")
+    displayName: string;
+  }
+
+  @doc("""
+    Org context for the authenticated user — the resolved org, the caller's active
+    branch, and their membership. Returned as a nested `{ org, branch, member }`
+    envelope; `branch` and `member` are null when only an org could be resolved, and
+    all three are null when the caller has no org yet (pre-onboarding).
+    """)
+  model OrgContextResponse {
+    @doc("Resolved organization (null when the caller has no org yet)")
+    org: OrgContextOrg | null;
+
+    @doc("Caller's active branch (null when no branch resolved)")
+    branch: OrgContextBranch | null;
+
+    @doc("Caller's membership at the resolved branch (null when none)")
+    member: OrgContextMember | null;
+  }
+
+  @doc("Active payment-plan rollup for the dashboard (FR0.7)")
+  model DashboardPaymentPlanSummary {
+    @doc("Number of active payment plans for the branch")
+    count: int32;
+
+    @doc("How many of those plans are flagged 'behind'")
+    behindCount: int32;
+
+    @doc("Total outstanding balance across active plans, in cents")
+    totalOutstandingCents: int32;
+  }
+
+  @doc("Pending lab-order rollup for the dashboard (FR0.8)")
+  model DashboardLabOrderSummary {
+    @doc("Total pending lab orders (not yet delivered)")
+    totalPending: int32;
+
+    @doc("Pending orders still in 'ordered' status")
+    ordered: int32;
+
+    @doc("Pending orders in 'in_fabrication' status")
+    inFabrication: int32;
+
+    @doc("Pending orders past their expected delivery date")
+    overdueDelivery: int32;
+  }
+
+  @doc("Dashboard summary metrics — active payment plans (FR0.7) + pending lab orders (FR0.8)")
   model DashboardSummaryResponse {
-    todayVisits: int32;
-    pendingInvoices: int32;
-    totalPatients: int32;
-    revenueThisMonthCents: int32;
+    @doc("Active payment-plan rollup")
+    activePaymentPlans: DashboardPaymentPlanSummary;
+
+    @doc("Pending lab-order rollup")
+    labOrders: DashboardLabOrderSummary;
   }
 
   @doc("Create a flat member (org/branch resolved from auth context)")
@@ -530,38 +600,28 @@ namespace DentalOrgModule {
     sunday?: DentalWorkingHoursDay;
   }
 
-  @doc("Branch operational settings")
+  @doc("""
+    Branch operational settings. The settings payload is a free-form key/value bag
+    (`Record<unknown>`) — the GET/PUT handlers store and merge an open settings
+    object on `dental_branch.settings` (clinic info, fee schedule, locale, currency,
+    working hours, notification prefs, etc.), not a fixed column set. Both GET and PUT
+    return the envelope `{ branchId, settings }`.
+    """)
   model DentalBranchSettings {
     @doc("Branch ID")
     branchId: UUID;
 
-    @doc("Default appointment duration in minutes")
-    appointmentDurationMinutes: int32;
-
-    @doc("Currency code (ISO 4217)")
-    currency: string;
-
-    @doc("Tax rate as a decimal (e.g. 0.12 for 12%)")
-    taxRate: float32;
-
-    @doc("Whether appointment reminders are enabled")
-    appointmentReminderEnabled: boolean;
+    @doc("Free-form settings bag merged on the branch (e.g. appointmentDurationMinutes, currency, taxRate, feeSchedule, locale, workingHours)")
+    settings: Record<unknown>;
   }
 
-  @doc("Update branch settings request")
-  model UpdateDentalBranchSettingsRequest {
-    @doc("Default appointment duration in minutes")
-    appointmentDurationMinutes?: int32;
-
-    @doc("Currency code (ISO 4217)")
-    currency?: string;
-
-    @doc("Tax rate as a decimal")
-    taxRate?: float32;
-
-    @doc("Whether appointment reminders are enabled")
-    appointmentReminderEnabled?: boolean;
-  }
+  @doc("""
+    Update branch settings request — a free-form key/value bag of settings to merge.
+    Top-level keys are shallow-merged onto the existing branch settings (owner-only).
+    Callers may send the keys directly (e.g. `{ "currency": "PHP" }`) or wrap them
+    under a `settings` object; both are accepted by the handler.
+    """)
+  model UpdateDentalBranchSettingsRequest is Record<unknown>;
 
   @example(#{
     id: "ct-1a2b3c4d-0000-4000-8000-000000000001",

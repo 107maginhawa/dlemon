@@ -12,7 +12,12 @@
  *
  * The SDK reads response.text() and parses JSON; tests use proper Response
  * objects via jsonResponse() so the SDK client can process them correctly.
- * The API returns the settings object directly (not wrapped in { settings: ... }).
+ *
+ * CONTRACT (verified live against GET /dental/branches/:id/settings): the API
+ * returns the ENVELOPE `{ branchId, settings: { ...bag } }` — the settings bag is
+ * NESTED under `.settings`, NOT spread flat at the top level. The hook must unwrap
+ * `.settings` so the panels (clinic/fee/locale/working-hours/notifications) read
+ * their fields. A prior fixture asserted the flat shape and masked the drift.
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
@@ -26,8 +31,8 @@ afterEach(() => { global.fetch = originalFetch; });
 
 const BRANCH_ID = 'branch-abc';
 
-// API returns DentalOrgModuleDentalBranchSettings directly (no { settings: ... } wrapper)
-const mockSettings = {
+// The settings bag (the inner object the handler stores on dental_branch.settings).
+const mockSettingsBag = {
   clinicName: 'Happy Smiles Dental',
   clinicAddress: '123 Mabuhay St, Makati',
   clinicPhone: '+63 2 8888 8888',
@@ -36,6 +41,12 @@ const mockSettings = {
   dentistLicenseNumber: 'D-12345',
   locale: 'PH',
   feeSchedule: { D0120: 50000, D1110: 80000 },
+};
+
+// API returns the ENVELOPE { branchId, settings: { ...bag } } — bag is nested.
+const mockSettings = {
+  branchId: BRANCH_ID,
+  settings: mockSettingsBag,
 };
 
 describe('useBranchSettings — GET', () => {
@@ -50,25 +61,30 @@ describe('useBranchSettings — GET', () => {
     expect(result.current.settings).toBeNull();
   });
 
-  test('returns settings on successful fetch', async () => {
-    // API returns the settings object directly (SDK unwraps the response body)
+  test('unwraps the { branchId, settings } envelope so panels read their fields', async () => {
+    // Real API shape: bag is NESTED under .settings. The hook must unwrap it so
+    // result.current.settings.clinicName resolves (not envelope.clinicName === undefined).
     global.fetch = mock(() => jsonResponse(mockSettings));
     const qc = freshClient();
     const { result } = renderHook(() => useBranchSettings(BRANCH_ID), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.settings?.clinicName).toBe('Happy Smiles Dental');
     expect(result.current.settings?.feeSchedule).toEqual({ D0120: 50000, D1110: 80000 });
+    expect(result.current.settings?.locale).toBe('PH');
+    // The envelope keys must NOT leak through as settings fields.
+    expect((result.current.settings as Record<string, unknown>)?.branchId).toBeUndefined();
+    expect((result.current.settings as Record<string, unknown>)?.settings).toBeUndefined();
     expect(result.current.error).toBeNull();
   });
 
-  test('returns empty-ish settings when response has no known fields', async () => {
-    // The SDK returns whatever the API sends; with an empty object the settings is just {}
-    global.fetch = mock(() => jsonResponse({}));
+  test('returns empty-ish settings when the envelope has an empty bag', async () => {
+    // Fresh branch: { branchId, settings: {} } → settings is defined but has no clinicName.
+    global.fetch = mock(() => jsonResponse({ branchId: BRANCH_ID, settings: {} }));
     const qc = freshClient();
     const { result } = renderHook(() => useBranchSettings(BRANCH_ID), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    // SDK returns {} directly — settings is truthy with no clinicName
     expect(result.current.settings).toBeDefined();
+    expect(result.current.settings?.clinicName).toBeUndefined();
     expect(result.current.error).toBeNull();
   });
 

@@ -3778,13 +3778,87 @@ export type DentalOrgModuleCreateOrganizationRequest = {
 };
 
 /**
- * Dashboard summary metrics
+ * Pending lab-order rollup for the dashboard (FR0.8)
+ */
+export type DentalOrgModuleDashboardLabOrderSummary = {
+    /**
+     * Total pending lab orders (not yet delivered)
+     */
+    totalPending: number;
+    /**
+     * Pending orders still in 'ordered' status
+     */
+    ordered: number;
+    /**
+     * Pending orders in 'in_fabrication' status
+     */
+    inFabrication: number;
+    /**
+     * Pending orders past their expected delivery date
+     */
+    overdueDelivery: number;
+};
+
+/**
+ * Active payment-plan rollup for the dashboard (FR0.7)
+ */
+export type DentalOrgModuleDashboardPaymentPlanSummary = {
+    /**
+     * Number of active payment plans for the branch
+     */
+    count: number;
+    /**
+     * How many of those plans are flagged 'behind'
+     */
+    behindCount: number;
+    /**
+     * Total outstanding balance across active plans, in cents
+     */
+    totalOutstandingCents: number;
+};
+
+/**
+ * Dashboard summary metrics — active payment plans (FR0.7) + pending lab orders (FR0.8)
  */
 export type DentalOrgModuleDashboardSummaryResponse = {
-    todayVisits: number;
-    pendingInvoices: number;
-    totalPatients: number;
-    revenueThisMonthCents: number;
+    /**
+     * Active payment-plan rollup
+     */
+    activePaymentPlans: {
+        /**
+         * Number of active payment plans for the branch
+         */
+        count: number;
+        /**
+         * How many of those plans are flagged 'behind'
+         */
+        behindCount: number;
+        /**
+         * Total outstanding balance across active plans, in cents
+         */
+        totalOutstandingCents: number;
+    };
+    /**
+     * Pending lab-order rollup
+     */
+    labOrders: {
+        /**
+         * Total pending lab orders (not yet delivered)
+         */
+        totalPending: number;
+        /**
+         * Pending orders still in 'ordered' status
+         */
+        ordered: number;
+        /**
+         * Pending orders in 'in_fabrication' status
+         */
+        inFabrication: number;
+        /**
+         * Pending orders past their expected delivery date
+         */
+        overdueDelivery: number;
+    };
 };
 
 /**
@@ -3860,7 +3934,11 @@ export type DentalOrgModuleDentalBranch = {
 };
 
 /**
- * Branch operational settings
+ * Branch operational settings. The settings payload is a free-form key/value bag
+ * (`Record<unknown>`) — the GET/PUT handlers store and merge an open settings
+ * object on `dental_branch.settings` (clinic info, fee schedule, locale, currency,
+ * working hours, notification prefs, etc.), not a fixed column set. Both GET and PUT
+ * return the envelope `{ branchId, settings }`.
  */
 export type DentalOrgModuleDentalBranchSettings = {
     /**
@@ -3868,21 +3946,11 @@ export type DentalOrgModuleDentalBranchSettings = {
      */
     branchId: string;
     /**
-     * Default appointment duration in minutes
+     * Free-form settings bag merged on the branch (e.g. appointmentDurationMinutes, currency, taxRate, feeSchedule, locale, workingHours)
      */
-    appointmentDurationMinutes: number;
-    /**
-     * Currency code (ISO 4217)
-     */
-    currency: string;
-    /**
-     * Tax rate as a decimal (e.g. 0.12 for 12%)
-     */
-    taxRate: number;
-    /**
-     * Whether appointment reminders are enabled
-     */
-    appointmentReminderEnabled: boolean;
+    settings: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -4170,16 +4238,117 @@ export type DentalOrgModuleOnboardingResponse = {
 };
 
 /**
- * Org context for the authenticated user
+ * Resolved branch in the org-context response
+ */
+export type DentalOrgModuleOrgContextBranch = {
+    /**
+     * Branch ID
+     */
+    id: string;
+    /**
+     * Branch name
+     */
+    name: string;
+    /**
+     * Branch IANA timezone
+     */
+    timezone: string;
+};
+
+/**
+ * Resolved membership in the org-context response
+ */
+export type DentalOrgModuleOrgContextMember = {
+    /**
+     * Membership ID
+     */
+    id: string;
+    /**
+     * Member role at the resolved branch
+     */
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
+    /**
+     * Member display name
+     */
+    displayName: string;
+};
+
+/**
+ * Resolved organization in the org-context response
+ */
+export type DentalOrgModuleOrgContextOrg = {
+    /**
+     * Organization ID
+     */
+    id: string;
+    /**
+     * Organization (practice) name
+     */
+    name: string;
+    /**
+     * Subscription tier
+     */
+    tier: string;
+};
+
+/**
+ * Org context for the authenticated user — the resolved org, the caller's active
+ * branch, and their membership. Returned as a nested `{ org, branch, member }`
+ * envelope; `branch` and `member` are null when only an org could be resolved, and
+ * all three are null when the caller has no org yet (pre-onboarding).
  */
 export type DentalOrgModuleOrgContextResponse = {
-    organizationId: Uuid;
-    branchId: Uuid;
-    memberId: Uuid;
-    role: DentalOrgModuleMemberRole;
-    orgName: string;
-    branchName: string;
-    timezone: string;
+    /**
+     * Resolved organization (null when the caller has no org yet)
+     */
+    org: {
+        /**
+         * Organization ID
+         */
+        id: string;
+        /**
+         * Organization (practice) name
+         */
+        name: string;
+        /**
+         * Subscription tier
+         */
+        tier: string;
+    } | null;
+    /**
+     * Caller's active branch (null when no branch resolved)
+     */
+    branch: {
+        /**
+         * Branch ID
+         */
+        id: string;
+        /**
+         * Branch name
+         */
+        name: string;
+        /**
+         * Branch IANA timezone
+         */
+        timezone: string;
+    } | null;
+    /**
+     * Caller's membership at the resolved branch (null when none)
+     */
+    member: {
+        /**
+         * Membership ID
+         */
+        id: string;
+        /**
+         * Member role at the resolved branch
+         */
+        role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
+        /**
+         * Member display name
+         */
+        displayName: string;
+    } | null;
 };
 
 /**
@@ -4330,25 +4499,13 @@ export type DentalOrgModuleSetSecurityQuestionRequest = {
 };
 
 /**
- * Update branch settings request
+ * Update branch settings request — a free-form key/value bag of settings to merge.
+ * Top-level keys are shallow-merged onto the existing branch settings (owner-only).
+ * Callers may send the keys directly (e.g. `{ "currency": "PHP" }`) or wrap them
+ * under a `settings` object; both are accepted by the handler.
  */
 export type DentalOrgModuleUpdateDentalBranchSettingsRequest = {
-    /**
-     * Default appointment duration in minutes
-     */
-    appointmentDurationMinutes?: number;
-    /**
-     * Currency code (ISO 4217)
-     */
-    currency?: string;
-    /**
-     * Tax rate as a decimal
-     */
-    taxRate?: number;
-    /**
-     * Whether appointment reminders are enabled
-     */
-    appointmentReminderEnabled?: boolean;
+    [key: string]: unknown;
 };
 
 /**
