@@ -298,11 +298,22 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 
 ### Taylor — Patient
 
-**WF-078 [INFERRED]: Patient portal session**
+**WF-078: Patient portal session (E4 Phase 1 — read-only foundation, BUILT)**
 1. Login via magic link (WF-003)
-2. View own PMD documents (WF-066)
-3. View appointment history [INFERRED — no explicit PRD flow]
-4. Revoke consent (WF-035)
+2. View own appointments — `GET /me/appointments` (`dental-portal/listMyAppointments`)
+3. View own invoices — `GET /me/invoices` (`dental-portal/listMyInvoices`)
+4. View own outstanding balance — `GET /me/balance` (`dental-portal/getMyBalance`)
+
+> **IDOR boundary (V-PORTAL-001):** every portal read is self-scoped by deriving
+> the patient id server-side from the session (`resolveSelfPatientIdOrThrow`,
+> invariant `user.id === person.id → dental_patient.person_id`); no route accepts a
+> client-supplied `patientId`, so a patient can only ever read their OWN data. A
+> staff-only account (no linked patient) → 403; unauthenticated → 401.
+>
+> **DEFERRED (Phase 2, NOT built):** view own PMD documents (WF-066), revoke
+> consent (WF-035), self-booking/reschedule, online self-pay, secure messaging,
+> guardian/household-dependent access, and `/me` imaging/clinical reads. The
+> read-only surface (no `/me` write route exists) is itself the write-scope guarantee.
 
 ### Platform Admin
 

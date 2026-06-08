@@ -899,6 +899,65 @@
           ]
         }
       ]
+    },
+    "dental-portal": {
+      "description": "Patient self-service portal (E4 Phase 1: read-only foundation). An EXTERNAL trust boundary: the actor is a PATIENT (Better-Auth system role 'user', linked Person + dental_patient row, NO dental_membership), not clinic staff. Three self-scoped READ endpoints — GET /me/appointments, /me/invoices, /me/balance — each handled under services/api-ts/src/handlers/dental-portal/. Headline invariant: a patient may ONLY ever read their OWN data. There is NO client-supplied patientId on any portal route; identity is derived server-side from the session via resolveSelfPatientIdOrThrow (assert-self-patient.ts), using the codebase invariant user.id === person.id → dental_patient.person_id, eliminating IDOR by construction. Routes gate authMiddleware({roles:['user']}); the staff-vs-patient distinction (a staff-only account with no linked patient → 403) is enforced in-handler, not by role. Read-only: no /me write/pay/mutate routes exist. Guardian/household-dependent access, self-booking, self-pay, secure messaging, consent management, and /me imaging/clinical reads are Phase-2 DEFERRED (not built).",
+      "rules": [
+        {
+          "id": "V-PORTAL-001 (IDOR-free self-scope — headline invariant)",
+          "description": "Every portal read returns ONLY the session patient's own rows. The patientId is derived server-side from the session (resolveSelfPatientIdOrThrow → patients.person === user.id); no route accepts a client-supplied patientId. A tampered ?patientId=<other> query param is INERT (the handler ignores all client input). Patient A can never read patient B's appointments/invoices/balance.",
+          "type": "security",
+          "status": "implemented",
+          "source": "assert-self-patient.ts:63-75 (resolveSelfPatientIdOrThrow); listMyAppointments.ts:29; listMyInvoices.ts:28; getMyBalance.ts:27",
+          "tests": [
+            "dental-portal.test.ts (assertSelfPatient: other patient's id → 403 no leak; nonexistent → 404)",
+            "dental-portal.test.ts (each /me read: 200 returns ONLY caller's rows; B's ids/numbers absent, both directions)",
+            "dental-portal.test.ts (IDOR: A appending ?patientId=PATIENT_B still gets ONLY A's appointments/invoices/balance — tampered param inert)"
+          ]
+        },
+        {
+          "id": "V-PORTAL-002 (staff-only account denied; patient-only boundary)",
+          "description": "A caller with no linked dental_patient row (a staff-only account) is denied with 403 NOT_A_SELF_PATIENT — never another patient's data. An unauthenticated caller gets 401. The portal is reachable only by an authenticated user that owns a patient record.",
+          "type": "security",
+          "status": "implemented",
+          "source": "assert-self-patient.ts:68-73 (ForbiddenError when no patient row); routes.ts authMiddleware({roles:['user']})",
+          "tests": [
+            "dental-portal.test.ts (resolveSelfPatientIdOrThrow: staff-only user → ForbiddenError 403)",
+            "dental-portal.test.ts (each /me read: staff-only account → 403; unauthenticated → 401)"
+          ]
+        },
+        {
+          "id": "V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)",
+          "description": "A real owned patient with zero appointments/invoices gets 200 [] (lists) and a zeroed balance roll-up — proving the scope is the SESSION patient's set even when empty, with no fallback to an unscoped all-patients query.",
+          "type": "security",
+          "status": "implemented",
+          "source": "appointment-portal.facade.ts:17-25 (eq patientId); billing-dental-patient.facade.ts:17-22 (eq patientId)",
+          "tests": [
+            "dental-portal.test.ts (empty self-scope: patient C with no rows → /me/appointments [] , /me/invoices [], /me/balance zeroed)"
+          ]
+        },
+        {
+          "id": "V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)",
+          "description": "Portal projections expose only schedule/billing-facing fields. Internal staff fields (dentistMemberId, notes, cancellationReason, discountReason, discountedBy, line items) are NOT returned. Voided AND uncollectible (internally written-off) invoices are hidden from /me/invoices and excluded from the /me/balance roll-up — a patient is never shown debt the clinic has cancelled or written off.",
+          "type": "privacy",
+          "status": "implemented",
+          "source": "listMyInvoices.ts:33-44 (filter voided/uncollectible + projection); getMyBalance.ts:30-39; listMyAppointments.ts:35-44 (projection)",
+          "tests": [
+            "dental-portal.test.ts (projection excludes dentistMemberId/notes/cancellationReason/discountReason/discountedBy)",
+            "dental-portal.test.ts (voided + uncollectible invoices hidden; balance excludes both — would be 17000/13000 if leaked)"
+          ]
+        },
+        {
+          "id": "V-PORTAL-005 (read-only; no patient write/mutate path)",
+          "description": "The portal exposes NO write/pay/mutate routes (no POST/PUT/PATCH/DELETE on /me). A patient cannot mutate clinic-owned data (mark a treatment performed, edit clinical notes, pay an invoice) through the portal. Self-booking and online self-pay are Phase-2 deferred and intentionally not built — their absence is the guarantee.",
+          "type": "security",
+          "status": "implemented",
+          "source": "generated/openapi/routes.ts (only GET /me/appointments|/me/invoices|/me/balance registered; no /me write route)",
+          "tests": [
+            "no /me write route exists (verified: grep for app.(post|put|patch|delete)('/me/ → none)"
+          ]
+        }
+      ]
     }
   }
 }

@@ -21,7 +21,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 9 | dental-billing | ✅ READY (1 security fix) | 6 (1 REAL cross-tenant money+PHI hole on 5 optional-branchId report endpoints; 5 doc/registry drift: br-registry +BR-014/BR-015/EM-BIL-002 & BR-010/012 stale, MODULE_SPEC §8 FSM / §10 routes, API_CONTRACTS plan-frequency enum) | recordedByMemberId server-validation product decision + 2 test gaps (empty-membership pin, DE-008 partial-negative pin) + KG-backlog (phantom ar/aging route) | [MODULE_dental-billing_AUDIT_2026-06-08.md](modules/MODULE_dental-billing_AUDIT_2026-06-08.md) |
 | 10 | dental-audit | ✅ READY | 6 (1 REAL test gap: cross-tenant audit-read denial pin; 5 doc/registry drift: br-registry whole-module ABSENT → added 6 rules, MODULE_SPEC §9 banner legacy-table-name + §6/§11/§17 pg-boss/no-self-audit, API_CONTRACTS response field table snake_case→camelCase) | fail-closed-on-security-event pin + legacy-table dual-write coverage + retention→round-11 + self-audit tenantId-echo decision + KG-backlog (phantom `/dental/audit/events` route) | [MODULE_dental-audit_AUDIT_2026-06-08.md](modules/MODULE_dental-audit_AUDIT_2026-06-08.md) |
 | 11 | erasure/legal-hold/retention | ✅ READY | 5 (2 REAL test gaps: audit-survives-erasure pin + AC-LH-004 release-already-released/nonexistent FSM pins; 3 doc/registry drift: whole governance layer ABSENT from br-registry → added 6-rule block, 2 stale "no legal-hold store exists yet" source comments contradicted by the code, WORKFLOW_MAP WFG-006 three stale "Gap/no-implementation/PHI-purge/store-remaining" spots → RESOLVED) | dental-erasure MODULE_SPEC anchor absent + cross-tenant admin-scope product decision + retention enforcement env-gated-off + extra targets/Art.20-portability deferred + erasure fail-closed-audit pin + KG-backlog (phantom /dental/data-governance/* routes, retention unmodeled, Pino-not-store) | [MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md](modules/MODULE_erasure-legal-hold-retention_AUDIT_2026-06-08.md) |
-| 12 | dental-portal | ⏳ pending | — | — | — |
+| 12 | dental-portal | ✅ GAPS (honest — Phase-1 read-only foundation; what's built is GREEN) | 3 (1 REAL adversarial-test pin: IDOR-tamper-inert + empty-self-scope ×6; 2 doc/registry drift: whole module ABSENT from br-registry → added 5-rule V-PORTAL-001..005 block, WORKFLOW_MAP WF-078 over-described unbuilt Phase-2 + omitted built reads → reconciled) | guardian/household-dependent portal access + self-booking + online self-pay + /me imaging/clinical/treatment-plan reads + secure-messaging/consent-mgmt + dental-portal MODULE_SPEC anchor — all Phase-2 DEFERRED/surfaced (NOT built); route-level role-reject belt-and-suspenders pin | [MODULE_dental-portal_AUDIT_2026-06-08.md](modules/MODULE_dental-portal_AUDIT_2026-06-08.md) |
 | 13 | emr-consultation | ⏳ pending | — | — | — |
 | 14 | provider | ⏳ pending | — | — | — |
 | 15 | external-records-import | ⏳ pending | — | — | — |
@@ -162,9 +162,16 @@ dental-portal → emr-consultation → provider → external-records-import
     is required, not optional). The round ADDED the missing **cross-tenant read-denial test** with the
     2-org full-role pattern (the prior 403 test only covered a no-membership caller — the imaging/pmd
     lesson).
+  - **dental-portal = N/A by design (no branch surface) — 2026-06-08 (round 12).** The portal is
+    PATIENT-FACING and read-only: it takes NO `branchId` (or any) client param. Identity is the
+    session patient (`resolveSelfPatientIdOrThrow`, `patients.person === user.id`) and the facades
+    scope on a REQUIRED `eq(patientId)` that is always the session id — so neither the caller-supplied-
+    branchId class nor the optional-branchId-omission class applies (there is no branch/tenant param to
+    tamper or omit, and no cross-resource aggregate with an optional-only scope). IDOR/self-scope =
+    CLEAR; the round only ADDED an IDOR-tamper-inert + empty-self-scope test.
   - **branchId-auth-boundary class status: CLEAR for org/patient/scheduling/visit/clinical/perio/
-    imaging/pmd/audit; HOLES found+fixed in dental-patient + dental-visit (caller-supplied branchId) and
-    dental-billing (omitted optional branchId). Remaining to chase: portal, emr.**
+    imaging/pmd/audit/portal (portal N/A by design); HOLES found+fixed in dental-patient + dental-visit
+    (caller-supplied branchId) and dental-billing (omitted optional branchId). Remaining to chase: emr (the LAST module).**
   - **TARGETED CROSS-MODULE SWEEP for the optional-branchId-omission variant — CLEAN (2026-06-08).**
     After EM-BIL-002, swept all 45 list/report/aggregate/search/export endpoints across the eight
     already-audited modules (org/patient/scheduling/visit/clinical/perio/imaging/pmd) specifically for
@@ -204,3 +211,22 @@ dental-portal → emr-consultation → provider → external-records-import
   and claimed out-of-scope "recall management". **Treat KG node prose as DESCRIPTIVE-and-possibly-stale:
   verify the acronym expansion against MODULE_SPEC §2 and every cited route against the generated
   routes before trusting a summary.** Query-only — flag for next regeneration, never hand-edit the KG.
+- **A PATIENT-FACING module has a DIFFERENT auth model — IDOR, not branch-RBAC (from dental-portal round 12).**
+  The portal actor is a PATIENT (`user` role, linked Person + dental_patient, NO membership), so the
+  boundary is NOT `assertBranchRole` — it is "derive the patient id from the SESSION and read only that."
+  The IDOR-safe pattern (and what to look for in any patient-facing surface): **no route accepts a
+  client-supplied `patientId`; identity is resolved server-side via `resolveSelfPatientIdOrThrow`
+  (`patients.person === user.id`, invariant user.id===person.id); facades scope on a REQUIRED `eq(patientId)`.**
+  Cross-patient access is then impossible *by construction*, not by a check. The adversarial pin that
+  proves it: a caller appending `?patientId=<other>` must be INERT (still gets own rows) AND an empty
+  owned-scope must return `[]`/zero (not a fallback to all). **For emr (the last module), if any endpoint
+  is patient/provider-self-facing, apply this lens, not the branch-RBAC one.** A partially-built patient
+  portal whose UNBUILT features (guardian/dependent access, self-pay, /me imaging) are well-surfaced as
+  Phase-2-deferred is an HONEST `GAPS` verdict — don't force `READY`, and don't auto-build a patient-write
+  /PHI surface (high-risk; needs product decisions). Guardian-over-scope is N/A when no guardian access is
+  built — there's no over-broad scope to leak; building it later MUST check the household relationship
+  server-side (a guardian sees ONLY their own dependents, never trusted from the client).
+- **First clean-KG round (dental-portal round 12).** Unlike every prior round (each carried a phantom
+  route / wrong-store over-claim / lossy under-model), `domain:patient-portal` + `flow:patient-self-service-read`
+  are accurate: correct routes (`GET /me/appointments|/me/invoices|/me/balance`), the IDOR claim verbatim,
+  and the right file/facade citations. **A KG node CAN be trustworthy — verify (don't assume drift either way).**

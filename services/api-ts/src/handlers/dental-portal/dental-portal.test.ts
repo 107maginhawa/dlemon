@@ -41,10 +41,13 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 // The `022` segment in every id is a suite-unique tag avoiding cross-suite collisions.
 const USER_A = { id: `a0220000-0000-4000-8000-000000000001`, email: 'patientA@example.com' };
 const USER_B = { id: `a0220000-0000-4000-8000-000000000002`, email: 'patientB@example.com' };
+// USER_C is a real patient with ZERO appointments/invoices — the empty-self-scope case.
+const USER_C = { id: `a0220000-0000-4000-8000-000000000003`, email: 'patientC@example.com' };
 const STAFF_ONLY = { id: `a0220000-0000-4000-8000-000000000099`, email: 'staffonly@example.com' };
 
 const PATIENT_A = `b0220000-0000-4000-8000-000000000001`;
 const PATIENT_B = `b0220000-0000-4000-8000-000000000002`;
+const PATIENT_C = `b0220000-0000-4000-8000-000000000003`;
 
 const ORG_ID = `c0220000-0000-4000-8000-000000000001`;
 const BRANCH_ID = `d0220000-0000-4000-8000-000000000001`;
@@ -80,12 +83,15 @@ beforeAll(async () => {
   await db.insert(persons).values([
     { id: USER_A.id, firstName: 'Alice', lastName: 'Anderson', createdBy: USER_A.id, updatedBy: USER_A.id },
     { id: USER_B.id, firstName: 'Bob', lastName: 'Brown', createdBy: USER_B.id, updatedBy: USER_B.id },
+    { id: USER_C.id, firstName: 'Carol', lastName: 'Clark', createdBy: USER_C.id, updatedBy: USER_C.id },
     { id: STAFF_ONLY.id, firstName: 'Sam', lastName: 'Staff', createdBy: STAFF_ONLY.id, updatedBy: STAFF_ONLY.id },
   ]).onConflictDoNothing();
 
   await db.insert(patients).values([
     { id: PATIENT_A, person: USER_A.id, preferredBranchId: BRANCH_ID, createdBy: USER_A.id, updatedBy: USER_A.id },
     { id: PATIENT_B, person: USER_B.id, preferredBranchId: BRANCH_ID, createdBy: USER_B.id, updatedBy: USER_B.id },
+    // PATIENT_C is a real, owned patient row with NO appointments/invoices.
+    { id: PATIENT_C, person: USER_C.id, preferredBranchId: BRANCH_ID, createdBy: USER_C.id, updatedBy: USER_C.id },
   ]).onConflictDoNothing();
   // NB: STAFF_ONLY has NO patient row — the "staff-only account" case.
 
@@ -330,5 +336,71 @@ describe('GET /me/balance', () => {
   test('staff-only account → 403', async () => {
     const res = await buildApp(STAFF_ONLY).request('/me/balance');
     expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5 — Adversarial IDOR: client-supplied patientId is INERT (carry-forward #1)
+//
+// The headline portal invariant is that there is NO client-supplied patientId
+// to tamper with — identity is derived from the session. These tests prove that
+// even when a caller DELIBERATELY appends ?patientId=<another patient> (or
+// ?patientId=<self> / a path-ish param), the handler ignores it entirely and
+// still returns ONLY the SESSION patient's own rows. If a future refactor ever
+// wired a query param into the scope, the cross-patient assertions here go RED.
+// ---------------------------------------------------------------------------
+
+describe('IDOR: tampered ?patientId is ignored (session-derived identity wins)', () => {
+  test('A appending ?patientId=PATIENT_B still gets ONLY A own appointments', async () => {
+    const res = await buildApp(USER_A).request(`/me/appointments?patientId=${PATIENT_B}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any[];
+    expect(body.length).toBe(1);
+    expect(body[0].visitType).toBe('checkup'); // A's appointment, not B's 'treatment'
+    expect(body.map((a: any) => a.id)).not.toContain('f0220000-0000-4000-8000-0000000000b1');
+  });
+
+  test('A appending ?patientId=PATIENT_B still gets ONLY A own invoices', async () => {
+    const res = await buildApp(USER_A).request(`/me/invoices?patientId=${PATIENT_B}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any[];
+    expect(body.map((i: any) => i.invoiceNumber)).not.toContain('INV-B-1');
+    expect(body.map((i: any) => i.invoiceNumber)).toContain('INV-A-1');
+  });
+
+  test('A appending ?patientId=PATIENT_B still gets ONLY A own balance', async () => {
+    const res = await buildApp(USER_A).request(`/me/balance?patientId=${PATIENT_B}`);
+    const body = (await res.json()) as any;
+    // A's own roll-up (6000), NEVER B's 20000.
+    expect(body.outstandingBalanceCents).toBe(6000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6 — Empty self-scope: a real owned patient with zero rows gets [] / zero,
+//     NOT an error and NOT another patient's data. Proves the scope is the
+//     SESSION patient's set even when that set is empty (no fallback to all).
+// ---------------------------------------------------------------------------
+
+describe('empty self-scope (patient C has no appointments/invoices)', () => {
+  test('GET /me/appointments → 200 []', async () => {
+    const res = await buildApp(USER_C).request('/me/appointments');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
+  test('GET /me/invoices → 200 []', async () => {
+    const res = await buildApp(USER_C).request('/me/invoices');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
+  test('GET /me/balance → 200 zeroed roll-up (not another patient data)', async () => {
+    const res = await buildApp(USER_C).request('/me/balance');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.outstandingBalanceCents).toBe(0);
+    expect(body.totalBilledCents).toBe(0);
+    expect(body.invoiceCount).toBe(0);
   });
 });
