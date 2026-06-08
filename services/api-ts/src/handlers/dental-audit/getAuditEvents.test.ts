@@ -194,6 +194,53 @@ describe('V-AUD-003: contract DTO mapping', () => {
     expect(access.afterSnapshot).toBeNull();
   });
 
+  // --------------------------------------------------------------------------
+  // EM-AUD-002 / AC-AUD-003 (cross-tenant read denial): a legitimately onboarded
+  // dentist_owner of ORG_A must NOT be able to read the audit trail of ORG_B by
+  // passing ORG_B's branchId. The 403-role test above seeds no membership (denies
+  // for "no membership at all"); this proves the resource-scoped branch invariant
+  // with a *real* owner of a *different* org — the only test that exercises the
+  // cross-tenant leak path (the leak the EM-AUD-002 branchId guard exists to stop).
+  // Per dental-imaging/pmd carry-forward: cross-branch isolation must be tested with
+  // a full-role member of a *different* org, not just a no-membership outsider.
+  // --------------------------------------------------------------------------
+  test('AC-AUD-003: ORG_A owner passing ORG_B branchId → 403 (cross-tenant audit read denied)', async () => {
+    const ORG_B = 'da090001-0000-0000-0000-0000000000b0';
+    const BRANCH_B = 'da090001-0000-0000-0000-0000000000c0';
+    const OWNER_B = 'da090001-0000-0000-0000-0000000000d0';
+
+    // ORG_A owner (the caller) + their own branch/membership.
+    await seedOwnerBranch();
+
+    // A wholly independent ORG_B with its own owner, branch, membership, and a
+    // sensitive audit row. The ORG_A caller has NO membership in BRANCH_B.
+    await new OrganizationRepository(db).createOne({
+      id: ORG_B, name: 'Rival Clinic', tier: 'clinic',
+      ownerPersonId: OWNER_B, countryCode: 'PH', active: true,
+    });
+    await new BranchRepository(db).createOne({
+      id: BRANCH_B, organizationId: ORG_B, name: 'Rival Branch',
+      timezone: 'Asia/Manila', active: true,
+    });
+    await new MembershipRepository(db).createOne({
+      branchId: BRANCH_B, personId: OWNER_B, displayName: 'Rival Owner',
+      role: 'dentist_owner', status: 'active', pinFailedAttempts: 0,
+    });
+    await new AuditLogRepository(db).insert({
+      tenantId: ORG_B, branchId: BRANCH_B, actorId: OWNER_B,
+      eventType: 'data-modification', action: 'invoice.voided',
+      targetType: 'dental_invoice',
+      targetId: 'da090001-0000-0000-0000-0000000000e0',
+    });
+
+    // ORG_A owner attempts to read ORG_B's audit trail by passing BRANCH_B.
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(`/dental/audit-events?branchId=${BRANCH_B}`);
+    expect(res.status).toBe(403);
+    // Body must NOT echo ORG_B's audit data.
+    expect(JSON.stringify(await res.json())).not.toContain('invoice.voided');
+  });
+
   test('V-AUD-004: filters by event_type (eventType query param)', async () => {
     await seedOwnerBranch();
     const repo = new AuditLogRepository(db);

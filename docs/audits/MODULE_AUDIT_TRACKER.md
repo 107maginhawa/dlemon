@@ -19,7 +19,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 7 | dental-imaging | ✅ READY | 6 (1 cross-branch PHI isolation test; 5 doc/registry drift: DOMAIN_MODEL SM-01 mislabel, MODULE_SPEC §6 permissions / §13 edge-cases / §15 errors, br-registry CIMG-001/002 tier + CIMG-010 analyses) | AI auto-tracing/DICOM/structural-superimposition non-goals + imaging audit-row test gap + detect kill-switch-OFF test + 403/404-mask convention note + KG-backlog | [MODULE_dental-imaging_AUDIT_2026-06-08.md](modules/MODULE_dental-imaging_AUDIT_2026-06-08.md) |
 | 8 | dental-pmd | ✅ READY | 5 (1 cross-branch PHI isolation test; 4 doc/registry drift: MODULE_SPEC §7/§7.2 phantom columns, §10 wrong list route + multipart, §15 error table, br-registry enriched 2→7 rules) | getImportedPMD-patient-self-detail decision + async/presigned/multipart/notif deferred + 2 test gaps (detail-read audit row, care-record superseded-exclusion) + KG over-claim (PMD mis-expansion / phantom route / recall claim) | [MODULE_dental-pmd_AUDIT_2026-06-08.md](modules/MODULE_dental-pmd_AUDIT_2026-06-08.md) |
 | 9 | dental-billing | ✅ READY (1 security fix) | 6 (1 REAL cross-tenant money+PHI hole on 5 optional-branchId report endpoints; 5 doc/registry drift: br-registry +BR-014/BR-015/EM-BIL-002 & BR-010/012 stale, MODULE_SPEC §8 FSM / §10 routes, API_CONTRACTS plan-frequency enum) | recordedByMemberId server-validation product decision + 2 test gaps (empty-membership pin, DE-008 partial-negative pin) + KG-backlog (phantom ar/aging route) | [MODULE_dental-billing_AUDIT_2026-06-08.md](modules/MODULE_dental-billing_AUDIT_2026-06-08.md) |
-| 10 | dental-audit | ⏳ pending | — | — | — |
+| 10 | dental-audit | ✅ READY | 6 (1 REAL test gap: cross-tenant audit-read denial pin; 5 doc/registry drift: br-registry whole-module ABSENT → added 6 rules, MODULE_SPEC §9 banner legacy-table-name + §6/§11/§17 pg-boss/no-self-audit, API_CONTRACTS response field table snake_case→camelCase) | fail-closed-on-security-event pin + legacy-table dual-write coverage + retention→round-11 + self-audit tenantId-echo decision + KG-backlog (phantom `/dental/audit/events` route) | [MODULE_dental-audit_AUDIT_2026-06-08.md](modules/MODULE_dental-audit_AUDIT_2026-06-08.md) |
 | 11 | erasure/legal-hold/retention | ⏳ pending | — | — | — |
 | 12 | dental-portal | ⏳ pending | — | — | — |
 | 13 | emr-consultation | ⏳ pending | — | — | — |
@@ -75,7 +75,29 @@ dental-portal → emr-consultation → provider → external-records-import
 - **A whole module can be missing from br-registry (from dental-perio).** dental-perio's BR-P01..P07
   + V-PER codes were entirely absent from `br-registry.json` (8 of 10 dental modules registered).
   **When auditing a module, confirm it has a registry block at all** — not just that individual rules
-  are present.
+  are present. **RECURRED at dental-audit (round 10):** dental-audit (the 10th dental module) was also
+  entirely absent (only 9 of 10 registered) despite being the compliance source-of-truth — added a
+  6-rule block this round. Pattern confirmed: registry coverage lags module creation; always check
+  presence-of-block first.
+- **The recurring "audit-row assertion gap" is now CLOSED AT-SOURCE (dental-audit round 10).**
+  Rounds 6–9 repeatedly deferred an "audit-row assertion gap": handlers were confirmed to CALL
+  `logAuditEvent` by source, but few tests asserted the row is actually WRITTEN with the right
+  actor/action/target/tenant. **That invariant lives at the source-of-truth module and IS pinned
+  there:** `dental-audit/audit.test.ts` asserts `logAuditEvent({...})` persists a `dental_audit_log`
+  row with the correct `actorId`(=session.userId, the true actor — there is no caller-supplied actor
+  field to forge)/`action`/`targetType`/`tenantId`/`branchId`/server `timestamp` + PHI-sanitized
+  before/after snapshots, and `getAuditEvents.test.ts` pins the viewer self-audit row's actor == the
+  session user. **Implication for the remaining modules:** a per-module "handler X writes an audit row"
+  pin is now *belt-and-suspenders*, not a P1 — the write mechanism itself is proven correct + PHI-clean
+  at-source. Per-module deferrals of "assert the audit row" are downgraded; only add one where a
+  module's *specific* action→row mapping (the right `action` string / `targetType`) is load-bearing
+  and untested.
+- **Append-only / immutability has a canonical two-layer pattern (dental-audit round 10, also dental-pmd
+  imported-PMD).** The strong form is HTTP method-shadow guards (DELETE/PUT/PATCH → 405 IMMUTABLE) PLUS a
+  DB BEFORE UPDATE/DELETE trigger that RAISEs — so a direct SQL mutation (compromised credential, errant
+  migration) is also refused. **When a module claims "immutable/append-only," verify BOTH layers exist
+  and are tested** (the HTTP 405 alone is bypassable by direct DB access; the DB trigger alone misses the
+  API contract). dental-audit has both (app.ts 405 guards + migration 0080 trigger), both tested.
 - **Caller-supplied branchId is not an auth boundary (V-PAT-002 → V-VIS-011).** A `branchId`
   query param that is access-checked but never tied to the path resource (patientId) leaks
   cross-tenant. dental-patient (list visits/conditions) and dental-visit (treatment-plan
@@ -110,8 +132,16 @@ dental-portal → emr-consultation → provider → external-records-import
     must default to the caller's accessible set, never to "unfiltered = all tenants." Check portal +
     emr (the last two modules) for the same optional-filter-omitted pattern, not just caller-supplied
     branchId.**
+  - **dental-audit = SAFE (no hole) + prior P0 stayed fixed — 2026-06-08 (round 10).** The audit-log
+    READ endpoint (`getAuditEvents`) takes branchId as a **REQUIRED** scope guard (omitted → 400, never
+    an unscoped all-tenant `list` — this is the EM-AUD-002 P0 that was fixed earlier, **verified still
+    fixed**) and gates on `assertBranchRole(dentist_owner)` against `dental_membership`, so an owner of
+    org A passing org B's branchId → 403. The optional-branchId-omission variant does NOT apply (branchId
+    is required, not optional). The round ADDED the missing **cross-tenant read-denial test** with the
+    2-org full-role pattern (the prior 403 test only covered a no-membership caller — the imaging/pmd
+    lesson).
   - **branchId-auth-boundary class status: CLEAR for org/patient/scheduling/visit/clinical/perio/
-    imaging/pmd; HOLES found+fixed in dental-patient + dental-visit (caller-supplied branchId) and
+    imaging/pmd/audit; HOLES found+fixed in dental-patient + dental-visit (caller-supplied branchId) and
     dental-billing (omitted optional branchId). Remaining to chase: portal, emr.**
   - **TARGETED CROSS-MODULE SWEEP for the optional-branchId-omission variant — CLEAN (2026-06-08).**
     After EM-BIL-002, swept all 45 list/report/aggregate/search/export endpoints across the eight

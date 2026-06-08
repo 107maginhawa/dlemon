@@ -42,22 +42,30 @@ Query the audit log for a branch.
 > `page`/`per_page` are **not implemented** — pagination is `limit`/`offset`. `date_from`/`date_to`
 > are **not implemented** — the date filters are `from`/`to`. (V-AUD-004)
 
-**Response 200:** `{ data: AuditEvent[], meta: { total, limit, offset } }`
+**Response 200:** `{ data: DentalAuditEvent[], meta: { total, limit, offset } }`
+
+Field names are **camelCase** and match the viewer DTO in `getAuditEvents.ts#toDTO` / TypeSpec `DentalAuditEvent` (V-AUD-003). The `beforeSnapshot`/`afterSnapshot` JSONB columns are **deliberately omitted** from the response (latent-PHI guard, AC-AUD-004).
 
 | Field | Type | Nullable | Notes |
 |-------|------|----------|-------|
-| `id` | string (uuid) | NO | ULID |
-| `event_type` | string | NO | Domain event name or ACCESS_* |
-| `actor_id` | string (uuid) | NO | `"system"` for automated |
-| `actor_role` | string | NO | Role at time of event |
-| `branch_id` | string (uuid) | NO | |
-| `aggregate_type` | string | NO | |
-| `aggregate_id` | string (uuid) | NO | |
-| `action` | string | NO | |
-| `occurred_at` | string (date-time) | NO | |
-| `metadata` | object | NO | Safe non-PHI key/value pairs |
+| `id` | string (uuid) | NO | |
+| `tenantId` | string (uuid) | NO | Organization the event belongs to |
+| `branchId` | string (uuid) | YES | Null for org-level events |
+| `actorId` | string (uuid) | NO | The acting user (UUID only — never a name) |
+| `actorRole` | string | YES | Membership role at time of event |
+| `eventType` | string | YES | `data-modification` \| `security` \| `authentication` \| `data-access` \| `compliance` \| `system-config` |
+| `action` | string | NO | e.g. `invoice.voided`, `audit_log.accessed` |
+| `resourceType` | string | NO | DB `target_type` (e.g. `dental_invoice`) |
+| `resourceId` | string (uuid) | YES | DB `target_id`; null for non-entity events |
+| `reason` | string | YES | Optional reason supplied with the action |
+| `ipAddress` | string | YES | Web requests only |
+| `userAgent` | string | YES | Web requests only |
+| `metadata` | object | YES | Safe non-PHI key/value pairs |
+| `timestamp` | string (date-time) | NO | ISO 8601 UTC |
 
-**Sort:** `occurred_at DESC` (default, not configurable)
+> The previously documented `aggregate_type`/`aggregate_id`/`occurred_at`/snake_case fields are **NOT** the implemented response — the DTO is camelCase (`resourceType`/`resourceId`/`timestamp`) and excludes the before/after snapshots.
+
+**Sort:** `timestamp DESC` (default, not configurable)
 
 **Errors:** `FORBIDDEN(403)`, `BRANCH_ACCESS_DENIED(403)`, `INVALID_DATE_RANGE(422)`
 

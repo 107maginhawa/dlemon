@@ -329,7 +329,10 @@
           "type": "compliance",
           "status": "implemented",
           "source": "generatePMD.ts (VISIT_NOT_COMPLETED guard, sha256Hex, supersede)",
-          "tests": ["dental-pmd.test.ts (AC-PMD-001/004, supersede, checksum)", "dental-pmd-auth.test.ts"]
+          "tests": [
+            "dental-pmd.test.ts (AC-PMD-001/004, supersede, checksum)",
+            "dental-pmd-auth.test.ts"
+          ]
         },
         {
           "id": "BR-022",
@@ -337,7 +340,10 @@
           "type": "data-integrity",
           "status": "implemented",
           "source": "app.ts (405 IMPORTED_PMD_IMMUTABLE guard), importPMD.ts (verbatim store)",
-          "tests": ["imported-pmd-immutable.test.ts (real-app PATCH/PUT/DELETE → 405)", "dental-pmd.test.ts (AC-PMD-03 verbatim)"]
+          "tests": [
+            "imported-pmd-immutable.test.ts (real-app PATCH/PUT/DELETE → 405)",
+            "dental-pmd.test.ts (AC-PMD-03 verbatim)"
+          ]
         },
         {
           "id": "N-PMD-02",
@@ -345,7 +351,10 @@
           "type": "security",
           "status": "implemented",
           "source": "generatePMD.ts (PATIENT_VISIT_MISMATCH; patientId = visit.patientId)",
-          "tests": ["dental-pmd-auth.test.ts (identity pin)", "dental-pmd.test.ts (PATIENT_VISIT_MISMATCH)"]
+          "tests": [
+            "dental-pmd-auth.test.ts (identity pin)",
+            "dental-pmd.test.ts (PATIENT_VISIT_MISMATCH)"
+          ]
         },
         {
           "id": "EF-PMD-001",
@@ -353,7 +362,9 @@
           "type": "data-integrity",
           "status": "implemented",
           "source": "importPMD.ts (computeChecksum, CHECKSUM_MISMATCH)",
-          "tests": ["dental-pmd.test.ts (EF-PMD-006)"]
+          "tests": [
+            "dental-pmd.test.ts (EF-PMD-006)"
+          ]
         },
         {
           "id": "EF-PMD-005",
@@ -361,7 +372,9 @@
           "type": "compliance",
           "status": "implemented",
           "source": "importPMD.ts (sourceDescription required + 200-char guard)",
-          "tests": ["dental-pmd.test.ts (sourceDescription stored/required, V-PMD-010 cap)"]
+          "tests": [
+            "dental-pmd.test.ts (sourceDescription stored/required, V-PMD-010 cap)"
+          ]
         },
         {
           "id": "V-PMD-007",
@@ -369,7 +382,9 @@
           "type": "compliance",
           "status": "implemented",
           "source": "importPMD.ts / generatePMD.ts / exportPMD.ts / exportPatientCareRecord.ts (logAuditEvent)",
-          "tests": ["dental-pmd-events.test.ts (pmd.generated / pmd.import / pmd.export rows + negative paths)"]
+          "tests": [
+            "dental-pmd-events.test.ts (pmd.generated / pmd.import / pmd.export rows + negative paths)"
+          ]
         },
         {
           "id": "V-PMD-008",
@@ -377,7 +392,10 @@
           "type": "security",
           "status": "implemented",
           "source": "getPMDForVisit / listPMDs / listImportedPMDs / exportPMD / exportPatientCareRecord (isPatientSelf branch + assertBranchAccess)",
-          "tests": ["dental-pmd-auth.test.ts (patient-self + cross-branch deny)", "exportPatientCareRecord.test.ts (self-download + other-branch 403)"]
+          "tests": [
+            "dental-pmd-auth.test.ts (patient-self + cross-branch deny)",
+            "exportPatientCareRecord.test.ts (self-download + other-branch 403)"
+          ]
         }
       ]
     },
@@ -735,6 +753,74 @@
           "type": "referential-integrity",
           "status": "implemented",
           "source": "All CephMgmt_*.ts handlers — ImagingRepository.getById() guard"
+        }
+      ]
+    },
+    "dental-audit": {
+      "description": "Compliance audit trail (table: dental_audit_log) — append-only, never deleted (HIPAA 7-year retention). No PHI in the log body: actor/target are UUIDs, and metadata + before/after snapshots are recursively PHI-sanitized at a single repository choke point. Read is branch-scoped and dentist_owner-only; viewing the log is itself a self-audited security event.",
+      "rules": [
+        {
+          "id": "AC-AUD-002",
+          "description": "Audit events are append-only and immutable — no UPDATE or DELETE, ever. Enforced at TWO layers: (1) HTTP — PATCH/PUT/DELETE /dental/audit-events/:id → 405 AUDIT_EVENT_IMMUTABLE; (2) DB — migration 0080 installs a BEFORE UPDATE OR DELETE FOR EACH ROW trigger on dental_audit_log that RAISEs 'append-only', so a direct SQL UPDATE/DELETE (compromised credential, errant migration) is also refused (defense-in-depth). There is NO update/delete handler or route for audit rows.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "app.ts:147-154 (405 guards); migration 0080_audit_log_append_only (DB trigger); no update/delete handler exists",
+          "tests": [
+            "audit-append-only.test.ts (real-app PATCH/PUT/DELETE → 405 AUDIT_EVENT_IMMUTABLE)",
+            "audit-immutability-db.test.ts (DB trigger rejects row UPDATE + DELETE; INSERT allowed)"
+          ]
+        },
+        {
+          "id": "AC-AUD-003 / EM-AUD-002",
+          "description": "Audit-log read is branch-scoped and dentist_owner-only. branchId is REQUIRED (omitted → 400 VALIDATION_ERROR) — without it AuditLogRepository.list applies no branch condition and would return rows across ALL tenants (cross-tenant PHI-adjacent leak). Role is checked via assertBranchRole against the dental_membership table (NOT the Better-Auth session field, EM-AUD-009), so a dentist_owner of org A passing org B's branchId has no membership there → 403. A non-owner role → 403.",
+          "type": "security",
+          "status": "implemented",
+          "source": "getAuditEvents.ts:80-129 (branchId-required 400 + assertBranchRole dentist_owner)",
+          "tests": [
+            "getAuditEvents.test.ts (401 unauth; 403 non-owner; 400 branchId-omitted; AC-AUD-003 ORG_A owner passing ORG_B branchId → 403 cross-tenant read denied)"
+          ]
+        },
+        {
+          "id": "AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A",
+          "description": "No PHI in the log body. The audit store is append-only/never-deleted, so PHI baked into metadata or the before/after JSONB snapshots is unremediable. A recursive PHI-key blocklist sanitizer strips identity/demographic/clinical keys (name, email, dob, ssn, mrn, diagnosis, medications, notes, …) at any nesting depth — applied at the AuditLogRepository.insert choke point so EVERY write path is covered (not only logAuditEvent). The viewer DTO additionally OMITS the before/after snapshot columns entirely (V-AUD-003).",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "core/audit-phi-sanitizer.ts (recursive blocklist); audit-log.repo.ts:21-49 (choke-point sanitize); getAuditEvents.ts toDTO (drops snapshots)",
+          "tests": [
+            "audit.test.ts (V-AUD-NEW-A strips top-level + nested-in-objects/arrays PHI keys)",
+            "getAuditEvents.test.ts (V-AUD-003 viewer DTO omits before/after snapshots; PHI value absent from response)"
+          ]
+        },
+        {
+          "id": "AUD-BR-004",
+          "description": "Every audit row carries the mandatory fields: actorId (= the session user, the TRUE actor — never a caller-supplied display field), action, targetType, tenantId, and a server-set timestamp; branchId, eventType, before/after snapshots when supplied. logAuditEvent persists these to dental_audit_log (the authoritative sink read by the viewer) and dual-writes the legacy dental_audit table.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "core/audit-logger.ts:121-196 (logAuditEvent → AuditLogRepository.insert with personId=actorId)",
+          "tests": [
+            "audit.test.ts (AUD-BR-004 row has actorId/action/targetType/timestamp/tenantId/branchId; snapshots round-trip)",
+            "getAuditEvents.test.ts (V-AUD-NEW-B self-audit ACCESSED row actorId == session user)"
+          ]
+        },
+        {
+          "id": "V-AUD-NEW-B / WF-028",
+          "description": "Viewing the audit log is itself a privileged READ that MUST be self-audited: getAuditEvents writes one security-class 'audit_log.accessed' event (actor = the viewing owner, target_type = dental_audit_log) capturing filter scope/result counts ONLY — never PHI. logAuditEvent never throws, so the self-audit cannot break the read.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "getAuditEvents.ts:150-177 (audit_log.accessed self-audit write)",
+          "tests": [
+            "getAuditEvents.test.ts (V-AUD-NEW-B records ACCESSED event with eventType=security, scope-only metadata, null snapshots)"
+          ]
+        },
+        {
+          "id": "V-AUD-007 / EM-AUD-008",
+          "description": "Audit writes are durability-hardened: a transient pooled-connection drop is retried once on a fresh connection (idempotent), the row id is generated explicitly (no reliance on a drifted DB default), and security-class events FAIL-CLOSED — a failed dental_audit_log write for a security event RETHROWS (ADR-005) rather than being silently swallowed, so a compliance write is never lost unnoticed.",
+          "type": "reliability",
+          "status": "implemented",
+          "source": "core/audit-logger.ts:41-58,144-175 (withConnectionRetry, explicit id, fail-closed rethrow)",
+          "tests": [
+            "audit-logger.test.ts"
+          ]
         }
       ]
     }
