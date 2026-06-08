@@ -17,7 +17,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 5 | dental-clinical | ✅ READY | 6 (1 consent-integrity bug: revoke-then-sign + gate ignored revoked; 5 contract/spec/registry/comment drift). _Post-audit: updatePrescription BR-003 field-edit guard added (resolved)._ | post-sign consent-withdrawal decision (ratified as-is) + AC-CLI-005 405 pin + KG-backlog | [MODULE_dental-clinical_AUDIT_2026-06-08.md](modules/MODULE_dental-clinical_AUDIT_2026-06-08.md) |
 | 6 | dental-perio | ✅ READY | 7 (1 clinical-correctness bug: partial-chart over-staging to IV via charted-count `remainingTeeth`; 1 wrong-role RBAC test; 1 stale comment; 4 registry/spec/contract drift incl. whole module absent from br-registry) | WF-P03 amendment + WF-P05 PDF export deferred + cascade-audit-row test gap + cross-branch positive test + KG-backlog | [MODULE_dental-perio_AUDIT_2026-06-08.md](modules/MODULE_dental-perio_AUDIT_2026-06-08.md) |
 | 7 | dental-imaging | ✅ READY | 6 (1 cross-branch PHI isolation test; 5 doc/registry drift: DOMAIN_MODEL SM-01 mislabel, MODULE_SPEC §6 permissions / §13 edge-cases / §15 errors, br-registry CIMG-001/002 tier + CIMG-010 analyses) | AI auto-tracing/DICOM/structural-superimposition non-goals + imaging audit-row test gap + detect kill-switch-OFF test + 403/404-mask convention note + KG-backlog | [MODULE_dental-imaging_AUDIT_2026-06-08.md](modules/MODULE_dental-imaging_AUDIT_2026-06-08.md) |
-| 8 | dental-pmd | ⏳ pending | — | — | — |
+| 8 | dental-pmd | ✅ READY | 5 (1 cross-branch PHI isolation test; 4 doc/registry drift: MODULE_SPEC §7/§7.2 phantom columns, §10 wrong list route + multipart, §15 error table, br-registry enriched 2→7 rules) | getImportedPMD-patient-self-detail decision + async/presigned/multipart/notif deferred + 2 test gaps (detail-read audit row, care-record superseded-exclusion) + KG over-claim (PMD mis-expansion / phantom route / recall claim) | [MODULE_dental-pmd_AUDIT_2026-06-08.md](modules/MODULE_dental-pmd_AUDIT_2026-06-08.md) |
 | 9 | dental-billing | ⏳ pending | — | — | — |
 | 10 | dental-audit | ⏳ pending | — | — | — |
 | 11 | erasure/legal-hold/retention | ⏳ pending | — | — | — |
@@ -90,8 +90,30 @@ dental-portal → emr-consultation → provider → external-records-import
     radiograph) — it was correct by source but unpinned. **Cross-branch isolation should be tested
     with a member of a *different* branch (full role), not just a no-membership `OUTSIDER` — the two
     deny for different reasons and only the former proves the resource-scoped-branch invariant.**
+  - **dental-pmd = also the SAFE pattern (no hole found) — 2026-06-08.** dental-pmd trusts **no
+    `branchId` query param at all**; visit-scoped handlers derive branch from `visit.branchId`,
+    patient-scoped handlers from `patient.preferredBranchId` (the patient resource's own branch,
+    org-scoped so it can't cross an org boundary), then `assertBranchAccess/Role`. The round only
+    ADDED the missing cross-branch *tests* (a full-role `dentist_owner` of `OTHER_BRANCH` is denied
+    the patient's PMDs/care-record). **Carry-forward branchId-auth-boundary class is now CLEAR for
+    org/patient/scheduling/visit/clinical/perio/imaging/pmd — the holes found (and fixed) were
+    confined to dental-patient + dental-visit, which took a `branchId` *query param* untied to the
+    path resource. The remaining modules to chase are billing, portal, emr.**
 - **A br-registry rule can UNDERSTATE a gate, not just be absent (from dental-imaging CIMG-001).**
   CIMG-001 said the ceph tier gate blocks "free or null" — but the code is strict `!== 'addon'`, so
   `basic` is blocked too (a test already proved it). **When a registry rule enumerates the blocked
   set, re-derive it from the operator in code** (`!== 'addon'` ⇒ everything except addon), not from
   the prose. Same class as a stale "only one analysis type exists" claim after N shipped (CIMG-010).
+- **A MODULE_SPEC can list PHANTOM schema columns / wrong routes a sibling doc already fixed (from
+  dental-pmd §7/§10).** API_CONTRACTS had already been reconciled to the inline-JSON reality
+  (V-PMD-006), but MODULE_SPEC §7 still listed `storage_file_id`/`format_version`/`imported_pmd.branch_id`
+  columns that don't exist and §10 still listed the wrong list route + multipart upload. **When two
+  spec docs for a module disagree, diff BOTH against the schema/routes — don't assume the
+  most-recently-edited one propagated its fix.** Re-derive the column set from `*.schema.ts` and the
+  route set from `generated/openapi/routes.ts`, not from prose.
+- **KG node summaries can carry a wrong domain-term EXPANSION + a phantom route (from dental-pmd).**
+  The graph expanded "PMD" as "Patient medical data" (canonical is "**Portable** Medical Document",
+  V-PMD-009), cited a non-existent `POST /dental/pmd/generate` (real: `POST /dental/visits/:visitId/pmd`),
+  and claimed out-of-scope "recall management". **Treat KG node prose as DESCRIPTIVE-and-possibly-stale:
+  verify the acronym expansion against MODULE_SPEC §2 and every cited route against the generated
+  routes before trusting a summary.** Query-only — flag for next regeneration, never hand-edit the KG.

@@ -51,6 +51,11 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 // person ids stay deterministic so onConflictDoNothing is a correct no-op.
 const ORG_ID = 'ef000000-0000-1000-8000-000000000a05';
 const BRANCH_ID = '7b000000-0000-4000-8000-000000000a05';
+// V-PMD-008 cross-branch: a SECOND branch in the SAME org. A full-role member of
+// this branch is NOT a member of BRANCH_ID and must be denied the BRANCH_ID
+// patient's PMDs (branch is derived from the resource, never the caller's own
+// branch context). Carry-forward class V-PAT-002 → V-VIS-011 → imaging V-IMG-002.
+const OTHER_BRANCH_ID = '7b000000-0000-4000-8000-000000000a0b';
 const PERSON_ID = 'f1000000-0000-1000-8000-000000000a05';
 const PATIENT_ID = 'a0000000-0000-1000-8000-000000000a05';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
@@ -59,11 +64,17 @@ const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
 const OWNER = { id: '00000000-0000-0000-0000-000000000a51', email: 'owner@clinic.com' }; // dentist_owner — authorized
 const HYGIENIST = { id: '00000000-0000-0000-0000-000000000a52', email: 'hyg@clinic.com' }; // staff_full member of branch — wrong role for generatePMD, but read-allowed
 const OUTSIDER = { id: '00000000-0000-0000-0000-000000000a53', email: 'outsider@clinic.com' }; // NOT a member of the branch
+// OTHER_BRANCH_DENTIST: a dentist_owner of OTHER_BRANCH (same org), with NO
+// membership in BRANCH_ID. Denies for a DIFFERENT reason than OUTSIDER (who has
+// no membership anywhere) — only this persona proves the resource-scoped-branch
+// invariant, not merely "no membership anywhere".
+const OTHER_BRANCH_DENTIST = { id: '00000000-0000-0000-0000-000000000a54', email: 'otherbranch@clinic.com' };
 // PATIENT_SELF: a user whose id IS the patient's person id — V-PMD-008 self-access.
 const PATIENT_SELF = { id: PERSON_ID, email: 'patient@self.com' };
 
 const OWNER_MEMBER_ID = '7c000000-0000-4000-8000-000000000a51';
 const HYG_MEMBER_ID = '7c000000-0000-4000-8000-000000000a52';
+const OTHER_BRANCH_MEMBER_ID = '7c000000-0000-4000-8000-000000000a54';
 
 beforeAll(async () => {
   const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
@@ -74,11 +85,14 @@ beforeAll(async () => {
 
   await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'PMD Auth Clinic', tier: 'solo', ownerPersonId: OWNER.id, countryCode: 'PH', createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: OTHER_BRANCH_ID, organizationId: ORG_ID, name: 'Other Branch', timezone: 'Asia/Manila', createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
   // dentist_owner — authorized for generatePMD
   await db.insert(dentalMemberships).values({ id: OWNER_MEMBER_ID, branchId: BRANCH_ID, personId: OWNER.id, displayName: 'Dr. Owner', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
   // staff_full — a branch member but NOT a clinician → must be denied generatePMD, allowed reads
   await db.insert(dentalMemberships).values({ id: HYG_MEMBER_ID, branchId: BRANCH_ID, personId: HYGIENIST.id, displayName: 'Front Desk', role: 'staff_full', status: 'active', pinFailedAttempts: 0, createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
-  // OUTSIDER intentionally has NO membership in this branch.
+  // dentist_owner of OTHER_BRANCH (same org), but NOT a member of BRANCH_ID.
+  await db.insert(dentalMemberships).values({ id: OTHER_BRANCH_MEMBER_ID, branchId: OTHER_BRANCH_ID, personId: OTHER_BRANCH_DENTIST.id, displayName: 'Dr. Other', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
+  // OUTSIDER intentionally has NO membership in any branch.
 
   await db.insert(persons).values({ id: PERSON_ID, firstName: 'Auth', lastName: 'Patient', createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: OWNER.id, updatedBy: OWNER.id }).onConflictDoNothing();
@@ -287,6 +301,62 @@ describe('patient-self read/export [V-PMD-008]', () => {
   test('DENY: an unrelated outsider (no membership, not patient-self) listPMDs → 403', async () => {
     const app = buildTestApp(OUTSIDER);
     const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (d) cross-branch PHI isolation — a FULL-ROLE member of ANOTHER branch (same
+//     org) is denied the BRANCH_ID patient's PMDs. The branch is derived from
+//     the resource (visit.branchId / patient.preferredBranchId), never from the
+//     caller's own branch context — so a dentist_owner of OTHER_BRANCH (who
+//     would pass any role-only check) is still 403'd here. This pins the
+//     carry-forward class (V-PAT-002 → V-VIS-011 → imaging V-IMG-002): the
+//     OUTSIDER cases above deny for "no membership anywhere"; only an
+//     other-branch member proves the resource-scoped-branch invariant.
+// ---------------------------------------------------------------------------
+
+describe('cross-branch PHI isolation [V-PMD-008 / carry-forward]', () => {
+  test('DENY: dentist_owner of OTHER_BRANCH cannot read a BRANCH_ID visit PMD → 403', async () => {
+    const visit = await seedCompletedVisit();
+    // generate the PMD as the legitimate owner
+    const ownerApp = buildTestApp(OWNER);
+    const gen = await ownerApp.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(gen.status).toBe(201);
+
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd`);
+    expect(res.status).toBe(403);
+  });
+
+  test('DENY: dentist_owner of OTHER_BRANCH cannot export a BRANCH_ID visit PMD → 403', async () => {
+    const visit = await seedCompletedVisit();
+    const ownerApp = buildTestApp(OWNER);
+    const gen = await ownerApp.request(`/dental/visits/${visit!.id}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    expect(gen.status).toBe(201);
+
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    const res = await app.request(`/dental/visits/${visit!.id}/pmd/export`);
+    expect(res.status).toBe(403);
+  });
+
+  test('DENY: dentist_owner of OTHER_BRANCH cannot list the BRANCH_ID patient PMDs → 403', async () => {
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    const res = await app.request(`/dental/visits/pmd?patientId=${PATIENT_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('DENY: dentist_owner of OTHER_BRANCH cannot list the BRANCH_ID patient imported PMDs → 403', async () => {
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    const res = await app.request(`/dental/pmd/imported?patientId=${PATIENT_ID}`);
     expect(res.status).toBe(403);
   });
 });

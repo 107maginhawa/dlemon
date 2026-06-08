@@ -26,10 +26,17 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 
 const TEST_USER = { id: '00000000-0000-0000-0000-0000000000a1', email: 'ccd@clinic.com' };
 const OTHER_USER = { id: '00000000-0000-0000-0000-0000000000a2', email: 'other@clinic.com' };
+// OTHER_BRANCH_DENTIST: a FULL-ROLE (dentist_owner) member of OTHER_BRANCH in the
+// same org. Unlike OTHER_USER (no membership anywhere), this persona passes any
+// role-only check yet must STILL be denied the patient's care record because the
+// export's branch is derived from patient.preferredBranchId (= BRANCH_ID), not the
+// caller's branch. Carry-forward V-PAT-002 → imaging V-IMG-002.
+const OTHER_BRANCH_DENTIST = { id: '00000000-0000-0000-0000-0000000000a3', email: 'otherbranch@clinic.com' };
 const PATIENT_ID = 'a0000000-0000-1000-8000-0000000000c1';
 const BRANCH_ID = 'b0000000-0000-1000-8000-0000000000c2';
 const OTHER_BRANCH_ID = 'b0000000-0000-1000-8000-0000000000c9';
 const DENTIST_MEMBER_ID = 'c0000000-0000-1000-8000-0000000000c3';
+const OTHER_BRANCH_MEMBER_ID = 'c0000000-0000-1000-8000-0000000000c4';
 const ORG_ID = 'ee000000-0000-1000-8000-0000000000c1';
 const PERSON_ID = 'f2000000-0000-1000-8000-0000000000c1';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-0000000000c9';
@@ -44,6 +51,7 @@ beforeAll(async () => {
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'CCD Main', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalBranches).values({ id: OTHER_BRANCH_ID, organizationId: ORG_ID, name: 'CCD Other', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Dr. CCD', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: OTHER_BRANCH_MEMBER_ID, branchId: OTHER_BRANCH_ID, personId: OTHER_BRANCH_DENTIST.id, displayName: 'Dr. Other', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(persons).values({ id: PERSON_ID, firstName: 'Jane', lastName: 'Doe', dateOfBirth: '1990-04-01', gender: 'female', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
 });
@@ -143,6 +151,16 @@ describe('GET /dental/pmd/patient/:patientId/care-record (P2-18)', () => {
   test('403 for staff at a different branch', async () => {
     // OTHER_USER has no membership at the patient's preferred branch.
     const app = buildTestApp(OTHER_USER);
+    const res = await app.request(`/dental/pmd/patient/${PATIENT_ID}/care-record`);
+    expect(res.status).toBe(403);
+  });
+
+  test('403 for a FULL-ROLE member of ANOTHER branch (cross-branch PHI isolation)', async () => {
+    // OTHER_BRANCH_DENTIST is a dentist_owner — but of OTHER_BRANCH, not the
+    // patient's preferred branch. The care-record export must derive its branch
+    // from patient.preferredBranchId, so this otherwise-privileged user is denied.
+    await seedCompletedVisitWithPMD(buildTestApp(TEST_USER));
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
     const res = await app.request(`/dental/pmd/patient/${PATIENT_ID}/care-record`);
     expect(res.status).toBe(403);
   });

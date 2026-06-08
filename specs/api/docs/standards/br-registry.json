@@ -291,21 +291,63 @@
       ]
     },
     "dental-pmd": {
-      "description": "Portable Medical Document rules",
+      "description": "Portable Medical Document (canonical expansion; V-PMD-009) rules — per-visit immutable signed snapshots, external PMD import + immutability, checksum integrity, identity binding, patient-self access, continuity-of-care export.",
       "rules": [
         {
           "id": "BR-021",
-          "description": "A PMD is generated per-visit and verified by checksum. Future changes to the visit record do not alter the PMD — it is a snapshot.",
+          "description": "A PMD is an immutable per-visit snapshot generated ONLY from a completed or locked visit (otherwise 422 VISIT_NOT_COMPLETED). Content is SHA-256 checksummed (sha256-<hex>) and sealed; future changes to the source visit do NOT alter the PMD. Re-generation supersedes the prior row (generated→superseded) and never mutates a superseded row's content/checksum.",
           "type": "compliance",
           "status": "implemented",
-          "source": "dental-pmd handlers"
+          "source": "generatePMD.ts (VISIT_NOT_COMPLETED guard, sha256Hex, supersede)",
+          "tests": ["dental-pmd.test.ts (AC-PMD-001/004, supersede, checksum)", "dental-pmd-auth.test.ts"]
         },
         {
           "id": "BR-022",
-          "description": "An imported external PMD is stored as-is (read-only). Its data is not merged into the patient's editable records automatically.",
+          "description": "An imported external PMD is stored verbatim and is READ-ONLY after creation. PATCH/PUT/DELETE on /dental/pmd/imported/:id are rejected at the route level with 405 IMPORTED_PMD_IMMUTABLE (not 403 — there is no GET-only generated mutate route; the guard lives in app.ts). Its data is never auto-merged into the patient's editable records; the Safety Floor merge is add-only and never mutates imported content.",
           "type": "data-integrity",
           "status": "implemented",
-          "source": "dental-pmd handlers"
+          "source": "app.ts (405 IMPORTED_PMD_IMMUTABLE guard), importPMD.ts (verbatim store)",
+          "tests": ["imported-pmd-immutable.test.ts (real-app PATCH/PUT/DELETE → 405)", "dental-pmd.test.ts (AC-PMD-03 verbatim)"]
+        },
+        {
+          "id": "N-PMD-02",
+          "description": "Identity binding: the PMD's patientId is derived from the VISIT (single source of truth), never the request body. A body.patientId disagreeing with visit.patientId → 422 PATIENT_VISIT_MISMATCH; the checksum-sealed content always carries visit.patientId so no client-controllable id can leak into a non-repudiation record.",
+          "type": "security",
+          "status": "implemented",
+          "source": "generatePMD.ts (PATIENT_VISIT_MISMATCH; patientId = visit.patientId)",
+          "tests": ["dental-pmd-auth.test.ts (identity pin)", "dental-pmd.test.ts (PATIENT_VISIT_MISMATCH)"]
+        },
+        {
+          "id": "EF-PMD-001",
+          "description": "Import checksum verification: when body.checksum is supplied, the server recomputes sha256-<hex> of body.content and rejects a mismatch with 422 CHECKSUM_MISMATCH. checksum is optional (import without one → 201).",
+          "type": "data-integrity",
+          "status": "implemented",
+          "source": "importPMD.ts (computeChecksum, CHECKSUM_MISMATCH)",
+          "tests": ["dental-pmd.test.ts (EF-PMD-006)"]
+        },
+        {
+          "id": "EF-PMD-005",
+          "description": "sourceDescription is REQUIRED on import (identifies the originating software system, e.g. 'Open Dental v21.1') for data-provenance audit; persisted and returned. Capped at 200 chars (V-PMD-010) → 422 VALIDATION_ERROR if exceeded.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "importPMD.ts (sourceDescription required + 200-char guard)",
+          "tests": ["dental-pmd.test.ts (sourceDescription stored/required, V-PMD-010 cap)"]
+        },
+        {
+          "id": "V-PMD-007",
+          "description": "PHI data-movement logging: import (pmd.import), generation (pmd.generate + pmd.generated DE-017), and export (pmd.export) each write a synchronous dental_audit_log row (ADR-006; no event bus). A failed action writes NO row.",
+          "type": "compliance",
+          "status": "implemented",
+          "source": "importPMD.ts / generatePMD.ts / exportPMD.ts / exportPatientCareRecord.ts (logAuditEvent)",
+          "tests": ["dental-pmd-events.test.ts (pmd.generated / pmd.import / pmd.export rows + negative paths)"]
+        },
+        {
+          "id": "V-PMD-008",
+          "description": "Patient-self access (HIPAA right-of-access, EF-PMD-007): a user whose id === patient.person may read/list/export/download their OWN PMDs and care-record without a branch membership. All other readers require branch access derived from the resource (visit.branchId / patient.preferredBranchId); a full-role member of a DIFFERENT branch is denied (cross-branch PHI isolation).",
+          "type": "security",
+          "status": "implemented",
+          "source": "getPMDForVisit / listPMDs / listImportedPMDs / exportPMD / exportPatientCareRecord (isPatientSelf branch + assertBranchAccess)",
+          "tests": ["dental-pmd-auth.test.ts (patient-self + cross-branch deny)", "exportPatientCareRecord.test.ts (self-download + other-branch 403)"]
         }
       ]
     },

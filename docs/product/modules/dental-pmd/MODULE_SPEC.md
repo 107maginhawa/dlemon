@@ -26,7 +26,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ---
 
 ## 3. Workflows
-WF-021: Generate PMD (dentist, post visit completion, BR-021) | WF-022: Import external PMD (dentist/staff, BR-022) | WF-066 [INFERRED]: Download PMD (dentist, patient)
+WF-021: Generate PMD (dentist, post visit completion, BR-021) | WF-022: Import external PMD (dentist/staff, BR-022) | WF-066 [INFERRED]: Download PMD (dentist, patient — patient may download/export their OWN PMDs, V-PMD-008/EF-PMD-007) | P2-18: Whole-patient continuity-of-care export (FHIR R4 Bundle — `GET /dental/pmd/patient/:patientId/care-record`; authorized staff OR patient-self, HIPAA right-of-access)
 
 ---
 
@@ -44,8 +44,14 @@ Generate PMD: dentist_owner, dentist_associate | Import PMD: dentist_owner, dent
 ---
 
 ## 7. Data Requirements
-**`pmd_document`:** id, visit_id, patient_id, branch_id, generated_at, checksum (SHA-256), storage_file_id, format_version
-**`imported_pmd`:** id, patient_id, branch_id, imported_at, storage_file_id, source_description, checksum
+> Reconciled 2026-06-08 to the implemented schema (`repos/pmd-document.schema.ts`). The
+> original draft listed `storage_file_id`/`format_version` and a `branch_id` on `imported_pmd`;
+> there is no object-store file flow for PMDs (content is stored inline as JSON — see
+> API_CONTRACTS V-PMD-006) and `imported_pmd` has NO `branch_id` column (access is derived from
+> the patient's preferred branch). Below is the real column set.
+
+**`pmd_document`:** id, visit_id, patient_id, author_member_id, branch_id (nullable), status (`generated`|`signed`|`superseded`), content (JSON snapshot, inline), signature (nullable), signed_at (nullable), supersedes_id (nullable, self-FK), checksum (`sha256-<hex>`), created_at, updated_at
+**`imported_pmd`:** id, patient_id, source_facility, source_reference (nullable), source_description (required, max 200), content (inline), imported_at, safety_floor_merged, created_at, updated_at — **no `branch_id`, no `storage_file_id`**
 
 ---
 
@@ -69,7 +75,7 @@ The PMD snapshot aggregates data from 3 source modules at generation time. Field
 
 When an ImportedPMD row is created via POST /dental/pmd/import, the following invariants must hold:
 
-1. **UUID refs only** — imported PMD rows store `patient_id`, `branch_id`, `imported_by_member_id` as plain UUIDs. No DB foreign key constraints to `dental_patient`, `dental_branch`, or `dental_membership` tables.
+1. **UUID refs only** — imported PMD rows store `patient_id` as a plain UUID. No DB foreign key constraints to `dental_patient` (so an import from a defunct facility is not blocked by a missing FK target, and survives later patient anonymisation/erasure). (The original draft listed `branch_id`/`imported_by_member_id` columns; neither exists — `imported_pmd` derives access from the patient's preferred branch and audits the importer via the audit log, not a stored column.)
 2. **No FK joins** — the import pipeline must not JOIN imported_pmd rows against any live dental table in read paths.
 3. **Read-only after import** — no UPDATE or DELETE operations on imported_pmd rows after creation. Router must reject PATCH/PUT/DELETE at the route level (405 Method Not Allowed, not a 403).
 4. **Checksum required** — import must provide a checksum field; server verifies it against the uploaded content before creating the row. Missing or mismatched checksum → 422 CHECKSUM_MISMATCH.
@@ -96,7 +102,7 @@ PMD list per patient: generated date, visit date, download button. Import: file 
 
 ## 10. API Expectations
 PMD generation/export is **visit-scoped** (matches API_CONTRACTS.md + generated routes; V-PMD-006). Canonical routes:
-POST /dental/visits/:visitId/pmd (generate, BR-021 — visit must be completed), GET /dental/visits/:visitId/pmd, GET /dental/visits/pmd?patientId= (list), GET /dental/visits/:visitId/pmd/export (download), POST /dental/pmd/import (file upload, BR-022), GET /dental/pmd/imported?patientId= (list), GET /dental/pmd/imported/:id
+POST /dental/visits/:visitId/pmd (generate, BR-021 — visit must be completed), GET /dental/visits/:visitId/pmd (returns 204 when no PMD yet — matches getVisitPerioChart precedent), GET /dental/visits/pmd?patientId= (list — canonical path is `/dental/visits/pmd`, **not** `/dental/pmd`; V-PMD-006), GET /dental/visits/:visitId/pmd/export (download, inline JSON — no presigned URL), POST /dental/pmd/import (JSON inline `content`, **not** multipart upload; BR-022), GET /dental/pmd/imported?patientId= (list), GET /dental/pmd/imported/:id, GET /dental/pmd/patient/:patientId/care-record (P2-18 whole-patient FHIR R4 continuity-of-care export).
 
 ---
 
@@ -137,7 +143,20 @@ Integration: complete visit → generate PMD → verify checksum.
 ---
 
 ## 15. Error Handling
-Visit not completed → 422 VISIT_NOT_COMPLETED | Import: 422 CHECKSUM_MISMATCH | Imported PMD write → 405
+| Condition | Code | Status |
+|-----------|------|--------|
+| Generate from a non-completed/non-locked visit (BR-021/AC-PMD-001) | `VISIT_NOT_COMPLETED` | 422 |
+| `body.patientId` disagrees with the visit's patient (N-PMD-02) | `PATIENT_VISIT_MISMATCH` | 422 |
+| Import `checksum` does not match SHA-256 of `content` (EF-PMD-001) | `CHECKSUM_MISMATCH` | 422 |
+| `sourceDescription` > 200 chars (V-PMD-010) | `VALIDATION_ERROR` | 422 |
+| Missing required body/query field (e.g. patientId) | `VALIDATION_ERROR` | 400 |
+| PATCH / PUT / DELETE on an imported PMD (BR-022/AC-PMD-002) | `IMPORTED_PMD_IMMUTABLE` | 405 |
+| Caller lacks the required branch role / membership | `BRANCH_ACCESS_DENIED` / `FORBIDDEN` | 403 |
+| Visit / patient / imported-PMD not found | `NOT_FOUND` | 404 |
+| Unauthenticated | `UNAUTHORIZED` | 401 |
+
+> Note: `GET /dental/visits/:visitId/pmd` returns **204** (not 404) when the visit exists but
+> has no PMD yet — an absent optional sub-resource, matching the perio precedent.
 
 ---
 
