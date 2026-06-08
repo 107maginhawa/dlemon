@@ -63,6 +63,11 @@ const DENTIST = { id: 'a1a00000-0000-4000-8000-0000000000d1', email: 'dentist@im
 const ASSOCIATE = { id: 'a1a00000-0000-4000-8000-0000000000a2', email: 'assoc@imgint.test' };
 const HYGIENIST = { id: 'a1a00000-0000-4000-8000-0000000000c3', email: 'hyg@imgint.test' };
 const OUTSIDER = { id: 'a1a00000-0000-4000-8000-0000000000e4', email: 'outsider@imgint.test' };
+// A dentist whose ONLY membership is in OTHER_BRANCH (same org as BRANCH_ID).
+// Used to prove cross-branch PHI isolation: a same-org member of a *different*
+// branch is denied a radiograph in BRANCH_ID — branchId is derived from the
+// resource, never the caller (V-IMG-002, the V-PAT-002 → V-VIS-011 carry-forward).
+const OTHER_BRANCH_DENTIST = { id: 'a1a00000-0000-4000-8000-0000000000b5', email: 'otherbranch@imgint.test' };
 
 const PATIENT_ID = 'd1a00000-0000-4000-8000-0000000000f5';
 
@@ -204,6 +209,14 @@ async function seedOrgsAndMembers() {
     {
       id: 'aaee0000-0000-4000-8000-0000000000f1', branchId: FREE_BRANCH_ID, personId: DENTIST.id,
       displayName: 'Owner Dentist', role: 'dentist_owner', status: 'active',
+      pinFailedAttempts: 0, createdBy: DENTIST.id, updatedBy: DENTIST.id,
+    },
+    // A dentist whose only membership is OTHER_BRANCH (same org, different branch).
+    // Has a full clinical role — so any denial is purely cross-branch isolation,
+    // not a role gate.
+    {
+      id: 'aaee0000-0000-4000-8000-0000000000b5', branchId: OTHER_BRANCH_ID, personId: OTHER_BRANCH_DENTIST.id,
+      displayName: 'Other-Branch Dentist', role: 'dentist_owner', status: 'active',
       pinFailedAttempts: 0, createdBy: DENTIST.id, updatedBy: DENTIST.id,
     },
   ]).onConflictDoNothing();
@@ -470,6 +483,45 @@ describe('listPatientImages', () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
+// Cross-branch PHI isolation (V-IMG-002).
+// A clinician whose membership is in a *different* branch of the SAME org must
+// NOT be able to read another branch's radiographs. branchId is derived from the
+// resource (study.branchId), never the caller — so OTHER_BRANCH_DENTIST (a full
+// dentist_owner, but only in OTHER_BRANCH) is denied. This pins the resource-
+// scoped-branch invariant beyond the no-membership-anywhere OUTSIDER case.
+// =============================================================================
+
+describe('cross-branch PHI isolation', () => {
+  test('getImagingStudy: same-org member of a different branch is denied (403)', async () => {
+    const { studyId } = await seedStudyWithImage(); // study lives in BRANCH_ID
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    const res = await app.request(`/dental/imaging/studies/${studyId}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('listPatientImages: caller cannot read images of a branch they do not belong to', async () => {
+    await seedStudyWithImage(); // image in BRANCH_ID
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    // The caller passes the branch the radiographs actually live in; membership
+    // check fails because they belong only to OTHER_BRANCH.
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('listPatientImages: passing the caller\'s OWN branch returns no other-branch radiographs (no leak)', async () => {
+    await seedStudyWithImage(); // image in BRANCH_ID only
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    // Caller scopes to their own branch (OTHER_BRANCH) — they are a member, so
+    // 200, but the result must NOT include the BRANCH_ID radiograph.
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${OTHER_BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    // The seeded image is in BRANCH_ID; OTHER_BRANCH has none → empty imaging set.
+    expect(body.items.filter((i: any) => i.source === 'imaging')).toHaveLength(0);
   });
 });
 

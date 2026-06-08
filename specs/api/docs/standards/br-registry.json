@@ -475,17 +475,18 @@
         },
         {
           "id": "CIMG-001",
-          "description": "Cephalometric features require a paid imaging tier. If the branch's imagingTier is 'free' or null, all CephMgmt_* endpoints return 403.",
+          "description": "Cephalometric (and CBCT) features require the 'addon' imaging tier. The gate is strict-equality `imagingTier !== 'addon'` (BR-016c), so BOTH 'free' AND 'basic' are blocked with 403 IMAGING_TIER_REQUIRED — 'basic' is 2-D-only and does NOT unlock ceph. Enforced before any DB write; cephalometric/CBCT study CREATE is gated too, not just downstream ceph endpoints.",
           "type": "access-control",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers — tier check before any DB write"
+          "source": "All CephMgmt_*.ts handlers + createImagingStudy.ts — getImagingTierForBranch, `!== 'addon'` check",
+          "notes": "Corrects the prior 'free or null' wording which omitted the 'basic'-blocked case (proved by imaging-coverage.test.ts EF-IMG-009 basic→403)."
         },
         {
           "id": "CIMG-002",
-          "description": "A null imagingTier is treated identically to 'free' — 403 returned. Absence of tier data is never interpreted as unlimited access.",
+          "description": "A null/absent imagingTier is treated as no-access (blocked, 403) — never interpreted as unlimited access. Identical outcome to 'free' and 'basic': only an explicit 'addon' unlocks ceph/CBCT.",
           "type": "access-control",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers"
+          "source": "All CephMgmt_*.ts handlers — `!== 'addon'` is true for null"
         },
         {
           "id": "CIMG-003",
@@ -538,10 +539,11 @@
         },
         {
           "id": "CIMG-010",
-          "description": "The analysisType field on all analysis responses is always 'steiner_hybrid_sn'. No other analysis type exists in v1.4.",
+          "description": "analysisType is selected by the ?analysisType= query param and defaults to 'steiner_hybrid_sn'. Six protocols ship (steiner_hybrid_sn, ricketts, downs, tweed, mcnamara, jarabak); an unknown value is rejected 422 UNSUPPORTED_ANALYSIS_TYPE (never silently defaulted — showing the wrong analysis is a safety bug). The response echoes the requested analysisType.",
           "type": "response-contract",
           "status": "implemented",
-          "source": "All CephMgmt_*.ts handlers returning analysis"
+          "source": "getCephAnalysis.ts / recomputeCephAnalysis.ts (ANALYSIS_TYPES guard); @monobase/ceph-math ANALYSIS_TYPES (index.ts:400)",
+          "notes": "Supersedes the prior v1.4 'only steiner_hybrid_sn' claim — multi-analysis shipped."
         },
         {
           "id": "CIMG-011",

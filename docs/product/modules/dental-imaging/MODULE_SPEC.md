@@ -97,10 +97,12 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 | Action | Allowed | Notes |
 |--------|---------|-------|
-| Upload study | dentist_owner, dentist_associate | — |
+| Capture / upload study | dentist_owner, dentist_associate, **hygienist, dental_assistant** | E2/E3 reconciliation: capture is clinical-write — hygienist + dental_assistant may capture under dentist supervision (`createImagingStudy` `assertBranchRole`). Authoritative grid: ROLE_PERMISSION_MATRIX.md §Clinical Write ("Capture imaging study"). |
+| CBCT *finalize* (`finalizeCbctStudy`) | dentist_owner, dentist_associate | Stays dentist-only (DICOM parse + volume commit). |
+| Image management (delete / calibration / modality) | dentist_owner, dentist_associate | Not hygienist/assistant — see deleteImage BR-026/027, calibration/modality `assertBranchRole`. |
 | Annotate / record finding | dentist_owner, dentist_associate | — |
-| Run ceph | dentist_owner, dentist_associate | imagingTier required |
-| View studies | all dental roles | Branch-scoped |
+| Run ceph | dentist_owner, dentist_associate | imagingTier=`addon` required (BR-016c) |
+| View studies / images / ceph | all clinical dental roles (read) | Branch-scoped; non-ceph reads 403 on no-access, ceph reads 404-mask (info-hiding) |
 
 ---
 
@@ -177,10 +179,12 @@ Coverage: see BUSINESS_RULES.md §Imaging coverage summary (imaging.test.ts, cep
 ---
 
 ## 13. Edge Cases
-- Ceph analysis recompute with missing landmarks → error with list of missing landmarks
-- Study upload with unsupported MIME type → 422
-- Finding on study from different branch → 403 (assertBranchAccess)
-- Calibration not set before landmark placement → 422 NOT_CALIBRATED
+- Ceph analysis recompute with missing landmarks → returns `missing[]` list (analysis is never 404; mm metrics that depend on absent landmarks are null)
+- Study upload with unsupported MIME type → 422 UNSUPPORTED_MIME_TYPE
+- Study upload exceeding the per-modality byte ceiling → 422 FILE_TOO_LARGE
+- Finding/measurement/image-management on a study from a branch the caller can't access → 403 (non-ceph) / 404-mask (ceph endpoints, info-hiding)
+- Landmark placement does NOT require calibration — landmarks may be placed uncalibrated; `recomputeCephAnalysis` returns 422 NOT_CALIBRATED only when an mm (linear) metric is requested on an image whose pixel spacing is missing/anisotropic. Pixel-based angle metrics still compute.
+- Unknown `analysisType` query param → 422 UNSUPPORTED_ANALYSIS_TYPE (never silently defaulted)
 
 ---
 
@@ -194,10 +198,16 @@ Coverage: see BUSINESS_RULES.md §Imaging coverage summary (imaging.test.ts, cep
 
 | Scenario | HTTP | Code |
 |----------|------|------|
-| imagingTier insufficient | 403 | IMAGING_TIER_REQUIRED |
-| Invalid annotation state | 422 | INVALID_STATUS_TRANSITION |
-| Not calibrated | 422 | NOT_CALIBRATED |
-| Unsupported image type | 422 | UNSUPPORTED_MIME_TYPE |
+| imagingTier insufficient (not `addon`, incl. `free`/`basic`/null) | 403 | IMAGING_TIER_REQUIRED |
+| Invalid finding state transition (SM-01, e.g. confirmed→draft) | 422 | INVALID_STATUS_TRANSITION |
+| mm metric requested on uncalibrated/anisotropic image | 422 | NOT_CALIBRATED |
+| Unsupported image MIME type | 422 | UNSUPPORTED_MIME_TYPE |
+| Upload exceeds per-modality byte ceiling | 422 | FILE_TOO_LARGE |
+| Unknown ceph `analysisType` | 422 | UNSUPPORTED_ANALYSIS_TYPE |
+| Malformed DICOM on CBCT finalize (no half-written volume) | 422 | INVALID_DICOM |
+| Locked ceph landmark mutated/deleted | 422 | LANDMARK_LOCKED |
+| viewer-link on a non-volume study | 422 | NOT_A_VOLUME |
+| Non-member on ceph endpoint (info-hiding) | 404 | (masked) |
 
 ---
 

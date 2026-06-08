@@ -80,8 +80,8 @@
 | `Amendment` | Original record | Additive correction; original immutable |
 | `DentalAttachment` | Visit | File ref to storage module |
 | `ImagingImage` | ImagingStudy | One or more images per study |
-| `ImagingAnnotation` | ImagingStudy | Per-image annotations (SM-01) |
-| `ImagingFinding` | ImagingStudy | Clinically significant findings |
+| `ImagingAnnotation` | ImagingStudy | Per-image presentation overlays; `visible` flag only — **no** state machine (V-IMG-008) |
+| `ImagingFinding` | ImagingStudy | Clinically significant findings; **carries SM-01** (`draft→confirmed→resolved`) |
 | `CephLandmark` | CephAnalysis | Per-landmark state machine (SM-02) |
 | `PerioToothReading` | PerioChart | One per (chartId, toothNumber); 6-site probing depths, BOP, recession, mobility, furcation |
 | `AuditEvent` | AuditLog (platform) | Append-only, never deleted |

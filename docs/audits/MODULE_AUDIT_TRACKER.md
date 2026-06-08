@@ -16,7 +16,7 @@ dental-portal → emr-consultation → provider → external-records-import
 | 4 | dental-visit | ✅ READY | 10 (5 security: applyTemplate RBAC + cross-clinic template leak + 3× treatment-plan cross-tenant PHI; 5 registry/spec/contract/workflow-map drift) | carry-over cross-branch decision + TypeSpec shape reconciliation + BR-005 flag-ON test + template-CRUD RBAC + KG-backlog | [MODULE_dental-visit_AUDIT_2026-06-08.md](modules/MODULE_dental-visit_AUDIT_2026-06-08.md) |
 | 5 | dental-clinical | ✅ READY | 6 (1 consent-integrity bug: revoke-then-sign + gate ignored revoked; 5 contract/spec/registry/comment drift). _Post-audit: updatePrescription BR-003 field-edit guard added (resolved)._ | post-sign consent-withdrawal decision (ratified as-is) + AC-CLI-005 405 pin + KG-backlog | [MODULE_dental-clinical_AUDIT_2026-06-08.md](modules/MODULE_dental-clinical_AUDIT_2026-06-08.md) |
 | 6 | dental-perio | ✅ READY | 7 (1 clinical-correctness bug: partial-chart over-staging to IV via charted-count `remainingTeeth`; 1 wrong-role RBAC test; 1 stale comment; 4 registry/spec/contract drift incl. whole module absent from br-registry) | WF-P03 amendment + WF-P05 PDF export deferred + cascade-audit-row test gap + cross-branch positive test + KG-backlog | [MODULE_dental-perio_AUDIT_2026-06-08.md](modules/MODULE_dental-perio_AUDIT_2026-06-08.md) |
-| 7 | dental-imaging | ⏳ pending | — | — | — |
+| 7 | dental-imaging | ✅ READY | 6 (1 cross-branch PHI isolation test; 5 doc/registry drift: DOMAIN_MODEL SM-01 mislabel, MODULE_SPEC §6 permissions / §13 edge-cases / §15 errors, br-registry CIMG-001/002 tier + CIMG-010 analyses) | AI auto-tracing/DICOM/structural-superimposition non-goals + imaging audit-row test gap + detect kill-switch-OFF test + 403/404-mask convention note + KG-backlog | [MODULE_dental-imaging_AUDIT_2026-06-08.md](modules/MODULE_dental-imaging_AUDIT_2026-06-08.md) |
 | 8 | dental-pmd | ⏳ pending | — | — | — |
 | 9 | dental-billing | ⏳ pending | — | — | — |
 | 10 | dental-audit | ⏳ pending | — | — | — |
@@ -28,8 +28,11 @@ dental-portal → emr-consultation → provider → external-records-import
 
 ## Cross-module carry-forward
 
-- **BR-016c (imagingTier gate)** — declared in dental-org §5 but enforced/tested in dental-imaging.
-  Register in the **dental-imaging** round (correct module attribution).
+- ~~**BR-016c (imagingTier gate)** — declared in dental-org §5 but enforced/tested in dental-imaging.~~
+  **RESOLVED 2026-06-08 (dental-imaging round).** The gate is implemented as strict `imagingTier !== 'addon'`
+  at study create (cephalometric/CBCT) AND on every ceph endpoint, blocking free/basic/null with 403
+  IMAGING_TIER_REQUIRED. br-registry CIMG-001/002 reconciled (had understated `basic` as allowed). Tests
+  pin free→403, basic→403, null→403, addon→pass.
 - **AC-ORG-002** fee-schedule → new-invoice default: dental-org proves the per-branch override;
   the invoice-time price snapshot is billing-side — verify in the **dental-billing** round.
 - ~~**BR-015b archived = read-only (product decision)**~~ **RESOLVED 2026-06-08.** Re-verification
@@ -79,3 +82,16 @@ dental-portal → emr-consultation → provider → external-records-import
   get/accept/version) both had it. **Audit every patient/resource-scoped read+write that takes
   a `branchId` query param** in the remaining modules (billing, pmd, portal, emr) — authorize
   against the resource's own branch, not the param.
+  - **dental-imaging = the SAFE pattern (no hole found).** Every imaging handler derives branch
+    from the resource (`study.branchId`, or image→study), then `assertBranchAccess/Role`; the
+    `listPatientImages?branchId=` repo filters images by `branchId` AND the caller must be a member
+    of it, so a member of a different branch sees zero rows (no leak). The 2026-06-08 round only
+    ADDED the missing *test* for this (a same-org member of `OTHER_BRANCH` is denied a `BRANCH_ID`
+    radiograph) — it was correct by source but unpinned. **Cross-branch isolation should be tested
+    with a member of a *different* branch (full role), not just a no-membership `OUTSIDER` — the two
+    deny for different reasons and only the former proves the resource-scoped-branch invariant.**
+- **A br-registry rule can UNDERSTATE a gate, not just be absent (from dental-imaging CIMG-001).**
+  CIMG-001 said the ceph tier gate blocks "free or null" — but the code is strict `!== 'addon'`, so
+  `basic` is blocked too (a test already proved it). **When a registry rule enumerates the blocked
+  set, re-derive it from the operator in code** (`!== 'addon'` ⇒ everything except addon), not from
+  the prose. Same class as a stale "only one analysis type exists" claim after N shipped (CIMG-010).
