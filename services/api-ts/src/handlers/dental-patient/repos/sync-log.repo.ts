@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import { dentalSyncLogs, type DentalSyncLog, type NewDentalSyncLog, type SyncStatus } from './sync-log.schema';
@@ -9,8 +9,14 @@ export class SyncLogRepository {
     private readonly logger?: Logger,
   ) {}
 
-  async findAll(): Promise<DentalSyncLog[]> {
-    return this.db.select().from(dentalSyncLogs);
+  /**
+   * G1 (P0): sync logs are tenant-scoped by branch. Callers MUST pass the set of
+   * branch ids they are authorized to read; an empty scope returns nothing.
+   * (The former no-WHERE `findAll()` leaked every org's sync logs.)
+   */
+  async findAll(branchIds: string[]): Promise<DentalSyncLog[]> {
+    if (branchIds.length === 0) return [];
+    return this.db.select().from(dentalSyncLogs).where(inArray(dentalSyncLogs.branchId, branchIds));
   }
 
   async findOneById(id: string): Promise<DentalSyncLog | null> {

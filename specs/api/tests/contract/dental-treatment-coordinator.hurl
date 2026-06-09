@@ -93,8 +93,55 @@ plan_id: jsonpath "$.id"
 jsonpath "$.status" == "draft"
 
 
+# 5b. Open a visit and diagnose two treatments the NORMAL way (unlinked to any
+# plan). This reproduces the real-world state the case-presentation G1 fix targets:
+# treatments exist but nothing links them to the plan until it is presented.
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Treatment planning"
+}
+HTTP 201
+[Captures]
+visit_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits/{{visit_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "toothNumber": 14,
+  "cdtCode": "D2391",
+  "description": "Resin composite — 1 surface",
+  "priceCents": 500000,
+  "phase": "disease_control"
+}
+HTTP 201
+
+POST {{api}}/dental/visits/{{visit_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "toothNumber": 30,
+  "cdtCode": "D2740",
+  "description": "Crown — porcelain/ceramic",
+  "priceCents": 2000000,
+  "phase": "definitive"
+}
+HTTP 201
+
+
 # 6. Present the plan (draft → presented). E1: the presented transition is gated to
 # clinicians + treatment_coordinator; the owner is a presenter → 200.
+# case-presentation G1: presenting now LINKS the patient's pending treatments to
+# the plan, so the aggregate below is non-empty.
 PATCH {{api}}/dental/patients/{{patient_id}}/treatment-plans/{{plan_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -122,6 +169,17 @@ jsonpath "$.status" == "draft"
 jsonpath "$.treatmentPlanId" == "{{plan_id}}"
 
 
+# 7b. GET the aggregate — case-presentation G1: it MUST be non-empty (the two
+# diagnosed treatments were linked at the presented transition). Before the fix
+# this returned grandTotalCents=0 / phases=[] and accept was impossible.
+GET {{api}}/dental/patients/{{patient_id}}/case-presentations/{{presentation_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.grandTotalCents" > 0
+jsonpath "$.phases" count > 0
+
+
 # 8. List case presentations (broad read set; owner allowed → 200).
 GET {{api}}/dental/patients/{{patient_id}}/case-presentations
 Cookie: better-auth.session_token={{session_token}}
@@ -129,6 +187,23 @@ HTTP 200
 [Asserts]
 jsonpath "$" isCollection
 jsonpath "$[0].id" == "{{presentation_id}}"
+
+
+# 8b. Accept the presentation (e-sign) — case-presentation G1+G3: accept now
+# succeeds (was 422 PLAN_HAS_NO_ITEMS), the plan moves presented → approved, and
+# a consent id is returned. The approval record + linked items are pinned by the
+# backend real-flow test.
+POST {{api}}/dental/patients/{{patient_id}}/case-presentations/{{presentation_id}}/accept
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgo=",
+  "signerName": "Coordinator Test Patient"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.consentFormId" exists
+jsonpath "$.plan.status" == "approved"
 
 
 # 9. Case-presentation create requires auth (Bearer override beats the cookie → 401).

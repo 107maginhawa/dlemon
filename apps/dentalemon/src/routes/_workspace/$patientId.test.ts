@@ -52,4 +52,25 @@ describe('WorkspacePage layout', () => {
       expect(await src()).toContain('data-testid="workspace-table-zone"');
     });
   });
+
+  // case-presentation G1: the workspace route is the layout parent of the nested
+  // /case-presentation/$presentationId route. Without an Outlet, the child route's
+  // URL matched but rendered nothing — the patient-facing view was unreachable and
+  // accept could never complete from the UI. These pin the Outlet wiring so the
+  // nested route can render full-screen.
+  describe('nested-route Outlet (case-presentation reachability)', () => {
+    test('imports Outlet + useChildMatches from the router', async () => {
+      const s = await src();
+      expect(s).toContain('Outlet');
+      expect(s).toContain('useChildMatches');
+    });
+
+    test('renders <Outlet /> when a child route is active', async () => {
+      expect(await src()).toMatch(/<Outlet\s*\/>/);
+    });
+
+    test('gates the workspace body behind a child-route check', async () => {
+      expect(await src()).toContain('useChildMatches()');
+    });
+  });
 });

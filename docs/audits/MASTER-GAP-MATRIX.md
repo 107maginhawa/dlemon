@@ -1,0 +1,325 @@
+# MASTER GAP MATRIX — dentalemon module gap-plans
+
+**Compiled:** 2026-06-09 · **Branch:** `chore/workflow-verification-sweep` @ `e49e411d`
+**Source:** 19 module gap-plans in `docs/audits/module-gap-plans/` (each: live `/webwright` drive and/or static FE↔BE wiring map + per-gap test plan + KG/contract-spine validation pass).
+**Wiring oracle:** `.understand-anything/contract-spine.json` (regenerated 2026-06-09 12:24, operationId → handler → SDK → FE-consumer; 357 ops / 135 FE-consumer files). The full node `knowledge-graph.json` is type-import-edge stale (baseline `1196799b`, 2026-06-06) — **not regenerated** (FULL_UPDATE class, ~12M tok / poor ROI; the type drift does not touch FE→BE wiring). Every wiring claim below was ground-truthed in the source plans, not read off the stale node graph.
+**Status:** consolidation. **Batch 1 IMPLEMENTED 2026-06-09** (see §8). Remaining batches not started.
+
+> **Batch 1 — Core-workflow & security blockers — DONE (2026-06-09).** dental-patient **G1** (P0 sync-log cross-tenant leak), case-presentation **G1** (P0 broken accept), **G3** (approval-path convergence), **G2** (seed) all fixed + proven (backend unit + contract against the live server + live browser drive). A latent **FE blocker (case-presentation FE-1)** was discovered and fixed during live verification: the workspace route had no `<Outlet/>`, so the nested `/case-presentation/$presentationId` route never rendered — the patient-facing view was unreachable and accept could never complete from the UI. Full present→e-sign→accept now works end-to-end live. Details in §8.
+
+---
+
+## 1. Executive Summary
+
+Across 19 modules: **1 FAIL** (case-presentation — core accept workflow broken end-to-end), **18 PARTIAL PASS**. Total gaps catalogued: **2 P0, 36 P1, 47 P2, 41 P3** (≈126).
+
+The backends are consistently strong (RBAC via `assertBranchRole`, FSMs, audit, well-tested). **Almost every gap is one of seven recurring shapes**, not isolated defects:
+
+1. **Built-backend / zero-FE-consumer ("orphan endpoint")** — the dominant class. Whole verticals (insurance/claims, occlusion/postop/inventory, audit viewer, PMD viewer, erasure UI, legal-hold UI, retention policy UI, notif inbox, EMR, provider, bulk import) are tested + SDK-wired but unreachable in product.
+2. **Dead trigger** — sheet mounted + handler passed, but no button renders (`dental-clinical` Lab Orders `onLab`; `dental-pmd` viewer `onPmd` — explicitly "the same dead-prop class").
+3. **Saved-but-not-enforced config (split-brain)** — UI writes a settings blob nothing consumes (working hours, fee schedule, permission grid, notification settings, retention policies).
+4. **Cross-tenant / tenancy leak** — the only true security class (`dental-patient` sync-log **P0**; erasure no-tenant-gate; EMR admin-sees-all; legal-hold by-design cross-tenant).
+5. **Contract / wire-shape drift** — bare-array vs `{data,pagination}`, numeric-string vs `float64`, declared-but-absent fields, `user`-vs-`admin` role drift.
+6. **Audit write-coverage / reliability gaps** — sensitive mutations unaudited or audited best-effort/non-atomic.
+7. **Two sources of truth** — claims (patient vs billing), clinical notes (EMR vs visit), provider (Provider/Practitioner vs memberships), approval (two paths), audit (3 sinks).
+
+**Genuinely blocking for V1:** the 2 P0s (`dental-patient` G1 sync-log leak; `case-presentation` G1 broken accept) and the compliance-write reliability gap (`dental-audit` P1-C). Most P1s are "honest-affordance / wire-the-built-backend" work that is low-risk but voluminous. A large fraction of P1/P2 is **gated on product `[NEEDS CONFIRMATION]` decisions** (wire-vs-remove, enforce-vs-relabel, who-can-erase, is-EMR-in-scope) — see §6; those cannot start until decided.
+
+**Recommended first batch:** Batch 1 (the two P0s + their tightly-coupled fixes) — confirmed bugs, no product decision required. See §5.
+
+---
+
+## 2. Consolidated Gap Matrix
+
+> Severity as assigned in each source plan. "Blast radius" = modules/seams touched. IDs are the source-plan IDs.
+> `[NC]` = blocked on a `[NEEDS CONFIRMATION]` decision (see §6). `[xmod]` = cross-module fix.
+
+### P0 — blocks safe V1
+
+| Pri | Module | ID | Gap | Blast radius | Recommended fix | Required tests |
+|---|---|---|---|---|---|---|
+| ✅P0 | dental-patient | G1 | **FIXED 2026-06-09.** `listSyncLogs` now requires `branchId` (400 if absent), asserts caller access, and scopes via `findAll(branchIds)`; `createSyncLog` requires `branchId` (400) + authorizes unconditionally; `updateSyncLog` authorizes unconditionally (branchless row → 403). | self-contained (sync repo/handlers + shared branch-access helper); `listSyncLogs` has 1 FE consumer (`use-sync-status.ts`, already sends branchId) | scope `findAll(scope)` to caller's branch(es); require `branchId` on create/update | **DONE**: `dental-patient-sync-isolation.test.ts` (unit `findAll([])`/`findAll([A])` filter; 2-org integration: B sees 0 of A; B→A 403; list/create branchless→400). Existing sync test updated to new contract. Smoke extension deferred (P3). |
+| ✅P0 | case-presentation | G1 | **FIXED 2026-06-09.** `updateTreatmentPlan` now links pending treatments at the `presented` transition (mirrors `approveTreatmentPlan`); `acceptCasePresentation` also links before resolving the consent anchor. Aggregate is non-empty, accept returns 200. **Also fixed FE-1** (no `<Outlet/>` in workspace route → CP view never rendered). | `[xmod]` dental-visit facade, dental-patient treatment-plans; FE workspace route | link pending treatments at the `presented` transition | **DONE**: `case-presentation-real-flow.test.ts` (normal flow: unlinked treatments → present → aggregate `grandTotalCents>0`/`phases>0`; accept 200). Contract `dental-treatment-coordinator.hurl` extended (create visit+treatments → present links → aggregate non-empty → accept 200, plan approved). Live browser: present→₱95,000 renders→e-sign→accept 200. Regression: 51 treatment-plan/case-pres tests green. |
+
+### P1 — fix before production
+
+| Pri | Module | ID | Gap | Blast radius | Recommended fix | Required tests |
+|---|---|---|---|---|---|---|
+| ✅P1 | case-presentation | G3 | **FIXED 2026-06-09.** `acceptCasePresentation` now links pending treatments AND writes a `TreatmentPlanApproval` record (method `signature`, approver = patient's person, consentFormId), converging it with `approveTreatmentPlan`. | `[xmod]` dental-patient treatment-plans, dental-clinical consent facade | converge accept onto the shared link+approval-record logic | **DONE**: `case-presentation-real-flow.test.ts` asserts after accept the plan has linked items **and** exactly one approval record (`method==='signature'`). |
+| ✅P1 | case-presentation | G2 | **FIXED 2026-06-09.** `seed-supplement.ts` seeds 4 plans across the FSM (draft/presented/accepted/rejected) with **linked** items + an alternate option group + a draft case-presentation for the patient-facing ones. (Hit + fixed the `detUuid` collision gotcha: explicit ids on near-identical seed strings dropped items via `onConflictDoNothing` → use `defaultRandom()`.) | seed | seed plans across FSM + alternate option group | **DONE**: reseed verified — presented ₱95,000/4 items, accepted ₱24,000/2, rejected ₱42,000/1, draft ₱5,000/1. Live: "Present to patient" renders for Maria Santos. (Annotated-image seed = G4 P3, deferred.) |
+| P1 | dental-clinical | G1 | Lab Orders sheet unreachable — `LabOrdersSheet` mounted + `onLab` passed but **no Lab button** in `WorkspaceTopBar`; backend FSM complete+tested. Masked by API-only false-green E2E | dental-clinical FE only (`lib/rbac.ts`, org-context) | render one `Lab orders` IconButton wired to existing `onLab` | FE-unit: button exists+fires `onLab` (RED today); **real UI E2E** opening sheet + FSM advance; relabel `lab-order-tracking.spec.ts`→`*-api` |
+| P1 | dental-clinical | G3 | Consent cannot be revoked; history/refusals invisible (`revokeConsentForm`/`listConsentRefusals` 0 consumers; `listConsentForms` only a completion gate) | `[xmod]` consent-billing + case-presentation-consent facades read consent state | consent-history view + Revoke on pending forms | FE-unit revoke pending→revoked, signed→no-revoke; hurl revoke+refusals; **integration: revoke ⇏ invalidate accepted case-presentation/billed work** |
+| P1 | dental-clinical | G4 | Rx list + dispense/cancel not surfaced (`listPrescriptions`/`updatePrescription` 0 consumers) | self-contained | prescriptions list + dispense/cancel actions | FE-unit list renders; dispense/cancel; invalid→422 |
+| P1 | dental-clinical | G2 | Occlusion screening zero FE `[NC]` | self-contained (after G10) | wire surface or formally defer | FE-unit + contract (after list-shape G10) |
+| P1 | dental-patient | G2 | Insurance+claims vertical entirely unwired; **two claim subsystems** (dead dental-patient vertical vs live dental-billing `ClaimsWorklist`); dead hooks `use-insurance-claims.ts:155-223` `[NC][xmod]` | dental-patient ↔ dental-billing ↔ imaging (attachments) | decide single source of truth → wire or delete dead vertical | E2E insurance→claim chain (if wire) / dead-hook deletion (if remove) |
+| P1 | dental-patient | G3 | Communication consent write-only, fire-and-forget (`.catch(()=>{})`), never read back, never enforced `[NC][xmod]` | notifs + comms (enforce), person JSONB | make write blocking/server-side; read back; decide send-time enforcement | FE-unit failure surfaced; read-back render; integration consent=false blocks send (if enforce) |
+| P1 | dental-patient | G4 | Archived-write guard missing on insurance/contacts/alerts/tasks (`PATIENT_ARCHIVED`) | in-module | mirror existing guard | 4× integration archived-write→403 (RED) |
+| P1 | dental-patient | G5 | Audit-creation tested for only 2 actions; consent/plan-approval/claim-status unverified | `[xmod]` dental-audit (= P1-B/P2-D) | backfill audit-row assertions | integration: approveTreatmentPlan + updateClaimStatus write audit row |
+| P1 | dental-billing | BIL-G1 | No discount-apply UI (`applyDentalDiscount` owner-only/reason-required, 0 consumers); V1-Required §8.4 | dental-org (role) + audit | wire reason-required owner-only POST in invoice footer | FE-unit visible owner+writable, reason-required; E2E 10% discount; non-owner hidden |
+| P1 | dental-billing | BIL-G2 | Insurance/HMO revenue cycle unreachable E2E — worklist renders but **no create-claim affordance**; `create/addLine/updateLine/getInsuranceClaim`+`estimateClaimCoverage` unwired `[NC][xmod]` | dental-patient insurance, dental-visit | wire create-claim (+lines, +coverage estimate, +detail) | E2E create→submit→remittance; FE-unit ≥1 line required; coverage estimate |
+| P1 | dental-org | G1 | Working hours saved to settings blob never enforced (split-brain); enforcement reads dedicated column; `update/getWorkingHours` 0 consumers. **+G1-shape**: FE `{open:bool,start,end}` ≠ column `{enabled,open,close}` | `[xmod]` dental-scheduling (= SCH-G3) + seed | reconcile shape FIRST, then point UI at column (read+write) + seed column | **P0-gate** shape-conformance unit; FE-unit save calls column mutation; **E2E out-of-hours booking rejected + walk-in bypass**; seed column populated |
+| P1 | dental-org | G2 | Fee schedule saved to blob drives no pricing (AC-ORG-002 unmet). **+R1**: dedicated `get/updateFeeScheduleEntry` also orphaned (triple split-brain) `[NC][xmod]` | dental-visit/treatments, dental-billing | pick canonical fee store; retire orphan endpoints; drive treatment/invoice price defaults | price-resolution unit; contract fee→invoice default; E2E |
+| P1 | dental-org | G3 | Granular permission grid editable but unenforced (`assertPermission` 0 prod call-sites; real gate `assertBranchRole`=109 files) `[NC][xmod high-blast]` | enforce path = ~109 handlers; remove path = FE only | **decide enforce vs remove first** | enforce: per-handler 403-on-override + contract + E2E; remove: tab-absent + orphan-route guard |
+| P1 | dental-scheduling | SCH-G1 | No appointment cancellation anywhere in FE (`cancelAppointment` DELETE reason-required, 0 consumers); cancelled styling unreachable | `[xmod]` dental-visit (BR-004 cancel ⇏ delete linked visit) | wire reason-required DELETE in calendar/modal actions menu | FE-unit cancel→reason→DELETE→cancelled; blank-reason blocked; E2E cancel→visit still reachable; RBAC-hidden |
+| P1 | dental-scheduling | SCH-G3 | (= dental-org G1) working-hours enforcement seam; proof E2E lives here | `[xmod]` dental-org | single source of truth = column | shared with dental-org G1 |
+| P1 | dental-visit | G1 | Carry-over has no FE trigger (`carryOverTreatments` 0 consumers); "Carried Over" subtotal only renders from seed `[NC]` | reports (listDentalTreatments/Visits readers) | wire `POST /carry-over` affordance OR remove dead UI | FE-unit carry-over populates from response; E2E; read-path regression |
+| P1 | dental-perio | P1-1 | Periodontal diagnosis (Stage/Grade/Extent) computed at completion but **not persisted** → vanishes on reopen; survives only in audit metadata | self-contained perio (+ SDK regen additive) | add 3 nullable columns + 3 optional `PerioChart` fields (reuse enums) + persist in `complete()` | backend complete→GET round-trip (RED); FE reopen-from-`chart.*`; hurl post-complete GET |
+| P1 | dental-imaging | IMG-P1-1 | AI "Auto-detect landmarks" upsell contradicts documented no-AI non-goal; backend is a FakeDetector behind addon `[NC]` | imaging FE + addon gate | product decision: remove or guarantee real detector | decision-dependent FE/backend test |
+| P1 | dental-audit | P1-C | Non-`security` audit writes best-effort (errors swallowed) + run **outside** mutation tx → money/clinical mutation can commit with no audit row | `[xmod]` all producer handlers (roll out per-handler) | move `logAuditEvent` inside tx OR fail-closed for void/discount/payment/visit-complete/role-change | integration: force audit-insert failure → mutation rolled back/5xx (no silent gap) |
+| P1 | dental-audit | P1-B | Sensitive actions unaudited: member role change, plan approval/accept, note sign/amend | `[xmod]` dental-org, dental-patient, dental-visit | add `logAuditEvent` to those handlers | per-handler audit-row assertions (= dental-patient G5) |
+| P1 | dental-audit | P1-A | No frontend audit-log viewer (`getAuditEvents` + hooks generated, 0 callers; WF-028 V1-Required) | new `features/audit/` + org-context | build owner-gated viewer (after P1-C/P1-B make trail trustworthy) | FE-unit table+filters; **E2E-AUD-001** owner filters `invoice.voided`→sees seeded event; non-owner denied; seed audit rows |
+| P1 | dental-pmd | P1-3 | PMD Viewer + Import UI unreachable (dead `onPmd`, same class as Lab `onLab`) | dental-pmd FE | render PMD IconButton→`onPmd` | real-button E2E (RED until button) reaching Import |
+| P1 | dental-pmd | P1-1 | Generated PMD omits mandatory Safety Floor (allergies/conditions) + demographics `[NC]` | `[xmod]` dental-clinical med-history, dental-patient | route generate through `buildCareRecordBundle` + safety/demographic slices | schema + required-section assertions |
+| P1 | dental-pmd | P1-2 | PMD never digitally signed; co-located checksum misrepresented as non-repudiation | dental-org (custodian key) | implement JWS/ES256 signing; `generated→signed`; verify on import; remove misleading comments | sign/verify/tamper round-trip |
+| P1 | dental-pmd | P1-4 | Imported PMDs no clinical effect (`markSafetyFloorMerged` never called) | dental-patient safety floor | run add-only safety-floor merge on import | import allergy → visible in safety floor; flag flips |
+| P1 | dental-pmd | P1-5 | Per-visit PMD not a FHIR R4 Bundle (bespoke JSON) `[NC]` | reuse `buildCareRecordBundle` | make PMD a `Bundle(type=document)` | schema validation against `pmd-bundle.schema.json` |
+| P1 | dental-portal | — | No patient onboarding/account-linking path — 100% of real patients get 403 `[NC][xmod]` | identity/auth + dental-patient | add invite-to-portal or self-claim+staff-link | backend: link user↔person makes `/me/*` 200; unlinked still 403; permission test |
+| P1 | dental-portal | — | No patient entry point (user-role sign-in → staff onboarding, never `/portal`) | routing/guards | post-login branch: linked patient → `/portal` | route test patient→portal, staff→dashboard |
+| P1 | dental-portal | — | No seed patient-portal account → undemoable/un-E2E-able | seed | seed one patient with `person.id===user.id` + appts + mixed invoices | seed-coherence assertion |
+| P1 | dental-erasure | ER-P1-1 | No tenant/ownership validation — `tenantId` from body unchecked; `listErasureRequests` returns all tenants' PII; anonymize keyed only on `personId` | `[xmod]` person/patient/clinical/imaging facades | resolve subject→tenant; enforce actor membership; default list to caller's tenant; reject mismatched body tenantId | RED: cross-tenant list/approve blocked; hurl cross-tenant scenario |
+| P1 | dental-erasure | ER-P1-2 | No operable workflow — zero frontend (GDPR/RA-10173 right-to-erasure undeliverable) `[NC]` | new FE | build admin/owner erasure UI | FE-unit; E2E request→approve→anonymized→audit |
+| P1 | dental-erasure | ER-P1-3 | Data controller cannot act — only 3 hardcoded platform emails can erase `[NC]` | dental-org/Better-Auth roles | decide who may erase (likely `dentist_owner` per-tenant) | RBAC tests per decision |
+| P1 | dental-legalhold | — | No operator UI (place/list/release only via raw API) `[NC]` | new FE | build Settings→Compliance→Legal Holds (if MVP) | FE-unit; E2E place→erasure blocked→release→proceeds |
+| P1 | retention | G1 | No operator surface to view/edit retention policies (raw SQL only) despite "review per jurisdiction" requirement `[NC][xmod]` | new `dental-*` HTTP module calling lib | `GET/PATCH /dental/retention-policies` + admin settings screen | contract GET/PATCH admin-only (RED); FE-unit |
+| P1 | retention | G2 | Enforcement OFF by default with zero observability (no live/dry-run status, no last-run summary) | reads audit events | surface last-run + dry-run/live status; go-live attestation | handler test summary reflects seeded audit rows |
+| P1 | emr-consultation | G1 | Entire frontend absent (WF-EMRC-001..006 unreachable); docs claim `implemented` `[NC]` | scope decision | keep+build / dormant-relabel / remove | path-dependent FE/E2E |
+| P1 | emr-consultation | G2 | Dual source of clinical-note truth (`consultation_note` vs dental-visit/clinical) | dental-visit/clinical | designate canonical encounter; scope EMR to telemedicine or retire | doc/MODULE_MAP |
+| P1 | emr-consultation | G3 | Admin sees ALL consultation notes, no tenant scoping (cross-clinic PHI if exposed) `[NC]` | RBAC | scope admin reads to caller's clinic | cross-tenant isolation test |
+| P1 | external-records-import | G1 | Bulk patient import orphan endpoint (`POST /dental/patients/import` 0 FE consumers; FR7.2 unreachable) `[NC][xmod]` | dental-patient (owns handler) | wire owner-only import surface OR mark dormant | FE-unit + E2E + contract walker |
+| P1 | external-records-import | G2 | No server-side row cap on bulk import (DoS-class, unbounded memory + long tx) `[NC]` | dental-patient handler | `MAX_IMPORT_ROWS` → 422 `IMPORT_TOO_LARGE` | cap+1 rows → 422, 0 written (RED) |
+| P1 | notifs | G1 | No in-app notification UI (4 endpoints + hooks, 0 consumers; rows created, never surfaced) | app shell FE | build bell + inbox + `/notifications` route | FE-unit list(unread)+markRead+badge |
+| P1 | notifs | G2 | Settings save (`notificationPreferences`) but no backend reads them — disabled reminders still send `[NC][xmod]` | scheduling/patient/billing producers | enforce via shared gate OR relabel panel | backend: disabled pref suppresses send |
+| P1 | provider | G1 | Duplicate/competing source of truth (`Provider`/`Practitioner` vs canonical `dentalMemberships`) `[NC]` | EMR (only consumer of Provider facade) | deprecate (recommended) or productize | EMR authz on memberships; deprecation regression |
+| P1 | provider | G2 | `createProvider` (role `user`) grants global role + **revokes caller session** — conflicts with org-membership/PIN model | auth | remove/admin-gate, drop session-revoke | handler test pinning chosen behavior |
+
+### P2 — recommended before production
+
+| Pri | Module | ID | Gap | Recommended fix | Required tests |
+|---|---|---|---|---|---|
+| P2 | dental-clinical | G5 | Amendments write-only (no list/approve; `approveAmendment` 501 BR-019) | amendment list on record; keep approval deferred | FE-unit list renders; approve hidden while flag false |
+| P2 | dental-clinical | G6 | Post-op templates zero FE `[NC]` | manager under settings + attach affordance, or defer | FE-unit + contract |
+| P2 | dental-clinical | G7 | Inventory/materials zero FE `[NC]` | inventory screen, or defer | FE-unit + contract |
+| P2 | dental-patient | G6 | Validator-bypass test-hygiene (downgraded from P1 — no prod drift) | re-mount generated validator in tests; delete stale comment | contract via generated validator |
+| P2 | dental-patient | G7 | No demographics-edit journey (`updateDentalPatient` unwired) `[NC]` | edit modal | FE-unit + contract + role guard |
+| P2 | dental-patient | G8 | Alerts/contacts/tasks full backend, no FE (guardian for minors PAT-BR-002) `[NC]` | wire surfaces | FE-unit per surface |
+| P2 | dental-patient | G9 | Treatment-plan approval/versions/appointment-link unwired `[NC]` | wire | FE-unit |
+| P2 | dental-patient | G10 | Household create/edit unwired; `removeHouseholdMember` hard-deletes | wire card + consider soft-delete | FE-unit |
+| P2 | dental-patient | G11 | Statement/safety-floor/conditions/visits/import unwired | wire statement + import entry | FE-unit |
+| P2 | dental-patient | G12 | BR gaps: plan total≠Σitems (TP-BR-006); claim readiness missing provider/date/tooth (CLAIM-BR-001); TP-BR-004 | fix logic | unit pins |
+| P2 | dental-billing | BIL-G3 | No payment void/refund UI (`voidDentalPayment` owner-only, 0 consumers) | void/refund on payments sub-table | FE-unit + E2E reverse + voided receipt viewable |
+| P2 | dental-billing | BIL-G4 | No payment-plan create/update UI (only view wired) | Create Payment Plan (2–24 installments) | FE-unit + E2E; reject <2/>24 |
+| P2 | dental-billing | BIL-G5 | No printable receipt (`getDentalPaymentReceipt` 0 consumers; V1-Required §8.4) | receipt action per payment | FE-unit + E2E printable view |
+| P2 | dental-billing | BIL-G6 | Duplicate balance source of truth (client sum vs `getPatientBalance`) | consolidate or assert equality | FE-unit client sum == endpoint |
+| P2 | dental-org | G4 | Staff `invited` state divergence (PRD invite flow vs direct PIN-staff) `[NC]` | doc-reconcile or build invite | contract MemberStatus enum; or invite E2E |
+| P2 | dental-org | G5 | No post-creation staff edit (`updateMember` 0 consumers; license/NPI uncapturable) | staff edit modal | FE-unit edit/role/NPI; contract round-trip |
+| P2 | dental-org | G6 | Consent-template management no UI; `consent-sheet` uses hardcoded const not `listConsentTemplates` | wire CRUD + picker | FE-unit + contract |
+| P2 | dental-org | G7 | No multi-branch create/switcher (`getBranchesByUser`/`createBranch` 0 consumers) | branch list + create + switch | FE-unit + contract |
+| P2 | dental-scheduling | SCH-G2 | No "mark no-show" (FSM supports; `updateAppointment` already wired — pure affordance) | add to G1 actions menu | FE-unit/E2E status→no_show; checked-in guard |
+| P2 | dental-scheduling | SCH-G4 | Chairside queue no enqueue path (`createQueueItem` 0 consumers) | "Send to queue" from check-in/walk-in | FE-unit/E2E + branch-scope contract |
+| P2 | dental-scheduling | SCH-G5 | Waitlist fully unwired (`create/list/promoteWaitlistEntry`) | "Join waitlist" + staff FIFO panel | FE-unit/E2E + FIFO contract |
+| P2 | dental-scheduling | SCH-G6 | Online-booking confirmation lookup unwired (`getOnlineBooking`) | confirmation-code lookup | FE-unit lookup + not-found |
+| P2 | dental-visit | G2 | Accepted treatment-plan version not viewable (`getTreatmentPlanVersion` 0 consumers) `[NC][xmod dental-patient]` | read-only version viewer | FE-unit snapshot render; extend J09 |
+| P2 | dental-visit | G3 | Treatment templates built+seeded, zero FE | "Apply template" + manage screen, or defer+remove seed | FE-unit apply→treatments; E2E; read-path regression |
+| P2 | dental-perio | P2-1 | Completed-chart summary BOP%/Mean show "–" — wire-contract violation (numeric string vs float64; list path already coerces) | mirror `numOrNull` in `getPerioChart`/`getVisitPerioChart` | **P0-test** backend numeric on both GETs (RED); FE string-shape render; hurl single-GET |
+| P2 | dental-perio | P2-2 | Risk-factor inputs not persisted → Grade not explainable/correctable | persist risk factors (JSONB/columns) | backend risk-factor round-trip + grade linkage |
+| P2 | dental-imaging | IMG-P2-1 | Persisted superimposition unreachable (`SuperimpositionPanel` not mounted in prod overlay) | mount panel + wire persist/list | FE + contract persist/list |
+| P2 | dental-imaging | IMG-P2-2 | CBCT chain only on test-harness route (`finalizeCbctStudy` never called in prod) `[NC]` | wire finalize into real upload; prod-overlay E2E | prod-overlay E2E + contract finalize |
+| P2 | dental-imaging | IMG-P2-3 | Auto-detect 403 retried 3× (long misleading spinner) | `retry:false` on 4xx + proactive gating | FE-unit retry off; immediate upsell error |
+| P2 | dental-audit | P2-A | AUD-BR-004 before/after snapshots + `reason` never populated | capture pre-state; write snapshots+reason | before/after+reason persisted + sanitized |
+| P2 | dental-audit | P2-B | Fragmented audit sinks (3); base-module PHI-access events invisible to viewer | consolidate to one authoritative sink | PHI read appears in `getAuditEvents` |
+| P2 | dental-audit | P2-C | `read_only`/auditor role cannot read log `[NC]` | widen or document owner-only | RBAC allow/deny per decision |
+| P2 | dental-audit | P2-D | Producer-side audit-row test gaps (= dental-patient G5) | per-producer assertions | (shared) |
+| P2 | dental-pmd | P2-6 | `exportPatientCareRecord` (FHIR continuity) no FE trigger | wire export button | FE button calls endpoint |
+| P2 | dental-pmd | P2-7 | `listImportedPmds`/`getImportedPmd` no FE | imported-PMD list/detail | FE list/detail |
+| P2 | dental-pmd | P2-8 | "Share PMD" delivers only checksum text; silent no-op on desktop | real file/SHL export + honest no-op | FE share artifact |
+| P2 | dental-pmd | P2-9 | No multi-PMD reader (dedup/conflict/trust-tier) | reader module (staged) | reader tests |
+| P2 | dental-portal | — | No E2E journey; contract has no 200/own-data; overdue trusts `status` `[NC]` | E2E + contract 200 + overdue-by-dueDate pin | (listed) |
+| P2 | dental-erasure | ER-P2-1 | List-response bare-array vs contract `{data:[]}`; hurl asserts wrong shape | flip hurl to `$.data[0]` (RED) → `{data:rows}` | contract shape |
+| P2 | dental-erasure | ER-P2-2 | No tenant-isolation tests | RED-first cross-tenant tests | backend + hurl |
+| P2 | dental-legalhold | — | RBAC contract drift (tsp `user` vs handler `admin`); list unbounded/un-enveloped | tsp→`admin` + regen; pagination; filter tests | spec-vs-handler role guard; filter narrows |
+| P2 | retention | G3 | clinical/visit/prescription retention declared but unenforceable (no target) `[NC]` | per-domain `*-retention.facade` + register | per-target eligibility + legal-hold exclusion |
+| P2 | retention | G4 | No E2E of live (enforcement-ON) cron→engine→facade→DB chain | `dryRun:false` real-registry integration | assert `deletedAt` set + held row untouched |
+| P2 | emr-consultation | G4 | `getConsultation` adversarial RBAC untested | cross-provider/patient read 403 tests | 2 RBAC tests |
+| P2 | emr-consultation | G5 | Carrying cost of unreachable tested code | tied to G1 decision | — |
+| P2 | external-records-import | G3 | Naive CSV parser (`split(',')`) corrupts quoted/embedded-comma fields | RFC-4180 parse | quoted-comma round-trip (RED) |
+| P2 | external-records-import | G4 | `ui-prototype` stale namespace (`/api/dental-emr/imports`) | reconcile to `/dental/emr-import` | doc-only |
+| P2 | external-records-import | G5 | Module identity fragmented; tracker "partial FE" misleads | document 3-artifact boundary; fix FE tag | doc-only |
+| P2 | external-records-import | G6 | No FE/E2E/contract-walker for bulk import; `{success,...}` envelope un-asserted | add on G1 build | contract walker |
+| P2 | notifs | G3 | Push no opt-in UX (`requestNotificationPermission`/click handler never called) | wire prompt + click deep-link | FE prompt + handler |
+| P2 | notifs | G4 | Contract drift `deliveredAt` (declared, no column/response) | add column+populate or drop from tsp | contract assertion |
+| P2 | provider | G3/G4/G5/G6 | No FE; phantom RBAC roles; empty seed; handler test gaps | per chosen path (deprecate/productize) | per path |
+
+### P3 — polish / deferred (do NOT fix unless required by a P0/P1)
+
+| Module | ID | Gap |
+|---|---|---|
+| dental-clinical | G8 | Medical-history review-history not surfaced (needs new endpoint) |
+| dental-clinical | G9 | Notes/Medical-History FE affordances not role-gated (backend is real gate) |
+| dental-clinical | G10 | occlusion/postop/inventory list bare-array vs `{data,pagination}` — **blocks G2/G6/G7 wiring; fix before them** |
+| dental-patient | G13/G14/G15/G16/G17 | raw fetch in `patients.tsx`; list-shape inconsistency; base `patient/deletePatient` hard-delete `[NC]`; merge doc wording (corrected); J15 sync-badge assertions |
+| dental-billing | BIL-G7/G8/G9 | `getCollectionsSummary` unused; AR-aging seed no aged receivables; coverage-estimate trigger (folds into BIL-G2) |
+| dental-org | G8/G9/G10 | PIN self-recovery no UI; raw fetch (org-context, verify-pin ×2); audit-viewer param drift (EM-AUD-013) |
+| dental-scheduling | SCH-G7/G8/G9/G10/G11/G12 | reminder token landing (flag-off); portal self-service `[NC]`; recall overdue default; PATCH-cancel reason asymmetry (P0 test-step inside G1); seed free-text visitType; backend adversarial depth |
+| dental-visit | G4/G5/G6 | FE affordance≠RBAC (chart-edit/treatment — P0 *test* before fix); redundant endpoints; view toggles not persisted |
+| dental-perio | P3-1/P3-2/P3-3 | Hygienist finalizes diagnosis w/o sign-off `[NC]`; Stage null on depth-only; finalization-seam test gaps |
+| dental-imaging | IMG-P3-1/P3-2/P3-3 | No modality-reclassify/delete-image; benign unwired endpoints; harness routes mask reachability |
+| dental-audit | P3-A/P3-B/P3-C | TRUNCATE not blocked; AUD-BR-003 denied-attempt logging; stale pg-boss comments |
+| dental-pmd | P3-10/11/12 | Async gen / presigned / multipart; SHL/trust-tier; no seed library |
+| dental-portal | — | Appointments list unbounded; silent balance-load failure; Phase-2 reads deferred |
+| case-presentation | G4/G5 | Annotated images not openable; GET-with-write telemetry |
+| dental-erasure | ER-P3-1/P3-2 | Misleading `user` role annotation; no E2E (blocked by no-UI) |
+| dental-legalhold | — | `branchId` saved-but-unused; cross-tenant admin scope (by-design) `[NC]` |
+| retention | G5/G6 | Misleading "policy UI" comments; KG under-models enforcement |
+| emr-consultation | G6/G7 | Duplicate-context soft assertion; `amended` dead enum |
+| external-records-import | G7/G8/G9 | FHIR/CDA/PDF bridge (Phase-3 by design); no dedup; KG under-models import |
+| notifs | G5/G6 | Email templates unverified `[NC]`; no enqueue→cron→deliver integration test |
+| provider | G7 | Terminology drift (Provider/Practitioner/membership) |
+
+---
+
+## 3. Cross-Module Patterns
+
+**A. Cross-tenant / tenancy leak (the only true security class).**
+`dental-patient` G1 (**P0**, reachable in UI), `dental-erasure` ER-P1-1 (list-leak + wrong-tenant anonymize), `emr-consultation` G3 (admin-sees-all), `dental-legalhold` cross-tenant (by-design/tracked). Shared remedy: resolve subject→tenant and enforce the caller's membership; default lists to the caller's scope; reuse `handlers/shared/` branch-access helpers. **Note:** the contract-spine over-reports raw-fetch and dead-hook endpoints (`dental-org` R3 verify-pin, `dental-patient` G2 coverage-auth) as "wired" — never make a wire/remove or leak decision from spine "wired" status alone; confirm component reach.
+
+**B. Saved-but-not-enforced config (split-brain).** `dental-org` G1 working hours (= `dental-scheduling` SCH-G3) + G2 fee schedule (+R1 triple split-brain) + G3 permission grid; `notifs` G2 settings; `retention` G1/G2. Each writes a settings blob/row that no enforcement path reads, and shows a success toast. Structural remedy: **every config surface needs a downstream-effect test (booking blocked / price defaulted / send suppressed), never a toast-only test** — and FE interaction tests that assert the *mutation call*, since the current pure-helper FE tests are exactly why these shipped green.
+
+**C. Built-backend / zero-FE-consumer (the dominant class).** Whole verticals are tested + SDK-wired but unreachable: insurance/claims (`dental-patient` G2 / `dental-billing` BIL-G2), occlusion/postop/inventory (`dental-clinical` G2/G6/G7), audit viewer (P1-A), PMD viewer/import/care-record, erasure UI, legal-hold UI, retention policy UI, notif inbox, EMR, provider, bulk import, staff-edit/consent-templates/branch-switcher (`dental-org` G5/G6/G7), queue/waitlist/cancel/no-show (`dental-scheduling`). All are **additive FE wiring onto existing RBAC-gated, audited, tested backends → low blast radius, no contract regen** — but many are gated on wire-vs-remove product decisions (§6).
+
+**D. Dead trigger (mounted sheet, no button).** `dental-clinical` G1 (`onLab`) and `dental-pmd` P1-3 (`onPmd`) are the *same dead-prop class* in `WorkspaceTopBar` — fixable together (and the lab-orders false-green E2E must be relabeled/hardened).
+
+**E. Contract / wire-shape drift.** Bare-array vs `{data,pagination}` (`dental-clinical` G10, `dental-erasure` ER-P2-1, `dental-patient` G14, `dental-legalhold`); numeric-string vs `float64` (`dental-perio` P2-1); declared-but-absent field (`notifs` deliveredAt G4); `{success,…}` vs `{data,meta}` (`external-records-import` G6); `user`-vs-`admin` role-annotation drift (`dental-erasure` ER-P3-1, `dental-legalhold`). Several "contract tests" assert the wrong (impl) shape, masking the drift — **fix the spec-conformant shape before wiring any new FE onto these endpoints**, or the FE inherits the drift.
+
+**F. Audit write coverage / reliability.** `dental-audit` P1-B/P1-C/P2-A/P2-D + `dental-patient` G5 are one work-stream: sensitive mutations are unaudited or audited best-effort/non-atomic, and only 2 actions have audit-row tests. This must precede the audit viewer (P1-A) — the viewer is only as trustworthy as the trail.
+
+**G. Tests mount components/handlers directly → false-green wiring.** `dental-clinical` G1 (API-only E2E), `case-presentation` G1 (fixture pre-links treatments), `dental-pmd` (mounts viewer directly), `dental-imaging` IMG-P3-3 (harness routes). Recurring repo theme (`feedback_test_verification`). Remedy: real-UI E2E that drives the trigger, not the mounted component/raw fetch.
+
+**H. Two sources of truth.** Claims (patient vs billing), clinical notes (EMR vs visit), provider (Provider/Practitioner vs `dentalMemberships`), approval (`approveTreatmentPlan` vs `acceptCasePresentation`), audit (3 sinks). Each needs a "designate canonical + retire/reconcile the other" decision.
+
+**I. Seed coherence.** `case-presentation` (no plans), `dental-billing` BIL-G8 (no aged AR), `dental-portal` (no portal patient), `provider` G5 (empty), `dental-audit` (seed audit rows), `dental-org` G1 (working_hours column), `dental-scheduling` SCH-G11 (enum-invalid visitType). Several gaps are invisible *because* the seed can't reach the surface.
+
+---
+
+## 4. Recommended Fix Batches
+
+> Ordered by: security/safety → compliance-trail reliability → split-brain honesty → high-value FE wiring → durable records → identity reconciliation → governance/portal operability. Batches 1–3 need **no product decision**; later batches are largely gated on §6.
+
+| Batch | Modules | Gaps included | Why this batch | Tests required |
+|---|---|---|---|---|
+| **1 — Core-workflow & security blockers (unblocked)** | dental-patient, case-presentation | dental-patient G1 (P0); case-presentation G1 (P0)+G3+G2 | The two P0s + case-presentation's tightly-coupled trio (G1 fix is unverifiable without the G2 seed; G3 stops the source-of-truth drift G1 would otherwise introduce). Confirmed bugs, no decision needed. | sync-log: unit scope + 2-org integration + branchless-400. case-pres: normal-flow present→accept 200 (RED), aggregate `phases>0`, accept-links-items + approval-record, seed-coherence, present→accept/decline E2E, **regression on treatment-completion % + invoice-from-plan** |
+| **2 — Compliance-trail reliability (foundational)** | dental-audit, dental-patient | dental-audit P1-C → P1-B → P2-A; dental-patient G5 | Make audit writes durable & complete **before** anything reads them. Per-handler rollout (not a global flip). | force-audit-failure→rollback (void/payment); per-handler audit-row assertions (member role change, plan approve/accept, note sign/amend, claim-status); before/after+reason persisted+sanitized |
+| **3 — Wire-shape conformance (unblocks safe FE wiring)** | dental-clinical, dental-perio, dental-erasure, notifs, external-records-import | dental-clinical G10; dental-perio P2-1; dental-erasure ER-P2-1; notifs G4; external-records-import G3 | Normalize the contract shapes **before** any FE is wired onto these endpoints, so the FE isn't built against a shape that later changes (drift-bug prevention). Includes the CSV data-corruption fix and the perio numeric-coercion (both backend, RED-first). | bare-array→`{data,pagination}` (clinical occlusion/postop/inventory; erasure list); perio numeric on both single-GETs; deliveredAt column/contract or drop; RFC-4180 quoted-comma round-trip |
+| **4 — Split-brain config enforcement** | dental-org, dental-scheduling, notifs, retention | dental-org G1(+G1-shape)/SCH-G3; dental-org G2(+R1); dental-org G3 decision; notifs G2; retention G2 | The "saved-but-not-enforced" class. Working-hours is unblocked (direction clear) and proves the pattern; the rest need §6 decisions. Each fix must land with a **downstream-effect** test + the smoke upgrade (no toast-only). | shape-conformance unit (P0 gate); E2E out-of-hours booking rejected + walk-in bypass; fee→invoice default (if drive); per-handler 403-on-override (if enforce); disabled-pref-suppresses-send; retention last-run summary |
+| **5a — Dead-trigger + clinical-workspace wiring** | dental-clinical, dental-pmd | dental-clinical G1+G3+G4+G9; dental-pmd P1-3 | The dead-prop class (`onLab`/`onPmd`) + consent-history/Rx-list/amendment-list (read-mostly, backend done). Relabel the lab false-green E2E. | top-bar button RED→present; real-UI E2E; consent revoke+history+blast-radius; Rx list/dispense; role-gating |
+| **5b — Scheduling terminal-status & queue wiring** | dental-scheduling | SCH-G1+G10+SCH-G2+SCH-G4+SCH-G5+SCH-G6 | No cancel/no-show in the entire FE is a real ops gap; one actions-menu surface unlocks several. G10 transitions-test is a P0 step inside G1. | cancel reason-required + visit-preserved E2E; transitions reason policy (RED); no-show; enqueue branch-scoped; waitlist FIFO; confirmation lookup |
+| **5c — Billing operations wiring** | dental-billing | BIL-G1+BIL-G5+BIL-G3+BIL-G4+BIL-G6 | Discount/receipt/void/payment-plan are daily billing ops; all additive onto tested owner-gated backends. | discount reason-required owner-only; receipt printable; void reverses+voided-receipt; payment-plan 2–24; balance==endpoint |
+| **5d — Visit & org settings wiring** | dental-visit, dental-org | dental-visit G4+G2+G3; dental-org G5+G6+G7 | FE role-gating + version viewer + templates (visit); staff-edit + consent-templates + branch-switcher (org). Mostly low-risk; G1 carry-over + G2/G3 templates partly decision-gated. | role-gated affordances; version viewer; apply-template+read-path regression; staff edit/NPI; consent-template picker wired; branch switch |
+| **6 — Durable clinical records (migrations)** | dental-perio, dental-pmd | dental-perio P1-1+P2-2; dental-pmd P1-1+P1-2+P1-4+P1-5 | Need migrations + (PMD) signing/FHIR; PMD bundle is decision-gated on "true PMD vs internal snapshot". | perio complete→GET round-trip + risk-factor persist; PMD schema/required-sections + sign/verify/tamper + import-merge |
+| **7 — Source-of-truth reconciliation (decision-led)** | provider, emr-consultation, dental-patient, dental-billing | provider G1/G2; emr-consultation G1/G2/G3; dental-patient G2 / billing BIL-G2 (claims) | Each is "designate canonical + retire/reconcile the duplicate" — gated on §6 decisions; mostly docs+deprecation or one wired vertical. | EMR-authz-on-memberships; provider session-revoke removal; claims single-source E2E |
+| **8 — Governance operability (decision-gated UIs)** | dental-erasure, dental-legalhold, retention | ER-P1-1/P1-2/P1-3/ER-P2-2/ER-P3-1; legalhold UI+RBAC-drift; retention G1/G3 | Compliance features that exist only as raw API. RBAC-drift (tsp `user`→`admin`) is cheap+unblocked and can be pulled forward. | tenancy gate cross-tenant tests; admin erasure/legal-hold UI + E2E; retention policy GET/PATCH admin-only |
+| **9 — Portal door** | dental-portal | provisioning + entry redirect + seed + E2E + overdue | Make the read-only portal reachable by a real patient. Gated on the provisioning-scope decision. | link-200/unlinked-403; patient→portal redirect; seed patient; E2E; overdue-by-dueDate |
+| **10 — Remaining P3 polish** | all | residual P3 | Only if required by a shipped P0/P1; otherwise defer. | per-gap |
+
+---
+
+## 5. First Fix Batch Recommendation
+
+**Implement Batch 1 — Core-workflow & security blockers — first.**
+
+Contents:
+1. **dental-patient G1 (P0)** — scope `listSyncLogs`/`SyncLogRepository.findAll` to the caller's branch(es)/tenant; require `branchId` on create/update. *Cross-tenant PII read leak reachable from the live UI (`use-sync-status.ts`).*
+2. **case-presentation G1 (P0)** — link pending treatments to the plan at the `presented` transition. *The module's core accept workflow is broken end-to-end (₱0 aggregate, accept 422).*
+3. **case-presentation G3 (P1)** — converge `acceptCasePresentation` onto the same link+approval-record logic as `approveTreatmentPlan`. *Prevents the source-of-truth drift G1's fix would otherwise create.*
+4. **case-presentation G2 (P1)** — seed presented/accepted/rejected plans with linked items. *Unblocks the E2E that proves #2/#3 and was the reason the P0 went undetected.*
+
+**Why first:**
+- These are the only **2 P0s** in the entire sweep, and both are **confirmed bugs requiring no product decision** — unlike most P1s, which are gated on §6.
+- **Security:** G1 is an actively-reachable cross-tenant PII leak.
+- **Workflow:** case-presentation is the lone **FAIL** module; its primary purpose cannot be completed.
+- **Coupling:** the case-presentation three (G1/G2/G3) must move together — G1's fix is unverifiable without G2's seed, and G3 must converge the approval truth at the same time or G1 introduces drift.
+- **Test-readiness:** every fix has a RED-first test already specified (cross-tenant integration; normal-flow present→accept; accept-links-items+approval-record; seed-coherence).
+
+**Blast-radius caution:** case-presentation G1 changes *when* `treatmentPlanId` is set on treatments, which ripples to plan-completion % and invoice-from-plan — Batch 1 must include regression assertions on `listDentalTreatments`/`listDentalVisits` readers and the billing-from-plan path (per the case-presentation + dental-visit plans).
+
+After Batch 1 lands green (full gate: `bun test` + api-ts `bunx tsc` + `CONTRACT_ONLY=...` hurl + FE unit + lint/boundaries), proceed to **Batch 2 (audit-trail reliability)** then **Batch 3 (wire-shape conformance)** — both also unblocked — before the decision-gated FE-wiring batches.
+
+---
+
+## 6. Items Needing Confirmation
+
+These product/technical decisions **gate** the listed fixes. Do not act on them until resolved.
+
+| # | Decision | Gates | Modules |
+|---|---|---|---|
+| 1 | **Claims single source of truth** — dental-patient insurance/claims vertical vs dental-billing `ClaimsWorklist`. Wire one + an insurance-profile UI, or delete the dead vertical + dead hooks. | dental-patient G2, dental-billing BIL-G2 | patient, billing, imaging |
+| 2 | **Communication-consent enforcement** — enforce per-channel consent at send time (gate notifs/comms)? Make the registration write blocking? | dental-patient G3 | patient, notifs, comms |
+| 3 | **V1 scope of backend-only patient surfaces** — demographics-edit, guardian/contacts, alerts, tasks, household, statement: wire for V1 or defer? | dental-patient G7/G8/G9/G10/G11 | patient |
+| 4 | **Permission grid: enforce vs remove** — granular per-(role,feature) overrides a requirement (~109-handler change) or coarse role model sufficient (remove tab)? | dental-org G3 | org + all clinical/billing/scheduling |
+| 5 | **Fee schedule: drive pricing vs reference-only** — auto-default invoice/treatment prices (close AC-ORG-002) or non-binding list? Which fee store is canonical (blob vs dedicated endpoints)? | dental-org G2 (+R1) | org, visit/treatments, billing |
+| 6 | **Working-hours canonical shape** — adopt backend `{enabled,open,close}` (recommended) vs FE `{open:bool,start,end}`. | dental-org G1-shape, SCH-G3 | org, scheduling |
+| 7 | **Staff model** — direct PIN-staff creation (local-first) vs PRD email-invite/`invited` state. | dental-org G4 | org, Better-Auth, email, notifs |
+| 8 | **Notification settings: enforce vs relabel** — branch `notificationPreferences` a real master switch, or is per-patient `PersonConsent` the sole gate (panel decorative)? | notifs G2 | notifs, scheduling, patient, billing |
+| 9 | **Carry-over model** — `POST /carry-over` the intended cross-visit completion path, or mark-done-in-place (then remove dead "Carried Over" UI)? | dental-visit G1 | visit |
+| 10 | **Treatment templates V1** — surface now (built+seeded) or defer+remove seed? | dental-visit G3 | visit, org |
+| 11 | **Accepted-plan version viewer surface** — visit workspace vs patient treatment-plan sheet? | dental-visit G2 | visit, patient |
+| 12 | **Perio hygienist finalize policy** — may a hygienist finalize Stage/Grade, or require dentist sign-off? (code allows hygienist; docstring says dentist-only). Persistence shape: discrete columns vs JSONB. | dental-perio P3-1, P1-1/P2-2 | perio |
+| 13 | **Imaging AI auto-detect** — intentional reversal of the no-AI non-goal (keep + ship a real detector) or remove the affordance? Is the addon detector real or FakeDetector? | dental-imaging IMG-P1-1, IMG-P2-3 | imaging |
+| 14 | **CBCT prod-overlay scope** — does the production upload form offer `modality='cbct'` / is the CBCT card reachable outside the harness? Is persisted superimposition V1? | dental-imaging IMG-P2-2, IMG-P2-1 | imaging |
+| 15 | **PMD intent** — true canonical PMD (FHIR + signed + Safety-Floor) vs intentionally-narrowed internal visit-snapshot? Self-signed facility cert acceptable for pilot? | dental-pmd P1-1/P1-2/P1-5 | pmd, clinical, patient, org |
+| 16 | **Audit read role** — owner-only (current) or widen to `read_only`/auditor? TRUNCATE carve-out acceptable? Viewer scope = full prototype vs reduced V1? | dental-audit P1-A/P2-C/P3-A | audit, org |
+| 17 | **Who may erase** — clinic `dentist_owner` per-tenant (recommended) vs platform `admin` only? Co-locate Art.20 export? `branchId`/`subjectPatientId` semantics? | dental-erasure ER-P1-1/P1-3 | erasure, org, person |
+| 18 | **Legal-hold admin UI in MVP?** Reaffirm cross-tenant DPO model. `branchId` audit-only vs scoping? | dental-legalhold | legalhold |
+| 19 | **Retention operator UI/API in V1?** Are clinical/visit/prescription targets enforceable in V1? `RETENTION_ENFORCEMENT_ENABLED` go-live posture? | retention G1/G3/G2 | retention, clinical, scheduling |
+| 20 | **EMR-consultation in product scope?** Keep+expose / dormant-relabel / remove. Global admin vs clinic-scoped admins? Canonical encounter boundary vs dental-visit? | emr-consultation G1/G2/G3 | emr, visit, clinical |
+| 21 | **Bulk patient import V1 surface?** Build owner-only UI vs dormant primitive. Max row count + reject-vs-partial on oversized. Canonical owner of import UX? | external-records-import G1/G2/G5 | external-records-import, patient |
+| 22 | **Provider module: deprecate vs productize** — is practitioner credentialing/directory a V1/V2 capability, or is `dentalMemberships` the only provider concept? Is `createProvider` session-revoke intentional? | provider G1/G2/G3 | provider, EMR, org |
+| 23 | **Portal provisioning scope** — is patient-account linking a V1 fix or accepted Phase-1 "no door"? Overdue auto-flip job? Phase-2 PHI-read scope? | dental-portal P1 trio | portal, patient, auth |
+| 24 | **Scheduling** — portal self-cancel/reschedule in V1? Recall `listDueRecalls` overdue default vs FE floor workaround? | dental-scheduling SCH-G8/G9 | scheduling, portal |
+
+---
+
+## 7. Execution Rules
+
+1. **Fix one batch at a time.** Do not start a batch until the previous one is green on the full gate.
+2. **Use TDD where practical.** Write the failing test first (RED), then the smallest fix (GREEN), then refactor. For config/affordance gaps, the RED test must assert a **downstream effect** (booking blocked / price defaulted / send suppressed / cross-tenant rows excluded), never a success toast or a mounted-component render alone.
+3. **Add failing tests first when feasible** — every gap above names its RED test; characterization tests (existing-behavior pins) are allowed where the fix is wiring-only.
+4. **Do not touch unrelated modules.** Cross-module fixes (`[xmod]`) touch only the named seams; verify the blast-radius readers named in the source plan.
+5. **Do not fix P2/P3 unless required by a P0/P1 in the same batch** (e.g. dental-clinical G10 list-shape is a P3 but **must** precede G2/G6/G7; dental-scheduling G10/perio P2-1/visit G4 are P3 but are P0 *test-steps* inside their P1 fixes).
+6. **Do not act on `[NEEDS CONFIRMATION]` items.** Surface the §6 decision; if undecided, skip the gated gap and proceed to unblocked work.
+7. **Run relevant tests after each batch:** api-ts backend via `scripts/test-with-db.ts` (inline `DATABASE_URL=...monobase_test`, **never** `bun test <path>`); `bun run typecheck` (root = FE only — also run api-ts `bunx tsc`); **restart the dev server before `test:contract`** to avoid stale-handler drift; FE unit; `bun run check:boundaries`; lint. The 8-file MinIO/Mailpit infra baseline is expected-fail and unrelated.
+8. **Update this matrix and the per-module gap plan after each batch** — mark closed gaps, record the decision taken for any resolved `[NEEDS CONFIRMATION]`, and re-run the contract-spine if FE wiring changed consumer counts.
+9. **Spec-first for any shape change:** TypeSpec → `bun run build` → regen handlers/validators/SDK → FE. Never hand-edit generated files.
+
+---
+
+## 8. Batch 1 Implementation Log (2026-06-09)
+
+**Scope:** dental-patient G1 (P0), case-presentation G1 (P0) + G3 (P1) + G2 (P1). No `[NEEDS CONFIRMATION]` items acted on. One latent FE blocker (case-presentation **FE-1**) found during live verification and fixed because it gates the same P0 workflow.
+
+**Resolved `[NEEDS CONFIRMATION]` (case-presentation plan §):**
+- **#1 link timing** → resolved as **link at the `presented` transition** (the matrix-recommended fix; also linked defensively at accept for robustness).
+- **#3 "Present to patient" button reachability** → **confirmed live** for the seeded presented plan (Maria Santos) once G2 seeded it.
+
+**New gap surfaced + fixed — case-presentation FE-1 (FE routing, was blocking the P0 E2E):**
+`apps/dentalemon/src/routes/_workspace/$patientId.tsx` (the workspace) is the TanStack flat-routing layout **parent** of `/$patientId/case-presentation/$presentationId`, but rendered **no `<Outlet/>`**. Navigating to the CP route changed the URL but rendered nothing (the workspace stayed). The patient-facing view was unreachable and accept could never complete from the UI — the real reason the module was FAIL E2E (the original gap-plan author flagged this as unconfirmed, open question #3). Fix: `useChildMatches()` → render `<Outlet/>` when a child route is active. Regression pin added to `$patientId.test.ts`.
+
+**Files changed (code):**
+- `services/api-ts/src/handlers/dental-patient/repos/sync-log.repo.ts` — `findAll(branchIds)` scoped via `inArray`; empty scope → `[]`.
+- `.../dental-patient/sync/listSyncLogs.ts` — require `branchId` (400), `assertBranchAccess`, scoped `findAll([branchId])`.
+- `.../dental-patient/sync/createSyncLog.ts` — require `branchId` (400) + unconditional `assertBranchAccess`.
+- `.../dental-patient/sync/updateSyncLog.ts` — unconditional auth; branchless row → 403.
+- `.../dental-patient/treatment-plans/updateTreatmentPlan.ts` — link pending treatments on `presented`.
+- `.../dental-patient/case-presentation/acceptCasePresentation.ts` — link pending treatments + write `TreatmentPlanApproval` (G3).
+- `.../patient/repos/patient-dental-patient.facade.ts` — `getPatientForDentalPatient` also returns `personId` (additive; for the G3 approval record).
+- `apps/dentalemon/src/routes/_workspace/$patientId.tsx` — `<Outlet/>` for nested routes (FE-1).
+- `services/api-ts/scripts/seed-supplement.ts` — seed case-presentation plans across the FSM.
+
+**Tests added/updated:** `dental-patient-sync-isolation.test.ts` (new, 8 tests), `case-presentation-real-flow.test.ts` (new, 3 tests), `dental-patient-sync.test.ts` (contract update), `dental-treatment-coordinator.hurl` (aggregate non-empty + accept), `$patientId.test.ts` (Outlet pins).
+
+**Gate:** api-ts backend (sync isolation 8/0, sync 14/0, route-reg 3/0, case-pres real-flow 3/0, dental-patient dir 400/0, treatment-plan/case-pres 51/0); contract 46/46 files (719 req); api-ts `tsc` 0; root typecheck (FE+api-ts) 0; FE workspace test 11/0; lint 0 errors; `check:boundaries` clean; live browser present→accept E2E ✅.
+
+**Known pre-existing failure (NOT a Batch-1 regression, out of scope):** `patient/patient.test.ts` → `unmergePatients … returns 500 (not implemented)` asserts 500 but the handler returns the documented **501 NOT_IMPLEMENTED** (base `patient` module; this is dental-patient **G16**, P3 test-staleness). Unmerge does not use the changed facade; the test file is not in the Batch-1 changeset. Flagged for the G16 fix, not touched here.
+
+---
+
+*Compiled from 19 module gap-plans. Batch 1 implemented 2026-06-09; later batches not started.*

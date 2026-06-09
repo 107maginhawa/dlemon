@@ -36,6 +36,13 @@ import {
 import { dentalPatientChartBaselines } from '@/handlers/dental-visit/repos/dental-chart-baseline.schema';
 import { dentalPerioCharts } from '@/handlers/dental-perio/repos/perio-chart.schema';
 import { dentalPerioToothReadings } from '@/handlers/dental-perio/repos/perio-reading.schema';
+import {
+  dentalTreatmentPlans, dentalTreatmentPlanApprovals, dentalTreatmentPlanStatusHistory,
+  type NewDentalTreatmentPlan, type TreatmentPlanStatus,
+} from '@/handlers/dental-patient/repos/treatment-plan.schema';
+import {
+  dentalCasePresentations, type NewDentalCasePresentation,
+} from '@/handlers/dental-patient/repos/case-presentation.schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
@@ -1026,6 +1033,149 @@ async function seed() {
       log(`  ✓ Perio history: 2 exams for Claudia Bautista (improving trend, 1 relapsed site)`);
     }
   }
+
+  // ── Case-presentation treatment plans (case-presentation G2) ───────────────
+  // The base seed creates ZERO plan-level treatment plans, so the case-presentation
+  // module was UI-unreachable ("Present to patient" never renders) and its accept
+  // workflow undemoable. Seed plans across the FSM (draft / presented / accepted /
+  // rejected) with LINKED treatment items + an alternate option group, plus a
+  // case-presentation row for the patient-facing ones, so the whole present→accept/
+  // decline journey is demoable and E2E-reachable out of the box.
+  section('Case-presentation plans (treatment plans + presentations)');
+
+  const providerPersonId = owner.personId ?? owner.id;
+
+  /** Ensure the patient has a visit to hang treatment items off; create one if absent. */
+  async function ensureVisit(patientId: string, key: string): Promise<string> {
+    const existing = visitByPatient.get(patientId);
+    if (existing) return existing;
+    const visitId = detUuid(`cp-visit:${key}`);
+    await db.insert(dentalVisits).values({
+      id: visitId, patientId, branchId: branch.id, dentistMemberId: owner.id,
+      status: 'completed', activatedAt: daysAgo(14), completedAt: daysAgo(14),
+      chiefComplaint: 'Comprehensive treatment planning', createdBy: providerPersonId, updatedBy: providerPersonId,
+    }).onConflictDoNothing();
+    visitByPatient.set(patientId, visitId);
+    return visitId;
+  }
+
+  type CpItem = { tooth: number; cdt: string; desc: string; priceCents: number; phase?: string; status: 'planned' | 'diagnosed'; optionGroupId?: string; recommended?: boolean };
+  type CpPlanSpec = {
+    key: string; patientIdx: number; status: TreatmentPlanStatus;
+    decision?: 'accepted' | 'rejected'; rejectionReason?: string; withPresentation: boolean;
+    items: CpItem[];
+  };
+
+  const cpPlanSpecs: CpPlanSpec[] = [
+    {
+      key: 'cp-presented', patientIdx: 0, status: 'presented', withPresentation: true,
+      items: [
+        { tooth: 14, cdt: 'D2391', desc: 'Resin composite — 1 surface', priceCents: 500000, phase: 'disease_control', status: 'planned' },
+        { tooth: 30, cdt: 'D2740', desc: 'Crown — porcelain/ceramic', priceCents: 2000000, phase: 'definitive', status: 'planned' },
+        // Alternate option group (implant recommended vs bridge), unphased.
+        { tooth: 19, cdt: 'D6010', desc: 'Implant body — Option A (recommended)', priceCents: 4000000, status: 'diagnosed', optionGroupId: detUuid('cp-optgroup:presented'), recommended: true },
+        { tooth: 19, cdt: 'D6240', desc: 'Bridge — Option B', priceCents: 3000000, status: 'diagnosed', optionGroupId: detUuid('cp-optgroup:presented'), recommended: false },
+      ],
+    },
+    {
+      key: 'cp-accepted', patientIdx: 1, status: 'approved', decision: 'accepted', withPresentation: true,
+      items: [
+        { tooth: 3, cdt: 'D2750', desc: 'Crown — porcelain fused to metal', priceCents: 1800000, phase: 'definitive', status: 'planned' },
+        { tooth: 18, cdt: 'D2392', desc: 'Resin composite — 2 surfaces', priceCents: 600000, phase: 'disease_control', status: 'planned' },
+      ],
+    },
+    {
+      key: 'cp-rejected', patientIdx: 2, status: 'rejected', decision: 'rejected',
+      rejectionReason: 'Patient wants to defer the implant and seek a second opinion.', withPresentation: true,
+      items: [
+        { tooth: 31, cdt: 'D6010', desc: 'Implant body placement', priceCents: 4200000, phase: 'definitive', status: 'diagnosed' },
+      ],
+    },
+    {
+      key: 'cp-draft', patientIdx: 3, status: 'draft', withPresentation: false,
+      items: [
+        { tooth: 5, cdt: 'D2391', desc: 'Resin composite — 1 surface', priceCents: 500000, phase: 'disease_control', status: 'planned' },
+      ],
+    },
+  ];
+
+  let cpPlans = 0, cpPresentations = 0;
+  for (const spec of cpPlanSpecs) {
+    const patient = allPatients[spec.patientIdx % allPatients.length];
+    if (!patient) continue;
+    const visitId = await ensureVisit(patient.id, spec.key);
+    const planId = detUuid(`cp-plan:${spec.key}`);
+    const presentedAt = spec.status === 'draft' ? null : daysAgo(7);
+    const approvedAt = spec.status === 'approved' ? daysAgo(3) : null;
+    const total = spec.items.reduce((s, i) => s + i.priceCents, 0);
+
+    const planRow: NewDentalTreatmentPlan = {
+      id: planId, patientId: patient.id, providerId: providerPersonId, status: spec.status,
+      totalEstimateCents: total, presentedAt, approvedAt,
+      createdBy: providerPersonId, updatedBy: providerPersonId,
+    };
+    await db.insert(dentalTreatmentPlans).values(planRow).onConflictDoNothing();
+
+    // LINKED treatment items (treatmentPlanId set) — the link the present-path now performs.
+    // No explicit id: detUuid() collides across near-identical seed strings (the
+    // documented tooth-numbered-seed gotcha) and silently drops items via
+    // onConflictDoNothing. defaultRandom() PK + the full reset-db before each
+    // reseed keep this idempotent.
+    for (const it of spec.items) {
+      await db.insert(dentalTreatments).values({
+        visitId, patientId: patient.id, treatmentPlanId: planId,
+        toothNumber: it.tooth, cdtCode: it.cdt, description: it.desc, priceCents: it.priceCents,
+        phase: (it.phase ?? null) as any, status: it.status,
+        optionGroupId: it.optionGroupId ?? null, recommended: it.recommended ?? false,
+        createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+
+    // Status-history rows for the transitions the FSM would have recorded.
+    if (spec.status !== 'draft') {
+      await db.insert(dentalTreatmentPlanStatusHistory).values({
+        treatmentPlanId: planId, fromStatus: 'draft', toStatus: 'presented',
+        changedByPersonId: providerPersonId, createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+    if (spec.status === 'approved') {
+      await db.insert(dentalTreatmentPlanStatusHistory).values({
+        treatmentPlanId: planId, fromStatus: 'presented', toStatus: 'approved',
+        changedByPersonId: providerPersonId, createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+      // Approval record (parity with both approval paths — case-presentation G3).
+      await db.insert(dentalTreatmentPlanApprovals).values({
+        id: detUuid(`cp-approval:${spec.key}`),
+        treatmentPlanId: planId, approvedByPersonId: patient.person, method: 'signature',
+        createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+    if (spec.status === 'rejected') {
+      await db.insert(dentalTreatmentPlanStatusHistory).values({
+        treatmentPlanId: planId, fromStatus: 'presented', toStatus: 'rejected',
+        changedByPersonId: providerPersonId, createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+    cpPlans++;
+
+    if (spec.withPresentation) {
+      const cpStatus = spec.decision === 'accepted' ? 'accepted' : spec.decision === 'rejected' ? 'rejected' : 'draft';
+      const cpRow: NewDentalCasePresentation = {
+        id: detUuid(`cp-presentation:${spec.key}`),
+        patientId: patient.id, treatmentPlanId: planId, status: cpStatus as any,
+        decision: spec.decision ?? null,
+        decisionAt: spec.decision ? daysAgo(3) : null,
+        signerName: spec.decision === 'accepted' ? 'Patient (demo e-sign)' : null,
+        signatureData: spec.decision === 'accepted' ? 'data:image/png;base64,iVBORw0KGgo=' : null,
+        rejectionReason: spec.rejectionReason ?? null,
+        createdBy: providerPersonId, updatedBy: providerPersonId,
+      };
+      await db.insert(dentalCasePresentations).values(cpRow).onConflictDoNothing();
+      cpPresentations++;
+    }
+    log(`  ✓ ${spec.key} — plan ${spec.status}${spec.withPresentation ? ' + presentation' : ''} (₱${(total / 100).toLocaleString()})`);
+  }
+  log(`  Σ Case-presentation: ${cpPlans} plans, ${cpPresentations} presentations`);
 
   console.log('\n✓ Supplement seed complete.\n');
 }

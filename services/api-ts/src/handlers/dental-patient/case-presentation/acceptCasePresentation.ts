@@ -76,6 +76,14 @@ export async function acceptCasePresentation(ctx: HandlerContext): Promise<Respo
     );
   }
 
+  // G3: converge with approveTreatmentPlan — link the patient's pending
+  // treatments to the plan before resolving the consent anchor. This is the
+  // same step approveTreatmentPlan performs; doing it here keeps the two
+  // approval paths persisting the SAME truth (linked items + approval record),
+  // and makes accept robust even for a plan presented before the G1 fix.
+  // Idempotent: only unlinked treatments are claimed.
+  await planRepo.linkPendingTreatments(plan.id, patientId);
+
   // 1. Immutable consent e-sig, hung off the plan's visit.
   const visitId = await repo.findPlanVisitId(plan.id, patientId);
   if (!visitId) {
@@ -91,6 +99,20 @@ export async function acceptCasePresentation(ctx: HandlerContext): Promise<Respo
     signerName: body.signerName,
     acceptedPlanVersionId: presentation.planVersionId,
     createdBy: user.id,
+  });
+
+  // G3: record a TreatmentPlanApproval (parity with approveTreatmentPlan) so an
+  // accepted case-presentation yields the SAME persisted approval truth as the
+  // staff approval path. The approver is the patient who signed.
+  await planRepo.createApproval({
+    treatmentPlanId: plan.id,
+    approvedByPersonId: patient.personId,
+    method: 'signature',
+    consentFormId: consent.id,
+    planVersionId: presentation.planVersionId ?? null,
+    signatureData: body.signatureData ?? null,
+    createdBy: user.id,
+    updatedBy: user.id,
   });
 
   // 2. Plan presented → approved (+ P2-8 status-history row).

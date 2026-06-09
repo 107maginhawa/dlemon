@@ -70,6 +70,12 @@ export async function updateTreatmentPlan(ctx: HandlerContext): Promise<Response
         'dentist_owner', 'dentist_associate', 'treatment_coordinator',
       ]);
       updates.presentedAt = new Date();
+      // case-presentation G1 (P0): link the patient's pending (diagnosed/planned)
+      // treatments to the plan at the moment it is presented — mirroring
+      // approveTreatmentPlan. Without this the case-presentation aggregate is
+      // structurally empty (₱0/0 items) and accept throws PLAN_HAS_NO_ITEMS.
+      // Idempotent: only unlinked treatments are claimed.
+      await repo.linkPendingTreatments(planId, patientId);
     }
     if (to === 'approved') updates.approvedAt = new Date();
   }

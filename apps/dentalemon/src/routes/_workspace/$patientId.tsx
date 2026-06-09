@@ -8,7 +8,7 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
@@ -52,6 +52,15 @@ export const Route = createFileRoute('/_workspace/$patientId')({
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
+
+  // case-presentation G1: this workspace route is the layout PARENT of the
+  // nested `/case-presentation/$presentationId` route (TanStack flat routing).
+  // Without an Outlet, navigating to a child route changed the URL but rendered
+  // nothing — the patient-facing case-presentation view was unreachable, so the
+  // accept workflow could never complete from the UI. When a child route is
+  // active, render it full-screen in place of the workspace chart.
+  const childMatches = useChildMatches();
+  const hasChildRoute = childMatches.length > 0;
 
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
   const [pmdShared, setPmdShared] = useState(false);
@@ -199,6 +208,12 @@ function WorkspacePage() {
     );
   }
 
+
+  // A nested route (e.g. case-presentation) is active → hand the screen to it.
+  // Placed after all hooks to respect the rules of hooks.
+  if (hasChildRoute) {
+    return <Outlet />;
+  }
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (visitsLoading) {
