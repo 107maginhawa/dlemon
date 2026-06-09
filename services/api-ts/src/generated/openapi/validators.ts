@@ -2076,9 +2076,9 @@ export const DentalOrgModuleDentalOrganizationSchema = z.object({
 });
 
 export const DentalOrgModuleDentalWorkingHoursDaySchema = z.object({
-  open: z.string(),
-  close: z.string(),
-  isOpen: z.boolean()
+  enabled: z.boolean(),
+  open: z.string().optional(),
+  close: z.string().optional()
 });
 
 export const DentalOrgModuleDentalWorkingHoursSchema = z.object({
@@ -2089,6 +2089,19 @@ export const DentalOrgModuleDentalWorkingHoursSchema = z.object({
   friday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
   saturday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
   sunday: DentalOrgModuleDentalWorkingHoursDaySchema.optional()
+});
+
+export const DentalOrgModuleDentalWorkingHoursResponseSchema = z.object({
+  branchId: z.string().uuid(),
+  workingHours: z.union([z.object({
+  monday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  tuesday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  wednesday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  thursday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  friday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  saturday: DentalOrgModuleDentalWorkingHoursDaySchema.optional(),
+  sunday: DentalOrgModuleDentalWorkingHoursDaySchema.optional()
+}), z.null()])
 });
 
 export const DentalOrgModuleImagingTierSchema = z.enum(["free", "basic", "addon"]);
@@ -2229,6 +2242,10 @@ export const DentalOrgModuleUpdateOrganizationRequestSchema = z.object({
 
 export const DentalOrgModuleUpdatePermissionsRequestSchema = z.object({
   overrides: z.array(DentalOrgModulePermissionOverrideInputSchema)
+});
+
+export const DentalOrgModuleUpdateWorkingHoursRequestSchema = z.object({
+  workingHours: DentalOrgModuleDentalWorkingHoursSchema
 });
 
 export const DentalOrgModuleVerifyPinRequestSchema = z.object({
@@ -20318,17 +20335,17 @@ export const GetWorkingHoursParams = z.object({
 });
 export type GetWorkingHoursParams = z.infer<typeof GetWorkingHoursParams>;
 
-export const GetWorkingHoursResponse = DentalOrgModuleDentalWorkingHoursSchema;
+export const GetWorkingHoursResponse = DentalOrgModuleDentalWorkingHoursResponseSchema;
 
 export const UpdateWorkingHoursParams = z.object({
   branchId: UUIDSchema,
 });
 export type UpdateWorkingHoursParams = z.infer<typeof UpdateWorkingHoursParams>;
 
-export const UpdateWorkingHoursBody = DentalOrgModuleDentalWorkingHoursSchema;
+export const UpdateWorkingHoursBody = DentalOrgModuleUpdateWorkingHoursRequestSchema;
 export type UpdateWorkingHoursBody = z.infer<typeof UpdateWorkingHoursBody>;
 
-export const UpdateWorkingHoursResponse = DentalOrgModuleDentalWorkingHoursSchema;
+export const UpdateWorkingHoursResponse = DentalOrgModuleDentalWorkingHoursResponseSchema;
 
 export const CreateMedicalHistoryEntryBody = CreateMedicalHistoryEntryRequestSchema;
 export type CreateMedicalHistoryEntryBody = z.infer<typeof CreateMedicalHistoryEntryBody>;

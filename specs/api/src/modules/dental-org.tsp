@@ -577,16 +577,16 @@ namespace DentalOrgModule {
     temporaryPin?: string;
   }
 
-  @doc("Working hours for a single day")
+  @doc("Working hours for a single day (canonical enforced shape — G1-shape)")
   model DentalWorkingHoursDay {
-    @doc("Opening time (HH:mm)")
-    open: string;
-
-    @doc("Closing time (HH:mm)")
-    close: string;
-
     @doc("Whether the branch is open on this day")
-    isOpen: boolean;
+    enabled: boolean;
+
+    @doc("Opening time (HH:mm) — omitted/ignored when not enabled")
+    open?: string;
+
+    @doc("Closing time (HH:mm) — omitted/ignored when not enabled")
+    close?: string;
   }
 
   @doc("Weekly working hours configuration for a branch")
@@ -598,6 +598,20 @@ namespace DentalOrgModule {
     friday?: DentalWorkingHoursDay;
     saturday?: DentalWorkingHoursDay;
     sunday?: DentalWorkingHoursDay;
+  }
+
+  @doc("GET/PUT working-hours response envelope (matches the handler).")
+  model DentalWorkingHoursResponse {
+    @doc("Branch ID")
+    branchId: UUID;
+
+    @doc("Weekly working hours in the enforced {enabled,open,close} shape")
+    workingHours: DentalWorkingHours | null;
+  }
+
+  @doc("PUT working-hours request body (wrapped in `workingHours`).")
+  model UpdateWorkingHoursRequest {
+    workingHours: DentalWorkingHours;
   }
 
   @doc("""
@@ -1006,7 +1020,7 @@ namespace DentalOrgModule {
     @operationId("getWorkingHours")
     getWorkingHours(
       @path branchId: UUID
-    ): ApiOkResponse<DentalWorkingHours>
+    ): ApiOkResponse<DentalWorkingHoursResponse>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
@@ -1017,8 +1031,8 @@ namespace DentalOrgModule {
     @operationId("updateWorkingHours")
     updateWorkingHours(
       @path branchId: UUID,
-      @body body: DentalWorkingHours
-    ): ApiOkResponse<DentalWorkingHours>
+      @body body: UpdateWorkingHoursRequest
+    ): ApiOkResponse<DentalWorkingHoursResponse>
       | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;

@@ -271,6 +271,20 @@ jsonpath "$.workingHours.monday.enabled" == true
 jsonpath "$.workingHours.sunday.enabled" == false
 
 
+# G1: read the saved hours back — the GET must reflect the enforced
+# {enabled,open,close} envelope shape the scheduler reads (closes the split-brain
+# at the contract layer).
+GET {{api}}/dental/branches/{{branch_id}}/working-hours
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.branchId" == "{{branch_id}}"
+jsonpath "$.workingHours.monday.enabled" == true
+jsonpath "$.workingHours.monday.open" == "08:00"
+jsonpath "$.workingHours.monday.close" == "17:00"
+jsonpath "$.workingHours.sunday.enabled" == false
+
+
 # ============================================================
 # CONSENT TEMPLATES
 # ============================================================

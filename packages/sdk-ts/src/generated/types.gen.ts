@@ -4145,21 +4145,43 @@ export type DentalOrgModuleDentalWorkingHours = {
 };
 
 /**
- * Working hours for a single day
+ * Working hours for a single day (canonical enforced shape — G1-shape)
  */
 export type DentalOrgModuleDentalWorkingHoursDay = {
     /**
-     * Opening time (HH:mm)
-     */
-    open: string;
-    /**
-     * Closing time (HH:mm)
-     */
-    close: string;
-    /**
      * Whether the branch is open on this day
      */
-    isOpen: boolean;
+    enabled: boolean;
+    /**
+     * Opening time (HH:mm) — omitted/ignored when not enabled
+     */
+    open?: string;
+    /**
+     * Closing time (HH:mm) — omitted/ignored when not enabled
+     */
+    close?: string;
+};
+
+/**
+ * GET/PUT working-hours response envelope (matches the handler).
+ */
+export type DentalOrgModuleDentalWorkingHoursResponse = {
+    /**
+     * Branch ID
+     */
+    branchId: string;
+    /**
+     * Weekly working hours in the enforced {enabled,open,close} shape
+     */
+    workingHours: {
+        monday?: DentalOrgModuleDentalWorkingHoursDay;
+        tuesday?: DentalOrgModuleDentalWorkingHoursDay;
+        wednesday?: DentalOrgModuleDentalWorkingHoursDay;
+        thursday?: DentalOrgModuleDentalWorkingHoursDay;
+        friday?: DentalOrgModuleDentalWorkingHoursDay;
+        saturday?: DentalOrgModuleDentalWorkingHoursDay;
+        sunday?: DentalOrgModuleDentalWorkingHoursDay;
+    } | null;
 };
 
 /**
@@ -4590,6 +4612,13 @@ export type DentalOrgModuleUpdatePermissionsRequest = {
      * Override decisions to upsert
      */
     overrides: Array<DentalOrgModulePermissionOverrideInput>;
+};
+
+/**
+ * PUT working-hours request body (wrapped in `workingHours`).
+ */
+export type DentalOrgModuleUpdateWorkingHoursRequest = {
+    workingHours: DentalOrgModuleDentalWorkingHours;
 };
 
 /**
@@ -66130,13 +66159,13 @@ export type GetWorkingHoursResponses = {
     /**
      * Success response with data
      */
-    200: DentalOrgModuleDentalWorkingHours;
+    200: DentalOrgModuleDentalWorkingHoursResponse;
 };
 
 export type GetWorkingHoursResponse = GetWorkingHoursResponses[keyof GetWorkingHoursResponses];
 
 export type UpdateWorkingHoursData = {
-    body: DentalOrgModuleDentalWorkingHours;
+    body: DentalOrgModuleUpdateWorkingHoursRequest;
     path: {
         branchId: Uuid;
     };
@@ -66165,7 +66194,7 @@ export type UpdateWorkingHoursResponses = {
     /**
      * Success response with data
      */
-    200: DentalOrgModuleDentalWorkingHours;
+    200: DentalOrgModuleDentalWorkingHoursResponse;
 };
 
 export type UpdateWorkingHoursResponse = UpdateWorkingHoursResponses[keyof UpdateWorkingHoursResponses];

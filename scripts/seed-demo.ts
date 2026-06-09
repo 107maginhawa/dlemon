@@ -31,6 +31,7 @@ async function req(
 const post  = (p: string, b: unknown, c: string) => req('POST',  p, b, c)
 const get   = (p: string, c: string)              => req('GET',   p, null, c)
 const patch = (p: string, b: unknown, c: string) => req('PATCH', p, b, c)
+const put   = (p: string, b: unknown, c: string) => req('PUT',   p, b, c)
 
 function must<T>(r: { ok: boolean; status: number; data: T }, label: string): T {
   if (!r.ok) throw new Error(`${label} → ${r.status}: ${JSON.stringify(r.data).slice(0, 300)}`)
@@ -546,6 +547,26 @@ async function seed() {
     branch = { id: onb.branchId, name: 'Main Clinic' }
     ownerMember = { id: onb.membershipId, displayName: 'Dr. Maria Reyes', role: 'dentist_owner' }
     log(`✓ Onboarded: ${org.name} / ${branch.name} (owner membership ${ownerMember.id})`)
+  }
+
+  // ── Working hours (G1) ───────────────────────────────────────────────────
+  // Populate the ENFORCED `dental_branch.working_hours` column in the canonical
+  // {enabled,open,close} shape so the scheduler actually gates booking against
+  // it (Mon–Fri 09:00–17:00, Sat 09:00–13:00, Sun closed). Without this the
+  // column is null and every booking time is treated as in-hours.
+  if (branch?.id) {
+    must(await put(`/dental/branches/${branch.id}/working-hours`, {
+      workingHours: {
+        monday:    { enabled: true,  open: '09:00', close: '17:00' },
+        tuesday:   { enabled: true,  open: '09:00', close: '17:00' },
+        wednesday: { enabled: true,  open: '09:00', close: '17:00' },
+        thursday:  { enabled: true,  open: '09:00', close: '17:00' },
+        friday:    { enabled: true,  open: '09:00', close: '17:00' },
+        saturday:  { enabled: true,  open: '09:00', close: '13:00' },
+        sunday:    { enabled: false },
+      },
+    }, cookie), 'seed working hours')
+    log(`✓ Working hours set (Mon–Fri 09–17, Sat 09–13, Sun closed)`)
   }
 
   // ── 4. Staff ─────────────────────────────────────────────────────────────
