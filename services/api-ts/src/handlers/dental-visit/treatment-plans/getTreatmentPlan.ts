@@ -56,7 +56,7 @@ export async function getTreatmentPlan(ctx: BaseContext) {
   const currentVersion = latestVersion?.version ?? 0;
 
   if (visitIds.length === 0) {
-    return ctx.json({ patientId, treatments: [], totalEstimateCents: 0, toothCount: 0, version: currentVersion }, 200);
+    return ctx.json({ patientId, treatments: [], totalEstimateCents: 0, toothCount: 0, version: currentVersion, completedToothNumbers: [] }, 200);
   }
 
   // Fetch all pending (diagnosed/planned/declined) treatments
@@ -69,6 +69,27 @@ export async function getTreatmentPlan(ctx: BaseContext) {
         inArray(dentalTreatments.status, ['diagnosed', 'planned', 'declined'])
       )
     );
+
+  // CHART-XV: cumulative completed tooth numbers across ALL the patient's visits.
+  // The odontogram's Completed layer is a living document — performed/verified work
+  // shows on the chart regardless of which visit performed it (not per-visit). This
+  // is the single cross-visit source the FE feeds into the chart's 'completed' layer.
+  const completedRows = await db
+    .select({ toothNumber: dentalTreatments.toothNumber })
+    .from(dentalTreatments)
+    .where(
+      and(
+        inArray(dentalTreatments.visitId, visitIds),
+        inArray(dentalTreatments.status, ['performed', 'verified'])
+      )
+    );
+  const completedToothNumbers = [
+    ...new Set(
+      completedRows
+        .map((r) => r.toothNumber)
+        .filter((n): n is number => n != null),
+    ),
+  ].sort((a, b) => a - b);
 
   const totalEstimateCents = pendingTreatments.reduce((sum, t) => sum + t.priceCents, 0);
 
@@ -114,6 +135,7 @@ export async function getTreatmentPlan(ctx: BaseContext) {
     totalEstimateCents,
     treatmentCount: pendingTreatments.length,
     toothCount: Object.keys(byTooth).filter(k => k !== 'general').length,
+    completedToothNumbers,
     byTooth,
     treatments: pendingTreatments.map(t => ({
       id: t.id,

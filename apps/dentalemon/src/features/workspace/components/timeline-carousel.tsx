@@ -56,8 +56,12 @@ export interface TimelineCarouselProps {
   panelOpen?: boolean;
   /** Patient date of birth (ISO date string) — used to select dentition type */
   patientDateOfBirth?: string | null;
-  /** FDI numbers with a completed (performed) treatment on the current visit — drives the chart's 'completed' layer. */
+  /** CHART-XV cumulative cross-visit layer sets — applied to the ACTIVE card only
+   *  (the living document); historical cards stay per-visit snapshots. */
   completedToothNumbers?: Set<number>;
+  proposedToothNumbers?: Set<number>;
+  declinedToothNumbers?: Set<number>;
+  carriedOverToothNumbers?: Set<number>;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -71,6 +75,9 @@ function VisitChartCard({
   lockPending,
   dentitionType,
   completedToothNumbers,
+  proposedToothNumbers,
+  declinedToothNumbers,
+  carriedOverToothNumbers,
   onTeethLoaded,
 }: {
   visit: VisitCard;
@@ -82,6 +89,9 @@ function VisitChartCard({
   lockPending?: boolean;
   dentitionType: DentitionType;
   completedToothNumbers?: Set<number>;
+  proposedToothNumbers?: Set<number>;
+  declinedToothNumbers?: Set<number>;
+  carriedOverToothNumbers?: Set<number>;
   /** Called with the fetched tooth data when the active card loads (for compare diff). */
   onTeethLoaded?: (teeth: ToothData[]) => void;
 }) {
@@ -115,6 +125,14 @@ function VisitChartCard({
       className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-lemon-hover border-2 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_6px_rgba(0,0,0,0.04)]' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
     >
       {isActive && <div data-accent-bar className="h-1 rounded-full bg-lemon" />}
+      {/* CHART-XV: name the scope so the cumulative active chart isn't misread as
+          data loss vs the per-visit historical snapshots. */}
+      <span
+        data-testid="chart-scope-label"
+        className="text-[10px] font-medium text-muted-foreground px-0.5"
+      >
+        {isActive ? 'Current — all visits' : 'Visit snapshot'}
+      </span>
       <div className="overflow-x-auto flex-1 min-h-0">
         {isLoading ? (
           <div data-testid="visit-chart-loading" className="flex flex-col gap-2 p-2">
@@ -169,7 +187,12 @@ function VisitChartCard({
             toothSize={isActive ? 'md' : 'xs'}
             showLegend={false}
             showLayerToggle={isActive}
+            // CHART-XV: cumulative cross-visit layers apply only to the ACTIVE card
+            // (the living document); historical cards remain per-visit snapshots.
             completedToothNumbers={isActive ? completedToothNumbers : undefined}
+            proposedToothNumbers={isActive ? proposedToothNumbers : undefined}
+            declinedToothNumbers={isActive ? declinedToothNumbers : undefined}
+            carriedOverToothNumbers={isActive ? carriedOverToothNumbers : undefined}
             dentitionType={dentitionType}
           />
         )}
@@ -232,6 +255,9 @@ export function TimelineCarousel({
   panelOpen = false,
   patientDateOfBirth = null,
   completedToothNumbers,
+  proposedToothNumbers,
+  declinedToothNumbers,
+  carriedOverToothNumbers,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
@@ -347,6 +373,9 @@ export function TimelineCarousel({
                 lockPending={lockMutation.isPending}
                 dentitionType={dentitionType}
                 completedToothNumbers={completedToothNumbers}
+                proposedToothNumbers={proposedToothNumbers}
+                declinedToothNumbers={declinedToothNumbers}
+                carriedOverToothNumbers={carriedOverToothNumbers}
                 onTeethLoaded={isActive ? setActiveTeeth : undefined}
               />
             </SwiperSlide>

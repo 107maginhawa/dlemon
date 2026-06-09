@@ -159,6 +159,20 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(screen.getByText(/draft/i)).not.toBeNull();
     });
 
+    // CHART-XV: the active chart is cumulative (all visits); historical cards are
+    // per-visit snapshots. Label the scope so the difference isn't misread as data loss.
+    test('active card is labeled cumulative; historical cards are labeled snapshots', () => {
+      renderCarousel({
+          visits: THREE_VISITS,
+          patientId: 'test-patient',
+          onSelectVisit: () => {},
+          onNewVisit: () => {},
+        });
+      const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
+      expect(labels).toContain('Current — all visits');
+      expect(labels.filter((t) => t === 'Visit snapshot').length).toBe(THREE_VISITS.length - 1);
+    });
+
     test('renders a DentalChart stub inside each slide', async () => {
       renderCarousel({
           visits: THREE_VISITS,

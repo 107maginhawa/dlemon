@@ -36,6 +36,7 @@ import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
+import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
 import { toast } from 'sonner';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
@@ -255,12 +256,11 @@ function WorkspacePage() {
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
-  // Teeth with completed (performed/verified) treatments — drives the chart's 'completed' layer (CR-03).
-  const completedToothNumbers = new Set<number>(
-    treatments
-      .filter((t) => (t.status === 'performed' || t.status === 'verified') && t.toothNumber != null)
-      .map((t) => t.toothNumber as number),
-  );
+  // CHART-XV: the chart is a cumulative living document. Its Completed / Proposed /
+  // Declined layers come from the patient's treatments across ALL visits (the
+  // treatment-plan aggregate), not the current visit alone — so prior-visit
+  // performed work shows done, and prior-visit pending work shows carried over.
+  const chartLayers = deriveChartLayerSets(treatmentPlan);
 
   const currentVisitDate = currentVisit
     ? new Date(currentVisit.createdAt).toLocaleDateString('en-PH', {
@@ -401,7 +401,10 @@ function WorkspacePage() {
             onSelectTooth={selectTooth}
             panelOpen={false}
             patientDateOfBirth={patientProfile?.dateOfBirth}
-            completedToothNumbers={completedToothNumbers}
+            completedToothNumbers={chartLayers.completed}
+            proposedToothNumbers={chartLayers.proposed}
+            declinedToothNumbers={chartLayers.declined}
+            carriedOverToothNumbers={chartLayers.carriedOver}
           />
         </div>
 

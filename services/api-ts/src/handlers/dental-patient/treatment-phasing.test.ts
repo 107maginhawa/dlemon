@@ -145,3 +145,57 @@ describe('P1-18 — treatment phasing / sequencing', () => {
     expect(unphased.phase).toBeNull();
   });
 });
+
+// ── CHART-XV: cumulative cross-visit completed tooth numbers ──────────────────
+// The chart is a living document: performed/verified work must show on the
+// patient's chart cumulatively, regardless of which visit performed it. The
+// treatment-plan aggregate (which already iterates ALL the patient's visits) is
+// extended with `completedToothNumbers` so the odontogram's Completed layer is
+// cumulative-for-patient rather than scoped to the current visit.
+const SECOND_VISIT_ID = 'f0000000-0000-1000-8000-0000000000c1';
+
+async function seedCompletedAcrossVisits() {
+  const { dentalVisits } = await import('@/handlers/dental-visit/repos/visit.schema');
+  const { dentalTreatments } = await import('@/handlers/dental-visit/repos/treatment.schema');
+  // A SECOND visit for the same patient — proves cumulation spans visits.
+  await db.insert(dentalVisits).values({
+    id: SECOND_VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID,
+    status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  } as any).onConflictDoNothing();
+  await db.insert(dentalTreatments).values([
+    // visit 1: performed restoration on tooth 26 → completed
+    { id: 'f5000000-0000-1000-8000-0000000000c1', visitId: VISIT_ID, patientId: PATIENT_ID, cdtCode: 'D2740',
+      description: 'Crown', status: 'performed', priceCents: 50000, toothNumber: 26,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    // visit 2: verified work on tooth 36 → completed (verified counts)
+    { id: 'f5000000-0000-1000-8000-0000000000c2', visitId: SECOND_VISIT_ID, patientId: PATIENT_ID, cdtCode: 'D2391',
+      description: 'Filling', status: 'verified', priceCents: 18000, toothNumber: 36,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    // visit 2: still-planned work on tooth 11 → proposed, NOT completed
+    { id: 'f5000000-0000-1000-8000-0000000000c3', visitId: SECOND_VISIT_ID, patientId: PATIENT_ID, cdtCode: 'D2150',
+      description: 'Planned filling', status: 'planned', priceCents: 12000, toothNumber: 11,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    // dismissed work on tooth 47 → excluded entirely
+    { id: 'f5000000-0000-1000-8000-0000000000c4', visitId: VISIT_ID, patientId: PATIENT_ID, cdtCode: 'D7140',
+      description: 'Abandoned extraction', status: 'dismissed', priceCents: 9000, toothNumber: 47,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    // performed but general (no tooth) → excluded from tooth-number set
+    { id: 'f5000000-0000-1000-8000-0000000000c5', visitId: VISIT_ID, patientId: PATIENT_ID, cdtCode: 'D0150',
+      description: 'Exam', status: 'performed', priceCents: 4000, toothNumber: null,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+  ] as any).onConflictDoNothing();
+}
+
+describe('CHART-XV — cumulative cross-visit completed tooth numbers', () => {
+  test('completedToothNumbers spans all visits; verified counts; pending/dismissed/null excluded', async () => {
+    await seedCompletedAcrossVisits();
+    const app = buildApp();
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plan?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    const completed = [...(body.completedToothNumbers as number[])].sort((a, b) => a - b);
+    expect(completed).toEqual([26, 36]); // performed(26) + verified(36), cumulative across 2 visits
+    expect(completed).not.toContain(11); // planned → proposed, not completed
+    expect(completed).not.toContain(47); // dismissed → excluded
+  });
+});

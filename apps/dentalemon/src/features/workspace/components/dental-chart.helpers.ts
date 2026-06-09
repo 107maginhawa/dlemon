@@ -98,18 +98,24 @@ export interface ToothData {
 }
 
 /**
- * Chart layers for baseline/proposed/completed separation (CR-03, CHART-BR-001/002/006).
+ * Chart layers for baseline/proposed/completed/declined separation
+ * (CR-03, CHART-BR-001/002/006, CHART-XV).
+ * - declined: a recommended treatment the patient refused — rendered as a
+ *   desaturated gray hatch (a stroke/pattern, not a 4th saturated fill).
  */
-export type ChartLayer = 'baseline' | 'proposed' | 'completed';
+export type ChartLayer = 'baseline' | 'proposed' | 'completed' | 'declined';
 
 /**
- * Default set of visible layers (P1-15): all three layers shown simultaneously.
- * This is the sensible starting state — clinicians see existing + planned + completed.
+ * Default set of visible layers (P1-15): all layers shown simultaneously.
+ * This is the sensible starting state — clinicians see existing + planned +
+ * completed + declined. The Declined toggle chip is only surfaced when declined
+ * teeth actually exist, but declined teeth are visible by default when present.
  */
 export const DEFAULT_VISIBLE_LAYERS: ReadonlySet<ChartLayer> = new Set<ChartLayer>([
   'baseline',
   'proposed',
   'completed',
+  'declined',
 ]);
 
 /**
@@ -125,27 +131,54 @@ export function isToothVisible(toothLayer: ChartLayer, visibleLayers: ReadonlySe
 }
 
 /**
- * Map a tooth's entryClassification to its chart layer.
- * - existing / existing_other → baseline (pre-existing conditions)
- * - treatment_plan / condition → proposed (planned/diagnosed work)
- * - undefined (legacy/unclassified) → baseline
+ * Map a tooth's entryClassification to its chart-NATIVE layer (the fallback when
+ * no cumulative treatment record drives the tooth).
+ * - condition → proposed (a finding charted without a treatment record yet)
+ * - existing / existing_other / treatment_plan / undefined → baseline
  *
- * NOTE: 'completed' is NOT derived from entryClassification — completion lives on
- * the treatment record (status 'performed'), so the chart determines it at render
- * time from its `completedToothNumbers` prop, not from this function.
+ * CHART-XV: `treatment_plan` is intentionally NOT proposed here. Whether a tooth
+ * is proposed/completed lives on the cumulative treatment record (status), which
+ * the chart resolves at render time from its proposed/completed tooth-number
+ * props. Deriving "proposed" from the frozen chart classification resurrected
+ * stale red after a treatment was dismissed (two sources of truth disagreeing).
+ * Only `condition` remains chart-native, since a finding can legitimately exist
+ * before any treatment is recorded.
+ *
+ * NOTE: 'completed' and 'declined' are never derived from entryClassification —
+ * they come from treatment status via the chart's tooth-number props.
  */
 export function getToothLayer(
   entryClassification?: ChartEntryClassification,
-): Exclude<ChartLayer, 'completed'> {
+): Exclude<ChartLayer, 'completed' | 'declined'> {
   switch (entryClassification) {
-    case 'treatment_plan':
     case 'condition':
       return 'proposed';
     case 'existing':
     case 'existing_other':
+    case 'treatment_plan':
     default:
       return 'baseline';
   }
+}
+
+/**
+ * Resolve a tooth's effective chart layer from CUMULATIVE treatment status
+ * (cross-visit sets fed by the patient treatment-plan aggregate), falling back to
+ * the tooth's chart-native classification when no treatment record drives it.
+ *
+ * Precedence (CHART-XV): completed > proposed > declined > entryClassification.
+ * A tooth that has been treated is shown done even if a stale planned/declined
+ * item still references it; a fresh proposal supersedes a prior declination.
+ */
+export function resolveToothLayer(
+  toothNumber: number,
+  entryClassification: ChartEntryClassification | undefined,
+  sets?: { completed?: ReadonlySet<number>; proposed?: ReadonlySet<number>; declined?: ReadonlySet<number> },
+): ChartLayer {
+  if (sets?.completed?.has(toothNumber)) return 'completed';
+  if (sets?.proposed?.has(toothNumber)) return 'proposed';
+  if (sets?.declined?.has(toothNumber)) return 'declined';
+  return getToothLayer(entryClassification);
 }
 
 /**

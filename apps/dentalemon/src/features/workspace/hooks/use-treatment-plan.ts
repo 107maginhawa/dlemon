@@ -66,6 +66,9 @@ export interface TreatmentPlanData {
   toothCount: number;
   byTooth: Record<string | number, TreatmentPlanItem[]>;
   treatments: TreatmentPlanItem[];
+  /** CHART-XV: FDI tooth numbers with a performed/verified treatment across all
+   *  visits — drives the chart's cumulative Completed layer (living document). */
+  completedToothNumbers?: number[];
 }
 
 interface UseTreatmentPlanOptions {

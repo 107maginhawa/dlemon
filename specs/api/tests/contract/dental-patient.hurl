@@ -356,9 +356,12 @@ HTTP 401
 
 
 # G2.5-S6 — get treatment plan: a new patient has an empty v0 plan (branchId required)
+# CHART-XV: response carries cumulative completedToothNumbers for the chart's Completed layer.
 GET {{api}}/dental/patients/{{patient_id}}/treatment-plan?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+[Asserts]
+jsonpath "$.completedToothNumbers" isCollection
 
 
 # G2.5-S6 — accept the treatment plan → creates version 1 (branchId required)

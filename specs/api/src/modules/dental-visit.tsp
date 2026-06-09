@@ -376,6 +376,11 @@ model TreatmentPlanResponse {
   visits: string;
   treatments: string;
   acceptedPlanVersionId?: UUID;
+
+  /** CHART-XV: FDI tooth numbers with a performed/verified treatment across ALL
+   *  the patient's visits. Drives the odontogram's cumulative Completed layer
+   *  (living document) rather than a per-visit completed view. */
+  completedToothNumbers?: int32[];
 }
 
 model TreatmentPlanVersion {

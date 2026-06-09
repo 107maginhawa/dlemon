@@ -18916,7 +18916,8 @@ export const TreatmentPlanResponseSchema = z.object({
   patientId: UUIDSchema,
   visits: z.string(),
   treatments: z.string(),
-  acceptedPlanVersionId: UUIDSchema.optional()
+  acceptedPlanVersionId: UUIDSchema.optional(),
+  completedToothNumbers: z.array(z.number().int()).optional()
 });
 
 export const TreatmentPlanVersionSchema = z.object({
