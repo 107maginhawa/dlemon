@@ -27,7 +27,7 @@ interface WorkspaceTopBarProps {
   onNotes: () => void;
   onTreatmentPlan: () => void;
   onCompleteVisit: () => void;
-  visitStatus?: 'draft' | 'active' | 'completed' | 'locked';
+  visitStatus?: 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
 }
 
 function IconButton({

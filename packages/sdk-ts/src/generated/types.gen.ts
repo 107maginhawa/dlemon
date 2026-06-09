@@ -8004,7 +8004,17 @@ export type DentalVisit = {
     chiefComplaint?: string;
 };
 
-export type DentalVisitStatus = 'draft' | 'active' | 'completed' | 'locked';
+/**
+ * Body to discard (abandon) an open visit. Reason required (5–500 chars); audited.
+ */
+export type DentalVisitModuleDiscardVisitRequest = {
+    /**
+     * Why the visit is being abandoned (e.g. 'patient left', 'created in error').
+     */
+    reason: string;
+};
+
+export type DentalVisitStatus = 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
 
 export type DentalVisitType = 'general' | 'hygiene';
 
@@ -72561,6 +72571,41 @@ export type SignConsentFormResponses = {
 };
 
 export type SignConsentFormResponse = SignConsentFormResponses[keyof SignConsentFormResponses];
+
+export type DiscardVisitData = {
+    body: DentalVisitModuleDiscardVisitRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/discard';
+};
+
+export type DiscardVisitErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type DiscardVisitError = DiscardVisitErrors[keyof DiscardVisitErrors];
+
+export type DiscardVisitResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalVisit;
+};
+
+export type DiscardVisitResponse = DiscardVisitResponses[keyof DiscardVisitResponses];
 
 export type ListLabOrdersData = {
     body?: never;

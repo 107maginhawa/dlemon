@@ -3431,7 +3431,7 @@ export const DentalTreatmentSchema = z.object({
 
 export const DentalTreatmentPhaseSchema = z.enum(["systemic", "disease_control", "re_evaluation", "definitive", "maintenance"]);
 
-export const DentalVisitStatusSchema = z.enum(["draft", "active", "completed", "locked"]);
+export const DentalVisitStatusSchema = z.enum(["draft", "active", "completed", "locked", "discarded"]);
 
 export const DentalVisitSchema = z.object({
   id: UUIDSchema,
@@ -3447,6 +3447,10 @@ export const DentalVisitSchema = z.object({
   completedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   lockedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   chiefComplaint: z.string().optional()
+});
+
+export const DentalVisitModuleDiscardVisitRequestSchema = z.object({
+  reason: z.string().min(5).max(500)
 });
 
 export const DentalVisitTypeSchema = z.enum(["general", "hygiene"]);
@@ -22045,6 +22049,16 @@ export const SignConsentFormBody = SignConsentFormRequestSchema;
 export type SignConsentFormBody = z.infer<typeof SignConsentFormBody>;
 
 export const SignConsentFormResponse = ConsentFormSchema;
+
+export const DiscardVisitParams = z.object({
+  visitId: UUIDSchema,
+});
+export type DiscardVisitParams = z.infer<typeof DiscardVisitParams>;
+
+export const DiscardVisitBody = DentalVisitModuleDiscardVisitRequestSchema;
+export type DiscardVisitBody = z.infer<typeof DiscardVisitBody>;
+
+export const DiscardVisitResponse = DentalVisitSchema;
 
 export const CreateLabOrderParams = z.object({
   visitId: UUIDSchema,

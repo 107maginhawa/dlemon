@@ -66,19 +66,40 @@ async function setupPatientWithActiveVisit(page: Page) {
 }
 
 test.describe('New Visit with an existing active visit', () => {
-  test('shows the actionable backend message, not the generic "try again"', async ({ page }) => {
+  test('disables New Visit (with a reason) instead of inviting a guaranteed-fail click', async ({ page }) => {
     const { patientId } = await setupPatientWithActiveVisit(page);
 
     await spaNavigate(page, `/${patientId}`);
-    await expect(page.getByTestId('new-visit-btn')).toBeVisible({ timeout: 15000 });
-    await page.getByTestId('new-visit-btn').click();
 
-    // The 409 ACTIVE_VISIT_EXISTS message must surface verbatim…
-    await expect(
-      page.getByText(/active visit already exists|complete or discard it first/i),
-    ).toBeVisible({ timeout: 10000 });
+    // The workspace makes the open visit obvious…
+    await expect(page.getByTestId('visit-in-progress-indicator')).toBeVisible({ timeout: 15000 });
 
-    // …and the misleading generic retry copy must NOT be shown.
-    await expect(page.getByText(/please try again/i)).toHaveCount(0);
+    // …and the New Visit affordance is DISABLED with a reason — not a clickable
+    // button that 409s.
+    const newVisit = page.getByTestId('new-visit-btn');
+    await expect(newVisit).toBeVisible();
+    await expect(newVisit).toBeDisabled();
+    await expect(page.getByTestId('new-visit-disabled-hint')).toContainText(/finish or discard the open visit/i);
+
+    // Forcing a click does nothing — no 409 error toast appears.
+    await newVisit.click({ force: true }).catch(() => {});
+    await expect(page.getByText(/active visit already exists|please try again/i)).toHaveCount(0);
+  });
+
+  test('owner can Discard the open visit, which re-enables New Visit (escape hatch)', async ({ page }) => {
+    const { patientId } = await setupPatientWithActiveVisit(page);
+    await spaNavigate(page, `/${patientId}`);
+
+    const discard = page.getByTestId('discard-visit-btn');
+    await expect(discard).toBeVisible({ timeout: 15000 });
+
+    // The discard prompts for a reason (window.prompt) — auto-accept with one.
+    page.once('dialog', (d) => d.accept('Patient left without being seen'));
+    await discard.click();
+
+    // After discard, the open visit is gone → the in-progress indicator clears and
+    // New Visit becomes enabled again.
+    await expect(page.getByTestId('visit-in-progress-indicator')).toHaveCount(0, { timeout: 15000 });
+    await expect(page.getByTestId('new-visit-btn')).toBeEnabled();
   });
 });

@@ -2095,6 +2095,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.signConsentForm as unknown as Handler
   );
 
+  // discardVisit
+  app.post('/dental/visits/:visitId/discard',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.DiscardVisitParams, validationErrorHandler),
+    zValidator('json', validators.DiscardVisitBody, validationErrorHandler),
+    registry.discardVisit as unknown as Handler
+  );
+
   // createLabOrder
   app.post('/dental/visits/:visitId/lab-orders',
     authMiddleware({ roles: ["user"] }),

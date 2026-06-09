@@ -50,7 +50,12 @@ export function useVisits({ patientId, branchId }: UseVisitsOptions) {
     // checks every field-access against the real backend type.
     select: (data): Visit[] => {
       const items = Array.isArray(data) ? data : (data?.data ?? []);
-      return items.map((v) => ({
+      // Discarded (abandoned/auto-discarded) visits are not part of the patient's
+      // clinical timeline — exclude them so they don't render as ghost cards or
+      // count toward the open-visit / New-Visit gating.
+      return items
+        .filter((v) => v.status !== 'discarded')
+        .map((v) => ({
         id: v.id,
         patientId: v.patientId,
         status: v.status,

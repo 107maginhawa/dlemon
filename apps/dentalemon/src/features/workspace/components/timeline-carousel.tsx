@@ -31,7 +31,7 @@ import { ChartCompareOverlay } from '@/features/workspace/components/chart-compa
 
 export interface VisitCard {
   id: string;
-  status: 'draft' | 'active' | 'completed' | 'locked';
+  status: 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
   createdAt: string;
   chiefComplaint?: string;
   activatedAt?: string;
@@ -44,6 +44,12 @@ export interface TimelineCarouselProps {
   currentVisitId?: string;
   onSelectVisit: (visitId: string) => void;
   onNewVisit: () => void;
+  /**
+   * When set, the New Visit affordance is DISABLED and shows this hint — the
+   * patient already has an open (active/draft) visit, so starting another is
+   * forbidden by the one-active-visit rule. Resume/continue the open visit instead.
+   */
+  newVisitDisabledHint?: string;
   /** Called when a tooth is selected on the active slide */
   onSelectTooth?: (toothNumber: number) => void;
   /** When true, narrows the carousel to make room for the slideout panel */
@@ -221,6 +227,7 @@ export function TimelineCarousel({
   currentVisitId,
   onSelectVisit,
   onNewVisit,
+  newVisitDisabledHint,
   onSelectTooth,
   panelOpen = false,
   patientDateOfBirth = null,
@@ -347,15 +354,27 @@ export function TimelineCarousel({
         })}
       </Swiper>
 
+      {/* One-active-visit rule: when the patient already has an open (active/draft)
+          visit, starting another is forbidden (409 ACTIVE_VISIT_EXISTS). Disable the
+          affordance with a reason instead of inviting a guaranteed-fail click —
+          the open visit is already auto-selected; resume it. */}
       <button
         type="button"
         data-testid="new-visit-btn"
         onClick={onNewVisit}
-        className="self-center rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 px-6 py-3 opacity-60 hover:opacity-100 transition-opacity"
+        disabled={!!newVisitDisabledHint}
+        aria-disabled={!!newVisitDisabledHint}
+        title={newVisitDisabledHint}
+        className="self-center rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 px-6 py-3 opacity-60 hover:opacity-100 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
         aria-label="Start new visit"
       >
         <span className="text-2xl text-muted-foreground leading-none">+</span>
         <span className="text-xs text-muted-foreground font-medium">New Visit</span>
+        {newVisitDisabledHint && (
+          <span data-testid="new-visit-disabled-hint" className="text-[10px] text-muted-foreground/80 max-w-[10rem] text-center leading-tight">
+            {newVisitDisabledHint}
+          </span>
+        )}
       </button>
     </div>
   );

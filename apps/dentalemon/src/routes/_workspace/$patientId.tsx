@@ -35,6 +35,8 @@ import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
+import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
+import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
 import { toast } from 'sonner';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
@@ -87,6 +89,7 @@ function WorkspacePage() {
 
   // prescriberMemberId for RxSheet (WBAR-02) — reactive selector
   const prescriberMemberId = useOrgContextStore(s => s.memberId) ?? '';
+  const orgRole = useOrgContextStore(s => s.role);
 
   // branchId for treatment plan (TXPL-01) + visits — reactive selector
   const branchId = useOrgContextStore(s => s.branchId);
@@ -109,6 +112,10 @@ function WorkspacePage() {
   }, [visits, currentVisitId]);
 
   const currentVisit = visits.find((v) => v.id === currentVisitId);
+  // The patient's open (active/draft) visit, computed from the FULL list — never
+  // the year-filtered list, or an active visit hidden by the filter would falsely
+  // re-enable "New Visit". Gates the New Visit affordance (one-active-visit rule).
+  const openVisit = findOpenVisit(visits);
   const isReadOnly =
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
   const carriedOverItems = treatmentPlan?.treatments.filter((t) => t.carriedOver) ?? [];
@@ -132,6 +139,7 @@ function WorkspacePage() {
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
+  const discardVisitMutation = useDiscardVisit(patientId);
   const sharePMDMutation = useSharePMD();
   const { saveToothData } = useSaveToothFlow({
     visitId: currentVisitId,
@@ -154,6 +162,13 @@ function WorkspacePage() {
   }
 
   function handleNewVisit() {
+    // Defense-in-depth: the one-active-visit rule means a new visit can't be created
+    // while one is open. The button is disabled in that state, but guard here too —
+    // resume the open visit instead of firing a guaranteed-fail POST.
+    if (openVisit) {
+      setCurrentVisitId(openVisit.id);
+      return;
+    }
     const { branchId: localBranchId, memberId: dentistMemberId, role } = useOrgContextStore.getState();
     if (!localBranchId || !dentistMemberId) {
       // CR-01: surface the failure instead of silently returning.
@@ -181,6 +196,21 @@ function WorkspacePage() {
         },
       },
     );
+  }
+
+  function handleDiscardVisit() {
+    if (!openVisit) return;
+    const reason = window.prompt(
+      'Discard this visit? Its pending treatments will be dismissed. This cannot be undone.\n\nReason (required, min 5 chars):',
+    );
+    if (reason == null) return; // cancelled
+    if (reason.trim().length < 5) {
+      toast.error('A reason of at least 5 characters is required to discard a visit.');
+      return;
+    }
+    discardVisitMutation.discard(openVisit.id, reason.trim()).then(() => {
+      setCurrentVisitId(null); // let the auto-select effect pick the next visit
+    }).catch(() => { /* error surfaced by the hook */ });
   }
 
   function handleSharePMD() {
@@ -341,12 +371,33 @@ function WorkspacePage() {
           data-testid="workspace-carousel-zone"
           className="shrink-0 border-b bg-background/80 backdrop-blur overflow-visible"
         >
+          {openVisit && (
+            <div
+              data-testid="visit-in-progress-indicator"
+              className="flex items-center gap-2 px-4 pt-2 text-xs font-medium text-green-700"
+            >
+              <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden />
+              Visit in progress — finish or discard it to start a new one.
+              {orgRole === 'dentist_owner' && (
+                <button
+                  type="button"
+                  data-testid="discard-visit-btn"
+                  onClick={handleDiscardVisit}
+                  disabled={discardVisitMutation.isPending}
+                  className="ml-2 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                >
+                  Discard visit
+                </button>
+              )}
+            </div>
+          )}
           <TimelineCarousel
             visits={filteredVisits}
             patientId={patientId}
             currentVisitId={currentVisitId ?? undefined}
             onSelectVisit={handleSelectVisit}
             onNewVisit={handleNewVisit}
+            newVisitDisabledHint={openVisit ? NEW_VISIT_DISABLED_HINT : undefined}
             onSelectTooth={selectTooth}
             panelOpen={false}
             patientDateOfBirth={patientProfile?.dateOfBirth}

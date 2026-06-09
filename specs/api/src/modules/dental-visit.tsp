@@ -29,6 +29,10 @@ enum DentalVisitStatus {
   active,
   completed,
   locked,
+  // Abandoned before completion (BR-005 auto-discard of empty visits, and the
+  // owner-initiated "Discard visit" escape hatch). The DB + FSM already produce
+  // this state — declaring it here makes the wire type honest.
+  discarded,
 }
 
 // E3: visit type scopes which roles may create/own/sign a visit.
@@ -428,6 +432,14 @@ model PatientConditionEntry {
 // ---------------------------------------------------------------------------
 
 namespace DentalVisitModule {
+  @doc("Body to discard (abandon) an open visit. Reason required (5–500 chars); audited.")
+  model DiscardVisitRequest {
+    @doc("Why the visit is being abandoned (e.g. 'patient left', 'created in error').")
+    @minLength(5)
+    @maxLength(500)
+    reason: string;
+  }
+
   interface DentalVisitManagement {
     @post
     @useAuth(bearerAuth)
@@ -470,6 +482,19 @@ namespace DentalVisitModule {
     updateVisit(
       @path visitId: UUID,
       @body body: UpdateDentalVisitRequest
+    ): ApiOkResponse<DentalVisit>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{visitId}/discard")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("discardVisit")
+    discardVisit(
+      @path visitId: UUID,
+      @body body: DiscardVisitRequest
     ): ApiOkResponse<DentalVisit>
       | ApiBadRequestResponse
       | ApiNotFoundResponse
