@@ -180,6 +180,53 @@ jsonpath "$.cdtCode" == "D2391"
 jsonpath "$.priceCents" == 15000
 
 
+# 8a. Fee schedule DRIVES treatment pricing (dental-org G2 / AC-ORG-002).
+# Set a per-branch override for a catalog CDT via the dedicated endpoint, then
+# create a treatment with NO priceCents — the handler must default it from the
+# fee schedule. D1110 is in the global procedure catalog (seeded on boot).
+PATCH {{api}}/dental/fee-schedule/D1110
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "branchId": "{{branch_id}}",
+  "priceCents": 33300
+}
+HTTP 200
+[Asserts]
+jsonpath "$.data.cdtCode" == "D1110"
+jsonpath "$.data.priceCents" == 33300
+
+# 8b. Create a treatment WITHOUT priceCents → defaults to the configured fee.
+POST {{api}}/dental/visits/{{visit_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "cdtCode": "D1110",
+  "description": "Adult prophylaxis"
+}
+HTTP 201
+[Captures]
+fee_default_treatment_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.cdtCode" == "D1110"
+jsonpath "$.priceCents" == 33300
+
+# 8c. Dismiss the fee-default treatment so it does not block visit completion
+# below (this scenario only exists to prove fee-driven pricing).
+PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{fee_default_treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "dismissed",
+  "dismissReason": "fee-default contract probe"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "dismissed"
+
+
 # 9. List treatments for visit
 GET {{api}}/dental/visits/{{visit_id}}/treatments
 Cookie: better-auth.session_token={{session_token}}

@@ -26,6 +26,7 @@ import { registerBookingJobs } from '@/handlers/booking/jobs';
 import { registerRetentionJobs } from '@/handlers/retention/jobs';
 import { registerDentalSchedulingJobs } from '@/handlers/dental-scheduling/jobs/holdCleanup';
 import { registerDentalPatientJobs } from '@/handlers/dental-patient/jobs';
+import { seedProcedureCatalog } from '@/handlers/dental-visit/repos/seed-procedure-catalog';
 
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
@@ -256,6 +257,12 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
     logger.debug('Running database migrations...');
     await runMigrations(database);
     logger.debug('Database migrations completed successfully');
+
+    // dental-org G2: seed the global CDT procedure-code catalog (reference data
+    // the fee schedule reads). Idempotent — never clobbers operator edits.
+    logger.debug('Seeding CDT procedure-code catalog...');
+    await seedProcedureCatalog(database);
+    logger.debug('CDT procedure-code catalog seeded');
   }
 
   // Initialize email templates

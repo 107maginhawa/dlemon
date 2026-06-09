@@ -236,7 +236,12 @@ model CreateDentalTreatmentRequest {
   cdtCode: string;
   description: string;
   conditionCode?: string;
-  priceCents: int32;
+  /**
+   * Price in cents. Optional: when omitted, the server defaults it from the
+   * branch fee schedule (per-branch override, else catalog default) — closes
+   * AC-ORG-002 / dental-org G2. An explicit value always wins.
+   */
+  priceCents?: int32;
   clinicalNotes?: string;
 
   /** P1-18: clinical sequencing phase */

@@ -38,6 +38,21 @@ export async function getActiveBranchIdsForPerson(
   return rows.map((r) => r.branchId);
 }
 
+/**
+ * dental-org G2 (decision §5): the per-branch CDT price overrides stored on
+ * `dental_branch.settings.feeSchedule`. Consumed by dental-visit treatment
+ * creation to default a treatment's price from the configured fee schedule.
+ * Returns an empty map when the branch is unknown or has no overrides.
+ */
+export async function getBranchFeeOverrides(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<Record<string, number>> {
+  const branch = await new BranchRepository(db).findOneById(branchId);
+  const settings = (branch?.settings ?? {}) as { feeSchedule?: Record<string, number> };
+  return settings.feeSchedule ?? {};
+}
+
 export async function getActiveMembershipId(
   db: DatabaseInstance,
   personId: string,

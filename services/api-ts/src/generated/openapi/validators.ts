@@ -888,7 +888,7 @@ export const CreateDentalTreatmentRequestSchema = z.object({
   cdtCode: z.string(),
   description: z.string(),
   conditionCode: z.string().optional(),
-  priceCents: z.number().int(),
+  priceCents: z.number().int().optional(),
   clinicalNotes: z.string().optional(),
   phase: z.enum(["systemic", "disease_control", "re_evaluation", "definitive", "maintenance"]).optional(),
   priority: z.number().int().gte(0).optional(),

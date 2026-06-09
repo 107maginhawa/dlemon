@@ -188,7 +188,12 @@ describe('createDentalTreatment handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('returns 400 when priceCents is missing', async () => {
+  // dental-org G2 (decision §5): priceCents is now OPTIONAL — when omitted the
+  // handler defaults it from the branch fee schedule (override ?? catalog default
+  // ?? 0). No catalog/override is seeded in this suite, so the default is 0.
+  // (Drive-pricing behaviour with a populated catalog is covered in
+  // dental-treatment.fee-default.test.ts.)
+  test('returns 201 and defaults priceCents from the fee schedule when omitted', async () => {
     const visit = await seedVisit();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
@@ -196,7 +201,9 @@ describe('createDentalTreatment handler', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patientId: PATIENT_ID, cdtCode: 'D0120', description: 'Eval' }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    const created = await res.json() as { priceCents: number };
+    expect(created.priceCents).toBe(0);
   });
 
   test('returns 400 when priceCents is not a number', async () => {
