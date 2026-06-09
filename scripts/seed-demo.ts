@@ -813,6 +813,9 @@ async function seed() {
   if (P[1]) {
     log(`\n── ${P[1].displayName}`)
     const p1 = P[1]
+    // Captured in V3, restored into the active V4 below so the living-document
+    // chart shows a carried-over (amber-ring) pending treatment.
+    let mariaDeferredId: string | null = null
 
     for (const [daysBack, tpl] of [
       [180, TEMPLATES.checkup(24)],
@@ -833,6 +836,16 @@ async function seed() {
     if (v3id) {
       await addChart(v3id, p1.id, v3tpl.teeth, cookie)
       await addTreatments(v3id, p1.id, v3tpl.treatments, cookie, 'mixed')
+      // A recommendation the patient deferred → dismissed, so it can be CARRIED
+      // OVER into the active V4 below (exercises the chart's carried-over marker).
+      const deferR = await post(`/dental/visits/${v3id}/treatments`, {
+        visitId: v3id, patientId: p1.id,
+        cdtCode: 'D2391', description: 'Resin composite #14 — early caries', priceCents: 400000, toothNumber: 14,
+      }, cookie)
+      if (deferR.ok) {
+        mariaDeferredId = deferR.data.id
+        await patch(`/dental/visits/${v3id}/treatments/${deferR.data.id}`, { status: 'dismissed', dismissReason: 'Patient deferred — revisit next appointment' }, cookie)
+      }
       await addNotes(v3id, v3tpl.soap, cookie)
       await completeVisit(v3id, p1.id, cookie)
       completedCount++
@@ -869,11 +882,28 @@ async function seed() {
           log(`  ⚠ Consent create (${consentR.status})`)
         }
       }
+      // Carry over the deferred composite #14 from V3 → planned + carriedOver, so
+      // the active "Current — all visits" chart shows the amber carried-over ring.
+      if (mariaDeferredId) {
+        const coR = await post(`/dental/visits/${v4id}/carry-over`, { restoreDismissedIds: [mariaDeferredId] }, cookie)
+        if (coR.ok) log(`  ↪ Carried over #14 (deferred composite) → carried-over marker`)
+        else log(`  ⚠ Carry-over (${coR.status})`)
+      }
+      // Recommend a crown #46 the patient DECLINES → declined chart layer (gray
+      // hatch) + the conditional "Declined" toggle chip.
+      const declR = await post(`/dental/visits/${v4id}/treatments`, {
+        visitId: v4id, patientId: p1.id,
+        cdtCode: 'D2740', description: 'Crown #46 — recommended (post-RCT protection)', priceCents: 1800000, toothNumber: 46,
+      }, cookie)
+      if (declR.ok) {
+        await patch(`/dental/visits/${v4id}/treatments/${declR.data.id}`, { status: 'declined', refusalReason: 'Patient declined — cost; will reconsider next year' }, cookie)
+        log(`  ✗ Declined crown #46 → declined layer`)
+      }
       await addNotes(v4id, { subjective: 'Follow-up sensitivity #24. Sensitive toothpaste not helping.', objective: 'Cervical erosion progressing. Cold test positive, 3s.' }, cookie)
       activeCount++
       log(`  ◎ Active visit: ${P[1].displayName}`)
     }
-    log(`  ✓ 3 completed + 1 active + partial invoice`)
+    log(`  ✓ 3 completed + 1 active + partial invoice + declined/carried-over chart layers`)
   }
 
   // ═══════════════════════════════════════════════════════════════════════
