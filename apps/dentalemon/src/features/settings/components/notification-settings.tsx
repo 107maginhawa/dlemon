@@ -43,15 +43,27 @@ function parseNotificationPreferences(raw: unknown): NotificationPreferences {
   };
 }
 
+// G2 (decision §8 = RELABEL): these are clinic-wide DEFAULT preferences. Whether
+// an individual patient is actually contacted is governed by that patient's
+// communication consent (PersonConsent) on their profile — NOT by these toggles
+// (no send path reads `notificationPreferences`). Copy is worded as defaults, and
+// the consent notice below makes the real gate explicit so the panel isn't
+// misleading.
 const NOTIFICATION_ITEMS: { key: keyof NotificationPreferences; label: string; description: string; group: 'triggers' | 'channels' }[] = [
-  { key: 'appointmentReminders', label: 'Appointment Reminders', description: 'Send reminders before scheduled appointments', group: 'triggers' },
-  { key: 'treatmentFollowUp', label: 'Treatment Follow-Up', description: 'Post-treatment care reminders', group: 'triggers' },
-  { key: 'paymentReceipts', label: 'Payment Receipts', description: 'Email receipts after payments', group: 'triggers' },
-  { key: 'marketingSms', label: 'Marketing SMS', description: 'Promotional messages to patients', group: 'triggers' },
-  { key: 'emailNotifications', label: 'Email Channel', description: 'Enable email as a notification channel', group: 'channels' },
-  { key: 'smsNotifications', label: 'SMS Channel', description: 'Enable SMS as a notification channel', group: 'channels' },
-  { key: 'pushNotifications', label: 'Push Notifications', description: 'Enable push notifications to patient devices', group: 'channels' },
+  { key: 'appointmentReminders', label: 'Appointment Reminders', description: 'Default: remind patients before scheduled appointments', group: 'triggers' },
+  { key: 'treatmentFollowUp', label: 'Treatment Follow-Up', description: 'Default: post-treatment care reminders', group: 'triggers' },
+  { key: 'paymentReceipts', label: 'Payment Receipts', description: 'Default: email receipts after payments', group: 'triggers' },
+  { key: 'marketingSms', label: 'Marketing SMS', description: 'Default: promotional messages to patients', group: 'triggers' },
+  { key: 'emailNotifications', label: 'Email Channel', description: 'Prefer email as a notification channel', group: 'channels' },
+  { key: 'smsNotifications', label: 'SMS Channel', description: 'Prefer SMS as a notification channel', group: 'channels' },
+  { key: 'pushNotifications', label: 'Push Notifications', description: 'Prefer push notifications to patient devices', group: 'channels' },
 ];
+
+// The single source of truth for whether a given patient is contacted.
+export const NOTIFICATION_CONSENT_NOTICE =
+  'These are clinic-wide defaults. Whether an individual patient is contacted is ' +
+  'governed by that patient’s communication consent on their profile — update a ' +
+  'patient’s consent there to stop contacting them.';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -90,7 +102,12 @@ export function NotificationSettings() {
 
   return (
     <div className="flex flex-col gap-6 max-w-xl">
-      <p className="text-sm text-muted-foreground">Configure which notifications your clinic sends and through which channels.</p>
+      <p className="text-sm text-muted-foreground">Set your clinic’s default notification preferences and channels.</p>
+
+      {/* G2: make the real gate explicit so the toggles aren't read as enforced switches. */}
+      <div className="rounded-lg bg-secondary/40 border border-border px-3 py-2 text-xs text-muted-foreground">
+        {NOTIFICATION_CONSENT_NOTICE}
+      </div>
 
       {saveError && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
@@ -105,7 +122,7 @@ export function NotificationSettings() {
 
       {/* Notification Types */}
       <section>
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Notification Types</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Default Notification Types</h3>
         <div className="rounded-xl border border-border overflow-hidden">
           {triggers.map((item, i) => (
             <div key={item.key} className={`flex items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-border' : ''}`}>
