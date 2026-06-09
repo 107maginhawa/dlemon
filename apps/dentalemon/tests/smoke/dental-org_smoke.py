@@ -23,6 +23,15 @@ the dentalemon dental-org module and verifies four critical points:
   CP4 (RBAC negative)— as STAFF (staff_full), direct-URL /staff and /settings
                        are DENIED (redirected to /patients, no admin UI). The
                        owner-only org-admin gate must hold.
+  CP5 (downstream     — as the OWNER, the /settings Fee Schedule panel sets a
+       effect, not a    run-unique per-CDT price (D1110), Saves, RELOADs, re-auths,
+       toast)           and asserts the price PERSISTS — proving the save reaches
+                        the CANONICAL fee store (dedicated PATCH /dental/fee-schedule/:cdt)
+                        that actually drives treatment/invoice pricing, NOT the
+                        inert settings.feeSchedule blob (dental-org G2 split-brain).
+                        Config-surface smokes must assert a DOWNSTREAM EFFECT
+                        (price persists / booking blocked / send suppressed),
+                        never a success toast alone.
 
 Re-runnable against any environment by overriding the flags.
 
@@ -214,6 +223,50 @@ def verify_dental_org(base_url: str, email: str, password: str,
         )
         step(3, f"staff rows(incl header)={member_rows} roles_shown={has_roles} "
                 f"owner_guard_label={owner_guard} ok={results['CP3_staff_list']}")
+
+        # ============================================================
+        # CP5 — Fee Schedule DOWNSTREAM EFFECT (config-surface honesty)
+        # ============================================================
+        # Set a run-unique per-CDT price, Save, RELOAD, re-auth, and assert it
+        # persists. A persisting value proves the save reached the CANONICAL fee
+        # store (dedicated PATCH /dental/fee-schedule/:cdt — the one that drives
+        # pricing), not the inert settings.feeSchedule blob (G2 split-brain).
+        fee_price = str(int(suffix) % 900 + 100)  # 100..999 pesos, run-unique
+        page.click("a[href='/settings']")
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name=re.compile(r"^Fee Schedule$", re.I)).first.click()
+        page.wait_for_timeout(800)
+        fee_input = page.get_by_label("Price for D1110")
+        fee_set = False
+        try:
+            fee_input.wait_for(timeout=8000)
+            fee_input.fill(fee_price)
+            page.screenshot(path=str(shots / "final_execution_5a_fee_set.png"))
+            page.get_by_role("button", name=re.compile(r"^Save$", re.I)).first.click()
+            page.wait_for_timeout(1500)
+            fee_set = True
+        except PWTimeout:
+            fee_set = False
+        page.screenshot(path=str(shots / "final_execution_5b_fee_saved.png"))
+
+        # Full RELOAD -> re-auth -> reopen Fee Schedule -> assert persisted price.
+        page.reload(wait_until="networkidle")
+        _reauth_if_gated(page, owner_profile, owner_pin)
+        page.click("a[href='/settings']")
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(1000)
+        page.get_by_role("button", name=re.compile(r"^Fee Schedule$", re.I)).first.click()
+        page.wait_for_timeout(900)
+        fee_reloaded = ""
+        try:
+            fee_reloaded = page.get_by_label("Price for D1110").input_value()
+        except PWTimeout:
+            fee_reloaded = ""
+        page.screenshot(path=str(shots / "final_execution_5c_fee_reloaded.png"))
+        results["CP5_fee_downstream_effect"] = fee_set and (fee_reloaded == fee_price)
+        step(5, f"set D1110 price='{fee_price}' set_ok={fee_set} after reload='{fee_reloaded}' "
+                f"persisted={results['CP5_fee_downstream_effect']}")
 
         # ============================================================
         # CP4 — RBAC NEGATIVE: staff_full denied /staff and /settings
