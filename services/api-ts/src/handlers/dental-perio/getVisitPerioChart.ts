@@ -53,5 +53,15 @@ export async function getVisitPerioChart(
   // P1-5: attach read-only per-site CAL (derived from PD + gingival margin).
   const readingsWithCal = readings.map((r) => ({ ...r, ...computeReadingCal(r) }));
 
-  return ctx.json({ ...chart, readings: readingsWithCal });
+  // P2-1: Drizzle returns `numeric` columns as strings; coerce the summary stats
+  // to numbers so the wire matches the declared float64 contract (mirrors
+  // listPerioChartsForPatient). null stays null.
+  const numOrNull = (v: unknown): number | null => (v == null ? null : Number(v));
+
+  return ctx.json({
+    ...chart,
+    summaryBopPercent: numOrNull(chart.summaryBopPercent),
+    summaryMeanDepth: numOrNull(chart.summaryMeanDepth),
+    readings: readingsWithCal,
+  });
 }

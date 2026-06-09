@@ -181,6 +181,9 @@ describe('getNotification', () => {
     expect(body.recipient).toBe(USER_A.id);
     expect(body.title).toBe('nf01 Hello');
     expect(body.type).toBe('billing');
+    // G4: `deliveredAt` was a phantom contract field (no column, never populated).
+    // It is removed from the contract/response; the `status` field carries delivery state.
+    expect('deliveredAt' in body).toBe(false);
   });
 });
 

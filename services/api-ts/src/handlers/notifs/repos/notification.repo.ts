@@ -490,7 +490,8 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
               await this.updateOneById(notification.id, {
                 status: 'delivered',
                 sentAt: new Date(),
-                deliveredAt: new Date(),
+                // G4: no `delivered_at` column exists — the `delivered` status above
+                // already represents delivery state. (Removed phantom `deliveredAt`.)
                 metadata: {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- `metadata` is not a schema column; accessing persisted JSONB workaround
                   ...(notification as any).metadata,

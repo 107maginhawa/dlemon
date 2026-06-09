@@ -1469,9 +1469,6 @@ const notificationSchemaResponseTransformer = (data: any) => {
     if (data.sentAt) {
         data.sentAt = new Date(data.sentAt);
     }
-    if (data.deliveredAt) {
-        data.deliveredAt = new Date(data.deliveredAt);
-    }
     if (data.readAt) {
         data.readAt = new Date(data.readAt);
     }

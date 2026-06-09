@@ -6,6 +6,7 @@ import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors'
 import { getPatientForClinical } from '@/handlers/patient/repos/patient-clinical.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { OcclusionScreeningRepository } from '../repos/occlusion-screening.repo';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -28,5 +29,8 @@ export async function listOcclusionScreenings(ctx: HandlerContext): Promise<Resp
   const repo = new OcclusionScreeningRepository(db, logger);
   const screenings = await repo.findByPatientId(patientId);
 
-  return ctx.json(screenings);
+  // G10: conform to the platform `{ data, pagination }` envelope (was a bare array).
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
+  const page = screenings.slice(offset, offset + limit);
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, screenings.length, limit, offset) });
 }

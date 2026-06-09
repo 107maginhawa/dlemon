@@ -3,7 +3,7 @@
 **Compiled:** 2026-06-09 · **Branch:** `chore/workflow-verification-sweep` @ `e49e411d`
 **Source:** 19 module gap-plans in `docs/audits/module-gap-plans/` (each: live `/webwright` drive and/or static FE↔BE wiring map + per-gap test plan + KG/contract-spine validation pass).
 **Wiring oracle:** `.understand-anything/contract-spine.json` (regenerated 2026-06-09 12:24, operationId → handler → SDK → FE-consumer; 357 ops / 135 FE-consumer files). The full node `knowledge-graph.json` is type-import-edge stale (baseline `1196799b`, 2026-06-06) — **not regenerated** (FULL_UPDATE class, ~12M tok / poor ROI; the type drift does not touch FE→BE wiring). Every wiring claim below was ground-truthed in the source plans, not read off the stale node graph.
-**Status:** consolidation. **Batch 1 IMPLEMENTED 2026-06-09** (see §8). **Batch 2 IMPLEMENTED 2026-06-09** (see §9). Remaining batches not started.
+**Status:** consolidation. **Batch 1 IMPLEMENTED 2026-06-09** (see §8). **Batch 2 IMPLEMENTED 2026-06-09** (see §9). **Batch 3 IMPLEMENTED 2026-06-09** (see §10). Remaining batches not started.
 
 > **Batch 1 — Core-workflow & security blockers — DONE (2026-06-09).** dental-patient **G1** (P0 sync-log cross-tenant leak), case-presentation **G1** (P0 broken accept), **G3** (approval-path convergence), **G2** (seed) all fixed + proven (backend unit + contract against the live server + live browser drive). A latent **FE blocker (case-presentation FE-1)** was discovered and fixed during live verification: the workspace route had no `<Outlet/>`, so the nested `/case-presentation/$presentationId` route never rendered — the patient-facing view was unreachable and accept could never complete from the UI. Full present→e-sign→accept now works end-to-end live. Details in §8.
 
@@ -120,7 +120,7 @@ The backends are consistently strong (RBAC via `assertBranchRole`, FSMs, audit, 
 | P2 | dental-scheduling | SCH-G6 | Online-booking confirmation lookup unwired (`getOnlineBooking`) | confirmation-code lookup | FE-unit lookup + not-found |
 | P2 | dental-visit | G2 | Accepted treatment-plan version not viewable (`getTreatmentPlanVersion` 0 consumers) `[NC][xmod dental-patient]` | read-only version viewer | FE-unit snapshot render; extend J09 |
 | P2 | dental-visit | G3 | Treatment templates built+seeded, zero FE | "Apply template" + manage screen, or defer+remove seed | FE-unit apply→treatments; E2E; read-path regression |
-| P2 | dental-perio | P2-1 | Completed-chart summary BOP%/Mean show "–" — wire-contract violation (numeric string vs float64; list path already coerces) | mirror `numOrNull` in `getPerioChart`/`getVisitPerioChart` | **P0-test** backend numeric on both GETs (RED); FE string-shape render; hurl single-GET |
+| ✅P2 | dental-perio | P2-1 | **FIXED 2026-06-09 (Batch 3).** `getPerioChart` + `getVisitPerioChart` now coerce `summaryBopPercent`/`summaryMeanDepth` with `numOrNull` (mirrors `listPerioChartsForPatient`), so completed-chart summaries return JSON floats matching the declared `float64` contract. | mirror `numOrNull` in `getPerioChart`/`getVisitPerioChart` | **DONE (backend + contract):** `dental-perio-coverage.test.ts` (2 RED-before tests: both single-GETs `typeof === 'number'` for a completed chart); `dental-perio.hurl` §7b (single-GET-after-complete `isFloat` on both). FE string-shape render deferred (P1 regression guard; backend coercion is the single-source fix). |
 | P2 | dental-perio | P2-2 | Risk-factor inputs not persisted → Grade not explainable/correctable | persist risk factors (JSONB/columns) | backend risk-factor round-trip + grade linkage |
 | P2 | dental-imaging | IMG-P2-1 | Persisted superimposition unreachable (`SuperimpositionPanel` not mounted in prod overlay) | mount panel + wire persist/list | FE + contract persist/list |
 | P2 | dental-imaging | IMG-P2-2 | CBCT chain only on test-harness route (`finalizeCbctStudy` never called in prod) `[NC]` | wire finalize into real upload; prod-overlay E2E | prod-overlay E2E + contract finalize |
@@ -134,19 +134,19 @@ The backends are consistently strong (RBAC via `assertBranchRole`, FSMs, audit, 
 | P2 | dental-pmd | P2-8 | "Share PMD" delivers only checksum text; silent no-op on desktop | real file/SHL export + honest no-op | FE share artifact |
 | P2 | dental-pmd | P2-9 | No multi-PMD reader (dedup/conflict/trust-tier) | reader module (staged) | reader tests |
 | P2 | dental-portal | — | No E2E journey; contract has no 200/own-data; overdue trusts `status` `[NC]` | E2E + contract 200 + overdue-by-dueDate pin | (listed) |
-| P2 | dental-erasure | ER-P2-1 | List-response bare-array vs contract `{data:[]}`; hurl asserts wrong shape | flip hurl to `$.data[0]` (RED) → `{data:rows}` | contract shape |
+| ✅P2 | dental-erasure | ER-P2-1 | **FIXED 2026-06-09 (Batch 3).** `listErasureRequestsHandler` now returns `{ data: rows }` (was a bare array), conforming to the already-declared `ErasureRequestList = { data }` contract. No spec change needed (impl was violating the spec). | flip hurl to `$.data[0]` (RED) → `{data:rows}` | **DONE:** `dental-erasure.hurl` all 5 list scenarios flipped `$`/`$[0]` → `$.data`/`$.data[0]` (RED-before); `erasure-routes.test.ts` asserts `body.data` envelope. ER-P3-1 role-annotation drift left out of scope (independent P3, not required to complete ER-P2-1). |
 | P2 | dental-erasure | ER-P2-2 | No tenant-isolation tests | RED-first cross-tenant tests | backend + hurl |
 | P2 | dental-legalhold | — | RBAC contract drift (tsp `user` vs handler `admin`); list unbounded/un-enveloped | tsp→`admin` + regen; pagination; filter tests | spec-vs-handler role guard; filter narrows |
 | P2 | retention | G3 | clinical/visit/prescription retention declared but unenforceable (no target) `[NC]` | per-domain `*-retention.facade` + register | per-target eligibility + legal-hold exclusion |
 | P2 | retention | G4 | No E2E of live (enforcement-ON) cron→engine→facade→DB chain | `dryRun:false` real-registry integration | assert `deletedAt` set + held row untouched |
 | P2 | emr-consultation | G4 | `getConsultation` adversarial RBAC untested | cross-provider/patient read 403 tests | 2 RBAC tests |
 | P2 | emr-consultation | G5 | Carrying cost of unreachable tested code | tied to G1 decision | — |
-| P2 | external-records-import | G3 | Naive CSV parser (`split(',')`) corrupts quoted/embedded-comma fields | RFC-4180 parse | quoted-comma round-trip (RED) |
+| ✅P2 | external-records-import | G3 | **FIXED 2026-06-09 (Batch 3).** `parseCSV` in `importPatients.ts` replaced with an RFC-4180-aware char-scanning tokenizer (quoted fields, escaped `""`, embedded commas/newlines). | RFC-4180 parse | **DONE:** `dental-patient.bulk-import.test.ts` — RED-before test imports `"dela Cruz, Jr."` + `"O""Brien, Sr."`; before fix the column-shift made branchId an invalid UUID → 500; after fix both lastNames round-trip intact (201). |
 | P2 | external-records-import | G4 | `ui-prototype` stale namespace (`/api/dental-emr/imports`) | reconcile to `/dental/emr-import` | doc-only |
 | P2 | external-records-import | G5 | Module identity fragmented; tracker "partial FE" misleads | document 3-artifact boundary; fix FE tag | doc-only |
 | P2 | external-records-import | G6 | No FE/E2E/contract-walker for bulk import; `{success,...}` envelope un-asserted | add on G1 build | contract walker |
 | P2 | notifs | G3 | Push no opt-in UX (`requestNotificationPermission`/click handler never called) | wire prompt + click deep-link | FE prompt + handler |
-| P2 | notifs | G4 | Contract drift `deliveredAt` (declared, no column/response) | add column+populate or drop from tsp | contract assertion |
+| ✅P2 | notifs | G4 | **FIXED 2026-06-09 (Batch 3) — DROPPED from TypeSpec** (smaller safe change). The `notification` table (snapshot 0091) has no `delivered_at` column, `NotificationResponse` never returned it, and no delivery path produces a delivery timestamp — the `delivered` *status* already represents delivery state. Removed `deliveredAt` from `model Notification` (notifs.tsp) + regen; also removed the dead `deliveredAt: new Date()` from `notification.repo.ts` (push path, wrote to a non-existent column under `as any`). | add column+populate or drop from tsp | **DONE:** OpenAPI/SDK `Notification` no longer declares `deliveredAt` (verified 0; the remaining `deliveredAt` is the unrelated `LabOrder` FSM field); `notifs.test.ts` asserts `'deliveredAt' in body === false`. |
 | P2 | provider | G3/G4/G5/G6 | No FE; phantom RBAC roles; empty seed; handler test gaps | per chosen path (deprecate/productize) | per path |
 
 ### P3 — polish / deferred (do NOT fix unless required by a P0/P1)
@@ -155,7 +155,7 @@ The backends are consistently strong (RBAC via `assertBranchRole`, FSMs, audit, 
 |---|---|---|
 | dental-clinical | G8 | Medical-history review-history not surfaced (needs new endpoint) |
 | dental-clinical | G9 | Notes/Medical-History FE affordances not role-gated (backend is real gate) |
-| dental-clinical | G10 | occlusion/postop/inventory list bare-array vs `{data,pagination}` — **blocks G2/G6/G7 wiring; fix before them** |
+| dental-clinical | G10 | ✅ **FIXED 2026-06-09 (Batch 3).** Spec-first: the 4 list ops (`listOcclusionScreenings`, `listPostopTemplates`, `listInventoryItems`, `listInventoryAdjustments`) changed in `dental-clinical-ops.tsp` from `ApiOkResponse<T[]>` → `ApiOkResponse<PaginatedResponse<T>>` (regen routes/validators/SDK), handlers now return `{data,pagination}` via `parsePagination`/`buildPaginationMeta`. Backend tests (occlusion/postop/inventory) updated to the envelope (RED→GREEN). Zero FE consumers, so no FE change. Unblocks G2/G6/G7 wiring. |
 | dental-patient | G13/G14/G15/G16/G17 | raw fetch in `patients.tsx`; list-shape inconsistency; base `patient/deletePatient` hard-delete `[NC]`; merge doc wording (corrected); J15 sync-badge assertions |
 | dental-billing | BIL-G7/G8/G9 | `getCollectionsSummary` unused; AR-aging seed no aged receivables; coverage-estimate trigger (folds into BIL-G2) |
 | dental-org | G8/G9/G10 | PIN self-recovery no UI; raw fetch (org-context, verify-pin ×2); audit-viewer param drift (EM-AUD-013) |
@@ -208,7 +208,7 @@ The backends are consistently strong (RBAC via `assertBranchRole`, FSMs, audit, 
 |---|---|---|---|---|
 | **1 — Core-workflow & security blockers (unblocked)** | dental-patient, case-presentation | dental-patient G1 (P0); case-presentation G1 (P0)+G3+G2 | The two P0s + case-presentation's tightly-coupled trio (G1 fix is unverifiable without the G2 seed; G3 stops the source-of-truth drift G1 would otherwise introduce). Confirmed bugs, no decision needed. | sync-log: unit scope + 2-org integration + branchless-400. case-pres: normal-flow present→accept 200 (RED), aggregate `phases>0`, accept-links-items + approval-record, seed-coherence, present→accept/decline E2E, **regression on treatment-completion % + invoice-from-plan** |
 | **✅2 — Compliance-trail reliability (foundational)** | dental-audit, dental-patient | dental-audit P1-C → P1-B → P2-A; dental-patient G5 | **DONE 2026-06-09** (see §9). Audit writes are now durable (fail-closed on money/clinical mutations) & complete (sensitive actions audited) with before/after+reason. Per-handler rollout, no global flip. | force-audit-failure→5xx (void/role-change); per-handler audit-row assertions (member role change, plan approve/accept, note sign/amend, claim-status); before/after+reason persisted+sanitized — **all GREEN** |
-| **3 — Wire-shape conformance (unblocks safe FE wiring)** | dental-clinical, dental-perio, dental-erasure, notifs, external-records-import | dental-clinical G10; dental-perio P2-1; dental-erasure ER-P2-1; notifs G4; external-records-import G3 | Normalize the contract shapes **before** any FE is wired onto these endpoints, so the FE isn't built against a shape that later changes (drift-bug prevention). Includes the CSV data-corruption fix and the perio numeric-coercion (both backend, RED-first). | bare-array→`{data,pagination}` (clinical occlusion/postop/inventory; erasure list); perio numeric on both single-GETs; deliveredAt column/contract or drop; RFC-4180 quoted-comma round-trip |
+| **✅3 — Wire-shape conformance (unblocks safe FE wiring)** | dental-clinical, dental-perio, dental-erasure, notifs, external-records-import | dental-clinical G10; dental-perio P2-1; dental-erasure ER-P2-1; notifs G4; external-records-import G3 | **DONE 2026-06-09** (see §10). All 5 contract shapes normalized RED-first before FE wiring. | bare-array→`{data,pagination}` (clinical occlusion/postop/inventory; erasure list); perio numeric on both single-GETs; deliveredAt dropped from tsp; RFC-4180 quoted-comma round-trip — **all GREEN** |
 | **4 — Split-brain config enforcement** | dental-org, dental-scheduling, notifs, retention | dental-org G1(+G1-shape)/SCH-G3; dental-org G2(+R1); dental-org G3 decision; notifs G2; retention G2 | The "saved-but-not-enforced" class. Working-hours is unblocked (direction clear) and proves the pattern; the rest need §6 decisions. Each fix must land with a **downstream-effect** test + the smoke upgrade (no toast-only). | shape-conformance unit (P0 gate); E2E out-of-hours booking rejected + walk-in bypass; fee→invoice default (if drive); per-handler 403-on-override (if enforce); disabled-pref-suppresses-send; retention last-run summary |
 | **5a — Dead-trigger + clinical-workspace wiring** | dental-clinical, dental-pmd | dental-clinical G1+G3+G4+G9; dental-pmd P1-3 | The dead-prop class (`onLab`/`onPmd`) + consent-history/Rx-list/amendment-list (read-mostly, backend done). Relabel the lab false-green E2E. | top-bar button RED→present; real-UI E2E; consent revoke+history+blast-radius; Rx list/dispense; role-gating |
 | **5b — Scheduling terminal-status & queue wiring** | dental-scheduling | SCH-G1+G10+SCH-G2+SCH-G4+SCH-G5+SCH-G6 | No cancel/no-show in the entire FE is a real ops gap; one actions-menu surface unlocks several. G10 transitions-test is a P0 step inside G1. | cancel reason-required + visit-preserved E2E; transitions reason policy (RED); no-show; enqueue branch-scoped; waitlist FIFO; confirmation lookup |
@@ -356,4 +356,32 @@ These product/technical decisions **gate** the listed fixes. Do not act on them 
 
 ---
 
-*Compiled from 19 module gap-plans. Batch 1 + Batch 2 implemented 2026-06-09; later batches not started.*
+## 10. Batch 3 Implementation Log (2026-06-09)
+
+**Scope:** dental-clinical **G10** (list-shape), dental-perio **P2-1** (numeric coercion), dental-erasure **ER-P2-1** (list envelope), notifs **G4** (`deliveredAt` drift), external-records-import **G3** (CSV parser). All backend / wire-shape, RED-first. No `[NEEDS CONFIRMATION]` items acted on. **Out of scope (untouched):** ER-P3-1 role-annotation drift (independent P3, not required to complete ER-P2-1); all other P2/P3.
+
+**Resolved decision (notifs G4 — add-column vs drop):** chose **drop `deliveredAt` from TypeSpec**. Verified the `notification` table (snapshot 0091) has no `delivered_at` column, `NotificationResponse` never returned it, and no delivery path produces a delivery timestamp (the `delivered` *status* already represents delivery). Dropping is one TypeSpec line + regen with zero migration / zero runtime logic / zero data backfill / zero FE consumers to break; adding a column would require inventing a "delivered" timestamp that no channel (OneSignal/SMTP fire-and-forget) actually confirms.
+
+**Files changed (code):**
+- `specs/api/src/modules/dental-clinical-ops.tsp` — 4 list ops `ApiOkResponse<T[]>` → `ApiOkResponse<PaginatedResponse<T>>` (occlusion / postop / inventory items + adjustments).
+- `specs/api/src/modules/notifs.tsp` — removed `deliveredAt` from `model Notification`.
+- `.../dental-clinical/occlusion/listOcclusionScreenings.ts`, `.../postop/listPostopTemplates.ts`, `.../inventory/listInventoryItems.ts`, `.../inventory/listInventoryAdjustments.ts` — `{ data, pagination }` via `parsePagination`/`buildPaginationMeta`.
+- `.../dental-perio/getPerioChart.ts`, `.../getVisitPerioChart.ts` — coerce `summaryBopPercent`/`summaryMeanDepth` with `numOrNull`.
+- `.../dental-erasure/listErasureRequestsHandler.ts` — return `{ data: rows }`.
+- `.../dental-patient/identity/importPatients.ts` — RFC-4180 `parseCsvRows` tokenizer replacing `line.split(',')`.
+- `.../notifs/repos/notification.repo.ts` — removed dead `deliveredAt: new Date()` (push path; wrote a non-existent column).
+- **Regenerated (not hand-edited):** `services/api-ts/src/generated/openapi/validators.ts`, `packages/sdk-ts/src/generated/{types,transformers}.gen.ts` (via `specs/api bun run build` → `api-ts bun run generate` → `sdk-ts bun run generate`). `specs/api/dist/openapi/*` is gitignored (CI rebuilds).
+
+**Tests added/updated (all RED-before / GREEN-after):**
+- `dental-perio-coverage.test.ts` (+2): both single-GETs return numeric `summaryBopPercent`/`summaryMeanDepth` for a completed chart (RED: `"string"`).
+- `dental-perio.hurl` §7b: single-GET-after-complete on chartId + visitId, `summaryBopPercent`/`summaryMeanDepth` `isFloat`.
+- `dental-erasure.hurl`: all 5 list scenarios flipped `$`/`$[0]` → `$.data`/`$.data[0]`; `erasure-routes.test.ts` asserts `body.data` envelope.
+- `dental-patient.bulk-import.test.ts` (+1): quoted embedded-comma + escaped-quote round-trip (RED: 500 from corrupted branchId).
+- `notifs.test.ts` (+1 assert): `getNotification` response has no `deliveredAt`.
+- `dental-clinical-occlusion/postop/inventory.test.ts`: list assertions (incl. `.find`/`.every`/empty-list) updated to `{ data, pagination }`.
+
+**Gate:** api-ts `bunx tsc` 0; root typecheck (FE + api-ts) 0; sdk-ts `tsc` 0; `check:boundaries` clean; lint 0 errors (pre-existing unused-import warnings only); affected suites green (perio-coverage 40/0, perio-history 6/0, erasure routes 7/0 + reg 5/0 + service 6/0, bulk-import 18/0, notifs 16/0 + markRead 3/0, clinical occlusion 6/0 / postop 6/0 / inventory 23/0); **full contract suite 46/46 files, 747 requests, 100%** (server restarted before run — fresh handlers). Backend tests via `scripts/test-with-db.ts` per-file clones.
+
+---
+
+*Compiled from 19 module gap-plans. Batches 1–3 implemented 2026-06-09; later batches not started.*

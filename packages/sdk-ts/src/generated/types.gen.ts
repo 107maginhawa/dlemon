@@ -58046,10 +58046,6 @@ export type Notification = {
      */
     sentAt?: Date;
     /**
-     * Delivered timestamp
-     */
-    deliveredAt?: Date;
-    /**
      * Read timestamp
      */
     readAt?: Date;
@@ -65513,7 +65509,49 @@ export type ListInventoryItemsResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModuleInventoryItem> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModuleInventoryItem>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListInventoryItemsResponse = ListInventoryItemsResponses[keyof ListInventoryItemsResponses];
@@ -65632,7 +65670,49 @@ export type ListInventoryAdjustmentsResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModuleInventoryAdjustment> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModuleInventoryAdjustment>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListInventoryAdjustmentsResponse = ListInventoryAdjustmentsResponses[keyof ListInventoryAdjustmentsResponses];
@@ -65713,7 +65793,49 @@ export type ListPostopTemplatesResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModulePostopTemplate> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModulePostopTemplate>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListPostopTemplatesResponse = ListPostopTemplatesResponses[keyof ListPostopTemplatesResponses];
@@ -69595,7 +69717,49 @@ export type ListOcclusionScreeningsResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModuleOcclusionScreening> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModuleOcclusionScreening>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListOcclusionScreeningsResponse = ListOcclusionScreeningsResponses[keyof ListOcclusionScreeningsResponses];

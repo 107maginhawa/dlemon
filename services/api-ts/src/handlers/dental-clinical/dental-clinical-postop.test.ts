@@ -150,9 +150,11 @@ describe('GET /dental/branches/:branchId/postop-templates (pop01-AC-002)', () =>
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThanOrEqual(1);
-    expect(body[0].branchId).toBe(BRANCH_ID);
+    // G10: { data, pagination } envelope (was a bare array).
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data[0].branchId).toBe(BRANCH_ID);
+    expect(body.pagination.totalCount).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -179,7 +181,7 @@ describe('GET with category filter (pop01-AC-003)', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.every((t: any) => t.category === 'extraction')).toBe(true);
+    expect(body.data.every((t: any) => t.category === 'extraction')).toBe(true);
   });
 });
 

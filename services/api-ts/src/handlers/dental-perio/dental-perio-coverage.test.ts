@@ -786,6 +786,19 @@ describe('getVisitPerioChart', () => {
     expect(body.readings.length).toBeGreaterThan(0);
   });
 
+  // P2-1: the completed chart's numeric summary must be returned as JSON numbers
+  // (Drizzle returns `numeric` columns as strings). The declared contract is
+  // float64; getVisitPerioChart must coerce like listPerioChartsForPatient does.
+  test('returns numeric summaryBopPercent/summaryMeanDepth for a completed chart (P2-1)', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${VISIT_ID}/perio-chart`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('completed');
+    expect(typeof body.summaryBopPercent).toBe('number');
+    expect(typeof body.summaryMeanDepth).toBe('number');
+  });
+
   test('returns 204 when no chart exists for the visit', async () => {
     const emptyVisitId = 'ee000000-0000-1000-8000-000000000051';
     // Insert a visit with no chart
@@ -824,6 +837,19 @@ describe('getPerioChart', () => {
     const body = await res.json() as any;
     expect(body.id).toBe(chartId);
     expect(Array.isArray(body.readings)).toBe(true);
+  });
+
+  // P2-1: completed-chart numeric summary must be returned as JSON numbers, not
+  // Drizzle numeric strings (mirror listPerioChartsForPatient's coercion).
+  test('returns numeric summaryBopPercent/summaryMeanDepth for a completed chart (P2-1)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('completed');
+    expect(typeof body.summaryBopPercent).toBe('number');
+    expect(typeof body.summaryMeanDepth).toBe('number');
   });
 
   // EF-PER-002: staff_scheduling must not read perio data via direct chart endpoint

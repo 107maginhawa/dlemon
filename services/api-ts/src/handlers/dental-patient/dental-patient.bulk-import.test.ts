@@ -210,6 +210,33 @@ describe('POST /dental/patients/import via CSV', () => {
     });
     expect(res.status).toBe(422);
   });
+
+  // G3: RFC-4180 — quoted fields with embedded commas / escaped quotes must round-trip.
+  // With naive line.split(','), the quoted lastName mis-splits and every later column
+  // shifts (branchId ends up holding the dateOfBirth value), so the import 403/422s
+  // entirely AND the demographic is silently corrupted.
+  test('G3: quoted CSV field with embedded comma round-trips intact', async () => {
+    const csv = [
+      'firstName,lastName,dateOfBirth,branchId',
+      `Maria,"dela Cruz, Jr.",1990-05-15,${BRANCH_ID}`,
+      `Juan,"O""Brien, Sr.",1985-03-20,${BRANCH_ID}`,
+    ].join('\n');
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/patients/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/csv' },
+      body: csv,
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.imported).toBe(2);
+    const byFirst = Object.fromEntries(body.patients.map((p: any) => [p.firstName, p]));
+    // Embedded comma preserved (not truncated to "dela Cruz" + a shifted column).
+    expect(byFirst['Maria'].lastName).toBe('dela Cruz, Jr.');
+    // Escaped double-quote ("") collapses to a single quote per RFC-4180.
+    expect(byFirst['Juan'].lastName).toBe('O"Brien, Sr.');
+  });
 });
 
 // ---------------------------------------------------------------------------

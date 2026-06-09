@@ -152,14 +152,14 @@ GET {{api}}/dental/erasure-requests?subjectPersonId={{subject_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
-jsonpath "$" isCollection
-jsonpath "$" count == 1
-jsonpath "$[0].id" == "{{erasure_id}}"
-jsonpath "$[0].status" == "requested"
-jsonpath "$[0].subjectPersonId" == "{{subject_person_id}}"
-jsonpath "$[0].tenantId" == "a1000000-0000-4000-8000-000000000001"
-jsonpath "$[0].requestedBy" == "{{admin_user_id}}"
-jsonpath "$[0].legalHoldBlocked" == false
+jsonpath "$.data" isCollection
+jsonpath "$.data" count == 1
+jsonpath "$.data[0].id" == "{{erasure_id}}"
+jsonpath "$.data[0].status" == "requested"
+jsonpath "$.data[0].subjectPersonId" == "{{subject_person_id}}"
+jsonpath "$.data[0].tenantId" == "a1000000-0000-4000-8000-000000000001"
+jsonpath "$.data[0].requestedBy" == "{{admin_user_id}}"
+jsonpath "$.data[0].legalHoldBlocked" == false
 
 
 # status=requested filter — proves filter discriminates (our request is included).
@@ -167,10 +167,10 @@ GET {{api}}/dental/erasure-requests?status=requested&subjectPersonId={{subject_p
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
-jsonpath "$" isCollection
-jsonpath "$" count == 1
-jsonpath "$[0].id" == "{{erasure_id}}"
-jsonpath "$[0].status" == "requested"
+jsonpath "$.data" isCollection
+jsonpath "$.data" count == 1
+jsonpath "$.data[0].id" == "{{erasure_id}}"
+jsonpath "$.data[0].status" == "requested"
 
 
 # status=anonymized filter — must be EMPTY (nothing approved yet for this subject).
@@ -178,8 +178,8 @@ GET {{api}}/dental/erasure-requests?status=anonymized&subjectPersonId={{subject_
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
-jsonpath "$" isCollection
-jsonpath "$" count == 0
+jsonpath "$.data" isCollection
+jsonpath "$.data" count == 0
 
 
 # ============================================================
@@ -246,8 +246,8 @@ GET {{api}}/dental/erasure-requests?subjectPersonId={{subject_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
-jsonpath "$" isCollection
-jsonpath "$" count == 2
+jsonpath "$.data" isCollection
+jsonpath "$.data" count == 2
 
 
 # status=rejected filter: only the rejected one shows.
@@ -255,11 +255,11 @@ GET {{api}}/dental/erasure-requests?status=rejected&subjectPersonId={{subject_pe
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
-jsonpath "$" isCollection
-jsonpath "$" count == 1
-jsonpath "$[0].id" == "{{erasure_id_reject}}"
-jsonpath "$[0].status" == "rejected"
-jsonpath "$[0].legalHoldBlocked" == false
+jsonpath "$.data" isCollection
+jsonpath "$.data" count == 1
+jsonpath "$.data[0].id" == "{{erasure_id_reject}}"
+jsonpath "$.data[0].status" == "rejected"
+jsonpath "$.data[0].legalHoldBlocked" == false
 
 
 # ============================================================

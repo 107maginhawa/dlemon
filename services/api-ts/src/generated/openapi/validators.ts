@@ -18005,7 +18005,6 @@ export const NotificationSchema = z.object({
   relatedEntity: z.string().uuid().optional(),
   status: z.enum(["queued", "sent", "delivered", "read", "failed", "expired", "unread"]),
   sentAt: z.string().datetime().transform((str) => new Date(str)).optional(),
-  deliveredAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   readAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   consentValidated: z.boolean()
@@ -20167,7 +20166,19 @@ export const ListInventoryItemsParams = z.object({
 });
 export type ListInventoryItemsParams = z.infer<typeof ListInventoryItemsParams>;
 
-export const ListInventoryItemsResponse = z.union([z.array(DentalClinicalOpsModuleInventoryItemSchema), ErrorResponseSchema]);
+export const ListInventoryItemsResponse = z.union([z.object({
+  data: z.array(DentalClinicalOpsModuleInventoryItemSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+}), ErrorResponseSchema]);
 
 export const UpdateInventoryItemParams = z.object({
   branchId: UUIDSchema,
@@ -20197,7 +20208,19 @@ export const ListInventoryAdjustmentsParams = z.object({
 });
 export type ListInventoryAdjustmentsParams = z.infer<typeof ListInventoryAdjustmentsParams>;
 
-export const ListInventoryAdjustmentsResponse = z.union([z.array(DentalClinicalOpsModuleInventoryAdjustmentSchema), ErrorResponseSchema]);
+export const ListInventoryAdjustmentsResponse = z.union([z.object({
+  data: z.array(DentalClinicalOpsModuleInventoryAdjustmentSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+}), ErrorResponseSchema]);
 
 export const CreatePostopTemplateParams = z.object({
   branchId: UUIDSchema,
@@ -20219,7 +20242,19 @@ export const ListPostopTemplatesQuery = z.object({
 });
 export type ListPostopTemplatesQuery = z.infer<typeof ListPostopTemplatesQuery>;
 
-export const ListPostopTemplatesResponse = z.union([z.array(DentalClinicalOpsModulePostopTemplateSchema), ErrorResponseSchema]);
+export const ListPostopTemplatesResponse = z.union([z.object({
+  data: z.array(DentalClinicalOpsModulePostopTemplateSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+}), ErrorResponseSchema]);
 
 export const UpdatePostopTemplateParams = z.object({
   branchId: UUIDSchema,
@@ -21284,7 +21319,19 @@ export const ListOcclusionScreeningsParams = z.object({
 });
 export type ListOcclusionScreeningsParams = z.infer<typeof ListOcclusionScreeningsParams>;
 
-export const ListOcclusionScreeningsResponse = z.union([z.array(DentalClinicalOpsModuleOcclusionScreeningSchema), ErrorResponseSchema]);
+export const ListOcclusionScreeningsResponse = z.union([z.object({
+  data: z.array(DentalClinicalOpsModuleOcclusionScreeningSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+}), ErrorResponseSchema]);
 
 export const CreateRecallParams = z.object({
   patientId: UUIDSchema,

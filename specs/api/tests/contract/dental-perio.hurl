@@ -540,6 +540,29 @@ jsonpath "$.code" == "CHART_COMPLETED"
 
 
 # ============================================================
+# 7b. P2-1: single-GET-after-complete must return the numeric summary as JSON
+# floats (Drizzle returns `numeric` as strings; getPerioChart / getVisitPerioChart
+# must coerce to match the declared float64 contract — mirrors the list path).
+# ============================================================
+
+GET {{api}}/dental/perio-charts/{{chart_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "completed"
+jsonpath "$.summaryBopPercent" isFloat
+jsonpath "$.summaryMeanDepth" isFloat
+
+GET {{api}}/dental/visits/{{visit_id}}/perio-chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "completed"
+jsonpath "$.summaryBopPercent" isFloat
+jsonpath "$.summaryMeanDepth" isFloat
+
+
+# ============================================================
 # 8. List for patient AFTER completion → completed chart appears
 # ============================================================
 

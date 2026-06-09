@@ -27,5 +27,7 @@ export async function listErasureRequestsHandler(
     tenantId: filters.tenantId,
   });
 
-  return ctx.json(rows, 200);
+  // ER-P2-1: conform to the declared contract `ErasureRequestList = { data: [] }`
+  // (was returning a bare array, which the SDK type contradicts).
+  return ctx.json({ data: rows }, 200);
 }

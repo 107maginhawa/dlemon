@@ -157,8 +157,11 @@ model Notification extends BaseEntity {
   @doc("Sent timestamp")
   sentAt?: utcDateTime;
 
-  @doc("Delivered timestamp")
-  deliveredAt?: utcDateTime;
+  // G4: `deliveredAt` removed — no `delivered_at` column exists on the
+  // `notification` table, no delivery path produces a delivery timestamp, and
+  // `NotificationResponse` never returned it (the `delivered` status enum already
+  // represents delivery state). A contract field that can never be populated is
+  // contract drift; dropping it is the smaller safe change (no migration).
 
   @doc("Read timestamp")
   readAt?: utcDateTime;
