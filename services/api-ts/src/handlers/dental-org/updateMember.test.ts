@@ -6,8 +6,8 @@
  *        404 not found, 200 success with changed fields.
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
-import { sql } from 'drizzle-orm';
+import { describe, test, expect, afterEach, spyOn } from 'bun:test';
+import { sql, eq, and } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
@@ -16,6 +16,8 @@ import { updateMember } from './updateMember';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
+import { AuditLogRepository } from '@/handlers/dental-audit/repos/audit-log.repo';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -87,6 +89,7 @@ async function seedAll() {
 
 describe('updateMember handler', () => {
   afterEach(async () => {
+    await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
     await db.execute(sql`TRUNCATE TABLE dental_membership, dental_branch, dental_organization CASCADE`);
   });
 
@@ -347,5 +350,95 @@ describe('updateMember handler', () => {
     const body = await res.json() as any;
     expect(body.displayName).toBe('Renamed Self');
     expect(body.role).toBe('staff_full');
+  });
+
+  // --------------------------------------------------------------------------
+  // dental-audit P1-B / P2-A: a member role change is a sensitive permission
+  // transition and MUST be written to the audit log with before/after role.
+  // --------------------------------------------------------------------------
+
+  test('[P1-B] role change writes a membership.role_change audit row with before/after role', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Staff Roley',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'staff_scheduling' }),
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.targetId, member.id), eq(dentalAuditLog.action, 'membership.role_change')));
+
+    expect(row).toBeTruthy();
+    expect(row!.actorId).toBe(PERSON_ID);
+    expect(row!.targetType).toBe('dental_membership');
+    expect((row!.beforeSnapshot as any)?.role).toBe('staff_full');
+    expect((row!.afterSnapshot as any)?.role).toBe('staff_scheduling');
+  });
+
+  test('[P1-B] a non-role update (displayName only) writes NO role_change audit row', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Staff Norole',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp(authedUser);
+
+    await app.request(`/dental/org/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Renamed Only' }),
+    });
+
+    const rows = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.targetId, member.id), eq(dentalAuditLog.action, 'membership.role_change')));
+    expect(rows.length).toBe(0);
+  });
+
+  // --------------------------------------------------------------------------
+  // dental-audit P1-C: a role change must NOT report success when its audit row
+  // cannot be persisted (fail-closed — no silent permission-change gap).
+  // --------------------------------------------------------------------------
+
+  test('[P1-C] role change returns 5xx when the audit sink is unavailable', async () => {
+    const membershipRepo = await seedAll();
+    const member = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Staff Failclosed',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    const app = buildTestApp(authedUser);
+
+    const spy = spyOn(AuditLogRepository.prototype, 'insert').mockImplementation(async () => {
+      throw new Error('audit sink unavailable');
+    });
+    try {
+      const res = await app.request(`/dental/org/members/${member.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'staff_scheduling' }),
+      });
+      expect(res.status).toBeGreaterThanOrEqual(500);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

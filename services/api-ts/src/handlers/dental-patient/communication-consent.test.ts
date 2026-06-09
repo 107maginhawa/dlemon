@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
@@ -17,6 +17,7 @@ import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { getPatientCommunicationConsent } from './consent/getPatientCommunicationConsent';
 import { updatePatientCommunicationConsent } from './consent/updatePatientCommunicationConsent';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -75,6 +76,7 @@ afterEach(async () => {
   await db.update(persons)
     .set({ consent: { registrationConsent: true, capturedAt: new Date().toISOString() } })
     .where(eq(persons.id, PERSON_ID));
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
 });
 
 function buildApp() {
@@ -152,5 +154,28 @@ describe('P1-28 — per-channel communication consent', () => {
     const app = buildApp();
     const res = await app.request(`/dental/patients/${MISSING_PATIENT_ID}/communication-consent`);
     expect(res.status).toBe(404);
+  });
+
+  // dental-patient G5 / dental-audit P1-B: a consent change is a data-governance
+  // sensitive mutation and must write an audit row (characterization — the handler
+  // already audits; this pins it so a future regression that drops the call fails).
+  test('[G5] a consent update writes a patient.communication_consent.updated audit row', async () => {
+    const app = buildApp();
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/communication-consent`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sms: true, marketing: false }),
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(
+        eq(dentalAuditLog.targetId, PATIENT_ID),
+        eq(dentalAuditLog.action, 'patient.communication_consent.updated'),
+      ));
+    expect(row).toBeTruthy();
+    expect(row!.actorId).toBe(TEST_USER.id);
+    expect(row!.targetType).toBe('dental_patient');
   });
 });

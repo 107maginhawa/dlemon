@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
@@ -33,6 +33,7 @@ import { createClaimDraft } from './insurance/createClaimDraft';
 import { listPatientClaims } from './insurance/listPatientClaims';
 import { getClaimReadiness } from './insurance/getClaimReadiness';
 import { updateClaimStatus } from './insurance/updateClaimStatus';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -151,6 +152,8 @@ async function truncateInsuranceData() {
   const { dentalInsuranceProfiles } = await import('./repos/insurance-profile.schema');
   await db.delete(dentalClaimDrafts).where(eq(dentalClaimDrafts.patientId, PATIENT_ID));
   await db.delete(dentalInsuranceProfiles).where(eq(dentalInsuranceProfiles.patientId, PATIENT_ID));
+  // dental_audit_log is append-only (DELETE blocked); TRUNCATE is the sanctioned reset.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
 }
 
 afterEach(async () => {
@@ -384,6 +387,43 @@ describe('PATCH /dental/patients/:patientId/claims/:claimId/status (AC-005, AC-0
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('ready');
+  });
+
+  // dental-patient G5 / dental-audit P1-B: a claim-status transition is a
+  // billing-sensitive change and must write an audit row (before/after status).
+  test('[G5] claim status transition writes a claim.status_changed audit row', async () => {
+    const app = buildTestApp(TEST_USER);
+
+    const profileRes = await app.request(`/dental/patients/${PATIENT_ID}/insurance-profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ insurerName: 'Maxicare', policyNumber: 'P-G5', subscriberName: 'Carlos Reyes' }),
+    });
+    const profile = await profileRes.json() as any;
+    const claimRes = await app.request(`/dental/patients/${PATIENT_ID}/claims`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ insuranceProfileId: profile.id, cdtCode: 'D0150', feeAmountCents: 50000 }),
+    });
+    const claim = await claimRes.json() as any;
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/claims/${claim.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ready' }),
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.targetId, claim.id), eq(dentalAuditLog.action, 'claim.status_changed')));
+
+    expect(row).toBeTruthy();
+    expect(row!.actorId).toBe(TEST_USER.id);
+    expect(row!.targetType).toBe('dental_claim_draft');
+    expect((row!.beforeSnapshot as any)?.status).toBe('draft');
+    expect((row!.afterSnapshot as any)?.status).toBe('ready');
   });
 
   test('AC-006: ready→draft transition returns 422 (invalid FSM)', async () => {

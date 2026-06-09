@@ -63,15 +63,20 @@ export async function applyDentalDiscount(
   const taxRate = Number(invoice.taxRate);
 
   const updated = await repo.applyDiscount(invoiceId, discountCents, taxRate, body.reason.trim(), session.userId);
+  // P1-C fail-closed + P2-A before/after + reason (AUD-BR-004); non-PHI money fields.
   const branchForAudit = await getBranchOrgId(db, invoice.branchId);
   await logAuditEvent(db, ctx.get('logger'), {
     personId: session.userId,
     tenantId: branchForAudit?.organizationId ?? invoice.branchId,
     branchId: invoice.branchId,
+    eventType: 'data-modification',
     action: 'discount.applied',
     resourceType: 'dental_invoice',
     resourceId: invoiceId,
+    reason: body.reason.trim(),
+    before: { discountCents: invoice.discountCents, totalCents: invoice.totalCents },
+    after: { discountCents, totalCents: updated?.totalCents ?? null },
     metadata: { percentageRate: body.percentageRate, reason: body.reason.trim() },
-  });
+  }, { failClosed: true });
   return ctx.json(updated);
 }

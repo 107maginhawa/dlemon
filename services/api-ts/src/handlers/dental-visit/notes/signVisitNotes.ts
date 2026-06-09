@@ -15,6 +15,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitNotesRepository } from '../repos/treatment.repo';
 import { VisitRepository } from '../repos/visit.repo';
+import { logAuditEvent } from '@/core/audit-logger';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { SignVisitNotesBody, SignVisitNotesParams } from '@/generated/openapi/validators';
 
@@ -49,7 +51,22 @@ export async function signVisitNotes(
 
   const { note: signed } = await repo.sign(note.id, user.id);
 
-  ctx.get('logger')?.info(
+  // dental-audit P1-B: signing freezes an immutable clinical record — write an
+  // audit row so an owner can see who signed/locked the note and when.
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    eventType: 'data-modification',
+    action: 'visit_note.signed',
+    resourceType: 'dental_visit_note',
+    resourceId: note.id,
+    metadata: { visitId },
+  });
+
+  logger?.info(
     { requestId: ctx.get('requestId'), action: 'visit_note_sign', noteId: note.id, visitId, by: user.id },
     'Visit note signed and locked',
   );

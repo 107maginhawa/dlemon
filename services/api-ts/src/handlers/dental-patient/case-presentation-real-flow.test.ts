@@ -17,7 +17,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
@@ -36,6 +36,7 @@ import { getCasePresentation } from './case-presentation/getCasePresentation';
 import { acceptCasePresentation } from './case-presentation/acceptCasePresentation';
 import { updateTreatmentPlan } from './treatment-plans/updateTreatmentPlan';
 import { TreatmentPlanRepository } from './repos/treatment-plan.repo';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -169,6 +170,7 @@ afterEach(async () => {
     await db.delete(dentalTreatmentPlanStatusHistory).where(eq(dentalTreatmentPlanStatusHistory.treatmentPlanId, p.id));
   }
   await db.delete(dentalTreatmentPlans).where(eq(dentalTreatmentPlans.patientId, PATIENT_ID));
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
 });
 
 describe('case-presentation G1: present links treatments → aggregate non-empty', () => {
@@ -226,5 +228,27 @@ describe('case-presentation G1+G3: accept succeeds, links items, records approva
     const approvals = await repo.findApprovalsByPlanId(plan.id);
     expect(approvals.length).toBe(1);
     expect(approvals[0]!.method).toBe('signature');
+  });
+
+  // dental-audit P1-B: accepting a presented case is a sensitive clinical approval
+  // and must be written to the audit log.
+  test('[P1-B] accept writes a case_presentation.accepted audit row', async () => {
+    const app = buildTestApp();
+    const plan = await seedDraftPlanWithUnlinkedTreatments();
+    await presentPlan(app, plan.id);
+    const presentation = await createPresentation(app, plan.id);
+    await app.request(`/dental/patients/${PATIENT_ID}/case-presentations/${presentation.id}/accept`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatureData: 'data:image/png;base64,iVBORw0KGgo=', signerName: 'Juan Dela Cruz' }),
+    });
+
+    const [row] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.targetId, presentation.id), eq(dentalAuditLog.action, 'case_presentation.accepted')));
+    expect(row).toBeTruthy();
+    expect(row!.actorId).toBe(TEST_USER.id);
+    expect(row!.targetType).toBe('dental_case_presentation');
+    expect((row!.afterSnapshot as any)?.planStatus).toBe('approved');
   });
 });

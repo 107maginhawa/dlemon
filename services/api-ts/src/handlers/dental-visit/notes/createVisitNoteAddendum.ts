@@ -14,6 +14,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitNotesRepository } from '../repos/treatment.repo';
 import { VisitRepository } from '../repos/visit.repo';
+import { logAuditEvent } from '@/core/audit-logger';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { CreateVisitNoteAddendumBody, CreateVisitNoteAddendumParams } from '@/generated/openapi/validators';
 
@@ -42,7 +44,23 @@ export async function createVisitNoteAddendum(
 
   const version = await repo.addendum(note.id, content, reason, user.id);
 
-  ctx.get('logger')?.info(
+  // dental-audit P1-B / P2-A: an addendum is an immutable clinical correction —
+  // write an audit row with the (sanitized) correction reason.
+  const logger = ctx.get('logger');
+  const branchForAudit = await getBranchOrgId(db, visit.branchId);
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? visit.branchId,
+    branchId: visit.branchId,
+    eventType: 'data-modification',
+    action: 'visit_note.amended',
+    resourceType: 'dental_visit_note',
+    resourceId: note.id,
+    reason,
+    metadata: { visitId, version: version.version },
+  });
+
+  logger?.info(
     { requestId: ctx.get('requestId'), action: 'visit_note_addendum', noteId: note.id, visitId, version: version.version, by: user.id },
     'Visit note addendum created',
   );

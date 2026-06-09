@@ -151,14 +151,19 @@ export async function updateDentalVisit(
     const updated = patch.chiefComplaint ? await repo.findOneById(visitId) ?? completedRaw : completedRaw;
     log?.info({ requestId, action: 'dental_visit_complete', visitId, by: user.id }, 'Visit completed');
     const branchForAudit = await getBranchOrgId(db, visit.branchId);
+    // P1-C fail-closed + P2-A before/after (AUD-BR-004): completing a clinical visit
+    // must never silently commit without an audit row.
     await logAuditEvent(db, log, {
       personId: user.id,
       tenantId: branchForAudit?.organizationId ?? visit.branchId,
       branchId: visit.branchId,
+      eventType: 'data-modification',
       action: 'visit.complete',
       resourceType: 'dental_visit',
       resourceId: visitId,
-    });
+      before: { status: visit.status },
+      after: { status: 'completed' },
+    }, { failClosed: true });
     return ctx.json(updated);
   }
 

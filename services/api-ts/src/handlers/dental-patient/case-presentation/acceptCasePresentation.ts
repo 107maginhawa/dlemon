@@ -25,6 +25,8 @@ import { CasePresentationRepository } from '../repos/case-presentation.repo';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
 import { TREATMENT_PLAN_FSM } from '../repos/treatment-plan.schema';
 import { writeAcceptanceConsent } from '@/handlers/dental-clinical/repos/case-presentation-consent.facade';
+import { logAuditEvent } from '@/core/audit-logger';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 import type { AcceptCasePresentationParams, AcceptCasePresentationBody } from '@/generated/openapi/validators';
@@ -142,6 +144,22 @@ export async function acceptCasePresentation(ctx: HandlerContext): Promise<Respo
       'PRESENTATION_DECIDED',
     );
   }
+
+  // dental-audit P1-B: accepting a presented case is a sensitive clinical approval
+  // (patient e-signature) — write an audit row with before/after plan status.
+  const branchForAudit = await getBranchOrgId(db, patient.preferredBranchId);
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? patient.preferredBranchId,
+    branchId: patient.preferredBranchId,
+    eventType: 'data-modification',
+    action: 'case_presentation.accepted',
+    resourceType: 'dental_case_presentation',
+    resourceId: presentationId,
+    before: { decision: null, planStatus: plan.status },
+    after: { decision: 'accepted', planStatus: 'approved' },
+    metadata: { treatmentPlanId: plan.id, consentFormId: consent.id },
+  });
 
   logger?.info(
     { action: 'acceptCasePresentation', patientId, presentationId, planId: plan.id, consentFormId: consent.id },

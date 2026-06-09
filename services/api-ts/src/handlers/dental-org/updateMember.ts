@@ -13,6 +13,8 @@ import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
 import { VALID_MEMBER_ROLES, dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
+import { logAuditEvent } from '@/core/audit-logger';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 
 const updateMemberSchema = z.object({
   displayName: z.string().min(1).optional(),
@@ -77,6 +79,28 @@ export async function updateMember(ctx: Context): Promise<Response> {
 
   try {
     const updated = await repo.updateOneById(memberId, updateData);
+
+    // dental-audit P1-B / P1-C / P2-A: a member ROLE change is a sensitive
+    // permission transition. Audit it with before/after role, fail-closed so a
+    // role change can never silently commit without an audit row. (Non-role-field
+    // edits — displayName, credentials — are not permission-sensitive and stay
+    // unaudited here.)
+    if (body.role !== undefined && body.role !== member.role) {
+      const branchForAudit = await getBranchOrgId(db, member.branchId);
+      await logAuditEvent(db, logger, {
+        personId: user.id,
+        tenantId: branchForAudit?.organizationId ?? member.branchId,
+        branchId: member.branchId,
+        eventType: 'data-modification',
+        actorRole: 'dentist_owner',
+        action: 'membership.role_change',
+        resourceType: 'dental_membership',
+        resourceId: memberId,
+        before: { role: member.role },
+        after: { role: body.role },
+      }, { failClosed: true });
+    }
+
     const { pinHash, ...safeResponse } = updated;
     return ctx.json(safeResponse);
   } catch (error: unknown) {
