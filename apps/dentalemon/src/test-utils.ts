@@ -6,6 +6,7 @@
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { SdkError } from '@monobase/sdk-ts/client';
 
 /** Create a QueryClient with retries disabled (queries only). */
 export function freshClient() {
@@ -24,6 +25,28 @@ export function makeWrapper(qc: QueryClient) {
   // eslint-disable-next-line react/display-name
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+}
+
+/**
+ * Build a REAL `SdkError` exactly as the SDK error interceptor produces at runtime
+ * (`packages/sdk-ts/src/client.ts:wrapError` → installed in `react/provider.tsx`).
+ * Every non-2xx the app sees is an `SdkError` whose `.body` is the FLAT backend
+ * envelope and whose `.message` is the human string. Error-handling tests MUST use
+ * this — not a hand-authored `{ error: {...} }` object — so fixtures can't drift
+ * from the real thrown shape (the exact drift that hid the create-visit bug).
+ */
+export function makeSdkError(
+  status: number,
+  body: { code?: string; message?: string; [k: string]: unknown },
+): SdkError {
+  return new SdkError({
+    status,
+    url: '/test',
+    method: 'POST',
+    body: { statusCode: status, ...body },
+    // wrapError copies the body's message onto the Error.message; mirror that.
+    message: typeof body.message === 'string' ? body.message : undefined,
+  });
 }
 
 /** Resolve a mock fetch call with a JSON body and the given HTTP status. */

@@ -179,4 +179,30 @@ describe('useCreateVisit', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
+
+  // Regression for the "Failed to create visit. Please try again." bug: a 409
+  // ACTIVE_VISIT_EXISTS carries a clear, actionable backend message — the toast
+  // must SHOW that message, not the generic fallback. (The test above only proved
+  // *a* toast fired; this asserts the CONTENT, which is what actually broke.)
+  test('surfaces the actionable backend message on 409 ACTIVE_VISIT_EXISTS (not the generic fallback)', async () => {
+    const backendMessage = 'Active visit already exists for this patient. Complete or discard it first.';
+    global.fetch = mock(() =>
+      jsonResponse(
+        { code: 'ACTIVE_VISIT_EXISTS', message: backendMessage, statusCode: 409 },
+        409,
+      ),
+    );
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useCreateVisit('p1'), { wrapper: makeWrapper(qc) });
+
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // toastError(err, fallback) → toast.error(getErrorMessage(...)). The mocked
+    // sonner toast.error (_toastError) receives the RESOLVED string.
+    const shown = _toastError.mock.calls.at(-1)?.[0];
+    expect(shown).toBe(backendMessage);
+    expect(shown).not.toMatch(/please try again/i);
+  });
 });

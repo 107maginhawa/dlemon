@@ -76,10 +76,13 @@ export function useImagingUpload() {
         throwOnError: true,
       })
 
-      // Narrow union: DentalImagingModuleCreateImagingStudyResponse | ErrorResponse.
-      // ErrorResponse is discriminated by a top-level `error` object.
+      // Discriminate the generated 200 union (CreateImagingStudyResponse | ErrorResponse).
+      // NOTE: this is the OpenAPI inline-union ErrorResponse type, NOT the runtime error
+      // path — with throwOnError: true a non-2xx is already thrown as an SdkError above,
+      // so this arm is effectively unreachable at runtime and exists for type-narrowing.
+      // (Runtime API errors surface as SdkError; see docs/product/ERROR_TAXONOMY.md.)
       if (!initData || 'error' in initData) {
-        throw new Error(initData?.error?.message ?? 'Failed to initiate imaging study')
+        throw new Error('Failed to initiate imaging study')
       }
 
       const { study, uploadUrl, uploadMethod } = initData
