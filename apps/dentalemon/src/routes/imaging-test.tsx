@@ -24,6 +24,7 @@
 import { useEffect, useState } from 'react'
 import { createRoute, type AnyRoute, useSearch } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { patientImageMgmtListPatientImagesQueryKey } from '@monobase/sdk-ts/generated/react-query'
 import { PatientImageList } from '@/features/imaging/components/patient-image-list'
 import { ImagingWorkspace } from '@/features/imaging/components/imaging-workspace'
 import { ComparisonView } from '@/features/imaging/components/comparison-view'
@@ -75,8 +76,15 @@ function makeSeededClient(): QueryClient {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
   })
+  // Seed under the EXACT SDK query key use-imaging-studies reads (an object-keyed
+  // tuple from createQueryKey) so PatientImageList renders from cache with no
+  // network. A stale literal key (['imaging','patient',…]) silently misses, and
+  // the list then fetches the real API → "Failed to load images".
   qc.setQueryData(
-    ['imaging', 'patient', TEST_IDS.patientId, TEST_IDS.branchId],
+    patientImageMgmtListPatientImagesQueryKey({
+      path: { patientId: TEST_IDS.patientId },
+      query: { branchId: TEST_IDS.branchId },
+    }),
     studiesFixture(),
   )
   // Expose the QueryClient so the E2E harness can read the live ceph-landmarks
