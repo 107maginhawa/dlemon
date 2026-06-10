@@ -50,6 +50,12 @@ export const dentalVisits = pgTable('dental_visit', {
   activePatientUnique: uniqueIndex('dental_visit_active_patient_unique')
     .on(table.patientId, table.status)
     .where(sql`status = 'active'`),
+  // SL-01 / F-G02: offline-replay idempotency backstop — a (branch, localId) pair
+  // may exist at most once. The handler pre-check returns the existing row on
+  // replay; this index guards against a concurrent-retry race.
+  branchLocalIdUnique: uniqueIndex('dental_visit_branch_local_id_unique')
+    .on(table.branchId, table.localId)
+    .where(sql`local_id is not null`),
 }));
 
 export type DentalVisit = typeof dentalVisits.$inferSelect;

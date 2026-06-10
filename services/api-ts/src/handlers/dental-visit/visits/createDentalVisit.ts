@@ -38,6 +38,15 @@ export async function createDentalVisit(
 
   const repo = new VisitRepository(db);
 
+  // SL-01 / F-G02: offline-replay idempotency. A retried create carrying a
+  // previously-seen localId returns the EXISTING visit instead of inserting a
+  // duplicate (and before the active-visit guard, so a replay of the same create
+  // never trips ACTIVE_VISIT_EXISTS on its own first row).
+  if (body.localId) {
+    const existing = await repo.findByLocalId(body.branchId, body.localId);
+    if (existing) return ctx.json(existing, 201);
+  }
+
   // V-VIS-003 / BR-001: app-level guard — return 409 (not a raw 500 from the
   // partial unique index) when an active visit already exists for this patient.
   const existingActive = await repo.findActiveByPatient(body.patientId);
