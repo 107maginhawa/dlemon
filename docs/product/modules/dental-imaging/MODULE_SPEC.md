@@ -99,8 +99,10 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 |--------|---------|-------|
 | Capture / upload study | dentist_owner, dentist_associate, **hygienist, dental_assistant** | E2/E3 reconciliation: capture is clinical-write — hygienist + dental_assistant may capture under dentist supervision (`createImagingStudy` `assertBranchRole`). Authoritative grid: ROLE_PERMISSION_MATRIX.md §Clinical Write ("Capture imaging study"). |
 | CBCT *finalize* (`finalizeCbctStudy`) | dentist_owner, dentist_associate | Stays dentist-only (DICOM parse + volume commit). |
-| Image management (delete / calibration / modality) | dentist_owner, dentist_associate | Not hygienist/assistant — see deleteImage BR-026/027, calibration/modality `assertBranchRole`. |
+| Image management (delete / calibration / modality / **metadata** / **links**) | dentist_owner, dentist_associate | Not hygienist/assistant — see deleteImage BR-026/027, calibration/modality/metadata/link `assertBranchRole`. |
 | Annotate / record finding | dentist_owner, dentist_associate | — |
+| **Ceph landmark drafting** | dentist_owner, dentist_associate, **dental_assistant** | **G4-B**: assistants may place/edit landmarks in draft; writing/transitioning to `confirmed`/`locked` → 403 `ASSISTANT_CANNOT_FINALIZE`. Only `dental_assistant` drafts (hygienist/coordinator excluded). |
+| **Ceph finalize** (confirm/lock landmarks, generate report) | dentist_owner, dentist_associate | **G4-B**: clinician sign-off only; report snapshot pins `prepared_by`/`finalized_by`. |
 | Run ceph | dentist_owner, dentist_associate | imagingTier=`addon` required (BR-016c) |
 | View studies / images / ceph | all clinical dental roles (read) | Branch-scoped; non-ceph reads 403 on no-access, ceph reads 404-mask (info-hiding) |
 
@@ -108,11 +110,14 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ## 7. Data Requirements (key fields)
 **`imaging_study`:** id, patient_id (UUID ref), branch_id, dentist_member_id, study_type (enum), capture_method (enum), created_at
-**`imaging_study_image`:** id, study_id, storage_file_id, tooth_fdi (nullable), sequence_order
+**`imaging_study_image`:** id, study_id, storage_file_id, tooth_fdi (nullable), sequence_order, **`is_diagnostic` (bool, default true), `quality_status` (enum ok|retake, default ok), `retake_reason` (nullable), `tags` (jsonb string[])** — G5a library metadata (migration 0098)
+**`imaging_link`:** id, image_id (FK→image), `link_type` (enum treatment_plan|ortho_case|report), `target_id` (uuid, loose-coupled — no DB FK to target module), created_at, created_by; unique(image_id, link_type, target_id) — G5b context links (migration 0099)
+**`imaging_calibration`:** id, image_id (FK→image), `version` (monotonic per image), `point_a`/`point_b` (jsonb {x,y}), `known_distance_mm`, `pixel_distance`, `pixel_spacing_mm`, `method`, created_at, created_by — G6 append-only versioned 2-point ruler record (migration 0097)
 **`imaging_annotation`:** id, image_id, type (enum: line/angle/area/label/arrow/freehand/shape/tooth), geometry (JSONB), measurement_value, measurement_unit, tooth_number, visible (bool). V-IMG-008: annotations are presentation overlays with a `visible` flag — they do NOT carry the SM-01 finding state machine.
 **`imaging_finding`:** id, image_id, tooth_number, type, status (SM-01: draft/confirmed/resolved)
 **`ceph_analysis`:** id, study_id, analysis_type (steiner_hybrid_sn), status, calibration_method (enum), mm_per_pixel
-**`ceph_landmark`:** id, analysis_id, landmark_type, x, y, status (not_placed/placed/locked), source (manual/auto)
+**`ceph_landmark`:** id, analysis_id, landmark_type, x, y, status (not_placed/placed/locked), source (manual/auto), created_by/updated_by (G4-B sign-off authorship)
+**`imaging_ceph_report`:** id, image_id, version, snapshot (jsonb — pins analysis_type/norm_population/norm_version/formula_version/calibration record + `prepared_by`/`finalized_by`), **`revision_of` (nullable self-ref), `revision_reason` (nullable)** — G1-B revision lineage (migration 0096); append-only/immutable
 
 ---
 

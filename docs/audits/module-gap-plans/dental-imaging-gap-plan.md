@@ -5,6 +5,10 @@
 **Method:** Live browser drive (webwright/Firefox) on branch `chore/workflow-verification-sweep`, app :3003 / API :7213, logged in as Dr. Maria Reyes (dentist-owner). Code + contract + wiring + test inspection.
 **Audit decision:** **PARTIAL PASS** — all core clinical-imaging journeys work end-to-end live; gaps are advanced-feature wiring, image-management affordances, one product-alignment contradiction, and test-reachability — no P0 blocker.
 
+> **Companion (2026-06-10):** spec-level gaps derived from the enhancement guide (`docs/context/DENTAL_IMAGING_AND_MANUAL_CEPH_TRACING_ENHANCEMENT_GUIDE_UPDATED.md`) are reconciled in **`docs/reviews/research/ceph-guide-reconciliation.md`** — report version-pinning, trace-session lifecycle FSM, assistant/clinician sign-off split, analysis-template abstraction, library metadata breadth, versioned calibration. This gap-plan covers the **wiring/affordance** gaps; the reconciliation covers the **spec/data-model** gaps. They are complementary.
+
+> **Update (2026-06-10):** the reconciliation backlog shipped — six commits `8975a1d2`→`bcc5dfab` closed those **spec/data-model** gaps (report version-pinning G2, revision lineage G1-B, assistant/clinician sign-off G4-B, versioned calibration G6, library metadata + context links G5a/G5b; analysis-template abstraction G3 deferred), followed by the G5 **FE write UI** (`a378d4de`) and live **E2E** for calibration/metadata/links (`b0063f19`). **These do NOT close the wiring/affordance items in this plan** — IMG-P1-1 (AI auto-detect vs no-AI stance), IMG-P2-1 (superimposition production mount), IMG-P2-2 (CBCT production wiring) and the P3-* affordances remain open and are tracked below.
+
 ---
 
 ## Audit Decision: PARTIAL PASS
