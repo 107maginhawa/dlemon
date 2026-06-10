@@ -11,10 +11,19 @@
  *   - declined   = teeth whose recommended treatment the patient refused.
  *   - carriedOver = proposed teeth first proposed in a prior visit (carriedOver flag).
  *
- * Clinical precedence: completed > proposed > declined. A tooth that has been
- * treated is shown done even if another planned/declined item still references it
- * (e.g. a second recommendation on the same tooth). This keeps the chart honest —
- * the Completed layer never double-counts a tooth as still pending.
+ * Clinical precedence: completed > proposed > declined (> baseline). A tooth that
+ * has been treated is shown done even if another planned/declined item still
+ * references it (e.g. a second recommendation on the same tooth). This keeps the
+ * chart honest — the Completed layer never double-counts a tooth as still pending.
+ *
+ * SHARED LAYER-PRECEDENCE CONTRACT (keep in sync with the backend chart export
+ * `services/api-ts/src/handlers/dental-visit/chart/chart-export.ts` → deriveLayerSets):
+ *   precedence: completed > proposed > declined > baseline (else unset)
+ *   completed = treatment status performed | verified
+ *   proposed  = status diagnosed | planned ; declined = status declined
+ * The two implementations can't share a function across the module boundary, so they
+ * are maintained independently and MUST agree. Changing precedence here requires the
+ * same change in chart-export.ts (pinned in chart-export.test.ts).
  */
 import type { TreatmentPlanData } from '../hooks/use-treatment-plan';
 

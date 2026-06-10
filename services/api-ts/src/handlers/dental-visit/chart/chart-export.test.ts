@@ -57,6 +57,26 @@ describe('buildChartExport — derived tooth layers (precedence completed > prop
     expect(layerOf(21)).toBe('unset');
   });
 
+  // Shared layer-precedence contract pin (chart-export.ts ↔ FE chart-layers.ts):
+  // when ONE tooth is referenced by completed AND proposed AND declined items at
+  // once, completed must win outright. This is the strongest statement of the
+  // precedence both implementations must agree on.
+  test('a tooth referenced by completed + proposed + declined resolves to completed', () => {
+    const out = buildChartExport({
+      ...BASE,
+      chartTeeth: [{ toothNumber: 36, state: 'filled' }],
+      treatments: [
+        { toothNumber: 36, cdtCode: 'D2750', description: 'Crown', status: 'declined', priceCents: 60000 },
+        { toothNumber: 36, cdtCode: 'D2391', description: 'Composite', status: 'planned', priceCents: 15000 },
+        { toothNumber: 36, cdtCode: 'D2740', description: 'Onlay', status: 'verified', priceCents: 50000 },
+      ],
+    });
+    expect(out.teeth[0]!.layer).toBe('completed');
+    expect(out.summary.completedCount).toBe(1);
+    expect(out.summary.proposedCount).toBe(0);
+    expect(out.summary.declinedCount).toBe(0);
+  });
+
   test('completed wins over a competing planned item on the same tooth', () => {
     const out = buildChartExport({
       ...BASE,

@@ -6,8 +6,15 @@
  * tooth's derived display layer, a legend, and a proposed/completed/declined
  * treatment summary.
  *
- * Layer precedence mirrors the FE living-document chart (chart-layers.ts):
- *   completed > proposed > declined, then baseline (entryClassification), else unset.
+ * SHARED LAYER-PRECEDENCE CONTRACT (keep in sync with the FE living-document chart
+ * `apps/dentalemon/src/features/workspace/lib/chart-layers.ts` → deriveChartLayerSets):
+ *   precedence: completed > proposed > declined > baseline (else unset)
+ *   completed = treatment status performed | verified
+ *   proposed  = status diagnosed | planned ; declined = status declined
+ * The two implementations can't share a function across the module boundary, so they
+ * are maintained independently and MUST agree. The precedence is pinned in
+ * chart-export.test.ts ("derived tooth layers" / "completed wins …"); changing it here
+ * requires the same change in chart-layers.ts (and vice versa).
  * Kept pure (no DB) so the layer/summary logic is unit-tested directly.
  */
 import type { ToothChartState, ChartEntryClassification } from '../repos/dental-chart.schema';
