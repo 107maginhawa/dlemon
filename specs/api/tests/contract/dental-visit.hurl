@@ -378,6 +378,19 @@ HTTP 200
 jsonpath "$.status" == "active"
 
 
+# SL-03 / B-G1 — per-tooth PATCH merges into the patient baseline (living document).
+# The second visit has no chart row of its own, so GET chart carries the baseline
+# forward. Step 7 PATCHed tooth 26 to "filled"; the earlier upsert (step 5) had it
+# as "caries". The carried-over state must be "filled" — proving the PATCH path
+# (not just the full upsert) merged into the baseline. Before the fix this returned
+# the stale "caries" because updateTooth skipped the baseline merge.
+GET {{api}}/dental/visits/{{visit2_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.teeth[?(@.toothNumber == 26)].state" == "filled"
+
+
 # NEW: G2-S4 — upsert notes (first time) on second visit
 POST {{api}}/dental/visits/{{visit2_id}}/notes
 Cookie: better-auth.session_token={{session_token}}
