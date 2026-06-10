@@ -8,6 +8,7 @@ import {
 } from '@monobase/ui'
 import { useImagingStudies, type PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
 import { ImageUpload } from './image-upload'
+import { ImageMetadataEditor } from './image-metadata-editor'
 import { FmxMount } from './FmxMount'
 import { CbctStudyCard } from './CbctStudyCard'
 import { BRAND_GOLD_SOFT, BRAND_GOLD_TEXT } from '@/constants/brand'
@@ -29,6 +30,8 @@ interface PatientImageListProps {
 export function PatientImageList({ patientId, branchId, onSelectImage, onCompare }: PatientImageListProps) {
   const { data, isLoading, error, refetch } = useImagingStudies(patientId, branchId)
   const [uploadOpen, setUploadOpen] = useState(false)
+  // G5: per-image metadata/links editor (Sheet). Holds the image being edited.
+  const [editingItem, setEditingItem] = useState<PatientImageItem | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   // P2-5: list view vs anatomical full-mouth-series mount.
   const [view, setView] = useState<'list' | 'fmx'>('list')
@@ -250,12 +253,44 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                       Legacy
                     </span>
                   )}
+                  {/* G5: open the metadata/links editor for this image */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditingItem(item)
+                    }}
+                    data-testid={`edit-image-${item.id}`}
+                    aria-label={`Edit ${item.fileName}`}
+                    className="shrink-0 rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
+                  >
+                    Edit
+                  </button>
                 </li>
               ),
             )}
           </ul>
         )
       ) : null}
+
+      {/* G5: metadata + context-link editor for the selected image */}
+      <Sheet open={editingItem !== null} onOpenChange={(open) => { if (!open) setEditingItem(null) }}>
+        <SheetContent side="right" className="w-[360px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Edit image{editingItem ? ` — ${editingItem.fileName}` : ''}</SheetTitle>
+          </SheetHeader>
+          {editingItem && (
+            <div className="mt-4">
+              <ImageMetadataEditor
+                item={editingItem}
+                patientId={patientId}
+                branchId={branchId}
+                onSaved={() => setEditingItem(null)}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
