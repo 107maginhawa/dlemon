@@ -284,3 +284,6 @@ apps/dentalemon/tests/smoke/.craft-*/
 
 # root-level webwright craft scratch
 .craft-*/
+
+# Audit working scratch (19MB, regenerable) — not source
+outputs/
