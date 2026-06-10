@@ -64,7 +64,13 @@ export async function updateTooth(
   // (existing/existing_other baseline entries are protected by mergeTeeth).
   if (updated) {
     const baselineRepo = new DentalChartBaselineRepository(db);
-    await baselineRepo.mergeVisitChart(chart.patientId, visitId, updated.teeth as ToothChartState[], user.id);
+    const { conflicts } = await baselineRepo.mergeVisitChart(chart.patientId, visitId, updated.teeth as ToothChartState[], user.id);
+    // SL-12 / F-G04: a stale tooth that lost the baseline clock merge is recorded as
+    // a durable sync conflict on the chart rather than silently dropped.
+    if (conflicts.length > 0) {
+      const flagged = await repo.flagSyncConflict(chart.id, conflicts);
+      return ctx.json(flagged ?? updated);
+    }
   }
 
   return ctx.json(updated);

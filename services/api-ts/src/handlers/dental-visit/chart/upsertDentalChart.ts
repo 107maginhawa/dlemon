@@ -65,9 +65,17 @@ export async function upsertDentalChart(
 
   await repo.saveVersion(chart.id, body.teeth as ToothChartState[], user.id);
 
-  // Update cumulative patient-level baseline (merge, last-write-wins per tooth)
+  // Update cumulative patient-level baseline (clock-aware merge, last-write-wins per tooth)
   const baselineRepo = new DentalChartBaselineRepository(db);
-  await baselineRepo.mergeVisitChart(body.patientId, visitId, body.teeth as ToothChartState[], user.id);
+  const { conflicts } = await baselineRepo.mergeVisitChart(body.patientId, visitId, body.teeth as ToothChartState[], user.id);
+
+  // SL-12 / F-G04: a stale tooth that lost the baseline clock merge is a sync
+  // conflict — persist it (chart syncStatus='conflict' + conflictPayload) instead
+  // of silently dropping the losing write, so it is a durable, surfaceable record.
+  if (conflicts.length > 0) {
+    const flagged = await repo.flagSyncConflict(chart.id, conflicts);
+    return ctx.json(flagged ?? chart, 201);
+  }
 
   return ctx.json(chart, 201);
 }

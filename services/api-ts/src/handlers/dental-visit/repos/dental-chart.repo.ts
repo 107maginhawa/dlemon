@@ -96,6 +96,25 @@ export class DentalChartRepository {
     return row ?? null;
   }
 
+  /**
+   * SL-12 / F-G04: record a durable sync conflict on the chart. When the baseline
+   * merge rejects stale teeth (lost the clock comparison) the losing write is not
+   * dropped — the chart is flagged syncStatus='conflict' and the rejected teeth are
+   * persisted to conflictPayload for a future conflict-resolution UI to surface.
+   */
+  async flagSyncConflict(chartId: string, rejectedTeeth: ToothChartState[]): Promise<DentalChart | null> {
+    const [updated] = await this.db
+      .update(dentalCharts)
+      .set({
+        syncStatus: 'conflict',
+        conflictPayload: { reason: 'stale_clock_rejected', rejectedTeeth },
+        updatedAt: new Date(),
+      })
+      .where(eq(dentalCharts.id, chartId))
+      .returning();
+    return updated ?? null;
+  }
+
   async updateTooth(chartId: string, update: UpdateToothInput): Promise<DentalChart | null> {
     const chart = await this.findById(chartId);
     if (!chart) return null;
