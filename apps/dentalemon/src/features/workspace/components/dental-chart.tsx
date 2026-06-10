@@ -51,6 +51,9 @@ export interface DentalChartProps {
   declinedToothNumbers?: Set<number>;
   /** Subset of proposed teeth first proposed in a PRIOR visit — surfaced with a carried-over marker. */
   carriedOverToothNumbers?: Set<number>;
+  /** P0-A: FDI numbers with an open offline sync conflict — marked so the clinician
+   *  knows a rejected edit needs resolving (resolve via the conflict banner). */
+  conflictedToothNumbers?: Set<number>;
 }
 
 /** Layer chip config with color coding for multi-select (P1-15). */
@@ -110,6 +113,7 @@ export function DentalChart({
   proposedToothNumbers,
   declinedToothNumbers,
   carriedOverToothNumbers,
+  conflictedToothNumbers,
 }: DentalChartProps) {
   // ── Notation preference (QW-5) ───────────────────────────────────────────
   // Read from branch settings so the chart respects the locale/notation toggle
@@ -252,6 +256,8 @@ export function DentalChart({
         : isDeclinedOnLayer
           ? '1.5px solid #9CA3AF' // gray — declined
           : undefined;
+    // P0-A: this tooth has an open offline conflict (a rejected stale write).
+    const isConflicted = !!conflictedToothNumbers?.has(toothNumber);
     // Display label for the current notation preference (QW-5).
     const displayLabel = getToothDisplayLabel(toothNumber, notation);
     // Primary teeth in mixed dentition rendered at smaller size for visual distinction
@@ -267,8 +273,9 @@ export function DentalChart({
         data-tooth-label={displayLabel}
         data-tooth-primary={isPrimaryTooth ? '1' : undefined}
         data-carried-over={isCarriedOver ? '1' : undefined}
+        data-conflicted={isConflicted ? '1' : undefined}
         onClick={() => onSelectTooth?.(toothNumber)}
-        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer}${isCarriedOver ? ', carried over from a prior visit' : ''})`}
+        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer}${isCarriedOver ? ', carried over from a prior visit' : ''}${isConflicted ? ' — unsynced edit needs review' : ''})`}
         style={{
           flex: '1 1 0',
           minWidth: 0,
@@ -283,7 +290,7 @@ export function DentalChart({
             : undefined,
         }}
         className={[
-          'flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
+          'relative flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
           !isLastInQuadrant ? 'border-r border-border/20' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
@@ -299,6 +306,15 @@ export function DentalChart({
           showLabel={true}
         />
         {showLayerDots && !isDimmed && <LayerDot layer={toothLayer} />}
+        {isConflicted && (
+          <span
+            data-testid={`tooth-conflict-${toothNumber}`}
+            aria-label="Unsynced edit needs review"
+            className="absolute top-0 right-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-amber-500 text-[7px] font-bold text-white"
+          >
+            !
+          </span>
+        )}
       </button>
     );
   }

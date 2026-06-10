@@ -191,6 +191,48 @@ model UpdateToothRequest {
   entryClassification?: ChartEntryClassification;
 }
 
+// ---------------------------------------------------------------------------
+// P0-A: Offline conflict visibility & resolution
+//
+// The server already rejects stale offline chart writes (clock-aware baseline
+// merge) and persists the loser to dental_chart.conflictPayload with
+// syncStatus='conflict' — but nothing could read or resolve them, so dropped
+// clinical edits accumulated invisibly. These ops surface and resolve them.
+// ---------------------------------------------------------------------------
+
+/** How a clinician resolves an open chart sync conflict. */
+enum ChartConflictResolution {
+  /** The rejected (offline) write becomes the truth — re-applied as a NEW change
+   *  with a NEW (higher) clock. Never mutates history. */
+  accept,
+  /** Keep the current value; discard the rejected offline write. Requires a reason. */
+  dismiss,
+}
+
+/** A durable record of one chart write rejected as a stale offline edit. */
+model ChartConflict {
+  chartId: UUID;
+  visitId: UUID;
+  patientId: UUID;
+  /** Machine reason the write was rejected (e.g. 'stale_clock_rejected'). */
+  reason: string;
+  /** The tooth states that lost the clock comparison and were not applied. */
+  rejectedTeeth: ToothChartState[];
+  /** When the conflict was recorded (chart updatedAt). */
+  detectedAt: utcDateTime;
+}
+
+model ResolveChartConflictRequest {
+  resolution: ChartConflictResolution;
+  /**
+   * Required when resolution = dismiss (5–500 chars): why the offline edit was
+   * discarded. Ignored for 'accept'.
+   */
+  @minLength(5)
+  @maxLength(500)
+  reason?: string;
+}
+
 @example(#{
   id: "t1a2b3c4-0000-4000-8000-000000000001",
   createdAt: utcDateTime.fromISO("2026-03-15T09:10:00Z"),
@@ -546,6 +588,32 @@ namespace DentalVisitModule {
       @path visitId: UUID,
       @path toothNumber: int32,
       @body body: UpdateToothRequest
+    ): ApiOkResponse<DentalChart>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-A: list open (unresolved) chart sync conflicts for a patient across visits.")
+    @get
+    @route("/chart-conflicts/{patientId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listChartConflicts")
+    listChartConflicts(
+      @path patientId: UUID
+    ): ApiOkResponse<ChartConflict[]>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-A: resolve a visit chart's open sync conflict. 'accept' re-applies the rejected write with a NEW clock; 'dismiss' (reason required) discards it. Never mutates history.")
+    @post
+    @route("/{visitId}/chart/resolve-conflict")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("resolveChartConflict")
+    resolveChartConflict(
+      @path visitId: UUID,
+      @body body: ResolveChartConflictRequest
     ): ApiOkResponse<DentalChart>
       | ApiBadRequestResponse
       | ApiNotFoundResponse

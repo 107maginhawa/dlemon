@@ -1011,6 +1011,32 @@ export type CarryOverTreatmentsResponse = {
     carried: number;
 };
 
+/**
+ * A durable record of one chart write rejected as a stale offline edit.
+ */
+export type ChartConflict = {
+    chartId: Uuid;
+    visitId: Uuid;
+    patientId: Uuid;
+    /**
+     * Machine reason the write was rejected (e.g. 'stale_clock_rejected').
+     */
+    reason: string;
+    /**
+     * The tooth states that lost the clock comparison and were not applied.
+     */
+    rejectedTeeth: Array<ToothChartState>;
+    /**
+     * When the conflict was recorded (chart updatedAt).
+     */
+    detectedAt: Date;
+};
+
+/**
+ * How a clinician resolves an open chart sync conflict.
+ */
+export type ChartConflictResolution = 'accept' | 'dismiss';
+
 export type ChartEntryClassification = 'existing' | 'existing_other' | 'treatment_plan' | 'condition';
 
 /**
@@ -60369,6 +60395,15 @@ export type RefundResponse = {
     };
 };
 
+export type ResolveChartConflictRequest = {
+    resolution: ChartConflictResolution;
+    /**
+     * Required when resolution = dismiss (5–500 chars): why the offline edit was
+     * discarded. Ignored for 'accept'.
+     */
+    reason?: string;
+};
+
 /**
  * Review with NPS score and optional feedback
  */
@@ -71796,6 +71831,37 @@ export type CreateDentalVisitResponses = {
 
 export type CreateDentalVisitResponse = CreateDentalVisitResponses[keyof CreateDentalVisitResponses];
 
+export type ListChartConflictsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/chart-conflicts/{patientId}';
+};
+
+export type ListChartConflictsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListChartConflictsError = ListChartConflictsErrors[keyof ListChartConflictsErrors];
+
+export type ListChartConflictsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<ChartConflict>;
+};
+
+export type ListChartConflictsResponse = ListChartConflictsResponses[keyof ListChartConflictsResponses];
+
 export type GetToothHistoryData = {
     body?: never;
     path: {
@@ -72405,6 +72471,41 @@ export type UpsertDentalChartResponses = {
 };
 
 export type UpsertDentalChartResponse = UpsertDentalChartResponses[keyof UpsertDentalChartResponses];
+
+export type ResolveChartConflictData = {
+    body: ResolveChartConflictRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/chart/resolve-conflict';
+};
+
+export type ResolveChartConflictErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ResolveChartConflictError = ResolveChartConflictErrors[keyof ResolveChartConflictErrors];
+
+export type ResolveChartConflictResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalChart;
+};
+
+export type ResolveChartConflictResponse = ResolveChartConflictResponses[keyof ResolveChartConflictResponses];
 
 export type UpdateToothData = {
     body: UpdateToothRequest;

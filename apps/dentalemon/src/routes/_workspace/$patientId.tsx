@@ -48,6 +48,8 @@ import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
+import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
+import { useChartConflicts } from '@/features/workspace/hooks/use-chart-conflicts';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
@@ -102,6 +104,9 @@ function WorkspacePage() {
     useDentalChart({ visitId: currentVisitId });
   const { treatments } = useTreatments({ visitId: currentVisitId });
   const { data: treatmentPlan } = useTreatmentPlan({ patientId, branchId });
+
+  // P0-A: open offline chart conflicts (rejected stale writes) for this patient.
+  const { conflictedTeeth } = useChartConflicts(patientId);
   const { data: currentPMD } = usePMD(currentVisitId);
 
   // Auto-select active or most recent visit once visits load
@@ -371,6 +376,9 @@ function WorkspacePage() {
           data-testid="workspace-carousel-zone"
           className="shrink-0 border-b bg-background/80 backdrop-blur overflow-visible"
         >
+          {/* P0-A: data-integrity banner — rejected offline edits accumulate
+              invisibly without this. Surfaces + resolves them. */}
+          <ChartConflictBanner patientId={patientId} />
           {openVisit && (
             <div
               data-testid="visit-in-progress-indicator"
@@ -405,6 +413,7 @@ function WorkspacePage() {
             proposedToothNumbers={chartLayers.proposed}
             declinedToothNumbers={chartLayers.declined}
             carriedOverToothNumbers={chartLayers.carriedOver}
+            conflictedToothNumbers={conflictedTeeth}
           />
         </div>
 

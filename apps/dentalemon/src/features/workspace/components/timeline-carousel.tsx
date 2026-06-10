@@ -62,6 +62,8 @@ export interface TimelineCarouselProps {
   proposedToothNumbers?: Set<number>;
   declinedToothNumbers?: Set<number>;
   carriedOverToothNumbers?: Set<number>;
+  /** P0-A: FDI numbers with an open offline conflict — marked on the active chart. */
+  conflictedToothNumbers?: Set<number>;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -78,6 +80,7 @@ function VisitChartCard({
   proposedToothNumbers,
   declinedToothNumbers,
   carriedOverToothNumbers,
+  conflictedToothNumbers,
   onTeethLoaded,
 }: {
   visit: VisitCard;
@@ -92,6 +95,7 @@ function VisitChartCard({
   proposedToothNumbers?: Set<number>;
   declinedToothNumbers?: Set<number>;
   carriedOverToothNumbers?: Set<number>;
+  conflictedToothNumbers?: Set<number>;
   /** Called with the fetched tooth data when the active card loads (for compare diff). */
   onTeethLoaded?: (teeth: ToothData[]) => void;
 }) {
@@ -193,6 +197,7 @@ function VisitChartCard({
             proposedToothNumbers={isActive ? proposedToothNumbers : undefined}
             declinedToothNumbers={isActive ? declinedToothNumbers : undefined}
             carriedOverToothNumbers={isActive ? carriedOverToothNumbers : undefined}
+            conflictedToothNumbers={isActive ? conflictedToothNumbers : undefined}
             dentitionType={dentitionType}
           />
         )}
@@ -258,6 +263,7 @@ export function TimelineCarousel({
   proposedToothNumbers,
   declinedToothNumbers,
   carriedOverToothNumbers,
+  conflictedToothNumbers,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
@@ -376,6 +382,7 @@ export function TimelineCarousel({
                 proposedToothNumbers={proposedToothNumbers}
                 declinedToothNumbers={declinedToothNumbers}
                 carriedOverToothNumbers={carriedOverToothNumbers}
+                conflictedToothNumbers={conflictedToothNumbers}
                 onTeethLoaded={isActive ? setActiveTeeth : undefined}
               />
             </SwiperSlide>

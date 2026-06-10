@@ -507,7 +507,33 @@ export const CarryOverTreatmentsResponseSchema = z.object({
   carried: z.number().int()
 });
 
+export const ToothStateSchema = z.enum(["healthy", "caries", "fractured", "filled", "crown", "missing", "implant", "extracted", "watchlist"]);
+
+export const ToothSurfaceCodeSchema = z.enum(["mesial", "distal", "buccal", "lingual", "occlusal", "incisal", "cervical"]);
+
 export const ChartEntryClassificationSchema = z.enum(["existing", "existing_other", "treatment_plan", "condition"]);
+
+export const ToothChartStateSchema = z.object({
+  toothNumber: z.number().int(),
+  state: ToothStateSchema,
+  surfaces: z.array(ToothSurfaceCodeSchema).optional(),
+  conditionCode: z.string().optional(),
+  note: z.string().optional(),
+  surfaceConditionMap: z.record(z.string(), z.unknown()).optional(),
+  entryClassification: ChartEntryClassificationSchema.optional(),
+  clock: z.number().int().optional()
+});
+
+export const ChartConflictSchema = z.object({
+  chartId: UUIDSchema,
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  reason: z.string(),
+  rejectedTeeth: z.array(ToothChartStateSchema),
+  detectedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const ChartConflictResolutionSchema = z.enum(["accept", "dismiss"]);
 
 export const ChatMessageSchema = z.object({
   id: z.string().uuid(),
@@ -838,21 +864,6 @@ export const CreateDentalAttachmentRequestSchema = z.object({
   fileSizeBytes: z.number().int(),
   mimeType: z.string(),
   note: z.string().optional()
-});
-
-export const ToothStateSchema = z.enum(["healthy", "caries", "fractured", "filled", "crown", "missing", "implant", "extracted", "watchlist"]);
-
-export const ToothSurfaceCodeSchema = z.enum(["mesial", "distal", "buccal", "lingual", "occlusal", "incisal", "cervical"]);
-
-export const ToothChartStateSchema = z.object({
-  toothNumber: z.number().int(),
-  state: ToothStateSchema,
-  surfaces: z.array(ToothSurfaceCodeSchema).optional(),
-  conditionCode: z.string().optional(),
-  note: z.string().optional(),
-  surfaceConditionMap: z.record(z.string(), z.unknown()).optional(),
-  entryClassification: ChartEntryClassificationSchema.optional(),
-  clock: z.number().int().optional()
 });
 
 export const CreateDentalChartRequestSchema = z.object({
@@ -18795,6 +18806,11 @@ export const RefundResponseSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
+export const ResolveChartConflictRequestSchema = z.object({
+  resolution: ChartConflictResolutionSchema,
+  reason: z.string().min(5).max(500).optional()
+});
+
 export const ReviewSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -21890,6 +21906,13 @@ export const ListDentalVisitsResponse = z.object({
 })
 });
 
+export const ListChartConflictsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type ListChartConflictsParams = z.infer<typeof ListChartConflictsParams>;
+
+export const ListChartConflictsResponse = z.array(ChartConflictSchema);
+
 export const GetToothHistoryParams = z.object({
   patientId: UUIDSchema,
   toothNumber: z.coerce.number().int(),
@@ -22054,6 +22077,16 @@ export const GetDentalChartParams = z.object({
 export type GetDentalChartParams = z.infer<typeof GetDentalChartParams>;
 
 export const GetDentalChartResponse = DentalChartSchema;
+
+export const ResolveChartConflictParams = z.object({
+  visitId: UUIDSchema,
+});
+export type ResolveChartConflictParams = z.infer<typeof ResolveChartConflictParams>;
+
+export const ResolveChartConflictBody = ResolveChartConflictRequestSchema;
+export type ResolveChartConflictBody = z.infer<typeof ResolveChartConflictBody>;
+
+export const ResolveChartConflictResponse = DentalChartSchema;
 
 export const UpdateToothParams = z.object({
   visitId: UUIDSchema,

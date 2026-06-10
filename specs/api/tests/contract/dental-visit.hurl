@@ -569,3 +569,137 @@ HTTP 200
 [Asserts]
 jsonpath "$.signed" == true
 jsonpath "$.signedAt" isString
+
+
+# ============================================================
+# P0-A — offline chart conflict visibility & resolution
+# A stale offline write (lower clock) is rejected by the baseline merge and
+# persisted as a conflict; these ops surface and resolve it.
+# ============================================================
+
+# P0A-0 — fresh patient + active visit for the conflict flow
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Conflict Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+conflict_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{conflict_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Offline sync conflict probe"
+}
+HTTP 201
+[Captures]
+conflict_visit_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{conflict_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+
+# P0A-1 — seed the baseline: tooth #18 = crown at clock 10 (the newer edit)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{conflict_visit_id}}",
+  "patientId": "{{conflict_patient_id}}",
+  "teeth": [ {"toothNumber": 18, "state": "crown", "clock": 10} ]
+}
+HTTP 201
+[Asserts]
+jsonpath "$.syncStatus" == "synced"
+
+
+# P0A-2 — a STALE offline write (#18 caries @clock3) loses the merge → conflict
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{conflict_visit_id}}",
+  "patientId": "{{conflict_patient_id}}",
+  "teeth": [ {"toothNumber": 18, "state": "caries", "clock": 3} ]
+}
+HTTP 201
+[Asserts]
+jsonpath "$.syncStatus" == "conflict"
+
+
+# P0A-3 — list open conflicts for the patient
+GET {{api}}/dental/visits/chart-conflicts/{{conflict_patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 1
+jsonpath "$[0].visitId" == "{{conflict_visit_id}}"
+jsonpath "$[0].reason" == "stale_clock_rejected"
+jsonpath "$[0].rejectedTeeth[?(@.toothNumber == 18)].state" == "caries"
+
+
+# P0A-4 — dismiss WITHOUT a reason is rejected (400)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart/resolve-conflict
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "resolution": "dismiss" }
+HTTP 400
+
+
+# P0A-5 — dismiss WITH a reason clears the conflict (keeps current crown)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart/resolve-conflict
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "resolution": "dismiss", "reason": "Duplicate offline edit; crown is correct." }
+HTTP 200
+[Asserts]
+jsonpath "$.syncStatus" == "synced"
+
+
+# P0A-6 — the conflict is gone from the list
+GET {{api}}/dental/visits/chart-conflicts/{{conflict_patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 0
+
+
+# P0A-7 — seed a second conflict, then ACCEPT it (rejected write becomes truth)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{conflict_visit_id}}",
+  "patientId": "{{conflict_patient_id}}",
+  "teeth": [ {"toothNumber": 18, "state": "fractured", "clock": 2} ]
+}
+HTTP 201
+[Asserts]
+jsonpath "$.syncStatus" == "conflict"
+
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart/resolve-conflict
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "resolution": "accept" }
+HTTP 200
+[Asserts]
+jsonpath "$.syncStatus" == "synced"
+
+
+# P0A-8 — conflicts cleared after accept
+GET {{api}}/dental/visits/chart-conflicts/{{conflict_patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 0

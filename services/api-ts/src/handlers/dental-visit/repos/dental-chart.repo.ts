@@ -5,7 +5,7 @@
  * Per-tooth updates merge into the existing teeth array.
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import { createSnapshotVersion } from '@/core/database.schema';
@@ -110,6 +110,32 @@ export class DentalChartRepository {
         conflictPayload: { reason: 'stale_clock_rejected', rejectedTeeth },
         updatedAt: new Date(),
       })
+      .where(eq(dentalCharts.id, chartId))
+      .returning();
+    return updated ?? null;
+  }
+
+  /**
+   * P0-A: open (unresolved) sync conflicts for a patient across all visits. A
+   * conflict is a chart row flagged syncStatus='conflict' (see flagSyncConflict).
+   */
+  async listConflicts(patientId: string): Promise<DentalChart[]> {
+    return this.db
+      .select()
+      .from(dentalCharts)
+      .where(and(eq(dentalCharts.patientId, patientId), eq(dentalCharts.syncStatus, 'conflict')));
+  }
+
+  /**
+   * P0-A: clear a resolved conflict — syncStatus back to 'synced' and drop the
+   * conflictPayload. The clinical resolution itself (accept re-applies the
+   * rejected write with a new clock) happens before this; this only retires the
+   * conflict flag so it stops surfacing.
+   */
+  async clearConflict(chartId: string): Promise<DentalChart | null> {
+    const [updated] = await this.db
+      .update(dentalCharts)
+      .set({ syncStatus: 'synced', conflictPayload: null, updatedAt: new Date() })
       .where(eq(dentalCharts.id, chartId))
       .returning();
     return updated ?? null;

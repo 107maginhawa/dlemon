@@ -297,9 +297,11 @@ import { getDentalVisit } from '../../handlers/dental-visit/visits/getDentalVisi
 import { getToothHistory } from '../../handlers/dental-visit/chart/getToothHistory';
 import { getVisitNoteHistory } from '../../handlers/dental-visit/notes/getVisitNoteHistory';
 import { getVisitNotes } from '../../handlers/dental-visit/notes/getVisitNotes';
+import { listChartConflicts } from '../../handlers/dental-visit/listChartConflicts';
 import { listDentalTreatments } from '../../handlers/dental-visit/treatments/listDentalTreatments';
 import { listDentalVisits } from '../../handlers/dental-visit/visits/listDentalVisits';
 import { listTreatmentTemplates } from '../../handlers/dental-visit/templates/listTreatmentTemplates';
+import { resolveChartConflict } from '../../handlers/dental-visit/resolveChartConflict';
 import { signVisitNotes } from '../../handlers/dental-visit/notes/signVisitNotes';
 import { updateDentalTreatment } from '../../handlers/dental-visit/treatments/updateDentalTreatment';
 import { updateDentalVisit } from '../../handlers/dental-visit/visits/updateDentalVisit';
@@ -692,9 +694,11 @@ export const registry = {
   getToothHistory,
   getVisitNoteHistory,
   getVisitNotes,
+  listChartConflicts,
   listDentalTreatments,
   listDentalVisits,
   listTreatmentTemplates,
+  resolveChartConflict,
   signVisitNotes,
   updateDentalTreatment,
   updateDentalVisit,

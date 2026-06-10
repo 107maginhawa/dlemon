@@ -1970,6 +1970,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listDentalVisits as unknown as Handler
   );
 
+  // listChartConflicts
+  app.get('/dental/visits/chart-conflicts/:patientId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListChartConflictsParams, validationErrorHandler),
+    registry.listChartConflicts as unknown as Handler
+  );
+
   // getToothHistory
   app.get('/dental/visits/history/:patientId/teeth/:toothNumber',
     authMiddleware({ roles: ["user"] }),
@@ -2071,6 +2078,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetDentalChartParams, validationErrorHandler),
     registry.getDentalChart as unknown as Handler
+  );
+
+  // resolveChartConflict
+  app.post('/dental/visits/:visitId/chart/resolve-conflict',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ResolveChartConflictParams, validationErrorHandler),
+    zValidator('json', validators.ResolveChartConflictBody, validationErrorHandler),
+    registry.resolveChartConflict as unknown as Handler
   );
 
   // updateTooth
