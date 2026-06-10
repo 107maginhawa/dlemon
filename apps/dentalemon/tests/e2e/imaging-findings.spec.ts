@@ -44,13 +44,14 @@ test.describe('FindingsSidebar — create / update / delete', () => {
     await page.route('**/dental/imaging/images/*/findings', async (route) => {
       const method = route.request().method()
       if (method === 'GET') {
-        // GET /findings returns { data: ImagingFinding[] } — useImagingFindings
-        // reads data.data. Returning { items } makes the list resolve to
-        // undefined so created findings never surface in the sidebar.
+        // GET /findings returns { items: ImagingFinding[] } — useImagingFindings
+        // reads data.items (use-imaging-findings.ts), matching the real handler
+        // (listFindings.ts, post-BUG-IMG-002). Returning { data } would make the
+        // list resolve to undefined so created findings never surface.
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ data: storedFindings }),
+          body: JSON.stringify({ items: storedFindings }),
         })
         return
       }
