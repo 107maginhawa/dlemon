@@ -78,6 +78,10 @@ export interface CephReportViewProps {
   snapshot: CephReportSnapshot
   version: number
   imageUrl?: string
+  // G1-B: explicit revision lineage. `revisionOf` is the prior report version's
+  // id (null for v1); `revisionReason` records why this trace was re-finalized.
+  revisionOf?: string | null
+  revisionReason?: string | null
 }
 
 function valueText(
@@ -96,7 +100,7 @@ function valueText(
   return '—'
 }
 
-export function CephReportView({ snapshot, version, imageUrl }: CephReportViewProps) {
+export function CephReportView({ snapshot, version, imageUrl, revisionOf, revisionReason }: CephReportViewProps) {
   const missing = snapshot.missing ?? []
   const uncalibrated = snapshot.uncalibrated ?? false
   const placedCodes = Object.keys(snapshot.landmarks)
@@ -126,6 +130,19 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
             {' · '}
             Software: <span className="font-medium text-zinc-900">{snapshot.software_version}</span>
           </p>
+          {/* G1-B: revision lineage — version chain is linear, so a report with a
+              prior version (revisionOf set) revises v{version-1}. */}
+          {revisionOf && (
+            <p className="text-sm text-amber-700 mt-1" data-testid="ceph-report-revision">
+              Revises v{version - 1}
+              {revisionReason && (
+                <>
+                  {' · '}
+                  Reason: <span className="font-medium">{revisionReason}</span>
+                </>
+              )}
+            </p>
+          )}
           {/* G2: reproducibility provenance — what the report can be reproduced against.
               Provenance only (not a normative comparison; D-H still holds). */}
           {(snapshot.norm_population || snapshot.norm_version || snapshot.formula_version) && (

@@ -223,3 +223,40 @@ describe('D-F — SN-referenced labels', () => {
     expect(container.textContent?.toLowerCase()).toMatch(/frankfort/)
   })
 })
+
+// G1-B: revision lineage — version chain is explicit + reasoned
+describe('G1-B — revision lineage', () => {
+  test('v1 (no revisionOf) shows no revision line', () => {
+    render(
+      React.createElement(CephReportView, {
+        snapshot: mkSnapshot(), version: 1, revisionOf: null, revisionReason: null,
+      }),
+    )
+    expect(screen.queryByTestId('ceph-report-revision')).toBeNull()
+  })
+
+  test('v2 (revisionOf set) shows "Revises v1" + reason', () => {
+    render(
+      React.createElement(CephReportView, {
+        snapshot: mkSnapshot(),
+        version: 2,
+        revisionOf: 'prior-report-id',
+        revisionReason: 'Re-traced Gonion after calibration fix',
+      }),
+    )
+    const line = screen.getByTestId('ceph-report-revision')
+    expect(line.textContent).toContain('Revises v1')
+    expect(line.textContent).toContain('Re-traced Gonion after calibration fix')
+  })
+
+  test('revision with no reason shows the version link but no reason text', () => {
+    render(
+      React.createElement(CephReportView, {
+        snapshot: mkSnapshot(), version: 3, revisionOf: 'prior-id', revisionReason: null,
+      }),
+    )
+    const line = screen.getByTestId('ceph-report-revision')
+    expect(line.textContent).toContain('Revises v2')
+    expect(line.textContent?.toLowerCase()).not.toContain('reason')
+  })
+})

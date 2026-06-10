@@ -3312,6 +3312,8 @@ export type DentalImagingModuleCephReport = {
     snapshot: {
         [key: string]: unknown;
     };
+    revisionOf: string | null;
+    revisionReason: string | null;
     createdAt: Date;
 };
 
@@ -3355,6 +3357,7 @@ export type DentalImagingModuleCephSuperimpositionReference = 'cranial_base' | '
 export type DentalImagingModuleCreateCephReportBody = {
     analysisType?: string;
     normPopulation?: string;
+    revisionReason?: string;
 };
 
 export type DentalImagingModuleCreateFindingBody = {

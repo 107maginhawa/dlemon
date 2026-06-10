@@ -174,11 +174,16 @@ export class ImagingCephRepository {
   // Reports (immutable, append-only — D-I)
   // -------------------------------------------------------------------------
 
-  /** Inserts a new report version with monotonically increasing version number. */
+  /**
+   * Inserts a new report version with monotonically increasing version number.
+   * G1-B: `revisionOf` (prior version's report id) + `revisionReason` make the
+   * linear version chain an explicit, reasoned lineage. Both null for v1.
+   */
   async createReportVersion(
     imageId: string,
     snapshot: Record<string, unknown>,
     userId: string | null,
+    lineage: { revisionOf?: string | null; revisionReason?: string | null } = {},
   ): Promise<ImagingCephReport> {
     return createSnapshotVersion(
       this.db,
@@ -186,7 +191,13 @@ export class ImagingCephRepository {
       imagingCephReports.imageId,
       imagingCephReports.version,
       imageId,
-      { imageId, snapshot, createdBy: userId ?? null },
+      {
+        imageId,
+        snapshot,
+        createdBy: userId ?? null,
+        revisionOf: lineage.revisionOf ?? null,
+        revisionReason: lineage.revisionReason ?? null,
+      },
     ).then(row => row as ImagingCephReport);
   }
 

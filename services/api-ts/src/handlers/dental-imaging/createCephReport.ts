@@ -31,6 +31,8 @@ const SOFTWARE_VERSION = '1.4.0';
 /** Schema version of the calibration block snapshotted into a report (G2/G6). */
 const CALIBRATION_SNAPSHOT_VERSION = 1;
 const DEFAULT_ANALYSIS_TYPE = 'steiner_hybrid_sn';
+/** G1-B: cap on the free-text re-finalization reason. */
+const REVISION_REASON_MAX_LEN = 500;
 
 export async function createCephReport(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -44,6 +46,7 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
   const body = (await ctx.req.json().catch(() => ({}))) as {
     analysisType?: unknown;
     normPopulation?: unknown;
+    revisionReason?: unknown;
   };
   const analysisType =
     typeof body.analysisType === 'string' && (ANALYSIS_TYPES as readonly string[]).includes(body.analysisType)
@@ -53,6 +56,12 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
     typeof body.normPopulation === 'string' && NORM_POPULATIONS.includes(body.normPopulation)
       ? body.normPopulation
       : DEFAULT_POPULATION;
+  // G1-B: optional re-finalization reason; clamp to a sane length. revisionOf is
+  // server-derived from the prior latest version (never client-set).
+  const revisionReason =
+    typeof body.revisionReason === 'string' && body.revisionReason.trim().length > 0
+      ? body.revisionReason.trim().slice(0, REVISION_REASON_MAX_LEN)
+      : null;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -143,10 +152,18 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
     branch_name: branchName,
   };
 
-  const report = await cephRepo.createReportVersion(imageId, snapshot, user.id);
+  // G1-B: link this version to the prior latest one (null for v1) so the chain
+  // is an explicit, reasoned lineage.
+  const priorReport = await cephRepo.getLatestReport(imageId);
+  const revisionOf = priorReport?.id ?? null;
+
+  const report = await cephRepo.createReportVersion(imageId, snapshot, user.id, {
+    revisionOf,
+    revisionReason,
+  });
 
   logger?.info(
-    { imageId, reportVersion: report.version, action: 'ceph_report_create', by: user.id },
+    { imageId, reportVersion: report.version, revisionOf, action: 'ceph_report_create', by: user.id },
     'Ceph report version created',
   );
 
@@ -156,6 +173,8 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
       imageId: report.imageId,
       version: report.version,
       snapshot: report.snapshot,
+      revisionOf: report.revisionOf,
+      revisionReason: report.revisionReason,
       createdAt: report.createdAt,
     },
     201,

@@ -16,6 +16,9 @@ interface CephReportResponse {
   version: number
   imageId: string
   snapshot: CephReportSnapshot
+  // G1-B: explicit revision lineage
+  revisionOf: string | null
+  revisionReason: string | null
   createdAt: string
   createdBy: string | null
 }
@@ -67,6 +70,8 @@ function CephReportPage() {
     <CephReportView
       snapshot={data.snapshot}
       version={data.version}
+      revisionOf={data.revisionOf}
+      revisionReason={data.revisionReason}
     />
   )
 }

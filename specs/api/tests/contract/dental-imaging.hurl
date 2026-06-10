@@ -365,6 +365,9 @@ jsonpath "$.snapshot.norm_population" == "default"
 jsonpath "$.snapshot.norm_version" isString
 jsonpath "$.snapshot.formula_version" isString
 jsonpath "$.snapshot.calibration.version" isInteger
+# G1-B: v1 has no prior version → revision lineage is null.
+jsonpath "$.revisionOf" == null
+jsonpath "$.revisionReason" == null
 
 
 # 15. GET report (latest version) — snapshot must match what was returned on create
@@ -375,6 +378,7 @@ HTTP 200
 jsonpath "$.version" == 1
 jsonpath "$.id" == "{{report_id}}"
 jsonpath "$.snapshot.analysis_label" == "steiner_hybrid_sn"
+jsonpath "$.revisionOf" == null
 
 
 # ============================================================
@@ -399,6 +403,34 @@ jsonpath "$.version" == 1
 jsonpath "$.id" == "{{report_id}}"
 jsonpath "$.snapshot.analysis_label" == "{{snapshot_analysis_label}}"
 jsonpath "$.snapshot.branch_name" == "{{snapshot_branch_name}}"
+
+
+# ============================================================
+# CEPH REPORT — G1-B REVISION LINEAGE (re-finalize → v2)
+# ============================================================
+
+# 17b. Re-finalize → v2 with a revision reason. revisionOf links to v1's id;
+# the linear version chain is now explicit + reasoned (no trace-session FSM).
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "revisionReason": "Re-traced Gonion after calibration review"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.version" == 2
+jsonpath "$.revisionOf" == "{{report_id}}"
+jsonpath "$.revisionReason" == "Re-traced Gonion after calibration review"
+
+# 17c. GET latest → v2 carries the lineage on read
+GET {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.version" == 2
+jsonpath "$.revisionOf" == "{{report_id}}"
+jsonpath "$.revisionReason" == "Re-traced Gonion after calibration review"
 
 
 # ============================================================

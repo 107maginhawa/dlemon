@@ -477,11 +477,17 @@ namespace DentalImagingModule {
   }
 
   // D-I: immutable versioned snapshot — never mutated after creation
+  // G1-B: explicit revision lineage. `revisionOf` points to the report version
+  // this one supersedes (null for v1); `revisionReason` records why a finalized
+  // trace was re-finalized. The version chain is linear; these make it explicit
+  // and reasoned without a separate session FSM.
   model CephReport {
     id: string;
     imageId: string;
     version: int32;
     snapshot: Record<unknown>;
+    revisionOf: string | null;
+    revisionReason: string | null;
     createdAt: utcDateTime;
   }
 
@@ -489,9 +495,12 @@ namespace DentalImagingModule {
   // viewing when finalizing. Pinned into the snapshot so a finalized report
   // records the analysis ACTUALLY used (not a hardcoded default). Both optional
   // and back-compatible — omitted → steiner_hybrid_sn / default population.
+  // G1-B: optional `revisionReason` — captured when re-finalizing over a prior
+  // version. `revisionOf` is server-derived (prior latest version), not client-set.
   model CreateCephReportBody {
     analysisType?: string;
     normPopulation?: string;
+    revisionReason?: string;
   }
 
   // =========================================================================

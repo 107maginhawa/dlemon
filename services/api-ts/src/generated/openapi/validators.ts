@@ -1653,6 +1653,8 @@ export const DentalImagingModuleCephReportSchema = z.object({
   imageId: z.string(),
   version: z.number().int(),
   snapshot: z.record(z.string(), z.unknown()),
+  revisionOf: z.union([z.string(), z.null()]),
+  revisionReason: z.union([z.string(), z.null()]),
   createdAt: z.string().datetime().transform((str) => new Date(str))
 });
 
@@ -1693,7 +1695,8 @@ export const DentalImagingModuleCephSuperimpositionListResponseSchema = z.object
 
 export const DentalImagingModuleCreateCephReportBodySchema = z.object({
   analysisType: z.string().optional(),
-  normPopulation: z.string().optional()
+  normPopulation: z.string().optional(),
+  revisionReason: z.string().optional()
 });
 
 export const DentalImagingModuleImagingFindingTypeSchema = z.enum(["caries", "secondary_caries", "bone_loss", "furcation_involvement", "periapical_lesion", "root_resorption", "calculus", "crown_fracture", "root_fracture", "impacted_tooth", "over_eruption", "open_contact", "overhang", "crown_needed", "implant_needed"]);

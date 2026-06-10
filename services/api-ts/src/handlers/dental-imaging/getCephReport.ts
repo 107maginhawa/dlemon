@@ -78,6 +78,9 @@ export async function getCephReport(ctx: BaseContext): Promise<Response> {
       imageId: report.imageId,
       version: report.version,
       snapshot: report.snapshot,
+      // G1-B: explicit revision lineage
+      revisionOf: report.revisionOf,
+      revisionReason: report.revisionReason,
       createdAt: report.createdAt,
     },
     200,

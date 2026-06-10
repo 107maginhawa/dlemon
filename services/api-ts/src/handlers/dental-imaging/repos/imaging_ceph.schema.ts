@@ -131,6 +131,12 @@ export const imagingCephReports = pgTable(
     imageId: uuid('image_id')
       .notNull()
       .references(() => imagingStudyImages.id),
+    // G1-B: explicit revision lineage over the (linear) version chain. `revisionOf`
+    // points to the report version this one supersedes (null for v1); `revisionReason`
+    // records WHY a finalized trace was re-finalized. Server-derived + reasoned — no
+    // separate trace-session FSM (the landmark FSM is the draft↔blessed boundary).
+    revisionOf: uuid('revision_of'),
+    revisionReason: text('revision_reason'),
   },
   (table) => ({
     uniqueImageVersion: unique('imaging_ceph_report_image_version_uniq').on(
