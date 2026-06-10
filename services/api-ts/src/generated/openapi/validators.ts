@@ -1691,6 +1691,11 @@ export const DentalImagingModuleCephSuperimpositionListResponseSchema = z.object
   items: z.array(DentalImagingModuleCephSuperimpositionSchema)
 });
 
+export const DentalImagingModuleCreateCephReportBodySchema = z.object({
+  analysisType: z.string().optional(),
+  normPopulation: z.string().optional()
+});
+
 export const DentalImagingModuleImagingFindingTypeSchema = z.enum(["caries", "secondary_caries", "bone_loss", "furcation_involvement", "periapical_lesion", "root_resorption", "calculus", "crown_fracture", "root_fracture", "impacted_tooth", "over_eruption", "open_contact", "overhang", "crown_needed", "implant_needed"]);
 
 export const DentalImagingModuleImagingFindingStatusSchema = z.enum(["draft", "confirmed", "resolved"]);
@@ -20624,6 +20629,9 @@ export const CephMgmt_createCephReportParams = z.object({
   imageId: z.string(),
 });
 export type CephMgmt_createCephReportParams = z.infer<typeof CephMgmt_createCephReportParams>;
+
+export const CephMgmt_createCephReportBody = DentalImagingModuleCreateCephReportBodySchema;
+export type CephMgmt_createCephReportBody = z.infer<typeof CephMgmt_createCephReportBody>;
 
 export const CephMgmt_createCephReportResponse = z.union([DentalImagingModuleCephReportSchema, ErrorResponseSchema]);
 

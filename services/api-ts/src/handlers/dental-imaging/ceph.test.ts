@@ -232,12 +232,19 @@ function makeCephDb(opts: {
     insert: (tableRef: any) => {
       const isReportTable = tableRef?.snapshot !== undefined;
       return {
-        values: (_data: any) => {
+        values: (data: any) => {
           const voidPromise = Promise.resolve(undefined);
           return {
             returning: () => {
               if (isReportTable) {
-                return Promise.resolve([{ ...MOCK_REPORT, version: reportVersion + 1, createdBy: DENTIST_USER.id }]);
+                // Echo the snapshot the handler actually built (not a fixture) so
+                // tests assert real handler output (G2 snapshot provenance).
+                return Promise.resolve([{
+                  ...MOCK_REPORT,
+                  version: reportVersion + 1,
+                  createdBy: DENTIST_USER.id,
+                  snapshot: data?.snapshot ?? MOCK_REPORT.snapshot,
+                }]);
               }
               return Promise.resolve([analysis ?? MOCK_ANALYSIS]);
             },
@@ -888,6 +895,70 @@ describe('CIMG-11 report assembly', () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// G2 — report reproducibility version-pinning
+// ---------------------------------------------------------------------------
+
+describe('G2 report version-pinning', () => {
+  async function generateReport(body: Record<string, unknown>) {
+    const { CephMgmt_createCephReport } = await import('./CephMgmt_createCephReport');
+    const db = makeCephDb({ landmarks: GATE_LANDMARKS, reportVersion: 0 });
+    const app = buildCephApp(CephMgmt_createCephReport as any, {
+      user: DENTIST_USER, db, method: 'POST', path: '/:imageId/reports',
+    });
+    const res = await app.request(`/${IMAGE_ID}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res;
+  }
+
+  async function snapshotOf(res: Response): Promise<Record<string, any>> {
+    const body = (await res.json()) as { snapshot: Record<string, any> };
+    return body.snapshot;
+  }
+
+  test('pins the analysis actually used (no longer hardcoded Steiner)', async () => {
+    const res = await generateReport({ analysisType: 'ricketts', normPopulation: 'japanese' });
+    expect(res.status).toBe(201);
+    const snap = await snapshotOf(res);
+    expect(snap['analysis_type']).toBe('ricketts');
+    expect(snap['analysis_label']).toBe('ricketts');
+    expect(snap['norm_population']).toBe('japanese');
+  });
+
+  test('pins norm + formula versions for reproducibility', async () => {
+    const res = await generateReport({});
+    const snap = await snapshotOf(res);
+    expect(typeof snap['norm_version']).toBe('string');
+    expect(snap['norm_version'].length).toBeGreaterThan(0);
+    expect(typeof snap['formula_version']).toBe('string');
+    expect(snap['formula_version'].length).toBeGreaterThan(0);
+  });
+
+  test('defaults to steiner_hybrid_sn / default population when body omits them', async () => {
+    const res = await generateReport({});
+    const snap = await snapshotOf(res);
+    expect(snap['analysis_type']).toBe('steiner_hybrid_sn');
+    expect(snap['norm_population']).toBe('default');
+  });
+
+  test('clamps an unknown analysisType to the default (no fabricated label)', async () => {
+    const res = await generateReport({ analysisType: 'not_a_real_analysis' });
+    expect(res.status).toBe(201);
+    const snap = await snapshotOf(res);
+    expect(snap['analysis_type']).toBe('steiner_hybrid_sn');
+  });
+
+  test('calibration snapshot carries pixels_per_mm + version keys', async () => {
+    const res = await generateReport({});
+    const snap = await snapshotOf(res);
+    expect(snap['calibration']).toHaveProperty('pixels_per_mm');
+    expect(snap['calibration']).toHaveProperty('version');
   });
 });
 

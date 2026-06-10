@@ -1477,7 +1477,11 @@ export const cephMgmtGetCephReport = <ThrowOnError extends boolean = false>(opti
 export const cephMgmtCreateCephReport = <ThrowOnError extends boolean = false>(options: Options<CephMgmtCreateCephReportData, ThrowOnError>) => (options.client ?? client).post<CephMgmtCreateCephReportResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/dental/imaging/images/{imageId}/ceph/reports',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 export const imagingFindingsMgmtListFindings = <ThrowOnError extends boolean = false>(options: Options<ImagingFindingsMgmtListFindingsData, ThrowOnError>) => (options.client ?? client).get<ImagingFindingsMgmtListFindingsResponses, unknown, ThrowOnError>({

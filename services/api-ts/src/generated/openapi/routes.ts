@@ -1008,6 +1008,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/imaging/images/:imageId/ceph/reports',
     authMiddleware(),
     zValidator('param', validators.CephMgmt_createCephReportParams, validationErrorHandler),
+    zValidator('json', validators.CephMgmt_createCephReportBody, validationErrorHandler),
     registry.CephMgmt_createCephReport as unknown as Handler
   );
 

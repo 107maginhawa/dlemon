@@ -3352,6 +3352,11 @@ export type DentalImagingModuleCephSuperimpositionListResponse = {
 
 export type DentalImagingModuleCephSuperimpositionReference = 'cranial_base' | 'maxillary' | 'mandibular';
 
+export type DentalImagingModuleCreateCephReportBody = {
+    analysisType?: string;
+    normPopulation?: string;
+};
+
 export type DentalImagingModuleCreateFindingBody = {
     type: DentalImagingModuleImagingFindingType;
     status?: DentalImagingModuleImagingFindingStatus;
@@ -67174,7 +67179,7 @@ export type CephMgmtGetCephReportResponses = {
 export type CephMgmtGetCephReportResponse = CephMgmtGetCephReportResponses[keyof CephMgmtGetCephReportResponses];
 
 export type CephMgmtCreateCephReportData = {
-    body?: never;
+    body: DentalImagingModuleCreateCephReportBody;
     path: {
         imageId: string;
     };

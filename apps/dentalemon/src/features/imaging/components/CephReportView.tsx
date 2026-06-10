@@ -6,6 +6,7 @@
  * re-editing landmarks after export produces a new version.
  */
 import { useState } from 'react'
+import { getPopulationLabel } from '@monobase/ceph-math'
 
 // Tracing lines drawn over the radiograph when both endpoints are placed.
 // Reference overlay only — D-N: not to scale, no scale bar.
@@ -48,11 +49,19 @@ export interface CephReportSnapshot {
   landmarks: Record<string, CephReportSnapshotLandmark>
   measurements: Record<string, number | null>
   analysis_label: string
+  // G2: reproducibility provenance — analysis actually used + pinned versions.
+  analysis_type?: string
+  norm_population?: string
+  norm_version?: string
+  formula_version?: string
   calibration: {
     value: number | null
     method: string
-    at: string | null
-    by: string | null
+    at?: string | null
+    by?: string | null
+    // G2: px/mm + snapshot-schema version (versioned ruler points land in G6).
+    pixels_per_mm?: number | null
+    version?: number
   }
   software_version: string
   operator: string
@@ -117,6 +126,20 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
             {' · '}
             Software: <span className="font-medium text-zinc-900">{snapshot.software_version}</span>
           </p>
+          {/* G2: reproducibility provenance — what the report can be reproduced against.
+              Provenance only (not a normative comparison; D-H still holds). */}
+          {(snapshot.norm_population || snapshot.norm_version || snapshot.formula_version) && (
+            <p className="text-xs text-zinc-500 mt-1" data-testid="ceph-report-provenance">
+              {snapshot.norm_population && (
+                <>
+                  Reference norms:{' '}
+                  <span className="font-medium text-zinc-700">{getPopulationLabel(snapshot.norm_population)}</span>
+                </>
+              )}
+              {snapshot.norm_version && <> · Norms v{snapshot.norm_version}</>}
+              {snapshot.formula_version && <> · Engine v{snapshot.formula_version}</>}
+            </p>
+          )}
         </div>
         {/* D-G: analysis label badge */}
         <span

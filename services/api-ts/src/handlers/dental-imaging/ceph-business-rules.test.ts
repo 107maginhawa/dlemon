@@ -486,7 +486,13 @@ describe('BR-039 calibration provenance frozen in snapshot', () => {
     });
     const res = await postReport(app);
     expect(res.status).toBe(201);
-    expect(captured.calibration).toEqual({ value: 0.1, method: 'manual_ruler' });
+    // G2: calibration snapshot also pins px/mm (= 1/0.1) + schema version.
+    expect(captured.calibration).toEqual({
+      value: 0.1,
+      method: 'manual_ruler',
+      pixels_per_mm: 10,
+      version: 1,
+    });
   });
 
   test('BR-039: uncalibrated image freezes snapshot.calibration {value:null, method=not_calibrated}', async () => {
@@ -507,7 +513,13 @@ describe('BR-039 calibration provenance frozen in snapshot', () => {
     });
     const res = await postReport(app);
     expect(res.status).toBe(201);
-    expect(captured.calibration).toEqual({ value: null, method: 'not_calibrated' });
+    // G2: uncalibrated → px/mm null, but schema version still pinned.
+    expect(captured.calibration).toEqual({
+      value: null,
+      method: 'not_calibrated',
+      pixels_per_mm: null,
+      version: 1,
+    });
   });
 });
 

@@ -287,6 +287,8 @@ jsonpath "$.code" == "LANDMARK_LOCKED"
 # Route: POST /dental/imaging/images/{imageId}/ceph/reports
 POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
 Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
 HTTP 422
 [Asserts]
 jsonpath "$.code" == "REPORT_GATE_UNCONFIRMED"
@@ -337,8 +339,11 @@ HTTP 200
 # ============================================================
 
 # 14. Create ceph report — A,B,Go,Po now confirmed → should succeed (201)
+# Body omits analysisType/normPopulation → defaults to steiner_hybrid_sn / default.
 POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
 Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
 HTTP 201
 [Captures]
 report_id: jsonpath "$.id"
@@ -353,6 +358,13 @@ jsonpath "$.snapshot.branch_name" == "Main Branch"
 jsonpath "$.snapshot.calibration.method" == "manual_ruler"
 jsonpath "$.snapshot.software_version" isString
 jsonpath "$.snapshot.landmarks" count >= 6
+# G2: reproducibility version-pinning — snapshot records the analysis actually
+# used + the norm/formula/calibration versions it can be reproduced against.
+jsonpath "$.snapshot.analysis_type" == "steiner_hybrid_sn"
+jsonpath "$.snapshot.norm_population" == "default"
+jsonpath "$.snapshot.norm_version" isString
+jsonpath "$.snapshot.formula_version" isString
+jsonpath "$.snapshot.calibration.version" isInteger
 
 
 # 15. GET report (latest version) — snapshot must match what was returned on create

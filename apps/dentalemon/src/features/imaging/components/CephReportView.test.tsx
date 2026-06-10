@@ -166,6 +166,29 @@ describe('D4 — context fields from snapshot', () => {
   })
 })
 
+// G2: reproducibility provenance pinned in the snapshot
+describe('G2 — reproducibility provenance', () => {
+  test('renders the pinned norm population label', () => {
+    const { container } = renderView(mkSnapshot({ norm_population: 'japanese' }))
+    expect(container.textContent).toContain('Japanese')
+  })
+
+  test('renders the pinned norm-table version', () => {
+    const { container } = renderView(mkSnapshot({ norm_version: '1.0.0' }))
+    expect(container.textContent).toContain('1.0.0')
+  })
+
+  test('renders the pinned measurement-engine (formula) version', () => {
+    const { container } = renderView(mkSnapshot({ formula_version: '9.9.9' }))
+    expect(container.textContent).toContain('9.9.9')
+  })
+
+  test('badge reflects the analysis actually used (e.g. ricketts)', () => {
+    const { container } = renderView(mkSnapshot({ analysis_label: 'ricketts', analysis_type: 'ricketts' }))
+    expect(container.textContent).toContain('ricketts')
+  })
+})
+
 // Snapshot-driven (D-I)
 describe('D-I — snapshot-driven rendering', () => {
   test('renders measurements from snapshot, not live state', () => {

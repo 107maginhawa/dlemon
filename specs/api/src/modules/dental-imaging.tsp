@@ -485,6 +485,15 @@ namespace DentalImagingModule {
     createdAt: utcDateTime;
   }
 
+  // G2 (reproducibility): the analysis + reference population the clinician was
+  // viewing when finalizing. Pinned into the snapshot so a finalized report
+  // records the analysis ACTUALLY used (not a hardcoded default). Both optional
+  // and back-compatible — omitted → steiner_hybrid_sn / default population.
+  model CreateCephReportBody {
+    analysisType?: string;
+    normPopulation?: string;
+  }
+
   // =========================================================================
   // AUTO / AI LANDMARK DETECTION (P1-10, Phase 0 — detector SEAM + FakeDetector)
   // =========================================================================
@@ -634,7 +643,7 @@ namespace DentalImagingModule {
     @post
     @route("/dental/imaging/images/{imageId}/ceph/reports")
     @useAuth(bearerAuth)
-    createCephReport(@path imageId: string): CephReport | ErrorResponse;
+    createCephReport(@path imageId: string, @body body: CreateCephReportBody): CephReport | ErrorResponse;
 
     @get
     @route("/dental/imaging/images/{imageId}/ceph/reports")

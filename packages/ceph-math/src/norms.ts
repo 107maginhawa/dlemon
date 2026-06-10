@@ -11,6 +11,13 @@
  * not a diagnosis.
  */
 
+/**
+ * Version of the norm tables (CEPH_NORMS + population overrides). Bump whenever a
+ * mean/SD/source or population override changes so a finalized report can pin the
+ * exact reference values it was generated against (reproducibility — guide §14/§16).
+ */
+export const NORMS_VERSION = '1.0.0';
+
 export interface CephNorm {
   /** Population mean. */
   mean: number;

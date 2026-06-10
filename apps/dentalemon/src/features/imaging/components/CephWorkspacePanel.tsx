@@ -111,6 +111,9 @@ export function CephWorkspacePanel({
     mutationFn: async () => {
       const { data } = await cephMgmtCreateCephReport({
         path: { imageId },
+        // G2: pin the analysis + reference population the clinician is viewing so
+        // the immutable report records what was actually used (not a default).
+        body: { analysisType, normPopulation: population },
         throwOnError: true,
       })
       // data is DentalImagingModuleCephReport | ErrorResponse; narrow via 'version'.

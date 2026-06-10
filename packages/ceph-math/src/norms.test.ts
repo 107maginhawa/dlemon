@@ -1,5 +1,18 @@
 import { describe, it, expect } from 'bun:test'
-import { getNorm, classifyDeviation, CEPH_NORMS, type CephNorm } from './norms'
+import { getNorm, classifyDeviation, CEPH_NORMS, NORMS_VERSION, type CephNorm } from './norms'
+import { FORMULA_VERSION } from './index'
+
+describe('reproducibility version constants (G2)', () => {
+  it('exports a non-empty NORMS_VERSION string so reports can pin the norm-table version', () => {
+    expect(typeof NORMS_VERSION).toBe('string')
+    expect(NORMS_VERSION.length).toBeGreaterThan(0)
+  })
+
+  it('exports a non-empty FORMULA_VERSION string so reports can pin the measurement-engine version', () => {
+    expect(typeof FORMULA_VERSION).toBe('string')
+    expect(FORMULA_VERSION.length).toBeGreaterThan(0)
+  })
+})
 
 describe('ceph norms — lookup keyed by analysis type', () => {
   it('returns the Steiner SNA norm (82 ± 2)', () => {

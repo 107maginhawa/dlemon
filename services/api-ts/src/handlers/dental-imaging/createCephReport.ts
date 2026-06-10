@@ -15,18 +15,44 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getOrgDataForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
-import { computeCephAnalysis } from '@monobase/ceph-math';
+import {
+  computeAnalysis,
+  ANALYSIS_TYPES,
+  NORM_POPULATIONS,
+  DEFAULT_POPULATION,
+  NORMS_VERSION,
+  FORMULA_VERSION,
+} from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
 import { CEPH_REPORT_GATE_LANDMARKS } from './repos/imaging_ceph.schema';
 
 const SOFTWARE_VERSION = '1.4.0';
+/** Schema version of the calibration block snapshotted into a report (G2/G6). */
+const CALIBRATION_SNAPSHOT_VERSION = 1;
+const DEFAULT_ANALYSIS_TYPE = 'steiner_hybrid_sn';
 
 export async function createCephReport(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
   if (!user?.id) throw new UnauthorizedError('Authentication required');
 
   const { imageId } = ctx.req.param() as { imageId: string };
+
+  // G2: clinician's selected analysis + reference population (back-compat: omitted
+  // → steiner_hybrid_sn / default). Clamp to known values so the report never
+  // self-labels a fabricated analysis/population.
+  const body = (await ctx.req.json().catch(() => ({}))) as {
+    analysisType?: unknown;
+    normPopulation?: unknown;
+  };
+  const analysisType =
+    typeof body.analysisType === 'string' && (ANALYSIS_TYPES as readonly string[]).includes(body.analysisType)
+      ? body.analysisType
+      : DEFAULT_ANALYSIS_TYPE;
+  const normPopulation =
+    typeof body.normPopulation === 'string' && NORM_POPULATIONS.includes(body.normPopulation)
+      ? body.normPopulation
+      : DEFAULT_POPULATION;
 
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
@@ -72,12 +98,13 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
     );
   }
 
-  const result = computeCephAnalysis(landmarkMap, image.pixelSpacingMm ?? null);
+  const result = computeAnalysis(analysisType, landmarkMap, image.pixelSpacingMm ?? null);
 
   // D-4: context fields from imaging_study + branch
   const studyDate = study.createdAt.toISOString().split('T')[0] ?? study.createdAt.toISOString();
   const branchName = orgData.branchName ?? study.branchId;
 
+  const pixelSpacingMm = image.pixelSpacingMm ?? null;
   const snapshot: Record<string, unknown> = {
     landmarks: allLandmarks.map((l) => ({
       landmarkCode: l.landmarkCode,
@@ -88,11 +115,25 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
       confidence: l.confidence,
     })),
     measurements: result.measurements,
-    analysis_label: 'steiner_hybrid_sn',
+    // G2: pin the analysis ACTUALLY used (was hardcoded 'steiner_hybrid_sn').
+    // analysis_label kept for back-compat consumers; analysis_type is canonical.
+    analysis_label: analysisType,
+    analysis_type: analysisType,
+    norm_population: normPopulation,
+    norm_version: NORMS_VERSION,
+    formula_version: FORMULA_VERSION,
     calibration: {
-      value: image.pixelSpacingMm,
-      method: image.pixelSpacingMm ? 'manual_ruler' : 'not_calibrated',
+      value: pixelSpacingMm,
+      method: pixelSpacingMm ? 'manual_ruler' : 'not_calibrated',
+      // G2: pixels-per-mm + version pinned for reproducibility (versioned ruler
+      // points land in G6). pixels_per_mm = 1 / (mm-per-px).
+      pixels_per_mm: pixelSpacingMm ? Math.round((1 / pixelSpacingMm) * 10000) / 10000 : null,
+      version: CALIBRATION_SNAPSHOT_VERSION,
     },
+    // G2: surface analysis completeness so the report renders mm/missing honestly
+    // (CephReportView already reads these; they were previously never written).
+    missing: result.missing,
+    uncalibrated: result.uncalibrated,
     software_version: SOFTWARE_VERSION,
     operator: user.id,
     generated_at: new Date().toISOString(),
