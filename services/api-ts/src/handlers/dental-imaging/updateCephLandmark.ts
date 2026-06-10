@@ -12,13 +12,15 @@ import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { computeCephAnalysis } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
 import {
   CEPH_LANDMARK_TRANSITIONS,
+  isCephDraftRole,
+  isCephSignoffRole,
   type CephLandmarkStatus,
   type ImagingCephLandmark,
 } from './repos/imaging_ceph.schema';
@@ -41,10 +43,22 @@ export async function updateCephLandmark(ctx: BaseContext): Promise<Response> {
   const study = await imagingRepo.findStudyById(image.studyId);
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
-  try {
-    await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
-  } catch {
+  // G4-B sign-off split: DRAFT roles (incl. dental_assistant) may edit a draft
+  // landmark; non-members/non-clinical → 404. Transitioning INTO 'confirmed'/
+  // 'locked' is the clinician's sign-off — an assistant attempting it → 403.
+  const role = await getBranchRole(db, user.id, study.branchId);
+  if (!isCephDraftRole(role)) {
     throw new NotFoundError('Image not found');
+  }
+  if (
+    !isCephSignoffRole(role) &&
+    (body.status === 'confirmed' || body.status === 'locked')
+  ) {
+    throw new ForbiddenError(
+      `Landmark '${landmarkCode}' cannot be set to '${body.status}'. ` +
+        `Assistants may prepare drafts ('placed') only; a dentist must confirm or lock.`,
+      'ASSISTANT_CANNOT_FINALIZE',
+    );
   }
 
   const imagingTier = await getImagingTierForBranch(db, study.branchId);
@@ -98,7 +112,7 @@ export async function updateCephLandmark(ctx: BaseContext): Promise<Response> {
     updatePayload['source'] = 'ai_corrected';
   }
 
-  await cephRepo.update(landmark.id, updatePayload);
+  await cephRepo.update(landmark.id, updatePayload, user.id);
 
   const allLandmarks = await cephRepo.listByImage(imageId);
   const landmarkMap = Object.fromEntries(allLandmarks.map((l) => [l.landmarkCode, { x: l.x, y: l.y }]));

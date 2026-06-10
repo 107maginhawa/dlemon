@@ -205,6 +205,25 @@ export const CEPH_LANDMARK_TRANSITIONS: Record<CephLandmarkStatus, CephLandmarkS
 // D-L: report generation blocked until these 4 landmarks are 'confirmed'
 export const CEPH_REPORT_GATE_LANDMARKS = ['A', 'B', 'Go', 'Po'] as const;
 
+// G4-B sign-off split — assistant-prepares / clinician-finalizes (guide §3).
+// DRAFT roles may place/edit landmarks at 'placed' (a draft tracing); only
+// SIGNOFF roles may drive 'confirmed'/'locked' transitions and create a report.
+// dental_assistant is the canonical "assistant prepares" role; hygienist and
+// treatment_coordinator are intentionally excluded — cephalometric tracing is
+// not in their clinical scope (periodontal/administrative respectively).
+export const CEPH_SIGNOFF_ROLES = ['dentist_owner', 'dentist_associate'] as const;
+export const CEPH_DRAFT_ROLES = [...CEPH_SIGNOFF_ROLES, 'dental_assistant'] as const;
+
+/** True when a finalizing role (may confirm/lock landmarks + create reports). */
+export function isCephSignoffRole(role: string | null | undefined): boolean {
+  return role != null && (CEPH_SIGNOFF_ROLES as readonly string[]).includes(role);
+}
+
+/** True when a drafting role (may place/edit 'placed' landmarks). */
+export function isCephDraftRole(role: string | null | undefined): boolean {
+  return role != null && (CEPH_DRAFT_ROLES as readonly string[]).includes(role);
+}
+
 // ---------------------------------------------------------------------------
 // TypeScript types
 // ---------------------------------------------------------------------------

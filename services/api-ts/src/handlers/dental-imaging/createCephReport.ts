@@ -13,7 +13,7 @@ import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getOrgDataForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import {
   computeAnalysis,
@@ -25,7 +25,11 @@ import {
 } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
-import { CEPH_REPORT_GATE_LANDMARKS } from './repos/imaging_ceph.schema';
+import {
+  CEPH_REPORT_GATE_LANDMARKS,
+  isCephDraftRole,
+  isCephSignoffRole,
+} from './repos/imaging_ceph.schema';
 
 const SOFTWARE_VERSION = '1.4.0';
 /** Schema version of the calibration block snapshotted into a report (G2/G6). */
@@ -74,10 +78,18 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
   const study = await imagingRepo.findStudyById(image.studyId);
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
-  try {
-    await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
-  } catch {
+  // G4-B sign-off split: finalizing a report is the clinician's sign-off.
+  // Non-members/non-clinical roles → 404 (anti-enumeration); an assistant
+  // (draft-but-not-signoff) → 403 explaining they may prepare drafts only.
+  const role = await getBranchRole(db, user.id, study.branchId);
+  if (!isCephDraftRole(role)) {
     throw new NotFoundError('Image not found');
+  }
+  if (!isCephSignoffRole(role)) {
+    throw new ForbiddenError(
+      'Finalizing a cephalometric report requires a dentist. Assistants may prepare drafts only.',
+      'ASSISTANT_CANNOT_FINALIZE',
+    );
   }
 
   const orgData = await getOrgDataForBranch(db, study.branchId);
@@ -94,6 +106,15 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
 
   const allLandmarks = await cephRepo.listByImage(imageId);
   const landmarkMap = Object.fromEntries(allLandmarks.map((l) => [l.landmarkCode, { x: l.x, y: l.y }]));
+
+  // G4-B provenance: who PREPARED the tracing (distinct landmark authors) vs who
+  // FINALIZED it (this clinician). Under the sign-off split an assistant may draft
+  // landmarks while a dentist signs off — the report records both.
+  const preparedBy = [
+    ...new Set(
+      allLandmarks.flatMap((l) => [l.createdBy, l.updatedBy]).filter((id): id is string => id != null),
+    ),
+  ];
 
   // D-L: confirm-gate — A, B, Go, Po must all be 'confirmed'
   const confirmedCodes = new Set(
@@ -145,6 +166,10 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
     uncalibrated: result.uncalibrated,
     software_version: SOFTWARE_VERSION,
     operator: user.id,
+    // G4-B sign-off provenance: prepared_by = distinct landmark authors (may
+    // include an assistant); finalized_by = the clinician who signed off (operator).
+    prepared_by: preparedBy,
+    finalized_by: user.id,
     generated_at: new Date().toISOString(),
     // D-4 context fields
     study_date: studyDate,
