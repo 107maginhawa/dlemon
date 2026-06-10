@@ -88,7 +88,7 @@ consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = 
 | 1 | dental-org | yes | no | DONE | 🟢 | 1 (P1 shape-diff) | FE-unit + contract pins + smoke | none | runs/dental-org/ | bf88596a, 9cc7dadd |
 | 2 | person / profile + settings | yes | yes | DONE | 🟢 | 0 (no bugs) | contract pins + smoke | 3 (Type-C) | runs/person/ | eee6c6d8, d3f8f772 |
 | 3 | dental-patient | yes | no | DONE | 🟢 | 2 (P1 export×2) | contract + FE coherence pins + smoke | 3 (Type-C) | runs/dental-patient/ | 73034d6f, b74b1fe3, dc40d6cd, f27951b6, 6cd6727f |
-| 4 | dental-scheduling | yes | no | PENDING | — | — | — | — | — | — |
+| 4 | dental-scheduling | yes | no | IN-PROGRESS | — | — | — | — | — | — |
 | 5 | dental-visit | yes | no | DRY-RUN ✅ | 🟢 | 0 (no bugs) | n/a (dry run) | none | runs/dental-visit/ | none (report-only) |
 | 6 | dental-clinical | yes | no | PENDING | — | — | — | — | — | — |
 | 7 | dental-perio | yes | no | PENDING | — | — | — | — | — | — |
