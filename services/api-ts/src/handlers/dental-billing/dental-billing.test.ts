@@ -1210,28 +1210,26 @@ describe('createDentalPaymentPlan handler', () => {
     expect(body.frequency).toBe('monthly');
   });
 
-  test('returns error when plan already exists for invoice', async () => {
+  test('returns error when a DIFFERENT plan already exists for invoice', async () => {
+    // SL-04 / F-G16: one plan per invoice. An IDENTICAL re-create is now an
+    // idempotent replay (returns the existing plan, 200) — see
+    // createDentalPaymentPlan.idempotency.test.ts. A genuine attempt to create a
+    // DIFFERENT plan for an invoice that already has one is still PLAN_EXISTS.
     const { invoice } = await seedInvoice();
     const app = buildTestApp(TEST_USER);
-
-    const planBody = JSON.stringify({
-      patientId: PATIENT_ID,
-      numberOfInstallments: 2,
-      frequency: 'weekly',
-      startDate: new Date().toISOString(),
-    });
+    const startDate = new Date().toISOString();
 
     await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: planBody,
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 2, frequency: 'weekly', startDate }),
     });
 
-    // Second attempt should fail
+    // Second attempt with a DIFFERENT shape should conflict.
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: planBody,
+      body: JSON.stringify({ patientId: PATIENT_ID, numberOfInstallments: 4, frequency: 'monthly', startDate }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
     const body = await res.json() as any;
