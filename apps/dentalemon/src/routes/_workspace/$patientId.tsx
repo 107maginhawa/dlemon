@@ -37,6 +37,7 @@ import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan'
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
 import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
+import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
 import { toast } from 'sonner';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
@@ -269,6 +270,17 @@ function WorkspacePage() {
   // performed work shows done, and prior-visit pending work shows carried over.
   const chartLayers = deriveChartLayerSets(treatmentPlan);
 
+  // P0-D: explain why the selected tooth shows its odontogram layer/color. Derived
+  // from the SAME resolveToothLayer the chart renders with (via explainToothLayer),
+  // so the words shown in the slideout can't disagree with the rendered color.
+  const selectedToothLayerExplanation = selectedTooth != null
+    ? explainToothLayer(
+        selectedTooth,
+        teeth.find((t) => t.toothNumber === selectedTooth)?.entryClassification,
+        chartLayers,
+      )
+    : undefined;
+
   const currentVisitDate = currentVisit
     ? new Date(currentVisit.createdAt).toLocaleDateString('en-PH', {
         month: 'short',
@@ -441,6 +453,8 @@ function WorkspacePage() {
             treatments={treatments}
             carriedOverItems={carriedOverItems}
             visits={visits}
+            selectedTooth={selectedTooth}
+            onClearToothFilter={clearSelection}
             onMarkDone={(treatmentId, visitId, currentStatus) =>
               markDone(treatmentId, visitId, currentStatus as Parameters<typeof markDone>[2])
             }
@@ -458,6 +472,7 @@ function WorkspacePage() {
         onSaveAndNext={handleSaveAndNext}
         readOnly={isReadOnly}
         visitId={currentVisitId ?? undefined}
+        layerExplanation={selectedToothLayerExplanation}
       />
 
       {/* Footer */}

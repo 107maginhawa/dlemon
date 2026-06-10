@@ -53,9 +53,12 @@ export interface ToothSlideoutProps {
   visitId?: string;
   /** ID of the original treatment record being viewed (for amendment reference) */
   originalRecordId?: string;
+  /** P0-D: why this tooth shows its current odontogram layer/color (derived from
+   *  the same resolveToothLayer the chart uses, so it can't disagree). */
+  layerExplanation?: { layer: string; label: string; reason: string };
 }
 
-export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId }: ToothSlideoutProps) {
+export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId, layerExplanation }: ToothSlideoutProps) {
   // WCAG 2.4.3: Escape closes the slideout; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -256,6 +259,18 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
           ✕
         </button>
       </div>
+
+      {/* P0-D: explain why this tooth shows its current odontogram color/layer. */}
+      {layerExplanation && (
+        <div
+          data-testid="tooth-layer-explanation"
+          data-layer={layerExplanation.layer}
+          className="px-4 py-2 border-b bg-muted/30 text-xs"
+        >
+          <span className="font-semibold">{layerExplanation.label}</span>
+          <span className="text-muted-foreground"> — {layerExplanation.reason}</span>
+        </div>
+      )}
 
       {/* Step indicator — numbered circles with connecting lines */}
       <div className="flex items-center justify-between px-4 py-3 border-b">

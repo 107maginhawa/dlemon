@@ -31,6 +31,11 @@ interface TreatmentTableProps {
   selectedTreatmentId?: string | null;
   onMarkDone?: (treatmentId: string, visitId: string, currentStatus: string) => void; // kept for API compat; component now uses useMarkTreatmentDone directly
   readOnly?: boolean;
+  /** P0-D: when set, the table is scoped to this FDI tooth (body + counts + totals
+   *  all reflect only that tooth — keeps the summary coherent with the rows). */
+  selectedTooth?: number | null;
+  /** P0-D: clear the tooth scope (show all teeth again). */
+  onClearToothFilter?: () => void;
 }
 
 function formatDate(iso: string) {
@@ -67,14 +72,26 @@ function StatusBadge({ status }: { status: Treatment['status'] }) {
 
 export function TreatmentTable({
   visitId = '',
-  treatments,
-  carriedOverItems = [],
+  treatments: treatmentsProp,
+  carriedOverItems: carriedOverItemsProp = [],
   visits = [],
   onSelectTreatment,
   selectedTreatmentId,
   onMarkDone: _onMarkDone,
   readOnly: readOnlyProp = false,
+  selectedTooth = null,
+  onClearToothFilter,
 }: TreatmentTableProps) {
+  // P0-D: scope the whole table to the selected tooth. Every downstream
+  // computation (body rows, completed count, subtotals, grand total) reads these
+  // scoped arrays, so the summary a user sees always matches the rendered rows
+  // (guards the "summary computed from a different source than the body" bug class).
+  const treatments = selectedTooth == null
+    ? treatmentsProp
+    : treatmentsProp.filter((t) => t.toothNumber === selectedTooth);
+  const carriedOverItems = selectedTooth == null
+    ? carriedOverItemsProp
+    : carriedOverItemsProp.filter((i) => i.toothNumber === selectedTooth);
   // WR-01: with no active visit, visitId is '' → inline mutations would hit
   // PATCH /dental/visits//treatments/:id (invalid). Force read-only so no edit,
   // dismiss, price, notes, or mark-done control can fire against an empty visitId.
@@ -155,16 +172,58 @@ export function TreatmentTable({
 
   if (!hasRows) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[80px] text-sm text-muted-foreground">
-        No treatments recorded for this visit.
+      <div className="flex flex-col items-center justify-center h-full min-h-[80px] gap-2 text-sm text-muted-foreground">
+        {selectedTooth != null ? (
+          <>
+            <span data-testid="tooth-filter-empty">No treatments for tooth #{selectedTooth}.</span>
+            {onClearToothFilter && (
+              <button
+                type="button"
+                data-testid="tooth-filter-clear"
+                onClick={onClearToothFilter}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Show all teeth
+              </button>
+            )}
+          </>
+        ) : (
+          'No treatments recorded for this visit.'
+        )}
       </div>
     );
   }
 
+  // P0-D: rows actually rendered for the active scope (main breakdown + carried).
+  // The chip count is derived from this so it can never disagree with the body.
+  const visibleRowCount = displayedTreatments.length + carriedOverItems.length;
+
   return (
     <div className="border border-border/50 rounded-lg overflow-hidden bg-card mx-4 my-3">
       <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border/50">
-        <span className="text-sm font-semibold">Treatment Breakdown</span>
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          Treatment Breakdown
+          {selectedTooth != null && (
+            <span
+              data-testid="tooth-filter-chip"
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+            >
+              Tooth #{selectedTooth}
+              <span data-testid="tooth-filter-count" className="tabular-nums">({visibleRowCount})</span>
+              {onClearToothFilter && (
+                <button
+                  type="button"
+                  data-testid="tooth-filter-clear"
+                  onClick={onClearToothFilter}
+                  aria-label="Show all teeth"
+                  className="ml-0.5 rounded-full px-1 text-primary/70 hover:text-primary"
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          )}
+        </span>
         {/* Only show the toggle when it has a job: there is completed work to hide AND
             pending work to fall back to. On an all-completed visit the rows are always
             shown (effectiveShowCompleted), so a no-op toggle is hidden. Edge: if the last
