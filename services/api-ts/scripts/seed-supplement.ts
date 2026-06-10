@@ -44,6 +44,7 @@ import {
   dentalCasePresentations, type NewDentalCasePresentation,
 } from '@/handlers/dental-patient/repos/case-presentation.schema';
 import { eq, and, inArray } from 'drizzle-orm';
+import { detUuid, cpPlanSpecs } from './seed-shared';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 const db = createDatabase({ url: DATABASE_URL });
@@ -58,23 +59,6 @@ const daysFromNow = (n: number, h = 10) => {
 const atToday = (h: number, m = 0) => {
   const d = new Date(); d.setHours(h, m, 0, 0); return d;
 };
-
-// ─── Deterministic UUID helper (idempotent ids from a stable seed string) ────
-// Builds an RFC-4122-shaped v4 UUID deterministically from a label so re-runs
-// produce the same id and .onConflictDoNothing() de-dupes on the PK.
-function detUuid(seed: string): string {
-  let h = 2166136261 >>> 0;
-  const bytes: number[] = [];
-  for (let i = 0; i < 16; i++) {
-    h ^= seed.charCodeAt((i * 7 + 13) % seed.length) || (i + 1);
-    h = Math.imul(h, 16777619) >>> 0;
-    bytes.push((h >>> ((i % 4) * 8)) & 0xff);
-  }
-  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
-  const hex = bytes.map((b) => b.toString(16).padStart(2, '0'));
-  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
-}
 
 function log(msg: string) { console.log(`  ${msg}`); }
 function section(title: string) { console.log(`\n▶ ${title}`); }
@@ -1059,46 +1043,7 @@ async function seed() {
     return visitId;
   }
 
-  type CpItem = { tooth: number; cdt: string; desc: string; priceCents: number; phase?: string; status: 'planned' | 'diagnosed'; optionGroupId?: string; recommended?: boolean };
-  type CpPlanSpec = {
-    key: string; patientIdx: number; status: TreatmentPlanStatus;
-    decision?: 'accepted' | 'rejected'; rejectionReason?: string; withPresentation: boolean;
-    items: CpItem[];
-  };
-
-  const cpPlanSpecs: CpPlanSpec[] = [
-    {
-      key: 'cp-presented', patientIdx: 0, status: 'presented', withPresentation: true,
-      items: [
-        { tooth: 14, cdt: 'D2391', desc: 'Resin composite — 1 surface', priceCents: 500000, phase: 'disease_control', status: 'planned' },
-        { tooth: 30, cdt: 'D2740', desc: 'Crown — porcelain/ceramic', priceCents: 2000000, phase: 'definitive', status: 'planned' },
-        // Alternate option group (implant recommended vs bridge), unphased.
-        { tooth: 19, cdt: 'D6010', desc: 'Implant body — Option A (recommended)', priceCents: 4000000, status: 'diagnosed', optionGroupId: detUuid('cp-optgroup:presented'), recommended: true },
-        { tooth: 19, cdt: 'D6240', desc: 'Bridge — Option B', priceCents: 3000000, status: 'diagnosed', optionGroupId: detUuid('cp-optgroup:presented'), recommended: false },
-      ],
-    },
-    {
-      key: 'cp-accepted', patientIdx: 1, status: 'approved', decision: 'accepted', withPresentation: true,
-      items: [
-        { tooth: 3, cdt: 'D2750', desc: 'Crown — porcelain fused to metal', priceCents: 1800000, phase: 'definitive', status: 'planned' },
-        { tooth: 18, cdt: 'D2392', desc: 'Resin composite — 2 surfaces', priceCents: 600000, phase: 'disease_control', status: 'planned' },
-      ],
-    },
-    {
-      key: 'cp-rejected', patientIdx: 2, status: 'rejected', decision: 'rejected',
-      rejectionReason: 'Patient wants to defer the implant and seek a second opinion.', withPresentation: true,
-      items: [
-        { tooth: 31, cdt: 'D6010', desc: 'Implant body placement', priceCents: 4200000, phase: 'definitive', status: 'diagnosed' },
-      ],
-    },
-    {
-      key: 'cp-draft', patientIdx: 3, status: 'draft', withPresentation: false,
-      items: [
-        { tooth: 5, cdt: 'D2391', desc: 'Resin composite — 1 surface', priceCents: 500000, phase: 'disease_control', status: 'planned' },
-      ],
-    },
-  ];
-
+  // cpPlanSpecs is defined at module scope (exported for testing) — see top of file.
   let cpPlans = 0, cpPresentations = 0;
   for (const spec of cpPlanSpecs) {
     const patient = allPatients[spec.patientIdx % allPatients.length];
@@ -1180,9 +1125,13 @@ async function seed() {
   console.log('\n✓ Supplement seed complete.\n');
 }
 
-seed()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('\n✗ Supplement seed failed:', err);
-    process.exit(1);
-  });
+// Only run the seed when executed directly (`bun scripts/seed-supplement.ts`),
+// not when imported by a test that consumes the exported cpPlanSpecs.
+if (import.meta.main) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('\n✗ Supplement seed failed:', err);
+      process.exit(1);
+    });
+}
