@@ -185,6 +185,59 @@ describe('useMeasurements — createMeasurement', () => {
     expect((capturedBody as Record<string, unknown>).measurementValue).toBe(30);
   });
 
+  test('optimistic update works when cache holds the real { items } SDK shape (regression: IMG-16)', async () => {
+    // Reproduces production/E2E: the queryFn populates the cache as the canonical
+    // { items: [...] } SDK response (NOT a bare array). The buggy onMutate spread
+    // `[...(old ?? [])]` iterated that plain object → TypeError → onMutate rejected
+    // → mutationFn never ran → no POST, no optimistic item. Asserts through the
+    // selected view-model so it survives the cache-shape fix.
+    let postFired = false;
+    let resolvePost!: (r: Response) => void;
+    const postPromise = new Promise<Response>((res) => { resolvePost = res; });
+
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'POST') {
+        postFired = true;
+        return postPromise;
+      }
+      // GET — canonical SDK response shape (what the real queryFn caches).
+      return jsonResponse({ items: [makeAnnotation({ id: 'existing' })] });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(
+      () => useMeasurements('img-1'),
+      { wrapper: makeWrapper(qc) },
+    );
+
+    // Let the GET settle so the cache holds the real { items } shape before we mutate.
+    await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+
+    await act(async () => {
+      result.current.createMeasurement.mutate({
+        type: 'distance',
+        geometry: { points: [] },
+        measurementValue: 5,
+        measurementUnit: 'mm',
+      });
+    });
+
+    // Optimistic temp item must appear through the select transform...
+    await waitFor(() =>
+      expect(result.current.measurements.some((m) => m.id.startsWith('temp-'))).toBe(true),
+    );
+    // ...and the POST must actually fire (the bug rejected onMutate before mutationFn).
+    expect(postFired).toBe(true);
+
+    resolvePost(
+      new Response(JSON.stringify(makeAnnotation({ id: 'ann-server' })), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    await waitFor(() => expect(result.current.createMeasurement.isSuccess).toBe(true));
+  });
+
   test('applies optimistic update before server responds', async () => {
     // Use a deferred promise to hold the POST response so we can check
     // the optimistic state before settlement
@@ -202,10 +255,10 @@ describe('useMeasurements — createMeasurement', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // Seed the cache using the SDK query key
-    qc.setQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'), [
-      makeAnnotation({ id: 'existing' }),
-    ]);
+    // Seed the cache using the SDK query key, in the canonical { items } response shape.
+    qc.setQueryData(measurementsQueryKey('img-1'), {
+      items: [makeAnnotation({ id: 'existing' })],
+    });
 
     await act(async () => {
       result.current.createMeasurement.mutate({ type: 'distance', geometry: {} });
@@ -213,8 +266,8 @@ describe('useMeasurements — createMeasurement', () => {
 
     // Optimistic item should be in cache immediately (temp-* id)
     await waitFor(() => {
-      const cached = qc.getQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'));
-      return (cached?.length ?? 0) === 2 && cached?.some((m) => m.id.startsWith('temp-'));
+      const cached = qc.getQueryData<{ items: ImagingAnnotation[] }>(measurementsQueryKey('img-1'));
+      return (cached?.items.length ?? 0) === 2 && cached?.items.some((m) => m.id.startsWith('temp-'));
     });
 
     // Now resolve the POST
@@ -340,11 +393,10 @@ describe('useMeasurements — deleteMeasurement', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // Seed cache with two items using the SDK query key
-    qc.setQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'), [
-      makeAnnotation({ id: 'ann-keep' }),
-      makeAnnotation({ id: 'ann-delete' }),
-    ]);
+    // Seed cache with two items using the SDK query key, canonical { items } shape.
+    qc.setQueryData(measurementsQueryKey('img-1'), {
+      items: [makeAnnotation({ id: 'ann-keep' }), makeAnnotation({ id: 'ann-delete' })],
+    });
 
     await act(async () => {
       result.current.deleteMeasurement.mutate('ann-delete');
@@ -352,8 +404,8 @@ describe('useMeasurements — deleteMeasurement', () => {
 
     // Optimistic removal: only 'ann-keep' should remain
     await waitFor(() => {
-      const cached = qc.getQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'));
-      return cached?.length === 1 && cached[0]?.id === 'ann-keep';
+      const cached = qc.getQueryData<{ items: ImagingAnnotation[] }>(measurementsQueryKey('img-1'));
+      return cached?.items.length === 1 && cached.items[0]?.id === 'ann-keep';
     });
 
     resolveDelete(new Response(null, { status: 204 }));
@@ -372,10 +424,10 @@ describe('useMeasurements — deleteMeasurement', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // Seed cache
-    qc.setQueryData<ImagingAnnotation[]>(measurementsQueryKey('img-1'), [
-      makeAnnotation({ id: 'ann-1' }),
-    ]);
+    // Seed cache, canonical { items } shape.
+    qc.setQueryData(measurementsQueryKey('img-1'), {
+      items: [makeAnnotation({ id: 'ann-1' })],
+    });
 
     await act(async () => {
       result.current.deleteMeasurement.mutate('ann-1');
