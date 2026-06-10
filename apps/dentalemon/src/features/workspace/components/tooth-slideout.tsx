@@ -19,6 +19,7 @@ import { ToothOverviewStep } from './tooth-overview-step';
 import { CdtCodeBrowser } from './cdt-code-browser';
 import type { CdtCodeSelection } from './cdt-code-browser';
 import { AmendmentForm } from './amendment-form';
+import { FindingsPanel } from './findings-panel';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 type Step = 'overview' | 'treatment' | 'review';
@@ -306,6 +307,11 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             entryClassification={entryClassification}
             onSelectEntryClassification={setEntryClassification}
           />
+        )}
+
+        {/* P0-C: structured findings (curated vocabulary) for this tooth. */}
+        {step === 'overview' && !readOnly && visitId && (
+          <FindingsPanel visitId={visitId} toothNumber={toothNumber} />
         )}
 
         {step === 'treatment' && (

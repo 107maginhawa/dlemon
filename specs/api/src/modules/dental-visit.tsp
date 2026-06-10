@@ -294,6 +294,75 @@ model ChartExport {
   legend: ChartExportLegendEntry[];
 }
 
+// ---------------------------------------------------------------------------
+// P0-C: Condition-vocabulary enrichment + finding → treatment
+//
+// `state` stays the high-level visual layer on the odontogram. A curated
+// findings vocabulary lets common diagnoses be recorded as structured findings
+// (tooth- or surface-level) instead of collapsing into a generic note, and a
+// finding can be converted into a treatment. Inactive (resolved) findings stop
+// rendering as active.
+// ---------------------------------------------------------------------------
+
+/** Curated v1 clinical findings vocabulary. `other` requires a note. */
+enum ConditionCode {
+  caries,
+  abscess,
+  calculus,
+  gingival_recession,
+  impacted_unerupted,
+  retained_root,
+  sensitive_dentin,
+  fracture_crack,
+  wear_erosion,
+  developmental_anomaly,
+  other,
+}
+
+enum FindingStatus {
+  active,
+  resolved,
+}
+
+model DentalFinding {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  visitId: UUID;
+  patientId: UUID;
+  toothNumber: int32;
+  surface?: ToothSurfaceCode;
+  conditionCode: ConditionCode;
+  note?: string;
+  status: FindingStatus;
+  /** Set when the finding has been converted to / linked with a treatment. */
+  linkedTreatmentId?: UUID;
+}
+
+model CreateFindingRequest {
+  toothNumber: int32;
+  surface?: ToothSurfaceCode;
+  conditionCode: ConditionCode;
+  /** Required when conditionCode = other (free-text diagnosis). */
+  note?: string;
+  /** GAP-001: optional client-generated id for offline-first idempotent sync. */
+  localId?: string;
+}
+
+model UpdateFindingRequest {
+  conditionCode?: ConditionCode;
+  surface?: ToothSurfaceCode;
+  note?: string;
+  status?: FindingStatus;
+}
+
+model ConvertFindingToTreatmentRequest {
+  cdtCode: string;
+  description: string;
+  /** Optional — defaults from the branch fee schedule when omitted. */
+  priceCents?: int32;
+}
+
 @example(#{
   id: "t1a2b3c4-0000-4000-8000-000000000001",
   createdAt: utcDateTime.fromISO("2026-03-15T09:10:00Z"),
@@ -689,6 +758,64 @@ namespace DentalVisitModule {
     exportDentalChart(
       @path visitId: UUID
     ): ApiOkResponse<ChartExport>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface DentalFindingManagement {
+    @doc("P0-C: record a structured clinical finding (curated vocabulary) on a tooth/surface.")
+    @post
+    @route("/{visitId}/findings")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createDentalFinding")
+    createFinding(
+      @path visitId: UUID,
+      @body body: CreateFindingRequest
+    ): ApiCreatedResponse<DentalFinding>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-C: list findings for a visit (active + resolved).")
+    @get
+    @route("/{visitId}/findings")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listDentalFindings")
+    listFindings(
+      @path visitId: UUID
+    ): ApiOkResponse<PaginatedResponse<DentalFinding>>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-C: edit a finding or resolve it (status='resolved' → stops rendering as active).")
+    @patch(#{implicitOptionality: true})
+    @route("/{visitId}/findings/{findingId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateDentalFinding")
+    updateFinding(
+      @path visitId: UUID,
+      @path findingId: UUID,
+      @body body: UpdateFindingRequest
+    ): ApiOkResponse<DentalFinding>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-C: convert a finding into a treatment (carries tooth/surface) and link them.")
+    @post
+    @route("/{visitId}/findings/{findingId}/treatment")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("convertFindingToTreatment")
+    convertFindingToTreatment(
+      @path visitId: UUID,
+      @path findingId: UUID,
+      @body body: ConvertFindingToTreatmentRequest
+    ): ApiCreatedResponse<DentalTreatment>
+      | ApiBadRequestResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }

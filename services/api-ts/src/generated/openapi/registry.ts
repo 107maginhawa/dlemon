@@ -286,6 +286,8 @@ import { listImportedPMDs } from '../../handlers/dental-pmd/listImportedPMDs';
 import { listPMDs } from '../../handlers/dental-pmd/listPMDs';
 import { applyTemplate } from '../../handlers/dental-visit/templates/applyTemplate';
 import { carryOverTreatments } from '../../handlers/dental-visit/treatments/carryOverTreatments';
+import { convertFindingToTreatment } from '../../handlers/dental-visit/convertFindingToTreatment';
+import { createDentalFinding } from '../../handlers/dental-visit/createDentalFinding';
 import { createDentalTreatment } from '../../handlers/dental-visit/treatments/createDentalTreatment';
 import { createDentalVisit } from '../../handlers/dental-visit/visits/createDentalVisit';
 import { createTreatmentTemplate } from '../../handlers/dental-visit/templates/createTreatmentTemplate';
@@ -299,11 +301,13 @@ import { getToothHistory } from '../../handlers/dental-visit/chart/getToothHisto
 import { getVisitNoteHistory } from '../../handlers/dental-visit/notes/getVisitNoteHistory';
 import { getVisitNotes } from '../../handlers/dental-visit/notes/getVisitNotes';
 import { listChartConflicts } from '../../handlers/dental-visit/listChartConflicts';
+import { listDentalFindings } from '../../handlers/dental-visit/listDentalFindings';
 import { listDentalTreatments } from '../../handlers/dental-visit/treatments/listDentalTreatments';
 import { listDentalVisits } from '../../handlers/dental-visit/visits/listDentalVisits';
 import { listTreatmentTemplates } from '../../handlers/dental-visit/templates/listTreatmentTemplates';
 import { resolveChartConflict } from '../../handlers/dental-visit/resolveChartConflict';
 import { signVisitNotes } from '../../handlers/dental-visit/notes/signVisitNotes';
+import { updateDentalFinding } from '../../handlers/dental-visit/updateDentalFinding';
 import { updateDentalTreatment } from '../../handlers/dental-visit/treatments/updateDentalTreatment';
 import { updateDentalVisit } from '../../handlers/dental-visit/visits/updateDentalVisit';
 import { updateTooth } from '../../handlers/dental-visit/chart/updateTooth';
@@ -684,6 +688,8 @@ export const registry = {
   // Dental-visit handlers
   applyTemplate,
   carryOverTreatments,
+  convertFindingToTreatment,
+  createDentalFinding,
   createDentalTreatment,
   createDentalVisit,
   createTreatmentTemplate,
@@ -697,11 +703,13 @@ export const registry = {
   getVisitNoteHistory,
   getVisitNotes,
   listChartConflicts,
+  listDentalFindings,
   listDentalTreatments,
   listDentalVisits,
   listTreatmentTemplates,
   resolveChartConflict,
   signVisitNotes,
+  updateDentalFinding,
   updateDentalTreatment,
   updateDentalVisit,
   updateTooth,

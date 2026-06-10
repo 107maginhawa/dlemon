@@ -723,3 +723,91 @@ jsonpath "$.teeth" count == 3
 jsonpath "$.legend" count == 4
 jsonpath "$.summary.completedCount" >= 1
 jsonpath "$.teeth[?(@.toothNumber == 26)].layer" == "completed"
+
+
+# ============================================================
+# P0-C — condition-vocabulary findings + finding → treatment
+# ============================================================
+
+# P0C-0 — fresh patient + active visit
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "displayName": "Finding Test Patient {{suffix}}", "consentGiven": true, "branchId": "{{branch_id}}" }
+HTTP 201
+[Captures]
+finding_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "patientId": "{{finding_patient_id}}", "branchId": "{{branch_id}}", "dentistMemberId": "{{dentist_member_id}}", "chiefComplaint": "Findings probe" }
+HTTP 201
+[Captures]
+finding_visit_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{finding_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+
+# P0C-1 — record a structured tooth/surface finding from the curated vocabulary
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "toothNumber": 16, "surface": "occlusal", "conditionCode": "caries" }
+HTTP 201
+[Asserts]
+jsonpath "$.conditionCode" == "caries"
+jsonpath "$.toothNumber" == 16
+jsonpath "$.status" == "active"
+
+
+# P0C-2 — 'other' without a note is rejected
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "toothNumber": 21, "conditionCode": "other" }
+HTTP 400
+
+
+# P0C-3 — 'other' with a note is accepted
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "toothNumber": 21, "conditionCode": "other", "note": "Enamel pearl, distolingual" }
+HTTP 201
+[Captures]
+finding_other_id: jsonpath "$.id"
+
+
+# P0C-4 — list findings (both)
+GET {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" count == 2
+
+
+# P0C-5 — resolve a finding (stops rendering as active)
+PATCH {{api}}/dental/visits/{{finding_visit_id}}/findings/{{finding_other_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "resolved" }
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "resolved"
+
+
+# P0C-6 — convert a finding into a treatment (carries tooth + links them)
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings/{{finding_other_id}}/treatment
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "cdtCode": "D2391", "description": "Resin composite — one surface", "priceCents": 15000 }
+HTTP 201
+[Asserts]
+jsonpath "$.toothNumber" == 21
+jsonpath "$.cdtCode" == "D2391"
+jsonpath "$.status" == "diagnosed"

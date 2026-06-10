@@ -1336,6 +1336,11 @@ export type CompletePerioChartResponse = {
 };
 
 /**
+ * Curated v1 clinical findings vocabulary. `other` requires a note.
+ */
+export type ConditionCode = 'caries' | 'abscess' | 'calculus' | 'gingival_recession' | 'impacted_unerupted' | 'retained_root' | 'sensitive_dentin' | 'fracture_crack' | 'wear_erosion' | 'developmental_anomaly' | 'other';
+
+/**
  * Resource conflict error
  */
 export type ConflictError = {
@@ -1624,6 +1629,15 @@ export type ContactInfo = {
  * non-controlled ₱/PH prescribing flow.
  */
 export type ControlledSubstanceSchedule = 'none' | 'II' | 'III' | 'IV' | 'V';
+
+export type ConvertFindingToTreatmentRequest = {
+    cdtCode: string;
+    description: string;
+    /**
+     * Optional — defaults from the branch fee schedule when omitted.
+     */
+    priceCents?: number;
+};
 
 /**
  * Two-letter uppercase country code (ISO 3166-1 alpha-2)
@@ -1957,6 +1971,20 @@ export type CreateDentalVisitRequest = {
     visitType?: 'general' | 'hygiene';
     /**
      * GAP-001: optional client-generated id for offline-first idempotent sync
+     */
+    localId?: string;
+};
+
+export type CreateFindingRequest = {
+    toothNumber: number;
+    surface?: ToothSurfaceCode;
+    conditionCode: ConditionCode;
+    /**
+     * Required when conditionCode = other (free-text diagnosis).
+     */
+    note?: string;
+    /**
+     * GAP-001: optional client-generated id for offline-first idempotent sync.
      */
     localId?: string;
 };
@@ -3288,6 +3316,23 @@ export type DentalFeeScheduleModuleUpdateFeeScheduleEntryRequest = {
      * New price in minor units (0..999999)
      */
     priceCents: number;
+};
+
+export type DentalFinding = {
+    id: Uuid;
+    createdAt: Date;
+    updatedAt: Date;
+    visitId: Uuid;
+    patientId: Uuid;
+    toothNumber: number;
+    surface?: ToothSurfaceCode;
+    conditionCode: ConditionCode;
+    note?: string;
+    status: FindingStatus;
+    /**
+     * Set when the finding has been converted to / linked with a treatment.
+     */
+    linkedTreatmentId?: string;
 };
 
 export type DentalImagingModuleBatchUpsertLandmarksBody = {
@@ -8886,6 +8931,8 @@ export type FileUploadResponse = {
      */
     expiresAt: Date;
 };
+
+export type FindingStatus = 'active' | 'resolved';
 
 /**
  * Follow-up instructions with structured timeframe
@@ -61364,6 +61411,13 @@ export type UpdateDentalVisitRequest = {
     chiefComplaint?: string;
 };
 
+export type UpdateFindingRequest = {
+    conditionCode?: ConditionCode;
+    surface?: ToothSurfaceCode;
+    note?: string;
+    status?: FindingStatus;
+};
+
 /**
  * Body to update a claim line after a payer decision
  */
@@ -72939,6 +72993,186 @@ export type DiscardVisitResponses = {
 };
 
 export type DiscardVisitResponse = DiscardVisitResponses[keyof DiscardVisitResponses];
+
+export type ListDentalFindingsData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings';
+};
+
+export type ListDentalFindingsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListDentalFindingsError = ListDentalFindingsErrors[keyof ListDentalFindingsErrors];
+
+export type ListDentalFindingsResponses = {
+    /**
+     * Offset-based paginated response with page navigation
+     */
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalFinding>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    };
+};
+
+export type ListDentalFindingsResponse = ListDentalFindingsResponses[keyof ListDentalFindingsResponses];
+
+export type CreateDentalFindingData = {
+    body: CreateFindingRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings';
+};
+
+export type CreateDentalFindingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateDentalFindingError = CreateDentalFindingErrors[keyof CreateDentalFindingErrors];
+
+export type CreateDentalFindingResponses = {
+    /**
+     * Resource created response
+     */
+    201: DentalFinding;
+};
+
+export type CreateDentalFindingResponse = CreateDentalFindingResponses[keyof CreateDentalFindingResponses];
+
+export type UpdateDentalFindingData = {
+    body: UpdateFindingRequest;
+    path: {
+        visitId: Uuid;
+        findingId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings/{findingId}';
+};
+
+export type UpdateDentalFindingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateDentalFindingError = UpdateDentalFindingErrors[keyof UpdateDentalFindingErrors];
+
+export type UpdateDentalFindingResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalFinding;
+};
+
+export type UpdateDentalFindingResponse = UpdateDentalFindingResponses[keyof UpdateDentalFindingResponses];
+
+export type ConvertFindingToTreatmentData = {
+    body: ConvertFindingToTreatmentRequest;
+    path: {
+        visitId: Uuid;
+        findingId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings/{findingId}/treatment';
+};
+
+export type ConvertFindingToTreatmentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ConvertFindingToTreatmentError = ConvertFindingToTreatmentErrors[keyof ConvertFindingToTreatmentErrors];
+
+export type ConvertFindingToTreatmentResponses = {
+    /**
+     * Resource created response
+     */
+    201: DentalTreatment;
+};
+
+export type ConvertFindingToTreatmentResponse = ConvertFindingToTreatmentResponses[keyof ConvertFindingToTreatmentResponses];
 
 export type ListLabOrdersData = {
     body?: never;

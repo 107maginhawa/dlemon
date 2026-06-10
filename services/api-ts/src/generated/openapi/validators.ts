@@ -697,6 +697,8 @@ export const CompletePerioChartResponseSchema = z.object({
   extent: z.union([z.enum(["localized", "generalized", "molar_incisor"]), z.null()]).optional()
 });
 
+export const ConditionCodeSchema = z.enum(["caries", "abscess", "calculus", "gingival_recession", "impacted_unerupted", "retained_root", "sensitive_dentin", "fracture_crack", "wear_erosion", "developmental_anomaly", "other"]);
+
 export const ConflictErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
@@ -796,6 +798,12 @@ export const ContactInfoSchema = z.object({
 });
 
 export const ControlledSubstanceScheduleSchema = z.enum(["none", "II", "III", "IV", "V"]);
+
+export const ConvertFindingToTreatmentRequestSchema = z.object({
+  cdtCode: z.string(),
+  description: z.string(),
+  priceCents: z.number().int().optional()
+});
 
 export const CountryCodeSchema = z.string().regex(/^[A-Z]{2}$/).refine(val => validateCountryCode(val), { message: "Invalid ISO 3166-1 country code" });
 
@@ -967,6 +975,14 @@ export const CreateDentalVisitRequestSchema = z.object({
   dentistMemberId: UUIDSchema,
   chiefComplaint: z.string().optional(),
   visitType: z.enum(["general", "hygiene"]).optional(),
+  localId: z.string().optional()
+});
+
+export const CreateFindingRequestSchema = z.object({
+  toothNumber: z.number().int(),
+  surface: ToothSurfaceCodeSchema.optional(),
+  conditionCode: ConditionCodeSchema,
+  note: z.string().optional(),
   localId: z.string().optional()
 });
 
@@ -1613,6 +1629,22 @@ export const DentalFeeScheduleModuleFeeScheduleListSchema = z.object({
 export const DentalFeeScheduleModuleUpdateFeeScheduleEntryRequestSchema = z.object({
   branchId: z.string().uuid(),
   priceCents: z.number().int()
+});
+
+export const FindingStatusSchema = z.enum(["active", "resolved"]);
+
+export const DentalFindingSchema = z.object({
+  id: UUIDSchema,
+  createdAt: z.string().datetime().transform((str) => new Date(str)),
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  toothNumber: z.number().int(),
+  surface: ToothSurfaceCodeSchema.optional(),
+  conditionCode: ConditionCodeSchema,
+  note: z.string().optional(),
+  status: FindingStatusSchema,
+  linkedTreatmentId: z.string().uuid().optional()
 });
 
 export const DentalImagingModuleCephLandmarkCodeSchema = z.enum(["S", "N", "A", "B", "ANS", "PNS", "Go", "Po", "Me", "Or", "Pog", "Gn", "U1T", "U1A", "L1T", "L1A"]);
@@ -19118,6 +19150,13 @@ export const UpdateDentalVisitRequestSchema = z.object({
   chiefComplaint: z.string().optional()
 });
 
+export const UpdateFindingRequestSchema = z.object({
+  conditionCode: ConditionCodeSchema.optional(),
+  surface: ToothSurfaceCodeSchema.optional(),
+  note: z.string().optional(),
+  status: FindingStatusSchema.optional()
+});
+
 export const UpdateInsuranceClaimLineRequestSchema = z.object({
   approvedAmountCents: z.number().int().gte(0).optional(),
   paidAmountCents: z.number().int().gte(0).optional(),
@@ -22242,6 +22281,57 @@ export const DiscardVisitBody = DentalVisitModuleDiscardVisitRequestSchema;
 export type DiscardVisitBody = z.infer<typeof DiscardVisitBody>;
 
 export const DiscardVisitResponse = DentalVisitSchema;
+
+export const CreateDentalFindingParams = z.object({
+  visitId: UUIDSchema,
+});
+export type CreateDentalFindingParams = z.infer<typeof CreateDentalFindingParams>;
+
+export const CreateDentalFindingBody = CreateFindingRequestSchema;
+export type CreateDentalFindingBody = z.infer<typeof CreateDentalFindingBody>;
+
+export const CreateDentalFindingResponse = DentalFindingSchema;
+
+export const ListDentalFindingsParams = z.object({
+  visitId: UUIDSchema,
+});
+export type ListDentalFindingsParams = z.infer<typeof ListDentalFindingsParams>;
+
+export const ListDentalFindingsResponse = z.object({
+  data: z.array(DentalFindingSchema),
+  pagination: z.object({
+  offset: z.number().int(),
+  limit: z.number().int(),
+  count: z.number().int(),
+  totalCount: z.number().int(),
+  totalPages: z.number().int(),
+  currentPage: z.number().int(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean()
+})
+});
+
+export const UpdateDentalFindingParams = z.object({
+  visitId: UUIDSchema,
+  findingId: UUIDSchema,
+});
+export type UpdateDentalFindingParams = z.infer<typeof UpdateDentalFindingParams>;
+
+export const UpdateDentalFindingBody = UpdateFindingRequestSchema;
+export type UpdateDentalFindingBody = z.infer<typeof UpdateDentalFindingBody>;
+
+export const UpdateDentalFindingResponse = DentalFindingSchema;
+
+export const ConvertFindingToTreatmentParams = z.object({
+  visitId: UUIDSchema,
+  findingId: UUIDSchema,
+});
+export type ConvertFindingToTreatmentParams = z.infer<typeof ConvertFindingToTreatmentParams>;
+
+export const ConvertFindingToTreatmentBody = ConvertFindingToTreatmentRequestSchema;
+export type ConvertFindingToTreatmentBody = z.infer<typeof ConvertFindingToTreatmentBody>;
+
+export const ConvertFindingToTreatmentResponse = DentalTreatmentSchema;
 
 export const CreateLabOrderParams = z.object({
   visitId: UUIDSchema,

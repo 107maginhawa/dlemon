@@ -2156,6 +2156,37 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.discardVisit as unknown as Handler
   );
 
+  // createDentalFinding
+  app.post('/dental/visits/:visitId/findings',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.CreateDentalFindingParams, validationErrorHandler),
+    zValidator('json', validators.CreateDentalFindingBody, validationErrorHandler),
+    registry.createDentalFinding as unknown as Handler
+  );
+
+  // listDentalFindings
+  app.get('/dental/visits/:visitId/findings',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListDentalFindingsParams, validationErrorHandler),
+    registry.listDentalFindings as unknown as Handler
+  );
+
+  // updateDentalFinding
+  app.patch('/dental/visits/:visitId/findings/:findingId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpdateDentalFindingParams, validationErrorHandler),
+    zValidator('json', validators.UpdateDentalFindingBody, validationErrorHandler),
+    registry.updateDentalFinding as unknown as Handler
+  );
+
+  // convertFindingToTreatment
+  app.post('/dental/visits/:visitId/findings/:findingId/treatment',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ConvertFindingToTreatmentParams, validationErrorHandler),
+    zValidator('json', validators.ConvertFindingToTreatmentBody, validationErrorHandler),
+    registry.convertFindingToTreatment as unknown as Handler
+  );
+
   // createLabOrder
   app.post('/dental/visits/:visitId/lab-orders',
     authMiddleware({ roles: ["user"] }),

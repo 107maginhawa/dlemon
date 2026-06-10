@@ -360,6 +360,10 @@ namespace MonobaseAPI {
 
   @tag("Dental:Visit")
   @route("/dental/visits")
+  interface DentalFindingMgmt extends DentalVisitModule.DentalFindingManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
   interface VisitNotesMgmt extends DentalVisitModule.VisitNotesManagement {}
 
   @tag("Dental:Visit")
