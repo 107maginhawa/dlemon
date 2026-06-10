@@ -659,6 +659,13 @@
       "when": 1781075271296,
       "tag": "0093_clammy_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1781075554298,
+      "tag": "0094_first_trish_tilby",
+      "breakpoints": true
     }
   ]
 }

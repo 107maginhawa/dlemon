@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "dental_invoice_branch_local_id_unique" ON "dental_invoice" USING btree ("branch_id","local_id") WHERE local_id is not null;

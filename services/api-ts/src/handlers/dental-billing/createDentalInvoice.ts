@@ -33,14 +33,27 @@ export async function createDentalInvoice(
   // dentist_associate (own patients). staff_full is NOT permitted.
   await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate']);
 
+  const invoiceRepo = new DentalInvoiceRepository(db);
+
+  // SL-01 / E-NEW-05: offline-replay idempotency. A retried create carrying a
+  // previously-seen localId returns the EXISTING invoice (with its line items),
+  // idempotently. This MUST run before the S1-T7 already-billed guard below: the
+  // first successful create marks its treatments billed, so without this a replay
+  // would hit TREATMENT_ALREADY_BILLED (422) instead of echoing the original.
+  if (body.localId) {
+    const existing = await invoiceRepo.findByLocalId(body.branchId, body.localId);
+    if (existing) {
+      const withItems = await invoiceRepo.findWithLineItems(existing.id);
+      return ctx.json({ ...existing, lineItems: withItems?.lineItems ?? [] }, 201);
+    }
+  }
+
   // BR-014: signed consent form required before invoicing (see MODULE_SPEC §5).
   // (Previously mislabeled BR-011, which governs payment-plan/void blocking.)
   const hasSigned = await hasSignedConsentForVisit(db, body.visitId);
   if (!hasSigned) {
     throw new BusinessLogicError('Signed consent required before invoicing', 'CONSENT_REQUIRED');
   }
-
-  const invoiceRepo = new DentalInvoiceRepository(db);
 
   // Fetch performed/verified treatments for the visit
   const treatments = await getTreatmentsForInvoice(db, body.visitId);

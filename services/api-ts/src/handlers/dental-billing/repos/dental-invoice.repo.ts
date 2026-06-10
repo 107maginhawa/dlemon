@@ -49,6 +49,21 @@ export class DentalInvoiceRepository {
     return row!;
   }
 
+  /**
+   * SL-01 / E-NEW-05: offline-replay idempotency. Find a prior create by its
+   * client-generated localId, scoped to the branch. The handler returns the
+   * existing invoice on replay (before the already-billed guard would otherwise
+   * reject it); a partial unique index on (branch_id, local_id) backstops a
+   * concurrent-retry race.
+   */
+  async findByLocalId(branchId: string, localId: string): Promise<DentalInvoice | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalInvoices)
+      .where(and(eq(dentalInvoices.branchId, branchId), eq(dentalInvoices.localId, localId)));
+    return row ?? null;
+  }
+
   async createLineItem(data: NewDentalInvoiceLineItem): Promise<DentalInvoiceLineItem> {
     const [row] = await this.db
       .insert(dentalInvoiceLineItems)
