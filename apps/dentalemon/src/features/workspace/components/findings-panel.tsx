@@ -14,6 +14,8 @@ import { FINDINGS_VOCABULARY, NOTE_REQUIRED_CODES, findingLabel } from './findin
 export interface FindingsPanelProps {
   visitId: string;
   toothNumber: number;
+  /** Used to invalidate the patient's treatment plan when a finding is converted. */
+  patientId?: string;
 }
 
 const SURFACES: ToothSurfaceCode[] = ['mesial', 'distal', 'buccal', 'lingual', 'occlusal', 'incisal', 'cervical'];
@@ -30,8 +32,8 @@ const SUGGESTED_CDT: Partial<Record<ConditionCode, string>> = {
   abscess: 'D3310',
 };
 
-export function FindingsPanel({ visitId, toothNumber }: FindingsPanelProps) {
-  const { activeFindings, createFinding, resolveFinding, convertFinding, isMutating } = useFindings(visitId, toothNumber);
+export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanelProps) {
+  const { activeFindings, createFinding, resolveFinding, convertFinding, isMutating } = useFindings(visitId, toothNumber, patientId);
 
   const [code, setCode] = useState<ConditionCode | null>(null);
   const [surface, setSurface] = useState<ToothSurfaceCode | ''>('');

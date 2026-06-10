@@ -326,7 +326,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
 
         {/* P0-C: structured findings (curated vocabulary) for this tooth. */}
         {step === 'overview' && !readOnly && visitId && (
-          <FindingsPanel visitId={visitId} toothNumber={toothNumber} />
+          <FindingsPanel visitId={visitId} toothNumber={toothNumber} patientId={patientId} />
         )}
 
         {step === 'treatment' && (

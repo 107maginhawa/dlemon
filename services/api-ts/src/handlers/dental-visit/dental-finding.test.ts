@@ -126,6 +126,21 @@ describe('P0-C — updateFinding (resolve / edit)', () => {
     expect(res.status).toBe(200);
     expect((await res.json() as { status: string }).status).toBe('resolved');
   });
+
+  test("the 'other'-needs-note rule is enforced on UPDATE too (changing code to 'other' without a note → 400)", async () => {
+    const created = await (await post(`/dental/visits/${VISIT}/findings`, { toothNumber: 37, conditionCode: 'caries' })).json() as { id: string };
+    const res = await patch(`/dental/visits/${VISIT}/findings/${created.id}`, { conditionCode: 'other' });
+    expect(res.status).toBe(400);
+  });
+
+  test("updating code to 'other' WITH a note is accepted", async () => {
+    const created = await (await post(`/dental/visits/${VISIT}/findings`, { toothNumber: 38, conditionCode: 'caries' })).json() as { id: string };
+    const res = await patch(`/dental/visits/${VISIT}/findings/${created.id}`, { conditionCode: 'other', note: 'Atypical lesion' });
+    expect(res.status).toBe(200);
+    const f = await res.json() as { conditionCode: string; note: string };
+    expect(f.conditionCode).toBe('other');
+    expect(f.note).toBe('Atypical lesion');
+  });
 });
 
 describe('P0-C — convertFindingToTreatment', () => {

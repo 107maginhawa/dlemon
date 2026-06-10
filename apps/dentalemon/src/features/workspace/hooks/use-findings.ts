@@ -12,12 +12,14 @@
  *   POST /dental/visits/{visitId}/findings/{findingId}/treatment
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   listDentalFindingsOptions,
   listDentalFindingsQueryKey,
   createDentalFindingMutation,
   updateDentalFindingMutation,
   convertFindingToTreatmentMutation,
+  listDentalTreatmentsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
 import type { DentalFinding, ConditionCode, ToothSurfaceCode } from '@monobase/sdk-ts/generated';
 
@@ -31,7 +33,7 @@ export interface UseFindingsResult {
   convertFinding: (findingId: string, input: { cdtCode: string; description: string; priceCents?: number }) => Promise<void>;
 }
 
-export function useFindings(visitId: string | null, toothNumber?: number | null): UseFindingsResult {
+export function useFindings(visitId: string | null, toothNumber?: number | null, patientId?: string | null): UseFindingsResult {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -46,9 +48,21 @@ export function useFindings(visitId: string | null, toothNumber?: number | null)
     }
   }
 
-  const createMut = useMutation({ ...createDentalFindingMutation(), onSuccess: invalidate });
-  const updateMut = useMutation({ ...updateDentalFindingMutation(), onSuccess: invalidate });
-  const convertMut = useMutation({ ...convertFindingToTreatmentMutation(), onSuccess: invalidate });
+  const onMutationError = (verb: string) => () => toast.error(`Could not ${verb}. Please try again.`);
+
+  const createMut = useMutation({ ...createDentalFindingMutation(), onSuccess: invalidate, onError: onMutationError('add the finding') });
+  const updateMut = useMutation({ ...updateDentalFindingMutation(), onSuccess: invalidate, onError: onMutationError('update the finding') });
+  const convertMut = useMutation({
+    ...convertFindingToTreatmentMutation(),
+    onSuccess: () => {
+      // Converting a finding creates a TREATMENT — refresh the findings list AND the
+      // treatments table + treatment plan, or the new treatment is invisible until reload.
+      invalidate();
+      if (visitId) queryClient.invalidateQueries({ queryKey: listDentalTreatmentsQueryKey({ path: { visitId } }) });
+      queryClient.invalidateQueries({ queryKey: patientId ? ['dental-treatment-plan', patientId] : ['dental-treatment-plan'] });
+    },
+    onError: onMutationError('convert the finding to a treatment'),
+  });
 
   const raw = ((query.data as { data?: DentalFinding[] } | undefined)?.data ?? []) as DentalFinding[];
   const findings = toothNumber != null ? raw.filter((f) => f.toothNumber === toothNumber) : raw;

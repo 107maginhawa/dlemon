@@ -42,6 +42,9 @@ const PERSON = 'fa000000-0000-4000-8000-000000108001';
 const PATIENT = 'aa000000-0000-4000-8000-000000108001';
 const VISIT = 'da000000-0000-4000-8000-000000108001';
 const PRIOR_VISIT = 'da000000-0000-4000-8000-000000108009';
+// A dental_assistant may WRITE chart conditions but must NOT adjudicate a conflict.
+const ASSISTANT = { id: '00000000-0000-4000-8000-000000108002', email: 'assistant@conflict-resolve.com' };
+const ASSISTANT_MEMBER = 'ca000000-0000-4000-8000-000000108002';
 
 beforeAll(async () => {
   const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
@@ -53,6 +56,7 @@ beforeAll(async () => {
   await db.insert(dentalOrganizations).values({ id: ORG, name: 'Resolve Clinic', tier: 'solo', ownerPersonId: USER.id, countryCode: 'PH', createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
   await db.insert(dentalBranches).values({ id: BRANCH, organizationId: ORG, name: 'Main', timezone: 'Asia/Manila', createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: MEMBER, branchId: BRANCH, personId: USER.id, displayName: 'Owner', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: ASSISTANT_MEMBER, branchId: BRANCH, personId: ASSISTANT.id, displayName: 'Assistant', role: 'dental_assistant', status: 'active', pinFailedAttempts: 0, createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
   await db.insert(persons).values({ id: PERSON, firstName: 'Resolve', lastName: 'Patient', createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT, person: PERSON, preferredBranchId: BRANCH, createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
   await db.insert(dentalVisits).values({ id: VISIT, patientId: PATIENT, branchId: BRANCH, dentistMemberId: MEMBER, status: 'active', chiefComplaint: 'Checkup', createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
@@ -65,7 +69,7 @@ afterEach(async () => {
 
 const ve = (r: any, c: any) => { if (!r.success) return c.json({ error: 'Validation failed', issues: r.error.issues }, 400); };
 
-function buildApp() {
+function buildApp(actor: { id: string; email: string } = USER) {
   const app = new Hono();
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
@@ -75,8 +79,8 @@ function buildApp() {
     const ctx = c as any;
     ctx.set('database', db);
     ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
-    ctx.set('user', USER);
-    ctx.set('session', { id: 'sess', userId: USER.id });
+    ctx.set('user', actor);
+    ctx.set('session', { id: 'sess', userId: actor.id });
     await next();
   });
   app.post('/dental/visits/:visitId/chart',
@@ -109,8 +113,8 @@ async function listConflicts() {
   return buildApp().request(`/dental/visits/chart-conflicts/${PATIENT}`);
 }
 
-async function resolve(body: Record<string, unknown>) {
-  return buildApp().request(`/dental/visits/${VISIT}/chart/resolve-conflict`, {
+async function resolve(body: Record<string, unknown>, actor: { id: string; email: string } = USER) {
+  return buildApp(actor).request(`/dental/visits/${VISIT}/chart/resolve-conflict`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
@@ -191,6 +195,22 @@ describe('P0-A — resolveChartConflict (dismiss)', () => {
 });
 
 describe('P0-A — resolveChartConflict (guards)', () => {
+  test('a dismiss reason shorter than 5 chars is rejected (400)', async () => {
+    await seedConflict();
+    const res = await resolve({ resolution: 'dismiss', reason: 'no' });
+    expect(res.status).toBe(400);
+    // still open — an invalid request never clears the conflict
+    expect((await (await listConflicts()).json() as unknown[]).length).toBe(1);
+  });
+
+  test('a dental_assistant may not resolve a conflict (403) — clinical judgment only', async () => {
+    await seedConflict();
+    const res = await resolve({ resolution: 'accept' }, ASSISTANT);
+    expect(res.status).toBe(403);
+    // conflict stays open
+    expect((await (await listConflicts()).json() as unknown[]).length).toBe(1);
+  });
+
   test('resolving a chart with no open conflict returns 404', async () => {
     // Seed a clean (non-conflicting) chart so the chart row exists but syncStatus='synced'.
     const seed = await buildApp().request(`/dental/visits/${VISIT}/chart`, {

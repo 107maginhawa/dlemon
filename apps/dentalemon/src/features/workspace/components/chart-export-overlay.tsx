@@ -2,7 +2,7 @@
  * ChartExportOverlay — P0-B: fetches a visit's structured chart export and shows
  * it in a print-ready overlay (window.print()). The toolbar is hidden in print.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { exportDentalChartOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { ChartExport } from '@monobase/sdk-ts/generated';
@@ -20,6 +20,14 @@ export function ChartExportOverlay({ visitId, open, onClose }: ChartExportOverla
     enabled: open,
   });
 
+  // WCAG 2.1.2 / 2.4.3: Escape closes the print overlay (matches the other sheets).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const data = query.data as ChartExport | undefined;
@@ -27,6 +35,9 @@ export function ChartExportOverlay({ visitId, open, onClose }: ChartExportOverla
   return (
     <div
       data-testid="chart-export-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Chart export"
       className="fixed inset-0 z-50 overflow-auto bg-black/40 p-4 print:bg-white print:p-0"
     >
       <div className="mx-auto max-w-3xl rounded-lg bg-white shadow-xl print:max-w-none print:rounded-none print:shadow-none">
