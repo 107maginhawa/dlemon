@@ -37,6 +37,16 @@ export async function createDentalTreatment(
   if (!visit) throw new NotFoundError('Dental visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
+  // SL-01: offline-replay idempotency. A retried create carrying a previously-seen
+  // localId returns the EXISTING treatment instead of inserting a duplicate. Placed
+  // before the immutability guard so a replay of a successful create still resolves
+  // idempotently even after the visit was later completed/locked (mirrors the visit
+  // installment, which replays before its active-visit guard).
+  if (body.localId) {
+    const existing = await repo.findByLocalId(visitId, body.localId);
+    if (existing) return ctx.json(existing, 201);
+  }
+
   // FR1.16: Immutability — cannot add treatments to completed/locked visits
   if (visit.status === 'completed' || visit.status === 'locked') {
     throw new BusinessLogicError(

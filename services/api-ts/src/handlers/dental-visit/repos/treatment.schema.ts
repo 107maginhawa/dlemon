@@ -4,7 +4,8 @@
  * Treatment lifecycle: diagnosed → planned → performed → verified → dismissed
  */
 
-import { pgTable, uuid, text, integer, boolean, jsonb, index, unique, pgEnum, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, jsonb, index, unique, uniqueIndex, pgEnum, timestamp } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
@@ -119,6 +120,12 @@ export const dentalTreatments = pgTable('dental_treatment', {
   treatmentPlanIdx: index('dental_treatment_treatment_plan_id_idx').on(table.treatmentPlanId),
   appointmentIdx: index('dental_treatment_appointment_id_idx').on(table.appointmentId),
   optionGroupIdx: index('dental_treatment_option_group_id_idx').on(table.optionGroupId),
+  // SL-01: offline-replay idempotency backstop — a (visit, localId) pair may exist
+  // at most once. The handler pre-check returns the existing row on replay; this
+  // index guards against a concurrent-retry race.
+  visitLocalIdUnique: uniqueIndex('dental_treatment_visit_local_id_unique')
+    .on(table.visitId, table.localId)
+    .where(sql`local_id is not null`),
 }));
 
 export const visitNotes = pgTable('visit_notes', {
