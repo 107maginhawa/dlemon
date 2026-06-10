@@ -3209,6 +3209,11 @@ export type DentalImagingModuleBatchUpsertLandmarksBody = {
     landmarks: Array<DentalImagingModuleCephLandmarkInput>;
 };
 
+export type DentalImagingModuleCalibrationPoint = {
+    x: number;
+    y: number;
+};
+
 export type DentalImagingModuleCbctViewerLinkResponse = {
     viewerKind: 'download';
     downloadUrl: string;
@@ -3534,6 +3539,9 @@ export type DentalImagingModulePatientImageItem = {
 
 export type DentalImagingModuleUpdateCalibrationBody = {
     pixelSpacingMm: number;
+    pointA?: DentalImagingModuleCalibrationPoint;
+    pointB?: DentalImagingModuleCalibrationPoint;
+    knownDistanceMm?: number;
 };
 
 export type DentalImagingModuleUpdateFindingBody = {

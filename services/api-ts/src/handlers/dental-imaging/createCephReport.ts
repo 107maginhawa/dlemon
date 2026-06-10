@@ -135,6 +135,12 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
   const branchName = orgData.branchName ?? study.branchId;
 
   const pixelSpacingMm = image.pixelSpacingMm ?? null;
+
+  // G6: pin the EXACT versioned calibration record this trace was measured against
+  // (the 2 ruler points + known distance + monotonic record version). Null when
+  // the image was calibrated via the pre-G6 scalar-only path (or not at all).
+  const latestCalibration = await imagingRepo.getLatestCalibration(imageId);
+
   const snapshot: Record<string, unknown> = {
     landmarks: allLandmarks.map((l) => ({
       landmarkCode: l.landmarkCode,
@@ -154,11 +160,20 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
     formula_version: FORMULA_VERSION,
     calibration: {
       value: pixelSpacingMm,
-      method: pixelSpacingMm ? 'manual_ruler' : 'not_calibrated',
-      // G2: pixels-per-mm + version pinned for reproducibility (versioned ruler
-      // points land in G6). pixels_per_mm = 1 / (mm-per-px).
+      method: latestCalibration?.method ?? (pixelSpacingMm ? 'manual_ruler' : 'not_calibrated'),
+      // G2: pixels-per-mm + version pinned for reproducibility.
+      // pixels_per_mm = 1 / (mm-per-px).
       pixels_per_mm: pixelSpacingMm ? Math.round((1 / pixelSpacingMm) * 10000) / 10000 : null,
       version: CALIBRATION_SNAPSHOT_VERSION,
+      // G6: the pinned versioned calibration record (2 ruler points + known
+      // distance + monotonic record version). Null on the pre-G6 scalar path so
+      // a report is honest about whether it can be re-measured exactly.
+      point_a: latestCalibration?.pointA ?? null,
+      point_b: latestCalibration?.pointB ?? null,
+      known_distance_mm: latestCalibration?.knownDistanceMm ?? null,
+      record_version: latestCalibration?.version ?? null,
+      calibrated_by: latestCalibration?.createdBy ?? null,
+      calibrated_at: latestCalibration?.createdAt?.toISOString() ?? null,
     },
     // G2: surface analysis completeness so the report renders mm/missing honestly
     // (CephReportView already reads these; they were previously never written).

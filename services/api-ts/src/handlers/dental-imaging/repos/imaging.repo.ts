@@ -2,19 +2,22 @@
  * ImagingRepository — data access for dental imaging module
  */
 
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import { createSnapshotVersion } from '@/core/database.schema';
 import {
   imagingStudies,
   imagingStudyImages,
   imagingStudyTeeth,
   imagingAnnotations,
+  imagingCalibrations,
   type ImagingStudy,
   type NewImagingStudy,
   type ImagingStudyImage,
   type NewImagingStudyImage,
   type ImagingAnnotation,
   type NewImagingAnnotation,
+  type ImagingCalibration,
   type ImagingModality,
 } from './imaging.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
@@ -212,6 +215,53 @@ export class ImagingRepository {
       .returning();
     if (!updated) throw new Error(`Image ${id} not found`);
     return updated;
+  }
+
+  /**
+   * G6: persist a first-class VERSIONED calibration record (append-only, monotonic
+   * `version` per image). `pixelSpacingMm` is derived authoritatively by the caller
+   * (knownDistanceMm / pixelDistance) — never trusted from the client.
+   */
+  async createCalibrationVersion(
+    imageId: string,
+    data: {
+      pointA: { x: number; y: number };
+      pointB: { x: number; y: number };
+      knownDistanceMm: number;
+      pixelDistance: number;
+      pixelSpacingMm: number;
+      method?: string;
+      createdBy?: string | null;
+    },
+  ): Promise<ImagingCalibration> {
+    return createSnapshotVersion(
+      this.db,
+      imagingCalibrations,
+      imagingCalibrations.imageId,
+      imagingCalibrations.version,
+      imageId,
+      {
+        imageId,
+        pointA: data.pointA,
+        pointB: data.pointB,
+        knownDistanceMm: data.knownDistanceMm,
+        pixelDistance: data.pixelDistance,
+        pixelSpacingMm: data.pixelSpacingMm,
+        method: data.method ?? 'manual_ruler',
+        createdBy: data.createdBy ?? null,
+      },
+    ).then((row) => row as ImagingCalibration);
+  }
+
+  /** G6: latest calibration version for an image (null if never ruler-calibrated). */
+  async getLatestCalibration(imageId: string): Promise<ImagingCalibration | null> {
+    const [row] = await this.db
+      .select()
+      .from(imagingCalibrations)
+      .where(eq(imagingCalibrations.imageId, imageId))
+      .orderBy(desc(imagingCalibrations.version))
+      .limit(1);
+    return row ?? null;
   }
 
   // -------------------------------------------------------------------------

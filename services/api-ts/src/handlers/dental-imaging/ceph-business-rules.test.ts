@@ -178,6 +178,8 @@ function makeCephDb(opts: {
     const hasLandmarkCode = tableRef?.landmarkCode !== undefined;
     const hasAnalysisType = tableRef?.analysisType !== undefined;
     const hasSnapshot = tableRef?.snapshot !== undefined;
+    // G6: imaging_calibration — getLatestCalibration does .where().orderBy().limit(1).
+    const hasKnownDistance = tableRef?.knownDistanceMm !== undefined;
     const isMaxVersionQuery = hasSnapshot && fields != null && 'maxVersion' in fields;
     const hasBranchNameField = fields != null && 'branchName' in fields;
 
@@ -213,6 +215,15 @@ function makeCephDb(opts: {
         return Object.assign(rows, {
           limit: (_n: number) => rows,
           orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+        });
+      }
+
+      if (hasKnownDistance) {
+        // G6: no versioned calibration record by default → getLatestCalibration null.
+        rows = Promise.resolve([]);
+        return Object.assign(rows, {
+          orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+          limit: (_n: number) => rows,
         });
       }
 
@@ -487,11 +498,19 @@ describe('BR-039 calibration provenance frozen in snapshot', () => {
     const res = await postReport(app);
     expect(res.status).toBe(201);
     // G2: calibration snapshot also pins px/mm (= 1/0.1) + schema version.
+    // G6: no versioned ruler record on this image → point fields are null
+    // (the image carries only the legacy scalar pixelSpacingMm).
     expect(captured.calibration).toEqual({
       value: 0.1,
       method: 'manual_ruler',
       pixels_per_mm: 10,
       version: 1,
+      point_a: null,
+      point_b: null,
+      known_distance_mm: null,
+      record_version: null,
+      calibrated_by: null,
+      calibrated_at: null,
     });
   });
 
@@ -514,11 +533,18 @@ describe('BR-039 calibration provenance frozen in snapshot', () => {
     const res = await postReport(app);
     expect(res.status).toBe(201);
     // G2: uncalibrated → px/mm null, but schema version still pinned.
+    // G6: no versioned ruler record either → all point fields null.
     expect(captured.calibration).toEqual({
       value: null,
       method: 'not_calibrated',
       pixels_per_mm: null,
       version: 1,
+      point_a: null,
+      point_b: null,
+      known_distance_mm: null,
+      record_version: null,
+      calibrated_by: null,
+      calibrated_at: null,
     });
   });
 });

@@ -15,6 +15,40 @@ export type ToolClickAction =
   | { type: 'promptLabel'; point: Point }
   | { type: 'promptTooth'; point: Point }
 
+export interface CalibrationRequest {
+  pixelSpacingMm: number
+  pointA: Point
+  pointB: Point
+  knownDistanceMm: number
+}
+
+/**
+ * G6: build the versioned-calibration request body from the 2 ruler points the
+ * operator drew + the real-world distance they entered. Returns null for an
+ * unusable calibration (missing second point, coincident points, or a
+ * non-positive distance) so the caller skips the PATCH rather than persisting
+ * garbage. pixelSpacingMm is derived here for the optimistic UI; the server
+ * re-derives it authoritatively from the same inputs.
+ */
+export function buildCalibrationRequest({
+  points,
+  actualMm,
+}: {
+  points: Point[]
+  actualMm: number
+}): CalibrationRequest | null {
+  if (points.length < 2 || !(actualMm > 0)) return null
+  const [pointA, pointB] = points as [Point, Point]
+  const pixelDistance = euclidean(pointA, pointB)
+  if (!(pixelDistance > 0)) return null
+  return {
+    pixelSpacingMm: actualMm / pixelDistance,
+    pointA,
+    pointB,
+    knownDistanceMm: actualMm,
+  }
+}
+
 export interface ProcessToolClickArgs {
   toolMode: ToolMode
   drawPoints: Point[]

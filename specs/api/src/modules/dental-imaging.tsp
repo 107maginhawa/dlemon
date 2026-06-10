@@ -196,8 +196,22 @@ namespace DentalImagingModule {
     updatedAt: utcDateTime;
   }
 
+  // G6: a 2-point ruler calibration in image-space pixels.
+  model CalibrationPoint {
+    x: float64;
+    y: float64;
+  }
+
+  // G6: when pointA/pointB/knownDistanceMm are supplied the server persists a
+  // first-class VERSIONED calibration record (the two ruler points + known
+  // distance), not just the derived pixelSpacingMm — so a finalized report can
+  // pin the EXACT calibration version it was traced against. `pixelSpacingMm`
+  // stays required for back-compat (pre-G6 callers send only the derived value).
   model UpdateCalibrationBody {
     pixelSpacingMm: float64;
+    pointA?: CalibrationPoint;
+    pointB?: CalibrationPoint;
+    knownDistanceMm?: float64;
   }
 
   model CreateMeasurementBody {

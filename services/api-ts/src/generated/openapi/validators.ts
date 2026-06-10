@@ -1569,6 +1569,11 @@ export const DentalImagingModuleBatchUpsertLandmarksBodySchema = z.object({
   landmarks: z.array(DentalImagingModuleCephLandmarkInputSchema)
 });
 
+export const DentalImagingModuleCalibrationPointSchema = z.object({
+  x: z.number(),
+  y: z.number()
+});
+
 export const DentalImagingModuleCbctViewerLinkResponseSchema = z.object({
   viewerKind: z.enum(["download"]),
   downloadUrl: z.string(),
@@ -1866,7 +1871,10 @@ export const DentalImagingModuleMeasurementListResponseSchema = z.object({
 });
 
 export const DentalImagingModuleUpdateCalibrationBodySchema = z.object({
-  pixelSpacingMm: z.number()
+  pixelSpacingMm: z.number(),
+  pointA: DentalImagingModuleCalibrationPointSchema.optional(),
+  pointB: DentalImagingModuleCalibrationPointSchema.optional(),
+  knownDistanceMm: z.number().optional()
 });
 
 export const DentalImagingModuleUpdateFindingBodySchema = z.object({

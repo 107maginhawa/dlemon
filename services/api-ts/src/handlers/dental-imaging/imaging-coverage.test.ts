@@ -1105,6 +1105,8 @@ function makeCephCoverageDb(opts: {
     const hasLandmarkCode = tableRef?.landmarkCode !== undefined;
     const hasAnalysisType = tableRef?.analysisType !== undefined;
     const hasSnapshot     = tableRef?.snapshot    !== undefined;
+    // G6: imaging_calibration — getLatestCalibration does .where().orderBy().limit(1).
+    const hasKnownDistance = tableRef?.knownDistanceMm !== undefined;
     const isMaxVersionQuery = hasSnapshot && fields != null && 'maxVersion' in fields;
     const hasBranchNameField = fields != null && 'branchName' in fields;
 
@@ -1136,6 +1138,14 @@ function makeCephCoverageDb(opts: {
         return Object.assign(rows, {
           limit: (_n: number) => rows,
           orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+        });
+      }
+      if (hasKnownDistance) {
+        // G6: no versioned calibration record by default → getLatestCalibration null.
+        const rows = Promise.resolve([]);
+        return Object.assign(rows, {
+          orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+          limit: (_n: number) => rows,
         });
       }
       if (hasStudyId) {

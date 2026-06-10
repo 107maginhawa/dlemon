@@ -107,12 +107,17 @@ jsonpath "$.uploadUrl" isString
 jsonpath "$.uploadMethod" == "PUT"
 
 
-# 2. Calibrate image (pixelSpacingMm=0.2) — required for calibrated measurements
+# 2. Calibrate image — required for calibrated measurements.
+# G6: send the 2-point ruler (20 mm over 100 px) → server DERIVES pixelSpacingMm=0.2
+# and persists a first-class versioned calibration record.
 PATCH {{api}}/dental/imaging/images/{{image_id}}/calibration
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "pixelSpacingMm": 0.2
+  "pixelSpacingMm": 0.2,
+  "pointA": { "x": 0, "y": 0 },
+  "pointB": { "x": 100, "y": 0 },
+  "knownDistanceMm": 20
 }
 HTTP 200
 [Asserts]
@@ -365,6 +370,12 @@ jsonpath "$.snapshot.norm_population" == "default"
 jsonpath "$.snapshot.norm_version" isString
 jsonpath "$.snapshot.formula_version" isString
 jsonpath "$.snapshot.calibration.version" isInteger
+# G6: the report pins the EXACT versioned calibration record it was traced against
+# (the 2 ruler points + known distance + monotonic record version).
+jsonpath "$.snapshot.calibration.record_version" == 1
+jsonpath "$.snapshot.calibration.known_distance_mm" == 20
+jsonpath "$.snapshot.calibration.point_a.x" == 0
+jsonpath "$.snapshot.calibration.point_b.x" == 100
 # G1-B: v1 has no prior version → revision lineage is null.
 jsonpath "$.revisionOf" == null
 jsonpath "$.revisionReason" == null

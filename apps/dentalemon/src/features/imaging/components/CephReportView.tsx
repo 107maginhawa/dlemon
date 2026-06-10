@@ -59,9 +59,14 @@ export interface CephReportSnapshot {
     method: string
     at?: string | null
     by?: string | null
-    // G2: px/mm + snapshot-schema version (versioned ruler points land in G6).
+    // G2: px/mm + snapshot-schema version.
     pixels_per_mm?: number | null
     version?: number
+    // G6: the pinned versioned calibration record (2 ruler points + known distance).
+    point_a?: { x: number; y: number } | null
+    point_b?: { x: number; y: number } | null
+    known_distance_mm?: number | null
+    record_version?: number | null
   }
   software_version: string
   operator: string
@@ -306,6 +311,15 @@ export function CephReportView({ snapshot, version, imageUrl, revisionOf, revisi
             Calibration: {snapshot.calibration.value.toFixed(3)} mm/px via{' '}
             {snapshot.calibration.method}
             {snapshot.calibration.at ? ` on ${new Date(snapshot.calibration.at).toLocaleDateString()}` : ''}.
+            {/* G6: when a versioned ruler record is pinned, the report is exactly
+                reproducible against it — surface the known distance + record version. */}
+            {snapshot.calibration.record_version != null &&
+              snapshot.calibration.known_distance_mm != null && (
+                <>
+                  {' '}2-point ruler: {snapshot.calibration.known_distance_mm} mm (calibration v
+                  {snapshot.calibration.record_version}).
+                </>
+              )}
           </p>
         )}
       </div>
