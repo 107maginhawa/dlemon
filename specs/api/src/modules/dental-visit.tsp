@@ -154,6 +154,13 @@ model ToothChartState {
   note?: string;
   surfaceConditionMap?: Record<string>;
   entryClassification?: ChartEntryClassification;
+
+  /**
+   * SL-02 / F-G03: monotonic per-tooth logical clock for offline-first
+   * last-write-wins merge. Higher clock wins; a lower incoming clock is a stale
+   * offline write and is rejected by the server merge. Omit for online writes.
+   */
+  clock?: int32;
 }
 
 model DentalChart {

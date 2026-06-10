@@ -851,7 +851,8 @@ export const ToothChartStateSchema = z.object({
   conditionCode: z.string().optional(),
   note: z.string().optional(),
   surfaceConditionMap: z.record(z.string(), z.unknown()).optional(),
-  entryClassification: ChartEntryClassificationSchema.optional()
+  entryClassification: ChartEntryClassificationSchema.optional(),
+  clock: z.number().int().optional()
 });
 
 export const CreateDentalChartRequestSchema = z.object({

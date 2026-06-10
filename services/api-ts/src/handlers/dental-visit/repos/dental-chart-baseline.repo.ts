@@ -61,11 +61,20 @@ export class DentalChartBaselineRepository {
       const cur = map.get(tooth.toothNumber);
       const curIsExisting = cur?.entryClassification === 'existing' || cur?.entryClassification === 'existing_other';
       const incomingIsExisting = tooth.entryClassification === 'existing' || tooth.entryClassification === 'existing_other';
-      // CHART-BR-002: protect existing/existing_other baseline entries from
-      // treatment_plan/condition overwrites. Only another existing-tier entry can replace them.
-      if (!curIsExisting || incomingIsExisting) {
-        map.set(tooth.toothNumber, tooth);
+      // CHART-BR-002 (top guard): protect existing/existing_other baseline entries
+      // from treatment_plan/condition overwrites. Only another existing-tier entry
+      // can replace them — this wins even over a higher incoming clock.
+      if (curIsExisting && !incomingIsExisting) {
+        continue;
       }
+      // SL-02 / F-G03: clock-aware last-write-wins. When BOTH the current and the
+      // incoming tooth carry a monotonic clock, a lower incoming clock is a stale
+      // offline write — keep the current (newer) tooth. Absent clock on either side
+      // falls through to incoming-wins (backward-compatible with online writes).
+      if (cur && typeof cur.clock === 'number' && typeof tooth.clock === 'number' && tooth.clock < cur.clock) {
+        continue;
+      }
+      map.set(tooth.toothNumber, tooth);
     }
     return Array.from(map.values()).sort((a, b) => a.toothNumber - b.toothNumber);
   }

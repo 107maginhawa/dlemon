@@ -57,6 +57,13 @@ export interface ToothChartState {
   note?: string;
   surfaceConditionMap?: Record<string, unknown>;
   entryClassification?: ChartEntryClassification;
+  /**
+   * SL-02 / F-G03: monotonic per-tooth logical clock (lamport-style) for
+   * offline-first last-write-wins merge. When present on both the current and the
+   * incoming tooth, the merge keeps the HIGHER clock (a lower incoming clock is a
+   * stale offline write and is rejected). Absent → incoming-wins (backward compat).
+   */
+  clock?: number;
 }
 
 export const dentalCharts = pgTable('dental_chart', {
