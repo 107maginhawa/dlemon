@@ -124,6 +124,41 @@ HTTP 200
 jsonpath "$.pixelSpacingMm" == 0.2
 
 
+# 2b. G5 library metadata — flag a retake + tag the image, then verify it persists.
+PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "isDiagnostic": false,
+  "qualityStatus": "retake",
+  "retakeReason": "overexposed",
+  "tags": ["ortho", "ortho", "  review "]
+}
+HTTP 200
+[Asserts]
+jsonpath "$.isDiagnostic" == false
+jsonpath "$.qualityStatus" == "retake"
+jsonpath "$.retakeReason" == "overexposed"
+# tags normalized: de-duped + trimmed
+jsonpath "$.tags" count == 2
+jsonpath "$.tags" contains "ortho"
+jsonpath "$.tags" contains "review"
+
+# 2c. Reset to a clean diagnostic state so later ceph steps are unaffected.
+PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "isDiagnostic": true,
+  "qualityStatus": "ok",
+  "retakeReason": null,
+  "tags": []
+}
+HTTP 200
+[Asserts]
+jsonpath "$.qualityStatus" == "ok"
+
+
 # ============================================================
 # CEPH LANDMARKS — BATCH UPSERT (ROUTE PREFIX CHECK)
 # ============================================================

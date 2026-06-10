@@ -1050,6 +1050,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingMgmt_listMeasurements as unknown as Handler
   );
 
+  // ImagingMgmt_updateImageMetadata
+  app.patch('/dental/imaging/images/:imageId/metadata',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_updateImageMetadataParams, validationErrorHandler),
+    zValidator('json', validators.ImagingMgmt_updateImageMetadataBody, validationErrorHandler),
+    registry.ImagingMgmt_updateImageMetadata as unknown as Handler
+  );
+
   // ImagingMgmt_updateImageModality
   app.patch('/dental/imaging/images/:imageId/modality',
     authMiddleware(),

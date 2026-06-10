@@ -72,6 +72,11 @@ namespace DentalImagingModule {
     seriesInstanceUid?: string | null;
     studyInstanceUid?: string | null;
     viewerKind?: "image" | "volume";
+    // G5 library metadata (additive)
+    isDiagnostic?: boolean;
+    qualityStatus?: "ok" | "retake";
+    retakeReason?: string | null;
+    tags?: string[];
   }
 
   model ImagingStudyWithImages extends ImagingStudy {
@@ -97,6 +102,13 @@ namespace DentalImagingModule {
     isVolume?: boolean;
     frameCount?: int32 | null;
     viewerKind?: "image" | "volume";
+    // G5 library metadata — surfaced so the list can badge non-diagnostic / retake
+    // images and render tags without a follow-up fetch. Legacy attachments default
+    // to isDiagnostic=true / qualityStatus="ok" / tags=[] (no metadata backing).
+    isDiagnostic?: boolean;
+    qualityStatus?: "ok" | "retake";
+    retakeReason?: string | null;
+    tags?: string[];
   }
 
   model ListPatientImagesResponse {
@@ -214,6 +226,15 @@ namespace DentalImagingModule {
     knownDistanceMm?: float64;
   }
 
+  // G5: partial update of an image's library metadata. All fields optional — only
+  // the supplied ones are changed (clearing retakeReason → send null/empty).
+  model UpdateImageMetadataBody {
+    isDiagnostic?: boolean;
+    qualityStatus?: "ok" | "retake";
+    retakeReason?: string | null;
+    tags?: string[];
+  }
+
   model CreateMeasurementBody {
     type: "distance" | "angle" | "area";
     geometry: Record<unknown>;
@@ -246,6 +267,12 @@ namespace DentalImagingModule {
     @route("/images/{imageId}/modality")
     @useAuth(bearerAuth)
     updateImageModality(@path imageId: string, @body body: UpdateImageModalityBody): ImagingStudyImage | ErrorResponse;
+
+    // G5: update an image's library metadata (diagnostic flag, quality/retake, tags).
+    @patch
+    @route("/images/{imageId}/metadata")
+    @useAuth(bearerAuth)
+    updateImageMetadata(@path imageId: string, @body body: UpdateImageMetadataBody): ImagingStudyImage | ErrorResponse;
 
     // P2-7 CBCT finalize: server-side DICOM parse + populate volume metadata + set
     // is_volume=true. Called after the storage multipart upload completes.
@@ -285,7 +312,16 @@ namespace DentalImagingModule {
     @get
     @route("/{patientId}/images")
     @useAuth(bearerAuth)
-    listPatientImages(@path patientId: string, @query branchId: string): ListPatientImagesResponse | ErrorResponse;
+    listPatientImages(
+      @path patientId: string,
+      @query branchId: string,
+      // G5 filters (all optional, additive): narrow the library to diagnostic-only,
+      // a quality status, or a single tag. Filters apply to imaging-source rows;
+      // legacy attachments (no metadata) are treated as diagnostic/ok/untagged.
+      @query isDiagnostic?: boolean,
+      @query qualityStatus?: "ok" | "retake",
+      @query tag?: string,
+    ): ListPatientImagesResponse | ErrorResponse;
   }
 
   enum ImagingFindingType {

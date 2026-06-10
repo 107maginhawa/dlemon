@@ -99,6 +99,11 @@ export class ImagingRepository {
         frameCount: imagingStudyImages.frameCount,
         seriesInstanceUid: imagingStudyImages.seriesInstanceUid,
         studyInstanceUid: imagingStudyImages.studyInstanceUid,
+        // G5 library metadata
+        isDiagnostic: imagingStudyImages.isDiagnostic,
+        qualityStatus: imagingStudyImages.qualityStatus,
+        retakeReason: imagingStudyImages.retakeReason,
+        tags: imagingStudyImages.tags,
         createdAt: imagingStudyImages.createdAt,
         updatedAt: imagingStudyImages.updatedAt,
         version: imagingStudyImages.version,
@@ -173,6 +178,33 @@ export class ImagingRepository {
     const [updated] = await this.db
       .update(imagingStudyImages)
       .set({ modality: modality as ImagingModality, updatedAt: new Date() })
+      .where(eq(imagingStudyImages.id, id))
+      .returning();
+    if (!updated) throw new Error(`Image ${id} not found`);
+    return updated;
+  }
+
+  /**
+   * G5: partial update of library metadata. Only keys present in `patch` are
+   * written (a caller-validated subset of isDiagnostic/qualityStatus/retakeReason/tags).
+   */
+  async updateImageMetadata(
+    id: string,
+    patch: {
+      isDiagnostic?: boolean;
+      qualityStatus?: 'ok' | 'retake';
+      retakeReason?: string | null;
+      tags?: string[];
+    },
+  ): Promise<ImagingStudyImage> {
+    const set: Partial<NewImagingStudyImage> = { updatedAt: new Date() };
+    if (patch.isDiagnostic !== undefined) set.isDiagnostic = patch.isDiagnostic;
+    if (patch.qualityStatus !== undefined) set.qualityStatus = patch.qualityStatus;
+    if (patch.retakeReason !== undefined) set.retakeReason = patch.retakeReason;
+    if (patch.tags !== undefined) set.tags = patch.tags;
+    const [updated] = await this.db
+      .update(imagingStudyImages)
+      .set(set)
       .where(eq(imagingStudyImages.id, id))
       .returning();
     if (!updated) throw new Error(`Image ${id} not found`);

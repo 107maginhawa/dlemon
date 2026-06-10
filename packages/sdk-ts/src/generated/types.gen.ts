@@ -3494,6 +3494,10 @@ export type DentalImagingModuleImagingStudyImage = {
     seriesInstanceUid?: string | null;
     studyInstanceUid?: string | null;
     viewerKind?: 'image' | 'volume';
+    isDiagnostic?: boolean;
+    qualityStatus?: 'ok' | 'retake';
+    retakeReason?: string | null;
+    tags?: Array<string>;
 };
 
 export type DentalImagingModuleImagingStudyWithImages = {
@@ -3535,6 +3539,10 @@ export type DentalImagingModulePatientImageItem = {
     isVolume?: boolean;
     frameCount?: number | null;
     viewerKind?: 'image' | 'volume';
+    isDiagnostic?: boolean;
+    qualityStatus?: 'ok' | 'retake';
+    retakeReason?: string | null;
+    tags?: Array<string>;
 };
 
 export type DentalImagingModuleUpdateCalibrationBody = {
@@ -3551,6 +3559,13 @@ export type DentalImagingModuleUpdateFindingBody = {
     surfaces?: Array<string>;
     note?: string;
     treatmentId?: string;
+};
+
+export type DentalImagingModuleUpdateImageMetadataBody = {
+    isDiagnostic?: boolean;
+    qualityStatus?: 'ok' | 'retake';
+    retakeReason?: string | null;
+    tags?: Array<string>;
 };
 
 export type DentalImagingModuleUpdateImageModalityBody = {
@@ -67279,6 +67294,24 @@ export type ImagingMgmtCreateMeasurementResponses = {
 
 export type ImagingMgmtCreateMeasurementResponse = ImagingMgmtCreateMeasurementResponses[keyof ImagingMgmtCreateMeasurementResponses];
 
+export type ImagingMgmtUpdateImageMetadataData = {
+    body: DentalImagingModuleUpdateImageMetadataBody;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/metadata';
+};
+
+export type ImagingMgmtUpdateImageMetadataResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingStudyImage | ErrorResponse;
+};
+
+export type ImagingMgmtUpdateImageMetadataResponse = ImagingMgmtUpdateImageMetadataResponses[keyof ImagingMgmtUpdateImageMetadataResponses];
+
 export type ImagingMgmtUpdateImageModalityData = {
     body: DentalImagingModuleUpdateImageModalityBody;
     path: {
@@ -69628,6 +69661,9 @@ export type PatientImageMgmtListPatientImagesData = {
     };
     query: {
         branchId: string;
+        isDiagnostic?: boolean;
+        qualityStatus?: 'ok' | 'retake';
+        tag?: string;
     };
     url: '/dental/patients/{patientId}/images';
 };

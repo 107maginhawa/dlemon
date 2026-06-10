@@ -28,6 +28,11 @@ export interface PatientImageItem {
   isVolume?: boolean
   frameCount?: number | null
   viewerKind?: DentalImagingModulePatientImageItem['viewerKind']
+  // G5 library metadata (defaulted at the edge so older fixtures keep working).
+  isDiagnostic: boolean
+  qualityStatus: 'ok' | 'retake'
+  retakeReason: string | null
+  tags: string[]
 }
 
 const toIso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : String(d))
@@ -48,6 +53,11 @@ function toViewModel(item: DentalImagingModulePatientImageItem): PatientImageIte
     ...(item.isVolume !== undefined ? { isVolume: item.isVolume } : {}),
     ...(item.frameCount !== undefined ? { frameCount: item.frameCount } : {}),
     ...(item.viewerKind !== undefined ? { viewerKind: item.viewerKind } : {}),
+    // G5: default to diagnostic/ok/untagged when the server omits the fields.
+    isDiagnostic: item.isDiagnostic ?? true,
+    qualityStatus: item.qualityStatus ?? 'ok',
+    retakeReason: item.retakeReason ?? null,
+    tags: item.tags ?? [],
   }
 }
 

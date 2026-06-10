@@ -261,6 +261,7 @@ import { ImagingMgmt_getCbctViewerLink } from '../../handlers/dental-imaging/Ima
 import { ImagingMgmt_getImagingStudy } from '../../handlers/dental-imaging/ImagingMgmt_getImagingStudy';
 import { ImagingMgmt_listMeasurements } from '../../handlers/dental-imaging/ImagingMgmt_listMeasurements';
 import { ImagingMgmt_updateImageCalibration } from '../../handlers/dental-imaging/ImagingMgmt_updateImageCalibration';
+import { ImagingMgmt_updateImageMetadata } from '../../handlers/dental-imaging/ImagingMgmt_updateImageMetadata';
 import { ImagingMgmt_updateImageModality } from '../../handlers/dental-imaging/ImagingMgmt_updateImageModality';
 import { PatientImageMgmt_listPatientImages } from '../../handlers/dental-imaging/PatientImageMgmt_listPatientImages';
 import { listLegalHolds } from '../../handlers/dental-legalhold/listLegalHolds';
@@ -644,6 +645,7 @@ export const registry = {
   ImagingMgmt_getImagingStudy,
   ImagingMgmt_listMeasurements,
   ImagingMgmt_updateImageCalibration,
+  ImagingMgmt_updateImageMetadata,
   ImagingMgmt_updateImageModality,
   PatientImageMgmt_listPatientImages,
 

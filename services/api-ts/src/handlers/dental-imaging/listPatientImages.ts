@@ -47,6 +47,11 @@ export interface PatientImageItem {
   isVolume: boolean;
   frameCount: number | null;
   viewerKind: ImagingViewerKind;
+  // G5 library metadata (legacy attachments default to diagnostic/ok/untagged).
+  isDiagnostic: boolean;
+  qualityStatus: 'ok' | 'retake';
+  retakeReason: string | null;
+  tags: string[];
 }
 
 export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageItem {
@@ -67,7 +72,50 @@ export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageIte
     isVolume: false,
     frameCount: null,
     viewerKind: 'image',
+    // Legacy attachments carry no imaging metadata — treat as diagnostic/ok/untagged.
+    isDiagnostic: true,
+    qualityStatus: 'ok',
+    retakeReason: null,
+    tags: [],
   };
+}
+
+// ---------------------------------------------------------------------------
+// G5 library filters (pure, exported for unit tests)
+// ---------------------------------------------------------------------------
+
+export interface ImageLibraryFilters {
+  isDiagnostic?: boolean;
+  qualityStatus?: 'ok' | 'retake';
+  tag?: string;
+}
+
+/**
+ * Apply the optional G5 library filters to a merged image list. Undefined filters
+ * are no-ops; tag match is exact (case-insensitive). Legacy attachments carry the
+ * defaults set in mapLegacyAttachment, so they filter consistently with imaging rows.
+ */
+export function applyImageLibraryFilters(
+  items: PatientImageItem[],
+  filters: ImageLibraryFilters,
+): PatientImageItem[] {
+  const tagNeedle = filters.tag?.trim().toLowerCase();
+  return items.filter((it) => {
+    if (filters.isDiagnostic !== undefined && it.isDiagnostic !== filters.isDiagnostic) return false;
+    if (filters.qualityStatus !== undefined && it.qualityStatus !== filters.qualityStatus) return false;
+    if (tagNeedle) {
+      const hasTag = it.tags.some((t) => t.toLowerCase() === tagNeedle);
+      if (!hasTag) return false;
+    }
+    return true;
+  });
+}
+
+/** Parse the raw `isDiagnostic` query string into a tri-state boolean filter. */
+function parseBoolFilter(raw: string | undefined): boolean | undefined {
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +176,10 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
         isVolume,
         frameCount: row.frameCount ?? null,
         viewerKind: viewerKindFor({ isVolume, modality: row.modality }),
+        isDiagnostic: row.isDiagnostic ?? true,
+        qualityStatus: (row.qualityStatus ?? 'ok') as 'ok' | 'retake',
+        retakeReason: row.retakeReason ?? null,
+        tags: Array.isArray(row.tags) ? row.tags : [],
       };
     }),
   );
@@ -137,9 +189,18 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
   const legacyItems = legacyRows.map(mapLegacyAttachment);
 
   // 3. Combine and sort by createdAt DESC
-  const allItems: PatientImageItem[] = [...imagingItems, ...legacyItems].sort(
+  const merged: PatientImageItem[] = [...imagingItems, ...legacyItems].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
   );
+
+  // G5: apply optional library filters (diagnostic-only / quality / tag) post-merge
+  // so imaging + legacy rows filter uniformly.
+  const qualityRaw = ctx.req.query('qualityStatus');
+  const allItems = applyImageLibraryFilters(merged, {
+    isDiagnostic: parseBoolFilter(ctx.req.query('isDiagnostic')),
+    qualityStatus: qualityRaw === 'ok' || qualityRaw === 'retake' ? qualityRaw : undefined,
+    tag: ctx.req.query('tag') ?? undefined,
+  });
 
   // V-IMG-006: patient image list exposes radiograph PHI — audit the read.
   await logAuditEvent(db, ctx.get('logger'), {

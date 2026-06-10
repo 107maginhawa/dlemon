@@ -43,6 +43,10 @@ export const modalityEnum = pgEnum('imaging_modality', [
 
 export const imagingStatusEnum = pgEnum('imaging_status', ['active', 'archived']);
 
+// G5: per-image acquisition quality. 'ok' = usable; 'retake' = flagged for re-acquisition
+// (with an optional retakeReason). Additive, non-default-changing.
+export const imagingQualityStatusEnum = pgEnum('imaging_quality_status', ['ok', 'retake']);
+
 export const imagingAnnotationTypeEnum = pgEnum('imaging_annotation_type', [
   'line',
   'angle',
@@ -96,6 +100,13 @@ export const imagingStudyImages = pgTable('imaging_study_image', {
   // dedupe + viewer deep-link (Phase 2). No DB-level uniqueness in v1.
   seriesInstanceUid: text('series_instance_uid'),
   studyInstanceUid: text('study_instance_uid'),
+  // G5 library metadata (all additive / non-breaking — §4 organization & filtering):
+  // isDiagnostic defaults true (most images are diagnostic); qualityStatus flags retakes;
+  // retakeReason explains a flagged retake; tags are free-text organizational labels.
+  isDiagnostic: boolean('is_diagnostic').notNull().default(true),
+  qualityStatus: imagingQualityStatusEnum('quality_status').notNull().default('ok'),
+  retakeReason: text('retake_reason'),
+  tags: jsonb('tags').notNull().$type<string[]>().default([]),
 });
 
 /**

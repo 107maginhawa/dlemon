@@ -11,6 +11,7 @@ import { ImageUpload } from './image-upload'
 import { FmxMount } from './FmxMount'
 import { CbctStudyCard } from './CbctStudyCard'
 import { BRAND_GOLD_SOFT, BRAND_GOLD_TEXT } from '@/constants/brand'
+import { filterImageLibrary, collectTags } from '@/features/imaging/lib/image-library-filter'
 
 // P2-7: a CBCT / multi-frame object is a 3-D VOLUME — never render it as a flat
 // list row with an <img> thumbnail. The discriminator is server-provided.
@@ -31,6 +32,16 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   // P2-5: list view vs anatomical full-mouth-series mount.
   const [view, setView] = useState<'list' | 'fmx'>('list')
+  // G5: client-side library filters over the fetched list (no refetch on toggle).
+  const [diagnosticOnly, setDiagnosticOnly] = useState(false)
+  const [tagFilter, setTagFilter] = useState<string>('')
+
+  const allItems = data?.items ?? []
+  const availableTags = collectTags(allItems)
+  const visibleItems = filterImageLibrary(allItems, {
+    diagnosticOnly,
+    tag: tagFilter || undefined,
+  })
 
   function toggleSelect(item: PatientImageItem, e: React.ChangeEvent<HTMLInputElement>) {
     e.stopPropagation()
@@ -98,6 +109,35 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
         </Sheet>
       </div>
 
+      {/* G5: library filters (list view only, once there are images) */}
+      {!isLoading && !error && allItems.length > 0 && view === 'list' && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-100 text-[11px]">
+          <label className="flex items-center gap-1 text-zinc-600">
+            <input
+              type="checkbox"
+              checked={diagnosticOnly}
+              onChange={(e) => setDiagnosticOnly(e.target.checked)}
+              className="accent-lemon"
+              data-testid="filter-diagnostic-only"
+            />
+            Diagnostic only
+          </label>
+          {availableTags.length > 0 && (
+            <select
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              data-testid="filter-tag"
+              className="ml-auto rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-600"
+            >
+              <option value="">All tags</option>
+              {availableTags.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       {/* Image list */}
       {isLoading && <div className="p-4 text-zinc-400 text-sm">Loading images…</div>}
       {error && <div className="p-4 text-red-400 text-sm">Failed to load images</div>}
@@ -109,14 +149,18 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
           </p>
         </div>
       )}
-      {!isLoading && !error && data?.items.length ? (
+      {!isLoading && !error && allItems.length ? (
         view === 'fmx' ? (
           <div className="flex-1 overflow-y-auto">
-            <FmxMount images={data.items} onSelectImage={onSelectImage} />
+            <FmxMount images={allItems} onSelectImage={onSelectImage} />
+          </div>
+        ) : visibleItems.length === 0 ? (
+          <div className="p-4 text-xs text-zinc-500" data-testid="no-filter-matches">
+            No images match the current filters.
           </div>
         ) : (
           <ul className="divide-y divide-zinc-100 flex-1 overflow-y-auto">
-            {data.items.map((item) =>
+            {visibleItems.map((item) =>
               isVolumeItem(item) ? (
                 // P2-7: CBCT / 3-D volume — volume-aware card + viewer handoff,
                 // never a flat <img> row. Not eligible for 2-D pairwise compare.
@@ -140,6 +184,38 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     <p className="text-xs text-zinc-400 capitalize">
                       {item.modality.replace('_', ' ')}
                     </p>
+                    {/* G5: quality / diagnostic badges + tags */}
+                    {(item.qualityStatus === 'retake' || !item.isDiagnostic || item.tags.length > 0) && (
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        {item.qualityStatus === 'retake' && (
+                          <span
+                            className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700"
+                            data-testid={`badge-retake-${item.id}`}
+                            title={item.retakeReason ?? 'Flagged for retake'}
+                          >
+                            Retake
+                          </span>
+                        )}
+                        {!item.isDiagnostic && (
+                          <span
+                            className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                            data-testid={`badge-non-diagnostic-${item.id}`}
+                          >
+                            Non-diagnostic
+                          </span>
+                        )}
+                        {item.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            style={{ background: BRAND_GOLD_SOFT, color: BRAND_GOLD_TEXT }}
+                            data-testid={`tag-${item.id}-${t}`}
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {item.source === 'legacy' && (
                     <span
