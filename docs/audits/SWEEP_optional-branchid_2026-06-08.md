@@ -132,3 +132,42 @@ aggregate/report** endpoint. The remaining unaudited modules — **dental-portal
 same pattern when they are audited: any list/report whose tenant/branch filter is OPTIONAL
 must default an omitted scope to the caller's accessible set (`getActiveBranchIdsForPerson`
 → `inArray`, empty → zero rows), never to "unfiltered = all tenants."
+
+---
+
+## Carry-forward CLOSED — SL-08 / F-G06 (2026-06-10)
+
+The four carry-forward surfaces were swept for the same optional-branch-omission
+("aggregate with optional-only scope → all-tenant when omitted") pattern. Result:
+**none exhibits the EM-BIL-002 leak class.** Each is scoped by *ownership*, not an
+optional branch filter — so there is no "omit the filter → all tenants" surface.
+
+| Module | List/report/import endpoints | Scoping model | Verdict | Regression pin |
+|---|---|---|---|---|
+| **dental-portal** | `GET /me/invoices`, `/me/balance`, `/me/appointments` | patientId DERIVED from session (`resolveSelfPatientIdOrThrow`); **no client/optional branch param** — IDOR-free by construction | SAFE | `dental-portal.test.ts` (both-direction isolation, tampered `?patientId` inert, empty-self-scope) |
+| **emr** | `GET /emr/consultations`, `/emr/patients` | role-scoped: provider→own `provider.id`, patient→own `patient.id`, **no branch param**. (admin-global is the *separate* GC-02 question, decision #14 — NOT the optional-branch class) | SAFE (non-admin) | `emr/emr-coverage.test.ts §449/463` (provider list excludes another provider's notes, both directions) |
+| **external-records-import / importPatients** | `POST /dental/patients/import` | `assertBranchRole(user, row.branchId, ['dentist_owner'])` for **every** unique branchId in the payload | SAFE | `dental-patient.bulk-import.test.ts` (cross-tenant isolation: import naming a foreign branch → 403) |
+| **external-records-import / importPMD** | `POST /dental/pmd/import` | branch DERIVED from `patient.preferredBranchId` + `assertBranchRole` (clinical roles) | SAFE | **NEW** `dental-pmd/importPMD.cross-branch-isolation.test.ts` (foreign-org caller → 403, no row written; owner → 201; unauth → 401) |
+
+### provider — dormant base-template primitive (out of the dental cross-tenant class)
+
+`provider/listPractitioners` + `listPractitionerRoles` have **no branch/org filter at
+all** and do not scope by `tenantId`. On inspection this is a **frozen upstream
+base-template FHIR primitive, not wired into the dental product**:
+- **0 FE consumers** and **0 references from any `dental-*` handler** (grep-verified).
+- `createPractitioner` never sets `tenantId` — every row uses the schema default
+  `'default'` (`practitioner.schema.ts:85`). There is no caller→org mapping, so there is
+  no "caller's accessible set" to scope to.
+
+So the EM-BIL-002 optional-branch-omission pattern **does not apply** (no branch param to
+omit; single-`'default'`-tenant data; no dental tenancy integration). Forcing a dental-org
+branch guard onto this frozen, unused module would be a mis-integration, not a fix.
+**Forward guard:** if the provider module is ever wired to dental tenancy (per-org
+`tenantId` populated + dental consumers), `listPractitioners`/`listPractitionerRoles` MUST
+default an omitted scope to the caller's tenant set before that data goes live.
+
+### Net
+- Endpoints inspected (this pass): portal 3, emr 2, importPatients 1, importPMD 1, provider 2 = **9**.
+- **SAFE: 9.** HOLE-FIXED: 0. New regression pin added: 1 (`importPMD`). Documented dormant: 2 (provider).
+- The optional-branch-omission leak class is now **swept clean for all carry-forward
+  surfaces**; `dental-billing` remains the lone historical instance of the pattern (fixed `825bffbb`).
