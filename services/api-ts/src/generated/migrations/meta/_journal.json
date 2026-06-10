@@ -694,6 +694,13 @@
       "when": 1781087626774,
       "tag": "0098_chunky_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1781088325604,
+      "tag": "0099_closed_nova",
+      "breakpoints": true
     }
   ]
 }

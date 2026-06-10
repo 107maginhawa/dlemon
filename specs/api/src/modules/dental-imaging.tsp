@@ -109,6 +109,8 @@ namespace DentalImagingModule {
     qualityStatus?: "ok" | "retake";
     retakeReason?: string | null;
     tags?: string[];
+    // G5b: context links (treatment plan / ortho case / report). Empty for legacy.
+    links?: ImagingLink[];
   }
 
   model ListPatientImagesResponse {
@@ -235,6 +237,24 @@ namespace DentalImagingModule {
     tags?: string[];
   }
 
+  // G5b: a context link from an image to a treatment plan / ortho case / ceph report.
+  model ImagingLink {
+    id: string;
+    imageId: string;
+    linkType: "treatment_plan" | "ortho_case" | "report";
+    targetId: string;
+    createdAt: utcDateTime;
+  }
+
+  model CreateImagingLinkBody {
+    linkType: "treatment_plan" | "ortho_case" | "report";
+    targetId: string;
+  }
+
+  model ImagingLinkListResponse {
+    items: ImagingLink[];
+  }
+
   model CreateMeasurementBody {
     type: "distance" | "angle" | "area";
     geometry: Record<unknown>;
@@ -273,6 +293,22 @@ namespace DentalImagingModule {
     @route("/images/{imageId}/metadata")
     @useAuth(bearerAuth)
     updateImageMetadata(@path imageId: string, @body body: UpdateImageMetadataBody): ImagingStudyImage | ErrorResponse;
+
+    // G5b: context links (treatment plan / ortho case / report).
+    @post
+    @route("/images/{imageId}/links")
+    @useAuth(bearerAuth)
+    createImageLink(@path imageId: string, @body body: CreateImagingLinkBody): ImagingLink | ErrorResponse;
+
+    @get
+    @route("/images/{imageId}/links")
+    @useAuth(bearerAuth)
+    listImageLinks(@path imageId: string): ImagingLinkListResponse | ErrorResponse;
+
+    @delete
+    @route("/links/{linkId}")
+    @useAuth(bearerAuth)
+    deleteImageLink(@path linkId: string): void | ErrorResponse;
 
     // P2-7 CBCT finalize: server-side DICOM parse + populate volume metadata + set
     // is_volume=true. Called after the storage multipart upload completes.
@@ -321,6 +357,10 @@ namespace DentalImagingModule {
       @query isDiagnostic?: boolean,
       @query qualityStatus?: "ok" | "retake",
       @query tag?: string,
+      // G5b: filter to images linked to a specific target (treatment plan / ortho
+      // case / report id), optionally narrowed by link type.
+      @query linkTargetId?: string,
+      @query linkType?: "treatment_plan" | "ortho_case" | "report",
     ): ListPatientImagesResponse | ErrorResponse;
   }
 

@@ -26,6 +26,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     qualityStatus: 'ok',
     retakeReason: null,
     tags: [],
+    links: [],
   },
   {
     id: 'test-image-id-2',
@@ -43,6 +44,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     qualityStatus: 'ok',
     retakeReason: null,
     tags: [],
+    links: [],
   },
   {
     id: 'test-image-id-3',
@@ -60,6 +62,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     qualityStatus: 'ok',
     retakeReason: null,
     tags: [],
+    links: [],
   },
   // P2-7: a CBCT volume fixture — renders as a volume card (not a flat row), so the
   // E2E can verify the truthful volume affordance + "Open in viewer" handoff.
@@ -82,6 +85,7 @@ const STUDY_ITEMS: PatientImageItem[] = [
     qualityStatus: 'ok',
     retakeReason: null,
     tags: [],
+    links: [],
   },
 ]
 

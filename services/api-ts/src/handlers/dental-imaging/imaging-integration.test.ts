@@ -288,14 +288,15 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Wipe imaging rows between tests (FK order: annotations/findings/teeth/calibrations → images → studies).
-  const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations } =
+  // Wipe imaging rows between tests (FK order: annotations/findings/teeth/calibrations/links → images → studies).
+  const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations, imagingLinks } =
     await import('./repos/imaging.schema');
   const { imagingFindings } = await import('./repos/imaging_finding.schema');
   await db.delete(imagingFindings);
   await db.delete(imagingAnnotations);
   await db.delete(imagingStudyTeeth);
   await db.delete(imagingCalibrations);
+  await db.delete(imagingLinks);
   await db.delete(imagingStudyImages);
   await db.delete(imagingStudies);
 });

@@ -1722,6 +1722,11 @@ export const DentalImagingModuleCreateFindingBodySchema = z.object({
   frameIndex: z.number().int().optional()
 });
 
+export const DentalImagingModuleCreateImagingLinkBodySchema = z.object({
+  linkType: z.enum(["treatment_plan", "ortho_case", "report"]),
+  targetId: z.string()
+});
+
 export const DentalImagingModuleModalityEnumSchema = z.enum(["periapical", "bitewing", "panoramic", "cephalometric", "cbct", "intraoral_photo", "extraoral_photo", "other"]);
 
 export const DentalImagingModuleCreateImagingStudyBodySchema = z.object({
@@ -1835,6 +1840,18 @@ export const DentalImagingModuleImagingFindingListResponseSchema = z.object({
   items: z.array(DentalImagingModuleImagingFindingSchema)
 });
 
+export const DentalImagingModuleImagingLinkSchema = z.object({
+  id: z.string(),
+  imageId: z.string(),
+  linkType: z.enum(["treatment_plan", "ortho_case", "report"]),
+  targetId: z.string(),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const DentalImagingModuleImagingLinkListResponseSchema = z.object({
+  items: z.array(DentalImagingModuleImagingLinkSchema)
+});
+
 export const DentalImagingModuleImagingStudyWithImagesSchema = z.object({
   id: z.string(),
   patientId: z.string(),
@@ -1866,7 +1883,8 @@ export const DentalImagingModulePatientImageItemSchema = z.object({
   isDiagnostic: z.boolean().optional(),
   qualityStatus: z.enum(["ok", "retake"]).optional(),
   retakeReason: z.union([z.string(), z.null()]).optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  links: z.array(DentalImagingModuleImagingLinkSchema).optional()
 });
 
 export const DentalImagingModuleListPatientImagesResponseSchema = z.object({
@@ -20690,6 +20708,23 @@ export type ImagingFindingsMgmt_listFindingsParams = z.infer<typeof ImagingFindi
 
 export const ImagingFindingsMgmt_listFindingsResponse = z.union([DentalImagingModuleImagingFindingListResponseSchema, ErrorResponseSchema]);
 
+export const ImagingMgmt_createImageLinkParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_createImageLinkParams = z.infer<typeof ImagingMgmt_createImageLinkParams>;
+
+export const ImagingMgmt_createImageLinkBody = DentalImagingModuleCreateImagingLinkBodySchema;
+export type ImagingMgmt_createImageLinkBody = z.infer<typeof ImagingMgmt_createImageLinkBody>;
+
+export const ImagingMgmt_createImageLinkResponse = z.union([DentalImagingModuleImagingLinkSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_listImageLinksParams = z.object({
+  imageId: z.string(),
+});
+export type ImagingMgmt_listImageLinksParams = z.infer<typeof ImagingMgmt_listImageLinksParams>;
+
+export const ImagingMgmt_listImageLinksResponse = z.union([DentalImagingModuleImagingLinkListResponseSchema, ErrorResponseSchema]);
+
 export const ImagingMgmt_createMeasurementParams = z.object({
   imageId: z.string(),
 });
@@ -20726,6 +20761,13 @@ export const ImagingMgmt_updateImageModalityBody = DentalImagingModuleUpdateImag
 export type ImagingMgmt_updateImageModalityBody = z.infer<typeof ImagingMgmt_updateImageModalityBody>;
 
 export const ImagingMgmt_updateImageModalityResponse = z.union([DentalImagingModuleImagingStudyImageSchema, ErrorResponseSchema]);
+
+export const ImagingMgmt_deleteImageLinkParams = z.object({
+  linkId: z.string(),
+});
+export type ImagingMgmt_deleteImageLinkParams = z.infer<typeof ImagingMgmt_deleteImageLinkParams>;
+
+export const ImagingMgmt_deleteImageLinkResponse = ErrorResponseSchema;
 
 export const ImagingMgmt_deleteMeasurementParams = z.object({
   measurementId: z.string(),
@@ -21341,6 +21383,8 @@ export const PatientImageMgmt_listPatientImagesQuery = z.object({
   isDiagnostic: z.coerce.boolean().optional(),
   qualityStatus: z.enum(["ok", "retake"]).optional(),
   tag: z.string().optional(),
+  linkTargetId: z.string().optional(),
+  linkType: z.enum(["treatment_plan", "ortho_case", "report"]).optional(),
 });
 export type PatientImageMgmt_listPatientImagesQuery = z.infer<typeof PatientImageMgmt_listPatientImagesQuery>;
 

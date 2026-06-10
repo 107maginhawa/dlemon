@@ -47,6 +47,15 @@ export const imagingStatusEnum = pgEnum('imaging_status', ['active', 'archived']
 // (with an optional retakeReason). Additive, non-default-changing.
 export const imagingQualityStatusEnum = pgEnum('imaging_quality_status', ['ok', 'retake']);
 
+// G5b: context-link target kinds. An image can be linked to a treatment plan, an
+// ortho case, or a cephalometric report (loose-coupled — targetId references the
+// other module's row id with NO DB-level FK, mirroring the existing cross-module pattern).
+export const imagingLinkTypeEnum = pgEnum('imaging_link_type', [
+  'treatment_plan',
+  'ortho_case',
+  'report',
+]);
+
 export const imagingAnnotationTypeEnum = pgEnum('imaging_annotation_type', [
   'line',
   'angle',
@@ -152,6 +161,37 @@ export const imagingCalibrations = pgTable(
       table.version,
     ),
     imageIdx: index('imaging_calibration_image_idx').on(table.imageId),
+  }),
+);
+
+/**
+ * G5b: context links (guide §4) — an image's relationships to a treatment plan,
+ * ortho case, or cephalometric report. Loose-coupled: targetId references another
+ * module's row id with NO DB-level FK (matches the cross-module convention used by
+ * imaging_study.patientId/visitId). One row per (image, type, target); re-linking
+ * the same pair is idempotent.
+ */
+export const imagingLinks = pgTable(
+  'imaging_link',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdBy: uuid('created_by'),
+    imageId: uuid('image_id')
+      .notNull()
+      .references(() => imagingStudyImages.id),
+    linkType: imagingLinkTypeEnum('link_type').notNull(),
+    // loose-coupling: references treatment-plan / ortho-case / ceph-report id (cross-module — no DB FK)
+    targetId: uuid('target_id').notNull(),
+  },
+  (table) => ({
+    uniqueLink: unique('imaging_link_image_type_target_uniq').on(
+      table.imageId,
+      table.linkType,
+      table.targetId,
+    ),
+    imageIdx: index('imaging_link_image_idx').on(table.imageId),
+    targetIdx: index('imaging_link_target_idx').on(table.targetId),
   }),
 );
 
@@ -265,3 +305,6 @@ export type ImagingAnnotation = typeof imagingAnnotations.$inferSelect;
 export type NewImagingAnnotation = typeof imagingAnnotations.$inferInsert;
 export type ImagingCalibration = typeof imagingCalibrations.$inferSelect;
 export type NewImagingCalibration = typeof imagingCalibrations.$inferInsert;
+export type ImagingLink = typeof imagingLinks.$inferSelect;
+export type NewImagingLink = typeof imagingLinks.$inferInsert;
+export type ImagingLinkType = (typeof imagingLinkTypeEnum.enumValues)[number];

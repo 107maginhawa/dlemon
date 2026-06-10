@@ -3379,6 +3379,11 @@ export type DentalImagingModuleCreateFindingBody = {
     frameIndex?: number;
 };
 
+export type DentalImagingModuleCreateImagingLinkBody = {
+    linkType: 'treatment_plan' | 'ortho_case' | 'report';
+    targetId: string;
+};
+
 export type DentalImagingModuleCreateImagingStudyBody = {
     patientId: string;
     visitId?: string;
@@ -3464,6 +3469,18 @@ export type DentalImagingModuleImagingFindingStatus = 'draft' | 'confirmed' | 'r
 
 export type DentalImagingModuleImagingFindingType = 'caries' | 'secondary_caries' | 'bone_loss' | 'furcation_involvement' | 'periapical_lesion' | 'root_resorption' | 'calculus' | 'crown_fracture' | 'root_fracture' | 'impacted_tooth' | 'over_eruption' | 'open_contact' | 'overhang' | 'crown_needed' | 'implant_needed';
 
+export type DentalImagingModuleImagingLink = {
+    id: string;
+    imageId: string;
+    linkType: 'treatment_plan' | 'ortho_case' | 'report';
+    targetId: string;
+    createdAt: Date;
+};
+
+export type DentalImagingModuleImagingLinkListResponse = {
+    items: Array<DentalImagingModuleImagingLink>;
+};
+
 export type DentalImagingModuleImagingStudy = {
     id: string;
     patientId: string;
@@ -3543,6 +3560,7 @@ export type DentalImagingModulePatientImageItem = {
     qualityStatus?: 'ok' | 'retake';
     retakeReason?: string | null;
     tags?: Array<string>;
+    links?: Array<DentalImagingModuleImagingLink>;
 };
 
 export type DentalImagingModuleUpdateCalibrationBody = {
@@ -67258,6 +67276,42 @@ export type ImagingFindingsMgmtCreateFindingResponses = {
 
 export type ImagingFindingsMgmtCreateFindingResponse = ImagingFindingsMgmtCreateFindingResponses[keyof ImagingFindingsMgmtCreateFindingResponses];
 
+export type ImagingMgmtListImageLinksData = {
+    body?: never;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/links';
+};
+
+export type ImagingMgmtListImageLinksResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingLinkListResponse | ErrorResponse;
+};
+
+export type ImagingMgmtListImageLinksResponse = ImagingMgmtListImageLinksResponses[keyof ImagingMgmtListImageLinksResponses];
+
+export type ImagingMgmtCreateImageLinkData = {
+    body: DentalImagingModuleCreateImagingLinkBody;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/links';
+};
+
+export type ImagingMgmtCreateImageLinkResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingLink | ErrorResponse;
+};
+
+export type ImagingMgmtCreateImageLinkResponse = ImagingMgmtCreateImageLinkResponses[keyof ImagingMgmtCreateImageLinkResponses];
+
 export type ImagingMgmtListMeasurementsData = {
     body?: never;
     path: {
@@ -67329,6 +67383,28 @@ export type ImagingMgmtUpdateImageModalityResponses = {
 };
 
 export type ImagingMgmtUpdateImageModalityResponse = ImagingMgmtUpdateImageModalityResponses[keyof ImagingMgmtUpdateImageModalityResponses];
+
+export type ImagingMgmtDeleteImageLinkData = {
+    body?: never;
+    path: {
+        linkId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/links/{linkId}';
+};
+
+export type ImagingMgmtDeleteImageLinkResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * There is no content to send for this request, but the headers may be useful.
+     */
+    204: void;
+};
+
+export type ImagingMgmtDeleteImageLinkResponse = ImagingMgmtDeleteImageLinkResponses[keyof ImagingMgmtDeleteImageLinkResponses];
 
 export type ImagingMgmtDeleteMeasurementData = {
     body?: never;
@@ -69664,6 +69740,8 @@ export type PatientImageMgmtListPatientImagesData = {
         isDiagnostic?: boolean;
         qualityStatus?: 'ok' | 'retake';
         tag?: string;
+        linkTargetId?: string;
+        linkType?: 'treatment_plan' | 'ortho_case' | 'report';
     };
     url: '/dental/patients/{patientId}/images';
 };

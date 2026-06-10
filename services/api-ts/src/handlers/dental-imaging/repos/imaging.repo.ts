@@ -11,6 +11,7 @@ import {
   imagingStudyTeeth,
   imagingAnnotations,
   imagingCalibrations,
+  imagingLinks,
   type ImagingStudy,
   type NewImagingStudy,
   type ImagingStudyImage,
@@ -18,6 +19,8 @@ import {
   type ImagingAnnotation,
   type NewImagingAnnotation,
   type ImagingCalibration,
+  type ImagingLink,
+  type ImagingLinkType,
   type ImagingModality,
 } from './imaging.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
@@ -209,6 +212,63 @@ export class ImagingRepository {
       .returning();
     if (!updated) throw new Error(`Image ${id} not found`);
     return updated;
+  }
+
+  // -------------------------------------------------------------------------
+  // G5b: context links (treatment plan / ortho case / report)
+  // -------------------------------------------------------------------------
+
+  /** Idempotent: linking the same (image, type, target) twice returns the same row. */
+  async createImageLink(
+    imageId: string,
+    data: { linkType: ImagingLinkType; targetId: string; createdBy?: string | null },
+  ): Promise<ImagingLink> {
+    const [row] = await this.db
+      .insert(imagingLinks)
+      .values({ imageId, linkType: data.linkType, targetId: data.targetId, createdBy: data.createdBy ?? null })
+      .onConflictDoUpdate({
+        target: [imagingLinks.imageId, imagingLinks.linkType, imagingLinks.targetId],
+        set: { targetId: data.targetId },
+      })
+      .returning();
+    if (!row) throw new Error('Failed to create image link');
+    return row;
+  }
+
+  async listLinksByImage(imageId: string): Promise<ImagingLink[]> {
+    return await this.db
+      .select()
+      .from(imagingLinks)
+      .where(eq(imagingLinks.imageId, imageId));
+  }
+
+  async getLinkById(linkId: string): Promise<ImagingLink | null> {
+    const [row] = await this.db
+      .select()
+      .from(imagingLinks)
+      .where(eq(imagingLinks.id, linkId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async deleteLink(linkId: string): Promise<void> {
+    await this.db.delete(imagingLinks).where(eq(imagingLinks.id, linkId));
+  }
+
+  /** Batch-fetch links for many images → map keyed by imageId (list enrichment). */
+  async getLinksByImageIds(imageIds: string[]): Promise<Map<string, ImagingLink[]>> {
+    const map = new Map<string, ImagingLink[]>();
+    if (imageIds.length === 0) return map;
+    const rows = await this.db
+      .select()
+      .from(imagingLinks)
+      .where(inArray(imagingLinks.imageId, imageIds));
+    for (const row of rows) {
+      const list = map.get(row.imageId) ?? [];
+      list.push(row);
+      map.set(row.imageId, list);
+    }
+    return map;
   }
 
   // -------------------------------------------------------------------------

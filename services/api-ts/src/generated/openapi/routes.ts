@@ -1035,6 +1035,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingFindingsMgmt_listFindings as unknown as Handler
   );
 
+  // ImagingMgmt_createImageLink
+  app.post('/dental/imaging/images/:imageId/links',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_createImageLinkParams, validationErrorHandler),
+    zValidator('json', validators.ImagingMgmt_createImageLinkBody, validationErrorHandler),
+    registry.ImagingMgmt_createImageLink as unknown as Handler
+  );
+
+  // ImagingMgmt_listImageLinks
+  app.get('/dental/imaging/images/:imageId/links',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_listImageLinksParams, validationErrorHandler),
+    registry.ImagingMgmt_listImageLinks as unknown as Handler
+  );
+
   // ImagingMgmt_createMeasurement
   app.post('/dental/imaging/images/:imageId/measurements',
     authMiddleware(),
@@ -1064,6 +1079,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.ImagingMgmt_updateImageModalityParams, validationErrorHandler),
     zValidator('json', validators.ImagingMgmt_updateImageModalityBody, validationErrorHandler),
     registry.ImagingMgmt_updateImageModality as unknown as Handler
+  );
+
+  // ImagingMgmt_deleteImageLink
+  app.delete('/dental/imaging/links/:linkId',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_deleteImageLinkParams, validationErrorHandler),
+    registry.ImagingMgmt_deleteImageLink as unknown as Handler
   );
 
   // ImagingMgmt_deleteMeasurement

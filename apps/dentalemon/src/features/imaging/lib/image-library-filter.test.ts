@@ -5,12 +5,12 @@ import type { PatientImageItem } from '@/features/imaging/hooks/use-imaging-stud
 const make = (over: Partial<PatientImageItem>): PatientImageItem => ({
   id: 'x', source: 'imaging', modality: 'periapical', fileName: 'a', mimeType: 'image/png',
   fileSizeBytes: 1, studyId: 's', visitId: null, toothNumbers: [], createdAt: '2026-01-01',
-  downloadUrl: null, isDiagnostic: true, qualityStatus: 'ok', retakeReason: null, tags: [],
+  downloadUrl: null, isDiagnostic: true, qualityStatus: 'ok', retakeReason: null, tags: [], links: [],
   ...over,
 })
 
 const items: PatientImageItem[] = [
-  make({ id: 'a', tags: ['ortho'] }),
+  make({ id: 'a', tags: ['ortho'], links: [{ id: 'l1', linkType: 'treatment_plan', targetId: 'p1' }] }),
   make({ id: 'b', isDiagnostic: false, qualityStatus: 'retake', tags: ['review', 'PA'] }),
 ]
 
@@ -26,6 +26,10 @@ describe('filterImageLibrary', () => {
   })
   it('tag match is case-insensitive', () => {
     expect(filterImageLibrary(items, { tag: 'pa' }).map((i) => i.id)).toEqual(['b'])
+  })
+  it('linkType filter keeps only images linked of that type', () => {
+    expect(filterImageLibrary(items, { linkType: 'treatment_plan' }).map((i) => i.id)).toEqual(['a'])
+    expect(filterImageLibrary(items, { linkType: 'report' })).toHaveLength(0)
   })
 })
 

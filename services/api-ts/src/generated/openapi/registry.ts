@@ -252,13 +252,16 @@ import { ImagingFindingsMgmt_createFinding } from '../../handlers/dental-imaging
 import { ImagingFindingsMgmt_deleteFinding } from '../../handlers/dental-imaging/ImagingFindingsMgmt_deleteFinding';
 import { ImagingFindingsMgmt_listFindings } from '../../handlers/dental-imaging/ImagingFindingsMgmt_listFindings';
 import { ImagingFindingsMgmt_updateFinding } from '../../handlers/dental-imaging/ImagingFindingsMgmt_updateFinding';
+import { ImagingMgmt_createImageLink } from '../../handlers/dental-imaging/ImagingMgmt_createImageLink';
 import { ImagingMgmt_createImagingStudy } from '../../handlers/dental-imaging/ImagingMgmt_createImagingStudy';
 import { ImagingMgmt_createMeasurement } from '../../handlers/dental-imaging/ImagingMgmt_createMeasurement';
 import { ImagingMgmt_deleteImage } from '../../handlers/dental-imaging/ImagingMgmt_deleteImage';
+import { ImagingMgmt_deleteImageLink } from '../../handlers/dental-imaging/ImagingMgmt_deleteImageLink';
 import { ImagingMgmt_deleteMeasurement } from '../../handlers/dental-imaging/ImagingMgmt_deleteMeasurement';
 import { ImagingMgmt_finalizeCbctStudy } from '../../handlers/dental-imaging/ImagingMgmt_finalizeCbctStudy';
 import { ImagingMgmt_getCbctViewerLink } from '../../handlers/dental-imaging/ImagingMgmt_getCbctViewerLink';
 import { ImagingMgmt_getImagingStudy } from '../../handlers/dental-imaging/ImagingMgmt_getImagingStudy';
+import { ImagingMgmt_listImageLinks } from '../../handlers/dental-imaging/ImagingMgmt_listImageLinks';
 import { ImagingMgmt_listMeasurements } from '../../handlers/dental-imaging/ImagingMgmt_listMeasurements';
 import { ImagingMgmt_updateImageCalibration } from '../../handlers/dental-imaging/ImagingMgmt_updateImageCalibration';
 import { ImagingMgmt_updateImageMetadata } from '../../handlers/dental-imaging/ImagingMgmt_updateImageMetadata';
@@ -636,13 +639,16 @@ export const registry = {
   ImagingFindingsMgmt_deleteFinding,
   ImagingFindingsMgmt_listFindings,
   ImagingFindingsMgmt_updateFinding,
+  ImagingMgmt_createImageLink,
   ImagingMgmt_createImagingStudy,
   ImagingMgmt_createMeasurement,
   ImagingMgmt_deleteImage,
+  ImagingMgmt_deleteImageLink,
   ImagingMgmt_deleteMeasurement,
   ImagingMgmt_finalizeCbctStudy,
   ImagingMgmt_getCbctViewerLink,
   ImagingMgmt_getImagingStudy,
+  ImagingMgmt_listImageLinks,
   ImagingMgmt_listMeasurements,
   ImagingMgmt_updateImageCalibration,
   ImagingMgmt_updateImageMetadata,

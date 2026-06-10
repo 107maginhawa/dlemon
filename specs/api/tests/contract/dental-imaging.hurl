@@ -159,6 +159,50 @@ HTTP 200
 jsonpath "$.qualityStatus" == "ok"
 
 
+# 2d. G5b context links — link the image to a treatment plan, list, then delete.
+POST {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "linkType": "treatment_plan",
+  "targetId": "11111111-2222-4333-8444-555555555555"
+}
+HTTP 201
+[Captures]
+link_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.imageId" == "{{image_id}}"
+jsonpath "$.linkType" == "treatment_plan"
+jsonpath "$.targetId" == "11111111-2222-4333-8444-555555555555"
+
+# 2e. Re-linking the same target is idempotent — list still has exactly one.
+POST {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "linkType": "treatment_plan",
+  "targetId": "11111111-2222-4333-8444-555555555555"
+}
+HTTP 201
+
+GET {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count == 1
+
+# 2f. Delete the link → 204, then the list is empty.
+DELETE {{api}}/dental/imaging/links/{{link_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 204
+
+GET {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count == 0
+
+
 # ============================================================
 # CEPH LANDMARKS — BATCH UPSERT (ROUTE PREFIX CHECK)
 # ============================================================

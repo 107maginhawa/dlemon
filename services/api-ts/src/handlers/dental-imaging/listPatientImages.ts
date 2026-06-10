@@ -52,6 +52,8 @@ export interface PatientImageItem {
   qualityStatus: 'ok' | 'retake';
   retakeReason: string | null;
   tags: string[];
+  // G5b: context links (treatment plan / ortho case / report). Empty for legacy.
+  links: { id: string; imageId: string; linkType: string; targetId: string; createdAt: Date }[];
 }
 
 export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageItem {
@@ -77,6 +79,7 @@ export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageIte
     qualityStatus: 'ok',
     retakeReason: null,
     tags: [],
+    links: [],
   };
 }
 
@@ -88,6 +91,9 @@ export interface ImageLibraryFilters {
   isDiagnostic?: boolean;
   qualityStatus?: 'ok' | 'retake';
   tag?: string;
+  // G5b: filter to images linked to a specific target, optionally by link type.
+  linkTargetId?: string;
+  linkType?: string;
 }
 
 /**
@@ -106,6 +112,14 @@ export function applyImageLibraryFilters(
     if (tagNeedle) {
       const hasTag = it.tags.some((t) => t.toLowerCase() === tagNeedle);
       if (!hasTag) return false;
+    }
+    if (filters.linkTargetId || filters.linkType) {
+      const matches = it.links.some(
+        (l) =>
+          (!filters.linkTargetId || l.targetId === filters.linkTargetId) &&
+          (!filters.linkType || l.linkType === filters.linkType),
+      );
+      if (!matches) return false;
     }
     return true;
   });
@@ -140,6 +154,9 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
 
   // 1. Fetch new imaging images filtered by branch
   const imagingRows = await repo.listImagingImagesForPatient(patientId, branchId);
+
+  // G5b: batch-fetch context links for these images (avoids N+1).
+  const linksByImage = await repo.getLinksByImageIds(imagingRows.map((r) => r.id));
 
   // Presigned GET URL per imaging object so the viewer can load the bytes directly.
   // generateDownloadUrl signs the object key (= fileId) and does NOT require a
@@ -180,6 +197,13 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
         qualityStatus: (row.qualityStatus ?? 'ok') as 'ok' | 'retake',
         retakeReason: row.retakeReason ?? null,
         tags: Array.isArray(row.tags) ? row.tags : [],
+        links: (linksByImage.get(row.id) ?? []).map((l) => ({
+          id: l.id,
+          imageId: l.imageId,
+          linkType: l.linkType,
+          targetId: l.targetId,
+          createdAt: l.createdAt,
+        })),
       };
     }),
   );
@@ -200,6 +224,8 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
     isDiagnostic: parseBoolFilter(ctx.req.query('isDiagnostic')),
     qualityStatus: qualityRaw === 'ok' || qualityRaw === 'retake' ? qualityRaw : undefined,
     tag: ctx.req.query('tag') ?? undefined,
+    linkTargetId: ctx.req.query('linkTargetId') ?? undefined,
+    linkType: ctx.req.query('linkType') ?? undefined,
   });
 
   // V-IMG-006: patient image list exposes radiograph PHI — audit the read.

@@ -149,7 +149,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations } =
+  const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations, imagingLinks } =
     await import('./repos/imaging.schema');
   const { imagingFindings } = await import('./repos/imaging_finding.schema');
   const { imagingCephLandmarks, imagingCephAnalyses } = await import('./repos/imaging_ceph.schema');
@@ -157,6 +157,7 @@ beforeEach(async () => {
   await db.delete(imagingCephAnalyses);
   await db.delete(imagingCephLandmarks);
   await db.delete(imagingCalibrations);
+  await db.delete(imagingLinks);
   await db.delete(imagingAnnotations);
   await db.delete(imagingStudyTeeth);
   await db.delete(imagingStudyImages);

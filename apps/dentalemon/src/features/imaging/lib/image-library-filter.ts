@@ -1,9 +1,19 @@
 import type { PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
 
+export type ImageLinkType = 'treatment_plan' | 'ortho_case' | 'report'
+
 export interface ImageLibraryFilter {
   diagnosticOnly?: boolean
   qualityStatus?: 'ok' | 'retake'
   tag?: string
+  linkType?: ImageLinkType
+}
+
+/** Short human label for a context-link type (badges + filter options). */
+export const LINK_TYPE_LABELS: Record<ImageLinkType, string> = {
+  treatment_plan: 'Plan',
+  ortho_case: 'Ortho',
+  report: 'Report',
 }
 
 /**
@@ -20,6 +30,7 @@ export function filterImageLibrary(
     if (filter.diagnosticOnly && !it.isDiagnostic) return false
     if (filter.qualityStatus && it.qualityStatus !== filter.qualityStatus) return false
     if (tagNeedle && !it.tags.some((t) => t.toLowerCase() === tagNeedle)) return false
+    if (filter.linkType && !it.links.some((l) => l.linkType === filter.linkType)) return false
     return true
   })
 }

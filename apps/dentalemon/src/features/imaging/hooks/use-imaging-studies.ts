@@ -33,6 +33,8 @@ export interface PatientImageItem {
   qualityStatus: 'ok' | 'retake'
   retakeReason: string | null
   tags: string[]
+  // G5b context links (treatment plan / ortho case / report).
+  links: { id: string; linkType: 'treatment_plan' | 'ortho_case' | 'report'; targetId: string }[]
 }
 
 const toIso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : String(d))
@@ -58,6 +60,7 @@ function toViewModel(item: DentalImagingModulePatientImageItem): PatientImageIte
     qualityStatus: item.qualityStatus ?? 'ok',
     retakeReason: item.retakeReason ?? null,
     tags: item.tags ?? [],
+    links: (item.links ?? []).map((l) => ({ id: l.id, linkType: l.linkType, targetId: l.targetId })),
   }
 }
 

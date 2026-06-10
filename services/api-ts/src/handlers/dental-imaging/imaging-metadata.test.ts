@@ -195,7 +195,7 @@ describe('applyImageLibraryFilters (pure)', () => {
     id: 'x', source: 'imaging', modality: 'periapical', fileName: 'a', mimeType: 'image/png',
     fileSizeBytes: 1, studyId: 's', visitId: null, toothNumbers: [], createdAt: new Date('2026-01-01'),
     downloadUrl: null, isVolume: false, frameCount: null, viewerKind: 'image',
-    isDiagnostic: true, qualityStatus: 'ok', retakeReason: null, tags: ['ortho'],
+    isDiagnostic: true, qualityStatus: 'ok', retakeReason: null, tags: ['ortho'], links: [],
   };
   const items: PatientImageItem[] = [
     base,

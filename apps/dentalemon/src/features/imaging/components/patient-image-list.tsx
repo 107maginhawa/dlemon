@@ -11,7 +11,7 @@ import { ImageUpload } from './image-upload'
 import { FmxMount } from './FmxMount'
 import { CbctStudyCard } from './CbctStudyCard'
 import { BRAND_GOLD_SOFT, BRAND_GOLD_TEXT } from '@/constants/brand'
-import { filterImageLibrary, collectTags } from '@/features/imaging/lib/image-library-filter'
+import { filterImageLibrary, collectTags, LINK_TYPE_LABELS, type ImageLinkType } from '@/features/imaging/lib/image-library-filter'
 
 // P2-7: a CBCT / multi-frame object is a 3-D VOLUME — never render it as a flat
 // list row with an <img> thumbnail. The discriminator is server-provided.
@@ -35,12 +35,15 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
   // G5: client-side library filters over the fetched list (no refetch on toggle).
   const [diagnosticOnly, setDiagnosticOnly] = useState(false)
   const [tagFilter, setTagFilter] = useState<string>('')
+  const [linkTypeFilter, setLinkTypeFilter] = useState<'' | ImageLinkType>('')
 
   const allItems = data?.items ?? []
   const availableTags = collectTags(allItems)
+  const hasAnyLinks = allItems.some((i) => i.links.length > 0)
   const visibleItems = filterImageLibrary(allItems, {
     diagnosticOnly,
     tag: tagFilter || undefined,
+    linkType: linkTypeFilter || undefined,
   })
 
   function toggleSelect(item: PatientImageItem, e: React.ChangeEvent<HTMLInputElement>) {
@@ -122,6 +125,19 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
             />
             Diagnostic only
           </label>
+          {hasAnyLinks && (
+            <select
+              value={linkTypeFilter}
+              onChange={(e) => setLinkTypeFilter(e.target.value as '' | ImageLinkType)}
+              data-testid="filter-link-type"
+              className="rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-600"
+            >
+              <option value="">All links</option>
+              {(Object.keys(LINK_TYPE_LABELS) as ImageLinkType[]).map((lt) => (
+                <option key={lt} value={lt}>{LINK_TYPE_LABELS[lt]}</option>
+              ))}
+            </select>
+          )}
           {availableTags.length > 0 && (
             <select
               value={tagFilter}
@@ -184,9 +200,18 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     <p className="text-xs text-zinc-400 capitalize">
                       {item.modality.replace('_', ' ')}
                     </p>
-                    {/* G5: quality / diagnostic badges + tags */}
-                    {(item.qualityStatus === 'retake' || !item.isDiagnostic || item.tags.length > 0) && (
+                    {/* G5: quality / diagnostic badges + tags + context-link badges */}
+                    {(item.qualityStatus === 'retake' || !item.isDiagnostic || item.tags.length > 0 || item.links.length > 0) && (
                       <div className="mt-1 flex flex-wrap items-center gap-1">
+                        {[...new Set(item.links.map((l) => l.linkType))].map((lt) => (
+                          <span
+                            key={lt}
+                            className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-700"
+                            data-testid={`link-badge-${item.id}-${lt}`}
+                          >
+                            {LINK_TYPE_LABELS[lt]}
+                          </span>
+                        ))}
                         {item.qualityStatus === 'retake' && (
                           <span
                             className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700"
