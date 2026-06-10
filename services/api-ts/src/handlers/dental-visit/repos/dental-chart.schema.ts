@@ -4,7 +4,8 @@
  * Each visit has one DentalChart with an array of per-tooth states.
  */
 
-import { pgTable, uuid, jsonb, integer, text, index, pgEnum, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, jsonb, integer, text, index, pgEnum, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
@@ -68,6 +69,12 @@ export const dentalCharts = pgTable('dental_chart', {
 }, (table) => ({
   visitIdx: index('dental_chart_visit_id_idx').on(table.visitId),
   patientIdx: index('dental_chart_patient_id_idx').on(table.patientId),
+  // SL-01 / B-G3: offline-replay idempotency backstop — a (visit, localId) pair may
+  // exist at most once. The handler pre-check short-circuits a replayed create op;
+  // this index guards against a concurrent-retry race.
+  visitLocalIdUnique: uniqueIndex('dental_chart_visit_local_id_unique')
+    .on(table.visitId, table.localId)
+    .where(sql`local_id is not null`),
 }));
 
 export type DentalChart = typeof dentalCharts.$inferSelect;

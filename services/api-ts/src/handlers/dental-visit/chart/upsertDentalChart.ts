@@ -33,12 +33,27 @@ export async function upsertDentalChart(
   // E2: dental_assistant may write chart CONDITIONS under dentist supervision.
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'dental_assistant']);
 
+  const repo = new DentalChartRepository(db);
+
+  // SL-01 / B-G3: offline-replay idempotency. The chart is one-per-visit, so a
+  // replay never inserts a duplicate row — but re-running saveVersion below would
+  // append a REDUNDANT version snapshot. localId is set once on first insert; if
+  // the existing chart was created by THIS localId, the inbound POST is a replay of
+  // that create op — short-circuit (skip the version append + baseline re-merge).
+  // Scoped to an exact localId match, so a distinct edit op (different localId)
+  // still applies normally. Placed before the immutability guard so a replay
+  // resolves idempotently even after the visit was later completed/locked.
+  if (body.localId) {
+    const existingChart = await repo.findByVisit(visitId);
+    if (existingChart && existingChart.localId === body.localId) {
+      return ctx.json(existingChart, 201);
+    }
+  }
+
   // EF-VIS-003: completed/locked visits cannot be modified — lock gate
   if (visit.status === 'completed' || visit.status === 'locked') {
     throw new BusinessLogicError('Visit is immutable and cannot be modified', 'VISIT_IMMUTABLE');
   }
-
-  const repo = new DentalChartRepository(db);
 
   const chart = await repo.upsert({
     visitId,
