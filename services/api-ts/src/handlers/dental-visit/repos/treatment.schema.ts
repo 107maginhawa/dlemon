@@ -179,3 +179,36 @@ export const TREATMENT_TRANSITIONS: Record<DentalTreatmentStatus, DentalTreatmen
   dismissed: [], // terminal
   declined: [],  // terminal — patient declined recommended treatment
 };
+
+/**
+ * SL-09 / CAND-A18: monotonic rank along the treatment lifecycle. Higher = further
+ * along. The progression axis is diagnosed→planned→performed→verified; the terminal
+ * decisions (dismissed/declined) rank above the whole progression so a clinically-
+ * or legally-significant terminal outcome is never undone by a stale progression op.
+ */
+export const TREATMENT_STATUS_RANK: Record<DentalTreatmentStatus, number> = {
+  diagnosed: 0,
+  planned: 1,
+  performed: 2,
+  verified: 3,
+  dismissed: 4,
+  declined: 4,
+};
+
+/**
+ * SL-09 / CAND-A18: monotonic merge of a treatment status under offline sync.
+ *
+ * The HTTP PATCH path enforces forward-only transitions, but the sync-apply path
+ * (cadence row-level LWW) bypasses that guard — a stale offline status could clobber
+ * a newer one by arrival order, regressing e.g. performed→planned (P1 data-loss).
+ * This is the canonical guard the sync apply must use: the status that is FURTHER
+ * along the FSM wins; a lower-ranked (stale) incoming status is rejected. On equal
+ * rank the current status is kept (deterministic — covers same-status replays and a
+ * dismissed/declined tie).
+ */
+export function mergeTreatmentStatus(
+  current: DentalTreatmentStatus,
+  incoming: DentalTreatmentStatus,
+): DentalTreatmentStatus {
+  return TREATMENT_STATUS_RANK[incoming] > TREATMENT_STATUS_RANK[current] ? incoming : current;
+}
