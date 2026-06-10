@@ -172,6 +172,32 @@ describe('P0-A — resolveChartConflict (accept)', () => {
   });
 });
 
+describe('P0-A — resolveChartConflict (accept silent-drop guard)', () => {
+  test('accept blocked by existing-tier immutability surfaces CONFLICT_ACCEPT_BLOCKED and does NOT clear', async () => {
+    await seedConflict();
+    // Between conflict detection and resolution the baseline tooth #14 became an
+    // existing-tier (immutable) entry. CHART-BR-002 will silently refuse to overwrite
+    // it, so an 'accept' would no-op for #14 — the accepted clinical edit must NOT be
+    // dropped silently.
+    await new DentalChartBaselineRepository(db).mergeVisitChart(
+      PATIENT, PRIOR_VISIT,
+      [{ toothNumber: 14, state: 'crown', entryClassification: 'existing', clock: 20 }],
+      USER.id,
+    );
+    expect((await baselineTooth(14))?.entryClassification).toBe('existing');
+
+    const res = await resolve({ resolution: 'accept' });
+    expect(res.status).toBe(422);
+    expect((await res.json() as { code?: string }).code).toBe('CONFLICT_ACCEPT_BLOCKED');
+
+    // The conflict stays open (not silently cleared) and the baseline is untouched.
+    expect((await (await listConflicts()).json() as unknown[]).length).toBe(1);
+    const tooth = await baselineTooth(14);
+    expect(tooth?.state).toBe('crown');
+    expect(tooth?.entryClassification).toBe('existing');
+  });
+});
+
 describe('P0-A — resolveChartConflict (dismiss)', () => {
   test('dismiss without a reason is rejected (400)', async () => {
     await seedConflict();

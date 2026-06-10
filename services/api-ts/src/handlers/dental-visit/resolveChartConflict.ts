@@ -18,7 +18,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalChartRepository } from './repos/dental-chart.repo';
 import { DentalChartBaselineRepository } from './repos/dental-chart-baseline.repo';
@@ -92,7 +92,23 @@ export async function resolveChartConflict(
     const bumped: ToothChartState[] = rejectedTeeth.map((t) => ({ ...t, clock: newClock }));
 
     if (bumped.length > 0) {
-      await baselineRepo.mergeVisitChart(chart.patientId, visitId, bumped, user.id);
+      const { baseline: merged } = await baselineRepo.mergeVisitChart(chart.patientId, visitId, bumped, user.id);
+      // Silent-drop guard: CHART-BR-002 (existing/existing_other immutability) makes
+      // mergeVisitChart silently skip a bumped tooth if the baseline became
+      // existing-tier between conflict detection and resolution. Each accepted tooth
+      // carries the same newClock; if a tooth did not land at that clock the accept was
+      // refused. Surface it instead of clearing the conflict — the clinician's edit was
+      // NOT applied. Throwing rolls back the transaction so clearConflict never runs.
+      const blocked = bumped.filter(
+        (t) => merged.teeth.find((m) => m.toothNumber === t.toothNumber)?.clock !== newClock,
+      );
+      if (blocked.length > 0) {
+        const teeth = blocked.map((t) => t.toothNumber).join(', ');
+        throw new BusinessLogicError(
+          `Accepted edit could not be applied to tooth ${teeth}: an immutable existing-tier baseline entry blocks it. The conflict remains open.`,
+          'CONFLICT_ACCEPT_BLOCKED',
+        );
+      }
       // Record the resolution as a new version snapshot of the visit chart.
       await txRepo.saveVersion(chart.id, chart.teeth as ToothChartState[], user.id);
     }
