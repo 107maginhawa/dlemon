@@ -50,21 +50,26 @@ export async function convertFindingToTreatment(
     priceCents = resolveFeeCents(overrides, body.cdtCode, procedure?.defaultFeePhp);
   }
 
-  const treatment = await new TreatmentRepository(db).createOne({
-    visitId,
-    patientId: finding.patientId,
-    cdtCode: body.cdtCode,
-    description: body.description,
-    toothNumber: finding.toothNumber,
-    surfaces: finding.surface ? [finding.surface] : undefined,
-    conditionCode: finding.conditionCode,
-    priceCents,
-    carriedOver: false,
-    createdBy: user.id,
-    updatedBy: user.id,
+  // Atomic: create the treatment and link it to the finding in one transaction so a
+  // partial failure can't orphan a treatment (or, on retry, create a second one) and
+  // leave the finding showing linkedTreatmentId=null.
+  const treatment = await db.transaction(async (tx) => {
+    const created = await new TreatmentRepository(tx).createOne({
+      visitId,
+      patientId: finding.patientId,
+      cdtCode: body.cdtCode,
+      description: body.description,
+      toothNumber: finding.toothNumber,
+      surfaces: finding.surface ? [finding.surface] : undefined,
+      conditionCode: finding.conditionCode,
+      priceCents,
+      carriedOver: false,
+      createdBy: user.id,
+      updatedBy: user.id,
+    });
+    await new DentalFindingRepository(tx).linkTreatment(findingId, created.id);
+    return created;
   });
-
-  await findingRepo.linkTreatment(findingId, treatment.id);
 
   return ctx.json(treatment, 201);
 }

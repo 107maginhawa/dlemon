@@ -15,6 +15,8 @@ import { createDentalFinding } from './createDentalFinding';
 import { listDentalFindings } from './listDentalFindings';
 import { updateDentalFinding } from './updateDentalFinding';
 import { convertFindingToTreatment } from './convertFindingToTreatment';
+import { dentalFindings } from './repos/dental-finding.schema';
+import { TreatmentRepository } from './repos/treatment.repo';
 import {
   CreateDentalFindingBody, CreateDentalFindingParams,
   ListDentalFindingsParams,
@@ -140,6 +142,70 @@ describe('P0-C — updateFinding (resolve / edit)', () => {
     const f = await res.json() as { conditionCode: string; note: string };
     expect(f.conditionCode).toBe('other');
     expect(f.note).toBe('Atypical lesion');
+  });
+});
+
+/**
+ * Wrap a db so the dental_finding UPDATE (the linkTreatment write) always throws,
+ * at both the top level and inside a transaction. Lets us force a failure AFTER the
+ * treatment INSERT to prove the convert path is atomic: non-transactional → the
+ * treatment is orphaned (committed) while the link is lost; transactional → rollback
+ * leaves no treatment row.
+ */
+function dbThatFailsFindingLink(target: any): any {
+  return new Proxy(target, {
+    get(t, prop) {
+      if (prop === 'update') {
+        return (table: unknown) => {
+          if (table === dentalFindings) throw new Error('forced link failure');
+          return t.update(table);
+        };
+      }
+      if (prop === 'transaction') {
+        return (cb: (tx: unknown) => unknown, ...rest: unknown[]) =>
+          t.transaction((tx: unknown) => cb(dbThatFailsFindingLink(tx)), ...rest);
+      }
+      const v = Reflect.get(t, prop);
+      return typeof v === 'function' ? v.bind(t) : v;
+    },
+  });
+}
+
+function buildAppWithDb(injectedDb: unknown) {
+  const app = new Hono();
+  app.onError((err, c) => {
+    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
+    return c.json({ error: String((err as Error).message) }, 500);
+  });
+  app.use('*', async (c, next) => {
+    const ctx = c as any;
+    ctx.set('database', injectedDb);
+    ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
+    ctx.set('user', USER);
+    ctx.set('session', { id: 'sess', userId: USER.id });
+    await next();
+  });
+  app.post('/dental/visits/:visitId/findings',
+    zValidator('param', CreateDentalFindingParams, ve), zValidator('json', CreateDentalFindingBody, ve), createDentalFinding as any);
+  app.post('/dental/visits/:visitId/findings/:findingId/treatment',
+    zValidator('param', ConvertFindingToTreatmentParams, ve), zValidator('json', ConvertFindingToTreatmentBody, ve), convertFindingToTreatment as any);
+  return app;
+}
+
+describe('P0-C — convertFindingToTreatment atomicity', () => {
+  test('a failed finding→treatment link leaves NO orphan treatment (rolled back)', async () => {
+    const finding = await (await post(`/dental/visits/${VISIT}/findings`, { toothNumber: 27, surface: 'occlusal', conditionCode: 'caries' })).json() as { id: string };
+
+    const failApp = buildAppWithDb(dbThatFailsFindingLink(db));
+    const res = await failApp.request(`/dental/visits/${VISIT}/findings/${finding.id}/treatment`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cdtCode: 'D2391', description: 'Resin composite — one surface', priceCents: 15000 }),
+    });
+    expect(res.status).toBe(500);
+
+    // The treatment INSERT must have been rolled back with the failed link — no orphan.
+    const treatments = await new TreatmentRepository(db).findByVisit(VISIT);
+    expect(treatments.length).toBe(0);
   });
 });
 

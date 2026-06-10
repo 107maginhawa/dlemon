@@ -71,21 +71,34 @@ export async function resolveChartConflict(
   // accept: re-apply the rejected teeth to the baseline with a NEW clock above
   // the current winner so the offline edit wins legitimately (never mutates the
   // prior facts — it adds a new, higher-clocked change).
-  const baselineRepo = new DentalChartBaselineRepository(db);
-  const baseline = await baselineRepo.findByPatient(chart.patientId);
-  const maxClock = (baseline?.teeth ?? []).reduce(
-    (max, t) => (typeof t.clock === 'number' && t.clock > max ? t.clock : max),
-    0,
-  );
-  const newClock = maxClock + 1;
-  const bumped: ToothChartState[] = rejectedTeeth.map((t) => ({ ...t, clock: newClock }));
+  //
+  // Atomic: the baseline merge, the version snapshot, and the conflict-clear run in a
+  // single transaction so a partial failure can't lose the baseline update while still
+  // retiring the conflict flag (which would silently drop the accepted edit).
+  // NOTE: an explicit `FOR UPDATE` lock on the baseline row would further serialize
+  // two concurrent resolves of the SAME conflict, but is deliberately omitted — the
+  // offline-first embedded path runs on a single-writer SQLite (sqlite-proxy, which
+  // does not implement row locks), and concurrent resolution of one conflict is a
+  // narrow window already guarded by the syncStatus!=='conflict' 404 recheck.
+  const updated = await db.transaction(async (tx) => {
+    const baselineRepo = new DentalChartBaselineRepository(tx);
+    const txRepo = new DentalChartRepository(tx);
+    const baseline = await baselineRepo.findByPatient(chart.patientId);
+    const maxClock = (baseline?.teeth ?? []).reduce(
+      (max, t) => (typeof t.clock === 'number' && t.clock > max ? t.clock : max),
+      0,
+    );
+    const newClock = maxClock + 1;
+    const bumped: ToothChartState[] = rejectedTeeth.map((t) => ({ ...t, clock: newClock }));
 
-  if (bumped.length > 0) {
-    await baselineRepo.mergeVisitChart(chart.patientId, visitId, bumped, user.id);
-    // Record the resolution as a new version snapshot of the visit chart.
-    await repo.saveVersion(chart.id, chart.teeth as ToothChartState[], user.id);
-  }
+    if (bumped.length > 0) {
+      await baselineRepo.mergeVisitChart(chart.patientId, visitId, bumped, user.id);
+      // Record the resolution as a new version snapshot of the visit chart.
+      await txRepo.saveVersion(chart.id, chart.teeth as ToothChartState[], user.id);
+    }
 
-  const updated = await repo.clearConflict(chart.id);
+    return txRepo.clearConflict(chart.id);
+  });
+
   return ctx.json(updated ?? chart, 200);
 }
