@@ -535,6 +535,60 @@ export const ChartConflictSchema = z.object({
 
 export const ChartConflictResolutionSchema = z.enum(["accept", "dismiss"]);
 
+export const DentalVisitStatusSchema = z.enum(["draft", "active", "completed", "locked", "discarded"]);
+
+export const ChartExportToothSchema = z.object({
+  toothNumber: z.number().int(),
+  state: z.string(),
+  layer: z.string(),
+  surfaces: z.array(z.string()).optional(),
+  conditionCode: z.string().optional(),
+  entryClassification: ChartEntryClassificationSchema.optional(),
+  note: z.string().optional()
+});
+
+export const DentalTreatmentStatusSchema = z.enum(["diagnosed", "planned", "performed", "verified", "dismissed", "declined"]);
+
+export const ChartExportTreatmentSchema = z.object({
+  toothNumber: z.number().int().optional(),
+  cdtCode: z.string(),
+  description: z.string(),
+  surfaces: z.array(z.string()).optional(),
+  status: DentalTreatmentStatusSchema,
+  priceCents: z.number().int()
+});
+
+export const ChartExportSummarySchema = z.object({
+  proposedCount: z.number().int(),
+  completedCount: z.number().int(),
+  declinedCount: z.number().int(),
+  totalProposedCents: z.number().int()
+});
+
+export const ChartExportLegendEntrySchema = z.object({
+  key: z.string(),
+  label: z.string()
+});
+
+export const ChartExportSchema = z.object({
+  patientId: UUIDSchema,
+  patientName: z.string(),
+  patientDateOfBirth: z.string().optional(),
+  visitId: UUIDSchema,
+  visitDate: z.string().datetime().transform((str) => new Date(str)),
+  visitStatus: DentalVisitStatusSchema,
+  providerMemberId: UUIDSchema.optional(),
+  providerName: z.string().optional(),
+  branchId: UUIDSchema,
+  branchName: z.string().optional(),
+  notation: z.string(),
+  generatedAt: z.string().datetime().transform((str) => new Date(str)),
+  teeth: z.array(ChartExportToothSchema),
+  treatments: z.array(ChartExportTreatmentSchema),
+  summary: ChartExportSummarySchema,
+  legend: z.array(ChartExportLegendEntrySchema)
+});
+
 export const ChatMessageSchema = z.object({
   id: z.string().uuid(),
   version: z.number().int(),
@@ -3464,8 +3518,6 @@ export const DentalQueueModuleUpdateQueueItemStatusRequestSchema = z.object({
   notes: z.string().optional()
 });
 
-export const DentalTreatmentStatusSchema = z.enum(["diagnosed", "planned", "performed", "verified", "dismissed", "declined"]);
-
 export const DentalTreatmentSchema = z.object({
   id: UUIDSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
@@ -3491,8 +3543,6 @@ export const DentalTreatmentSchema = z.object({
 });
 
 export const DentalTreatmentPhaseSchema = z.enum(["systemic", "disease_control", "re_evaluation", "definitive", "maintenance"]);
-
-export const DentalVisitStatusSchema = z.enum(["draft", "active", "completed", "locked", "discarded"]);
 
 export const DentalVisitSchema = z.object({
   id: UUIDSchema,
@@ -22077,6 +22127,13 @@ export const GetDentalChartParams = z.object({
 export type GetDentalChartParams = z.infer<typeof GetDentalChartParams>;
 
 export const GetDentalChartResponse = DentalChartSchema;
+
+export const ExportDentalChartParams = z.object({
+  visitId: UUIDSchema,
+});
+export type ExportDentalChartParams = z.infer<typeof ExportDentalChartParams>;
+
+export const ExportDentalChartResponse = ChartExportSchema;
 
 export const ResolveChartConflictParams = z.object({
   visitId: UUIDSchema,

@@ -2080,6 +2080,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getDentalChart as unknown as Handler
   );
 
+  // exportDentalChart
+  app.get('/dental/visits/:visitId/chart/export',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ExportDentalChartParams, validationErrorHandler),
+    registry.exportDentalChart as unknown as Handler
+  );
+
   // resolveChartConflict
   app.post('/dental/visits/:visitId/chart/resolve-conflict',
     authMiddleware({ roles: ["user"] }),

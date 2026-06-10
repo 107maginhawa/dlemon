@@ -703,3 +703,23 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$" count == 0
+
+
+# ============================================================
+# P0-B — structured chart export
+# The original visit (visit_id) has a 3-tooth chart (#11/#26/#36) and tooth #26
+# was taken to 'performed' above → it lands on the Completed layer in the export.
+# ============================================================
+GET {{api}}/dental/visits/{{visit_id}}/chart/export
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.notation" == "FDI"
+jsonpath "$.generatedAt" isString
+jsonpath "$.patientName" isString
+jsonpath "$.teeth" count == 3
+jsonpath "$.legend" count == 4
+jsonpath "$.summary.completedCount" >= 1
+jsonpath "$.teeth[?(@.toothNumber == 26)].layer" == "completed"

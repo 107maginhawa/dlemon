@@ -233,6 +233,67 @@ model ResolveChartConflictRequest {
   reason?: string;
 }
 
+// ---------------------------------------------------------------------------
+// P0-B: Structured chart export
+//
+// A structured (not screenshot) snapshot of a visit's chart: patient/provider/
+// date header, the odontogram tooth/surface table with derived layers, a legend,
+// and a treatment-plan summary (proposed/completed/declined). Mirrors exportPMD.
+// ---------------------------------------------------------------------------
+
+model ChartExportTooth {
+  toothNumber: int32;
+  state: string;
+  /** Derived display layer: baseline | proposed | completed | declined | unset. */
+  layer: string;
+  surfaces?: string[];
+  conditionCode?: string;
+  entryClassification?: ChartEntryClassification;
+  note?: string;
+}
+
+model ChartExportTreatment {
+  toothNumber?: int32;
+  cdtCode: string;
+  description: string;
+  surfaces?: string[];
+  status: DentalTreatmentStatus;
+  priceCents: int32;
+}
+
+model ChartExportLegendEntry {
+  key: string;
+  label: string;
+}
+
+model ChartExportSummary {
+  proposedCount: int32;
+  completedCount: int32;
+  declinedCount: int32;
+  /** Sum of priceCents of the proposed (diagnosed/planned) treatments. */
+  totalProposedCents: int32;
+}
+
+model ChartExport {
+  patientId: UUID;
+  patientName: string;
+  patientDateOfBirth?: string;
+  visitId: UUID;
+  visitDate: utcDateTime;
+  visitStatus: DentalVisitStatus;
+  providerMemberId?: UUID;
+  providerName?: string;
+  branchId: UUID;
+  branchName?: string;
+  /** Canonical tooth notation of the export — always FDI. */
+  notation: string;
+  generatedAt: utcDateTime;
+  teeth: ChartExportTooth[];
+  treatments: ChartExportTreatment[];
+  summary: ChartExportSummary;
+  legend: ChartExportLegendEntry[];
+}
+
 @example(#{
   id: "t1a2b3c4-0000-4000-8000-000000000001",
   createdAt: utcDateTime.fromISO("2026-03-15T09:10:00Z"),
@@ -616,6 +677,18 @@ namespace DentalVisitModule {
       @body body: ResolveChartConflictRequest
     ): ApiOkResponse<DentalChart>
       | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-B: structured (not screenshot) chart export for a visit — header (patient/provider/date), odontogram tooth/surface table with derived layers, legend, and proposed/completed/declined treatment summary.")
+    @get
+    @route("/{visitId}/chart/export")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("exportDentalChart")
+    exportDentalChart(
+      @path visitId: UUID
+    ): ApiOkResponse<ChartExport>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
   }

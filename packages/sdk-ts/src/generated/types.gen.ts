@@ -1039,6 +1039,65 @@ export type ChartConflictResolution = 'accept' | 'dismiss';
 
 export type ChartEntryClassification = 'existing' | 'existing_other' | 'treatment_plan' | 'condition';
 
+export type ChartExport = {
+    patientId: Uuid;
+    patientName: string;
+    patientDateOfBirth?: string;
+    visitId: Uuid;
+    visitDate: Date;
+    visitStatus: DentalVisitStatus;
+    providerMemberId?: Uuid;
+    providerName?: string;
+    branchId: Uuid;
+    branchName?: string;
+    /**
+     * Canonical tooth notation of the export — always FDI.
+     */
+    notation: string;
+    generatedAt: Date;
+    teeth: Array<ChartExportTooth>;
+    treatments: Array<ChartExportTreatment>;
+    summary: ChartExportSummary;
+    legend: Array<ChartExportLegendEntry>;
+};
+
+export type ChartExportLegendEntry = {
+    key: string;
+    label: string;
+};
+
+export type ChartExportSummary = {
+    proposedCount: number;
+    completedCount: number;
+    declinedCount: number;
+    /**
+     * Sum of priceCents of the proposed (diagnosed/planned) treatments.
+     */
+    totalProposedCents: number;
+};
+
+export type ChartExportTooth = {
+    toothNumber: number;
+    state: string;
+    /**
+     * Derived display layer: baseline | proposed | completed | declined | unset.
+     */
+    layer: string;
+    surfaces?: Array<string>;
+    conditionCode?: string;
+    entryClassification?: ChartEntryClassification;
+    note?: string;
+};
+
+export type ChartExportTreatment = {
+    toothNumber?: number;
+    cdtCode: string;
+    description: string;
+    surfaces?: Array<string>;
+    status: DentalTreatmentStatus;
+    priceCents: number;
+};
+
 /**
  * Immutable chat message with optional video call data
  */
@@ -72471,6 +72530,37 @@ export type UpsertDentalChartResponses = {
 };
 
 export type UpsertDentalChartResponse = UpsertDentalChartResponses[keyof UpsertDentalChartResponses];
+
+export type ExportDentalChartData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/chart/export';
+};
+
+export type ExportDentalChartErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ExportDentalChartError = ExportDentalChartErrors[keyof ExportDentalChartErrors];
+
+export type ExportDentalChartResponses = {
+    /**
+     * Success response with data
+     */
+    200: ChartExport;
+};
+
+export type ExportDentalChartResponse = ExportDentalChartResponses[keyof ExportDentalChartResponses];
 
 export type ResolveChartConflictData = {
     body: ResolveChartConflictRequest;

@@ -292,6 +292,7 @@ import { createTreatmentTemplate } from '../../handlers/dental-visit/templates/c
 import { createVisitNoteAddendum } from '../../handlers/dental-visit/notes/createVisitNoteAddendum';
 import { deleteTreatmentTemplate } from '../../handlers/dental-visit/templates/deleteTreatmentTemplate';
 import { discardVisit } from '../../handlers/dental-visit/visits/discardVisit';
+import { exportDentalChart } from '../../handlers/dental-visit/exportDentalChart';
 import { getDentalChart } from '../../handlers/dental-visit/chart/getDentalChart';
 import { getDentalVisit } from '../../handlers/dental-visit/visits/getDentalVisit';
 import { getToothHistory } from '../../handlers/dental-visit/chart/getToothHistory';
@@ -689,6 +690,7 @@ export const registry = {
   createVisitNoteAddendum,
   deleteTreatmentTemplate,
   discardVisit,
+  exportDentalChart,
   getDentalChart,
   getDentalVisit,
   getToothHistory,

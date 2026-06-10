@@ -50,6 +50,7 @@ import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-p
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
 import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
 import { useChartConflicts } from '@/features/workspace/hooks/use-chart-conflicts';
+import { ChartExportOverlay } from '@/features/workspace/components/chart-export-overlay';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
@@ -87,6 +88,7 @@ function WorkspacePage() {
   const [recallsOpen, setRecallsOpen] = useState(false);
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
+  const [chartExportOpen, setChartExportOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
 
@@ -341,6 +343,18 @@ function WorkspacePage() {
           Plans
         </button>
 
+        {/* P0-B: structured chart export (print-ready) for the current visit */}
+        {currentVisitId && (
+          <button
+            type="button"
+            data-testid="chart-export-btn"
+            onClick={() => setChartExportOpen(true)}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          >
+            Export
+          </button>
+        )}
+
         {/* B5: Sync status badge */}
         <SyncStatusBadge branchId={branchId ?? null} />
 
@@ -585,6 +599,15 @@ function WorkspacePage() {
         open={treatmentPlansOpen}
         onClose={() => setTreatmentPlansOpen(false)}
       />
+
+      {/* P0-B: structured chart export overlay (print-ready) */}
+      {currentVisitId && (
+        <ChartExportOverlay
+          visitId={currentVisitId}
+          open={chartExportOpen}
+          onClose={() => setChartExportOpen(false)}
+        />
+      )}
 
       {/* VISIT-02: PreCompletionChecklist */}
       {currentVisitId && (
