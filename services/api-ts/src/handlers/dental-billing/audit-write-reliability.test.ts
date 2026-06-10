@@ -29,7 +29,8 @@ import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { voidDentalPayment } from './voidDentalPayment';
-import { VoidDentalPaymentParams, VoidDentalPaymentBody } from '@/generated/openapi/validators';
+import { voidDentalInvoice } from './voidDentalInvoice';
+import { VoidDentalPaymentParams, VoidDentalPaymentBody, VoidDentalInvoiceParams, VoidDentalInvoiceBody } from '@/generated/openapi/validators';
 import { AuditLogRepository } from '@/handlers/dental-audit/repos/audit-log.repo';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
@@ -79,6 +80,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_payment`);
+  await db.execute(sql`DELETE FROM dental_payment_plan`);
   await db.execute(sql`DELETE FROM dental_invoice_line_item`);
   await db.execute(sql`DELETE FROM dental_invoice`);
   // dental_audit_log is append-only (DELETE blocked by V-AUD-IMM-001); TRUNCATE is
@@ -110,7 +112,27 @@ function buildApp() {
     zValidator('json', VoidDentalPaymentBody, ve),
     voidDentalPayment as any,
   );
+  app.post(
+    '/dental/billing/invoices/:invoiceId/void',
+    zValidator('param', VoidDentalInvoiceParams, ve),
+    zValidator('json', VoidDentalInvoiceBody, ve),
+    voidDentalInvoice as any,
+  );
   return app;
+}
+
+async function seedIssuedInvoice() {
+  const invoiceRepo = new DentalInvoiceRepository(db);
+  const invoiceNumber = await invoiceRepo.generateInvoiceNumber();
+  const [invoice] = await db.insert(dentalInvoices).values({
+    id: crypto.randomUUID(), visitId: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID,
+    dentistMemberId: MEMBER_ID, invoiceNumber, status: 'issued' as any,
+    subtotalCents: 10000, discountCents: 0, taxCents: 0, taxRate: '0',
+    totalCents: 10000, paidCents: 0, balanceCents: 10000,
+    issuedAt: new Date('2025-01-15T10:00:00.000Z'),
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).returning();
+  return invoice!;
 }
 
 async function seedInvoiceWithPayment() {
@@ -181,5 +203,58 @@ describe('audit write reliability (P1-C fail-closed) + AUD-BR-004 snapshots (P2-
     expect(row!.eventType).toBe('data-modification');
     expect((row!.beforeSnapshot as any)?.isVoid).toBe(false);
     expect((row!.afterSnapshot as any)?.isVoid).toBe(true);
+  });
+});
+
+describe('SL-05 / E-NEW-02 — invoice void is fail-closed + snapshotted', () => {
+  // -------------------------------------------------------------------------
+  // P1-C: voiding an INVOICE must NOT report success when its audit row cannot
+  // be persisted. The MASTER-GAP-MATRIX P1-C entry claimed fail-closed covered
+  // void/discount/payment, but the INVOICE-void path was missed (only the
+  // PAYMENT-void path had it). RED before the fix: the void returns 200 even
+  // though no `dental_audit_log` row was written.
+  // -------------------------------------------------------------------------
+  test('voiding an invoice returns 5xx when the audit sink is unavailable (no silent gap)', async () => {
+    const invoice = await seedIssuedInvoice();
+    const app = buildApp();
+
+    const spy = spyOn(AuditLogRepository.prototype, 'insert').mockImplementation(async () => {
+      throw new Error('audit sink unavailable');
+    });
+    try {
+      const res = await app.request(
+        `/dental/billing/invoices/${invoice.id}/void`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Issued in error' }) },
+      );
+      expect(res.status).toBeGreaterThanOrEqual(500);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // P2-A (AUD-BR-004): the invoice.voided audit row carries before/after status
+  // snapshots + the void reason (parity with payment-void).
+  // -------------------------------------------------------------------------
+  test('voiding an invoice persists before/after status snapshots + reason on the audit row', async () => {
+    const invoice = await seedIssuedInvoice();
+    const app = buildApp();
+
+    const res = await app.request(
+      `/dental/billing/invoices/${invoice.id}/void`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Billing error correction' }) },
+    );
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.targetId, invoice.id), eq(dentalAuditLog.action, 'invoice.voided')));
+
+    expect(row).toBeTruthy();
+    expect(row!.reason).toBe('Billing error correction');
+    expect(row!.eventType).toBe('data-modification');
+    expect((row!.beforeSnapshot as any)?.status).toBe('issued');
+    expect((row!.afterSnapshot as any)?.status).toBe('voided');
   });
 });

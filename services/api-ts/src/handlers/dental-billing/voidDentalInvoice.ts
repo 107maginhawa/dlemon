@@ -50,6 +50,7 @@ export async function voidDentalInvoice(
     throw new BusinessLogicError('Cannot void invoice with active payment plan', 'ACTIVE_PAYMENT_PLAN');
   }
 
+  const previousStatus = invoice.status;
   const voided = await repo.voidInvoice(invoiceId);
 
   const logger = ctx.get('logger');
@@ -57,16 +58,24 @@ export async function voidDentalInvoice(
     { requestId: ctx.get('requestId'), action: 'dental_invoice_void', invoiceId, branchId: invoice.branchId, by: session.userId },
     'Dental invoice voided',
   );
+  // P1-C: fail-closed — voiding an invoice (a money/compliance mutation) must never
+  // silently commit without its audit row. SL-05 / E-NEW-02: this path was missed by
+  // the original P1-C sweep (payment-void/discount/payment got `failClosed`; the
+  // INVOICE-void path did not). P2-A (AUD-BR-004): capture before/after + reason.
   const branchForAudit = await getBranchOrgId(db, invoice.branchId);
   await logAuditEvent(db, logger, {
     personId: session.userId,
     tenantId: branchForAudit?.organizationId ?? invoice.branchId,
     branchId: invoice.branchId,
+    eventType: 'data-modification',
     action: 'invoice.voided',
     resourceType: 'dental_invoice',
     resourceId: invoiceId,
+    reason,
+    before: { status: previousStatus },
+    after: { status: 'voided' },
     metadata: { reason },
-  });
+  }, { failClosed: true });
 
   return ctx.json(voided);
 }
