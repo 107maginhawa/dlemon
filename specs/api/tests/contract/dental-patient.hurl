@@ -124,6 +124,53 @@ HTTP 200
 jsonpath "$.needsFollowUp" == true
 
 
+# 5a. FR2.4: correct a registration typo in demographics (name/DOB/gender).
+# These live on the linked PERSON record; the response surfaces the updated
+# declared subset + displayName (V-PAT-014: never contactInfo).
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "firstName": "Mariana",
+  "lastName": "Reyes",
+  "dateOfBirth": "1991-05-01",
+  "gender": "female"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.person.firstName" == "Mariana"
+jsonpath "$.person.lastName" == "Reyes"
+jsonpath "$.person.dateOfBirth" == "1991-05-01"
+jsonpath "$.person.gender" == "female"
+jsonpath "$.displayName" == "Mariana Reyes"
+# V-PAT-014: the PATCH response must NOT leak person PII (contactInfo / address)
+# or raw DB-row internals (actor UUIDs, version). Declared subset only.
+jsonpath "$.person.contactInfo" not exists
+jsonpath "$.person.primaryAddress" not exists
+jsonpath "$.version" not exists
+jsonpath "$.createdBy" not exists
+jsonpath "$.updatedBy" not exists
+
+
+# 5b. Persisted across a fresh read (edit-save-reload).
+GET {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.person.firstName" == "Mariana"
+jsonpath "$.displayName" == "Mariana Reyes"
+
+
+# 5c. Demographics validation: an invalid gender is rejected.
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "gender": "banana"
+}
+HTTP 400
+
+
 # 6. List patients with needsFollowUp filter
 GET {{api}}/dental/patients?branchId={{branch_id}}&needsFollowUp=true
 Cookie: better-auth.session_token={{session_token}}

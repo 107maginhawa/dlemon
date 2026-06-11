@@ -41,6 +41,79 @@ export async function createPersonForDentalPatient(
 }
 
 /**
+ * FR2.4: update the demographics (name / DOB / gender) on the person backing a
+ * dental patient. Only the fields supplied are changed (partial update). The
+ * caller (updateDentalPatient handler) owns authorization, the archived guard,
+ * and field validation; this facade is pure persistence. Returns the updated
+ * declared person subset, or null if the patient/person isn't found.
+ *
+ * Contact info (phone/email) is intentionally NOT writable here: V-PAT-014 keeps
+ * person.contactInfo out of the patient profile response, so it has no read
+ * surface to edit against.
+ */
+export async function updatePatientDemographics(
+  db: DatabaseInstance,
+  patientId: string,
+  demographics: {
+    firstName?: string;
+    lastName?: string | null;
+    dateOfBirth?: string | null;
+    gender?: string | null;
+  },
+  actorId: string,
+): Promise<{
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+} | null> {
+  const [link] = await db
+    .select({ personId: patients.person })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  if (!link?.personId) return null;
+
+  const updateData: {
+    updatedBy: string;
+    updatedAt: Date;
+    firstName?: string;
+    lastName?: string | null;
+    dateOfBirth?: string | null;
+    gender?: typeof persons.gender._.data | null;
+  } = { updatedBy: actorId, updatedAt: new Date() };
+
+  if (demographics.firstName !== undefined) updateData.firstName = demographics.firstName;
+  if (demographics.lastName !== undefined) updateData.lastName = demographics.lastName;
+  if (demographics.dateOfBirth !== undefined) updateData.dateOfBirth = demographics.dateOfBirth;
+  if (demographics.gender !== undefined) {
+    updateData.gender = demographics.gender as typeof persons.gender._.data | null;
+  }
+
+  const [updated] = await db
+    .update(persons)
+    .set(updateData)
+    .where(eq(persons.id, link.personId))
+    .returning({
+      id: persons.id,
+      firstName: persons.firstName,
+      lastName: persons.lastName,
+      dateOfBirth: persons.dateOfBirth,
+      gender: persons.gender,
+    });
+  if (!updated) return null;
+
+  return {
+    id: updated.id,
+    firstName: updated.firstName,
+    lastName: updated.lastName ?? null,
+    dateOfBirth: updated.dateOfBirth ?? null,
+    gender: updated.gender ?? null,
+  };
+}
+
+/**
  * P1-28: read the persisted consent (registration + per-channel) for the person
  * backing a dental patient. Returns null if the patient/person isn't found.
  */

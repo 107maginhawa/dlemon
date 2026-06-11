@@ -1099,6 +1099,131 @@ describe('V-PAT-002: PATCH demographics requires an edit-capable role', () => {
 });
 
 // =============================================================================
+// FR2.4: updateDentalPatient demographics edit (name/DOB/gender)
+//
+// Registration-typo correction. Demographics live on the linked PERSON record,
+// not dental_patient — these fields update the person via the dental handler's
+// branch-role + archived guards. Contact info (phone/email) is intentionally
+// excluded: V-PAT-014 keeps person.contactInfo out of the profile response, so
+// there is no read surface to edit it against (decision-gated, not in V1 scope).
+// =============================================================================
+
+describe('FR2.4: updateDentalPatient demographics edit', () => {
+  afterEach(truncate);
+
+  test('PATCH firstName/lastName/dateOfBirth/gender updates linked person and persists', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Maria Santos', { dateOfBirth: '1990-04-22', gender: 'female' });
+
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: 'Mariana', lastName: 'Reyes', dateOfBirth: '1991-05-01', gender: 'male' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.firstName).toBe('Mariana');
+    expect(body.person.lastName).toBe('Reyes');
+    expect(body.person.dateOfBirth).toBe('1991-05-01');
+    expect(body.person.gender).toBe('male');
+    expect(body.displayName).toBe('Mariana Reyes');
+
+    // V-PAT-014: the PATCH response is the declared subset — no person PII
+    // (contactInfo/primaryAddress) and no raw DB-row internals (actor UUIDs,
+    // version). Mirrors getDentalPatient's hand-crafted shape.
+    expect(body.person.contactInfo).toBeUndefined();
+    expect(body.person.primaryAddress).toBeUndefined();
+    expect(body.version).toBeUndefined();
+    expect(body.createdBy).toBeUndefined();
+    expect(body.updatedBy).toBeUndefined();
+
+    // Persisted across a fresh read (edit-save-reload core journey).
+    const getRes = await app.request(`/dental/patients/${patient.id}`);
+    const got = await getRes.json() as any;
+    expect(got.person.firstName).toBe('Mariana');
+    expect(got.person.lastName).toBe('Reyes');
+    expect(got.dateOfBirth).toBe('1991-05-01');
+    expect(got.gender).toBe('male');
+    expect(got.displayName).toBe('Mariana Reyes');
+  });
+
+  test('PATCH with only dental fields leaves person demographics unchanged', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Juan Cruz', { dateOfBirth: '1985-01-01' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ needsFollowUp: true }),
+    });
+    expect(res.status).toBe(200);
+    const getRes = await app.request(`/dental/patients/${patient.id}`);
+    const got = await getRes.json() as any;
+    expect(got.person.firstName).toBe('Juan');
+    expect(got.person.lastName).toBe('Cruz');
+    expect(got.needsFollowUp).toBe(true);
+  });
+
+  test('PATCH lastName to empty string clears the last name', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Cher Mononym');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastName: '' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.lastName).toBeNull();
+    expect(body.displayName).toBe('Cher');
+  });
+
+  test('PATCH rejects an invalid gender with 400', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Test Gender');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gender: 'banana' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH rejects a future date of birth with 400', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Future DOB');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfBirth: '2999-01-01' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH rejects a blank firstName with 400', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Blank Name');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: '   ' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('demographics edit on an archived patient returns 403', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Archived Demographics');
+    await app.request(`/dental/patients/${patient.id}/archive`, { method: 'POST' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: 'ShouldFail' }),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+// =============================================================================
 // EM-PAT-002: archiveDentalPatient requires dentist_owner role
 // =============================================================================
 

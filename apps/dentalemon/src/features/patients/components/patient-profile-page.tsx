@@ -13,8 +13,10 @@ import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/cons
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
+import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
+import { PatientEditForm } from './patient-edit-form';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -271,7 +273,9 @@ function FollowupTab({ patientId }: { patientId: string }) {
 
 export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+  const [editOpen, setEditOpen] = useState(false);
   const { data, isLoading, error } = usePatientProfile({ patientId });
+  const { update, isPending: isSaving, error: saveError } = useUpdatePatient(patientId);
 
   const branchId = useOrgContextStore((s) => s.branchId);
 
@@ -320,7 +324,14 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
           ‹ Patients
         </Link>
         <span className="text-sm font-semibold">{data.displayName}</span>
-        <div className="w-24" /> {/* spacer to center the name */}
+        <button
+          type="button"
+          data-testid="edit-patient-button"
+          onClick={() => setEditOpen(true)}
+          className="text-sm font-medium text-lemon-foreground hover:underline w-24 text-right"
+        >
+          Edit
+        </button>
       </div>
 
       <div className="p-6 flex flex-col gap-4 max-w-4xl mx-auto w-full">
@@ -419,6 +430,38 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
         </div>
 
       </div>
+
+      {/* FR2.4: demographics-correction modal. Conditionally rendered so it
+          remounts on each open — otherwise the form's useState would retain
+          stale values typed during a prior cancelled edit. */}
+      {editOpen && (
+      <PatientEditForm
+        open={editOpen}
+        initial={{
+          firstName: data.firstName,
+          lastName: data.lastName,
+          dateOfBirth: data.dateOfBirth ?? '',
+          gender: data.gender ?? '',
+        }}
+        disabled={data.status === 'archived'}
+        error={saveError ? 'Could not save changes. Please try again.' : null}
+        saving={isSaving}
+        onClose={() => setEditOpen(false)}
+        onSubmit={async (d) => {
+          try {
+            await update({
+              firstName: d.firstName,
+              lastName: d.lastName,
+              dateOfBirth: d.dateOfBirth,
+              gender: d.gender,
+            });
+            setEditOpen(false);
+          } catch {
+            // Error surfaced via saveError; keep the modal open for retry.
+          }
+        }}
+      />
+      )}
     </div>
   );
 }

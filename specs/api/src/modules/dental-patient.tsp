@@ -229,6 +229,24 @@ namespace DentalPatientModule {
     communicationPreferences?: Record<unknown>;
     recallDate?: string;
     recallNote?: string;
+
+    // FR2.4: staff demographics correction (registration-typo fix). These update
+    // the patient's linked PERSON record, not the dental_patient row. Branch-role
+    // and archived guards are enforced by the handler. Contact info (phone/email)
+    // is intentionally NOT editable here: V-PAT-014 excludes person.contactInfo
+    // from the patient profile response (PII minimisation), so it has no read
+    // surface to edit against — that remains a separate, decision-gated change.
+    @doc("Patient first name (updates linked person)")
+    firstName?: string;
+
+    @doc("Patient last name (updates linked person; empty string clears)")
+    lastName?: string;
+
+    @doc("Patient date of birth, ISO date (updates linked person)")
+    dateOfBirth?: string;
+
+    @doc("Patient gender (updates linked person)")
+    gender?: string;
   }
 
 

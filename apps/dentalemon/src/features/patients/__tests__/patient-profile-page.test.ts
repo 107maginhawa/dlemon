@@ -201,6 +201,75 @@ describe('PatientProfilePage', () => {
     await waitFor(() => expect(screen.getByTestId('profile-error')).not.toBeNull());
   });
 
+  // ── FR2.4: demographics edit flow ─────────────────────────────────────────
+
+  test('FR2.4: Edit button opens the form prefilled; form is absent until opened', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    // Conditionally rendered — no edit fields in the DOM until opened.
+    expect(screen.queryByLabelText(/first name/i)).toBeNull();
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    expect(firstName.value).toBe('Russel');
+  });
+
+  test('FR2.4: cancel after editing then reopen shows original values (no stale state)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName1 = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    await user.clear(firstName1);
+    await user.type(firstName1, 'Garbage');
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    // Reopen — must reflect the original 'Russel', not the discarded 'Garbage'.
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName2 = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    expect(firstName2.value).toBe('Russel');
+  });
+
+  test('FR2.4: saving the edit PATCHes /dental/patients/:id with the demographics body', async () => {
+    const user = userEvent.setup();
+    let patchMethod = '';
+    let patchBody: { firstName?: string; lastName?: string } | null = null;
+
+    global.fetch = mock(async (url: string | Request) => {
+      const req = url instanceof Request ? url : null;
+      const urlStr = req ? req.url : (url as string);
+      const method = req ? req.method : 'GET';
+      if (urlStr.includes('follow-up-notes')) return jsonResponse({ notes: [], total: 0 });
+      if (urlStr.includes('/visits')) return jsonResponse({ data: [], pagination: EMPTY_PAGINATION });
+      if (urlStr.includes('dental/invoices') || urlStr.includes('billing/invoices')) {
+        return jsonResponse({ data: [], total: 0 });
+      }
+      if (urlStr.includes('dental/patients')) {
+        if (method === 'PATCH' && req) {
+          patchMethod = method;
+          patchBody = (await req.clone().json()) as typeof patchBody;
+          return jsonResponse({
+            ...RAW_PROFILE,
+            displayName: 'Mariana Herrera',
+            person: { ...RAW_PROFILE.person, firstName: 'Mariana' },
+          });
+        }
+        return jsonResponse(RAW_PROFILE);
+      }
+      return jsonResponse({});
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    await user.clear(firstName);
+    await user.type(firstName, 'Mariana');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(patchMethod).toBe('PATCH'));
+    expect(patchBody?.firstName).toBe('Mariana');
+  });
+
   // ── Coherence oracle (workflow-verification backfill) ─────────────────────
   // Pins the summary-vs-body invariants the brief's COHERENCE ORACLE requires:
   // a displayed total/count must be explained by the rows actually rendered,

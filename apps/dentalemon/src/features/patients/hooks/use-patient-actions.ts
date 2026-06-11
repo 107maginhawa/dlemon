@@ -14,8 +14,46 @@ import {
   archiveDentalPatientMutation,
   restoreDentalPatientMutation,
   bulkArchiveDentalPatientsMutation,
+  updateDentalPatientMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import { exportDentalPatients } from '@monobase/sdk-ts/generated';
+
+// ─── useUpdatePatient (FR2.4) ───────────────────────────────────────────────
+
+/** Demographics body the form can send (name / DOB / gender). */
+export interface UpdatePatientDemographics {
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+}
+
+export function useUpdatePatient(patientId: string) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    ...updateDentalPatientMutation(),
+    onSuccess: () => {
+      // Refresh the single profile (getDentalPatient) and the list so the edit
+      // is reflected on reload (edit-save-reload journey).
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const id = (q.queryKey[0] as { _id?: string })?._id;
+          return id === 'getDentalPatient' || id === 'listDentalPatients';
+        },
+      });
+    },
+  });
+
+  const update = (demographics: UpdatePatientDemographics) =>
+    mutation.mutateAsync({ path: { id: patientId }, body: demographics });
+
+  return {
+    update,
+    isPending: mutation.isPending,
+    error: mutation.error as Error | null,
+  };
+}
 
 // ─── useArchivePatient ──────────────────────────────────────────────────
 

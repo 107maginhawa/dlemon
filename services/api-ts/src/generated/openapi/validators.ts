@@ -3449,7 +3449,11 @@ export const DentalPatientModuleUpdateDentalPatientRequestSchema = z.object({
   emergencyContact: z.record(z.string(), z.unknown()).optional(),
   communicationPreferences: z.record(z.string(), z.unknown()).optional(),
   recallDate: z.string().optional(),
-  recallNote: z.string().optional()
+  recallNote: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional()
 });
 
 export const PaymentMethodSchema = z.enum(["cash", "card", "bank_transfer"]);

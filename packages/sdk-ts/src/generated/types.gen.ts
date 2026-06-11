@@ -7899,6 +7899,22 @@ export type DentalPatientModuleUpdateDentalPatientRequest = {
     };
     recallDate?: string;
     recallNote?: string;
+    /**
+     * Patient first name (updates linked person)
+     */
+    firstName?: string;
+    /**
+     * Patient last name (updates linked person; empty string clears)
+     */
+    lastName?: string;
+    /**
+     * Patient date of birth, ISO date (updates linked person)
+     */
+    dateOfBirth?: string;
+    /**
+     * Patient gender (updates linked person)
+     */
+    gender?: string;
 };
 
 export type DentalPayment = {
