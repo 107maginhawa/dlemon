@@ -182,7 +182,17 @@ HTTP 200
 jsonpath "$.status" == "completed"
 
 
-# 5. Generate PMD from completed visit
+# 4b. AHA dental-pmd FIX-001: completing the visit AUTO-GENERATES the PMD
+# (WF-021/FR12.1) — a PMD now exists for the visit with NO manual generate call.
+GET {{api}}/dental/visits/{{visit_id}}/pmd
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.status" == "generated"
+
+
+# 5. Generate PMD from completed visit (manual re-generate supersedes the auto one)
 POST {{api}}/dental/visits/{{visit_id}}/pmd
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json

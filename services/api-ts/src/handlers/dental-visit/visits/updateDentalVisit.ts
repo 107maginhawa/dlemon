@@ -7,7 +7,7 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
+import { AppError, UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from '../repos/visit.repo';
 import { VISIT_TRANSITIONS, type DentalVisitStatus } from '../repos/visit.schema';
@@ -164,6 +164,25 @@ export async function updateDentalVisit(
       before: { status: visit.status },
       after: { status: 'completed' },
     }, { failClosed: true });
+
+    // FR12.1 / WF-021 (AHA dental-pmd FIX-001): auto-generate the Portable
+    // Medical Document on completion. Failure-ISOLATED — a PMD generation error
+    // must never roll back or fail the visit completion (the clinical record is
+    // already committed + audited above). Dynamic import avoids a static
+    // dental-visit ↔ dental-pmd cycle. The core is idempotent (supersede).
+    try {
+      const { generatePmdForVisit } = await import('@/handlers/dental-pmd/generatePMD');
+      await generatePmdForVisit(db, { visit: updated, actorUserId: user.id, logger: log });
+    } catch (pmdErr) {
+      // Surface the AppError code (e.g. a config issue like a deactivated
+      // membership → FORBIDDEN) so on-call can distinguish an actionable failure
+      // from transient I/O. Still swallowed — completion must not fail on PMD.
+      const code = pmdErr instanceof AppError ? pmdErr.code : undefined;
+      log?.error(
+        { requestId, visitId, code, err: pmdErr },
+        'PMD auto-generation failed (visit completion unaffected)',
+      );
+    }
     return ctx.json(updated);
   }
 
