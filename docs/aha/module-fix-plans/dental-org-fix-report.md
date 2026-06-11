@@ -114,3 +114,100 @@ None — Batch A touched only `features/staff/` and one E2E spec.
 ## 15. Recommended Next Step
 
 Run another `04-module-or-group-fix-tdd.md` pass for **Batch B — settings shell + consent templates** (`docs/aha/module-fix-plans/dental-org-fix-ready-plan.md`), which unblocks the data-governance retention panel and dental-pmd cert panel mounts.
+
+---
+
+# Batch B — Settings Shell + Consent Templates (appended 2026-06-11)
+
+## B1. Fix Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch B — Settings shell (FIX-003) + consent templates (FIX-004) + settings-portion test pins (FIX-002) |
+| Superpowers used | Yes (TDD + verification-before-completion) + a 4-lens adversarial verification workflow before commit |
+| Working tree status checked | Yes — clean before Batch B |
+| Fix scope | P2 (FIX-003 shared shell), P2→escalated-P1 (FIX-004 — a real contract bug was discovered), V1 RECOMMENDED test pins (FIX-002 settings portion) |
+| Shared files touched | Yes — `routes/_dashboard/settings.tsx` (shell), `consent-sheet.tsx` (clinical-owned consumer), TypeSpec `dental-org.tsp` + regenerated SDK/validators |
+| Schema/migration touched | No (DB already matched the reconciled contract) |
+| Code commit | `27e2cc20` |
+
+## B2. Fixes Selected
+
+| Fix ID | Gap | Severity | Scope Label | Reason | Status |
+| --- | --- | --- | --- | --- | --- |
+| FIX-003 | Settings shell hardcoded 5-tab list can't host pending cross-module panels | P2 | V1 REQUIRED `[SHARED DEPENDENCY]` | Unblocks data-governance retention + dental-pmd cert panel mounts; one owner of the seam | Fixed |
+| FIX-004 | Consent-template CRUD had zero UI; `consent-sheet.tsx` hardcoded legal text | P2→**P1** | V1 REQUIRED `[CROSS-MODULE RISK]` | While wiring, discovered the endpoints were **non-functional in production** (validator/handler field-name contradiction + wrapped-vs-bare response drift) | Fixed |
+| FIX-002 (settings) | New-panel FE tests must assert mutation calls | P3 | V1 RECOMMENDED `[TEST GAP]` | Prevents fake-green wiring of the new panel + shell | Fixed |
+
+## B3. Discovered Erratum (fix-ready plan was wrong)
+
+The plan's erratum said "consent-template backend already exists, tested, owner-gated — frontend/wiring only, no TypeSpec/backend rebuild." **This was incorrect.** Ground truth found during wiring:
+
+1. **Request field drift:** TypeSpec `Create/UpdateDentalConsentTemplateRequest` declared `title`/`content`/`isActive`; the DB schema, handler zod, and audit tests all use `name`/`body`/`requiresWitnessSignature`/`active`. The generated `zValidator('json', CreateConsentTemplateBody)` therefore required `{title, content}` while the handler required `{name, body}` — **no request body could satisfy both layers**, so create/update were non-functional in the real app (404/400/500). This stayed invisible because there was no FE consumer, and the backend integration tests mount the raw handler (skipping the generated validator) — the exact "raw-handler masks validator drift" gotcha.
+2. **Response envelope drift:** handlers returned `{ templates }` / `{ template }` / `{ deleted }` while the operation contracts already declared bare `ApiOkResponse<T[]>` / `ApiCreatedResponse<T>` / `ApiOkResponse<{}>` bodies.
+
+**Resolution (in-scope, spec-first-correct):** reconciled the stale TypeSpec models to the implemented DB/handler reality, regenerated OpenAPI → validators → SDK, and unwrapped the 4 handler responses. This aligns spec ↔ validator ↔ handler ↔ SDK ↔ FE ↔ tests. The scope-discipline verification lens confirmed this is a justified contract-bug fix, not scope creep (aligning the spec to ground truth, not warping code to a never-built spec).
+
+## B4. Changes Made
+
+| Fix ID | Implemented | Files |
+| --- | --- | --- |
+| FIX-003 | Minimal flat panel registry + router-free `SettingsPage`; route is now a thin wrapper | `features/settings/settings-panels.tsx` (new), `features/settings/components/settings-page.tsx` (new), `routes/_dashboard/settings.tsx` |
+| FIX-004 | TypeSpec reconcile (name/body/requiresWitnessSignature/active) + regen; 4 handler returns unwrapped to bare bodies; new consent-templates panel + hook (owner-only writes, inline two-step delete confirm); consent-sheet optional `templates` prop (const fallback) wired from workspace route; hurl + 2 backend tests corrected to bare shapes; seed-demo + 8 E2E seeders de-crufted | `specs/api/src/modules/dental-org.tsp`, `services/api-ts/src/handlers/dental-org/consentTemplates.ts`, generated `validators.ts` + SDK `types.gen.ts`, `features/settings/components/consent-templates.tsx` + `hooks/use-consent-templates.ts` (new), `features/workspace/components/consent-sheet.tsx`, `routes/_workspace/$patientId.tsx`, `specs/api/tests/contract/dental-org.hurl`, `dental-org.clinic-settings.test.ts`, `dental-org-audit-convergence.test.ts`, `scripts/seed-demo.ts`, 8 `tests/e2e/*.spec.ts` + `fixtures.ts` |
+| FIX-002 | Rendered mutation-call pins (POST/PATCH/DELETE body + owner-only gating) + shell mount/RBAC test | `consent-templates.test.tsx`, `settings-page.test.tsx`, `consent-sheet.test.ts` (new API-templates test) |
+
+## B5. Tests Added / Updated
+
+| Test File | Type | What It Proves |
+| --- | --- | --- |
+| `features/settings/components/consent-templates.test.tsx` | frontend/component + RBAC | list renders; create POST body; **edit PATCH body** (added after verification); delete DELETE; empty state; non-owner sees no writes |
+| `features/settings/components/settings-page.test.tsx` | frontend/component + regression | 5 original tabs + new Consent Forms tab render; consent panel mounts; non-settings role denied |
+| `features/workspace/components/consent-sheet.test.ts` | frontend/component | API-provided templates replace the hardcoded const and flow into createConsentForm |
+| `specs/api/tests/contract/dental-org.hurl` | integration/contract | owner-only CRUD round-trip pinning bare shapes; soft-delete removed from list |
+| `dental-org.clinic-settings.test.ts`, `dental-org-audit-convergence.test.ts` | backend/unit | consent CRUD now asserts the contract-correct bare bodies |
+
+## B6. Tests Run
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `bun test src/features/settings/ + consent-sheet` | Passed | 75/0 |
+| `bun test src/` (full FE) | Passed | 2258/0 |
+| `bun run typecheck` (FE; includes tests/e2e) | Passed | clean |
+| `bunx tsc --noEmit` (api-ts) | Passed | clean |
+| `bun run typecheck` (sdk-ts) | Passed | clean |
+| dental-org backend (`scripts/test-with-db.ts src/handlers/dental-org/`) | Passed | 674/0 |
+| `CONTRACT_ONLY=dental-org` contract suite (fresh :7213) | Passed | 33 reqs, 100% |
+| `bun run lint` (FE) | Passed | 0 errors |
+| `bun run check:boundaries:dental-org` | Passed | no violations |
+
+## B7. Adversarial Verification (pre-commit)
+
+A 4-lens workflow reviewed the uncommitted diff before commit:
+- **RBAC/security:** clean — owner-only enforcement intact at backend + FE; no branch leak; no PHI logging.
+- **Scope-discipline:** clean — minimal registry (no plugin framework), no DO-NOT-BUILD violations; TypeSpec reconcile confirmed justified.
+- **Contract-integrity:** clean end-to-end; 2 high-confidence nits (stale title/content cruft in seed-demo + 8 E2E seeders) — **folded into this commit.**
+- **Fake-green:** 1 valid P2 — the panel test claimed edit/update coverage it didn't have — **folded in (added the PATCH mutation-call test).**
+
+## B8. Shared / Cross-Module / Database Impact
+
+| Area | Files | Blast Radius | Coverage |
+| --- | --- | --- | --- |
+| Settings shell `[SHARED DEPENDENCY]` | `routes/_dashboard/settings.tsx` + registry | data-governance + dental-pmd panels mount onto the registry next | settings-page regression test pins all 5 existing tabs |
+| Consent-sheet `[CROSS-MODULE RISK]` | `consent-sheet.tsx` (clinical-owned) | workspace consent capture flow | const fallback preserves all existing consent-sheet tests; new API-templates test |
+| TypeSpec/SDK regen `[SHARED DEPENDENCY]` | `dental-org.tsp` + generated validators/SDK | repo-wide SDK; verified no non-generated consumer of the renamed models (both typechecks clean + repo grep) | hurl + backend + FE coverage |
+
+## B9. Completion Decision
+
+`COMPLETE` (Batch B) — FIX-003 + FIX-004 + FIX-002 (settings portion) fixed RED-first, a real P1 production contract bug discovered and resolved, all gates green, adversarial findings folded in before commit.
+
+## B10. Remaining dental-org Items
+
+| Item | Status |
+| --- | --- |
+| FIX-005/006 (Batch E doc reconcile) | Not run — low-priority docs; can piggyback a later pass |
+| Pre-existing settings panels (clinic/notification/locale) mutation pins | Deferred V1-RECOMMENDED — those panels already ship; this batch pinned the new wiring where the risk lives |
+| Batch C (PIN recovery, Q2) / Batch D (multi-branch, Q1) | Blocked on product decisions |
+
+## B11. Recommended Next Step
+
+Proceed to the next module per the execution order: **dental-billing Batch A** (overdue cron on the existing `services/api-ts/src/core/jobs.ts`) then **Batch E** (shared print/PDF utility + receipt). The dental-org settings shell (FIX-003) is now in place for data-governance and dental-pmd to mount their panels.
