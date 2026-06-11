@@ -288,3 +288,7 @@ apps/dentalemon/tests/smoke/.craft-*/
 # Audit working scratch (19MB, regenerable) — not source (root only;
 # unanchored pattern was also swallowing docs/aha/**/outputs/)
 /outputs/
+
+# AI brainstorm session scratch + Python Hypothesis cache
+.superpowers/
+.hypothesis/

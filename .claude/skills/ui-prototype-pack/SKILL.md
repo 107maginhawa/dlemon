@@ -58,7 +58,7 @@ Parse $ARGUMENTS:
 
 Required inputs:
 - Module spec: `docs/product/modules/{name}/MODULE_SPEC.md`
-- PRD: `docs/product/MASTER_PRD.md` (reference only)
+- PRD: `docs/prd/v3-dentalemon.md` (reference only)
 - Domain glossary: `docs/product/DOMAIN_GLOSSARY.md`
 - Role permission matrix: `docs/product/ROLE_PERMISSION_MATRIX.md`
 

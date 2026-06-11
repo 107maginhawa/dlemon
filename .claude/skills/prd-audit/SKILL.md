@@ -42,7 +42,7 @@ Arguments: $ARGUMENTS
 
 Parse $ARGUMENTS:
 - First non-flag token = path to PRD file
-- If no path given: auto-detect by searching for `docs/plans/*/plan.md` (Morgoth) or `docs/product/MASTER_PRD.md`
+- If no path given: auto-detect by searching for `docs/plans/*/plan.md` (Morgoth) or the canonical PRD `docs/prd/v3-dentalemon.md`
 - `--fix`: enable fix suggestions mode
 - `--strict`: treat Ambiguity Gate failures as blocking
 
