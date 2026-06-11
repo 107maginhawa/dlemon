@@ -7,7 +7,7 @@
  * Auto-generates installment records based on frequency/count/startDate.
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import { BusinessLogicError } from '@/core/errors';
@@ -217,5 +217,26 @@ export class DentalPaymentPlanRepository {
       .where(eq(dentalPaymentPlans.id, planId))
       .returning();
     return updated ?? null;
+  }
+
+  /**
+   * FR4.3 daily sweep: re-evaluate every non-terminal plan (on_track | behind)
+   * against its installments via {@link updatePlanStatus}. Terminal plans
+   * (completed | defaulted) are skipped. Returns the number of plans whose
+   * status actually changed. This is the missing caller that makes the
+   * "Behind" automation real; the per-plan logic is already covered.
+   */
+  async reevaluateActivePlanStatuses(): Promise<number> {
+    const active = await this.db
+      .select({ id: dentalPaymentPlans.id, status: dentalPaymentPlans.status })
+      .from(dentalPaymentPlans)
+      .where(inArray(dentalPaymentPlans.status, ['on_track', 'behind']));
+
+    let changed = 0;
+    for (const plan of active) {
+      const updated = await this.updatePlanStatus(plan.id);
+      if (updated && updated.status !== plan.status) changed++;
+    }
+    return changed;
   }
 }

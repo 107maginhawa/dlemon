@@ -26,6 +26,7 @@ import { registerBookingJobs } from '@/handlers/booking/jobs';
 import { registerRetentionJobs } from '@/handlers/retention/jobs';
 import { registerDentalSchedulingJobs } from '@/handlers/dental-scheduling/jobs/holdCleanup';
 import { registerDentalPatientJobs } from '@/handlers/dental-patient/jobs';
+import { registerDentalBillingJobs } from '@/handlers/dental-billing/jobs';
 import { seedProcedureCatalog } from '@/handlers/dental-visit/repos/seed-procedure-catalog';
 
 // Routes
@@ -290,6 +291,7 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
   registerRetentionJobs(jobs);
   registerDentalSchedulingJobs(jobs, app.notifs);
   registerDentalPatientJobs(jobs, app.notifs);
+  registerDentalBillingJobs(jobs);
 
   logger.debug('Starting background job scheduler...');
   await jobs.start();
