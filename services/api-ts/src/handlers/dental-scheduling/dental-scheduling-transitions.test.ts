@@ -16,6 +16,7 @@ import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { DentalAuditRepository } from '@/db/audit.repo';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -367,31 +368,70 @@ describe('APPOINTMENT_TRANSITIONS: updateAppointment (completed / revertNoShow)'
 });
 
 describe('APPOINTMENT_TRANSITIONS: updateAppointment (cancelled via PATCH)', () => {
-  test('valid: scheduled → cancelled via PATCH returns 200', async () => {
+  // FIX-002 (GAP-6): cancel policy is now uniform — PATCH {status:cancelled} requires
+  // a reason (5–500), exactly like the canonical DELETE cancel path. A reason-less
+  // PATCH cancel is rejected (REASON_REQUIRED 422). These pins were deliberately
+  // flipped RED→GREEN: they previously locked in reason-less PATCH cancels.
+  test('PATCH status=cancelled WITHOUT a reason → 422 (reason-required, parity with DELETE)', async () => {
     const appt = await seedAppointment();
     const app = buildApp(TEST_USER);
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'cancelled' }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('REASON_REQUIRED');
+  });
+
+  test('valid: scheduled → cancelled via PATCH WITH a reason returns 200', async () => {
+    const appt = await seedAppointment();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled', cancellationReason: 'Patient requested cancellation' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('cancelled');
   });
 
-  test('valid: checkedIn → cancelled via PATCH returns 200', async () => {
+  test('valid: checkedIn → cancelled via PATCH WITH a reason returns 200', async () => {
     const appt = await seedAppointment();
     await forceStatus(appt.id, 'checked_in');
     const app = buildApp(TEST_USER);
     const res = await app.request(`/dental/appointments/${appt.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'cancelled' }),
+      body: JSON.stringify({ status: 'cancelled', cancellationReason: 'Patient left before treatment' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.status).toBe('cancelled');
+  });
+
+  // FIX-002 parity: a PATCH cancel must leave the SAME audit trail (AL-008) as the
+  // canonical DELETE cancel — otherwise cancellations via PATCH are unaudited.
+  test('PATCH cancel writes an appointment.cancel audit entry (parity with DELETE)', async () => {
+    const appt = await seedAppointment();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled', cancellationReason: 'Audit parity check' }),
+    });
+    expect(res.status).toBe(200);
+
+    const auditRepo = new DentalAuditRepository(db);
+    const { entries } = await auditRepo.query(
+      { personId: TEST_USER.id, action: 'appointment.cancel', resourceType: 'dental_appointment' },
+      { limit: 20, offset: 0 },
+    );
+    const entry = entries.find(e => e.resourceId === appt.id);
+    expect(entry).toBeDefined();
+    expect(entry!.action).toBe('appointment.cancel');
   });
 
   test('invalid: completed → cancelled via PATCH rejected (4xx)', async () => {

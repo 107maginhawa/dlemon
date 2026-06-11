@@ -11,6 +11,7 @@ import {
   getStatusBadgeProps,
   canCheckIn,
   canConfirm,
+  canCancelStatus,
   type Appointment,
 } from './appointment-card';
 
@@ -72,6 +73,27 @@ describe('getStatusBadgeProps — label mapping', () => {
     const props = getStatusBadgeProps('some_future_status');
     expect(props.label).toBe('some_future_status');
     expect(props.className).toContain('gray');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// canCancelStatus (FR3.4)
+// ---------------------------------------------------------------------------
+
+describe('canCancelStatus — cancel eligibility (APPOINTMENT_TRANSITIONS)', () => {
+  test('states that can reach cancelled are cancellable', () => {
+    expect(canCancelStatus('scheduled')).toBe(true);
+    expect(canCancelStatus('confirmed')).toBe(true);
+    expect(canCancelStatus('checked_in')).toBe(true);
+  });
+
+  test('no_show is NOT cancellable (its only FSM transition is →completed)', () => {
+    expect(canCancelStatus('no_show')).toBe(false);
+  });
+
+  test('terminal states are NOT cancellable', () => {
+    expect(canCancelStatus('completed')).toBe(false);
+    expect(canCancelStatus('cancelled')).toBe(false);
   });
 });
 

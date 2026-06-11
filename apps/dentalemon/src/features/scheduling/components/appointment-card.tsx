@@ -48,6 +48,14 @@ export function canConfirm(status: string): boolean {
   return status === 'scheduled';
 }
 
+// FR3.4: an appointment can be cancelled only from a state that APPOINTMENT_TRANSITIONS
+// allows to reach `cancelled` — scheduled/confirmed/checked_in. NOT no_show (its only
+// transition is →completed), nor the terminal completed/cancelled. Mirroring the FSM
+// here avoids a false Cancel affordance that the backend would 422.
+export function canCancelStatus(status: string): boolean {
+  return ['scheduled', 'confirmed', 'checked_in'].includes(status);
+}
+
 function formatTime(isoString: string): string {
   const d = new Date(isoString);
   const h = d.getHours();
@@ -68,14 +76,17 @@ interface AppointmentCardProps {
   onClick?: (appointment: Appointment) => void;
   onCheckIn?: (appointmentId: string) => void;
   onConfirm?: (appointmentId: string) => void;
+  /** FR3.4: cancel affordance. Parent supplies it only for cancel-capable roles. */
+  onCancel?: (appointment: Appointment) => void;
   compact?: boolean;
 }
 
-export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, compact }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, onCancel, compact }: AppointmentCardProps) {
   const badge = getStatusBadgeProps(appointment.status);
   const time = formatTime(appointment.scheduledAt);
   const checkInAllowed = canCheckIn(appointment.status);
   const confirmAllowed = canConfirm(appointment.status);
+  const cancelAllowed = canCancelStatus(appointment.status);
 
   const statusStyles: Record<string, string> = {
     scheduled: 'border-l-blue-500 bg-blue-50/60',
@@ -144,6 +155,19 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, co
             aria-label={`Check in ${appointment.patientName ?? truncateId(appointment.patientId)}`}
           >
             Check In
+          </button>
+        )}
+        {cancelAllowed && onCancel && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel(appointment);
+            }}
+            className="bg-secondary text-destructive text-[11px] font-semibold px-2.5 py-1 rounded-md border border-border hover:bg-background transition-colors"
+            aria-label={`Cancel ${appointment.patientName ?? truncateId(appointment.patientId)}`}
+          >
+            Cancel
           </button>
         )}
       </div>

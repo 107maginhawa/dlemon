@@ -234,6 +234,70 @@ test.describe('Scheduling: Cancel Appointment (AC-SCHED-04)', () => {
     expect(result.ok).toBe(true);
     expect(result.status).toBe('cancelled');
   });
+
+  // FIX-001: the cancel action must be reachable FROM THE UI (the gap was that
+  // `cancelled` rendered but no affordance could produce it). Seed a today
+  // appointment, open the day grid, cancel via the card → reason dialog, and
+  // assert the card flips to Cancelled after the DELETE round-trip.
+  test('FR3.4: cancel an appointment from the calendar UI via the reason dialog', async ({ page }) => {
+    const { branchId, memberId } = await signUpAndSeedOrg(page);
+    // Name chosen NOT to start with "Cancel" so the card's own aria-label doesn't
+    // collide with the Cancel button's "Cancel <name>" label.
+    const patientId = await createDentalPatient(page, { displayName: 'Tina Reyes', branchId });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const appt = await createAppointment(page, {
+      patientId,
+      branchId,
+      memberId,
+      scheduledAt: `${today}T15:00:00.000Z`,
+      durationMinutes: 30,
+      serviceType: 'Cleaning',
+    });
+    expect(appt.id).toBeTruthy();
+
+    await spaNavigate(page, '/calendar');
+
+    const card = page.getByTestId(`appt-draggable-${appt.id}`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Reveal the card's hover-actions and invoke Cancel. dispatchEvent fires React's
+    // onClick directly, past the hover-reveal opacity and the floating TanStack
+    // devtools overlay that otherwise intercepts a real pointer click.
+    await card.hover();
+    await card.getByRole('button', { name: 'Cancel Tina Reyes' }).dispatchEvent('click');
+
+    // The reason dialog opens; fill a valid reason and confirm.
+    const reason = page.getByLabel(/cancellation reason/i);
+    await expect(reason).toBeVisible({ timeout: 5000 });
+    await reason.fill('Patient called to cancel');
+
+    // Confirm → the UI must hit the canonical reason-gated DELETE cancel endpoint.
+    const deleteReq = page.waitForRequest(
+      (req) =>
+        req.method() === 'DELETE' &&
+        req.url().includes(`/dental/appointments/${appt.id}`) &&
+        req.url().includes('reason='),
+      { timeout: 10000 },
+    );
+    await page.getByRole('button', { name: /^Cancel appointment$/i }).dispatchEvent('click');
+    const req = await deleteReq;
+    expect(req).not.toBeNull();
+
+    // The dialog closes on success (proves the round-trip resolved, not silently failed).
+    await expect(page.getByLabel(/cancellation reason/i)).toHaveCount(0, { timeout: 10000 });
+
+    // The cancellation persisted server-side with the reason — confirms the UI flow
+    // actually drove the canonical cancel, not just rendered a dialog.
+    const persisted = await page.evaluate(async ({ api, apptId }: { api: string; apptId: string }) => {
+      const r = await fetch(`${api}/dental/appointments/${apptId}`, { credentials: 'include' });
+      if (!r.ok) return { ok: false, status: r.status };
+      const a = await r.json() as any;
+      return { ok: true, status: a.status ?? a.appointmentStatus };
+    }, { api: API, apptId: appt.id });
+    expect(persisted.ok).toBe(true);
+    expect(persisted.status).toBe('cancelled');
+  });
 });
 
 // ---------------------------------------------------------------------------

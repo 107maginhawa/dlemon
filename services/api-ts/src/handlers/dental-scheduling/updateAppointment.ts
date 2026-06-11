@@ -15,6 +15,9 @@ import { REMINDER_NOTIFICATION_TYPES } from './utils/reminder-types';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
+import { emitAppointmentCancelled } from './domain-events';
+import type { JobScheduler } from '@/core/jobs';
 import type { User } from '@/types/auth';
 import type { UpdateAppointmentBody, UpdateAppointmentParams } from '@/generated/openapi/validators';
 import type { DentalAppointment } from './repos/dental-appointment.schema';
@@ -84,9 +87,40 @@ export async function updateAppointment(ctx: HandlerContext) {
     // admits staff_scheduling/dentist_associate so they can reschedule, but they must NOT be able
     // to cancel by routing through PATCH {status:'cancelled'} — close that role bypass here.
     await assertBranchRole(db, user.id, existing.branchId, ['dentist_owner', 'staff_full']);
-    const result = await repo.cancel(appointmentId, body.cancellationReason, user.id);
+
+    // FIX-002 (GAP-6): one canonical cancel policy. The dedicated DELETE cancel
+    // path requires a reason (5–500); PATCH {status:cancelled} must enforce the
+    // SAME rule so a reason-less cancel is impossible on either path.
+    const cancellationReason = typeof body.cancellationReason === 'string' ? body.cancellationReason.trim() : '';
+    if (cancellationReason.length < 5 || cancellationReason.length > 500) {
+      throw new BusinessLogicError('reason is required (min 5, max 500 characters)', 'REASON_REQUIRED');
+    }
+    const result = await repo.cancel(appointmentId, cancellationReason, user.id);
     if (!result) throw new NotFoundError('Appointment');
     await expireReminders();
+
+    // Parity with the canonical DELETE cancel path: a cancellation via PATCH must
+    // leave the SAME audit trail (AL-008) and emit the SAME domain event (DE-011).
+    const logger = ctx.get('logger');
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: result.branchId,
+      branchId: result.branchId,
+      action: 'appointment.cancel',
+      resourceType: 'dental_appointment',
+      resourceId: result.id,
+      reason: cancellationReason,
+      metadata: { patientId: result.patientId, dentistMemberId: result.dentistMemberId },
+    });
+    const scheduler = ctx.get('jobs') as JobScheduler | undefined;
+    if (scheduler) {
+      void emitAppointmentCancelled(scheduler, {
+        appointmentId: result.id,
+        patientId: result.patientId,
+        branchId: result.branchId,
+      }).catch(() => {/* non-blocking */});
+    }
+
     return ctx.json(toWire(result));
   }
 
