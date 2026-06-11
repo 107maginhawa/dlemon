@@ -77,6 +77,38 @@ test.describe('Staff Management', () => {
     await expect(page.getByText('Nurse Maria')).toBeVisible({ timeout: 8000 });
   });
 
+  test('FR6.1: owner edits a staff member role and it persists after reload', async ({ page }) => {
+    await signUpAndSetupPractice(page);
+    await spaNavigate(page, `/staff`);
+
+    // Create a staff member to edit
+    await page.getByRole('button', { name: /add staff/i }).click();
+    await page.getByLabel(/display name/i).fill('Editable Eddie');
+    await page.getByText('Staff - Full Operations').click();
+    await page.getByLabel(/pin.*6 digits/i).fill('135790');
+    await page.getByLabel(/confirm pin/i).fill('135790');
+    await page.getByRole('button', { name: /create staff member/i }).click();
+    await expect(page.getByTestId('staff-create-modal')).not.toBeVisible({ timeout: 10000 });
+    const row = page.getByRole('row', { name: /editable eddie/i });
+    await expect(row).toBeVisible({ timeout: 8000 });
+    await expect(row.getByText('Staff - Full Operations')).toBeVisible();
+
+    // Edit: change role to Staff - Scheduling
+    await row.getByRole('button', { name: /^edit$/i }).click();
+    await expect(page.getByTestId('staff-edit-modal')).toBeVisible();
+    await page.getByTestId('edit-role-staff_scheduling').click();
+    await page.getByRole('button', { name: /save changes/i }).click();
+    await expect(page.getByTestId('staff-edit-modal')).not.toBeVisible({ timeout: 10000 });
+
+    // Role badge updates in the list
+    await expect(row.getByText('Staff - Scheduling')).toBeVisible({ timeout: 8000 });
+
+    // Persists across a full reload (server state, not client cache)
+    await spaNavigate(page, `/staff`);
+    const rowAfter = page.getByRole('row', { name: /editable eddie/i });
+    await expect(rowAfter.getByText('Staff - Scheduling')).toBeVisible({ timeout: 8000 });
+  });
+
   test('FR8.13: non-owner role is denied access to staff page', async ({ browser }) => {
     // The RBAC route guard (requireRole) blocks staff_full from /staff at the route level,
     // redirecting to /dashboard. The StaffAccessDenied component is a secondary in-page

@@ -7,7 +7,8 @@
 
 import React, { useState } from 'react';
 import { StaffCreateModal } from './staff-create-modal';
-import { useStaffMembers, useStaffMutations, type MemberRole } from '../hooks/use-staff-members';
+import { StaffEditModal } from './staff-edit-modal';
+import { useStaffMembers, useStaffMutations, type Member, type MemberRole } from '../hooks/use-staff-members';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
   const { members, isLoading, error } = useStaffMembers(branchId);
   const { deactivate, deactivateError } = useStaffMutations(branchId);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [deactivateConfirming, setDeactivateConfirming] = useState<string | null>(null);
 
   async function handleDeactivate(memberId: string) {
@@ -209,6 +211,15 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
 
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
+                    {role === 'dentist_owner' && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingMember(member)}
+                        className="text-xs text-foreground/70 hover:text-foreground transition-colors mr-3"
+                      >
+                        Edit
+                      </button>
+                    )}
                     {canDeactivate(member.role, role) && member.status === 'active' && (
                       <button
                         type="button"
@@ -234,6 +245,17 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
         onClose={() => setShowCreateModal(false)}
         onCreated={() => setShowCreateModal(false)}
       />
+
+      {/* Edit Modal */}
+      {editingMember && (
+        <StaffEditModal
+          branchId={branchId}
+          member={editingMember}
+          open
+          onClose={() => setEditingMember(null)}
+          onSaved={() => setEditingMember(null)}
+        />
+      )}
     </div>
   );
 }

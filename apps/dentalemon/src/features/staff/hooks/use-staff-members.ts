@@ -11,8 +11,13 @@ import {
   createMemberMutation,
   resetMemberPinMutation,
   deactivateMemberMutation,
+  updateMemberMutation,
 } from '@monobase/sdk-ts/generated/react-query';
-import type { DentalOrgModuleDentalMembership, DentalOrgModuleCreateFlatMemberRequest } from '@monobase/sdk-ts/generated';
+import type {
+  DentalOrgModuleDentalMembership,
+  DentalOrgModuleCreateFlatMemberRequest,
+  DentalOrgModuleUpdateMemberRequest,
+} from '@monobase/sdk-ts/generated';
 
 export type MemberRole = 'dentist_owner' | 'dentist_associate' | 'staff_full' | 'staff_scheduling';
 
@@ -24,7 +29,12 @@ export interface Member {
   status: 'active' | 'inactive';
   avatarUrl: string | null;
   createdAt: string;
+  licenseNumber?: string | null;
+  npi?: string | null;
+  credentialType?: string | null;
 }
+
+export type UpdateMemberInput = DentalOrgModuleUpdateMemberRequest;
 
 export interface CreateMemberInput {
   displayName: string;
@@ -49,6 +59,9 @@ function toMember(m: DentalOrgModuleDentalMembership): Member {
     status: m.status as 'active' | 'inactive',
     avatarUrl: m.avatarUrl ?? null,
     createdAt: typeof m.createdAt === 'string' ? m.createdAt : (m.createdAt as Date).toISOString(),
+    licenseNumber: m.licenseNumber ?? null,
+    npi: m.npi ?? null,
+    credentialType: m.credentialType ?? null,
   };
 }
 
@@ -95,6 +108,11 @@ export function useStaffMutations(branchId: string) {
     onSuccess: invalidate,
   });
 
+  const updateMut = useMutation({
+    ...updateMemberMutation(),
+    onSuccess: invalidate,
+  });
+
   async function create(input: CreateMemberInput): Promise<Member> {
     const created = await createMut.mutateAsync({
       // branchId is a required query param on POST /dental/org/members (the
@@ -126,5 +144,11 @@ export function useStaffMutations(branchId: string) {
     deactivate: (memberId: string) => deactivateMut.mutateAsync({ path: { memberId } }),
     isDeactivating: deactivateMut.isPending,
     deactivateError: deactivateMut.error as Error | null,
+
+    update: (memberId: string, body: UpdateMemberInput) =>
+      updateMut.mutateAsync({ path: { memberId }, body }),
+    isUpdating: updateMut.isPending,
+    updateError: updateMut.error as Error | null,
+    resetUpdate: () => updateMut.reset(),
   };
 }
