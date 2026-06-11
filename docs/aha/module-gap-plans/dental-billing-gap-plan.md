@@ -2,6 +2,8 @@
 
 **Generated:** 2026-06-11 · **Branch:** `chore/workflow-verification-sweep` · **Prompt:** `docs/aha/prompts/02-module-or-group-audit-gap-plan.md`
 
+> **Erratum (2026-06-11, data-governance audit round):** GAP-1's mechanism claim "no job scheduler exists in api-ts (no `src/jobs/`, no pg-boss/cron wiring)" is **wrong** — a platform scheduler exists at `services/api-ts/src/core/jobs.ts` (`registerCron`), wired in `app.ts:286-290` and used by email/notifs/audit/booking/retention/dental-scheduling/dental-patient. **The finding itself stands**: dental-billing registers no jobs and `markOverdueInvoices` (`repos/dental-invoice.repo.ts:274`) still has zero callers, so the overdue lifecycle remains dead. The fix shrinks to registering a `dental-billing` cron on the existing scheduler — Q5 in §25 is answered (use `core/jobs.ts`; do not adopt pg-boss or build anything new). Same correction applies to plan-"Behind" automation.
+
 ## 1. Audit Scope
 
 | Item | Details |

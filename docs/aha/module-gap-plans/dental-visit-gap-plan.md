@@ -2,6 +2,8 @@
 
 **Generated:** 2026-06-11 · **Branch:** `chore/workflow-verification-sweep` · **Prompt:** `docs/aha/prompts/02-module-or-group-audit-gap-plan.md`
 
+> **Erratum (2026-06-11, data-governance audit round):** GAP-4's claim "no scheduler exists in api-ts" is **wrong in mechanism** — `services/api-ts/src/core/jobs.ts` provides `registerCron` (wired `app.ts:286-290`; 7 modules use it). The finding stands: no visit-lock job is registered, so completed visits never reach `locked` (WF-046). The fix shrinks to registering a lock-sweep cron on the existing scheduler; the `[SHARED DEPENDENCY]` is the existing `core/jobs.ts`, not a new mechanism.
+
 ## 1. Audit Scope
 
 | Item | Details |
