@@ -9,6 +9,7 @@ function makeAggregate(
   return {
     presentation: {
       id: 'p1', patientId: 'pat1', treatmentPlanId: 'plan1', status: 'viewed', decision: null,
+      signerName: null, decisionAt: null, rejectionReason: null,
     },
     plan: { id: 'plan1', status: 'presented', totalEstimateCents: 0 },
     patientFirstName: 'Maria',
@@ -123,7 +124,7 @@ describe('CasePresentationView', () => {
     render(
       <CasePresentationView
         aggregate={makeAggregate({
-          presentation: { id: 'p1', patientId: 'pat1', treatmentPlanId: 'plan1', status: 'accepted', decision: 'accepted' },
+          presentation: { id: 'p1', patientId: 'pat1', treatmentPlanId: 'plan1', status: 'accepted', decision: 'accepted', signerName: null, decisionAt: null, rejectionReason: null },
         })}
         isAccepting={false}
         isRejecting={false}

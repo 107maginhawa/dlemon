@@ -8,6 +8,7 @@
 import React from 'react';
 import { useCasePresentation } from './use-case-presentation';
 import { CasePresentationView } from './case-presentation-view';
+import { AcceptedPlanViewer } from './accepted-plan-viewer';
 
 interface CasePresentationPanelProps {
   patientId: string;
@@ -27,6 +28,14 @@ export function CasePresentationPanel({ patientId, presentationId }: CasePresent
         Couldn’t load this treatment plan. Please ask the front desk.
       </p>
     );
+  }
+
+  // FIX-002: once the patient has decided, the presentation is a signed legal record —
+  // show the read-only signed-acceptance viewer (who signed, when, the itemized plan)
+  // instead of the interactive sign controls. This is the read-back entry point that
+  // makes the previously-write-only artifact visible whenever the presentation is opened.
+  if (aggregate.presentation.decision !== null) {
+    return <AcceptedPlanViewer aggregate={aggregate} />;
   }
 
   return (

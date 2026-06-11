@@ -59,6 +59,11 @@ export interface CasePresentationRecord {
   treatmentPlanId: string;
   status: string;
   decision: 'accepted' | 'rejected' | null;
+  // FIX-002: the signed-acceptance legal artifact (who signed, when, why declined).
+  // Previously write-only on the record; surfaced read-only by the accepted-plan viewer.
+  signerName: string | null;
+  decisionAt: string | null;
+  rejectionReason: string | null;
 }
 
 export interface CasePresentationAggregate {
@@ -85,6 +90,10 @@ function toViewModel(agg: SdkAggregate): CasePresentationAggregate {
       treatmentPlanId: agg.presentation.treatmentPlanId,
       status: agg.presentation.status,
       decision: agg.presentation.decision ?? null,
+      // SDK dates arrive as strings at runtime; keep the view-model string-dated.
+      signerName: agg.presentation.signerName ?? null,
+      decisionAt: (agg.presentation.decisionAt as unknown as string | null) ?? null,
+      rejectionReason: agg.presentation.rejectionReason ?? null,
     },
     plan: {
       id: agg.plan.id,
