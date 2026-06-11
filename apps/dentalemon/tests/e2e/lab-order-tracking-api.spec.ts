@@ -1,12 +1,15 @@
 /**
- * E2E: Lab Order Tracking — Journey J56
+ * E2E: Lab Order Tracking — API integration coverage (J56)
  *
- * Flow: sign up → create patient → open workspace → create visit →
- *       verify lab orders API is reachable → create lab order →
- *       advance to inFabrication → advance to delivered → advance to fitted
+ * HONEST NAMING (AHA dental-clinical FIX-003): this spec drives the lab-order
+ * FSM through the real API via page.evaluate(fetch) — it does NOT exercise the
+ * UI. It was previously named `lab-order-tracking.spec.ts` and read as a UI
+ * journey, masking GAP-1 (the Lab top-bar button never rendered). The genuine
+ * rendered-UI journey now lives in `lab-order-ui.spec.ts`; this file is retained
+ * as honest backend/API-contract coverage of the BR-018 lifecycle.
  *
- * This E2E tests the API integration portion of the lab order lifecycle.
- * The LabOrdersSheet UI component integrates with these same endpoints.
+ * Flow (all via API): sign up → create patient → create visit → create lab
+ *       order → advance ordered → in_fabrication → delivered → fitted.
  *
  * Preconditions:
  *  - API running on localhost:7213

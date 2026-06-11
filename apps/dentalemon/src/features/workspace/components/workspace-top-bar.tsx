@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature } from 'lucide-react';
+import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard } from 'lucide-react';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { BRAND_GOLD_TEXT } from '@/constants/brand';
@@ -106,6 +106,10 @@ export function WorkspaceTopBar({
   const allowRx = role ? canPrescribe(role) : true;
   const allowTreatmentPlan = role ? canAddTreatment(role) : true;
   const allowConsent = role ? canCaptureConsent(role) : true;
+  // FIX-001/002: Lab orders match the backend createLabOrder gate (dentists);
+  // PMD generation is dentist-only. Both reuse the dentist-level treatment gate.
+  const allowLab = role ? canAddTreatment(role) : true;
+  const allowPmd = role ? canAddTreatment(role) : true;
 
   const firstName = profile?.firstName ?? '';
   const lastName = profile?.lastName ?? '';
@@ -192,6 +196,16 @@ export function WorkspaceTopBar({
         {allowTreatmentPlan && (
           <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>
             <List className="h-4 w-4" />
+          </IconButton>
+        )}
+        {allowLab && (
+          <IconButton label="Lab orders" onClick={onLab}>
+            <FlaskConical className="h-4 w-4" />
+          </IconButton>
+        )}
+        {allowPmd && (
+          <IconButton label="Portable medical document" onClick={onPmd}>
+            <IdCard className="h-4 w-4" />
           </IconButton>
         )}
         <IconButton

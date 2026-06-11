@@ -66,6 +66,8 @@ const _lucideMock = {
   Download: _makeIcon('download'),
   FileSignature: _makeIcon('filesignature'),
   FileText: _makeIcon('filetext'),
+  FlaskConical: _makeIcon('flaskconical'),
+  IdCard: _makeIcon('idcard'),
   Image: _makeIcon('image'),
   List: _makeIcon('list'),
   Loader2: _makeIcon('loader2'),
