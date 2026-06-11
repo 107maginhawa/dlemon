@@ -19,6 +19,7 @@ import { FeeSchedule } from './components/fee-schedule';
 import { LocaleSettings } from './components/locale-settings';
 import { NotificationSettings } from './components/notification-settings';
 import { ConsentTemplates } from './components/consent-templates';
+import { AuditLog } from './components/audit-log';
 
 export interface SettingsPanel {
   key: string;
@@ -33,4 +34,5 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   { key: 'locale', label: 'Locale', Component: LocaleSettings },
   { key: 'notifications', label: 'Notifications', Component: NotificationSettings },
   { key: 'consent', label: 'Consent Forms', Component: ConsentTemplates },
+  { key: 'audit', label: 'Audit Log', Component: AuditLog },
 ];
