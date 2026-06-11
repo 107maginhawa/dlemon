@@ -1701,6 +1701,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.get('/dental/patients/:patientId/treatment-plan',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetTreatmentPlanParams, validationErrorHandler),
+    zValidator('query', validators.GetTreatmentPlanQuery, validationErrorHandler),
     registry.getTreatmentPlan as unknown as Handler
   );
 

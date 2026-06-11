@@ -811,3 +811,102 @@ HTTP 201
 jsonpath "$.toothNumber" == 21
 jsonpath "$.cdtCode" == "D2391"
 jsonpath "$.status" == "diagnosed"
+
+
+# ============================================================
+# FIX-001 (GAP-6) — contract pins for the reconciled shapes.
+# Handlers are ground truth; these lock the REAL wire shapes so the
+# TypeSpec reconcile + SDK regen cannot silently drift (0 FE consumers
+# today, so the regen window is safe). They MUST pass both before the
+# reconcile (against the real handlers) and after regen.
+# ============================================================
+
+# FIX-001-A — create a treatment template. Handler self-validates
+# { name, branchId, items[] }; the real TreatmentTemplate carries `items`
+# (TemplateTreatmentItem[]) + branchId + active — NOT the stringly-typed
+# `treatments: string` the TypeSpec used to declare.
+POST {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Composite + Cleaning {{suffix}}",
+  "branchId": "{{branch_id}}",
+  "description": "Contract pin template",
+  "items": [
+    { "cdtCode": "D2391", "description": "Resin composite, one surface", "priceCents": 15000, "toothNumber": 14 },
+    { "cdtCode": "D1110", "description": "Adult prophylaxis", "priceCents": 33300 }
+  ]
+}
+HTTP 201
+[Captures]
+template_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.items" isCollection
+jsonpath "$.items" count == 2
+jsonpath "$.items[0].cdtCode" == "D2391"
+jsonpath "$.name" isString
+jsonpath "$.branchId" == "{{branch_id}}"
+
+
+# FIX-001-A1 — list templates returns the { templates: [...] } envelope (NOT a bare
+# array — the op declaration used to claim a bare array).
+GET {{api}}/dental/treatment-templates?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.templates" isCollection
+jsonpath "$.templates" count >= 1
+jsonpath "$.templates[0].items" isCollection
+
+
+# FIX-001-A2 — apply the template to the active second visit. Real
+# ApplyTemplateResponse is { applied: Treatment[], count } (NOT { applied: int, visitId }).
+POST {{api}}/dental/visits/{{visit2_id}}/apply-template/{{template_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 201
+[Asserts]
+jsonpath "$.applied" isCollection
+jsonpath "$.applied" count == 2
+jsonpath "$.count" == 2
+jsonpath "$.applied[0].status" == "planned"
+
+
+# FIX-001-B — carry over from the locked first visit into the active second visit
+# AND restore a previously-dismissed treatment. Real CarryOverTreatmentsResponse is
+# { carriedOver[], restoredDismissed[], message }; restoreDismissedIds must be
+# accepted + applied (the request field used to be missing from TypeSpec).
+POST {{api}}/dental/visits/{{visit2_id}}/carry-over
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "sourceVisitId": "{{visit_id}}",
+  "restoreDismissedIds": ["{{fee_default_treatment_id}}"]
+}
+HTTP 200
+[Asserts]
+jsonpath "$.carriedOver" isCollection
+jsonpath "$.restoredDismissed" isCollection
+jsonpath "$.restoredDismissed" count >= 1
+jsonpath "$.message" isString
+
+
+# FIX-001-C — patient treatment-plan aggregate. Real TreatmentPlanResponse is
+# { patientId, version, totalEstimateCents, treatmentCount, toothCount, byTooth,
+#   treatments[], completedToothNumbers } — NOT the stringly-typed visits/treatments
+# placeholder. Non-empty here (apply-template + carry-over above added planned items).
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.version" isInteger
+jsonpath "$.totalEstimateCents" isInteger
+jsonpath "$.toothCount" isInteger
+jsonpath "$.treatmentCount" isInteger
+jsonpath "$.byTooth" exists
+jsonpath "$.treatments" isCollection
+jsonpath "$.treatments" count >= 1
+jsonpath "$.treatments[0].cdtCode" isString
+jsonpath "$.completedToothNumbers" isCollection

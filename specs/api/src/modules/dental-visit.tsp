@@ -516,45 +516,101 @@ model ToothHistoryEntry {
   treatmentPriceCents?: int32;
 }
 
+/** A single treatment item inside a treatment template (FR1.8). */
+model TemplateTreatmentItem {
+  cdtCode: string;
+  description: string;
+  priceCents: int32;
+  toothNumber?: int32;
+  surfaces?: string[];
+}
+
 model TreatmentTemplate {
   id: UUID;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
+  branchId: UUID;
   name: string;
   description?: string;
-  treatments: string;
+  /** Reusable treatment items applied to a visit in one action. */
+  items: TemplateTreatmentItem[];
+  active: boolean;
 }
 
 model CreateTreatmentTemplateRequest {
   name: string;
+  branchId: UUID;
   description?: string;
-  treatments: string;
+  items: TemplateTreatmentItem[];
 }
 
 model UpdateTreatmentTemplateRequest {
   name?: string;
   description?: string;
-  treatments?: string;
+  items?: TemplateTreatmentItem[];
+  /** Activate/deactivate the template (handler accepts it; DELETE only sets false). */
+  active?: boolean;
 }
 
+model ListTreatmentTemplatesResponse {
+  templates: TreatmentTemplate[];
+}
+
+/** Real shape: the created treatment rows + their count (NOT { applied: int, visitId }). */
 model ApplyTemplateResponse {
-  applied: int32;
-  visitId: UUID;
+  applied: DentalTreatment[];
+  count: int32;
 }
 
 model CarryOverTreatmentsRequest {
+  /** Source visit to copy unperformed treatments from; auto-discovers recent prior visits when omitted. */
   sourceVisitId?: UUID;
+
+  /** FR1.11: dismissed treatment ids to restore (as `planned`) into the current visit. */
+  restoreDismissedIds?: UUID[];
 }
 
+/** Real shape: the carried + restored treatment rows + a human message (NOT { carried: int }). */
 model CarryOverTreatmentsResponse {
-  carried: int32;
+  carriedOver: DentalTreatment[];
+  restoredDismissed: DentalTreatment[];
+  message: string;
 }
 
+/** One pending (diagnosed/planned/declined) treatment in the patient treatment-plan aggregate. */
+model TreatmentPlanItem {
+  id: UUID;
+  toothNumber?: int32;
+  cdtCode: string;
+  description: string;
+  surfaces?: ToothSurfaceCode[];
+  priceCents: int32;
+  status: DentalTreatmentStatus;
+  conditionCode?: string;
+  visitId: UUID;
+
+  /** Optional: present on the flat `treatments[]` projection; the `byTooth`
+   *  grouping omits it (and `toothNumber`), so it is optional on the shared item. */
+  carriedOver?: boolean;
+  phase?: DentalTreatmentPhase;
+  priority: int32;
+  reason?: string;
+}
+
+/** Patient treatment-plan aggregate across all visits (getTreatmentPlan). */
 model TreatmentPlanResponse {
   patientId: UUID;
-  visits: string;
-  treatments: string;
-  acceptedPlanVersionId?: UUID;
+  version: int32;
+  totalEstimateCents: int32;
+
+  /** Count of pending treatments; omitted on the empty-plan response. */
+  treatmentCount?: int32;
+  toothCount: int32;
+
+  /** Pending treatments grouped by FDI tooth number (and "general"); omitted on the empty-plan response. */
+  byTooth?: Record<TreatmentPlanItem[]>;
+
+  treatments: TreatmentPlanItem[];
 
   /** CHART-XV: FDI tooth numbers with a performed/verified treatment across ALL
    *  the patient's visits. Drives the odontogram's cumulative Completed layer
@@ -940,7 +996,7 @@ namespace DentalVisitModule {
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     @operationId("listTreatmentTemplates")
-    listTreatmentTemplates(): ApiOkResponse<TreatmentTemplate[]>
+    listTreatmentTemplates(): ApiOkResponse<ListTreatmentTemplatesResponse>
       | ApiUnauthorizedResponse;
 
     @post
@@ -1013,7 +1069,10 @@ namespace DentalVisitModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("getTreatmentPlan")
     getTreatmentPlan(
-      @path patientId: UUID
+      @path patientId: UUID,
+
+      @doc("Branch context — required by the handler (contract field; auth is via patient-branch access).")
+      @query branchId: UUID
     ): ApiOkResponse<TreatmentPlanResponse>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;

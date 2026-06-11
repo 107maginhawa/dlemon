@@ -121,9 +121,12 @@ export type ApplyDentalDiscountRequest = {
     percentageRate: number;
 };
 
+/**
+ * Real shape: the created treatment rows + their count (NOT { applied: int, visitId }).
+ */
 export type ApplyTemplateResponse = {
-    applied: number;
-    visitId: Uuid;
+    applied: Array<DentalTreatment>;
+    count: number;
 };
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'no_show';
@@ -1004,11 +1007,23 @@ export type CancelEmailRequest = {
 export type CaptureMethod = 'automatic' | 'manual';
 
 export type CarryOverTreatmentsRequest = {
-    sourceVisitId?: Uuid;
+    /**
+     * Source visit to copy unperformed treatments from; auto-discovers recent prior visits when omitted.
+     */
+    sourceVisitId?: string;
+    /**
+     * FR1.11: dismissed treatment ids to restore (as `planned`) into the current visit.
+     */
+    restoreDismissedIds?: Array<Uuid>;
 };
 
+/**
+ * Real shape: the carried + restored treatment rows + a human message (NOT { carried: int }).
+ */
 export type CarryOverTreatmentsResponse = {
-    carried: number;
+    carriedOver: Array<DentalTreatment>;
+    restoredDismissed: Array<DentalTreatment>;
+    message: string;
 };
 
 /**
@@ -2563,8 +2578,9 @@ export type CreateTemplateRequest = {
 
 export type CreateTreatmentTemplateRequest = {
     name: string;
+    branchId: Uuid;
     description?: string;
-    treatments: string;
+    items: Array<TemplateTreatmentItem>;
 };
 
 export type CreateVisitNoteAddendumRequest = {
@@ -57752,6 +57768,10 @@ export type LeaveVideoCallResponse = {
     remainingParticipants: number;
 };
 
+export type ListTreatmentTemplatesResponse = {
+    templates: Array<TreatmentTemplate>;
+};
+
 /**
  * FHIR R4-aligned location record representing details and position information for a physical place where services are provided and resources and participants may be stored, found, contained, or accommodated
  */
@@ -60940,6 +60960,17 @@ export type SymptomsData = {
 export type TemplateStatus = 'draft' | 'active' | 'archived';
 
 /**
+ * A single treatment item inside a treatment template (FR1.8).
+ */
+export type TemplateTreatmentItem = {
+    cdtCode: string;
+    description: string;
+    priceCents: number;
+    toothNumber?: number;
+    surfaces?: Array<string>;
+};
+
+/**
  * Variable definition for email templates
  */
 export type TemplateVariable = {
@@ -61265,11 +61296,48 @@ export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown'
 
 export type ToothSurfaceCode = 'mesial' | 'distal' | 'buccal' | 'lingual' | 'occlusal' | 'incisal' | 'cervical';
 
+/**
+ * One pending (diagnosed/planned/declined) treatment in the patient treatment-plan aggregate.
+ */
+export type TreatmentPlanItem = {
+    id: Uuid;
+    toothNumber?: number;
+    cdtCode: string;
+    description: string;
+    surfaces?: Array<ToothSurfaceCode>;
+    priceCents: number;
+    status: DentalTreatmentStatus;
+    conditionCode?: string;
+    visitId: Uuid;
+    /**
+     * Optional: present on the flat `treatments[]` projection; the `byTooth`
+     * grouping omits it (and `toothNumber`), so it is optional on the shared item.
+     */
+    carriedOver?: boolean;
+    phase?: DentalTreatmentPhase;
+    priority: number;
+    reason?: string;
+};
+
+/**
+ * Patient treatment-plan aggregate across all visits (getTreatmentPlan).
+ */
 export type TreatmentPlanResponse = {
     patientId: Uuid;
-    visits: string;
-    treatments: string;
-    acceptedPlanVersionId?: Uuid;
+    version: number;
+    totalEstimateCents: number;
+    /**
+     * Count of pending treatments; omitted on the empty-plan response.
+     */
+    treatmentCount?: number;
+    toothCount: number;
+    /**
+     * Pending treatments grouped by FDI tooth number (and "general"); omitted on the empty-plan response.
+     */
+    byTooth?: {
+        [key: string]: Array<TreatmentPlanItem>;
+    };
+    treatments: Array<TreatmentPlanItem>;
     /**
      * CHART-XV: FDI tooth numbers with a performed/verified treatment across ALL
      * the patient's visits. Drives the odontogram's cumulative Completed layer
@@ -61293,9 +61361,14 @@ export type TreatmentTemplate = {
     id: Uuid;
     createdAt: Date;
     updatedAt: Date;
+    branchId: Uuid;
     name: string;
     description?: string;
-    treatments: string;
+    /**
+     * Reusable treatment items applied to a visit in one action.
+     */
+    items: Array<TemplateTreatmentItem>;
+    active: boolean;
 };
 
 /**
@@ -61860,7 +61933,11 @@ export type UpdateToothRequest = {
 export type UpdateTreatmentTemplateRequest = {
     name?: string;
     description?: string;
-    treatments?: string;
+    items?: Array<TemplateTreatmentItem>;
+    /**
+     * Activate/deactivate the template (handler accepts it; DELETE only sets false).
+     */
+    active?: boolean;
 };
 
 export type UpsertToothReadingRequest = {
@@ -70506,7 +70583,12 @@ export type GetTreatmentPlanData = {
     path: {
         patientId: Uuid;
     };
-    query?: never;
+    query: {
+        /**
+         * Branch context — required by the handler (contract field; auth is via patient-branch access).
+         */
+        branchId: Uuid;
+    };
     url: '/dental/patients/{patientId}/treatment-plan';
 };
 
@@ -71766,10 +71848,10 @@ export type ListTreatmentTemplatesResponses = {
     /**
      * Success response with data
      */
-    200: Array<TreatmentTemplate>;
+    200: ListTreatmentTemplatesResponse;
 };
 
-export type ListTreatmentTemplatesResponse = ListTreatmentTemplatesResponses[keyof ListTreatmentTemplatesResponses];
+export type ListTreatmentTemplatesResponse2 = ListTreatmentTemplatesResponses[keyof ListTreatmentTemplatesResponses];
 
 export type CreateTreatmentTemplateData = {
     body: CreateTreatmentTemplateRequest;

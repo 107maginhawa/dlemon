@@ -349,18 +349,30 @@ Read one immutable plan snapshot. The `patientId` path segment must match the st
 
 ---
 
-## Contract Drift (TypeSpec ↔ implementation — surfaced audit 2026-06-08)
+## Contract Drift (TypeSpec ↔ implementation) — RECONCILED 2026-06-11 (AHA M2 FIX-001)
 
-Several treatment-plan / template / carry-over TypeSpec models are stringly-typed
-placeholders that do NOT match the richer JSON the handlers return (and that the tests
-lock). The handler shapes above are the ground truth. Reconciling the TypeSpec models
-(and regenerating the SDK) is a follow-up that needs FE-consumer verification — NOT done
-in this round to avoid breaking unverified SDK consumers:
+**RESOLVED.** The treatment-plan / template / carry-over TypeSpec models below were
+stringly-typed placeholders that did not match the handler JSON. They have been
+reconciled to the ground-truth handler shapes, the SDK was regenerated, and contract
+pins were added (`dental-visit.hurl` FIX-001-A/A1/A2/B/C). The regen was safe (0 FE
+consumers of the drifted ops); both typechecks (api-ts `tsc` + root FE) and the
+dental-visit contract suite (66/66) are green. The reconcile also FIXED a real bug:
+the drifted `CreateTreatmentTemplateBody` validator was 400ing the real `{ items[] }`
+create-template body, and `getTreatmentPlan` was missing its required `branchId` query
+param (SDK could not send it → would 400 a future FE consumer).
 
-| TypeSpec model | Declares | Real response |
+| TypeSpec model | Old (drifted) | Reconciled to handler reality |
 |---|---|---|
-| `TreatmentPlanResponse` | `{ patientId, visits: string, treatments: string, acceptedPlanVersionId }` | `{ patientId, version, totalEstimateCents, treatmentCount, toothCount, byTooth, treatments[] }` |
-| `ApplyTemplateResponse` | `{ applied: int32, visitId }` | `{ applied: Treatment[], count: int32 }` |
-| `CarryOverTreatmentsResponse` | `{ carried: int32 }` | `{ carriedOver: Treatment[], restoredDismissed: Treatment[], message }` |
-| `CarryOverTreatmentsRequest` | `{ sourceVisitId? }` | also accepts `restoreDismissedIds: string[]` |
-| `TreatmentTemplate` | `{ …, treatments: string }` | row uses `items: TemplateTreatmentItem[]` |
+| `TreatmentPlanResponse` | `{ patientId, visits: string, treatments: string, acceptedPlanVersionId }` | `{ patientId, version, totalEstimateCents, treatmentCount?, toothCount, byTooth?, treatments: TreatmentPlanItem[], completedToothNumbers? }` |
+| `ApplyTemplateResponse` | `{ applied: int32, visitId }` | `{ applied: DentalTreatment[], count: int32 }` |
+| `CarryOverTreatmentsResponse` | `{ carried: int32 }` | `{ carriedOver: DentalTreatment[], restoredDismissed: DentalTreatment[], message }` |
+| `CarryOverTreatmentsRequest` | `{ sourceVisitId? }` | `+ restoreDismissedIds?: UUID[]` |
+| `TreatmentTemplate` / Create / Update | `{ …, treatments: string }` | `items: TemplateTreatmentItem[]` + `branchId` + `active`; Update `+ active?` |
+| `getTreatmentPlan` op | `@path patientId` only | `+ @query branchId: UUID` (required by handler) |
+| `listTreatmentTemplates` op | `ApiOkResponse<TreatmentTemplate[]>` | `ApiOkResponse<{ templates: TreatmentTemplate[] }>` |
+
+**Known residual (handler-side, NOT a Batch-A spec change):** `getTreatmentPlan`'s
+`byTooth` grouped items omit `carriedOver` (and `toothNumber`) that the flat
+`treatments[]` projection includes — so `TreatmentPlanItem.carriedOver` is modelled
+optional. Making `byTooth` items consistent with `treatments[]` is a small handler
+cleanup for a later batch (spec stays ground-truth-accurate either way).
