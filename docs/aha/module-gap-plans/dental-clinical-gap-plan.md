@@ -2,6 +2,8 @@
 
 **Generated:** 2026-06-11 · **Branch:** `chore/workflow-verification-sweep` · **Prompt:** `docs/aha/prompts/02-module-or-group-audit-gap-plan.md`
 
+> **Erratum (2026-06-11, dental-org audit round):** §25 Q4 states the consent-template editor (FR8.4b) has "no backend". **Wrong** — full owner-only CRUD exists in dental-org (`services/api-ts/src/handlers/dental-org/consentTemplates.ts`, routes `GET/POST/PATCH/DELETE /dental/branches/{branchId}/consent-templates`, `consent-template.schema.ts`), with zero FE consumers; `consent-sheet.tsx` hardcodes a `CONSENT_TEMPLATES` const instead. Q4 reduces from "is this a hidden V1 build item?" to a **wiring task** — see dental-org gap plan GAP-2 (joint batch).
+
 ## 1. Audit Scope
 
 | Item | Details |
