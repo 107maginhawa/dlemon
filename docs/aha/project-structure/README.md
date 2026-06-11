@@ -13,21 +13,17 @@ link/reference validation.
 | [03 — Approved Docs and Root Cleanup Execution](./prompts/03-approved-docs-and-root-cleanup-execution.md) | Executes approved docs and root cleanup plans |
 | [04 — Link and Reference Validation](./prompts/04-link-reference-validation.md) | Validates links and references after cleanup |
 
-> Some prompt files may live under a different filename; check `./prompts/`.
+## Outputs, Migration Plans, Reports
 
-## Outputs
+Generated fresh against **this** repository by running the prompts above:
 
-- [`outputs/DOCS_INVENTORY.md`](./outputs/DOCS_INVENTORY.md) — prompt 01
-- [`outputs/PRD_INDEX_DRAFT.md`](./outputs/PRD_INDEX_DRAFT.md) — prompt 01
-- [`outputs/PROJECT_STRUCTURE_INVENTORY.md`](./outputs/PROJECT_STRUCTURE_INVENTORY.md) — prompt 02
-- [`outputs/old/`](./outputs/old/) — historical pre-AHA workflow artifacts (2026-06-10 cleanup)
+- `outputs/` — prompt 01 + 02 inventories (created when the prompts run)
+- `migration-plans/` — prompt 01 + 02 migration plans
+- `reports/` — prompt 03 execution log + prompt 04 validation report
 
-## Migration Plans
+## Examples
 
-- [`migration-plans/DOCS_MIGRATION_PLAN.md`](./migration-plans/DOCS_MIGRATION_PLAN.md) — prompt 01
-- [`migration-plans/PROJECT_STRUCTURE_MIGRATION_PLAN.md`](./migration-plans/PROJECT_STRUCTURE_MIGRATION_PLAN.md) — prompt 02
-- [`migration-plans/old/`](./migration-plans/old/) — historical pre-AHA migration plans
-
-## Reports
-
-- [`reports/DOCS_AND_ROOT_CLEANUP_REPORT.md`](./reports/DOCS_AND_ROOT_CLEANUP_REPORT.md) — prompt 03 execution log
+[`examples/`](./examples/README.md) holds sample artifacts **imported from a
+different repository** together with the prompt pack. They show the expected
+output format only — they are **not** approved plans for this repo and must
+never be used as prompt 03 input.

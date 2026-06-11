@@ -285,5 +285,6 @@ apps/dentalemon/tests/smoke/.craft-*/
 # root-level webwright craft scratch
 .craft-*/
 
-# Audit working scratch (19MB, regenerable) — not source
-outputs/
+# Audit working scratch (19MB, regenerable) — not source (root only;
+# unanchored pattern was also swallowing docs/aha/**/outputs/)
+/outputs/
