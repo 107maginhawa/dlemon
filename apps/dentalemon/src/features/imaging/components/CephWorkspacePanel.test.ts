@@ -424,5 +424,7 @@ describe('CephWorkspacePanel — Auto-detect (P1-10)', () => {
         ),
       { timeout: 4000 },
     )
+    // CLINICAL INTEGRITY: with the kill-switch on, NO AI landmark may reach the chart.
+    expect(container.querySelector('[data-ai-unconfirmed]')).toBeNull()
   })
 })

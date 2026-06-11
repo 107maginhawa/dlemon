@@ -6,8 +6,32 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test'
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react'
+import { QueryClient } from '@tanstack/react-query'
 import { useCephLandmarks, type CephLandmark, type CephLandmarksResponse, type CephAnalysis } from './use-ceph-landmarks'
 import { freshClientWithMutations, makeWrapper, jsonResponse } from '@/test-utils'
+
+/**
+ * A QueryClient whose mutations retry up to 3× — the consequential half of the
+ * production policy (packages/sdk-ts/src/react/provider.tsx → shouldRetry).
+ * In production `shouldRetry` DOES skip 4xx, but only when the error is an
+ * `SdkError`; the autoDetect mutationFn runs `normalizeThrown` which collapses the
+ * `SdkError` into a plain `Error`, so `shouldRetry` falls to its `return true`
+ * branch and the permanent 403 retries. This client reproduces exactly that
+ * fall-through path. `freshClientWithMutations` disables retries, which is why the
+ * existing autoDetect tests never caught the storm. `retry: false` on the mutation
+ * cuts the loop before the error type matters.
+ */
+function prodLikeMutationClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: {
+        retry: (failureCount: number) => failureCount < 3,
+        retryDelay: 0,
+      },
+    },
+  })
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -441,5 +465,28 @@ describe('useCephLandmarks — autoDetect (P1-10)', () => {
     await act(async () => { result.current.autoDetect.mutate() })
     await waitFor(() => expect(result.current.autoDetect.isError).toBe(true))
     expect(String(result.current.autoDetect.error)).toContain('FEATURE_DISABLED')
+  })
+
+  test('does NOT retry a permanent 4xx gate — exactly one detect request (FIX-002)', async () => {
+    let detectCalls = 0
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : typeof req === 'string' ? req : req.toString()
+      if (url.includes('/ceph/landmarks/detect')) {
+        detectCalls += 1
+        return jsonResponse({ error: 'disabled', code: 'FEATURE_DISABLED' }, 403)
+      }
+      return jsonResponse(makeResponse([]))
+    }) as unknown as typeof fetch
+
+    // Prod-like retry policy — without retry:false on the mutation, the 403 retries.
+    const qc = prodLikeMutationClient()
+    const { result } = renderHook(() => useCephLandmarks('img-1'), { wrapper: makeWrapper(qc) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => { result.current.autoDetect.mutate() })
+    await waitFor(() => expect(result.current.autoDetect.isError).toBe(true))
+
+    // Permanent tier/flag gates must fail fast: one request, no retry storm / long spinner.
+    expect(detectCalls).toBe(1)
   })
 })

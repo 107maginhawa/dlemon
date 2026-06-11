@@ -309,6 +309,31 @@ describe('detectCephLandmarks gates', () => {
     expect(body.code).toBe('FEATURE_DISABLED');
   });
 
+  test('flag OFF writes ZERO landmark rows — kill-switch precedes all persistence', async () => {
+    // CLINICAL INTEGRITY (plan §4): when the kill-switch is off, no FakeDetector
+    // output may reach a real chart. The 403 alone is not enough — prove the
+    // detector never ran and nothing was upserted. The DB is configured to succeed
+    // for every read/write, so a missing/late gate would visibly persist rows.
+    const captured: Captured = { upserts: [], updates: [] };
+    const { CephMgmt_detectCephLandmarks } = await import('./CephMgmt_detectCephLandmarks');
+    const app = buildApp(CephMgmt_detectCephLandmarks as any, {
+      user: DENTIST_USER,
+      flagOn: false,
+      method: 'POST',
+      path: '/:imageId/landmarks/detect',
+      db: makeCephDb({ landmarks: [] }, captured),
+    });
+    const res = await app.request(`/${IMAGE_ID}/landmarks/detect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as any).code).toBe('FEATURE_DISABLED');
+    expect(captured.upserts.flat()).toHaveLength(0);
+    expect(captured.updates).toHaveLength(0);
+  });
+
   test('free tier → 403 IMAGING_TIER_REQUIRED', async () => {
     const res = await run({ user: DENTIST_USER, flagOn: true, db: makeCephDb({ imagingTier: 'free' }) });
     expect(res.status).toBe(403);
