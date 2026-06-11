@@ -381,9 +381,22 @@ jsonpath "$.overdueInvoiceCount" isInteger
 
 
 # NEW: G2.5-S6 — payment receipt
+# Drift pin (AHA dental-billing FIX-007): the receipt is the rich NESTED document
+# the handler returns and the reconciled TypeSpec now declares — receiptNumber +
+# isVoid + nested payment/invoice/patient + generatedAt — not the old flat
+# { amountCents, method, paidAt } projection. The FE PaymentReceipt depends on
+# this shape (patient name, invoice number, void watermark).
 GET {{api}}/dental/billing/invoices/{{invoice_id}}/payments/{{payment_id}}/receipt
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+[Asserts]
+jsonpath "$.receiptNumber" isString
+jsonpath "$.isVoid" isBoolean
+jsonpath "$.payment.amountCents" isInteger
+jsonpath "$.payment.method" isString
+jsonpath "$.invoice.invoiceNumber" isString
+jsonpath "$.patient.name" isString
+jsonpath "$.generatedAt" isString
 
 
 # NEW: G2.5-S6 — void invoice.

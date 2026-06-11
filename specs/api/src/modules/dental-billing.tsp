@@ -261,13 +261,40 @@ model CollectionsSummaryResponse {
   invoiceCount: int32;
 }
 
-model DentalPaymentReceiptResponse {
-  receiptNumber: string;
+// AHA dental-billing FIX-007: reconciled to the implemented (tested) handler
+// shape. The receipt is a rich nested document — void info (EC5 watermark),
+// patient name, and invoice context — not the never-implemented flat projection.
+model DentalPaymentReceiptPayment {
+  id: UUID;
   amountCents: int32;
   method: PaymentMethod;
-  paidAt: utcDateTime;
-  invoiceId: UUID;
-  patientId: UUID;
+  recordedAt: utcDateTime;
+  notes: string | null;
+}
+
+model DentalPaymentReceiptInvoice {
+  id: UUID;
+  invoiceNumber: string;
+  totalCents: int32;
+  paidCents: int32;
+  balanceCents: int32;
+  status: string;
+}
+
+model DentalPaymentReceiptPatient {
+  id: UUID;
+  name: string;
+}
+
+model DentalPaymentReceiptResponse {
+  receiptNumber: string;
+  isVoid: boolean;
+  voidedAt: utcDateTime | null;
+  voidReason: string | null;
+  payment: DentalPaymentReceiptPayment;
+  invoice: DentalPaymentReceiptInvoice;
+  patient: DentalPaymentReceiptPatient;
+  generatedAt: utcDateTime;
 }
 
 // ---------------------------------------------------------------------------

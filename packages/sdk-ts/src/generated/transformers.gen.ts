@@ -442,8 +442,17 @@ export const recordDentalPaymentResponseTransformer = async (data: any): Promise
     return data;
 };
 
+const dentalPaymentReceiptPaymentSchemaResponseTransformer = (data: any) => {
+    data.recordedAt = new Date(data.recordedAt);
+    return data;
+};
+
 const dentalPaymentReceiptResponseSchemaResponseTransformer = (data: any) => {
-    data.paidAt = new Date(data.paidAt);
+    if (data.voidedAt) {
+        data.voidedAt = new Date(data.voidedAt);
+    }
+    data.payment = dentalPaymentReceiptPaymentSchemaResponseTransformer(data.payment);
+    data.generatedAt = new Date(data.generatedAt);
     return data;
 };
 

@@ -7931,13 +7931,37 @@ export type DentalPaymentPlan = {
     updatedAt: Date;
 };
 
-export type DentalPaymentReceiptResponse = {
-    receiptNumber: string;
+export type DentalPaymentReceiptInvoice = {
+    id: Uuid;
+    invoiceNumber: string;
+    totalCents: number;
+    paidCents: number;
+    balanceCents: number;
+    status: string;
+};
+
+export type DentalPaymentReceiptPatient = {
+    id: Uuid;
+    name: string;
+};
+
+export type DentalPaymentReceiptPayment = {
+    id: Uuid;
     amountCents: number;
     method: PaymentMethod;
-    paidAt: Date;
-    invoiceId: Uuid;
-    patientId: Uuid;
+    recordedAt: Date;
+    notes: string | null;
+};
+
+export type DentalPaymentReceiptResponse = {
+    receiptNumber: string;
+    isVoid: boolean;
+    voidedAt: Date | null;
+    voidReason: string | null;
+    payment: DentalPaymentReceiptPayment;
+    invoice: DentalPaymentReceiptInvoice;
+    patient: DentalPaymentReceiptPatient;
+    generatedAt: Date;
 };
 
 /**

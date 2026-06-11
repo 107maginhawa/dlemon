@@ -25,6 +25,7 @@ import {
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { PaymentReceipt } from './payment-receipt';
 
 export type { LineItem, Payment, InvoiceData } from './invoice-detail.helpers';
 export {
@@ -62,6 +63,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [voidError, setVoidError] = useState<string | null>(null);
   const [showUncollectibleForm, setShowUncollectibleForm] = useState(false);
   const [uncollectibleError, setUncollectibleError] = useState<string | null>(null);
+  // FR4.6: payment whose printable receipt is currently open (null = none).
+  const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
   const qc = useQueryClient();
   // The recording staff member comes from the PIN-authenticated org context.
@@ -349,8 +352,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   <table className="w-full border-collapse">
                     <thead>
                       <tr>
-                        {['Receipt #', 'Date', 'Method', 'Amount'].map((h, i) => (
-                          <th key={h} className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 3 ? 'text-right' : 'text-left'}`}>{h}</th>
+                        {['Receipt #', 'Date', 'Method', 'Amount', ''].map((h, i) => (
+                          <th key={h || 'actions'} className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 3 ? 'text-right' : i === 4 ? 'text-right' : 'text-left'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -361,6 +364,15 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                           <td className="px-3 py-2.5 text-[13px] tabular-nums">{new Date(pmt.createdAt).toLocaleDateString()}</td>
                           <td className="px-3 py-2.5 text-[13px]">{METHOD_LABELS[pmt.method] ?? pmt.method}</td>
                           <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(pmt.amountCents)}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setReceiptPaymentId(pmt.id)}
+                              className="text-xs text-foreground/70 hover:text-foreground transition-colors"
+                            >
+                              Receipt
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -474,6 +486,19 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           </div>
         )}
       </div>
+
+      {/* FR4.6: printable payment receipt overlay */}
+      {receiptPaymentId && invoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
+          <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setReceiptPaymentId(null)} />
+          <div className="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-background shadow-2xl p-5">
+            <div className="no-print flex justify-end mb-2">
+              <button type="button" onClick={() => setReceiptPaymentId(null)} aria-label="Close receipt" className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">X</button>
+            </div>
+            <PaymentReceipt invoiceId={invoice.id} paymentId={receiptPaymentId} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

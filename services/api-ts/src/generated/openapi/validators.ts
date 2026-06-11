@@ -3486,13 +3486,37 @@ export const DentalPaymentPlanSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
-export const DentalPaymentReceiptResponseSchema = z.object({
-  receiptNumber: z.string(),
+export const DentalPaymentReceiptInvoiceSchema = z.object({
+  id: UUIDSchema,
+  invoiceNumber: z.string(),
+  totalCents: z.number().int(),
+  paidCents: z.number().int(),
+  balanceCents: z.number().int(),
+  status: z.string()
+});
+
+export const DentalPaymentReceiptPatientSchema = z.object({
+  id: UUIDSchema,
+  name: z.string()
+});
+
+export const DentalPaymentReceiptPaymentSchema = z.object({
+  id: UUIDSchema,
   amountCents: z.number().int(),
   method: PaymentMethodSchema,
-  paidAt: z.string().datetime().transform((str) => new Date(str)),
-  invoiceId: UUIDSchema,
-  patientId: UUIDSchema
+  recordedAt: z.string().datetime().transform((str) => new Date(str)),
+  notes: z.union([z.string(), z.null()])
+});
+
+export const DentalPaymentReceiptResponseSchema = z.object({
+  receiptNumber: z.string(),
+  isVoid: z.boolean(),
+  voidedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  voidReason: z.union([z.string(), z.null()]),
+  payment: DentalPaymentReceiptPaymentSchema,
+  invoice: DentalPaymentReceiptInvoiceSchema,
+  patient: DentalPaymentReceiptPatientSchema,
+  generatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
 export const DentalPortalModuleMyAppointmentSchema = z.object({
