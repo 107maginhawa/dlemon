@@ -302,7 +302,8 @@ describe('dental-org audit convergence (dental_audit_log + viewer)', () => {
       body: JSON.stringify({ name: 'Extraction Consent', body: 'I consent.' }),
     });
     expect(createRes.status).toBe(201);
-    const template = ((await createRes.json()) as any).template;
+    // Contract: ApiCreatedResponse<DentalConsentTemplate> = bare object body.
+    const template = (await createRes.json()) as any;
 
     const createRows = await db.select().from(dentalAuditLog).where(eq(dentalAuditLog.targetId, template.id));
     expect(createRows.some((r) => r.action === 'consent_template.create' && r.targetType === 'dental_consent_template')).toBe(true);

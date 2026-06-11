@@ -289,35 +289,42 @@ jsonpath "$.workingHours.sunday.enabled" == false
 # CONSENT TEMPLATES
 # ============================================================
 
-# NEW: G2.5-S6 — create consent template. The generated wire validator requires
-# `title`/`content`, while the handler persists from `name`/`body`; we send BOTH so
-# both layers are satisfied. The created template is returned wrapped under `template`
-# with the handler's `name`/`body` fields.
+# AHA dental-org FIX-004: the TypeSpec for these ops was reconciled to the
+# implemented backend. Request fields are now {name, body,
+# requiresWitnessSignature} (the never-implemented {title, content} that forced
+# this test to send BOTH field sets is gone), and responses are the bare
+# ApiOkResponse/ApiCreatedResponse bodies — no { template }/{ templates }/
+# { deleted } wrappers. Writes are owner-only (the signed-in user is the owner).
 POST {{api}}/dental/branches/{{branch_id}}/consent-templates
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "title": "General Treatment Consent",
-  "content": "I consent to general dental treatment as determined by my dentist.",
   "name": "General Treatment Consent",
-  "body": "I consent to general dental treatment as determined by my dentist."
+  "body": "I consent to general dental treatment as determined by my dentist.",
+  "requiresWitnessSignature": false
 }
 HTTP 201
 [Captures]
-consent_template_id: jsonpath "$.template.id"
+consent_template_id: jsonpath "$.id"
 [Asserts]
-jsonpath "$.template.name" == "General Treatment Consent"
+jsonpath "$.id" isString
+jsonpath "$.branchId" == "{{branch_id}}"
+jsonpath "$.name" == "General Treatment Consent"
+jsonpath "$.body" isString
+jsonpath "$.active" == true
 
 
-# NEW: G2.5-S6 — list consent templates (returned under `templates`)
+# List consent templates — bare array (ApiOkResponse<T[]>) including the new one.
 GET {{api}}/dental/branches/{{branch_id}}/consent-templates
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.templates" isCollection
+jsonpath "$" isCollection
+jsonpath "$[*].id" contains "{{consent_template_id}}"
+jsonpath "$[*].name" contains "General Treatment Consent"
 
 
-# NEW: G2.5-S6 — update consent template (name/body fields; response wrapped under `template`)
+# Update consent template — bare updated object; name + witness flag changed.
 PATCH {{api}}/dental/branches/{{branch_id}}/consent-templates/{{consent_template_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -327,16 +334,23 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.template.id" == "{{consent_template_id}}"
-jsonpath "$.template.name" == "General Treatment Consent v2"
+jsonpath "$.id" == "{{consent_template_id}}"
+jsonpath "$.name" == "General Treatment Consent v2"
+jsonpath "$.requiresWitnessSignature" == true
 
 
-# NEW: G2.5-S6 — delete consent template (soft-delete → { deleted: true })
+# Delete consent template — soft-delete; ApiOkResponse<{}> empty-object body.
 DELETE {{api}}/dental/branches/{{branch_id}}/consent-templates/{{consent_template_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+
+
+# List after delete — the soft-deleted template is no longer returned.
+GET {{api}}/dental/branches/{{branch_id}}/consent-templates
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
 [Asserts]
-jsonpath "$.deleted" == true
+jsonpath "$[*].id" not contains "{{consent_template_id}}"
 
 
 # ============================================================

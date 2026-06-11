@@ -79,11 +79,10 @@ async function buildLivingDocumentScenario(
       // A signed consent is required per visit to perform a treatment AND to
       // complete the visit. One shared branch template is enough.
       const tplRes = await fetch(`${api}/dental/branches/${branchId}/consent-templates`, j({
-        title: 'General Treatment Consent', content: 'I consent.',
         name: 'General Treatment Consent', body: 'I consent.',
       }));
-      const tplJson = await tplRes.json() as { template?: { id: string }; id?: string };
-      const templateId = tplJson?.template?.id ?? tplJson?.id;
+      const tplJson = await tplRes.json() as { id?: string };
+      const templateId = tplJson?.id;
 
       const startVisit = async () => {
         const vRes = await fetch(`${api}/dental/visits`, j({

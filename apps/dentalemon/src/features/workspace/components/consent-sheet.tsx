@@ -17,6 +17,11 @@ import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { createConsentForm, signConsentForm, recordConsentRefusal } from '@monobase/sdk-ts/generated';
 import type { ConsentForm } from '@monobase/sdk-ts/generated';
 
+// FR8.4b fallback only: used when the clinic has not configured any consent
+// templates (or no branch is in context). Once an owner adds templates in
+// Settings → Consent Forms, those are passed in via `templates` and these
+// hardcoded names are not shown. Hardcoded legal text must not be the source
+// of truth for a clinic that has configured its own.
 const CONSENT_TEMPLATES = [
   { id: 'tpl-general', name: 'General Dental Consent' },
   { id: 'tpl-extraction', name: 'Tooth Extraction Consent' },
@@ -25,6 +30,11 @@ const CONSENT_TEMPLATES = [
   { id: 'tpl-xray', name: 'Radiograph Consent' },
 ] as const;
 
+export interface ConsentTemplateOption {
+  id: string;
+  name: string;
+}
+
 type SheetMode = 'consent' | 'refusal';
 
 export interface ConsentSheetProps {
@@ -32,12 +42,20 @@ export interface ConsentSheetProps {
   patientId: string;
   /** Member who presents the treatment — attributed on an informed refusal record */
   currentMemberId?: string;
+  /**
+   * Branch-configured consent templates (FR8.4b). When present and non-empty,
+   * these replace the hardcoded fallback list so each clinic presents its own
+   * consent text. Sourced by the parent via useConsentTemplates(branchId).
+   */
+  templates?: ConsentTemplateOption[];
   open: boolean;
   onClose: () => void;
   onSaved?: () => void;
 }
 
-export function ConsentSheet({ visitId, patientId, currentMemberId, open, onClose, onSaved }: ConsentSheetProps) {
+export function ConsentSheet({ visitId, patientId, currentMemberId, templates, open, onClose, onSaved }: ConsentSheetProps) {
+  const templateOptions: ReadonlyArray<ConsentTemplateOption> =
+    templates && templates.length > 0 ? templates : CONSENT_TEMPLATES;
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -97,7 +115,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, open, onClos
   }
 
   function handleSelectTemplate(e: React.ChangeEvent<HTMLSelectElement>) {
-    const tmpl = CONSENT_TEMPLATES.find(t => t.id === e.target.value);
+    const tmpl = templateOptions.find(t => t.id === e.target.value);
     setTemplateId(e.target.value);
     setTemplateName(tmpl?.name ?? '');
   }
@@ -289,7 +307,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, open, onClos
                   className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none disabled:opacity-50"
                 >
                   <option value="">Choose template…</option>
-                  {CONSENT_TEMPLATES.map(t => (
+                  {templateOptions.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>

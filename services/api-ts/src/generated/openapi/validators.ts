@@ -2113,8 +2113,9 @@ export const DentalOrgModuleCreateBranchRequestSchema = z.object({
 });
 
 export const DentalOrgModuleCreateDentalConsentTemplateRequestSchema = z.object({
-  title: z.string(),
-  content: z.string()
+  name: z.string(),
+  body: z.string(),
+  requiresWitnessSignature: z.boolean().optional()
 });
 
 export const DentalOrgModuleCreateFlatMemberRequestSchema = z.object({
@@ -2181,9 +2182,10 @@ export const DentalOrgModuleDentalConsentTemplateSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   updatedBy: z.string().uuid().optional(),
   branchId: z.string().uuid(),
-  title: z.string(),
-  content: z.string(),
-  isActive: z.boolean()
+  name: z.string(),
+  body: z.string(),
+  requiresWitnessSignature: z.boolean(),
+  active: z.boolean()
 });
 
 export const DentalOrgModuleDentalMembershipSchema = z.object({
@@ -2365,9 +2367,9 @@ export const DentalOrgModuleSetSecurityQuestionRequestSchema = z.object({
 export const DentalOrgModuleUpdateDentalBranchSettingsRequestSchema = z.record(z.string(), z.unknown());
 
 export const DentalOrgModuleUpdateDentalConsentTemplateRequestSchema = z.object({
-  title: z.string().optional(),
-  content: z.string().optional(),
-  isActive: z.boolean().optional()
+  name: z.string().optional(),
+  body: z.string().optional(),
+  requiresWitnessSignature: z.boolean().optional()
 });
 
 export const DentalOrgModuleUpdateMemberRequestSchema = z.object({

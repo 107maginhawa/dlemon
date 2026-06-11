@@ -120,6 +120,40 @@ describe('ConsentSheet — shipped component', () => {
     }
   });
 
+  test('uses API-provided templates when passed (FR8.4b: no hardcoded legal text)', async () => {
+    const f = installFetch();
+    try {
+      render(
+        React.createElement(ConsentSheet, {
+          visitId: 'v-1',
+          patientId: 'p-1',
+          currentMemberId: 'm-1',
+          open: true,
+          onClose: () => {},
+          templates: [{ id: 'srv-tpl-1', name: 'Clinic Surgical Consent' }],
+        }),
+      );
+      const user = userEvent.setup();
+
+      // The configured clinic template appears; the hardcoded const options do not.
+      expect(screen.getByRole('option', { name: 'Clinic Surgical Consent' })).toBeTruthy();
+      expect(screen.queryByRole('option', { name: 'Tooth Extraction Consent' })).toBeNull();
+
+      await user.selectOptions(screen.getByLabelText(/select consent form template/i), 'srv-tpl-1');
+      await captureSignature();
+      const save = await screen.findByRole('button', { name: /save consent form to visit record/i });
+      await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+      await user.click(save);
+
+      await waitFor(() => expect(f.calls.some(c => c.url.includes('/sign'))).toBe(true));
+      const create = f.calls.find(c => c.url.includes('/consents') && !c.url.includes('/sign'))!;
+      expect((create.body as { templateId: string }).templateId).toBe('srv-tpl-1');
+      expect((create.body as { templateName: string }).templateName).toBe('Clinic Surgical Consent');
+    } finally {
+      f.restore();
+    }
+  });
+
   test('createConsentForm sends structured content fields when filled (P1-3)', async () => {
     const f = installFetch();
     try {

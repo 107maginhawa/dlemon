@@ -59,13 +59,12 @@ async function seedInvoice(page: Page, branchId: string, memberId: string) {
       return res.json() as any;
     };
 
-    // A fresh onboarded org has no consent template — create one (validator wants
-    // title/content, handler reads name/body; response is { template: { id } }).
+    // A fresh onboarded org has no consent template — create one
+    // (request = name/body; create returns the bare created object).
     const tpl = await need('consent-template', await post(`/dental/branches/${branchId}/consent-templates`, {
-      title: 'General Treatment Consent', content: 'I consent to treatment.',
       name: 'General Treatment Consent', body: 'I consent to treatment.',
     }));
-    const templateId = tpl?.template?.id ?? tpl?.id;
+    const templateId = tpl?.id;
     if (!templateId) throw new Error('seedInvoice: no consent template id');
 
     const patient = await need('patient', await post('/dental/patients', {

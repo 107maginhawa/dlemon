@@ -305,10 +305,11 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
     });
 
     expect(res.status).toBe(201);
+    // Contract: ApiCreatedResponse<DentalConsentTemplate> = bare created object.
     const body = await res.json() as any;
-    expect(body.template.name).toBe('Tooth Extraction Consent');
-    expect(body.template.branchId).toBe(BRANCH_ID);
-    expect(body.template.active).toBe(true);
+    expect(body.name).toBe('Tooth Extraction Consent');
+    expect(body.branchId).toBe(BRANCH_ID);
+    expect(body.active).toBe(true);
   });
 
   test('lists active consent templates for a branch', async () => {
@@ -322,8 +323,9 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
 
     const res = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`);
     expect(res.status).toBe(200);
+    // Contract: ApiOkResponse<DentalConsentTemplate[]> = bare array body.
     const body = await res.json() as any;
-    expect(body.templates.length).toBeGreaterThanOrEqual(2);
+    expect(body.length).toBeGreaterThanOrEqual(2);
   });
 
   test('owner can update a consent template', async () => {
@@ -341,9 +343,10 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
     });
 
     expect(res.status).toBe(200);
+    // Contract: ApiOkResponse<DentalConsentTemplate> = bare updated object.
     const body = await res.json() as any;
-    expect(body.template.name).toBe('New Name');
-    expect(body.template.body).toBe('Old body'); // unchanged
+    expect(body.name).toBe('New Name');
+    expect(body.body).toBe('Old body'); // unchanged
   });
 
   test('owner can soft-delete a consent template', async () => {
@@ -359,10 +362,10 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
     });
 
     expect(res.status).toBe(200);
-    // Should not appear in list after deletion
+    // Should not appear in list after deletion (bare array body).
     const listRes = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`);
     const listBody = await listRes.json() as any;
-    const found = listBody.templates.find((t: any) => t.id === template!.id);
+    const found = (listBody as any[]).find((t: any) => t.id === template!.id);
     expect(found).toBeUndefined();
   });
 

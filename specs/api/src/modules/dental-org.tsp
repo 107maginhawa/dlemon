@@ -643,44 +643,51 @@ namespace DentalOrgModule {
     updatedAt: utcDateTime.fromISO("2025-03-01T08:00:00Z"),
     version: 1,
     branchId: "br-1a2b3c4d-0000-4000-8000-000000000001",
-    title: "General Tooth Extraction Consent",
-    content: "<p>I, the undersigned patient, hereby consent to the extraction of the tooth/teeth indicated by my dentist...</p>",
-    isActive: true,
+    name: "General Tooth Extraction Consent",
+    body: "<p>I, the undersigned patient, hereby consent to the extraction of the tooth/teeth indicated by my dentist...</p>",
+    requiresWitnessSignature: false,
+    active: true,
   }, #{ title: "Extraction consent template — active" })
   @doc("Consent form template for a branch")
   model DentalConsentTemplate extends BaseEntity {
     @doc("Branch this template belongs to")
     branchId: UUID;
 
-    @doc("Template title")
-    title: string;
+    @doc("Template name / title")
+    name: string;
 
-    @doc("Template content (HTML or plain text)")
-    content: string;
+    @doc("Template body content (HTML or plain text)")
+    body: string;
 
-    @doc("Whether this template is active")
-    isActive: boolean;
+    @doc("Whether signing this template requires a witness signature")
+    requiresWitnessSignature: boolean;
+
+    @doc("Whether this template is active (soft-delete flag)")
+    active: boolean;
   }
 
   @doc("Create a consent template")
   model CreateDentalConsentTemplateRequest {
-    @doc("Template title")
-    title: string;
+    @doc("Template name / title")
+    name: string;
 
-    @doc("Template content")
-    content: string;
+    @doc("Template body content")
+    body: string;
+
+    @doc("Whether signing requires a witness signature")
+    requiresWitnessSignature?: boolean;
   }
 
   @doc("Update a consent template")
   model UpdateDentalConsentTemplateRequest {
-    @doc("New title")
-    title?: string;
+    @doc("New name / title")
+    name?: string;
 
-    @doc("New content")
-    content?: string;
+    @doc("New body content")
+    body?: string;
 
-    @doc("Active status")
-    isActive?: boolean;
+    @doc("Whether signing requires a witness signature")
+    requiresWitnessSignature?: boolean;
   }
 
   // ==========================================================================

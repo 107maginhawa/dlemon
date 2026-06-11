@@ -93,10 +93,10 @@ test.describe('Billing (FR4.x)', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title: 'General Treatment Consent', content: 'I consent.', name: 'General Treatment Consent', body: 'I consent.' }),
+        body: JSON.stringify({ name: 'General Treatment Consent', body: 'I consent.' }),
       });
       const tplJson = await tplRes.json() as any;
-      const templateId = tplJson?.template?.id ?? tplJson?.id;
+      const templateId = tplJson?.id;
       const conRes = await fetch(`${api}/dental/visits/${visitId}/consents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

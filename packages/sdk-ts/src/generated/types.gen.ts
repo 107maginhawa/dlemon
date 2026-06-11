@@ -3890,13 +3890,17 @@ export type DentalOrgModuleCreateBranchRequest = {
  */
 export type DentalOrgModuleCreateDentalConsentTemplateRequest = {
     /**
-     * Template title
+     * Template name / title
      */
-    title: string;
+    name: string;
     /**
-     * Template content
+     * Template body content
      */
-    content: string;
+    body: string;
+    /**
+     * Whether signing requires a witness signature
+     */
+    requiresWitnessSignature?: boolean;
 };
 
 /**
@@ -4170,17 +4174,21 @@ export type DentalOrgModuleDentalConsentTemplate = {
      */
     branchId: string;
     /**
-     * Template title
+     * Template name / title
      */
-    title: string;
+    name: string;
     /**
-     * Template content (HTML or plain text)
+     * Template body content (HTML or plain text)
      */
-    content: string;
+    body: string;
     /**
-     * Whether this template is active
+     * Whether signing this template requires a witness signature
      */
-    isActive: boolean;
+    requiresWitnessSignature: boolean;
+    /**
+     * Whether this template is active (soft-delete flag)
+     */
+    active: boolean;
 };
 
 /**
@@ -4719,17 +4727,17 @@ export type DentalOrgModuleUpdateDentalBranchSettingsRequest = {
  */
 export type DentalOrgModuleUpdateDentalConsentTemplateRequest = {
     /**
-     * New title
+     * New name / title
      */
-    title?: string;
+    name?: string;
     /**
-     * New content
+     * New body content
      */
-    content?: string;
+    body?: string;
     /**
-     * Active status
+     * Whether signing requires a witness signature
      */
-    isActive?: boolean;
+    requiresWitnessSignature?: boolean;
 };
 
 /**

@@ -34,6 +34,7 @@ import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-quer
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
+import { useConsentTemplates } from '@/features/settings/hooks/use-consent-templates';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
 import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
@@ -107,6 +108,9 @@ function WorkspacePage() {
     useDentalChart({ visitId: currentVisitId });
   const { treatments } = useTreatments({ visitId: currentVisitId });
   const { data: treatmentPlan } = useTreatmentPlan({ patientId, branchId });
+  // FR8.4b: branch-configured consent templates feed the ConsentSheet picker so
+  // clinicians present this clinic's own consent text, not a hardcoded list.
+  const { templates: consentTemplates } = useConsentTemplates(branchId ?? '');
 
   // P0-A: open offline chart conflicts (rejected stale writes) for this patient.
   const { conflictedTeeth } = useChartConflicts(patientId);
@@ -547,6 +551,7 @@ function WorkspacePage() {
           visitId={currentVisitId}
           patientId={patientId}
           currentMemberId={prescriberMemberId}
+          templates={consentTemplates.map((t) => ({ id: t.id, name: t.name }))}
           open={consentSheetOpen}
           onClose={() => setConsentSheetOpen(false)}
         />

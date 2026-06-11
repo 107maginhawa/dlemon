@@ -95,11 +95,11 @@ async function createAndCompleteVisit(page: Page, ctx: SeedCtx): Promise<string>
     // 3b. Create + sign a consent (gates performed + complete).
     const tplRes = await fetch(`${api}/dental/branches/${ctx.branchId}/consent-templates`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-      body: JSON.stringify({ title: 'General Treatment Consent', content: 'I consent.', name: 'General Treatment Consent', body: 'I consent.' }),
+      body: JSON.stringify({ name: 'General Treatment Consent', body: 'I consent.' }),
     });
     if (!tplRes.ok) throw new Error(`Consent template: ${tplRes.status}: ${await tplRes.text()}`);
     const tplJson = await tplRes.json() as any;
-    const templateId = tplJson?.template?.id ?? tplJson?.id;
+    const templateId = tplJson?.id;
     const conRes = await fetch(`${api}/dental/visits/${visit.id}/consents`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ visitId: visit.id, patientId: ctx.patientId, templateId, templateName: 'General Treatment Consent' }),

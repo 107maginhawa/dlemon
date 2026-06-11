@@ -52,11 +52,10 @@ async function buildPatchCarryoverScenario(
 
       // Shared consent template (a signed consent is required to complete a visit).
       const tplRes = await fetch(`${api}/dental/branches/${branchId}/consent-templates`, j({
-        title: 'General Treatment Consent', content: 'I consent.',
         name: 'General Treatment Consent', body: 'I consent.',
       }));
-      const tplJson = await tplRes.json() as { template?: { id: string }; id?: string };
-      const templateId = tplJson?.template?.id ?? tplJson?.id;
+      const tplJson = await tplRes.json() as { id?: string };
+      const templateId = tplJson?.id;
 
       const startVisit = async () => {
         const vRes = await fetch(`${api}/dental/visits`, j({

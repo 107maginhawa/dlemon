@@ -638,16 +638,15 @@ async function seed() {
   ]
   const consentTemplateIds: string[] = []
   for (let i = 0; i < consentNames.length; i++) {
-    // Generated validator requires `title`+`content`; handler reads raw body using `name`+`body`.
+    // Contract (reconciled, AHA FIX-004): request = { name, body,
+    // requiresWitnessSignature? }; create returns the bare created object.
     const r = await post(`/dental/branches/${branch.id}/consent-templates`, {
-      title: consentNames[i], content: consentBodies[i],
       name: consentNames[i], body: consentBodies[i],
     }, cookie)
-    // Create returns { template: { id, … } } — NOT a bare { id }. Reading r.data.id
-    // (undefined) silently left every consent template unusable, so generalConsentTplId
-    // fell back to 'general', no consent was ever signed, and every visit completion
-    // 422'd (VISIT_CONSENT_REQUIRED) → visits stuck active → timeline collapse.
-    const tplId = r.data?.template?.id ?? r.data?.id
+    // A correct template id here is load-bearing: if it is missing, generalConsentTplId
+    // falls back to 'general', no consent is ever signed, and every visit completion
+    // 422's (VISIT_CONSENT_REQUIRED) → visits stuck active → timeline collapse.
+    const tplId = r.data?.id
     if (r.ok && tplId) { consentTemplateIds.push(tplId); log(`✓ Consent template: ${consentNames[i]}`) }
     else log(`⚠ Consent template (${r.status}): ${consentNames[i]} ${r.ok ? '(no id in response)' : ''}`)
   }
