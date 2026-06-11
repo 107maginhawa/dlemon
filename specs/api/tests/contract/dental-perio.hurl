@@ -552,6 +552,12 @@ HTTP 200
 jsonpath "$.status" == "completed"
 jsonpath "$.summaryBopPercent" isFloat
 jsonpath "$.summaryMeanDepth" isFloat
+# FIX-001/002: the diagnosis of record is PERSISTED and read back (not just on the
+# completion response), and the grading evidence rides along so the grade is auditable.
+jsonpath "$.stage" == "III"
+jsonpath "$.grade" == "B"
+jsonpath "$.extent" == "localized"
+jsonpath "$.riskFactors.remainingTeeth" == 28
 
 GET {{api}}/dental/visits/{{visit_id}}/perio-chart
 Cookie: better-auth.session_token={{session_token}}
@@ -560,6 +566,9 @@ HTTP 200
 jsonpath "$.status" == "completed"
 jsonpath "$.summaryBopPercent" isFloat
 jsonpath "$.summaryMeanDepth" isFloat
+# FIX-001: the visit read path carries the persisted diagnosis too.
+jsonpath "$.stage" == "III"
+jsonpath "$.grade" == "B"
 
 
 # ============================================================
@@ -576,6 +585,11 @@ jsonpath "$.data[0].status" == "completed"
 jsonpath "$.data[0].summaryBopPercent" isFloat
 jsonpath "$.data[0].summaryMeanDepth" isFloat
 jsonpath "$.data[0].readings" count == 17
+# FIX-001: the longitudinal (comparison) read path carries the persisted diagnosis,
+# so the staging trajectory is renderable from the history endpoint.
+jsonpath "$.data[0].stage" == "III"
+jsonpath "$.data[0].grade" == "B"
+jsonpath "$.data[0].extent" == "localized"
 
 
 # ============================================================

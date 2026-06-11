@@ -720,7 +720,7 @@ export const CompletePerioChartResponseSchema = z.object({
   summaryMeanDepth: z.number(),
   summaryDeepPocketCount: z.number().int(),
   stage: z.union([z.enum(["I", "II", "III", "IV"]), z.null()]).optional(),
-  grade: z.enum(["A", "B", "C"]).optional(),
+  grade: z.union([z.enum(["A", "B", "C"]), z.null()]).optional(),
   extent: z.union([z.enum(["localized", "generalized", "molar_incisor"]), z.null()]).optional()
 });
 
@@ -18640,6 +18640,21 @@ export const PerioChartSchema = z.object({
   summaryBopPercent: z.number().optional(),
   summaryMeanDepth: z.number().optional(),
   summaryDeepPocketCount: z.number().int().optional(),
+  stage: z.union([z.enum(["I", "II", "III", "IV"]), z.null()]).optional(),
+  grade: z.union([z.enum(["A", "B", "C"]), z.null()]).optional(),
+  extent: z.union([z.enum(["localized", "generalized", "molar_incisor"]), z.null()]).optional(),
+  riskFactors: z.union([z.object({
+  toothLossCount: z.number().int().optional(),
+  remainingTeeth: z.number().int().optional(),
+  biteCollapse: z.boolean().optional(),
+  bonelossPercent: z.number().optional(),
+  ageYears: z.number().int().optional(),
+  fiveYearProgressionMm: z.number().optional(),
+  cigarettesPerDay: z.number().int().optional(),
+  hasDiabetes: z.boolean().optional(),
+  hba1cPercent: z.number().optional(),
+  molarIncisorPattern: z.boolean().optional()
+}), z.null()]).optional(),
   readings: z.array(PerioToothReadingSchema),
   createdAt: z.string().datetime().transform((str) => new Date(str)),
   updatedAt: z.string().datetime().transform((str) => new Date(str))
@@ -18652,6 +18667,19 @@ export const PerioChartHistorySchema = z.object({
 export const PerioExtentSchema = z.enum(["localized", "generalized", "molar_incisor"]);
 
 export const PerioGradeSchema = z.enum(["A", "B", "C"]);
+
+export const PerioRiskFactorsSchema = z.object({
+  toothLossCount: z.number().int().optional(),
+  remainingTeeth: z.number().int().optional(),
+  biteCollapse: z.boolean().optional(),
+  bonelossPercent: z.number().optional(),
+  ageYears: z.number().int().optional(),
+  fiveYearProgressionMm: z.number().optional(),
+  cigarettesPerDay: z.number().int().optional(),
+  hasDiabetes: z.boolean().optional(),
+  hba1cPercent: z.number().optional(),
+  molarIncisorPattern: z.boolean().optional()
+});
 
 export const PerioStageSchema = z.enum(["I", "II", "III", "IV"]);
 

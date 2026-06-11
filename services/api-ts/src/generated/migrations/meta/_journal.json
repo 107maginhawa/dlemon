@@ -708,6 +708,13 @@
       "when": 1781092808714,
       "tag": "0100_messy_wrecker",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1781191890755,
+      "tag": "0101_complete_junta",
+      "breakpoints": true
     }
   ]
 }

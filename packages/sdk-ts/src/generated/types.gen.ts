@@ -1284,7 +1284,7 @@ export type CollectionsSummaryResponse = {
 };
 
 /**
- * P1-6: optional 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted.
+ * P1-6: the completion request body — the grading risk factors (same shape persisted on the chart).
  */
 export type CompletePerioChartRequest = {
     /**
@@ -1341,7 +1341,7 @@ export type CompletePerioChartResponse = {
      */
     stage?: 'I' | 'II' | 'III' | 'IV';
     /**
-     * P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence).
+     * P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence). Nullable for contract symmetry with the read paths / persisted column (legacy charts).
      */
     grade?: 'A' | 'B' | 'C';
     /**
@@ -59413,6 +59413,63 @@ export type PerioChart = {
     summaryBopPercent?: number;
     summaryMeanDepth?: number;
     summaryDeepPocketCount?: number;
+    /**
+     * FIX-001: persisted 2017 AAP/EFP stage of record (frozen at completion). null for legacy charts completed before persistence and when there is no CAL evidence to stage.
+     */
+    stage?: 'I' | 'II' | 'III' | 'IV';
+    /**
+     * FIX-001: persisted 2017 AAP/EFP grade of record. null only for legacy pre-persistence charts.
+     */
+    grade?: 'A' | 'B' | 'C';
+    /**
+     * FIX-001: persisted extent descriptor of record. null when unclassifiable or for legacy charts.
+     */
+    extent?: 'localized' | 'generalized' | 'molar_incisor';
+    /**
+     * FIX-002: the grading risk-factor evidence submitted at completion, so the grade is reproducible/auditable. null/absent for legacy charts.
+     */
+    riskFactors?: {
+        /**
+         * Teeth lost due to periodontitis (staging complexity).
+         */
+        toothLossCount?: number;
+        /**
+         * Remaining teeth in the mouth; <20 is a Stage-IV factor. Defaults to charted-tooth count.
+         */
+        remainingTeeth?: number;
+        /**
+         * Masticatory dysfunction / bite collapse (Stage-IV factor).
+         */
+        biteCollapse?: boolean;
+        /**
+         * Radiographic %bone-loss at worst site (0-100), for the indirect grading ratio.
+         */
+        bonelossPercent?: number;
+        /**
+         * Patient age in years (denominator of the %bone-loss÷age grading ratio).
+         */
+        ageYears?: number;
+        /**
+         * Direct 5-yr RBL/CAL progression (mm). When present, overrides the indirect ratio.
+         */
+        fiveYearProgressionMm?: number;
+        /**
+         * Cigarettes per day (grading modifier): <10 → ≥B, ≥10 → C.
+         */
+        cigarettesPerDay?: number;
+        /**
+         * Whether the patient has diabetes (grading modifier).
+         */
+        hasDiabetes?: boolean;
+        /**
+         * Most recent HbA1c % (grading modifier): <7.0 → ≥B, ≥7.0 → C.
+         */
+        hba1cPercent?: number;
+        /**
+         * Whether involvement follows a molar/incisor pattern (extent descriptor).
+         */
+        molarIncisorPattern?: boolean;
+    } | null;
     readings: Array<PerioToothReading>;
     createdAt: Date;
     updatedAt: Date;
@@ -59436,6 +59493,52 @@ export type PerioExtent = 'localized' | 'generalized' | 'molar_incisor';
  * 2017 AAP/EFP grade (progression rate).
  */
 export type PerioGrade = 'A' | 'B' | 'C';
+
+/**
+ * P1-6: 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted. Persisted at completion (FIX-002) so the grade is reproducible/auditable.
+ */
+export type PerioRiskFactors = {
+    /**
+     * Teeth lost due to periodontitis (staging complexity).
+     */
+    toothLossCount?: number;
+    /**
+     * Remaining teeth in the mouth; <20 is a Stage-IV factor. Defaults to charted-tooth count.
+     */
+    remainingTeeth?: number;
+    /**
+     * Masticatory dysfunction / bite collapse (Stage-IV factor).
+     */
+    biteCollapse?: boolean;
+    /**
+     * Radiographic %bone-loss at worst site (0-100), for the indirect grading ratio.
+     */
+    bonelossPercent?: number;
+    /**
+     * Patient age in years (denominator of the %bone-loss÷age grading ratio).
+     */
+    ageYears?: number;
+    /**
+     * Direct 5-yr RBL/CAL progression (mm). When present, overrides the indirect ratio.
+     */
+    fiveYearProgressionMm?: number;
+    /**
+     * Cigarettes per day (grading modifier): <10 → ≥B, ≥10 → C.
+     */
+    cigarettesPerDay?: number;
+    /**
+     * Whether the patient has diabetes (grading modifier).
+     */
+    hasDiabetes?: boolean;
+    /**
+     * Most recent HbA1c % (grading modifier): <7.0 → ≥B, ≥7.0 → C.
+     */
+    hba1cPercent?: number;
+    /**
+     * Whether involvement follows a molar/incisor pattern (extent descriptor).
+     */
+    molarIncisorPattern?: boolean;
+};
 
 /**
  * 2017 AAP/EFP stage (severity/complexity).

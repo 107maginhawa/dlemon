@@ -17,6 +17,8 @@ import { usePerioHistory } from '@/features/workspace/hooks/use-perio-history';
 import {
   buildSummaryRows,
   buildToothPdRows,
+  buildStagingCells,
+  formatStage,
   examDateLabel,
   type MetricDelta,
 } from './perio-comparison.logic';
@@ -59,6 +61,7 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
 
   const summary = buildSummaryRows(charts);
   const toothRows = buildToothPdRows(charts);
+  const stagingCells = buildStagingCells(charts);
 
   return (
     <div data-testid="perio-comparison" className="flex flex-col gap-6">
@@ -79,6 +82,23 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             </tr>
           </thead>
           <tbody>
+            {/* FIX-003: the persisted AAP/EFP staging trajectory (diagnosis of record)
+                per exam. Legacy charts with no persisted stage show an em-dash. */}
+            <tr data-testid="summary-row-stage">
+              <td className="border-b px-2 py-1.5 text-left text-muted-foreground">AAP/EFP stage</td>
+              {stagingCells.map((cell, i) => (
+                <td key={i} className="border-b px-2 py-1.5 text-right">
+                  {cell.stage ? (
+                    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                      {formatStage(cell.stage)}
+                      {cell.grade ? <span className="ml-1 text-muted-foreground">· {cell.grade}</span> : null}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+              ))}
+            </tr>
             {summary.map((row) => (
               <tr key={row.key} data-testid={`summary-row-${row.key}`}>
                 <td className="border-b px-2 py-1.5 text-left text-muted-foreground">{row.label}</td>

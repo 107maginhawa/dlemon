@@ -107,6 +107,25 @@ export function buildToothPdRows(charts: PerioChart[]): ToothPdRow[] {
     });
 }
 
+/** The persisted 2017 AAP/EFP diagnosis for one exam (null for legacy/pre-persistence charts). */
+export interface StagingCell {
+  stage: string | null;
+  grade: string | null;
+}
+
+/** Per-exam staging cells (newest-first), for the longitudinal staging-trajectory row. */
+export function buildStagingCells(charts: PerioChart[]): StagingCell[] {
+  return charts.map((c) => ({
+    stage: (c.stage as string | undefined) ?? null,
+    grade: (c.grade as string | undefined) ?? null,
+  }));
+}
+
+/** Human label for a stage value; em-dash when unclassified/legacy (never "Stage null"). */
+export function formatStage(stage: string | null): string {
+  return stage ? `Stage ${stage}` : '—';
+}
+
 /** Format a chart's completion date for a column header (falls back to created/updated). */
 export function examDateLabel(c: PerioChart): string {
   const iso = c.completedAt ?? c.updatedAt ?? c.createdAt;

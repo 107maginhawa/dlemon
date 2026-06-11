@@ -6,6 +6,8 @@ import {
   readingMaxPd,
   buildSummaryRows,
   buildToothPdRows,
+  buildStagingCells,
+  formatStage,
   examDateLabel,
 } from './perio-comparison.logic';
 import type { PerioChart } from '@monobase/sdk-ts/generated';
@@ -38,6 +40,21 @@ describe('readingMaxPd', () => {
   test('returns the deepest of the 6 sites; null when none recorded', () => {
     expect(readingMaxPd(reading(16, { depthBM: 3, depthBD: 4, depthLC: 2 }))).toBe(4);
     expect(readingMaxPd(reading(16, {}))).toBeNull();
+  });
+});
+
+describe('buildStagingCells / formatStage', () => {
+  test('maps each chart to its persisted stage/grade; null when absent (legacy)', () => {
+    const withStage = chart({ id: 's', stage: 'II', grade: 'B' } as any);
+    const legacy = chart({ id: 'l' });
+    expect(buildStagingCells([withStage, legacy])).toEqual([
+      { stage: 'II', grade: 'B' },
+      { stage: null, grade: null },
+    ]);
+  });
+  test('formatStage labels a stage or an em-dash, never "Stage null"', () => {
+    expect(formatStage('III')).toBe('Stage III');
+    expect(formatStage(null)).toBe('—');
   });
 });
 

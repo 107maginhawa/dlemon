@@ -100,10 +100,14 @@ beforeAll(async () => {
     { id: CHART_OLD, visitId: VISIT_OLD, patientId: PATIENT_ID, branchId: BRANCH_ID, examinerMemberId: MEMBER_ID,
       status: 'locked', completedAt: new Date('2026-01-10T10:00:00Z'),
       summaryBopPercent: '40.00', summaryMeanDepth: '3.50', summaryDeepPocketCount: 5,
+      // FIX-001: persisted diagnosis of record (older exam = worse stage).
+      stage: 'III', grade: 'C', extent: 'generalized', riskFactors: { cigarettesPerDay: 12 },
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
     { id: CHART_NEW, visitId: VISIT_NEW, patientId: PATIENT_ID, branchId: BRANCH_ID, examinerMemberId: MEMBER_ID,
       status: 'completed', completedAt: new Date('2026-05-20T10:00:00Z'),
       summaryBopPercent: '18.00', summaryMeanDepth: '2.80', summaryDeepPocketCount: 1,
+      // FIX-001: newer exam = improved stage (a trajectory the comparison can show).
+      stage: 'II', grade: 'B', extent: 'localized', riskFactors: {},
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
     { id: CHART_DRAFT, visitId: VISIT_DRAFT, patientId: PATIENT_ID, branchId: BRANCH_ID, examinerMemberId: MEMBER_ID,
       status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
@@ -153,6 +157,23 @@ describe('listPerioChartsForPatient', () => {
     const r16 = newest.readings.find((r: any) => r.toothNumber === 16);
     expect(r16).toBeTruthy();
     expect(r16.calBM).toBe(4); // CAL = PD(3) + GM(1)
+  });
+
+  // FIX-001: the longitudinal read path must carry the persisted diagnosis so the
+  // comparison can show the staging trajectory (e.g. Stage III → Stage II).
+  test('carries the persisted stage/grade/extent per finalized chart', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts?patientId=${PATIENT_ID}`);
+    const body = await res.json() as any;
+    const newest = body.data.find((c: any) => c.id === CHART_NEW);
+    const oldest = body.data.find((c: any) => c.id === CHART_OLD);
+    expect(newest.stage).toBe('II');
+    expect(newest.grade).toBe('B');
+    expect(newest.extent).toBe('localized');
+    expect(oldest.stage).toBe('III');
+    expect(oldest.grade).toBe('C');
+    // The grading evidence rides along too.
+    expect(oldest.riskFactors).toMatchObject({ cigarettesPerDay: 12 });
   });
 
   test('returns empty data for a patient with no charts', async () => {

@@ -66,4 +66,27 @@ describe('PerioComparisonView', () => {
     const t11 = screen.getByTestId('tooth-row-11');
     expect(t11.querySelectorAll('[data-worse="true"]').length).toBe(1);
   });
+
+  // FIX-003: the persisted AAP/EFP staging trajectory must be visible per exam.
+  test('renders a staging row with the persisted stage/grade per exam', () => {
+    const newer = chart({ ...NEW, id: 'sn', stage: 'II', grade: 'B' } as any);
+    const older = chart({ ...OLD, id: 'so', stage: 'III', grade: 'C' } as any);
+    render(React.createElement(PerioComparisonView, { charts: [newer, older] }));
+    const row = screen.getByTestId('summary-row-stage');
+    expect(row).not.toBeNull();
+    // Both exams' stages render — the III → II improvement trajectory is visible.
+    expect(within(row).getByText(/Stage II\b/)).not.toBeNull();
+    expect(within(row).getByText(/Stage III\b/)).not.toBeNull();
+  });
+
+  test('renders the staging row gracefully when a chart has no persisted stage (legacy)', () => {
+    const newer = chart({ ...NEW, id: 'sn2', stage: 'II', grade: 'B' } as any);
+    const legacy = chart({ ...OLD, id: 'lg' }); // no stage/grade — pre-migration chart
+    render(React.createElement(PerioComparisonView, { charts: [newer, legacy] }));
+    const row = screen.getByTestId('summary-row-stage');
+    expect(within(row).getByText(/Stage II\b/)).not.toBeNull();
+    // Null stage shows an em-dash placeholder, not a crash or "Stage null".
+    expect(within(row).getByText('—')).not.toBeNull();
+    expect(row.textContent).not.toContain('null');
+  });
 });

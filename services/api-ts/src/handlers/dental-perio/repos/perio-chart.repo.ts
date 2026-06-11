@@ -57,7 +57,17 @@ export class PerioChartRepository extends DatabaseRepository<DentalPerioChart, N
 
   async complete(
     id: string,
-    summary: { bopPercent: number; meanDepth: number; deepPocketCount: number },
+    summary: {
+      bopPercent: number;
+      meanDepth: number;
+      deepPocketCount: number;
+      // FIX-001/002: persist the 2017 AAP/EFP diagnosis of record (frozen at
+      // completion) and the grading evidence that produced the grade.
+      stage?: string | null;
+      grade?: string | null;
+      extent?: string | null;
+      riskFactors?: Record<string, unknown> | null;
+    },
   ): Promise<DentalPerioChart | null> {
     const [updated] = await this.db
       .update(dentalPerioCharts)
@@ -67,6 +77,10 @@ export class PerioChartRepository extends DatabaseRepository<DentalPerioChart, N
         summaryBopPercent: summary.bopPercent.toFixed(2),
         summaryMeanDepth: summary.meanDepth.toFixed(2),
         summaryDeepPocketCount: summary.deepPocketCount,
+        stage: summary.stage ?? null,
+        grade: summary.grade ?? null,
+        extent: summary.extent ?? null,
+        riskFactors: summary.riskFactors ?? null,
         updatedAt: new Date(),
       })
       .where(eq(dentalPerioCharts.id, id))
