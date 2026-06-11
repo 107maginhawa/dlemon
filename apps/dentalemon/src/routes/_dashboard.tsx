@@ -4,6 +4,7 @@ import { useOrgContextStore } from '@/stores/org-context.store'
 import { loadOrgContext } from '@/lib/load-org-context'
 import { pinSession } from '@/lib/pin-session'
 import { AppSidebar, filterNavGroupsByRole, type NavGroup } from '@/components/app-sidebar'
+import { NotificationBell } from '@/features/notifications/notification-bell'
 import type { DentalRole } from '@/lib/rbac'
 import {
   SidebarProvider,
@@ -141,6 +142,9 @@ function DashboardLayout() {
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" data-testid="sidebar-toggle" />
+          <div className="ml-auto flex items-center">
+            <NotificationBell />
+          </div>
         </header>
         <main className="flex-1">
           <Outlet />

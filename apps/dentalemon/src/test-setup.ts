@@ -45,6 +45,7 @@ const _lucideMock = {
   AlertTriangle: _makeIcon('alerttriangle'),
   ArrowLeft: _makeIcon('arrowleft'),
   ArrowRight: _makeIcon('arrowright'),
+  Bell: _makeIcon('bell'),
   Calendar: _makeIcon('calendar'),
   CalendarClock: _makeIcon('calendarclock'),
   CalendarIcon: _makeIcon('calendaricon'),
