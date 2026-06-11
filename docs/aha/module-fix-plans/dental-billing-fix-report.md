@@ -101,3 +101,74 @@ Claims vertical, `recordedByMemberId` derivation, receipt email, auto PWD/Senior
 ## 13. Recommended Next Step
 
 Run a `04` pass for **Batch E — shared print/PDF utility + receipt** (`docs/aha/module-fix-plans/dental-billing-fix-ready-plan.md`), the platform batch that must land before dental-patient (statement) and case-presentation (estimate) consume the shared print primitive. Batches B/C/D remain for subsequent passes.
+
+---
+
+# Batch E — Shared Print Primitive + Payment Receipt (appended 2026-06-11)
+
+## E1. Fix Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch E — shared print primitive (FIX-008) + payment receipt (FIX-007) |
+| Superpowers used | Yes (TDD + verification-before-completion) + a 4-lens adversarial verification workflow before commit |
+| Working tree status checked | Yes — clean before Batch E |
+| Fix scope | P2 (FIX-007/008) + a discovered receipt-contract drift fix |
+| Shared files touched | Yes — NEW shared print component `src/components/print/`; global print stylesheet rule in `src/styles/globals.css`; TypeSpec `dental-billing.tsp` + regenerated SDK/validators |
+| Schema/migration touched | No |
+| Code commit | `b5b9e07a` |
+
+## E2. Fixes Selected
+
+| Fix ID | Gap | Severity | Reason | Status |
+| --- | --- | --- | --- | --- |
+| FIX-008 | No shared print/PDF primitive — three modules would diverge | P2 V1 REQUIRED `[SHARED DEPENDENCY]` | One contract for billing receipt (now) + dental-patient statement + case-presentation estimate (later) | Fixed |
+| FIX-007 | `getDentalPaymentReceipt` had 0 FE consumers; no printable receipt (EC5 VOIDED watermark) | P2 V1 REQUIRED | Cash-practice trust artifact; canonical first consumer of the print primitive | Fixed |
+
+## E3. Discovered Drift (fix-ready plan said "backend ready")
+
+The receipt TypeSpec `DentalPaymentReceiptResponse` was a stale FLAT projection `{receiptNumber, amountCents, method, paidAt, invoiceId, patientId}`, but the handler returns — and the FR4.6/EC5 backend tests assert — a rich NESTED shape `{receiptNumber, isVoid, voidedAt, voidReason, payment:{…}, invoice:{…}, patient:{name}, generatedAt}`. The flat contract omits exactly the fields the EC5 VOIDED watermark + an honest receipt need. **Resolution (spec-first-correct, same as the dental-org consent reconcile):** reconciled the TypeSpec to the handler reality, regenerated OpenAPI→validators→SDK, and strengthened the receipt hurl from HTTP-200-only to the nested shape. No non-generated consumer of the old flat type existed (verified) — near-zero blast radius.
+
+## E4. Changes Made
+
+| Fix ID | Implemented | Files |
+| --- | --- | --- |
+| FIX-008 | `PrintableDocument` (title/layout receipt|a4/onPrint seam/children) over the existing `.no-print`/`.print-receipt`/`.print-a4` conventions; a `:has(.print-document)`-scoped region-isolation print rule | NEW `src/components/print/printable-document.tsx` (+test); `src/styles/globals.css` |
+| FIX-007 | `PaymentReceipt` (nested fields + EC5 VOIDED watermark/reason) + `usePaymentReceipt` hook; per-payment-row Receipt action + overlay in invoice-detail | NEW `features/billing/components/payment-receipt.tsx` (+test); NEW `hooks/use-payment-receipt.ts`; `invoice-detail.tsx` |
+| Reconcile | TypeSpec receipt nested models + regen; hurl nested-shape pin | `specs/api/src/modules/dental-billing.tsp`; generated `validators.ts` + SDK; `specs/api/tests/contract/dental-billing.hurl` |
+
+## E5. Adversarial Verification (pre-commit)
+
+4-lens workflow over the uncommitted diff:
+- **Contract-integrity:** clean — reconcile consistent across handler/TypeSpec/OpenAPI/SDK/transformer/FE/hurl; date handling (string|Date) safe; no leftover flat-shape consumer.
+- **Shared-primitive:** **P1 print-isolation defect** found (hide-list vs region-isolate → parent modal backdrop + invoice body bleed onto the receipt page) — **folded in** via the shared-layer `:has(.print-document)` isolation rule (also closes the modal-card-chrome nit). P3 `@page` margin for A4 noted for the future A4 consumer.
+- **Fake-green:** **P2 invoice-detail Receipt wiring untested** (the dental-org Batch B lesson) — **folded in** (`invoice-detail.receipt.test.ts` pins clicked-row → right paymentId). P3 method-label/date/URL pins — **folded in**.
+- **Scope-discipline:** clean — no PDF lib/dependency, no email, no statement/estimate built, no verified-green area touched; reconcile confirmed justified.
+
+## E6. Tests Run
+
+| Command | Result |
+| --- | --- |
+| `bun test src/components/print/` | 6/0 |
+| `bun test .../payment-receipt.test.tsx` | 6/0 |
+| `bun test .../invoice-detail.receipt.test.ts` | 1/0 |
+| `bun test src/features/billing/ + print` | 133/0 |
+| `bun test src/` (full FE) | 2272/0 |
+| FE + api-ts + SDK typecheck | clean |
+| `CONTRACT_ONLY=dental-billing` (fresh :7213) | 40 reqs, 100% (receipt nested shape pinned) |
+
+## E7. Shared / Cross-Module Impact
+
+| Area | Blast Radius | Mitigation |
+| --- | --- | --- |
+| `PrintableDocument` `[SHARED DEPENDENCY]` | dental-patient statement + case-presentation estimate will consume it (layout="a4") | Contract pinned by tests; verified minimal/stable for A4 consumers; `@page` margin noted for the first A4 consumer |
+| globals.css print rule | All print output | Scoped via `:has(.print-document)` — only affects PrintableDocument-rendered content; existing prints (prescription/consent/invoice) untouched; degrades safely |
+| Receipt TypeSpec reconcile | repo-wide SDK | No non-generated consumer of the old type; both typechecks clean |
+
+## E8. Completion Decision
+
+`COMPLETE` (Batch E) — FIX-007 + FIX-008 fixed RED-first, a real receipt-contract drift reconciled, the P1 print-isolation defect + P2 wiring gap from adversarial review folded in before commit, all gates green.
+
+## E9. Recommended Next Step
+
+Per the execution order, proceed to **dental-pmd Batch A** (P0 generation trigger). dental-billing Batches B (discount/void UI), C (payment-plan create), D (pins+seed) remain for later passes. The shared `PrintableDocument` primitive is now available for dental-patient (statement) and case-presentation (estimate) to consume.
