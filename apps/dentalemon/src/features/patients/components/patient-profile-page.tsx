@@ -442,6 +442,8 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
           lastName: data.lastName,
           dateOfBirth: data.dateOfBirth ?? '',
           gender: data.gender ?? '',
+          email: data.email ?? '',
+          phone: data.phone ?? '',
         }}
         disabled={data.status === 'archived'}
         error={saveError ? 'Could not save changes. Please try again.' : null}
@@ -449,11 +451,20 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
         onClose={() => setEditOpen(false)}
         onSubmit={async (d) => {
           try {
+            // #14: send contactInfo only when a non-empty contact value actually
+            // changed — avoids a no-op `patient.contact.update` audit on a plain
+            // demographics save, and skips empty sub-fields (server merge keeps
+            // the stored value; explicit single-field clear is a V2 item).
+            const contactInfo: { email?: string; phone?: string } = {};
+            if (d.email && d.email !== (data.email ?? '')) contactInfo.email = d.email;
+            if (d.phone && d.phone !== (data.phone ?? '')) contactInfo.phone = d.phone;
+            const contactChanged = contactInfo.email !== undefined || contactInfo.phone !== undefined;
             await update({
               firstName: d.firstName,
               lastName: d.lastName,
               dateOfBirth: d.dateOfBirth,
               gender: d.gender,
+              ...(contactChanged ? { contactInfo } : {}),
             });
             setEditOpen(false);
           } catch {

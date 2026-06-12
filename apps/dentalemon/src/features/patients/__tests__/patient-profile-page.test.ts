@@ -232,7 +232,7 @@ describe('PatientProfilePage', () => {
   test('FR2.4: saving the edit PATCHes /dental/patients/:id with the demographics body', async () => {
     const user = userEvent.setup();
     let patchMethod = '';
-    let patchBody: { firstName?: string; lastName?: string } | null = null;
+    let patchBody: { firstName?: string; lastName?: string; contactInfo?: { email?: string; phone?: string } } | null = null;
 
     global.fetch = mock(async (url: string | Request) => {
       const req = url instanceof Request ? url : null;
@@ -268,6 +268,45 @@ describe('PatientProfilePage', () => {
 
     await waitFor(() => expect(patchMethod).toBe('PATCH'));
     expect(patchBody?.firstName).toBe('Mariana');
+    // #14: a demographics-only edit must NOT send contactInfo (no no-op audit).
+    expect(patchBody?.contactInfo).toBeUndefined();
+  });
+
+  test('#14: editing the email PATCHes a contactInfo body', async () => {
+    const user = userEvent.setup();
+    let patchBody: { contactInfo?: { email?: string; phone?: string } } | null = null;
+
+    global.fetch = mock(async (url: string | Request) => {
+      const req = url instanceof Request ? url : null;
+      const urlStr = req ? req.url : (url as string);
+      const method = req ? req.method : 'GET';
+      if (urlStr.includes('follow-up-notes')) return jsonResponse({ notes: [], total: 0 });
+      if (urlStr.includes('/visits')) return jsonResponse({ data: [], pagination: EMPTY_PAGINATION });
+      if (urlStr.includes('dental/invoices') || urlStr.includes('billing/invoices')) {
+        return jsonResponse({ data: [], total: 0 });
+      }
+      if (urlStr.includes('dental/patients')) {
+        if (method === 'PATCH' && req) {
+          patchBody = (await req.clone().json()) as typeof patchBody;
+          return jsonResponse(RAW_PROFILE);
+        }
+        return jsonResponse(RAW_PROFILE);
+      }
+      return jsonResponse({});
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const email = (await screen.findByLabelText(/email/i)) as HTMLInputElement;
+    await user.clear(email);
+    await user.type(email, 'updated@email.com');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(patchBody?.contactInfo).toBeDefined());
+    expect(patchBody?.contactInfo?.email).toBe('updated@email.com');
+    // Unchanged phone is not resent (partial body).
+    expect(patchBody?.contactInfo?.phone).toBeUndefined();
   });
 
   // ── Coherence oracle (workflow-verification backfill) ─────────────────────

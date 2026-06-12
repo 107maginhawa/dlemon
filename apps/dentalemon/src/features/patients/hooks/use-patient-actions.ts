@@ -20,12 +20,13 @@ import { exportDentalPatients } from '@monobase/sdk-ts/generated';
 
 // ─── useUpdatePatient (FR2.4) ───────────────────────────────────────────────
 
-/** Demographics body the form can send (name / DOB / gender). */
+/** Demographics body the form can send (name / DOB / gender / contact — #14). */
 export interface UpdatePatientDemographics {
   firstName?: string;
   lastName?: string;
   dateOfBirth?: string;
   gender?: string;
+  contactInfo?: { email?: string; phone?: string };
 }
 
 export function useUpdatePatient(patientId: string) {

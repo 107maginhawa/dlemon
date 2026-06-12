@@ -19,6 +19,8 @@ const initial = {
   lastName: 'Santos',
   dateOfBirth: '1990-04-22',
   gender: 'female',
+  email: 'maria@clinic.test',
+  phone: '+639170000001',
 };
 
 describe('PatientEditForm', () => {
@@ -35,6 +37,36 @@ describe('PatientEditForm', () => {
     expect((screen.getByLabelText(/last name/i) as HTMLInputElement).value).toBe('Santos');
     expect((screen.getByLabelText(/date of birth/i) as HTMLInputElement).value).toBe('1990-04-22');
     expect((screen.getByLabelText(/gender/i) as HTMLSelectElement).value).toBe('female');
+  });
+
+  // #14 (V-PAT-014): contact info (phone/email) is editable here.
+  test('renders prefilled contact info', () => {
+    render(
+      React.createElement(PatientEditForm, {
+        open: true,
+        initial,
+        onClose: () => {},
+        onSubmit: async () => {},
+      }),
+    );
+    expect((screen.getByLabelText(/email/i) as HTMLInputElement).value).toBe('maria@clinic.test');
+    expect((screen.getByLabelText(/phone/i) as HTMLInputElement).value).toBe('+639170000001');
+  });
+
+  test('calls onSubmit with edited contact info', async () => {
+    const user = userEvent.setup();
+    const onSubmit = mock(async () => {});
+    render(
+      React.createElement(PatientEditForm, { open: true, initial, onClose: () => {}, onSubmit }),
+    );
+    await user.clear(screen.getByLabelText(/email/i));
+    await user.type(screen.getByLabelText(/email/i), 'new@clinic.test');
+    await user.clear(screen.getByLabelText(/phone/i));
+    await user.type(screen.getByLabelText(/phone/i), '+639170000099');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ email: 'new@clinic.test', phone: '+639170000099' });
   });
 
   test('does not render when open is false', () => {

@@ -9,8 +9,9 @@
  * invalidation), mirroring PatientRegistrationModal. Archived patients are
  * read-only (BR-015b): the server returns 403, and the form pre-disables.
  *
- * Contact info (phone/email) is intentionally NOT editable here: V-PAT-014 keeps
- * person.contactInfo out of the patient profile, so there is no value to edit.
+ * Contact info (phone/email) IS editable here per decision #14 (V-PAT-014): it is
+ * surfaced on the profile and saved as person.contactInfo (a partial merge on the
+ * server — an omitted/blank sub-field is sent through and merged).
  */
 
 import React, { useState } from 'react';
@@ -20,6 +21,8 @@ export interface PatientEditData {
   lastName: string;
   dateOfBirth: string; // '' when unset
   gender: string; // '' when unset
+  email: string; // '' when unset
+  phone: string; // '' when unset
 }
 
 interface PatientEditFormProps {
@@ -57,6 +60,8 @@ export function PatientEditForm({
   const [lastName, setLastName] = useState(initial.lastName);
   const [dateOfBirth, setDateOfBirth] = useState(initial.dateOfBirth);
   const [gender, setGender] = useState(initial.gender);
+  const [email, setEmail] = useState(initial.email);
+  const [phone, setPhone] = useState(initial.phone);
   const [fieldError, setFieldError] = useState<string | null>(null);
 
   if (!open) return null;
@@ -79,6 +84,8 @@ export function PatientEditForm({
       lastName: lastName.trim(),
       dateOfBirth,
       gender,
+      email: email.trim(),
+      phone: phone.trim(),
     });
   }
 
@@ -166,6 +173,38 @@ export function PatientEditForm({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Email (#14: person.contactInfo.email) */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="edit-email" className="text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="edit-email"
+              type="email"
+              value={email}
+              disabled={disabled}
+              onChange={(e) => setEmail(e.target.value)}
+              aria-label="Email"
+              className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50"
+            />
+          </div>
+
+          {/* Phone (#14: person.contactInfo.phone) */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="edit-phone" className="text-sm font-medium">
+              Phone
+            </label>
+            <input
+              id="edit-phone"
+              type="tel"
+              value={phone}
+              disabled={disabled}
+              onChange={(e) => setPhone(e.target.value)}
+              aria-label="Phone"
+              className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50"
+            />
           </div>
 
           {fieldError && <span className="text-xs text-destructive">{fieldError}</span>}
