@@ -171,3 +171,49 @@ Backend-only slice (no TypeSpec/wire/SDK/FE change → no contract/FE/E2E, mirro
 
 ## Completion decision
 `COMPLETE` (migration-safety pass) — **closes Track 1** of the AHA prompt-04 worklist. Remaining pmd work: Batch D (honest E2E, needs dental-clinical top-bar), Batch E (sign-or-strip → strip per decision #4), and decision-#20 part (b) (append-only merge mechanism + FIX-003 consumer).
+
+---
+
+# Addendum — Batch E: sign-or-strip → STRIP (2026-06-12, post product-decision session)
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (consolidated via `outputs/EXECUTION-TODO.md` Track 3, line 48) · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Superpowers:** Yes (verification-before-completion). Driven by `outputs/product-decisions.md` **#4** (strip + defer honestly). Code/contract/docs commit `49e1197c`.
+
+## Decision executed
+**#4 — strip, not wire.** `sign()` has 0 production callers and `signature`/`signed_at` are always NULL; shipping a digital-signature / non-repudiation claim we do not enforce is a compliance liability. Strip the misleading language, **leave signing absent**, document FR12.4 as honestly deferred to Phase-2.
+
+## §15 — code-truth verification BEFORE editing (the fix-ready "strip" premise was unverified)
+1. **`sign()` path exists, 0 production callers — but NOT pure dead code:** it has 5 dedicated repo unit tests (`pmd-document.test.ts`: generated→signed transition, re-sign prevention, signature preservation, `findMany({status:'signed'})`), DB columns (`signature`/`signed_at`), an enum value (`signed`), a TypeSpec field + status, and a FE viewer banner. So this is a **tested Phase-2 stub**, not removable dead code.
+2. **The signature FIELD is in the contract** (`PMDDocument.signature?`/`signedAt?` + `PMDDocumentStatus.signed`), and the TypeSpec `@example` was a **fake "Signed PMD"** (`status: signed`, `signature: "MEYCIQDsX3..."`, `signedAt`) — the single most **actively-misleading client-facing artifact** in the canonical `openapi.json`.
+3. **Layered one-sided drift** (as the prompt predicted, same class as clinical-F): MODULE_SPEC §-deferred (L73) was already reconciled, but §1/§2/§8/§13 + all of API_CONTRACTS + TypeSpec + code comments + a UI-prototype doc still claimed "signed / non-repudiable".
+
+## Fork: REMOVE vs LEAVE-AND-DOCUMENT `sign()` → resolved by decision + risk (no AskUserQuestion)
+Decision #4 says **"leave the signature field absent"** = keep the Phase-2-reserved stub, strip only the claims. Removing would be the **higher-risk** path: a destructive column drop (migration) + enum migration + deleting 5 passing tests + a contract change + breaking the FE signed-banner test — all for no compliance benefit over an honestly-labeled absent field. **Kept-and-relabeled** the field/columns/enum/`sign()`/FE-banner as documented Phase-2 stubs. The genuine remove-vs-keep fork was therefore **not** non-obvious after tracing → picked the lower-risk option per the default lean; no user question needed.
+
+## What shipped (strip across 5 layers — no behavior/wire change)
+| Layer | File | Change |
+| --- | --- | --- |
+| Contract | `specs/api/src/modules/dental-pmd.tsp` | module docstring reworded; `@example` "Signed PMD"→unsigned `generated` PMD (fake signature removed); `signature?`/`signedAt?` field comments + `signed` enum → Phase-2 (FR12.4) reserved. Wire types byte-identical. |
+| Backend | `generatePMD.ts` | strip "non-repudiation" from the patient-bind comment (kept accurate checksum-sealed integrity); core docstring notes V1 is UNSIGNED. |
+| Backend | `repos/pmd-document.repo.ts` | header + `sign()` relabeled as a Phase-2/FR12.4 stub (0 prod callers; tests-only). |
+| Schema | `repos/pmd-document.schema.ts` | header docstring + `signature`/`signed_at` column comments + `signed` enum → Phase-2 reserved (NO migration). |
+| FE | `pmd-viewer.tsx` | signed-banner (gated on the unreachable `signed` state) marked Phase-2-reserved stub. |
+| Docs | `MODULE_SPEC.md` | §1/§2/§8/§13 reconciled + **NEW §8b "Signing posture (FR12.4 — Phase-2 deferred)"** resolving the dangling "see §-signing note" reference. |
+| Docs | `API_CONTRACTS.md` | header note; response field table + export envelope annotate signature/signedAt/`signed` as Phase-2 reserved (always null in V1). |
+| Docs | `ui-prototype/screens.md` | "per-visit signed snapshots"→"checksum-sealed". |
+
+**Honest-deferral pin** (added to `dental-pmd.test.ts` generate path, non-vacuous regression guard): a generated PMD asserts `status != 'signed'` + `signature`/`signedAt` null — catches any future accidental wiring of signing.
+
+## Tests / gate (no behavior change → self-review, not 3-lens; clinical-F precedent)
+| Command | Result |
+| --- | --- |
+| `dental-pmd.test.ts` (incl. honest-deferral pin) | 45 / 0 |
+| `repos/pmd-document.test.ts` (`sign()` stub still works) | 18 / 0 |
+| `pmd-generation-trigger.test.ts` | 2 / 0 |
+| FE `pmd-viewer.test.ts` (Phase-2 signed-banner test) | 5 / 0 |
+| `specs/api` build → `api-ts generate` → `sdk-ts generate` | clean; **SDK drift = description-only** (no wire-type change); `openapi.json` fake signature removed |
+| root typecheck (FE + api-ts) | 0 |
+| eslint (changed src) | 0 errors (2 pre-existing unused-import warnings) |
+| **pmd hurl contract** (fresh :7213) | **27 / 27** |
+
+## Completion decision
+`COMPLETE` (Batch E). Signing claims stripped honestly; FR12.4 documented as Phase-2 with the stub retained. Remaining pmd work: **Batch C2-b** (append-only safety-floor merge mechanism + FIX-003 clinical consumer, decision #20 part b) and **Batch D** (honest E2E — dental-clinical top-bar has since landed, so it is now runnable).
