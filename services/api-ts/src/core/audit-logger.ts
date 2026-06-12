@@ -1,8 +1,11 @@
 /**
  * Dental audit shim — writes to Pino, dental_audit_log (spec), AND dental_audit (legacy).
+ * Writes are inline/synchronous (ADR-005) — there is no async/pg-boss pipeline.
  *
- * Use in any handler that touches PHI. Never throws — audit failure
- * must never break the main request.
+ * Use in any handler that touches PHI. By default fire-and-forget: a write failure
+ * is logged but never breaks the main request. EXCEPTION (fail-closed): security-class
+ * events (eventType === 'security') and calls passing `{ failClosed: true }` RETHROW
+ * when the authoritative `dental_audit_log` write fails (see logAuditEvent below).
  */
 
 import type { DatabaseInstance } from './database';
@@ -62,9 +65,9 @@ async function withConnectionRetry<T>(fn: () => Promise<T>): Promise<T> {
  * never deleted, so any PHI written into `metadata` OR the before/after row snapshots is
  * unremediable (AC-AUD-004 / "No PHI in log body" / HIPAA breach). The recursive
  * sanitizer now lives in `core/audit-phi-sanitizer.ts` so it is shared across EVERY
- * write path — including the pg-boss consumer, which writes via
- * `AuditLogRepository.insert` (the single choke point) without going through this
- * function.
+ * write path that goes through `AuditLogRepository.insert` (the single choke point) —
+ * it sanitizes there too, without going through this function. (Audit writes are
+ * inline/synchronous per ADR-005; there is no async/pg-boss consumer.)
  *
  * `logAuditEvent` still sanitizes here for two reasons: (1) to emit the best-effort
  * warn log when PHI is stripped, and (2) because the legacy `dental_audit` table write

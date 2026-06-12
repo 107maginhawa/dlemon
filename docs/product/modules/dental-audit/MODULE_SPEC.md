@@ -6,12 +6,12 @@
 Spec Version: 1.0 | Last Updated: 2026-05-24
 ---
 
-> **⚠️ Architecture correction (G8-S8 / [ADR-005](../../../decisions/ADR-005-audit-write-path.md)):** This spec was authored assuming **pg-boss async** audit writes. The implementation writes audit events **inline and synchronously** (`core/audit-logger.ts#logAuditEvent` → `await auditLogRepo.insert`, dual-writing the authoritative `dental_audit_log` table + the legacy `dental_audit` table). AC-AUD-001's pg-boss/5s-async requirement is **superseded by ADR-005**. The viewer endpoint is `GET /dental/audit-events` (G8-S4). Treat every "pg-boss"/"async" mention below (§1, §3, §6, §14, §16, §19, §20) as **historical** — the durable, read-after-write **inline synchronous** path is authoritative. Write durability is hardened (V-AUD-007 / EM-AUD-008): one transient-connection retry, explicit row id, and **fail-closed rethrow on security-class events**. PHI safety is enforced by a **recursive sanitizer at the `AuditLogRepository.insert` choke point** (V-AUD-101) — covering metadata AND before/after snapshots on every write path — and the viewer DTO omits the snapshot columns entirely (V-AUD-003).
+> **⚠️ Architecture correction (G8-S8 / [ADR-005](../../../decisions/ADR-005-audit-write-path.md)):** This spec was authored assuming **pg-boss async** audit writes. The implementation writes audit events **inline and synchronously** (`core/audit-logger.ts#logAuditEvent` → `await auditLogRepo.insert`, dual-writing the authoritative `dental_audit_log` table + the legacy `dental_audit` table). AC-AUD-001's pg-boss/5s-async requirement is **superseded by ADR-005**. The viewer endpoint is `GET /dental/audit-events` (G8-S4). The spec body below has been **reconciled to the inline-synchronous reality** (dental-audit FIX-003); AC-AUD-001's original ≤5s async budget is retained only as historical traceability. The durable, read-after-write **inline synchronous** path is authoritative. Write durability is hardened (V-AUD-007 / EM-AUD-008): one transient-connection retry, explicit row id, and **fail-closed rethrow on security-class events**. PHI safety is enforced by a **recursive sanitizer at the `AuditLogRepository.insert` choke point** (V-AUD-101) — covering metadata AND before/after snapshots on every write path — and the viewer DTO omits the snapshot columns entirely (V-AUD-003).
 
 ## 1. Module Overview
 **Purpose:** Dental-specific audit trail and compliance event log. Extends the base `audit` platform module with dental domain events. Append-only; no record is ever deleted. Consumed by dentist_owner via the audit log viewer (WF-028).
 
-**Users:** dentist_owner (view); System (all modules write events via pg-boss async)
+**Users:** dentist_owner (view); System (all modules write events inline/synchronously via `logAuditEvent`, per ADR-005)
 
 **Related:** All modules (event producers via DE-001–DE-024), dental-org (audit log viewer endpoint, assertBranchAccess)
 
@@ -27,7 +27,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 ## 3. Workflows
 WF-028: View audit log (dentist_owner, branch-scoped, filterable by actor/event/date)
-WF-096 [INFERRED]: Write audit event (async, all modules via pg-boss on every write operation)
+WF-096 [INFERRED]: Write audit event (inline/synchronous via `logAuditEvent`, all modules, on every write operation — ADR-005)
 
 ---
 
@@ -62,12 +62,12 @@ GET /dental/audit-events (branchId [required], actorId?, eventType?, targetType?
 ---
 
 ## 10b. Domain Events
-Consumed: ALL domain events (DE-001 through DE-024) → each writes one audit event asynchronously
+Consumed: ALL domain events (DE-001 through DE-024) → each writes one audit event inline/synchronously (ADR-005)
 
 ---
 
 ## 11. Acceptance Criteria
-**AC-AUD-001:** Any write operation across any module → audit event created within 5s.
+**AC-AUD-001:** Any write operation across any module → audit event created **synchronously within the same request** (read-after-write; the original ≤5s async budget is superseded by ADR-005).
 **AC-AUD-002:** Audit event cannot be modified or deleted (405 on PATCH/PUT/DELETE).
 **AC-AUD-003:** Audit log viewer returns only events for the requesting user's branch — branchId is REQUIRED (omitted → 400; never an unscoped all-tenant query, EM-AUD-002) and the caller must be a dentist_owner of that branch (`assertBranchRole`); a dentist_owner of a *different* org passing this branchId is denied 403 (cross-tenant read denial, pinned in getAuditEvents.test.ts).
 **AC-AUD-004:** No email or name fields appear in any audit event (G-005 compliance).
@@ -75,13 +75,13 @@ Consumed: ALL domain events (DE-001 through DE-024) → each writes one audit ev
 ---
 
 ## 14. Dependencies
-**Internal:** dental-org (assertBranchAccess for viewer endpoint), all modules (event sources via pg-boss)
-**External:** pg-boss (async event queue)
+**Internal:** dental-org (assertBranchAccess for viewer endpoint), all modules (event sources via `logAuditEvent`, inline/synchronous)
+**External:** None (audit writes are inline/synchronous per ADR-005 — no async queue)
 
 ---
 
 ## 16. Performance Expectations
-Audit event write < 5s (async via pg-boss). Audit log viewer < 2s (paginated, 7 years retention = ~100k events/branch).
+Audit event write: inline/synchronous, sub-request latency (ADR-005; the original <5s async budget is superseded). Audit log viewer < 2s (paginated, 7 years retention = ~100k events/branch).
 
 ---
 
@@ -91,13 +91,13 @@ The audit module does not *consume* domain events to re-emit them (no recursion)
 ---
 
 ## 19. Vertical Slice Plan
-AUD-S1: Audit event write (pg-boss consumer) | AUD-S2: Audit log viewer (paginated, filtered) | AUD-S3: G-005 PHI removal from auth logs
+AUD-S1: Audit event write (inline/synchronous via `logAuditEvent`) | AUD-S2: Audit log viewer (paginated, filtered) | AUD-S3: G-005 PHI removal from auth logs
 
 ---
 
 ## 20. AI Instructions
 1. NO PHI in any audit log field — G-005 is a P1 gap requiring Wave G1 fix.
-2. Audit events written async via pg-boss — never block the main request path.
+2. Audit events written inline/synchronously via `logAuditEvent` (ADR-005): non-security writes are fire-and-forget (best-effort, never break the request); security-class + opt-in financial/clinical writes are fail-closed (rethrow on authoritative-write failure).
 3. No PATCH/PUT/DELETE routes on audit events.
 4. Paginate all audit log queries — never return unbounded sets.
 5. Follow ARCHITECTURE.md, CONTRIBUTING.md, VERTICAL_TDD.md.
