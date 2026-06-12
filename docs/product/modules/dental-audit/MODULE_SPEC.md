@@ -66,6 +66,27 @@ Consumed: ALL domain events (DE-001 through DE-024) → each writes one audit ev
 
 ---
 
+## 10c. Sink boundary (three audit sinks) — FIX-004
+
+Audit history is currently fragmented across **three** physical sinks. This is a
+documented boundary, not a bug to silently work around; consolidation (routing
+base-module events into the dental viewer + a 3→1 merge) is **`[NEEDS PRODUCT
+DECISION]` Q2 / deferred** — this section is the decision input.
+
+| # | Table | Written by | Read by | What it holds | In the dental viewer (getAuditEvents)? |
+|---|-------|-----------|---------|---------------|----------------------------------------|
+| 1 | `dental_audit_log` (**authoritative**) | `core/audit-logger.ts#logAuditEvent` → `AuditLogRepository.insert` (FIRST; fail-closed for security / opt-in financial/clinical) | **WF-028 dental viewer** `GET /dental/audit-events` (FIX-001) | All dental domain audit events (visit/invoice/consent/Rx/role/PIN/…) + the viewer's own `audit_log.accessed` self-audit | **YES** — this is the only table the viewer reads |
+| 2 | `dental_audit` (**legacy**) | `logAuditEvent` → `DentalAuditRepository.log` (SECOND; fire-and-forget, swallowed on failure) | Legacy wiring tests only — **no viewer** | A duplicate of every event in sink #1 (dual-write) | **NO** — not surfaced anywhere; retained for back-compat |
+| 3 | `audit_log_entry` (**base platform**) | base `handlers/audit/repos/audit.repo.ts#AuditRepository.logEvent` | base `GET` `listAuditLogs`; retention job `audit.retention` (purges > 7y / 2555d) | Base-module / platform events incl. base PHI-access reads | **NO** — separate module, separate table, separate endpoint |
+
+**Viewer visibility — what the dental owner CAN and CANNOT see:**
+- **CAN see:** every event the dental modules write via `logAuditEvent` (sink #1) — who voided an invoice, who amended a signed note, who changed a role, who accessed the audit log, etc.
+- **CANNOT see:** base-module PHI-access events that only land in sink #3 (`audit_log_entry`). A clinic owner reviewing the dental audit log does **not** get a single pane over base-platform reads. **This is the intentional, documented boundary** (Q2). Surfacing sink #3 in the dental viewer touches other modules' write paths and is out of scope until Q2 is decided.
+
+**Divergence guard (sinks #1 ↔ #2):** because sink #2 is fire-and-forget, it can silently drop while sink #1 succeeds. `legacy-sink-divergence.test.ts` is the canary: after N mixed `logAuditEvent` calls it asserts `count(dental_audit) == count(dental_audit_log)` (and per-action parity). It fails loudly if the legacy write ever starts diverging — giving the eventual legacy-sunset decision (Q3) a measured baseline. The canary does **not** cover sink #3 (a different module's table, not dual-written).
+
+---
+
 ## 11. Acceptance Criteria
 **AC-AUD-001:** Any write operation across any module → audit event created **synchronously within the same request** (read-after-write; the original ≤5s async budget is superseded by ADR-005).
 **AC-AUD-002:** Audit event cannot be modified or deleted (405 on PATCH/PUT/DELETE).
