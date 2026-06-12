@@ -108,6 +108,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Lint migration safety
         run: cd services/api-ts && bun run lint:migrations
+      - name: Lint test-harness (no new raw-handler mounts)
+        run: cd services/api-ts && bun run lint:test-harness
 
   duplicate-op-check:
     name: No Duplicate OperationId

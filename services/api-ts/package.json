@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:migrations": "bun scripts/lint-migrations.ts",
+    "lint:test-harness": "bun scripts/lint-test-harness.ts",
     "check:duplicate-ops": "bun scripts/check-duplicate-operation-ids.ts",
     "check:boundaries": "bun scripts/check-module-boundaries.ts",
     "check:boundaries:error": "bun scripts/check-module-boundaries.ts --error",
