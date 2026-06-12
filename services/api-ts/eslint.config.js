@@ -74,4 +74,24 @@ const testAnyOverride = {
   },
 };
 
-export default [...config, boundaryRule, prodAnyError, testAnyOverride];
+/**
+ * No raw `console` in handlers (PHI guard). Handler code touches patient PHI;
+ * the Pino logger (`core/logger.ts`) recursively redacts PHI field names at any
+ * depth, but a stray `console.log(patient)` bypasses that entirely and leaks the
+ * raw object. Handlers have zero console usage today, so this is a zero-churn
+ * ratchet that keeps PHI flowing only through the redacting logger. Bootstrap
+ * `console` (core/*: openapi/config/database, pre-logger) is out of scope here.
+ * Test files are exempt — debug logging in tests carries no production PHI.
+ */
+const noConsoleInHandlers = {
+  files: ['src/handlers/**/*.ts'],
+  ignores: ['src/handlers/**/*.test.ts', 'src/handlers/**/*.test-*.ts'],
+  rules: {
+    // Passing an explicit options object replaces the base allow-list
+    // (warn/error/info): in handlers EVERY console method leaks raw PHI, so all
+    // are blocked (the rule default allows none). Use the redacting logger.
+    'no-console': ['error', {}],
+  },
+};
+
+export default [...config, boundaryRule, prodAnyError, testAnyOverride, noConsoleInHandlers];
