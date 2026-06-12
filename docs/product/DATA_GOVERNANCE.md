@@ -101,13 +101,13 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Treatment` | Same as Visit | No | Same as Visit | — |
 | `Prescription` | 5 years (PH) / 2 years (EU) | No | Retain; anonymize patient link | [VERIFY per locale] |
 | `ImagingStudy` + S3 | 7 years clinical minimum | No | Delete S3 object + DB metadata on erasure | Must delete radiographs on GDPR erasure request |
-| `PMDDocument` | Permanent (signed export) | **NO — cannot delete** | Cannot delete signed PMD per compliance | PMD signing is non-repudiable |
+| `PMDDocument` | Permanent (immutable clinical export) | **NO — cannot delete** | Immutable once generated; supersede-on-amend only | Checksum-sealed (tamper-evident) clinical record; digital signing / non-repudiation is Phase-2 (FR12.4), not V1 |
 | `Invoice` / `LineItem` | 7 years (financial / tax) | No | Anonymize patient link; retain for tax audit | All locales: 7-year financial records |
 | `AuditEvent` | 7 years minimum | No | Append-only; no deletion ever | HIPAA audit trail requirement |
 | `ConsentForm` | Duration of care + 10 years | No | Retain; mark revoked | Must be available for litigation |
 | `MedicalHistoryEntry` | Same as Visit | No | Same as Visit | — |
 | `Appointment` | 1 year from date | Yes (after 1 year) | Soft-delete | Admin only |
-| `Authentication sessions` | Session expiry (ADR-007 — [UNSPECIFIED]) | Yes | Auto-expire | [RESOLVE: define session TTL] |
+| `Authentication sessions` | **PIN: 5 min idle (in-memory) / Cloud: 7 days absolute (ADR-003)** | Yes | PIN auto-lock on idle; cloud session DB-revoke → immediate 401 | Two-layer model per ADR-003: PIN re-auth at the shared workstation (HIPAA §164.312(a)(2)(iii) automatic logoff — 5 min is stricter than the common 10–15 min); cloud "stay signed in" trust = 7-day industry default |
 | `Person` PII fields | Linked to Patient retention | No | Anonymize on erasure (replace with pseudonym) | GDPR Art. 17 + BR-020 patient merge |
 
 ---
@@ -240,7 +240,7 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 |---------|----------|------------|
 | AG-1 | Exact retention periods per locale | [VERIFY]: PH=10y, EU=varies by record type, US=7y minimum |
 | AG-2 | Audit log retention period | **7 years** — HIPAA minimum; append-only, never deleted |
-| AG-3 | PMD deletion policy for signed documents | **Cannot delete** — signed PMD is non-repudiable; anonymize DB record only |
+| AG-3 | PMD deletion policy | **Cannot delete** — PMD is an immutable, checksum-sealed (tamper-evident) clinical record; anonymize DB record only. Digital signing / non-repudiation is Phase-2 (FR12.4), not V1 — do not claim "signed/non-repudiable" until it ships. |
 | AG-4 | Data portability export format | **DEFERRED pending WFG-006 PRD decision** (V-IMG-EXP-001, see §4 note). PMD covers clinical per-visit; patient-list CSV exists; bulk/multi-entity Art. 20 bundle blocked on an undecided portability format — not a P1 gap until PRD resolves WFG-006. |
-| AG-5 | Session TTL (ADR-007) | [UNRESOLVED] — must define before compliance sign-off |
+| AG-5 | Session TTL (ADR-003) | **RESOLVED (decision C-3, 2026-06-12)** — PIN idle = **5 min** (`apps/dentalemon/src/lib/pin-session.ts` `INACTIVITY_TIMEOUT_MS`, in-memory, lost on reload); cloud session = **7 days** absolute (DB-stored, revoke → immediate 401). Documented in ADR-003 §Addendum. (Note: the session-expiry ADR is **ADR-003**; an earlier "ADR-007" citation here was a misnumber — ADR-007 is self-service onboarding.) |
 | AG-6 / G-012 | PHI at-rest encryption | **SATISFIED-by-infra.** Control is storage-layer (transparent disk/volume / managed-Postgres + S3 SSE) encryption, defined in §1.1 — NOT column-level. Verified by a non-regressable startup attestation: `DB_AT_REST_ENCRYPTION` (`enabled`/`verified`) parsed in `services/api-ts/src/core/config.ts` (`config.database.atRestEncryption`) and asserted in the production boot guard — the server refuses to start if unattested. Evidence: `services/api-ts/src/core/config.test.ts` (V-DG-001 cases, RED-without/GREEN-with) + operator-set env (`.env.example`). Column-level encryption deferred as future defense-in-depth for a named ultra-sensitive subset only (§1.2). |
