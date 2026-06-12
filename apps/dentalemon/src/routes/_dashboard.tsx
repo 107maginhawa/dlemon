@@ -5,6 +5,7 @@ import { loadOrgContext } from '@/lib/load-org-context'
 import { pinSession } from '@/lib/pin-session'
 import { AppSidebar, filterNavGroupsByRole, type NavGroup } from '@/components/app-sidebar'
 import { NotificationBell } from '@/features/notifications/notification-bell'
+import { usePushNotificationRouting } from '@/features/notifications/hooks/use-push-notification-routing'
 import type { DentalRole } from '@/lib/rbac'
 import {
   SidebarProvider,
@@ -60,6 +61,10 @@ function DashboardLayout() {
   // source the route `requireRole(module)` guards read (org-context store), so
   // the sidebar and the route guards stay in lockstep (J-RBAC-NAV-001).
   const role = useOrgContextStore((s) => s.role) as DentalRole | null
+
+  // FIX-002: register the push-notification click → deep-link router once the
+  // authenticated shell is mounted (no-op when push is unconfigured).
+  usePushNotificationRouting()
 
   // Each item declares the RBAC `module` that gates its route. `Dashboard` is
   // intentionally ungated — it is the universal redirect fallback every guard
