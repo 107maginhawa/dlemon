@@ -415,4 +415,28 @@ Decision #7 (erase by imaging parity) shipped — closes the database-schema-aud
 
 **3-lens caught a real security BLOCKER** (full report in `EXECUTION-TODO.md` line 47): `filePath` is an unvalidated client string with no FK — legacy `/uploads/…` rows (seed + the imaging "legacy attachment" path) would have been issued as silently-succeeding bogus `DeleteObject`s (false-erasure) and the PHI-bearing path was retained. Fixed inline via a new `filterExistingStoredFileIds` storage facade (uuid-guarded existence check) + `filePath` redaction. Gate: backend 50/0, erasure contract 33/33, typecheck/lint/boundaries clean, no regen. Roadmap (shared with imaging): operator-reachable pending-S3 retry + durable pending-record + HeadObject confirm + validate-filePath-at-write.
 
-Remaining dental-clinical Track-3 item: **GAP-5 allergy confirm-dialog (#11)**.
+Remaining dental-clinical Track-3 item: **GAP-5 allergy confirm-dialog (#11)** — DONE below.
+
+---
+
+## Track 3 — GAP-5 allergy blocking-with-override (#11) — DONE 2026-06-12 (commit `97a179ab`)
+
+Decision #11 (restore PRD FR1.12/FR2.15 "blocking-with-override"; FE confirm-dialog; backend unchanged) shipped. The conflict was previously surfaced only AFTER a 201 (advisory amber banner + submit-disable), so the gate could never block *before* the Rx was saved.
+
+**§15 / design fork resolved to option (a) — true pre-submit gate.** Before coding, confirmed the FE already holds the patient's active allergies client-side via `useMedicalHistory(patientId)` — the same safety-floor cache the `WorkspaceTopBar` renders (react-query dedupes the key, so no extra fetch). That makes a real pre-submit check clean FE-only, so no AskUserQuestion was needed. `$patientId.tsx` sources the active allergies and passes `patientAllergies` as a prop so `RxSheet` stays prop-pure (its `global.fetch` test harness has no QueryClient).
+
+| Change | What | File |
+| --- | --- | --- |
+| FE (matcher) | `matchAllergyConflicts` — case-insensitive substring in EITHER direction, mirroring `createPrescription.ts:51-62`; trims both sides (defensive superset) + skips empty allergens | `rx-sheet.tsx` |
+| FE (gate) | `handleSave(allergyOverridden)` checks conflicts BEFORE the POST; on conflict opens a Radix confirm dialog (`pre-completion-checklist` pattern — no shadcn AlertDialog in repo) and returns without saving | `rx-sheet.tsx` |
+| FE (override) | dialog "Prescribe anyway" → `handleSave(true)` (threaded as an arg, race-free); submit `onClick` changed to `() => handleSave()` so a MouseEvent can't spoof the override | `rx-sheet.tsx` |
+| FE (coexistence) | post-save server banner retained for **drug-drug interactions** (server-only knowledge) and as a divergence fallback when no client allergies are supplied → existing QW-1/P1-1 banner tests stay green unchanged | `rx-sheet.tsx` |
+| FE (wiring) | source active allergies (`e.active && e.entryType==='allergy'` → `displayName`, same predicate as the top bar) and pass `patientAllergies` | `$patientId.tsx` |
+
+**3-lens adversarial review (mutation-tested, not self-review — clinical-safety path).** Lens-1 caught a real **MAJOR**: the override originally discarded the *entire* server `allergyConflicts` array, so a stale-cache server allergen the clinician never acknowledged was swallowed from the post-save banner. **Fixed to set-based suppression** — suppress only the allergens the confirm dialog actually showed; any server conflict not in that set still surfaces post-save (mutation-pinned: blanket suppression → 1 RED). Lens-2 = clean (dedup, field correctness, prop-purity, suppression coherence all verified). Lens-3 = every mutation (matcher→false, drop `return`, drop empty-guard, blanket suppression, `onClick={handleSave}` spoof) killed → suite non-vacuous.
+
+**Gate:** rx-sheet **24/0**; FE **2420/0**; new real-UI E2E (seed allergy → conflicting drug → dialog blocks → override → reopen Prescriptions tab → row created) + lifecycle spec **2/2**; typecheck (FE + api-ts) **0**; lint **0 errors**. Backend UNCHANGED → no TypeSpec/SDK/contract/regen step.
+
+**Roadmap flag:** the pre-submit block **fail-opens** when the medical-history cache is cold/loading/errored (`patientAllergies=[]`) and degrades to the post-save server advisory. Bounded — the visible safety-floor badges (same cache) and the unconditional server advisory still fire, so nothing ships unwarned — and hard-gating Save on query state would block legitimate prescribing during an MH read outage, which is worse. Flagged, not fixed.
+
+This closes the last decision-gated dental-clinical Track-3 item except attachment erasure (#7, done above).
