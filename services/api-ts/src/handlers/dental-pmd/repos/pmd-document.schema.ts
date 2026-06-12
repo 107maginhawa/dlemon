@@ -82,9 +82,13 @@ export const importedPmds = pgTable('imported_pmd', {
  * 0063 created this table as raw SQL with NO Drizzle model, leaving it orphaned (absent
  * from the Drizzle snapshot). This model brings it under the ORM so db:generate tracks it;
  * the reconcile migration syncs the snapshot idempotently against the table 0063 already
- * created on every environment. The append-only MERGE MECHANISM (markSafetyFloorMerged)
- * and its FIX-003 clinical consumer are intentionally DEFERRED (decision #20) — this is the
- * table definition only, so the snapshot stops trying to re-CREATE the orphan.
+ * created on every environment.
+ *
+ * Batch C2-b (decision #20): the merge is now LIVE — mergeImportedPMDSafetyFloor inserts
+ * one append-only event here (the unique index on imported_pmd_id makes merge-once a DB
+ * invariant → 409 on a second merge) and surfaces the imported safety items into the
+ * patient's medical history (the FIX-003 clinical consumer). See
+ * ImportedPMDRepository.recordSafetyFloorMergeEvent.
  *
  * Shape mirrors 0063 exactly: no baseEntityFields (only id/imported_pmd_id/merged_at/
  * merged_by), explicit FK name so the generated constraint matches the 0063 one.

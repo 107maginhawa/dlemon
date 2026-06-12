@@ -217,3 +217,49 @@ Decision #4 says **"leave the signature field absent"** = keep the Phase-2-reser
 
 ## Completion decision
 `COMPLETE` (Batch E). Signing claims stripped honestly; FR12.4 documented as Phase-2 with the stub retained. Remaining pmd work: **Batch C2-b** (append-only safety-floor merge mechanism + FIX-003 clinical consumer, decision #20 part b) and **Batch D** (honest E2E — dental-clinical top-bar has since landed, so it is now runnable).
+
+---
+
+# Addendum — Batch C2-b (append-only merge + FIX-003 consumer) + Batch D (honest E2E) — 2026-06-13
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (via `outputs/EXECUTION-TODO.md` Track 1 line 16-18 + Batch D) · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Superpowers:** Yes (test-driven-development, verification-before-completion). Driven by `outputs/product-decisions.md` **#20**. Commits: C2-b `0f871ef3`, Batch D `e4b86e59`, docs-close (this commit). **CLOSES the dental-pmd module.**
+
+## Decision executed
+**#20 part (b) — switch the safety-floor merge to append-only INSERT events + realize the FIX-003 clinical consumer, as ONE vertical slice.** `markSafetyFloorMerged` had 0 callers, so the imported safety data was clinically inert — an imported penicillin allergy never reached the clinical Safety Floor. Mechanism-only was forbidden; the merge mechanism ships WITH the consumer that surfaces the data.
+
+## §15 — code-truth verification BEFORE coding (the fix-ready premise was partly stale)
+1. **Two sides of the gap traced.** Merge side: `markSafetyFloorMerged` is a destructive boolean UPDATE on the `imported_pmd` row, 0 production callers; the append-only `imported_pmd_safety_floor_events` table existed (model landed C2-a `72954e12`) but had NO write path. Consumer side: the clinical Safety Floor (`getDentalPatientSafetyFloor` patient handler + `getSafetyFloorForPMD` clinical facade + the workspace top bar's `useMedicalHistory`) all read `medical_history_entry` rows — and NO handler ever inserted imported-PMD items there. Confirmed inert.
+2. **Content shape — the decisive §15 finding.** Imported PMD `content` is a caller-supplied freeform string. The FE import preview (`pmd-import.tsx` extractPreview) ALREADY reads **top-level `{conditions,medications,allergies}` string arrays** (and the textarea placeholder documents exactly that), and the existing data-portability test fixtures use the same loose shape — NOT generatePMD's `.safetyFloor` entry-object shape. So the V1 canonical import shape is top-level string arrays; the backend extractor mirrors the FE preview EXACTLY so the previewed set == the merged set (avoids the summary-vs-body coherence bug class). `.safetyFloor` entry-object round-trip (our-export shape) is a documented roadmap deferral.
+3. **BR-022 reconciled, not violated.** Documented BR-022 = "imported PMD row read-only, never merged." The merge never mutates the imported PMD; it copies its safety items **forward** into med-history as NEW append-only rows. Reconciled the one stale doc line (`DOMAIN_MODEL.md` "never merged") to this truth.
+4. **No existing merge op** in `dental-pmd.tsp` → new op + full regen chain (confirmed before coding).
+
+## What shipped — C2-b (`0f871ef3`)
+| Layer | Change |
+| --- | --- |
+| TypeSpec | new `mergeImportedPMDSafetyFloor` op (POST `/dental/pmd/imported/{id}/merge-safety-floor`) + `MergeImportedPMDSafetyFloorResult` model; full regen (routes/validators/SDK). |
+| Backend handler | `mergeImportedPMDSafetyFloor.ts`: branch-role gated (mirrors importPMD: dentist_owner/associate/staff_full); idempotent via the `safetyFloorMerged` flag (fast 409) + the `imported_pmd_safety_floor_events` unique index as the durable race backstop (23505 → 409 `SAFETY_FLOOR_ALREADY_MERGED`); PHI-audited (`pmd.safety_floor.merged`). Med-history inserted FIRST (data always lands; a rare dup under a concurrent merge beats a lost allergy). Content extraction mirrors the FE preview exactly. |
+| Facade | `clinical-pmd.facade.ts` `insertImportedSafetyFloorEntries` — append-only med-history insert (BR-022 boundary; the cross-module write seam dental-pmd→dental-clinical). |
+| Repo | `imported-pmd.repo.ts` `recordSafetyFloorMergeEvent` — append-only event insert. |
+| FE | `pmd-import.tsx` confirm now imports AND merges, then invalidates the medical-history query key (same key the top bar reads) so the "Safety Floor updated" claim is live + true; honest partial-failure copy if merge fails. |
+
+## What shipped — Batch D (`e4b86e59`)
+**J20** (`tests/e2e/journeys/20-pmd-import-merge.journey.spec.ts`) — the honest replacement for the API-only `pmd-import.spec.ts` false-green. Drives the REAL rendered workspace UI (top-bar PMD button → viewer sheet → import form → preview → confirm) on Maria Santos (P1, active visit so the PMD UI mounts), then proves via an INDEPENDENT safety-floor read that a unique imported allergen surfaced. Mutation-proven non-vacuous: skipping the merge call → J20 RED. **Scoping decision:** the complete-visit→auto-generate→viewer UI journey was NOT added — the generation trigger is already backend-pinned (Batch A `pmd-generation-trigger.test.ts` 2/0) and the top-bar+viewer open path is covered by J20; a UI generation journey would require a destructive seed mutation (completing a load-bearing active visit, gated by completion rules) for marginal coverage → deliberately deferred. The old API-only `pmd-import.spec.ts`/`pmd-generation.spec.ts` remain as contract-shape coverage (still green).
+
+## 3-lens adversarial (product code → mutation-tested, not self-review)
+- **Lens 1 (correctness/security):** authz mirrors importPMD; dual-guard idempotency; XSS-safe (Drizzle params + React escaping). No blockers/majors.
+- **Lens 2 (coherence/cross-module):** previewed set == merged set (identical extraction logic); boundary-legal facade write; "done" claim now honest + live (cache invalidation).
+- **Lens 3 (test honesty):** 2 backend mutations caught (facade insert no-op → 3 RED; flag-flip removed → no-double-insert RED) + 1 E2E mutation caught (skip merge → J20 RED). Non-vacuous.
+
+## Gate
+| Command | Result |
+| --- | --- |
+| backend `importPMD.safety-floor-merge.test.ts` | 6 / 0 (+ 2 mutations RED) |
+| backend `medical-history` 12/0 + `pmd-document` 18/0 + `dental-pmd.test` 45/0 + trigger 2/0 (each own clone, no regress) | green |
+| **pmd hurl contract** (fresh :7213) | **31 / 31** (+4 merge scenarios: merge 200 / floor-surfaces / re-merge 409 / auth 401) |
+| FE `pmd-import.test.ts` | 6 / 0 (+ merge-on-confirm) |
+| **E2E J20** (`--project=journeys`, live) | PASS 8.6s (+ mutation RED) |
+| root typecheck (FE + api-ts) | 0 |
+| eslint (changed src) | 0 errors |
+
+## Completion decision
+`COMPLETE` (Batch C2-b + Batch D). **dental-pmd module fully closed** (A trigger / B snapshot / C1 unique-index / C2-a orphan-reconcile / C2-b merge+consumer / D honest E2E / E sign-strip). **Roadmap:** `.safetyFloor` entry-object round-trip extraction (import-our-own-export); content length cap; transactional atomicity for the merge (deferred — openTestTx incompatibility, med-history-first ordering chosen so data always lands); the complete-visit→generate UI journey (low marginal value over the backend pin).

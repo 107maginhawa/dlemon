@@ -56,7 +56,7 @@
 | `ImagingStudy` | Imaging | Loose coupling — UUID refs only, no DB-level FKs |
 | `CephAnalysis` | Imaging | Per-study; isomorphic math engine |
 | `PMDDocument` | Records | Immutable snapshot; checksum-verified (BR-021) |
-| `ImportedPMD` | Records | Read-only; never merged (BR-022) |
+| `ImportedPMD` | Records | Row immutable after import (BR-022). Its safety items merge **forward** into med-history as new append-only entries (decision #20) — the imported row itself is never mutated |
 | `EMRRecord` | Records | External import; read-only store |
 | `Person` (platform) | Identity & Access | Central PII safeguard; consent JSONB fields |
 | `Membership` | Identity & Access | RBAC enforcement point (BR-016); person+branch junction |
