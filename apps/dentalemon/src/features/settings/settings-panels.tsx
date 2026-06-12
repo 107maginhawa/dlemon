@@ -19,6 +19,7 @@ import { FeeSchedule } from './components/fee-schedule';
 import { LocaleSettings } from './components/locale-settings';
 import { NotificationSettings } from './components/notification-settings';
 import { ConsentTemplates } from './components/consent-templates';
+import { TreatmentTemplates } from './components/treatment-templates';
 import { AuditLog } from './components/audit-log';
 import { DataErasure } from './components/data-erasure';
 
@@ -35,6 +36,7 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   { key: 'locale', label: 'Locale', Component: LocaleSettings },
   { key: 'notifications', label: 'Notifications', Component: NotificationSettings },
   { key: 'consent', label: 'Consent Forms', Component: ConsentTemplates },
+  { key: 'treatment-templates', label: 'Treatment Templates', Component: TreatmentTemplates },
   { key: 'audit', label: 'Audit Log', Component: AuditLog },
   { key: 'erasure', label: 'Data Erasure', Component: DataErasure },
 ];
