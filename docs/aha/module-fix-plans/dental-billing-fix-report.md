@@ -172,3 +172,76 @@ The receipt TypeSpec `DentalPaymentReceiptResponse` was a stale FLAT projection 
 ## E9. Recommended Next Step
 
 Per the execution order, proceed to **dental-pmd Batch A** (P0 generation trigger). dental-billing Batches B (discount/void UI), C (payment-plan create), D (pins+seed) remain for later passes. The shared `PrintableDocument` primitive is now available for dental-patient (statement) and case-presentation (estimate) to consume.
+
+---
+
+# Batch B — Invoice-detail money affordances: discount + payment-void (FIX-003 + FIX-004) · 2026-06-12 · commit `36727bf3`
+
+## B1. Fix Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch B — apply-discount UI (FIX-003) + per-payment void UI (FIX-004) in `invoice-detail.tsx` |
+| Superpowers used | Yes (Vertical TDD + verification-before-completion); §15 handler-vs-SDK-vs-contract check run FIRST via a parallel workflow; 3-lens adversarial review before commit |
+| Working tree status checked | Yes — clean before Batch B (HEAD `ddf8c6e8`) |
+| Fix scope | P1 (FIX-003) + V1 RECOMMENDED (FIX-004) + a §15 contract drift fix |
+| Shared files touched | TypeSpec `dental-billing.tsp` (+ regenerated `validators.ts`/SDK `types.gen.ts`, additive optional); `rbac.ts` (additions only) |
+| Schema/migration touched | No (`voided_by_member_id` column already existed; the reconcile only added it to the contract) |
+| Code commit | `36727bf3` |
+
+## B2. §15 verification — ONE drift (FIX-004), FE_ONLY for the rest (FIX-003)
+
+A 5-front parallel §15 sweep (applyDentalDiscount · voidDentalPayment · payment-plan · flag-sync · FE harness) ran BEFORE any wiring. Findings for Batch B:
+
+- **FIX-003 applyDentalDiscount = FE_ONLY (no drift).** Request `{reason, percentageRate}` and the **full updated `DentalInvoice`** response are already declared end-to-end. The wire takes a **0–100 PERCENTAGE** (`applyDiscountRate(subtotalCents, rate)`), NOT cents and NOT a 0–1 fraction — the lead unit trap, handled by sending the raw value. The response carries the recalculated totals, so the FE re-renders coherently from one round-trip (via invalidate+refetch of the enriched GET — the discount response lacks the lineItems/payments enrichments the sheet renders, so `setQueryData` would break the render; invalidate is both consistent with siblings AND necessary).
+- **FIX-004 voidDentalPayment = CONTRACT_FIX (clinical-B-precedent drift).** The repo `voidPayment` uses `.returning()` → the row carries `voided_by_member_id` (`dental-payment.schema.ts:32`, set to the resolved `membership.id`), but the TypeSpec `DentalPayment` model **omitted `voidedByMemberId`** → the SDK type omitted it. Same class as the clinical-B consent `revokedBy` reconcile. **Fixed the CONTRACT** (added `voidedByMemberId?: UUID` to `DentalPayment` + regen; additive optional across `validators.ts`/`types.gen.ts`), not an FE cast. The void response carries ONLY the payment row (no restored balance — the handler computes it via `removePayment` but discards the return), so the FE invalidate+refetches the invoice for the corrected balance/status (the established pattern).
+
+## B3. Owner-only gating
+
+Both affordances are backend `assertBranchRole(db, userId, branchId, ['dentist_owner'])` — STRICTER than the existing `canWrite` prop (owner||associate). NEW `canApplyDiscount(role)` + `canVoidPayment(role)` (both `=== 'dentist_owner'`) in `rbac.ts`; the component sources `role` from the same `useOrgContextStore` the billing route already reads, so the affordances **hide** for non-owners while the backend 403 stays the hard gate. The strict `=== 'dentist_owner'` is fail-safe against the store's `string | null` role.
+
+## B4. Changes Made
+
+| Fix ID | Implemented | Files |
+| --- | --- | --- |
+| FIX-003 | Footer "Apply Discount" (owner + issued/partial/overdue) → inline form (rate 0–100 + required reason) → `applyDentalDiscountMutation` → invalidate+refetch coherent totals | `invoice-detail.tsx`; `invoice-detail.helpers.ts` (`showDiscountButton`, `validateDiscountForm`); `rbac.ts` (`canApplyDiscount`) |
+| FIX-004 | Per-payment-row "Void" action (owner, non-voided rows) → reason form → `voidDentalPaymentMutation` → invalidate+refetch restored balance; voided rows persist flagged "Voided" | `invoice-detail.tsx`; `invoice-detail.helpers.ts` (Payment `isVoid?/voidedAt?/voidReason?`, `canVoidPaymentRow`); `rbac.ts` (`canVoidPayment`) |
+| §15 reconcile | `voidedByMemberId?: UUID` on `DentalPayment` + regen | `dental-billing.tsp`; generated `validators.ts`, SDK `types.gen.ts` |
+
+## B5. Tests Added / Updated
+
+| Test File | Type | What It Proves |
+| --- | --- | --- |
+| `invoice-detail.discount.test.tsx` (new) | FE component | Owner sees / associate does not; reason-required + rate-range block submit; 10% applies → POST `{reason, percentageRate: 10}` (RAW percentage) + coherent re-render (`-₱250.00` / `₱2250.00` from server truth) |
+| `invoice-detail.payment-void.test.tsx` (new) | FE component | Owner sees / associate does not; void collects reason → POST `/payments/{id}/void {voidReason}`, restored balance scoped to the Balance row; voided row persists flagged "Voided"; empty-reason blocks; already-voided shows no action |
+| `dental-billing.hurl` (updated) | contract | Discount returns the FULL invoice with EXACT recalculated arithmetic (`discountCents==4700`, `totalCents==18800`, `balanceCents==18800` vs the deterministic 23500 seed); void carries `voidedByMemberId` |
+| `billing.spec.ts` (updated) | E2E | Owner applies 10% end-to-end (₱50.00 − 10% → `-₱5.00` / Total `₱45.00`) — proof the wire works through the real app + `seedIssuedInvoice` helper |
+
+All FE affordance tests written **RED first** (8 fail / 2 pass — exactly the affordance-dependent tests failing); GREEN after wiring.
+
+## B6. Adversarial Verification (pre-commit)
+
+3-lens workflow (contract/§15 · FE-coherence/affordance · blast-radius/test-honesty) returned **SHIP / SHIP_WITH_NITS / SHIP — no blockers**. The test-honesty lens ran **7 independent source mutations**; every new test goes RED when its bound logic breaks (`vacuousTestRisk: NONE`) — including the percentage-vs-fraction hazard (sending the rate `/100` fails the happy path). **Majors folded in before commit:** (1) a **flaky** discount test (`userEvent.type` char-by-char raced the controlled number input → transient `0.1`) fixed with atomic `fireEvent.change` (stable ×3); (2) the claimed voidReason roadmap flag was **not actually written** — made real (TypeSpec comment + this report's §B7); (3) the hurl discount pins were `isInteger` (presence, not coherence) → tightened to **exact arithmetic** binding the recalculation invariant. **Nit folded in:** per-row Void trigger now `disabled={saving}`. The owner-gate non-vacuousness was also confirmed by a manual mutation (over-expose `canApplyDiscount` → associate-gate test fails).
+
+## B7. ROADMAP FLAGS (deliberate deferrals, documented not silent)
+
+- **`voidReason` lenient validation (audit-integrity gap).** `VoidDentalPaymentRequest.voidReason` has NO `@minLength` (unlike the sibling `VoidDentalInvoiceRequest` `@minLength(5)/@maxLength(500)`), and `voidDentalPayment.ts:50` does not trim/empty-guard it — so a **direct API caller can void a payment (a financial reversal) with an empty reason** and write an empty-reason `payment.void` audit row. The FE wired here imposes a 5-char floor, so contract+FE now diverge. **Deferred deliberately** (a server-validation/behavior change warrants its own RED-first 422 slice, out of scope for an FE-wiring batch). Flagged in `dental-billing.tsp` (comment on `VoidDentalPaymentRequest`). **V2:** add `@minLength(5)/@maxLength(500)` + a handler trim/empty guard mirroring the invoice void.
+- **`ApplyDentalDiscountRequest.percentageRate`** is `float32` with no `@minValue(0)/@maxValue(100)` at the contract layer (handler-only `422 INVALID_DISCOUNT_RATE`) — same lenient-contract pattern; fold into the voidReason V2 slice. (Pre-existing, not introduced here.)
+
+## B8. Tests Run
+
+| Command | Result |
+| --- | --- |
+| `bun test invoice-detail.discount + payment-void` ×3 | 10/0 (stable, no flake) |
+| `bun test src/features/billing/ + rbac` | 374/0 |
+| `bun test src/` (full FE) | 2372/0 |
+| `scripts/test-with-db.ts acceptance.billing-payments.test.ts` | 5/0 (no regen regression) |
+| `CONTRACT_ONLY=dental-billing` (fresh :7213) | 40 reqs, 100% |
+| `billing.spec.ts --project=chromium` | 5/0 (+discount money journey) |
+| typecheck FE + api-ts + sdk-ts | clean |
+| `check:boundaries:dental-billing` | clean |
+| eslint (changed files) | 0 errors (test `any` warnings consistent with siblings) |
+
+## B9. Completion Decision
+
+`COMPLETE` (Batch B) — FIX-003 + FIX-004 landed RED-first across component + contract + E2E, with one §15 contract drift (`voidedByMemberId`) reconciled spec-first. 3-lens majors folded in pre-commit; the voidReason validation gap is documented as a tracked deferral, not papered over. **Remaining:** C (payment-plan create + FIX-006 flag-sync — §15 already found a REAL cross-module bug there), D (pins + aged-receivable seed + overdue-filter E2E).
