@@ -320,3 +320,49 @@ All RED-first; the FIX-006 pin went `0/3 → 3/3`.
 ## C9. Completion Decision
 
 `COMPLETE` (Batch C) — FIX-005 landed RED-first across component + contract + E2E (the headline PH installment feature is now reachable AND renders coherently), and FIX-006 fixed a **real cross-module archive bug** with an honest pin and a guarded, boundary-legal, single-choke-point design. 3-lens clean; the one in-scope coherence finding folded in. **Remaining:** D (zero-membership report pins ×5 + balance equality pin + aged-receivable seed + the Batch-A-deferred overdue-filter E2E).
+
+---
+
+# Batch D — Report-isolation + balance-equality pins, aged seed, collections-summary doc (FIX-009/010/011/012) · 2026-06-12 · commit `3cad3041`
+
+## D1. Fix Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch D — FIX-009 (zero-membership report pin ×5) + FIX-010 (balance-equality pin) + FIX-011 (aged-receivable seed) + FIX-012 (collections-summary doc) |
+| Superpowers used | Yes (verification-before-completion); no 3-lens — **tests/seed/docs only, no product code** (clinical-Batch-F precedent), self-review performed |
+| Fix scope | P3 ×4 (V1 RECOMMENDED) |
+| Shared files touched | Demo seed (`seed-supplement.ts`) + product doc (`MODULE_SPEC.md`) |
+| Schema/migration/TypeSpec/SDK | **None** — no regen |
+| Code commit | `3cad3041` |
+
+## D2. Changes Made
+
+| Fix ID | Implemented | Result |
+| --- | --- | --- |
+| FIX-009 | 5 pins in `dental-billing.cross-tenant-reports.test.ts`: a `USER_ZERO` caller (no membership) gets EMPTY on all 5 omitted-`branchId` reports (aging/summary/payer-aging/claims/statements) | GREEN on arrival — the EM-BIL-002 scoping already handles the zero-membership edge; pin locks the class |
+| FIX-010 | NEW `dental-billing.patient-balance-coherence.test.ts`: `getPatientBalance.outstandingBalanceCents == Σ non-voided invoice.balanceCents` (mixed paid/partial/issued/overdue + a voided invoice excluded on both sides) | GREEN — dual-source equality confirmed |
+| FIX-011 | `seed-supplement.ts` ages the demo's overdue invoices across AR-aging buckets (INV-S0004 45d→days30, INV-S0008 78d→days60, NEW INV-S0011 120d→days90Plus) via a new optional `ageDays` spec field | The AR-aging report demos non-empty buckets; aging logic itself covered by `utils/aging.test.ts` + `ar-aging-statements.test.ts` |
+| FIX-012 | `MODULE_SPEC.md` documents `GET collections/summary` as **backend-only by choice** `[DO NOT OVERBUILD]` (dashboard derives from the invoice list) | Doc note |
+
+## D3. Test honesty (self-review)
+
+Both pins are **non-vacuous** — they assert against a DB that *has* data: FIX-009 asserts EMPTY results while two orgs' invoices/payments/claims are seeded (a whole-DB leak would make `body.patients`/`items` non-empty → fail); FIX-010 asserts the exact `10000` sum AND that the voided `9999` leaked into neither source (including voided would yield `19999 ≠ 10000` → fail). The seed edit is deterministic, type/lint-clean, and **no test imports the seed script** (it feeds `db:reseed` only), so it cannot regress the suite.
+
+## D4. ROADMAP FLAGS / Deferrals
+
+- **`PatientBalanceResponse` contract drift** — the TypeSpec model `{ balanceCents, overdueInvoices }` differs from the handler's richer shape `{ outstandingBalanceCents, totalBilledCents, totalPaidCents, overdueAmountCents, invoiceCount, … }`. Harmless today (0-consumer orphan); a separate §15 reconcile when the endpoint is wired.
+- **Overdue-filter E2E (Batch A "during" item) — DEFERRED to Track 4 (platform).** Making the billing-list "overdue" filter E2E honest needs a **test-only cron-trigger hook** to flip an issued invoice to `overdue` in a fresh E2E org — the demo seed's aged data is invisible to the E2E's `signUpOnboardAndUnlock` (fresh) org, and there is no HTTP trigger for `markOverdueInvoices`. Flagged per the Batch A report §9; out of scope for the "no new scheduler/queue" constraint.
+
+## D5. Tests Run
+
+| Command | Result |
+| --- | --- |
+| `scripts/test-with-db.ts .../cross-tenant-reports.test.ts` | 10/0 (+5 zero-membership) |
+| `scripts/test-with-db.ts .../patient-balance-coherence.test.ts` | 1/0 |
+| api-ts typecheck | clean |
+| eslint (seed + tests) | 0 errors |
+
+## D6. Completion Decision
+
+`COMPLETE` (Batch D) — the cheap permission/coherence pins close the EM-BIL-002 zero-membership edge and the dual-source balance drift class; the demo AR-aging report now shows real bucketed data; `getCollectionsSummary` is honestly documented as backend-only. **dental-billing module COMPLETE (Batches A–E + B/C/D all landed):** A (overdue/plan cron) · B (discount/void) · C (payment-plan create + flag-sync bug) · D (pins+seed+doc) · E (shared print primitive + receipt). The only remaining billing items are explicitly out-of-scope/deferred: claims (Phase-2), `recordedByMemberId` derivation (#8, separate handler-trust batch), receipt email, auto PWD/Senior engine, tax engine, and the overdue-filter E2E (Track 4 cron-trigger hook).
