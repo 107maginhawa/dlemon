@@ -107,3 +107,34 @@ The `onPmd`/WorkspaceTopBar button (dental-clinical owns it), any settings shell
 ## 13. Recommended Next Step
 
 Per the execution order, proceed to **dental-clinical Batch A** (WorkspaceTopBar `onLab` + `onPmd` wiring + remove false-green E2E) — which also unblocks this module's Batch D (honest E2E). A future dental-pmd pass should run Batch B (snapshot content: safety floor + demographics) so auto-generated PMDs carry the full FR12.1 content.
+
+---
+
+# Addendum — Batch B + Batch C1 pass (2026-06-12, post product-decision session)
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (consolidated via `outputs/EXECUTION-TODO.md` Track 1) · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Superpowers:** Yes (TDD). Driven by the 2026-06-12 product-decision session (`outputs/product-decisions.md` #4/#5/#6/#20).
+
+## Batch executed
+- **Batch B** — FIX-002 snapshot content (decisions #5 attestor + #6 narrowed field set). Commit `8cee0d48`.
+- **Batch C1** — single-live-PMD invariant + race-safe generation (schema-fix #4; the concurrency gap this report's §9 flagged for prompt-06). Commit `7da38ca6`.
+- **Batch C2 (mig-0063 finish / FIX-003 merge)** — **DEFERRED** (decision recorded `2727…`): mechanism-only leaves `markSafetyFloorMerged` at 0 callers; do it with its FIX-003 consumer + bundle the orphan-table reconciliation with migration-safety. Batch D (honest E2E) and Batch E (sign-or-strip, decision #4 = strip) remain.
+
+## Fixes
+| Fix | Decision | Status | What shipped |
+| --- | --- | --- | --- |
+| FIX-002 Batch B | #6 narrowed (floor + name/DOB/sex) | Fixed | `generatePMD.ts` snapshot now carries `safetyFloor` (active allergies/meds/conditions via new `getSafetyFloorForPMD` facade, deterministically ordered so the sha256 seal is reproducible) + narrowed `demographics`. MODULE_SPEC §7.1 reconciled to the V1-narrowed truth. |
+| PMD attestor | #5 treating dentist | Fixed | `authorMemberId` (snapshot + DB column) now binds `visit.dentistMemberId` (the clinician who delivered care), not the completing actor — **closes the §9 `[NEEDS PRODUCT DECISION]` author-vs-actor gap**. |
+| Concurrency (schema-fix #4) | — | Fixed | Partial unique index `pmd_document_visit_generated_unique` on `(visit_id,status) WHERE status='generated'` (mig 0102); `generatePmdForVisit` catches the 23505 race and resolves idempotently to the winner — **closes the §9 `[NEEDS CONFIRMATION]` no-unique-index concurrency gap**. |
+
+## Tests run (fresh)
+| Command | Result |
+| --- | --- |
+| `dental-pmd.test.ts` (RED→GREEN: +4 Batch B, +2 Batch C1) | 45 / 0 |
+| All pmd + dental-visit files (auto-gen path) | 50 files, 506 / 0 |
+| **Full backend suite** | 331 files, **3766 / 0** (1 pre-existing `unmergePatients`, unrelated) |
+| `bunx tsc` (api-ts) + root typecheck | both exit 0 |
+
+Wire shape unchanged (`content` stays an opaque JSON string; PMDDocument TypeSpec untouched) → no SDK regen. supersede kept two-statement (not `db.transaction`) for `openTestTx` isolation compatibility — index + handler catch deliver the invariant.
+
+## Completion decision
+`PARTIALLY COMPLETE` — Batch B + C1 `COMPLETE` and gate-green; C2/D/E remain (C2 deferred with rationale; E = strip path per decision #4; D needs dental-clinical top-bar).

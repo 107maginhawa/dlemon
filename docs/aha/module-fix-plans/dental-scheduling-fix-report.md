@@ -52,3 +52,17 @@ Batch B (no-show mark/revert), Batch C (queue intake at check-in seam — cross-
 | --- | --- |
 | PATCH `{status:cancelled}` retained as a second (now reason-gated + audited) cancel path | Q1 default was "reject"; chose "reason-required" to preserve intentional confirm/RBAC tests. If product prefers a single DELETE-only path, the PATCH-cancel branch + the confirm/RBAC tests that use it would need a coordinated removal — flag for review. |
 | FIX-006 smoke tool execution | Deferred; E2E covers the regression class. |
+
+---
+
+## Addendum — Schema-audit fix #3: soft-archived appointment leak (2026-06-12)
+
+**Source:** `outputs/database-schema-audit.md` schema-fix #3 (NOT a module-fix-ready batch) · consolidated via `outputs/EXECUTION-TODO.md` Track 1 · **Commit:** `29f4c60d` · **Superpowers:** Yes (TDD).
+
+**Gap:** soft-archived appointments (V-DG-003 retention stamps `deletedAt`) leaked into staff reads — `listAppointmentsWithPatientName` + `getAppointmentWithPatientName` (the list + detail facade for `listAppointments`/`getAppointment`) had no `isNull(deletedAt)` filter, so the calendar list returned archived rows and detail GET resolved them 200.
+
+**Fix:** added `isNull(dentalAppointments.deletedAt)` to both facade reads — the list filter applied unconditionally **inside** the facade (single choke point for both handlers, leak-proof). Held scope to the named calendar leak; the 6 other unfiltered read paths (overlap/confirmation/reminder) are functionally moot for year-old archived records and out of this fix's scope.
+
+**Tests (fresh, RED→GREEN):** 2 new tests (archived appt absent from list / detail → 404); `dental-scheduling.test.ts` 62/0; all 18 scheduling files 219/0; all retention files 75/0; api-ts + root typecheck exit 0. Backend-only (no HTTP archive trigger → no Hurl; FE has zero client-side archived filtering → no FE/E2E; GET wire shape + SDK unchanged, `deletedAt` stays internal).
+
+**Status:** `COMPLETE`. Note: the module's own Batch B (no-show), C (queue intake), D (seed conformance) remain per the original §9–§11 — unaffected by this schema-audit fix.
