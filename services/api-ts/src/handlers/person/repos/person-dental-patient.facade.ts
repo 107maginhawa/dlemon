@@ -8,7 +8,7 @@
 import { eq } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { persons } from './person.schema';
-import type { PersonConsent, CommunicationChannelConsent } from './person.schema';
+import type { PersonConsent, CommunicationChannelConsent, ContactInfo } from './person.schema';
 import { patients } from '../../patient/repos/patient.schema';
 
 export async function createPersonForDentalPatient(
@@ -47,9 +47,9 @@ export async function createPersonForDentalPatient(
  * and field validation; this facade is pure persistence. Returns the updated
  * declared person subset, or null if the patient/person isn't found.
  *
- * Contact info (phone/email) is intentionally NOT writable here: V-PAT-014 keeps
- * person.contactInfo out of the patient profile response, so it has no read
- * surface to edit against.
+ * Contact info (phone/email) IS writable here per decision #14 (V-PAT-014): it is
+ * surfaced on the patient profile and edited through this facade. The write is a
+ * partial merge — an omitted contactInfo sub-field keeps its current value.
  */
 export async function updatePatientDemographics(
   db: DatabaseInstance,
@@ -59,6 +59,7 @@ export async function updatePatientDemographics(
     lastName?: string | null;
     dateOfBirth?: string | null;
     gender?: string | null;
+    contactInfo?: ContactInfo;
   },
   actorId: string,
 ): Promise<{
@@ -67,10 +68,12 @@ export async function updatePatientDemographics(
   lastName: string | null;
   dateOfBirth: string | null;
   gender: string | null;
+  contactInfo: ContactInfo | null;
 } | null> {
   const [link] = await db
-    .select({ personId: patients.person })
+    .select({ personId: patients.person, contactInfo: persons.contactInfo })
     .from(patients)
+    .innerJoin(persons, eq(persons.id, patients.person))
     .where(eq(patients.id, patientId))
     .limit(1);
   if (!link?.personId) return null;
@@ -82,6 +85,7 @@ export async function updatePatientDemographics(
     lastName?: string | null;
     dateOfBirth?: string | null;
     gender?: typeof persons.gender._.data | null;
+    contactInfo?: ContactInfo;
   } = { updatedBy: actorId, updatedAt: new Date() };
 
   if (demographics.firstName !== undefined) updateData.firstName = demographics.firstName;
@@ -89,6 +93,12 @@ export async function updatePatientDemographics(
   if (demographics.dateOfBirth !== undefined) updateData.dateOfBirth = demographics.dateOfBirth;
   if (demographics.gender !== undefined) {
     updateData.gender = demographics.gender as typeof persons.gender._.data | null;
+  }
+  // #14: partial contact-info merge — provided sub-fields override, omitted ones
+  // keep the current value (so a phone-only edit never wipes the stored email).
+  if (demographics.contactInfo !== undefined) {
+    const current = (link.contactInfo as ContactInfo | null) ?? {};
+    updateData.contactInfo = { ...current, ...demographics.contactInfo };
   }
 
   const [updated] = await db
@@ -101,6 +111,7 @@ export async function updatePatientDemographics(
       lastName: persons.lastName,
       dateOfBirth: persons.dateOfBirth,
       gender: persons.gender,
+      contactInfo: persons.contactInfo,
     });
   if (!updated) return null;
 
@@ -110,6 +121,7 @@ export async function updatePatientDemographics(
     lastName: updated.lastName ?? null,
     dateOfBirth: updated.dateOfBirth ?? null,
     gender: updated.gender ?? null,
+    contactInfo: (updated.contactInfo as ContactInfo | null) ?? null,
   };
 }
 

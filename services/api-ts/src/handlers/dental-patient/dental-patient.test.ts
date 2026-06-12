@@ -1161,9 +1161,9 @@ describe('V-PAT-002: PATCH demographics requires an edit-capable role', () => {
 //
 // Registration-typo correction. Demographics live on the linked PERSON record,
 // not dental_patient — these fields update the person via the dental handler's
-// branch-role + archived guards. Contact info (phone/email) is intentionally
-// excluded: V-PAT-014 keeps person.contactInfo out of the profile response, so
-// there is no read surface to edit it against (decision-gated, not in V1 scope).
+// branch-role + archived guards. Contact info (phone/email) is now exposed on
+// the profile (DentalPatientPerson.contactInfo) and editable + audited per
+// decision #14 (V-PAT-014). Other person PII (primaryAddress, …) stays excluded.
 // =============================================================================
 
 describe('FR2.4: updateDentalPatient demographics edit', () => {
@@ -1186,9 +1186,10 @@ describe('FR2.4: updateDentalPatient demographics edit', () => {
     expect(body.person.gender).toBe('male');
     expect(body.displayName).toBe('Mariana Reyes');
 
-    // V-PAT-014: the PATCH response is the declared subset — no person PII
-    // (contactInfo/primaryAddress) and no raw DB-row internals (actor UUIDs,
-    // version). Mirrors getDentalPatient's hand-crafted shape.
+    // V-PAT-014: the PATCH response is the declared subset. contactInfo is now
+    // exposed (#14) but is absent here because this patient has none set; other
+    // person PII (primaryAddress) and raw DB-row internals (actor UUIDs, version)
+    // stay excluded. Mirrors getDentalPatient's hand-crafted shape.
     expect(body.person.contactInfo).toBeUndefined();
     expect(body.person.primaryAddress).toBeUndefined();
     expect(body.version).toBeUndefined();
@@ -1203,6 +1204,69 @@ describe('FR2.4: updateDentalPatient demographics edit', () => {
     expect(got.dateOfBirth).toBe('1991-05-01');
     expect(got.gender).toBe('male');
     expect(got.displayName).toBe('Mariana Reyes');
+  });
+
+  // #14 (V-PAT-014): contact info (phone/email) edit + audited write.
+  test('PATCH contactInfo persists and is returned on the profile (read+write round-trip)', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Maria Santos');
+
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { email: 'maria@clinic.test', phone: '+639170000001' } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.contactInfo.email).toBe('maria@clinic.test');
+    expect(body.person.contactInfo.phone).toBe('+639170000001');
+
+    // Persisted across a fresh read.
+    const getRes = await app.request(`/dental/patients/${patient.id}`);
+    const got = await getRes.json() as any;
+    expect(got.person.contactInfo.email).toBe('maria@clinic.test');
+    expect(got.person.contactInfo.phone).toBe('+639170000001');
+  });
+
+  test('PATCH contactInfo is partial — an omitted sub-field is left unchanged', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Juan Cruz');
+    await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { email: 'juan@clinic.test', phone: '+639170000002' } }),
+    });
+
+    // Update only the phone — the email must survive.
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { phone: '+639170000099' } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.contactInfo.phone).toBe('+639170000099');
+    expect(body.person.contactInfo.email).toBe('juan@clinic.test');
+  });
+
+  test('PATCH contactInfo writes a patient.contact.update audit event', async () => {
+    const { dentalAuditLog } = await import('@/handlers/dental-audit/repos/audit-log.schema');
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Ana Lopez');
+
+    await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { email: 'ana@clinic.test' } }),
+    });
+
+    const rows = await db.select().from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, patient.id));
+    const contactAudit = rows.filter((r: any) => r.action === 'patient.contact.update');
+    expect(contactAudit.length).toBe(1);
+    expect(contactAudit[0]!.actorId).toBe(authedUser.id);
+    // PHI-safe: the audit row must never carry the email/phone values.
+    expect(JSON.stringify(contactAudit[0])).not.toContain('ana@clinic.test');
   });
 
   test('PATCH with only dental fields leaves person demographics unchanged', async () => {

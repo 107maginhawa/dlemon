@@ -7617,6 +7617,20 @@ export type DentalPatientModuleDentalPatient = {
 };
 
 /**
+ * Patient contact info (phone/email). PII — exposed on the profile and editable per decision #14 (V-PAT-014)
+ */
+export type DentalPatientModuleDentalPatientContactInfo = {
+    /**
+     * Primary email address
+     */
+    email?: string;
+    /**
+     * Primary phone number
+     */
+    phone?: string;
+};
+
+/**
  * Embedded person details on a dental patient response
  */
 export type DentalPatientModuleDentalPatientPerson = {
@@ -7625,6 +7639,19 @@ export type DentalPatientModuleDentalPatientPerson = {
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+    /**
+     * Contact info (phone/email). PII, surfaced for staff editing per decision #14 (V-PAT-014)
+     */
+    contactInfo?: {
+        /**
+         * Primary email address
+         */
+        email?: string;
+        /**
+         * Primary phone number
+         */
+        phone?: string;
+    };
 };
 
 /**
@@ -7966,6 +7993,19 @@ export type DentalPatientModuleUpdateDentalPatientRequest = {
      * Patient gender (updates linked person)
      */
     gender?: string;
+    /**
+     * Patient contact info (phone/email; updates linked person, audited). Partial: omitted sub-fields unchanged
+     */
+    contactInfo?: {
+        /**
+         * Primary email address
+         */
+        email?: string;
+        /**
+         * Primary phone number
+         */
+        phone?: string;
+    };
 };
 
 export type DentalPayment = {

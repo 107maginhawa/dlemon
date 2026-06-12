@@ -389,7 +389,8 @@ describe('AC-PAT-003: safety floor aggregation counts', () => {
     expect(body.safetyFloor.allergyCount).toBe(2);
     expect(body.safetyFloor.medicationCount).toBe(1);
     expect(body.safetyFloor.hasAlerts).toBe(true);
-    // V-PAT-014: person is a declared subset (no contactInfo / primaryAddress PII).
+    // V-PAT-014: person is a declared subset. contactInfo is exposed per #14 but
+    // absent here (this patient has none set); primaryAddress PII stays excluded.
     expect(body.person.contactInfo).toBeUndefined();
     expect(body.person.primaryAddress).toBeUndefined();
     // V-PAT-007: follow-up notes present on the profile.

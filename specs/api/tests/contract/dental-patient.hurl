@@ -126,7 +126,8 @@ jsonpath "$.needsFollowUp" == true
 
 # 5a. FR2.4: correct a registration typo in demographics (name/DOB/gender).
 # These live on the linked PERSON record; the response surfaces the updated
-# declared subset + displayName (V-PAT-014: never contactInfo).
+# declared subset + displayName. contactInfo is absent here (none set) — it is
+# exposed only when present (#14, tested in 5d below).
 PATCH {{api}}/dental/patients/{{patient_id}}
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -159,6 +160,35 @@ HTTP 200
 [Asserts]
 jsonpath "$.person.firstName" == "Mariana"
 jsonpath "$.displayName" == "Mariana Reyes"
+
+
+# 5d. #14 (V-PAT-014): contact info (phone/email) edit — exposed + persisted.
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "contactInfo": { "email": "mariana@clinic.test", "phone": "+639170000123" }
+}
+HTTP 200
+[Asserts]
+jsonpath "$.person.contactInfo.email" == "mariana@clinic.test"
+jsonpath "$.person.contactInfo.phone" == "+639170000123"
+
+# 5e. Persisted contact info surfaces on a fresh read; partial edit keeps email.
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "contactInfo": { "phone": "+639170000999" }
+}
+HTTP 200
+
+GET {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.person.contactInfo.email" == "mariana@clinic.test"
+jsonpath "$.person.contactInfo.phone" == "+639170000999"
 
 
 # 5c. Demographics validation: an invalid gender is rejected.

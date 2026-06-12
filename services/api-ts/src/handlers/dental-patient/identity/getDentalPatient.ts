@@ -100,13 +100,16 @@ export async function getDentalPatient(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- consent is present on the DB row but absent from PersonData interface; typed fix requires schema change
     consent: (person as any)?.consent ?? null,
     // V-PAT-014: return a DECLARED subset of person — never spread the full
-    // person row (which carries undeclared PII: contactInfo, primaryAddress…).
+    // person row (which carries undeclared PII: primaryAddress…). contactInfo
+    // (phone/email) is exposed per #14, but only when set (absent, not null);
+    // other person PII stays excluded.
     person: {
       id: person?.id ?? null,
       firstName,
       lastName: lastName || null,
       dateOfBirth: person?.dateOfBirth ?? null,
       gender: person?.gender ?? null,
+      ...(person?.contactInfo ? { contactInfo: person.contactInfo } : {}),
     },
     createdAt: patient.createdAt,
     updatedAt: patient.updatedAt,

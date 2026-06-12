@@ -15,6 +15,7 @@ import { getDentalPatientRecord, updateDentalPatientRecord } from '../../patient
 import type { Patient, EmergencyContact, CommunicationPreferences } from '../../patient/repos/patient-dental-patient.facade';
 import { updatePatientDemographics } from '../../person/repos/person-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import { validateDateOfBirth } from '@/utils/date';
 import type { UpdateDentalPatientBody, UpdateDentalPatientParams } from '@/generated/openapi/validators';
 
@@ -86,8 +87,10 @@ export async function updateDentalPatient(
   // FR2.4: demographics correction — name / DOB / gender live on the linked
   // PERSON record. Validate here (handler owns validation; the facade is pure
   // persistence), then apply through the person facade.
-  const demographics: { firstName?: string; lastName?: string | null; dateOfBirth?: string | null; gender?: string | null } = {};
+  const demographics: { firstName?: string; lastName?: string | null; dateOfBirth?: string | null; gender?: string | null; contactInfo?: { email?: string; phone?: string } } = {};
   let hasDemographics = false;
+  // #14: track whether contact info specifically changed, to drive the audit.
+  let contactChanged = false;
 
   if (body['firstName'] !== undefined) {
     const firstName = body['firstName'].trim();
@@ -121,21 +124,45 @@ export async function updateDentalPatient(
     }
     hasDemographics = true;
   }
+  // #14 (V-PAT-014): contact info (phone/email) edit. Partial — the facade merges
+  // provided sub-fields over the stored contactInfo, so omitted ones are kept.
+  if (body['contactInfo'] !== undefined) {
+    const ci = body['contactInfo'] as { email?: string; phone?: string };
+    demographics.contactInfo = ci;
+    hasDemographics = true;
+    contactChanged = true;
+  }
 
   updates['updatedBy'] = user.id;
   const updated = await updateDentalPatientRecord(db, patientId, updates);
 
   // Apply demographics to the linked person and surface the updated subset on
-  // the response (V-PAT-014 declared subset — never contactInfo).
-  let person: { id: string; firstName: string; lastName: string | null; dateOfBirth: string | null; gender: string | null } | null = null;
+  // the response. Per #14 (V-PAT-014) the subset now includes contactInfo.
+  let person: { id: string; firstName: string; lastName: string | null; dateOfBirth: string | null; gender: string | null; contactInfo: { email?: string; phone?: string } | null } | null = null;
   if (hasDemographics) {
     person = await updatePatientDemographics(db, patientId, demographics, user.id);
   }
 
+  // #14: contact-info edits are audited on write (PHI surface). The audit row
+  // records only that contact info changed for this patient + the actor — never
+  // the email/phone values (audit log is append-only / never-deleted).
+  if (contactChanged) {
+    const branchId = patient.preferredBranchId as string | undefined;
+    await logAuditEvent(db, logger, {
+      personId: user.id,
+      tenantId: branchId ?? patientId,
+      branchId,
+      action: 'patient.contact.update',
+      resourceType: 'dental_patient',
+      resourceId: patientId,
+    });
+  }
+
   // Log only the changed field NAMES — never the values. `updates` can carry
-  // emergencyContact / communicationPreferences PII (next-of-kin name/phone) as
-  // opaque JSONB that Pino's PHI_REDACT_PATHS does not descend into; demographic
-  // name/DOB are likewise PII. Logging keys gives the audit trail without leaking.
+  // emergencyContact / communicationPreferences / contactInfo PII (next-of-kin
+  // name, phone, email) as JSONB; the logger's recursive redactor now descends
+  // JSONB and redacts PHI keys at any depth, but logging keys-not-values keeps
+  // the audit trail clean and is defence-in-depth against unkeyed PHI.
   logger?.info(
     {
       action: 'updateDentalPatient',
@@ -148,6 +175,17 @@ export async function updateDentalPatient(
 
   if (person) {
     const displayName = [person.firstName, person.lastName].filter(Boolean).join(' ');
+    // V-PAT-014 declared subset (mirrors getDentalPatient): id/name/DOB/gender,
+    // plus contactInfo per #14 — but only when set, so a contactless patient
+    // reports no contactInfo (absent, not null). Other person PII stays excluded.
+    const personSubset = {
+      id: person.id,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      dateOfBirth: person.dateOfBirth,
+      gender: person.gender,
+      ...(person.contactInfo ? { contactInfo: person.contactInfo } : {}),
+    };
     // Return the V-PAT-014 declared subset (mirrors getDentalPatient) — never
     // spread the raw patient row, which carries actor UUIDs (createdBy/updatedBy),
     // version, archiveNote, and undeclared jsonb (primaryPharmacy/primaryProvider).
@@ -164,7 +202,7 @@ export async function updateDentalPatient(
         emergencyContact: updated.emergencyContact ?? null,
         communicationPreferences: updated.communicationPreferences ?? null,
         displayName,
-        person,
+        person: personSubset,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
       },

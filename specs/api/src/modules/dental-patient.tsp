@@ -37,6 +37,15 @@ namespace DentalPatientModule {
   // Models
   // ==========================================================================
 
+  @doc("Patient contact info (phone/email). PII — exposed on the profile and editable per decision #14 (V-PAT-014)")
+  model DentalPatientContactInfo {
+    @doc("Primary email address")
+    email?: Email;
+
+    @doc("Primary phone number")
+    phone?: PhoneNumber;
+  }
+
   @doc("Embedded person details on a dental patient response")
   model DentalPatientPerson {
     id: UUID;
@@ -44,6 +53,9 @@ namespace DentalPatientModule {
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+
+    @doc("Contact info (phone/email). PII, surfaced for staff editing per decision #14 (V-PAT-014)")
+    contactInfo?: DentalPatientContactInfo;
   }
 
   @doc("Dental patient record")
@@ -233,9 +245,8 @@ namespace DentalPatientModule {
     // FR2.4: staff demographics correction (registration-typo fix). These update
     // the patient's linked PERSON record, not the dental_patient row. Branch-role
     // and archived guards are enforced by the handler. Contact info (phone/email)
-    // is intentionally NOT editable here: V-PAT-014 excludes person.contactInfo
-    // from the patient profile response (PII minimisation), so it has no read
-    // surface to edit against — that remains a separate, decision-gated change.
+    // is now editable here per decision #14 (V-PAT-014): it is surfaced on the
+    // profile (DentalPatientPerson.contactInfo) and edits are audited on write.
     @doc("Patient first name (updates linked person)")
     firstName?: string;
 
@@ -247,6 +258,9 @@ namespace DentalPatientModule {
 
     @doc("Patient gender (updates linked person)")
     gender?: string;
+
+    @doc("Patient contact info (phone/email; updates linked person, audited). Partial: omitted sub-fields unchanged")
+    contactInfo?: DentalPatientContactInfo;
   }
 
 

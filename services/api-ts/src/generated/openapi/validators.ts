@@ -3235,7 +3235,11 @@ export const DentalPatientModuleDentalPatientPersonSchema = z.object({
   firstName: z.string(),
   lastName: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  gender: z.string().optional()
+  gender: z.string().optional(),
+  contactInfo: z.object({
+  email: z.string().email().optional(),
+  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
+}).optional()
 });
 
 export const DentalPatientModuleDuplicateWarningSchema = z.object({
@@ -3313,6 +3317,11 @@ export const DentalPatientModuleDentalPatientSchema = z.object({
 }).optional(),
   channelsUpdatedAt: z.string().optional()
 }).optional()
+});
+
+export const DentalPatientModuleDentalPatientContactInfoSchema = z.object({
+  email: z.string().email().optional(),
+  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
 });
 
 export const DentalPatientModuleSafetyEntrySchema = z.object({
@@ -3497,7 +3506,11 @@ export const DentalPatientModuleUpdateDentalPatientRequestSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  gender: z.string().optional()
+  gender: z.string().optional(),
+  contactInfo: z.object({
+  email: z.string().email().optional(),
+  phone: z.string().regex(/^\+[1-9]\d{1,14}$/).refine(val => validatePhoneNumber(val), { message: "Invalid phone number in E.164 format" }).optional()
+}).optional()
 });
 
 export const PaymentMethodSchema = z.enum(["cash", "card", "bank_transfer"]);
