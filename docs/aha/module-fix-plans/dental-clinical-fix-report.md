@@ -328,3 +328,81 @@ A 3-lens adversarial workflow (§15/contract · FE-coherence · blast-radius/tes
 ## E.9 Completion
 
 `COMPLETE` (Batch E) — FIX-009 landed RED-first across component + a real cross-module E2E (owner configures a clinic template via the dental-org API → the picker surfaces its wording). The clinic's per-clinic consent `body` (FR8.4b) is now reachable in the consent capture flow as read-only reference text, with a graceful fallback + nudge when none is configured. **Remaining:** F (docs reconcile: lab-status enum + 50MB attachment-cap).
+
+---
+
+# Batch F — Docs reconcile: lab-status enum + attachment-cap (FIX-010) · 2026-06-12 · commit `fc42d0bd` · **MODULE COMPLETE**
+
+## F.1 Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch F — Docs reconcile (GAP-13 + Q5); **closes the dental-clinical module** |
+| Fix scope | FIX-010 (P3 `[RECOMMENDED]`) — lab-status enum drift + attachment size/MIME cap drift |
+| Superpowers used | Yes (verification-before-completion); §15 = validator/code verification run FIRST across **three** enforcement layers (dental-clinical handler, storage module, FE) before touching any doc |
+| Product decision taken | **Option (a) — docs-only to code truth** (surfaced via AskUserQuestion). The plan scoped FIX-010 docs-only and Q5 already fixed the documented value at 50 MB; §15 discovered the validator enforces nothing AND the real storage cap is 100 MB — a genuine (a) docs-only vs (b) add-the-cap fork the plan didn't anticipate. User chose: *"whats good for user while being feasible and standard"* → (a). |
+| Out of scope | Any code-behavior change / new server cap (option b — rejected: a 50 MB cap on the metadata endpoint would orphan the already-uploaded S3 object, since storage accepts up to 100 MB); storage module's own cap implementation; the broader snake_case/field-name drift across the rest of API_CONTRACTS (flagged for a separate larger reconcile) |
+| Shared files touched | `attachments-sheet.tsx` (comment-only correction); the rest are docs + one backend test pin |
+| Schema/migration/TypeSpec/SDK | **None** — docs-only; no regen |
+| Code commit | `fc42d0bd` |
+
+## F.2 §15 verification — code truth across three layers (the plan's premise was incomplete)
+
+The mandatory pre-edit verification read the **actual enforcement points**, not the docs:
+
+- **Lab-status enum** — code truth = `LabOrderStatus { ordered, in_fabrication, delivered, fitted, cancelled }` (`dental-clinical.tsp:28`), FSM `ordered → in_fabrication → delivered → fitted | cancelled`, illegal move → `422 INVALID_STATUS_TRANSITION` (`updateLabOrder.ts`, V-CLN-008), DE-015 emitted on the `→ delivered` transition only. **`MODULE_SPEC.md` already matches code** (§2/§4/§5/§7/§8); **only `API_CONTRACTS.md` was wrong** (`sent/received/completed/rejected`, initial `pending`, "DE-015 when → completed"). One-sided drift → fix `API_CONTRACTS` to code truth; `MODULE_SPEC` untouched.
+
+- **Attachment cap** — the task hypothesis ("validator enforces nothing") was **half-right and the bigger story is layered**. Verified the real flow is 4-step (`storage` presign → PUT bytes → complete → `createAttachment` metadata-register). Enforcement lives in **three** places, matching **no** single doc:
+  | Layer | Size | MIME |
+  | --- | --- | --- |
+  | `API_CONTRACTS.md` (doc) | 5 MB | image/*, pdf |
+  | `MODULE_SPEC.md` (doc) | 50 MB | JPEG/PNG/TIFF/DICOM/PDF |
+  | `ui-prototype/form-contracts.md` (doc) | 25 MB | PDF/PNG/JPG/HEIC/.dcm |
+  | product decision Q5 | 50 MB (documented) | — |
+  | **FE** `attachments-sheet.tsx` | **50 MB** guard (comment falsely said "matches backend") | picker `image/*,.pdf` |
+  | **storage** `uploadFile`/`initiateMultipartUpload` (real byte path) | **100 MB** non-DICOM / **2 GB** DICOM / 8 GB absolute, env-configurable (`config.ts:206-208`); over-limit → `400 VALIDATION_ERROR` | **no allow-list** |
+  | **dental-clinical** `createAttachment` (metadata register) | **none** | **none** (stores client-reported values) |
+  Also: the `API_CONTRACTS` attachment section misrepresented the endpoint as a `multipart/form-data` file upload returning a presigned URL — it is a JSON metadata register returning the row (`createAttachment.ts:51`).
+
+## F.3 (a) vs (b) decision — why docs-only is good-for-user, feasible, and standard
+
+- **User is already protected at 50 MB** by the FE guard (blocks before upload starts) — the product-decided user-facing limit is already delivered.
+- **(b) would introduce a bug:** capping `createAttachment` at 50 MB while storage accepts 100 MB means a non-FE caller's 60 MB upload lands in S3 (step 1) then 422s at step 4 → **orphaned object**. (a) avoids this.
+- **Standard architecture:** storage is the single byte-enforcement point (deliberately shared — imaging's CBCT/DICOM needs 2 GB); `createAttachment` is metadata-only by design.
+- **P3 docs item, local-first app** with no third-party API consumers — the "raw caller bypasses 50 MB" gap is outside this product's threat model.
+
+## F.4 Changes
+
+| Layer | Change | Files |
+| --- | --- | --- |
+| Doc (lab) | `API_CONTRACTS` lab PATCH enum → real FSM; initial status `pending`→`ordered`; DE-015 on `→ delivered`; PATCH body reconciled to `UpdateLabOrderRequest`; added a field-casing note bounding the change | `docs/product/modules/dental-clinical/API_CONTRACTS.md` |
+| Doc (attachment) | `API_CONTRACTS` attachment section rewritten to the 4-step metadata-register truth (fields, JSON content-type, row response, `VISIT_LOCKED`/no-MIME-error, layered size enforcement) | `API_CONTRACTS.md` |
+| Doc (attachment) | `MODULE_SPEC` WF-039.4 + `ui-prototype/form-contracts.md` reconciled to the same layered story (UI 50 MB guard, storage 100 MB/2 GB real cap, metadata-only endpoint, DICOM owned by imaging) | `MODULE_SPEC.md`, `form-contracts.md` |
+| FE (comment) | Corrected the misleading `// 50 MB — matches backend limit` → accurate (client-side guard below storage's 100 MB; blocks before upload so it can't orphan an object). Value unchanged. | `attachments-sheet.tsx` |
+| Backend (pin) | NEW test: `createAttachment` records an 80 MB client-reported size + arbitrary MIME at 201 — pins "metadata-only, no cap/MIME; storage is the byte boundary" (green-on-arrival) so a future cap here is a conscious change | `clinical-attachment-amendment.test.ts` |
+
+## F.5 Tests / Gate (lighter gate — docs-only, no behavior change)
+
+| Check | Result |
+| --- | --- |
+| `clinical-attachment-amendment.test.ts` (incl. NEW metadata-only no-cap pin) | backend unit **25/0** |
+| `attachments-sheet.test.ts` (comment-touched file) | frontend **12/0** |
+| `bun run typecheck` (FE + api-ts) | **0** |
+| eslint (both changed code files) | **0** |
+| regen / sdk-ts typecheck | **n/a** (no TypeSpec change) |
+| contract / E2E | **n/a** (no wire or behavior change; lighter gate per option a) |
+
+Doc claims spot-verified against code one final pass: `ValidationError`→`400 VALIDATION_ERROR` (`errors.ts:39` + `storage-coverage.test.ts` "file too large → 400 VALIDATION_ERROR"); storage defaults 100 MB / 2 GB / 8 GB (`config.ts:206-208`); DE-015 on `delivered` (`updateLabOrder.ts`); createAttachment auth incl. `dental_assistant` + `VISIT_LOCKED` (`createAttachment.ts:30,34`).
+
+## F.6 Adversarial review
+
+Full 3-lens not warranted (no code-behavior change — docs + one comment + a green-on-arrival pin). Self-review performed: re-verified every reconciled claim against the live code/config read this session; confirmed the lab drift is one-sided (`MODULE_SPEC` correct, untouched); confirmed all three drifting attachment-cap docs reconciled to one coherent layered story; confirmed the pin is honest (exercises the real handler, asserts the no-cap outcome).
+
+## F.7 Roadmap flags (pre-existing, documented not fixed)
+
+- The rest of `API_CONTRACTS.md` (prescription/consent/medical-history sections) still uses pre-camelCase snake_case field names + some stale field vocab (`medication_name`/`duration_days`/`repeats`) — a separate, larger doc reconcile (bounded + flagged via the new field-casing note at the top of the doc).
+- If product ever wants 50 MB enforced server-side as the *true* boundary (not just FE), the correct slice is to lower storage's non-DICOM cap (cross-module, affects imaging photos) — not a clinical metadata cap.
+
+## F.8 Completion
+
+`COMPLETE` (Batch F) — FIX-010 reconciled three drifting docs (lab enum + attachment cap) to verified code truth, corrected a misleading FE comment, and pinned the metadata-only attachment design. **This closes the dental-clinical module** — all active-scope batches (A consent/lab/PMD top-bar, B consent revoke+history, C Rx FSM, D amendments+role parity, E consent-template body, F docs reconcile) are COMPLETE. Decision-gated items remain in Track 3 (GAP-5 allergy confirm-dialog #11; attachment erasure #7).
