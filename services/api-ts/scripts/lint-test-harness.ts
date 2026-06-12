@@ -64,8 +64,7 @@ const ALLOWLIST: ReadonlySet<string> = new Set([
   'src/handlers/dental-imaging/imaging-integration.test.ts',
   'src/handlers/dental-imaging/imaging-links.test.ts',
   'src/handlers/dental-imaging/imaging-metadata.test.ts',
-  'src/handlers/dental-org/activateOrganization.test.ts',
-  // createMember.test.ts + deactivateMember.test.ts + updateMember.test.ts migrated to buildTestApp (ratchet tightened).
+  // activateOrganization.test.ts + createMember.test.ts + deactivateMember.test.ts + updateMember.test.ts migrated to buildTestApp (ratchet tightened).
   'src/handlers/dental-org/dental-org-events.test.ts',
   'src/handlers/dental-org/dental-org.clinic-settings.test.ts',
   'src/handlers/dental-org/dental-org.dashboard-summary-extended.test.ts',

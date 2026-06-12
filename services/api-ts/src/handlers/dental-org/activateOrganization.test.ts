@@ -8,12 +8,14 @@
  * - suspended: 403 ORG_SUSPENDED
  * - not found: 404 ; unauthenticated: 401
  */
-import { describe, test, expect, afterEach, beforeEach } from 'bun:test';
+import { describe, test, expect, afterEach } from 'bun:test';
 import { sql, eq, and } from 'drizzle-orm';
-import { Hono } from 'hono';
-import { activateOrganization } from './activateOrganization';
-import { AppError, UnauthorizedError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
+
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness (Track 4): POST /dental/organizations/:id/activate now runs through
+// the real generated route table (authMiddleware → param zValidator → handler).
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -33,21 +35,7 @@ async function orgStatus(): Promise<string | undefined> {
 }
 
 function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof UnauthorizedError) return c.json({ error: err.message }, 401);
-    return c.json({ error: String(err) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.post('/dental/organizations/:id/activate', activateOrganization as any);
-  return app;
+  return buildHarnessApp({ db, user: user ?? null });
 }
 
 afterEach(async () => {
