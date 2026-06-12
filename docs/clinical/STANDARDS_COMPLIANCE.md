@@ -14,9 +14,12 @@ an apparent omission.
 dentalemon is **local-first / offline-capable** and intentionally ships **no AI**
 at this stage. Two capabilities that the broader market is moving toward —
 **cephalometric AI auto-tracing** and **voice-activated periodontal charting**
-(speech recognition) — are therefore **deliberate non-goals**, not gaps. Both
-require models/services and/or hardware that do not fit a no-AI, offline-first
-product. This is a conscious trade-off; the de-facto cephalometric gold standard
+(speech recognition) — are therefore **deliberate non-goals**, not committed
+surfaces. Both require models/services and/or hardware that do not fit a no-AI,
+offline-first product. (Perio ships an *experimental* `perio.voice_charting`
+capability that is **disabled by default** pending a compliance review — see the
+Periodontal § "Manual entry is the supported input"; it is not a committed
+workflow.) This is a conscious trade-off; the de-facto cephalometric gold standard
 (Dolphin Imaging) is itself semi-automated mouse-placement, which is exactly the
 interaction model we ship.
 
@@ -99,14 +102,33 @@ automation, not correctness defects.
 - Mobility (0–3), furcation (0–3) with single-rooted soft-gate, 5 mm deep-pocket
   threshold + red-line visualization, 192-step keyboard auto-advance entry,
   `draft → complete → lock` lifecycle.
+- **Multi-exam comparison / longitudinal trend UI** — **shipped** (2026-06-07):
+  `GET /dental/perio-charts?patientId=` + the "Current exam ↔ History" overlay
+  (BOP%/mean-depth/deep-pocket trend rows + per-tooth max-PD grid + a per-exam
+  staging chip, `apps/dentalemon/.../components/perio/perio-comparison.tsx`).
+- **Per-exam AAP/EFP staging/grading/extent persisted** on the chart row
+  (frozen-at-completion, 2026-06-11) so the diagnosis of record survives reads
+  and drives the comparison staging trajectory.
+- **Source of truth for recession / gingival-margin (CEJ):** the perio chart is
+  the authoritative record for per-site recession and gingival-margin
+  measurements (decision C-3); other modules reference, never re-derive, these.
 
-### Intentional non-goal (no-AI)
-- **Voice charting** — keyboard auto-advance only; speech-recognition charting is
-  deliberately out of scope while the product is no-AI.
+### Manual entry is the supported input (no-AI)
+- **Manual keyboard auto-advance is the default and only supported V1 input
+  method** for perio charting (192-step grid). The product is local-first and
+  bundles **no AI/ML model**: AAP/EFP staging is a deterministic rule engine, not
+  a learned classifier.
+- **Voice charting is not a committed V1 surface.** A `perio.voice_charting`
+  capability exists in the codebase but ships **disabled by default**
+  (`apps/dentalemon/src/lib/feature-flags.ts` — default OFF, behind an
+  off-device-audio / PHI compliance review + browser speech-capability
+  detection). It relies on the browser Web Speech API, which is generally
+  cloud-backed and therefore **outside the offline-first guarantee** — so it is
+  treated as an experimental, opt-in enhancement, not a shipped clinical
+  workflow. **Binding non-goals:** AI auto-staging and AI/cloud transcription as
+  default behaviour.
 
 ### Deferred (non-AI) backlog — not ship blockers
-- **Multi-exam comparison / longitudinal trend UI** (data is already
-  snapshot-ready; only the side-by-side view is missing).
 - Per-site **suppuration** and **plaque** (currently per-tooth); add **calculus**
   and **MGJ / keratinized tissue**; per-furcation-site furcation grades.
 - **PDF export** of the chart for referrals / records.

@@ -101,7 +101,9 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | WF-P02 | Record tooth-level readings (probing, BOP, recession, mobility, furcation) | Dentist | P1 |
 | WF-P03 | Complete / lock perio chart | Dentist | P1 |
 | WF-P04 | View perio chart (historical) | Dentist, Staff Full | P1 |
-| WF-P05 | Print perio chart (PDF export) | Dentist, Staff Full | P1 |
+| WF-P05 | Print perio chart (PDF export) | Dentist, Staff Full | **V2 DEFERRED** (not built) |
+
+> **WF-P05 reconcile (2026-06-12):** PDF export / printable perio chart is **not implemented** (no server-side render, no `@media print` route, no Print button in `apps/dentalemon/.../components/perio/`). `docs/clinical/STANDARDS_COMPLIANCE.md` correctly lists it under the deferred non-AI backlog; this row is annotated to match (deferred wins). Re-promote to P1 only when the export is actually built.
 
 ### EMR-Consultation (emr-consultation §3, platform module)
 

@@ -22,9 +22,11 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 
 **Scope:** Per-visit periodontal examination record. One chart per visit. 6-site probing depths per tooth (FDI notation). Bleeding on probing, recession, mobility, furcation per tooth. Print-layout export. Immutable after visit locked.
 
-> **Spec-behind-impl note (2026-06-08 audit):** the shipped module is wider than this v1.0 spec. Beyond the fields above it persists/derives: **per-site gingival-margin (CEJ) position** and **read-only per-site CAL** (probing depth + gingival margin, never stored — P1-5); **2017 AAP/EFP staging/grading/extent** computed on completion (`utils/perio-staging.ts` + `utils/perio-classify-chart.ts` — P1-6); and a **multi-exam longitudinal comparison** endpoint `GET /dental/perio-charts?patientId=` (`listPerioChartsForPatient`). Two items originally listed "out of scope" below have since been **built and shipped** — voice-activated charting (`apps/dentalemon/.../perio/voice/`, `use-voice-perio.ts`) and automated staging/grading classification. The only genuine perio non-goal that remains is **AI** auto-tracing / AI voice transcription (the product is local-first and intentionally no-AI).
+> **Spec-behind-impl note (2026-06-08 audit; voice/no-AI reconcile 2026-06-12):** the shipped module is wider than this v1.0 spec. Beyond the fields above it persists/derives: **per-site gingival-margin (CEJ) position** and **read-only per-site CAL** (probing depth + gingival margin, never stored — P1-5); **2017 AAP/EFP staging/grading/extent** computed on completion **and persisted on the chart row** (frozen-at-completion, 2026-06-11; `utils/perio-staging.ts` + `utils/perio-classify-chart.ts` — P1-6); and a **multi-exam longitudinal comparison** endpoint `GET /dental/perio-charts?patientId=` (`listPerioChartsForPatient`) surfaced in the comparison overlay. Automated **staging/grading classification** is a **deterministic rule engine** (no AI/ML model) and is shipped.
+>
+> **Manual entry is the supported input.** The default and only supported V1 charting input is the **192-step keyboard auto-advance grid**. A **voice charting** capability exists in the codebase (`apps/dentalemon/.../components/perio/voice/`, `use-voice-perio.ts`, mounted in `perio-chart-overlay.tsx`) but is gated behind the **`perio.voice_charting` feature flag (default OFF** — `apps/dentalemon/src/lib/feature-flags.ts`) plus browser speech-capability detection, pending an off-device-audio / PHI compliance review. It uses the browser Web Speech API (generally cloud-backed → outside the offline-first guarantee), so it is an **experimental, opt-in enhancement, not a committed V1 workflow**. This reconciles the earlier "built and shipped" wording (over-claim) with `docs/clinical/STANDARDS_COMPLIANCE.md` (per product decision #2: hold no-AI, perio stays manual entry).
 
-**Out of scope (genuine non-goals):** AI-assisted progression tracking / AI auto-classification (product is local-first, no-AI).
+**Out of scope (genuine non-goals):** AI-assisted progression tracking / AI auto-classification (product is local-first, no-AI); **AI/cloud transcription** and **voice charting as a default workflow** (the `perio.voice_charting` flag stays default-OFF until a compliance review clears it — do **not** expand voice features meanwhile).
 
 ---
 
@@ -53,7 +55,7 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 | WF-P02 | Dentist | Record tooth-level readings (probing, BOP, recession, mobility, furcation) | P1 |
 | WF-P03 | Dentist | Complete / lock perio chart | P1 |
 | WF-P04 | Dentist, Staff Full | View perio chart (historical) | P1 |
-| WF-P05 | Dentist, Staff Full | Print perio chart (PDF export) | P1 |
+| WF-P05 | Dentist, Staff Full | Print perio chart (PDF export) | **V2 DEFERRED** (not built) |
 
 ---
 
@@ -86,7 +88,9 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 3. Click opens read-only chart view. Side-by-side comparison with previous chart available (P2 feature flag).
 4. No edit capability for completed/locked charts.
 
-### WF-P05 — Print Perio Chart
+### WF-P05 — Print Perio Chart  ⚠️ **V2 DEFERRED — not implemented**
+> No server-side PDF render, no `@media print` route, and no Print button exist in the shipped module (verified 2026-06-12). The steps below describe the future design target; `docs/clinical/STANDARDS_COMPLIANCE.md` lists PDF export under the deferred non-AI backlog (deferred wins). Do not represent this as available until built.
+
 1. Dentist or Staff Full clicks "Print" from any perio chart view.
 2. Server renders PDF with: patient header (name, DOB, examiner, date), full 6-site grid (all 32 teeth), BOP color map, summary stats, recession/mobility/furcation columns, notes.
 3. PDF generated server-side (html-to-pdf) or client-side print CSS (`@media print`).
@@ -163,6 +167,7 @@ oli: oli-module-specs v1.0 | generated: 2026-05-24 | source: docs/prd/v3-dentale
 - `PerioChart` is the aggregate root. `PerioToothReading` records are children of the chart.
 - Chart belongs to a Visit — no FK joins to other module tables (loose coupling via UUID refs).
 - Cross-references: `examinerMemberId` refs dental-org membership (UUID only, no JOIN in handler).
+- **Source of truth — recession / gingival margin (decision C-3, 2026-06-12):** the perio chart (`PerioToothReading` per-site gingival-margin / `recession`) is the **authoritative system record** for periodontal recession and gingival-margin (CEJ) measurements. Other modules (e.g. dental-clinical charting) reference these values; they do not maintain a competing recession store.
 
 ---
 
@@ -296,8 +301,9 @@ Per ADR-006 (domain-events-descope), domain events here are audit-log-only seman
 
 | Flag | Default | Controls |
 |------|---------|---------|
-| `perio.side_by_side_comparison` | false | Side-by-side chart comparison (P2) |
-| `perio.auto_staging` | false | AAP 2017 auto-staging classification (P3) |
+| `perio.voice_charting` | **false** | Voice / hands-free perio charting (`apps/dentalemon/src/lib/feature-flags.ts`). Default-OFF behind an off-device-audio / PHI compliance review + browser speech-capability detection. Override at build time via `VITE_FF_PERIO_VOICE_CHARTING=true`. Experimental — not a committed V1 surface (see §1 reconcile note). |
+
+> **§18 reconcile (2026-06-12):** the only real perio feature flag is `perio.voice_charting`. The previously-listed `perio.side_by_side_comparison` and `perio.auto_staging` flags were **never wired** — multi-exam comparison and AAP/EFP staging both **shipped unconditionally** (no flag), so those rows were removed to match `feature-flags.ts`.
 
 ---
 
