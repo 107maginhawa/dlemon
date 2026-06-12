@@ -128,3 +128,62 @@ Full FE 2340/0 · consent-sheet 10/0 · contract 47 req/0 · E2E 5/0 · consent 
 ## B.7 Completion
 
 `COMPLETE` (Batch B) — FIX-004 + FIX-005 landed RED-first across component + contract + E2E. The orphaned revoke/history surface (WF-035) is now reachable from the real product UI. **Remaining:** C (Rx list + dispense/cancel), D (amendments visibility + role parity), E (consent-template picker — coordinate dental-org), F (docs reconcile: lab enum + 50MB attachment cap per decision Batch B).
+
+---
+
+# Batch C — Rx list + dispense/cancel lifecycle (FIX-006) · 2026-06-12 · commit `c25eed44`
+
+## C.1 Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch C — Rx list + dispense/cancel lifecycle (WF-016) |
+| Fix scope | FIX-006 (P1) — wire the orphaned `listPrescriptions` + `updatePrescription` ops into `rx-sheet.tsx` |
+| Superpowers used | Yes (Vertical TDD + verification-before-completion); §15 handler-vs-SDK-vs-contract check run first; 3-lens adversarial review before commit |
+| Out of scope | Per-patient Rx list (no per-patient route exists — per-visit only); GAP-5 allergy override dialog (Track 3, decision #11); Batches D/E/F |
+| Shared files touched | No (rx-sheet is module-local). `$patientId.tsx` got a 1-line `canManage` prop thread (module-local mount) |
+| Schema/migration touched | No |
+| Code commit | `c25eed44` |
+
+## C.2 §15 verification finding — contract drift, FIXED (Batch-B class, both directions)
+
+The mandatory §15 pre-wire check surfaced the **same drift class as Batch B**, in both directions: the DB row + **every** handler response carry `status` (`pending`/`dispensed`/`cancelled`; column is `NOT NULL DEFAULT 'pending'`), and the PATCH endpoint **accepts** `status` (the primary dispense/cancel operation, tested at the HTTP level — `prescription.status.test.ts`), but the TypeSpec **omitted `status` both ways**: the `Prescription` response model *and* `UpdatePrescriptionRequest`. So the SDK type couldn't render Rx status (read) and couldn't express a transition (write).
+
+Rather than a lying FE cast, the **contract was made honest**: added a `PrescriptionStatus` enum, `status` to the `Prescription` model (+ `@example`), and optional `status` to `UpdatePrescriptionRequest` → regen (openapi → api-ts validators → sdk types/index). The additive request-side enum is non-breaking — **no test pinned invalid-enum-at-route at 422**, so the validator now returning 400 for a bad enum string breaks nothing (verified). Because `status` is now in the validated body, the handler's raw-JSON re-read + the now-unreachable `INVALID_PRESCRIPTION_STATUS` guard were removed (review MINOR 1); the FSM-routing decision is behaviorally identical.
+
+## C.3 Changes
+
+| Layer | Change | Files |
+| --- | --- | --- |
+| TypeSpec | `PrescriptionStatus` enum; `Prescription.status` (+ `@example`); optional `UpdatePrescriptionRequest.status`; regen | `specs/api/src/modules/dental-clinical.tsp` + generated (`validators.ts`, sdk `types`/`index`) |
+| Backend | read the validated `body.status` (drop the redundant raw `ctx.req.json()` parse + the now-dead enum guard); logic equivalent | `services/api-ts/src/handlers/dental-clinical/prescriptions/updatePrescription.ts` |
+| FE (FIX-006) | mode toggle (New \| Prescriptions); per-visit list with derived status badges; Dispense/Cancel **FSM-gated** (pending only) AND **role-gated** (`canManage`); optimistic flip + best-effort reconcile. Direct-SDK + local state (no react-query). | `rx-sheet.tsx` |
+| FE wiring | `canManage={orgRole ∈ {dentist_owner, dentist_associate}}` threaded to the Rx sheet | `$patientId.tsx` |
+| Contract (FSM pins) | pending→pending (422), dispense (200), dispensed→cancelled (422 `INVALID_PRESCRIPTION_TRANSITION`), create+cancel (200); + create `status==pending` + list `status exists` | `dental-clinical.hurl` |
+
+## C.4 Tests (RED→GREEN)
+
+| Test | Type | Result |
+| --- | --- | --- |
+| `rx-sheet.test.ts` +6 (list unwrap `{data,pagination}`+badges; dispense PATCH+flip; cancel PATCH; FSM-gated terminal rows; role-gated hidden; empty state) | frontend/component | 14/14 |
+| `dental-clinical.hurl` (5 new prescription FSM requests) | contract | 52 requests, 100% |
+| `rx-lifecycle-ui.spec.ts` (NEW — seed pending Rx via API → dispense through the Prescriptions tab → flips to dispensed, action drops) | E2E/Playwright | 1/1 chromium |
+| dental-clinical backend (all 19 handler files, incl prescription status 8 / fsm 8 / history 30) | backend unit | 209/0 (post-regen + handler change, no regression) |
+
+## C.5 Gate
+
+Full FE 2346/0 · rx-sheet 14/0 · contract 52 req/0 · E2E 1/1 · dental-clinical backend 209/0 · typecheck (FE + api-ts + sdk-ts) clean · lint 0 errors (changed files; one pre-existing unrelated `useNavigate` warning in `$patientId.tsx`, untouched) · regen scope minimal (validators +4 lines, sdk index +1 export `PrescriptionStatus`, nothing else changed).
+
+## C.6 Adversarial review (pre-commit)
+
+A 3-lens adversarial workflow (contract/§15 · FE/FSM · blast-radius/test-honesty) returned **no blockers, no majors**. Actioned: **MINOR 1** (handler reads validated `body.status`; redundant raw read + dead guard removed), **MINOR 2** (optimistic flip so a refetch failure after a committed PATCH no longer shows a false "failed" banner — clinically relevant), **NIT 3** (drop the impossible `?? 'pending'` fallback/cast now that `status` is required), **NIT 5** (added the `pending→pending`→422 self-transition pin to hurl). **NIT 4** (E2E visit-selected guard) declined — confirmed non-false-green (the 8s `sheet.waitFor` is the real guard).
+
+## C.7 Cross-module / notes
+
+- `Prescription.status` is additive for any other consumer of the type; no consumer asserts its absence.
+- **Per-patient Rx history is NOT built** — only a per-visit route (`GET /dental/visits/{visitId}/prescriptions`) exists; a cross-visit list would need a new backend route. Decision-free deferral, out of this FE-only batch (the fix-ready "per visit + per patient" wording outran the available backend).
+- Consent gate facades / V-CLN-010 untouched. No scheduler, no migration, no schema change.
+
+## C.8 Completion
+
+`COMPLETE` (Batch C) — FIX-006 landed RED-first across component + contract + E2E. The orphaned `listPrescriptions`/`updatePrescription` lifecycle (WF-016) is now reachable from the real product UI with FSM- and role-gated dispense/cancel. **Remaining:** D (amendments visibility + role parity), E (consent-template picker — coordinate dental-org), F (docs reconcile: lab enum + 50MB attachment cap).
