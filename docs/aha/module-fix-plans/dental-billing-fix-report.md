@@ -245,3 +245,78 @@ All FE affordance tests written **RED first** (8 fail / 2 pass — exactly the a
 ## B9. Completion Decision
 
 `COMPLETE` (Batch B) — FIX-003 + FIX-004 landed RED-first across component + contract + E2E, with one §15 contract drift (`voidedByMemberId`) reconciled spec-first. 3-lens majors folded in pre-commit; the voidReason validation gap is documented as a tracked deferral, not papered over. **Remaining:** C (payment-plan create + FIX-006 flag-sync — §15 already found a REAL cross-module bug there), D (pins + aged-receivable seed + overdue-filter E2E).
+
+---
+
+# Batch C — Payment-plan create dialog + flag-sync bug fix (FIX-005 + FIX-006) · 2026-06-12 · commit `8f956193`
+
+## C1. Fix Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch C — payment-plan create UI (FIX-005) + `hasActivePaymentPlan` flag-sync (FIX-006, a REAL cross-module bug) |
+| Superpowers used | Yes (Vertical TDD + verification-before-completion); §15 5-front sweep run first; 3-lens adversarial + targeted mutation-tests before commit |
+| Fix scope | P1 (FIX-005) + P2 cross-module bug (FIX-006) + a §15 contract drift |
+| Shared files touched | TypeSpec `dental-billing.tsp` (+ regen) ; patient facade (new fn) ; plan repo (cross-module via facade) |
+| Schema/migration touched | No (`installments[]` model existed unreferenced; the flag column already existed) |
+| Code commit | `8f956193` |
+
+## C2. §15 verification — ONE drift (FIX-005) + a REAL cross-module bug (FIX-006)
+
+- **FIX-005 createDentalPaymentPlan / getDentalPaymentPlan = CONTRACT_FIX.** Both handlers return `ctx.json({ ...plan, installments })` and the Hurl already pinned `$.installments`, but the TypeSpec `DentalPaymentPlan` model **omitted `installments[]`** → the SDK type omitted it → the view was forced to cast `data as unknown`. Added `installments: DentalPaymentPlanInstallment[]` to the model + regen (the installment model already existed, unreferenced) → dropped the cast. The create-request 2–24 bound was **deliberately left handler-only** (adding `@minValue/@maxValue` would change the tested `422 INVALID_INSTALLMENT_COUNT` to a `400 ValidationError`).
+- **FIX-006 = a real production bug, not just a pin.** `patients.hasActivePaymentPlan` (read by the EC1 archive guard, `patient.repo.ts:140`) was **NEVER written** — the new facade setter is the *only* writer; every other reference is a read. So the flag sat at its `false` schema default and **a patient with a live payment plan could be wrongly archived.** The pre-existing EC1 tests hand-FORCED the flag (`db.update(patients).set({ hasActivePaymentPlan: true })`) → false green.
+
+## C3. FIX-006 design (cross-module, boundary-legal, guarded)
+
+- **Write seam:** new `setPatientActivePaymentPlanFlag(db, patientId, bool)` in `patient-dental-patient.facade.ts`. The billing plan-repo importing a `.facade` is boundary-legal (`check-module-boundaries.ts:82` exempts `.facade`).
+- **Single choke point:** `syncPatientActivePaymentPlanFlag(patientId)` in the plan repo recomputes `hasActive = plans.some(status ∈ {on_track, behind})` via `findByPatient` and persists via the facade. Hooked into **all three** status-write paths: `createWithInstallments` (set), `setStatus` (manual), `updatePlanStatus` (cron/re-eval). **GUARDED clear** — a patient may hold plans across invoices, so the flag clears only when no remaining active plan exists. Verified (grep) that **no terminal transition bypasses these three methods** (`recordDentalPayment` has zero plan refs; no direct `db.update(dentalPaymentPlans)` outside the repo; `updateDentalPaymentPlan` is orphaned and routes through `setStatus`).
+- **Non-transactional** (sequential await), matching the existing non-atomic `createWithInstallments` + the `openTestTx` nested-tx constraint; the daily cron re-syncs (self-healing), so a crash between the plan write and the flag write self-corrects.
+
+## C4. Changes Made
+
+| Fix ID | Implemented | Files |
+| --- | --- | --- |
+| FIX-005 contract | `installments[]` on `DentalPaymentPlan` + regen | `dental-billing.tsp`; generated validators/SDK types/transformers/index |
+| FIX-005 FE | NEW `PaymentPlanCreate` dialog (2–24, frequency, startDate; NO amount; legible errors) + footer entry point; view `select`-mapper DERIVES paid/remaining/count/nextDue + `installmentNumber→number` (cast dropped); fixed `formatPlanStatus` `'onTrack'→'on_track'` + reconciled installment-status maps to `pending\|paid\|overdue\|waived` + `defaulted` badge | NEW `payment-plan-create.tsx`; `payment-plan-view.tsx`; `invoice-detail.tsx`; `invoice-detail.helpers.ts` (`showCreatePlanButton`) |
+| FIX-006 | facade setter + repo recompute hooked into create/setStatus/updatePlanStatus | `patient-dental-patient.facade.ts`; `dental-payment-plan.repo.ts` |
+
+## C5. Tests Added / Updated
+
+| Test File | Type | What It Proves |
+| --- | --- | --- |
+| `dental-billing.payment-plan-flag-sync.test.ts` (new) | backend integration | Creates a REAL plan → flag true → archive BLOCKED; complete → flag false → archive ALLOWED; defaulted clears; multi-plan GUARDED clear (completing one keeps flag set while another stays active) |
+| `payment-plan-create.test.tsx` (new) | FE component | Balance read-only; 2–24 bounds (1 and 25 blocked, no POST); start-date required; happy POST `{patientId, numberOfInstallments, frequency, startDate}` with `amountCents`/`totalCents` **undefined**; PLAN_EXISTS surfaced legibly |
+| `payment-plan-view.derive.test.tsx` (new) | FE component | Derives Paid ₱100 / Remaining ₱200 / Installments 3 / Next Due≠'--' / "On Track" from the wire; number badges; a WAIVED installment renders its label + is excluded from Next Due |
+| `invoice-detail.plan-create.test.tsx` (new) | FE component | Writer sees + opens the create dialog; non-writer does not |
+| `dental-billing.hurl` | contract | Existing `$.installments count==3` + per-installment field pins now backed by the declared model |
+
+All RED-first; the FIX-006 pin went `0/3 → 3/3`.
+
+## C6. Adversarial Verification (pre-commit)
+
+3-lens workflow returned **SHIP (contract) · SHIP_WITH_NITS (coherence) · SHIP (test-honesty) — no blockers, no majors, `vacuousTestRisk: NONE`** across all three (reviewers independently re-ran the gates and grep-confirmed the facade is the sole flag writer). **Targeted mutations** confirmed: over-exposing `canApplyDiscount`-class gates fails the negative tests; a `length>0` recompute (ignoring the active-status guard) fails the terminal-doesn't-count tests. **In-scope finding folded in:** the installment-status FE maps keyed a phantom `'upcoming'` and omitted `'waived'` (the now-correct SDK enum) → reconciled + pinned (a waived installment renders "Waived" and is excluded from Next Due).
+
+## C7. ROADMAP FLAGS (documented deferrals)
+
+- **Installment-payment lifecycle disconnect (product-completeness, pre-existing).** No production path marks an installment `paid` or updates `installment.paidCents` (`recordDentalPayment` does not touch installments; the cron only reads them). So a live plan's **derived Paid stays ₱0 / progress 0%**, and `completed` is only reachable via the cron all-paid path that can never become true. The view renders **truthfully** for the actual wire state (paid=0), so this is not a coherence break — but the installment-payment wiring is a real V2 gap.
+- **`createDentalPaymentPlan` trusts `body.patientId`** rather than deriving it from `invoice.patientId` (a mismatched id would key the flag-sync on the wrong patient). The dialog always passes `invoice.patientId`, so the FE flow is safe; same handler-trust category as the #8 `recordedByMemberId` fix — a separate backend-trust slice.
+- **Unconditional flag re-sync on every `updatePlanStatus`** (incl. no-op cron re-evals) is **intentional self-healing**, not a defect — it re-corrects any drift daily at O(active plans) cost (fine at clinic scale). A `newStatus !== oldStatus` guard would remove the redundant writes but trade away the self-heal.
+- Cosmetic (no action): footer can show Create + View Payment Plan together; `perInstallment` preview is a labeled `≈` approximation (backend gives the remainder to the last installment).
+
+## C8. Tests Run
+
+| Command | Result |
+| --- | --- |
+| `scripts/test-with-db.ts .../payment-plan-flag-sync.test.ts` | 3/0 (RED→GREEN) |
+| backend regression (fsm/jobs/repo/property/idempotency/edge/acceptance/dental-billing/patient-EC1) | 11/5/9/7/2/28/5/84/13, all 0 fail |
+| `CONTRACT_ONLY=dental-billing` (fresh :7213) | 40 reqs, 100% |
+| `bun test src/features/billing/` | 147/0 |
+| `bun test src/` (full FE) | 2383/0 |
+| `billing.spec.ts --project=chromium` | 6/0 (+create-plan journey) |
+| typecheck FE + api-ts + sdk-ts | clean |
+| `check:boundaries:dental-billing` | clean (`.facade` seam) |
+| eslint (changed files) | 0 errors |
+
+## C9. Completion Decision
+
+`COMPLETE` (Batch C) — FIX-005 landed RED-first across component + contract + E2E (the headline PH installment feature is now reachable AND renders coherently), and FIX-006 fixed a **real cross-module archive bug** with an honest pin and a guarded, boundary-legal, single-choke-point design. 3-lens clean; the one in-scope coherence finding folded in. **Remaining:** D (zero-membership report pins ×5 + balance equality pin + aged-receivable seed + the Batch-A-deferred overdue-filter E2E).
