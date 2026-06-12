@@ -131,6 +131,19 @@ export function createApp(config: Config): App {
         return c.json({ ok: true });
       }
     );
+    // Dev-only: promote the current session user to the platform `admin` role
+    // (for E2E tests of admin-gated surfaces, e.g. the data-governance erasure
+    // queue). Mirrors the AUTH_ADMIN_EMAILS auto-promotion the auth hook applies
+    // at sign-up; the middleware reads role live from getSession, so the next
+    // request sees `admin` without re-auth. NEVER mounted in production.
+    app.post('/dev/promote-admin',
+      authMiddleware({ roles: ['user'] }),
+      async (c: BaseContext) => {
+        const sessionUser = c.get('user');
+        await database.update(userTable).set({ role: 'admin' }).where(eq(userTable.id, sessionUser!.id));
+        return c.json({ ok: true });
+      }
+    );
   }
   // /dental/branches (user's branches) — MIGRATED to TypeSpec codegen (TR-DG-002):
   // emits from dental-org.tsp BranchConfigManagement.getBranchesByUser in main.tsp.
