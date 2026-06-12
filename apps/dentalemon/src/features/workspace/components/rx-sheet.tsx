@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import {
   createPrescription,
@@ -43,6 +44,24 @@ const SCHEDULE_OPTIONS = [
 ] as const;
 
 type ControlledSubstanceSchedule = (typeof SCHEDULE_OPTIONS)[number]['value'];
+
+/**
+ * GAP-5 / FR1.12 / FR2.15 — drug↔allergy cross-check, evaluated CLIENT-SIDE so the
+ * prescriber is gated with an explicit confirm BEFORE the prescription is created
+ * ("blocking-with-override"), not warned after a 201. Tracks the backend match in
+ * `createPrescription.ts`: case-insensitive substring in EITHER direction. The FE
+ * additionally trims both sides (a defensive superset — trimming only broadens a
+ * match in the safe direction) and skips empty allergen names (a bare "" would
+ * substring-match every drug).
+ */
+export function matchAllergyConflicts(drugName: string, allergies: readonly string[]): string[] {
+  const drug = drugName.trim().toLowerCase();
+  if (!drug) return [];
+  return allergies.filter((a) => {
+    const allergen = a.trim().toLowerCase();
+    return allergen.length > 0 && (allergen.includes(drug) || drug.includes(allergen));
+  });
+}
 
 /** Narrow local type for the subset of the response that carries warnings.
  *  The generated Prescription type omits `warnings` because it is not yet in
@@ -77,12 +96,19 @@ export interface RxSheetProps {
    * (otherwise they would surface a 403). The list itself is readable by all roles.
    */
   canManage?: boolean;
+  /**
+   * GAP-5 — the patient's ACTIVE allergy names (medical-history safety floor),
+   * supplied by the workspace route so the sheet stays prop-pure (its test harness
+   * has no QueryClient). Used to gate a conflicting prescription with a pre-submit
+   * confirm dialog. Defaults to none → behaves exactly as before (server advisory).
+   */
+  patientAllergies?: readonly string[];
   open: boolean;
   onClose: () => void;
   onSaved?: () => void;
 }
 
-export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = false, open, onClose, onSaved }: RxSheetProps) {
+export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = false, patientAllergies = [], open, onClose, onSaved }: RxSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -106,6 +132,8 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
   const [allergyConflicts, setAllergyConflicts] = useState<string[]>([]);
   /** Non-empty when the server flagged drug-drug interactions; clinician must acknowledge. */
   const [drugInteractions, setDrugInteractions] = useState<DrugInteraction[]>([]);
+  /** GAP-5: non-empty while the pre-submit allergy confirm dialog is open (the conflicting allergens). */
+  const [pendingAllergyConfirm, setPendingAllergyConfirm] = useState<string[]>([]);
 
   // ── Lifecycle list state (FIX-006 / WF-016) ────────────────────────────────
   const [rxList, setRxList] = useState<Prescription[]>([]);
@@ -127,6 +155,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
       setRxList([]);
       setListError('');
       setActingId('');
+      setPendingAllergyConfirm([]);
     }
   }, [open]);
 
@@ -189,10 +218,21 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
     return errs;
   }
 
-  async function handleSave() {
+  // GAP-5: `allergyOverridden` is threaded as an explicit argument (not read from
+  // state) so the dialog's "Prescribe anyway" can re-enter handleSave race-free —
+  // a setState would not be visible within the same synchronous call.
+  async function handleSave(allergyOverridden = false) {
     const errs = validate();
     if (errs.length > 0) { setErrors(errs); return; }
     setErrors([]);
+
+    // GAP-5 / FR1.12: block BEFORE creating the Rx when the drug conflicts with a
+    // recorded active allergy. The override is the explicit dialog confirmation.
+    if (!allergyOverridden) {
+      const conflicts = matchAllergyConflicts(drugName, patientAllergies);
+      if (conflicts.length > 0) { setPendingAllergyConfirm(conflicts); return; }
+    }
+
     setSaving(true);
     try {
       const result = await createPrescription({
@@ -222,7 +262,15 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
       // The generated type omits `warnings`; a single narrowing `as` widens to the
       // intersection above (no blind `as unknown as` — GAP-D).
       const data = result.data as PrescriptionWithWarnings | undefined;
-      const conflicts = data?.warnings?.allergyConflicts ?? [];
+      const serverConflicts = data?.warnings?.allergyConflicts ?? [];
+      // GAP-5: suppress ONLY the allergens the clinician explicitly acknowledged in
+      // the pre-submit dialog (= what the matcher surfaced for this drug). Any server
+      // conflict NOT in that set — e.g. one added since the safety-floor cache loaded —
+      // must still surface post-save rather than being blanket-swallowed by the override.
+      const acknowledged = allergyOverridden
+        ? new Set(matchAllergyConflicts(drugName, patientAllergies).map(a => a.toLowerCase()))
+        : new Set<string>();
+      const conflicts = serverConflicts.filter(c => !acknowledged.has(c.toLowerCase()));
       const interactions = data?.warnings?.drugInteractions ?? [];
       if (conflicts.length > 0 || interactions.length > 0) {
         // Prescription was saved — hold the sheet open and require acknowledgment.
@@ -656,7 +704,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
           {mode === 'new' && (
             <button
               type="button"
-              onClick={handleSave}
+              onClick={() => handleSave()}
               disabled={saving || allergyConflicts.length > 0 || drugInteractions.length > 0}
               className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
             >
@@ -665,6 +713,54 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
           )}
         </div>
       </div>
+
+      {/* GAP-5 / FR1.12 — pre-submit allergy blocking-with-override confirm dialog.
+          Radix Dialog (no shadcn AlertDialog in this repo); mirrors the
+          pre-completion-checklist pattern. The prescription is created ONLY on the
+          explicit "Prescribe anyway" override. */}
+      <Dialog.Root
+        open={pendingAllergyConfirm.length > 0}
+        onOpenChange={(v) => { if (!v) setPendingAllergyConfirm([]); }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+          <Dialog.Content
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-[calc(100%-2rem)] bg-background rounded-2xl p-6 z-50 shadow-2xl focus:outline-none"
+            aria-describedby="allergy-confirm-description"
+          >
+            {/* testid on an inner wrapper: the test-env Dialog.Content stub drops
+                arbitrary props, so anchor queries on a real child div. */}
+            <div data-testid="allergy-confirm-dialog">
+              <Dialog.Title className="text-base font-semibold text-amber-900">
+                Allergy conflict
+              </Dialog.Title>
+              <p id="allergy-confirm-description" className="text-sm text-muted-foreground mt-2">
+                <span className="font-medium text-foreground">{drugName.trim() || 'This drug'}</span>
+                {' '}conflicts with this patient&apos;s recorded allergy to{' '}
+                <span className="font-semibold text-amber-900">{pendingAllergyConfirm.join(', ')}</span>.
+                Prescribing it anyway requires your explicit confirmation.
+              </p>
+              <div className="flex gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setPendingAllergyConfirm([])}
+                  className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPendingAllergyConfirm([]); void handleSave(true); }}
+                  aria-label="Prescribe anyway despite allergy"
+                  className="flex-1 h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
+                >
+                  Prescribe anyway
+                </button>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { TimelineCarousel } from '@/features/workspace/components/timeline-carou
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
 import { MedicalHistorySheet } from '@/features/workspace/components/medical-history-sheet';
+import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { PreCompletionChecklist } from '@/features/workspace/components/pre-completion-checklist';
 import { RxSheet } from '@/features/workspace/components/rx-sheet';
 import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
@@ -115,6 +116,13 @@ function WorkspacePage() {
   // FR8.4b: branch-configured consent templates feed the ConsentSheet picker so
   // clinicians present this clinic's own consent text, not a hardcoded list.
   const { templates: consentTemplates } = useConsentTemplates(branchId ?? '');
+  // GAP-5 / FR1.12: the patient's active allergies (same safety-floor cache the top
+  // bar reads — react-query dedupes the key) feed the RxSheet's pre-submit allergy
+  // block. Sourced here so the sheet stays prop-pure.
+  const { entries: medicalHistoryEntries } = useMedicalHistory(patientId);
+  const patientAllergies = medicalHistoryEntries
+    .filter((e) => e.active && e.entryType === 'allergy')
+    .map((e) => e.displayName);
 
   // P0-A: open offline chart conflicts (rejected stale writes) for this patient.
   const { conflictedTeeth } = useChartConflicts(patientId);
@@ -563,6 +571,7 @@ function WorkspacePage() {
           patientId={patientId}
           prescriberMemberId={prescriberMemberId}
           canManage={orgRole === 'dentist_owner' || orgRole === 'dentist_associate'}
+          patientAllergies={patientAllergies}
           open={rxSheetOpen}
           onClose={() => setRxSheetOpen(false)}
         />

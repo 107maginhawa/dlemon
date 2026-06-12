@@ -450,3 +450,258 @@ describe('RxSheet — prescription list + lifecycle (FIX-006)', () => {
     }
   });
 });
+
+// ── GAP-5 (FR1.12/FR2.15): allergy blocking-with-override, PRE-SUBMIT gate ────
+//
+// Decision #11 restored PRD "blocking-with-override": a recorded allergy that the
+// drug being prescribed conflicts with must be confirmed via an explicit dialog
+// BEFORE the prescription is created — not surfaced after a 201 (advisory). The
+// FE already holds the patient's active allergies (workspace safety floor /
+// listMedicalHistory); the parent passes them in as `patientAllergies` so the
+// sheet stays prop-pure. The matcher mirrors the backend cross-check exactly
+// (case-insensitive, substring in either direction).
+
+import { within } from '@testing-library/react';
+
+function renderRxWithAllergies(
+  patientAllergies: string[],
+  overrides: Partial<{ onSaved: () => void; onClose: () => void }> = {},
+) {
+  return render(
+    React.createElement(RxSheet, {
+      visitId: 'v-1',
+      patientId: 'p-1',
+      prescriberMemberId: 'm-1',
+      patientAllergies,
+      open: true,
+      onClose: overrides.onClose ?? (() => {}),
+      onSaved: overrides.onSaved,
+    } as React.ComponentProps<typeof RxSheet>),
+  );
+}
+
+async function fillForm(user: ReturnType<typeof userEvent.setup>, drug: string) {
+  await user.type(screen.getByLabelText('Drug name'), drug);
+  await user.type(screen.getByLabelText('Dosage'), '500mg');
+  await user.selectOptions(screen.getByLabelText('Frequency selection'), 'TID (three times daily)');
+}
+
+describe('RxSheet — allergy blocking-with-override (GAP-5)', () => {
+  test('a conflicting drug opens a confirm dialog BEFORE submit and does NOT POST', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const f = installFetch();
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved });
+      await fillForm(user, 'Penicillin');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      // A confirm dialog must appear naming the conflicting allergen…
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      expect(dialog.textContent).toContain('Penicillin');
+      // …and NOTHING must have been POSTed yet (this is a PRE-submit gate).
+      expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(false);
+      expect(onSaved.mock.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('"Prescribe anyway" in the dialog is what actually POSTs the prescription', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const onClose = mock(() => {});
+    const f = installFetch();
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved, onClose });
+      await fillForm(user, 'Penicillin');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      // No POST until the explicit override.
+      expect(f.calls.some(c => c.method === 'POST')).toBe(false);
+
+      await user.click(within(dialog).getByRole('button', { name: /prescribe anyway/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(true),
+      );
+      const post = f.calls.find(c => c.url.includes('/prescriptions'))!;
+      expect((post.body as { drugName: string }).drugName).toBe('Penicillin');
+      // Allergy was already acknowledged pre-submit → the post-save server banner
+      // must NOT re-prompt; the sheet completes.
+      await waitFor(() => expect(onSaved.mock.calls.length).toBe(1));
+      expect(onClose.mock.calls.length).toBe(1);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('cancelling the dialog keeps the form and does NOT POST', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const f = installFetch();
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved });
+      await fillForm(user, 'Penicillin');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      await user.click(within(dialog).getByRole('button', { name: /cancel/i }));
+
+      await waitFor(() => expect(screen.queryByTestId('allergy-confirm-dialog')).toBeNull());
+      expect(f.calls.some(c => c.method === 'POST')).toBe(false);
+      expect(onSaved.mock.calls.length).toBe(0);
+      // The drug name is still in the form (not discarded).
+      expect((screen.getByLabelText('Drug name') as HTMLInputElement).value).toBe('Penicillin');
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('matches the allergen as a substring in either direction (mirrors backend)', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      // Allergen "Amoxicillin"; prescribing "Amox" → drug ⊂ allergen → conflict.
+      renderRxWithAllergies(['Amoxicillin']);
+      await fillForm(user, 'Amox');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      expect(dialog.textContent).toContain('Amoxicillin');
+      expect(f.calls.some(c => c.method === 'POST')).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('a non-conflicting drug submits directly with no dialog', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const onClose = mock(() => {});
+    const f = installFetch();
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved, onClose });
+      await fillForm(user, 'Ibuprofen');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(true),
+      );
+      // No pre-submit dialog was shown.
+      expect(screen.queryByTestId('allergy-confirm-dialog')).toBeNull();
+      await waitFor(() => expect(onSaved.mock.calls.length).toBe(1));
+      expect(onClose.mock.calls.length).toBe(1);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('matches when the allergen is a substring of the drug name (reverse direction)', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      // Allergen "Penicillin"; prescribing "Penicillin V" → allergen ⊂ drug → conflict.
+      renderRxWithAllergies(['Penicillin']);
+      await fillForm(user, 'Penicillin V');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      await screen.findByTestId('allergy-confirm-dialog');
+      expect(f.calls.some(c => c.method === 'POST')).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('after override, the post-save server allergy banner does NOT re-prompt (no double gate)', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const onClose = mock(() => {});
+    // The server ALSO returns allergyConflicts on the 201 (backend is unchanged).
+    const f = installFetch({ warnings: { allergyConflicts: ['Penicillin'] } });
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved, onClose });
+      await fillForm(user, 'Penicillin');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      await user.click(within(dialog).getByRole('button', { name: /prescribe anyway/i }));
+
+      // POST fires, and the allergy was already acknowledged pre-submit → the sheet
+      // completes without re-showing the post-save amber banner.
+      await waitFor(() => expect(onSaved.mock.calls.length).toBe(1));
+      expect(onClose.mock.calls.length).toBe(1);
+      expect(screen.queryByText(/allergy conflict:/i)).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('after override, a server allergen the clinician did NOT acknowledge still surfaces post-save', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    // Client cache knows only Penicillin; the server returns an ADDITIONAL conflict
+    // (e.g. a cross-reactive allergy added since the safety-floor cache loaded) that
+    // was never shown in the confirm dialog. The override must NOT swallow it.
+    const f = installFetch({ warnings: { allergyConflicts: ['Penicillin', 'Cephalexin'] } });
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved });
+      await fillForm(user, 'Penicillin');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      // The dialog only named the acknowledged allergen.
+      expect(dialog.textContent).toContain('Penicillin');
+      expect(dialog.textContent).not.toContain('Cephalexin');
+      await user.click(within(dialog).getByRole('button', { name: /prescribe anyway/i }));
+
+      // The un-acknowledged Cephalexin conflict surfaces post-save; the sheet holds open.
+      await waitFor(() => expect(screen.getByText(/allergy conflict:/i).textContent).toContain('Cephalexin'));
+      expect(screen.getByText(/allergy conflict:/i).textContent).not.toContain('Penicillin');
+      expect(onSaved.mock.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('drug interactions still surface post-save even when allergy was overridden', async () => {
+    const user = userEvent.setup();
+    const onSaved = mock(() => {});
+    const f = installFetch({
+      warnings: {
+        allergyConflicts: ['Penicillin'],
+        drugInteractions: [{ interactingDrug: 'Warfarin', severity: 'major', description: 'Bleeding risk' }],
+      },
+    });
+    try {
+      renderRxWithAllergies(['Penicillin'], { onSaved });
+      await fillForm(user, 'Penicillin');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+      const dialog = await screen.findByTestId('allergy-confirm-dialog');
+      await user.click(within(dialog).getByRole('button', { name: /prescribe anyway/i }));
+
+      // The server-only drug-drug interaction (not knowable client-side) still gates post-save.
+      await waitFor(() => expect(screen.getByText(/drug interaction warning/i)).not.toBeNull());
+      expect(onSaved.mock.calls.length).toBe(0);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('empty-string allergens never spuriously match a drug', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      renderRxWithAllergies(['']);
+      await fillForm(user, 'Ibuprofen');
+      await user.click(screen.getByRole('button', { name: /save prescription/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/prescriptions'))).toBe(true),
+      );
+      expect(screen.queryByTestId('allergy-confirm-dialog')).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+});
