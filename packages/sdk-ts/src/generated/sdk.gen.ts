@@ -1229,7 +1229,7 @@ export const getDashboardSummary = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * List erasure requests with optional filters Requires role: 'user'
+ * List erasure requests with optional filters Requires role: 'admin'
  */
 export const listErasureRequests = <ThrowOnError extends boolean = false>(options?: Options<ListErasureRequestsData, ThrowOnError>) => (options?.client ?? client).get<ListErasureRequestsResponses, ListErasureRequestsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1238,7 +1238,7 @@ export const listErasureRequests = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * Request erasure of a subject's PII Requires role: 'user'
+ * Request erasure of a subject's PII Requires role: 'admin'
  */
 export const requestErasure = <ThrowOnError extends boolean = false>(options: Options<RequestErasureData, ThrowOnError>) => (options.client ?? client).post<RequestErasureResponses, RequestErasureErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1251,7 +1251,7 @@ export const requestErasure = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Fetch a single erasure request Requires role: 'user'
+ * Fetch a single erasure request Requires role: 'admin'
  */
 export const getErasureRequest = <ThrowOnError extends boolean = false>(options: Options<GetErasureRequestData, ThrowOnError>) => (options.client ?? client).get<GetErasureRequestResponses, GetErasureRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1260,7 +1260,7 @@ export const getErasureRequest = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
- * Approve an erasure request — runs anonymization (legal hold blocks it) Requires role: 'user'
+ * Approve an erasure request — runs anonymization (legal hold blocks it) Requires role: 'admin'
  */
 export const approveErasure = <ThrowOnError extends boolean = false>(options: Options<ApproveErasureData, ThrowOnError>) => (options.client ?? client).post<ApproveErasureResponses, ApproveErasureErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1273,7 +1273,7 @@ export const approveErasure = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Reject an erasure request with a reason Requires role: 'user'
+ * Reject an erasure request with a reason Requires role: 'admin'
  */
 export const rejectErasure = <ThrowOnError extends boolean = false>(options: Options<RejectErasureData, ThrowOnError>) => (options.client ?? client).post<RejectErasureResponses, RejectErasureErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1605,7 +1605,7 @@ export const imagingMgmtGetCbctViewerLink = <ThrowOnError extends boolean = fals
 });
 
 /**
- * List legal holds with optional filters Requires role: 'user'
+ * List legal holds with optional filters Requires role: 'admin'
  */
 export const listLegalHolds = <ThrowOnError extends boolean = false>(options?: Options<ListLegalHoldsData, ThrowOnError>) => (options?.client ?? client).get<ListLegalHoldsResponses, ListLegalHoldsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1614,7 +1614,7 @@ export const listLegalHolds = <ThrowOnError extends boolean = false>(options?: O
 });
 
 /**
- * Place a legal hold on a subject Requires role: 'user'
+ * Place a legal hold on a subject Requires role: 'admin'
  */
 export const placeLegalHold = <ThrowOnError extends boolean = false>(options: Options<PlaceLegalHoldData, ThrowOnError>) => (options.client ?? client).post<PlaceLegalHoldResponses, PlaceLegalHoldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1627,7 +1627,7 @@ export const placeLegalHold = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Release an active legal hold Requires role: 'user'
+ * Release an active legal hold Requires role: 'admin'
  */
 export const releaseLegalHold = <ThrowOnError extends boolean = false>(options: Options<ReleaseLegalHoldData, ThrowOnError>) => (options.client ?? client).post<ReleaseLegalHoldResponses, ReleaseLegalHoldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

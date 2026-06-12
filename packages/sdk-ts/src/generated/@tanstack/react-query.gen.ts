@@ -2158,7 +2158,7 @@ export const getDashboardSummaryOptions = (options?: Options<GetDashboardSummary
 export const listErasureRequestsQueryKey = (options?: Options<ListErasureRequestsData>) => createQueryKey('listErasureRequests', options);
 
 /**
- * List erasure requests with optional filters Requires role: 'user'
+ * List erasure requests with optional filters Requires role: 'admin'
  */
 export const listErasureRequestsOptions = (options?: Options<ListErasureRequestsData>) => queryOptions<ListErasureRequestsResponse, ListErasureRequestsError, ListErasureRequestsResponse, ReturnType<typeof listErasureRequestsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -2174,7 +2174,7 @@ export const listErasureRequestsOptions = (options?: Options<ListErasureRequests
 });
 
 /**
- * Request erasure of a subject's PII Requires role: 'user'
+ * Request erasure of a subject's PII Requires role: 'admin'
  */
 export const requestErasureMutation = (options?: Partial<Options<RequestErasureData>>): UseMutationOptions<RequestErasureResponse, RequestErasureError, Options<RequestErasureData>> => {
     const mutationOptions: UseMutationOptions<RequestErasureResponse, RequestErasureError, Options<RequestErasureData>> = {
@@ -2193,7 +2193,7 @@ export const requestErasureMutation = (options?: Partial<Options<RequestErasureD
 export const getErasureRequestQueryKey = (options: Options<GetErasureRequestData>) => createQueryKey('getErasureRequest', options);
 
 /**
- * Fetch a single erasure request Requires role: 'user'
+ * Fetch a single erasure request Requires role: 'admin'
  */
 export const getErasureRequestOptions = (options: Options<GetErasureRequestData>) => queryOptions<GetErasureRequestResponse, GetErasureRequestError, GetErasureRequestResponse, ReturnType<typeof getErasureRequestQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -2209,7 +2209,7 @@ export const getErasureRequestOptions = (options: Options<GetErasureRequestData>
 });
 
 /**
- * Approve an erasure request — runs anonymization (legal hold blocks it) Requires role: 'user'
+ * Approve an erasure request — runs anonymization (legal hold blocks it) Requires role: 'admin'
  */
 export const approveErasureMutation = (options?: Partial<Options<ApproveErasureData>>): UseMutationOptions<ApproveErasureResponse, ApproveErasureError, Options<ApproveErasureData>> => {
     const mutationOptions: UseMutationOptions<ApproveErasureResponse, ApproveErasureError, Options<ApproveErasureData>> = {
@@ -2226,7 +2226,7 @@ export const approveErasureMutation = (options?: Partial<Options<ApproveErasureD
 };
 
 /**
- * Reject an erasure request with a reason Requires role: 'user'
+ * Reject an erasure request with a reason Requires role: 'admin'
  */
 export const rejectErasureMutation = (options?: Partial<Options<RejectErasureData>>): UseMutationOptions<RejectErasureResponse, RejectErasureError, Options<RejectErasureData>> => {
     const mutationOptions: UseMutationOptions<RejectErasureResponse, RejectErasureError, Options<RejectErasureData>> = {
@@ -2808,7 +2808,7 @@ export const imagingMgmtGetCbctViewerLinkOptions = (options: Options<ImagingMgmt
 export const listLegalHoldsQueryKey = (options?: Options<ListLegalHoldsData>) => createQueryKey('listLegalHolds', options);
 
 /**
- * List legal holds with optional filters Requires role: 'user'
+ * List legal holds with optional filters Requires role: 'admin'
  */
 export const listLegalHoldsOptions = (options?: Options<ListLegalHoldsData>) => queryOptions<ListLegalHoldsResponse, ListLegalHoldsError, ListLegalHoldsResponse, ReturnType<typeof listLegalHoldsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -2824,7 +2824,7 @@ export const listLegalHoldsOptions = (options?: Options<ListLegalHoldsData>) => 
 });
 
 /**
- * Place a legal hold on a subject Requires role: 'user'
+ * Place a legal hold on a subject Requires role: 'admin'
  */
 export const placeLegalHoldMutation = (options?: Partial<Options<PlaceLegalHoldData>>): UseMutationOptions<PlaceLegalHoldResponse, PlaceLegalHoldError, Options<PlaceLegalHoldData>> => {
     const mutationOptions: UseMutationOptions<PlaceLegalHoldResponse, PlaceLegalHoldError, Options<PlaceLegalHoldData>> = {
@@ -2841,7 +2841,7 @@ export const placeLegalHoldMutation = (options?: Partial<Options<PlaceLegalHoldD
 };
 
 /**
- * Release an active legal hold Requires role: 'user'
+ * Release an active legal hold Requires role: 'admin'
  */
 export const releaseLegalHoldMutation = (options?: Partial<Options<ReleaseLegalHoldData>>): UseMutationOptions<ReleaseLegalHoldResponse, ReleaseLegalHoldError, Options<ReleaseLegalHoldData>> => {
     const mutationOptions: UseMutationOptions<ReleaseLegalHoldResponse, ReleaseLegalHoldError, Options<ReleaseLegalHoldData>> = {

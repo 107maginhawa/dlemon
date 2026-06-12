@@ -758,7 +758,10 @@ export const ConsentFormSchema = z.object({
   risksOfNonTreatment: z.string().optional(),
   signedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   signatureData: z.string().optional(),
-  signed: z.boolean()
+  signed: z.boolean(),
+  revoked: z.boolean(),
+  revokedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  revokedBy: z.string().uuid().optional()
 });
 
 export const PrescriptionDataSchema = z.object({

@@ -222,3 +222,145 @@ describe('ConsentSheet — informed refusal (P1-3)', () => {
     }
   });
 });
+
+// ── Batch B (FIX-004): consent history + revoke ─────────────────────────────
+// WF-035 — consent revocation + a history view of signed/pending/revoked forms
+// and informed refusals. The history list reads listConsentForms +
+// listConsentRefusals; the Revoke action calls revokeConsentForm (PATCH) and is
+// gated to PENDING (unsigned, un-revoked) forms AND to the caller's role
+// (canRevoke), mirroring the dentist_owner/associate server gate.
+
+const HISTORY_DATES = { createdAt: '2024-01-10T09:00:00Z', updatedAt: '2024-01-10T09:00:00Z' };
+
+const HISTORY_FORMS = [
+  { id: 'cf-pending', visitId: 'v-1', patientId: 'p-1', templateId: 't1', templateName: 'General Dental Consent', signed: false, revoked: false, ...HISTORY_DATES },
+  { id: 'cf-signed', visitId: 'v-1', patientId: 'p-1', templateId: 't2', templateName: 'Tooth Extraction Consent', signed: true, revoked: false, signedAt: HISTORY_DATES.createdAt, ...HISTORY_DATES },
+  { id: 'cf-revoked', visitId: 'v-1', patientId: 'p-1', templateId: 't3', templateName: 'Implant Surgery Consent', signed: false, revoked: true, revokedAt: HISTORY_DATES.createdAt, ...HISTORY_DATES },
+];
+
+const HISTORY_REFUSALS = [
+  { id: 'ref-1', visitId: 'v-1', patientId: 'p-1', refusingMemberId: 'm-1', procedureDescription: 'Root canal on #36', refusalReason: 'Cost', patientAcknowledgement: 'Understood', refusedAt: HISTORY_DATES.createdAt, ...HISTORY_DATES },
+];
+
+// Method-aware fetch router: the bespoke installFetch() above keys only on URL
+// substrings and would route GET /consents (list) into the create stub. This
+// disambiguates by method so the history GETs and the revoke PATCH resolve.
+function installHistoryFetch() {
+  const calls: Array<{ url: string; method: string; body: unknown }> = [];
+  const original = global.fetch;
+  global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+    const url = req instanceof Request ? req.url : String(req);
+    const method = (req instanceof Request ? req.method : init?.method ?? 'GET').toUpperCase();
+    const raw = req instanceof Request ? await req.clone().text() : (init?.body as string | undefined);
+    calls.push({ url, method, body: raw ? JSON.parse(raw) : undefined });
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+
+    if (method === 'PATCH' && url.includes('/revoke')) {
+      // Echo the revoked form (matches the handler's full-row response).
+      const id = url.split('/consents/')[1]?.split('/revoke')[0];
+      const form = HISTORY_FORMS.find(fm => fm.id === id) ?? HISTORY_FORMS[0];
+      return json({ ...form, signed: false, revoked: true, revokedAt: HISTORY_DATES.createdAt });
+    }
+    if (method === 'GET' && url.includes('/consent-refusals')) {
+      return json({ data: HISTORY_REFUSALS, pagination: { totalCount: HISTORY_REFUSALS.length } });
+    }
+    if (method === 'GET' && url.includes('/consents')) {
+      return json({ data: HISTORY_FORMS, pagination: { offset: 0, limit: 50, count: HISTORY_FORMS.length, totalCount: HISTORY_FORMS.length } });
+    }
+    return json({ id: 'consent-x', visitId: 'v-1', signed: false, revoked: false, ...HISTORY_DATES }, 201);
+  }) as unknown as typeof fetch;
+  return { calls, restore: () => { global.fetch = original; } };
+}
+
+function renderHistorySheet(overrides: Partial<{ canRevoke: boolean; onSaved: () => void }> = {}) {
+  return render(
+    React.createElement(ConsentSheet, {
+      visitId: 'v-1',
+      patientId: 'p-1',
+      currentMemberId: 'm-1',
+      canRevoke: overrides.canRevoke ?? true,
+      open: true,
+      onClose: () => {},
+      onSaved: overrides.onSaved,
+    } as React.ComponentProps<typeof ConsentSheet>),
+  );
+}
+
+describe('ConsentSheet — consent history + revoke (Batch B / FIX-004)', () => {
+  test('History tab lists consent forms with status and informed refusals', async () => {
+    const f = installHistoryFetch();
+    try {
+      renderHistorySheet();
+      await userEvent.setup().click(screen.getByRole('tab', { name: /history/i }));
+
+      // Forms render with their template names and derived statuses.
+      await screen.findByText('General Dental Consent');
+      expect(screen.getByTestId('consent-status-cf-pending').textContent).toMatch(/pending/i);
+      expect(screen.getByTestId('consent-status-cf-signed').textContent).toMatch(/signed/i);
+      expect(screen.getByTestId('consent-status-cf-revoked').textContent).toMatch(/revoked/i);
+
+      // Refusals render in the same history view.
+      expect(screen.getByText('Root canal on #36')).toBeTruthy();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('Revoke action shows ONLY on pending forms (hidden on signed + revoked)', async () => {
+    const f = installHistoryFetch();
+    try {
+      renderHistorySheet({ canRevoke: true });
+      await userEvent.setup().click(screen.getByRole('tab', { name: /history/i }));
+      await screen.findByText('General Dental Consent');
+
+      const revokeButtons = screen.getAllByRole('button', { name: /revoke/i });
+      expect(revokeButtons.length).toBe(1);
+      // The single revoke button belongs to the pending form.
+      expect(screen.getByRole('button', { name: /revoke general dental consent/i })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /revoke tooth extraction consent/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /revoke implant surgery consent/i })).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('clicking Revoke issues PATCH .../consents/{id}/revoke and refetches history', async () => {
+    const onSaved = mock(() => {});
+    const f = installHistoryFetch();
+    try {
+      renderHistorySheet({ canRevoke: true, onSaved });
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('tab', { name: /history/i }));
+      await screen.findByText('General Dental Consent');
+
+      await user.click(screen.getByRole('button', { name: /revoke general dental consent/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'PATCH' && c.url.includes('/consents/cf-pending/revoke'))).toBe(true),
+      );
+      // History is refetched after a successful revoke (>= 2 GET /consents calls).
+      await waitFor(() =>
+        expect(f.calls.filter(c => c.method === 'GET' && /\/consents(\?|$)/.test(c.url)).length).toBeGreaterThanOrEqual(2),
+      );
+      await waitFor(() => expect(onSaved.mock.calls.length).toBeGreaterThanOrEqual(1));
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('Revoke is hidden for roles without revoke permission (canRevoke=false)', async () => {
+    const f = installHistoryFetch();
+    try {
+      renderHistorySheet({ canRevoke: false });
+      await userEvent.setup().click(screen.getByRole('tab', { name: /history/i }));
+      await screen.findByText('General Dental Consent');
+
+      // Pending form still renders, but no revoke affordance is offered.
+      expect(screen.getByTestId('consent-status-cf-pending').textContent).toMatch(/pending/i);
+      expect(screen.queryByRole('button', { name: /revoke/i })).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+});

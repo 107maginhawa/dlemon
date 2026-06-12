@@ -172,6 +172,90 @@ Content-Type: application/json
   "signatureData": "new-sig-data"
 }
 HTTP 422
+[Asserts]
+jsonpath "$.code" == "CONSENT_FORM_SIGNED"
+
+
+# ============================================================
+# CONSENT REVOCATION + REFUSALS (WF-035) — FIX-005 (Batch B)
+# ============================================================
+
+# 8b. Create a second, UNSIGNED consent form to exercise the revoke flow.
+# (Step 5's form is signed at step 7, so a fresh unsigned form is required.)
+POST {{api}}/dental/visits/{{visit_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "templateId": "tpl-revocable-consent",
+  "templateName": "Revocable Consent"
+}
+HTTP 201
+[Captures]
+revocable_consent_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.signed" == false
+jsonpath "$.revoked" == false
+
+
+# 8c. Revoke the unsigned consent form (WF-035). NOTE: revoke is PATCH (sign is
+# POST). The handler returns the full row, so `revoked` flips true and `signed`
+# stays false — now schema-backed after the ConsentForm model gained `revoked`.
+PATCH {{api}}/dental/visits/{{visit_id}}/consents/{{revocable_consent_id}}/revoke
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.revoked" == true
+jsonpath "$.signed" == false
+
+
+# 8d. Signing a revoked consent form is rejected (V-CLN-010 mutual exclusion):
+# 422 CONSENT_FORM_REVOKED (distinct from the signed→re-sign 422 above).
+POST {{api}}/dental/visits/{{visit_id}}/consents/{{revocable_consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "CONSENT_FORM_REVOKED"
+
+
+# 8e. Re-revoking an already-revoked form conflicts (409).
+PATCH {{api}}/dental/visits/{{visit_id}}/consents/{{revocable_consent_id}}/revoke
+Cookie: better-auth.session_token={{session_token}}
+HTTP 409
+
+
+# 8f. Record an informed refusal (precondition for the refusals-list pin).
+POST {{api}}/dental/visits/{{visit_id}}/consent-refusals
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "refusingMemberId": "{{dentist_member_id}}",
+  "procedureDescription": "Extraction of tooth #48",
+  "refusalReason": "Patient prefers conservative care",
+  "patientAcknowledgement": "I understand the risks of declining treatment."
+}
+HTTP 201
+[Asserts]
+jsonpath "$.procedureDescription" == "Extraction of tooth #48"
+jsonpath "$.refusingMemberId" == "{{dentist_member_id}}"
+
+
+# 8g. List informed refusals (WF-035 history surface). The handler emits a
+# non-canonical pagination object {totalCount,page,pageSize}; assert only the
+# array + totalCount to stay green against the actual shape.
+GET {{api}}/dental/visits/{{visit_id}}/consent-refusals
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" count >= 1
+jsonpath "$.pagination.totalCount" >= 1
 
 
 # ============================================================

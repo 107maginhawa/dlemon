@@ -165,6 +165,7 @@ model UpdatePrescriptionRequest {
   signedAt: utcDateTime.fromISO("2026-03-15T08:52:00Z"),
   signatureData: "data:image/png;base64,iVBORw0KGgoAAAANS...",
   signed: true,
+  revoked: false,
 }, #{ title: "Signed extraction consent form" })
 model ConsentForm {
   id: UUID;
@@ -188,6 +189,16 @@ model ConsentForm {
   signedAt?: utcDateTime;
   signatureData?: string;
   signed: boolean;
+  /**
+   * DE-013 / EM-CLI-001 (WF-035): true once an unsigned consent form has been
+   * revoked. Returned by the handler/repo (full-row read) — declared here so the
+   * consent-history UI can distinguish a revoked form from a still-pending one.
+   */
+  revoked: boolean;
+  /** Timestamp the form was revoked, if revoked. */
+  revokedAt?: utcDateTime;
+  /** Member/user who revoked the form, if revoked. */
+  revokedBy?: UUID;
 }
 
 model CreateConsentFormRequest {

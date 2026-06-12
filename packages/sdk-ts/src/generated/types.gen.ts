@@ -1449,6 +1449,20 @@ export type ConsentForm = {
     signedAt?: Date;
     signatureData?: string;
     signed: boolean;
+    /**
+     * DE-013 / EM-CLI-001 (WF-035): true once an unsigned consent form has been
+     * revoked. Returned by the handler/repo (full-row read) — declared here so the
+     * consent-history UI can distinguish a revoked form from a still-pending one.
+     */
+    revoked: boolean;
+    /**
+     * Timestamp the form was revoked, if revoked.
+     */
+    revokedAt?: Date;
+    /**
+     * Member/user who revoked the form, if revoked.
+     */
+    revokedBy?: string;
 };
 
 /**

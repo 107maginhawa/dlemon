@@ -14,8 +14,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { createConsentForm, signConsentForm, recordConsentRefusal } from '@monobase/sdk-ts/generated';
-import type { ConsentForm } from '@monobase/sdk-ts/generated';
+import {
+  createConsentForm,
+  signConsentForm,
+  recordConsentRefusal,
+  listConsentForms,
+  listConsentRefusals,
+  revokeConsentForm,
+} from '@monobase/sdk-ts/generated';
+import type { ConsentForm, InformedRefusal } from '@monobase/sdk-ts/generated';
 
 // FR8.4b fallback only: used when the clinic has not configured any consent
 // templates (or no branch is in context). Once an owner adds templates in
@@ -35,7 +42,7 @@ export interface ConsentTemplateOption {
   name: string;
 }
 
-type SheetMode = 'consent' | 'refusal';
+type SheetMode = 'consent' | 'refusal' | 'history';
 
 export interface ConsentSheetProps {
   visitId: string;
@@ -48,12 +55,19 @@ export interface ConsentSheetProps {
    * consent text. Sourced by the parent via useConsentTemplates(branchId).
    */
   templates?: ConsentTemplateOption[];
+  /**
+   * WF-035 — whether the current user may revoke a pending consent form. The
+   * backend gates revoke to dentist_owner/dentist_associate; the parent passes
+   * this so the Revoke affordance only appears for those roles (otherwise it
+   * would surface a 403). The history view itself is visible to all roles.
+   */
+  canRevoke?: boolean;
   open: boolean;
   onClose: () => void;
   onSaved?: () => void;
 }
 
-export function ConsentSheet({ visitId, patientId, currentMemberId, templates, open, onClose, onSaved }: ConsentSheetProps) {
+export function ConsentSheet({ visitId, patientId, currentMemberId, templates, canRevoke = false, open, onClose, onSaved }: ConsentSheetProps) {
   const templateOptions: ReadonlyArray<ConsentTemplateOption> =
     templates && templates.length > 0 ? templates : CONSENT_TEMPLATES;
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
@@ -79,6 +93,13 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
   const [patientAcknowledgement, setPatientAcknowledgement] = useState('');
   const [refusalRecorded, setRefusalRecorded] = useState(false);
 
+  // ── Consent history + revoke state (Batch B / FIX-004, WF-035) ─────────────
+  const [historyForms, setHistoryForms] = useState<ConsentForm[]>([]);
+  const [historyRefusals, setHistoryRefusals] = useState<InformedRefusal[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [revokingId, setRevokingId] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -101,10 +122,69 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
       setRefusalReason('');
       setPatientAcknowledgement('');
       setRefusalRecorded(false);
+      setHistoryForms([]);
+      setHistoryRefusals([]);
+      setHistoryError('');
+      setRevokingId('');
       setError('');
       clearCanvas();
     }
   }, [open]);
+
+  // Load consent history when the History tab is opened (WF-035).
+  useEffect(() => {
+    if (open && mode === 'history') void loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, visitId]);
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+    setHistoryError('');
+    try {
+      const [formsRes, refusalsRes] = await Promise.all([
+        listConsentForms({ path: { visitId } }),
+        listConsentRefusals({ path: { visitId } }),
+      ]);
+      const forms =
+        formsRes.data && 'data' in formsRes.data ? (formsRes.data.data as ConsentForm[]) : [];
+      const refusals =
+        refusalsRes.data && 'data' in refusalsRes.data
+          ? (refusalsRes.data.data as InformedRefusal[])
+          : [];
+      setHistoryForms(forms);
+      setHistoryRefusals(refusals);
+    } catch {
+      setHistoryError('Failed to load consent history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  /** Derived form status — pending forms are the only revocable ones (WF-035). */
+  function consentStatus(form: ConsentForm): 'signed' | 'revoked' | 'pending' {
+    if (form.signed) return 'signed';
+    if (form.revoked) return 'revoked';
+    return 'pending';
+  }
+
+  async function handleRevoke(form: ConsentForm) {
+    setRevokingId(form.id);
+    setHistoryError('');
+    try {
+      const res = await revokeConsentForm({ path: { visitId, cid: form.id } });
+      if ((res as { error?: unknown }).error) {
+        setHistoryError('Failed to revoke consent form');
+        return;
+      }
+      // Re-read so the row flips signed/pending → revoked and the action drops.
+      await loadHistory();
+      onSaved?.();
+    } catch {
+      setHistoryError('Failed to revoke consent form');
+    } finally {
+      setRevokingId('');
+    }
+  }
 
   function clearCanvas() {
     const canvas = canvasRef.current;
@@ -255,7 +335,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
         </div>
 
         {/* Mode toggle */}
-        <div className="flex gap-1 px-5 pt-3 flex-shrink-0" role="tablist" aria-label="Consent or refusal">
+        <div className="flex gap-1 px-5 pt-3 flex-shrink-0" role="tablist" aria-label="Consent, refusal, or history">
           <button
             type="button"
             role="tab"
@@ -282,6 +362,19 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
           >
             Informed Refusal
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'history'}
+            onClick={() => { setMode('history'); setError(''); }}
+            className={`flex-1 h-9 rounded-xl text-sm font-semibold transition-colors ${
+              mode === 'history'
+                ? 'bg-foreground text-background'
+                : 'bg-secondary text-muted-foreground hover:bg-secondary/70'
+            }`}
+          >
+            History
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
@@ -291,7 +384,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
             </div>
           )}
 
-          {mode === 'consent' ? (
+          {mode === 'consent' && (
             <>
               {/* Template selector */}
               <div>
@@ -439,7 +532,9 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
                 </div>
               )}
             </>
-          ) : (
+          )}
+
+          {mode === 'refusal' && (
             <>
               {/* Informed refusal form */}
               <div className="rounded-xl bg-destructive/5 border border-destructive/20 px-3 py-2 text-xs text-muted-foreground">
@@ -497,6 +592,91 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
               )}
             </>
           )}
+
+          {mode === 'history' && (
+            <>
+              {historyError && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                  {historyError}
+                </div>
+              )}
+              {historyLoading && (
+                <p className="text-sm text-muted-foreground">Loading consent history…</p>
+              )}
+              {!historyLoading && historyForms.length === 0 && historyRefusals.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No consent records for this visit yet.
+                </p>
+              )}
+
+              {historyForms.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Consent forms
+                  </p>
+                  {historyForms.map((form) => {
+                    const status = consentStatus(form);
+                    const statusStyle =
+                      status === 'signed'
+                        ? 'bg-green-100 text-green-800'
+                        : status === 'revoked'
+                          ? 'bg-destructive/15 text-destructive'
+                          : 'bg-amber-100 text-amber-800';
+                    return (
+                      <div
+                        key={form.id}
+                        data-testid={`consent-history-form-${form.id}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary/20 px-3.5 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{form.templateName}</p>
+                          <span
+                            data-testid={`consent-status-${form.id}`}
+                            className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${statusStyle}`}
+                          >
+                            {status}
+                          </span>
+                        </div>
+                        {canRevoke && status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevoke(form)}
+                            disabled={revokingId === form.id}
+                            aria-label={`Revoke ${form.templateName}`}
+                            className="flex-shrink-0 h-8 px-3 rounded-lg border border-destructive/40 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          >
+                            {revokingId === form.id ? 'Revoking…' : 'Revoke'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {historyRefusals.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Informed refusals
+                  </p>
+                  {historyRefusals.map((refusal) => (
+                    <div
+                      key={refusal.id}
+                      data-testid={`consent-history-refusal-${refusal.id}`}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary/20 px-3.5 py-2.5"
+                    >
+                      <p className="text-sm font-medium min-w-0 truncate">
+                        {refusal.procedureDescription}
+                      </p>
+                      <span className="flex-shrink-0 inline-block rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive">
+                        Refused
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 px-5 py-4 border-t flex-shrink-0">
@@ -507,7 +687,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
           >
             Cancel
           </button>
-          {mode === 'consent' ? (
+          {mode === 'consent' && (
             <button
               type="button"
               onClick={handleSave}
@@ -517,7 +697,8 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, o
             >
               {saving ? 'Saving…' : 'Save consent form'}
             </button>
-          ) : (
+          )}
+          {mode === 'refusal' && (
             <button
               type="button"
               onClick={handleRecordRefusal}

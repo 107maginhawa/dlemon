@@ -1112,6 +1112,9 @@ const consentFormSchemaResponseTransformer = (data: any) => {
     if (data.signedAt) {
         data.signedAt = new Date(data.signedAt);
     }
+    if (data.revokedAt) {
+        data.revokedAt = new Date(data.revokedAt);
+    }
     return data;
 };
 
