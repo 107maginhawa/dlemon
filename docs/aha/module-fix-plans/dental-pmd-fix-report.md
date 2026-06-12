@@ -138,3 +138,36 @@ Wire shape unchanged (`content` stays an opaque JSON string; PMDDocument TypeSpe
 
 ## Completion decision
 `PARTIALLY COMPLETE` — Batch B + C1 `COMPLETE` and gate-green; C2/D/E remain (C2 deferred with rationale; E = strip path per decision #4; D needs dental-clinical top-bar).
+
+---
+
+# Addendum — Migration-safety pass: 0069 corrective + lint guard + mig-0063 orphan reconcile (2026-06-12)
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (consolidated via `outputs/EXECUTION-TODO.md` Track 1, last item — closes Track 1) · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Superpowers:** Yes (TDD + verification-before-completion). Commit `72954e12`.
+
+## Track-0 finding (recorded in EXECUTION-TODO Track 0)
+**0069 populated-DB exposure = NONE** (high confidence). Migration 0069 added `imported_pmd.source_description` as `NOT NULL` with no DEFAULT to a table created 63 migrations earlier (0006) — Postgres rejects that on a *populated* table (23502 on ATRewriteTable), so a populated DB fails to boot; fresh installs apply it to an empty table (CI green). The import write-path was structurally callable 27 days before 0069 (rows *could* lack the column), but every environment is always-fresh (pre-release `0.2.0.0`; no deploy; `db:reset`/`seed-demo` post-migration), so no persistent DB carried a row across the boundary. **Decisive mechanic:** the migrator (`drizzle-orm/node-postgres` `migrate()`) is single-transaction + journal-watermark-gated → a *forward-only* migration cannot rescue a DB blocked at 0069 (the chain halts there). Editing 0069 in place is the only form that closes the hazard, and is safe (watermark-gated → never re-runs on a DB past 0069). **Product confirmation 2026-06-12:** edit 0069 in place + add the lint guard; reconcile the orphan table now.
+
+## Fixes
+| Fix | Status | What shipped |
+| --- | --- | --- |
+| 0069 populated-DB-safe | Fixed | 0069 rewritten to the safe 3-step (`ADD COLUMN IF NOT EXISTS` nullable → `UPDATE` backfill `'Imported before provenance tracking'` → `ALTER COLUMN … SET NOT NULL`). End-state (`source_description NOT NULL`) + Drizzle snapshot unchanged. |
+| `lint-migrations.ts` guard | Fixed | Added the missing `ADD COLUMN … NOT NULL` (no DEFAULT) rule — the existing rule only caught `SET NOT NULL`, which is exactly why 0069 slipped through. It was the *sole* match across all migrations before the fix and is satisfied after. Already gated in CI (`quality.yml:110`). |
+| mig-0063 orphan-table reconcile (decision #20, part a) | Fixed | `imported_pmd_safety_floor_events` (raw-SQL orphan from 0063, no Drizzle model, absent from the snapshot) now has a Drizzle model (exact 0063 shape: no `baseEntityFields`; explicit FK name `imported_pmd_safety_floor_events_imported_pmd_id_fk`) + idempotent reconcile migration `0103_fat_miek.sql` (`CREATE TABLE IF NOT EXISTS` / FK `DO`-guard / `CREATE UNIQUE INDEX IF NOT EXISTS` — no-op on every DB that ran 0063). Snapshot now tracks the table → db:generate consistent. |
+| Append-only merge mechanism + FIX-003 consumer (decision #20, part b) | **Still deferred** | Mechanism-only leaves `markSafetyFloorMerged` at 0 callers; do the append-only INSERT-event merge **with** its FIX-003 clinical consumer as one slice. |
+
+## Tests added / run (fresh)
+| Test / command | Result |
+| --- | --- |
+| `imported-pmd-0069-migration-safety.test.ts` (new): real 0069 SQL applied to a populated pre-0069 fixture in a throwaway schema — RED on the old single-statement form → GREEN on the rewrite; + NOT NULL invariant pin; + 0103 idempotency (re-apply = no-op) | 3 / 0 (RED→GREEN proven) |
+| Full dental-pmd suite (12 files) | 122 / 0 |
+| Fresh template rebuild (`dropdb monobase_test && db:setup:test`) — full chain `0000→0103` | applies cleanly (0103 no-ops over 0063 objects with the expected "already exists, skipping" notice) |
+| Real server boot — runtime migrator on dev `monobase` `0102→0103` | clean ("🚀 Server running") |
+| `lint:migrations` | 104 files, 0 unsafe |
+| `bunx tsc` (api-ts) + root typecheck (FE + api-ts) | all exit 0 |
+| eslint (changed src) | clean |
+
+Backend-only slice (no TypeSpec/wire/SDK/FE change → no contract/FE/E2E, mirroring the scheduling `deletedAt` precedent). Files: `0069_kind_triton.sql`, `0103_fat_miek.sql`, `meta/_journal.json`, `meta/0103_snapshot.json`, `scripts/lint-migrations.ts`, `repos/pmd-document.schema.ts`, `imported-pmd-0069-migration-safety.test.ts`.
+
+## Completion decision
+`COMPLETE` (migration-safety pass) — **closes Track 1** of the AHA prompt-04 worklist. Remaining pmd work: Batch D (honest E2E, needs dental-clinical top-bar), Batch E (sign-or-strip → strip per decision #4), and decision-#20 part (b) (append-only merge mechanism + FIX-003 consumer).
