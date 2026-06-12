@@ -82,9 +82,50 @@ Origin: {{api}}
 HTTP 200
 [Captures]
 subject_person_id: jsonpath "$.user.id"
+subject_session: cookie "better-auth.session_token"
 [Asserts]
 jsonpath "$.user.id" isString
 jsonpath "$.user.role" == "user"
+
+
+# ============================================================
+# Scenario 2a-bis: the erasure SUBJECT must be a PATIENT (C-4, patients-only V1).
+# The fresh subject user self-onboards a clinic (becomes dentist_owner) and
+# registers a patient in it; that patient's person.id is the erasure subject, and
+# the org id is its server-resolved tenant (FIX-001 resolves branch→org). The bare
+# signed-up user (subject_person_id) is kept for the role-gate + C-4-reject pins.
+# ============================================================
+
+POST {{api}}/dental/onboarding
+Cookie: better-auth.session_token={{subject_session}}
+Content-Type: application/json
+{
+  "organizationName": "Erasure Test Clinic {{suffix}}",
+  "tier": "clinic",
+  "countryCode": "PH"
+}
+HTTP 201
+[Captures]
+org_id: jsonpath "$.organizationId"
+branch_id: jsonpath "$.branchId"
+
+
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{subject_session}}
+Content-Type: application/json
+{
+  "displayName": "Erasure Subject Patient {{suffix}}",
+  "dateOfBirth": "1985-06-15",
+  "gender": "female",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+patient_person_id: jsonpath "$.person.id"
+patient_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.person.id" isString
 
 
 # ============================================================
@@ -119,8 +160,8 @@ POST {{api}}/dental/erasure-requests
 Cookie: better-auth.session_token={{admin_session}}
 Content-Type: application/json
 {
-  "subjectPersonId": "{{subject_person_id}}",
-  "tenantId":        "a1000000-0000-4000-8000-000000000001",
+  "subjectPersonId": "{{patient_person_id}}",
+  "tenantId":        "{{org_id}}",
   "reason":          "Art.17 GDPR erasure request - contract test {{suffix}}"
 }
 HTTP 201
@@ -129,8 +170,8 @@ erasure_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.id" isString
 jsonpath "$.status" == "requested"
-jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
-jsonpath "$.tenantId" == "a1000000-0000-4000-8000-000000000001"
+jsonpath "$.subjectPersonId" == "{{patient_person_id}}"
+jsonpath "$.tenantId" == "{{org_id}}"
 jsonpath "$.reason" == "Art.17 GDPR erasure request - contract test {{suffix}}"
 jsonpath "$.requestedBy" == "{{admin_user_id}}"
 jsonpath "$.legalHoldBlocked" == false
@@ -143,12 +184,33 @@ jsonpath "$.updatedAt" isString
 
 
 # ============================================================
+# Scenario 3-bis (C-4, patients-only V1): a person-only subject (no patient
+# anchor) is REJECTED. subject_person_id is the bare signed-up user — a Person
+# with no patient row. Previously this was accepted (201) keeping the caller's
+# tenantId (the cross-tenant leak); it must now be 400 VALIDATION_ERROR.
+# ============================================================
+
+POST {{api}}/dental/erasure-requests
+Cookie: better-auth.session_token={{admin_session}}
+Content-Type: application/json
+{
+  "subjectPersonId": "{{subject_person_id}}",
+  "tenantId":        "{{org_id}}",
+  "reason":          "Person-only subject — must be rejected {{suffix}}"
+}
+HTTP 400
+[Asserts]
+jsonpath "$.code" == "VALIDATION_ERROR"
+jsonpath "$.message" contains "patient"
+
+
+# ============================================================
 # Scenario 4a: GET /dental/erasure-requests (200) — list after creating one.
 # Scoped to the run-unique subjectPersonId: must be EXACTLY the one request
 # we just created so count == 1 and [0].id matches.
 # ============================================================
 
-GET {{api}}/dental/erasure-requests?subjectPersonId={{subject_person_id}}
+GET {{api}}/dental/erasure-requests?subjectPersonId={{patient_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
@@ -156,14 +218,14 @@ jsonpath "$.data" isCollection
 jsonpath "$.data" count == 1
 jsonpath "$.data[0].id" == "{{erasure_id}}"
 jsonpath "$.data[0].status" == "requested"
-jsonpath "$.data[0].subjectPersonId" == "{{subject_person_id}}"
-jsonpath "$.data[0].tenantId" == "a1000000-0000-4000-8000-000000000001"
+jsonpath "$.data[0].subjectPersonId" == "{{patient_person_id}}"
+jsonpath "$.data[0].tenantId" == "{{org_id}}"
 jsonpath "$.data[0].requestedBy" == "{{admin_user_id}}"
 jsonpath "$.data[0].legalHoldBlocked" == false
 
 
 # status=requested filter — proves filter discriminates (our request is included).
-GET {{api}}/dental/erasure-requests?status=requested&subjectPersonId={{subject_person_id}}
+GET {{api}}/dental/erasure-requests?status=requested&subjectPersonId={{patient_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
@@ -174,7 +236,7 @@ jsonpath "$.data[0].status" == "requested"
 
 
 # status=anonymized filter — must be EMPTY (nothing approved yet for this subject).
-GET {{api}}/dental/erasure-requests?status=anonymized&subjectPersonId={{subject_person_id}}
+GET {{api}}/dental/erasure-requests?status=anonymized&subjectPersonId={{patient_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
@@ -192,8 +254,8 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{erasure_id}}"
 jsonpath "$.status" == "requested"
-jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
-jsonpath "$.tenantId" == "a1000000-0000-4000-8000-000000000001"
+jsonpath "$.subjectPersonId" == "{{patient_person_id}}"
+jsonpath "$.tenantId" == "{{org_id}}"
 jsonpath "$.reason" == "Art.17 GDPR erasure request - contract test {{suffix}}"
 jsonpath "$.requestedBy" == "{{admin_user_id}}"
 jsonpath "$.legalHoldBlocked" == false
@@ -210,8 +272,8 @@ POST {{api}}/dental/erasure-requests
 Cookie: better-auth.session_token={{admin_session}}
 Content-Type: application/json
 {
-  "subjectPersonId": "{{subject_person_id}}",
-  "tenantId":        "a1000000-0000-4000-8000-000000000001",
+  "subjectPersonId": "{{patient_person_id}}",
+  "tenantId":        "{{org_id}}",
   "reason":          "Second erasure request for reject-path test {{suffix}}"
 }
 HTTP 201
@@ -238,11 +300,11 @@ jsonpath "$.reviewedAt" != null
 jsonpath "$.legalHoldBlocked" == false
 jsonpath "$.processedAt" == null
 # Subject PII not touched — subjectPersonId still present
-jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
+jsonpath "$.subjectPersonId" == "{{patient_person_id}}"
 
 
 # Two requests now exist for this subject: one 'requested', one 'rejected'.
-GET {{api}}/dental/erasure-requests?subjectPersonId={{subject_person_id}}
+GET {{api}}/dental/erasure-requests?subjectPersonId={{patient_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
@@ -251,7 +313,7 @@ jsonpath "$.data" count == 2
 
 
 # status=rejected filter: only the rejected one shows.
-GET {{api}}/dental/erasure-requests?status=rejected&subjectPersonId={{subject_person_id}}
+GET {{api}}/dental/erasure-requests?status=rejected&subjectPersonId={{patient_person_id}}
 Cookie: better-auth.session_token={{admin_session}}
 HTTP 200
 [Asserts]
@@ -290,8 +352,8 @@ POST {{api}}/dental/legal-holds
 Cookie: better-auth.session_token={{admin_session}}
 Content-Type: application/json
 {
-  "tenantId":        "a1000000-0000-4000-8000-000000000001",
-  "subjectPersonId": "{{subject_person_id}}",
+  "tenantId":        "{{org_id}}",
+  "subjectPersonId": "{{patient_person_id}}",
   "name":            "LH Erasure Block {{suffix}}",
   "reason":          "Ongoing litigation — erasure blocked for contract test",
   "note":            "Placed by dental-erasure contract suite"
@@ -302,7 +364,7 @@ hold_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.id" isString
 jsonpath "$.status" == "active"
-jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
+jsonpath "$.subjectPersonId" == "{{patient_person_id}}"
 
 
 # 6-b: Approve the still-pending erasure request while the hold is active.
@@ -319,7 +381,7 @@ jsonpath "$.reviewedBy" == "{{admin_user_id}}"
 jsonpath "$.reviewedAt" isString
 jsonpath "$.reviewedAt" != null
 # Subject PII must NOT be anonymized — the request was blocked
-jsonpath "$.subjectPersonId" == "{{subject_person_id}}"
+jsonpath "$.subjectPersonId" == "{{patient_person_id}}"
 
 
 # 6-c: Release the legal hold.
@@ -340,8 +402,8 @@ POST {{api}}/dental/erasure-requests
 Cookie: better-auth.session_token={{admin_session}}
 Content-Type: application/json
 {
-  "subjectPersonId": "{{subject_person_id}}",
-  "tenantId":        "a1000000-0000-4000-8000-000000000001",
+  "subjectPersonId": "{{patient_person_id}}",
+  "tenantId":        "{{org_id}}",
   "reason":          "Art.17 re-request after hold released — contract test {{suffix}}"
 }
 HTTP 201
@@ -420,8 +482,8 @@ POST {{api}}/dental/erasure-requests
 Cookie: better-auth.session_token={{nonadmin_session}}
 Content-Type: application/json
 {
-  "subjectPersonId": "{{subject_person_id}}",
-  "tenantId":        "a1000000-0000-4000-8000-000000000001",
+  "subjectPersonId": "{{patient_person_id}}",
+  "tenantId":        "{{org_id}}",
   "reason":          "Should be forbidden"
 }
 HTTP 403
@@ -498,7 +560,7 @@ POST {{api}}/dental/erasure-requests
 Cookie: better-auth.session_token={{admin_session2}}
 Content-Type: application/json
 {
-  "tenantId": "a1000000-0000-4000-8000-000000000001"
+  "tenantId": "{{org_id}}"
 }
 HTTP 400
 [Asserts]

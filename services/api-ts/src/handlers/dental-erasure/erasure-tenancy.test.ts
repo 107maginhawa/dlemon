@@ -27,8 +27,11 @@ const ADMIN = { id: 'a4000000-0000-4000-8000-000000000001', email: 'admin@clinic
 const ORG_A = 'c4000000-0000-4000-8000-0000000000a1';
 const BRANCH_A = 'c4000000-0000-4000-8000-0000000000b1';
 const ORG_B = 'c4000000-0000-4000-8000-0000000000a2';
+const BRANCH_B = 'c4000000-0000-4000-8000-0000000000b2';
 const PERSON_PATIENT = 'c4000000-0000-4000-8000-0000000000e1';
 const PATIENT_ID = 'c4000000-0000-4000-8000-0000000000f1';
+const PERSON_PATIENT_B = 'c4000000-0000-4000-8000-0000000000e3';
+const PATIENT_B_ID = 'c4000000-0000-4000-8000-0000000000f3';
 const PERSON_BARE = 'c4000000-0000-4000-8000-0000000000e2';
 
 const validationErrorHandler = (result: any, c: any) => {
@@ -63,17 +66,27 @@ describe('erasure tenancy resolution (FIX-001)', () => {
     const t = await openTestTx();
     db = t.db;
     teardown = t.rollback;
-    // Only ORG_A is a real org (the subject patient's org). ORG_B is just a
-    // different UUID used as a "wrong tenant" value (tenantId has no FK).
+    // ORG_A and ORG_B are both real orgs, each with one branch + one patient
+    // subject (so list-scoping can be proven across two real tenants). In the
+    // forged-tenant tests ORG_B doubles as a "wrong tenant" UUID for ORG_A's
+    // patient — still a genuine mismatch the resolver rejects.
     await db.insert(dentalOrganizations).values([
       { id: ORG_A, name: 'Org A', tier: 'solo', ownerPersonId: ADMIN.id, countryCode: 'PH', createdBy: ADMIN.id, updatedBy: ADMIN.id },
+      { id: ORG_B, name: 'Org B', tier: 'solo', ownerPersonId: 'a4000000-0000-4000-8000-0000000000b9', countryCode: 'PH', createdBy: ADMIN.id, updatedBy: ADMIN.id },
     ]);
-    await db.insert(dentalBranches).values({ id: BRANCH_A, organizationId: ORG_A, name: 'Branch A', timezone: 'Asia/Manila', createdBy: ADMIN.id, updatedBy: ADMIN.id });
+    await db.insert(dentalBranches).values([
+      { id: BRANCH_A, organizationId: ORG_A, name: 'Branch A', timezone: 'Asia/Manila', createdBy: ADMIN.id, updatedBy: ADMIN.id },
+      { id: BRANCH_B, organizationId: ORG_B, name: 'Branch B', timezone: 'Asia/Manila', createdBy: ADMIN.id, updatedBy: ADMIN.id },
+    ]);
     await db.insert(persons).values([
       { id: PERSON_PATIENT, firstName: 'Pat', lastName: 'Subject' },
+      { id: PERSON_PATIENT_B, firstName: 'Pat', lastName: 'SubjectB' },
       { id: PERSON_BARE, firstName: 'Bare', lastName: 'Person' },
     ]);
-    await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_PATIENT, preferredBranchId: BRANCH_A, createdBy: ADMIN.id, updatedBy: ADMIN.id });
+    await db.insert(patients).values([
+      { id: PATIENT_ID, person: PERSON_PATIENT, preferredBranchId: BRANCH_A, createdBy: ADMIN.id, updatedBy: ADMIN.id },
+      { id: PATIENT_B_ID, person: PERSON_PATIENT_B, preferredBranchId: BRANCH_B, createdBy: ADMIN.id, updatedBy: ADMIN.id },
+    ]);
   });
 
   afterEach(async () => { await teardown(); });
@@ -152,26 +165,31 @@ describe('erasure tenancy resolution (FIX-001)', () => {
     expect(res.status).toBeLessThan(500);
   });
 
-  test('bare-person subject (no patient row) keeps the supplied tenant (fallback, admin-gated)', async () => {
+  // C-4 (patients-only V1): a person-only subject (no patient anchor) USED to be
+  // accepted, keeping the caller-supplied tenantId — the exact cross-tenant leak
+  // (a bare person + a forged tenant attribution the server cannot validate). V1
+  // erasure is patients-only: reject it so every request carries a server-resolved
+  // tenant via the subject's patient anchor.
+  test('person-only subject (no patient anchor) is rejected — patients-only V1 (4xx)', async () => {
     const app = makeApp(db, ADMIN);
     const res = await app.request('/dental/erasure-requests', J({
       subjectPersonId: PERSON_BARE,
-      tenantId: ORG_B, // no patient → no resolution source → kept
+      tenantId: ORG_B, // no patient → no resolution source → no longer accepted
       reason: 'GDPR erasure',
     }));
-    expect(res.status).toBe(201);
-    const body = await res.json() as any;
-    expect(body.tenantId).toBe(ORG_B);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
   });
 
-  // FIX-002 (Q2 lean, ER-P2-2): the list endpoint is platform-admin only and
-  // platform-wide by design; the optional tenantId filter scopes by the (now
-  // server-resolved) tenant attribution. Pin both so the semantics are explicit.
+  // FIX-002 (ER-P2-2): the list endpoint is platform-admin only and platform-wide
+  // by design; the optional tenantId filter scopes by the (server-resolved) tenant
+  // attribution. With C-4 every request is patient-anchored, so both subjects here
+  // are real patients in two different real orgs — the filter proves isolation.
   test('list is platform-wide for admin; tenantId filter scopes by resolved tenant', async () => {
     const app = makeApp(db, ADMIN);
-    // One patient-subject request (resolves to ORG_A) + one bare-person request (ORG_B).
+    // Two patient-subject requests, resolving to ORG_A and ORG_B respectively.
     await app.request('/dental/erasure-requests', J({ subjectPersonId: PERSON_PATIENT, subjectPatientId: PATIENT_ID, tenantId: ORG_A, reason: 'A erasure' }));
-    await app.request('/dental/erasure-requests', J({ subjectPersonId: PERSON_BARE, tenantId: ORG_B, reason: 'B erasure' }));
+    await app.request('/dental/erasure-requests', J({ subjectPersonId: PERSON_PATIENT_B, subjectPatientId: PATIENT_B_ID, tenantId: ORG_B, reason: 'B erasure' }));
 
     const all = await (await app.request('/dental/erasure-requests', { method: 'GET' })).json() as any;
     expect(all.data.length).toBeGreaterThanOrEqual(2);
@@ -180,5 +198,6 @@ describe('erasure tenancy resolution (FIX-001)', () => {
     expect(scoped.data.every((r: any) => r.tenantId === ORG_A)).toBe(true);
     expect(scoped.data.some((r: any) => r.subjectPersonId === PERSON_PATIENT)).toBe(true);
     expect(scoped.data.some((r: any) => r.tenantId === ORG_B)).toBe(false);
+    expect(scoped.data.some((r: any) => r.subjectPersonId === PERSON_PATIENT_B)).toBe(false);
   });
 });
