@@ -22,6 +22,7 @@ import {
 } from '@/core/errors';
 import { AuditLogRepository } from './repos/audit-log.repo';
 import type { DentalAuditLog } from './repos/audit-log.schema';
+import { listBranchBasePhiReads, type BasePhiReadRow } from './repos/base-phi-reads.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
@@ -66,6 +67,35 @@ function toDTO(row: DentalAuditLog): DentalAuditEventDTO {
       row.timestamp instanceof Date
         ? row.timestamp.toISOString()
         : (row.timestamp as unknown as string),
+  };
+}
+
+/**
+ * Map a base-sink (#3) PHI-access read into the same viewer DTO (#18 single pane).
+ * The base `details` JSONB is DELIBERATELY DROPPED (it may carry latent PHI, same
+ * concern as the snapshot columns / V-AUD-003) and replaced with a `{ source }`
+ * provenance marker so the owner can tell platform reads from dental events.
+ */
+function basePhiReadToDTO(
+  row: BasePhiReadRow,
+  branchId: string,
+  resolvedTenant: string,
+): DentalAuditEventDTO {
+  return {
+    id: row.id,
+    branchId,
+    tenantId: resolvedTenant,
+    actorId: row.user ?? '',
+    actorRole: row.userType ?? null,
+    eventType: 'data-access',
+    action: 'read',
+    resourceType: row.resourceType,
+    resourceId: row.resource ?? null,
+    reason: null,
+    ipAddress: row.ipAddress ?? null,
+    userAgent: row.userAgent ?? null,
+    metadata: { source: 'base' },
+    timestamp: row.createdAt.toISOString(),
   };
 }
 
@@ -132,20 +162,51 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
   const offset = Number(ctx.req.query('offset') ?? 0);
 
   const repo = new AuditLogRepository(db);
-  const { entries, total } = await repo.list(
-    {
-      actorId,
-      tenantId,
-      branchId,
-      eventType,
-      targetType,
-      targetId,
-      action,
-      from: fromDate,
-      to: toDate,
-    },
-    { limit, offset },
-  );
+
+  // #18 / decision-log Q2 — SINGLE PANE. The viewer unions two sinks at READ time:
+  //   sink #1 `dental_audit_log` (every dental event) AND
+  //   sink #3 `audit_log_entry` data-access PHI reads attributable to this branch's
+  //           active members (base-module reads the owner previously could not see).
+  // The base sink is included only when the eventType filter is unset or explicitly
+  // 'data-access' (base PHI reads are all data-access). To page a merged-and-sorted
+  // result we fetch the top (offset+limit) of each source, merge desc by timestamp,
+  // then slice the requested window. total = sum of each source's unpaginated count.
+  const includeBaseReads = !eventType || eventType === 'data-access';
+  const window = offset + limit;
+
+  const [{ entries, total: dentalTotal }, base] = await Promise.all([
+    repo.list(
+      {
+        actorId,
+        tenantId,
+        branchId,
+        eventType,
+        targetType,
+        targetId,
+        action,
+        from: fromDate,
+        to: toDate,
+      },
+      { limit: window, offset: 0 },
+    ),
+    includeBaseReads
+      ? listBranchBasePhiReads(
+          db,
+          branchId,
+          { actorId, action, targetType, targetId, from: fromDate, to: toDate },
+          { limit: window, offset: 0 },
+        )
+      : Promise.resolve({ rows: [] as BasePhiReadRow[], total: 0 }),
+  ]);
+
+  // Base rows carry no real tenant column; stamp the viewed branchId (the only
+  // honest scope we have) rather than echoing the caller-supplied tenantId param.
+  const merged = [
+    ...entries.map(toDTO),
+    ...base.rows.map((r) => basePhiReadToDTO(r, branchId, branchId)),
+  ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const page = merged.slice(offset, offset + limit);
+  const total = dentalTotal + base.total;
 
   // V-AUD-NEW-B / WF-028 / AUDIT_CONTRACTS §3: viewing the audit log is itself a
   // privileged READ that MUST be self-audited (ACCESSED). Record scope/counts only —
@@ -171,11 +232,12 @@ export async function getAuditEvents(ctx: BaseContext): Promise<Response> {
       to: to ?? null,
       limit,
       offset,
-      resultCount: entries.length,
+      resultCount: page.length,
       total,
     },
   });
 
-  // V-AUD-003: map raw DB rows to the contract DTO and drop snapshot columns.
-  return ctx.json({ data: entries.map(toDTO), meta: { total, limit, offset } });
+  // V-AUD-003: rows are already mapped to the contract DTO (snapshots dropped) and
+  // merged across sinks (#18 single pane); return the paginated window.
+  return ctx.json({ data: page, meta: { total, limit, offset } });
 }

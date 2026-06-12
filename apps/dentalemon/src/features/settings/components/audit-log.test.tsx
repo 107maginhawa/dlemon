@@ -106,4 +106,30 @@ describe('AuditLog viewer', () => {
     renderPanel();
     await waitFor(() => expect(screen.getByTestId('audit-log-error')).not.toBeNull());
   });
+
+  // #18 single pane: a base-sink PHI read (metadata.source === 'base') is visibly
+  // marked so the owner can tell a surfaced platform read from a native dental event.
+  test('marks base-sink PHI reads with a platform-source badge; dental events are unmarked', async () => {
+    const baseRead = {
+      id: 'ae000000-0000-4000-8000-0000000000b1',
+      actorId: 'ac000000-0000-4000-8000-000000000001',
+      actorRole: 'client',
+      eventType: 'data-access',
+      action: 'read',
+      resourceType: 'medical-history',
+      resourceId: 'pa000000-0000-4000-8000-000000000001',
+      reason: null,
+      metadata: { source: 'base' },
+      timestamp: '2026-06-11T08:00:00.000Z',
+      createdAt: '2026-06-11T08:00:00.000Z',
+    };
+    installFetch([baseRead, ...EVENTS], 2);
+    renderPanel();
+    await waitFor(() => expect(screen.getAllByTestId('audit-log-row').length).toBe(2));
+    // Exactly one row carries the provenance badge ...
+    const badges = screen.getAllByTestId('audit-source-base');
+    expect(badges.length).toBe(1);
+    // ... and it is the BASE read row (medical-history), not the dental invoice row.
+    expect(badges[0].closest('[data-testid="audit-log-row"]')?.textContent).toContain('medical-history');
+  });
 });

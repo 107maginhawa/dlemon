@@ -127,6 +127,15 @@ export function AuditLog() {
                   <td className="px-3 py-2 font-medium">{e.action}</td>
                   <td className="px-3 py-2">
                     {e.resourceType}{e.resourceId ? ` · ${e.resourceId.slice(0, 8)}…` : ''}
+                    {e.metadata?.['source'] === 'base' ? (
+                      <span
+                        data-testid="audit-source-base"
+                        title="PHI read recorded in the platform audit sink, surfaced here for a single compliance view"
+                        className="ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground align-middle"
+                      >
+                        platform
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{e.reason ?? '—'}</td>
                 </tr>

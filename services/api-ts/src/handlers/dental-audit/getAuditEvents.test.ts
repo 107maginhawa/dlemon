@@ -18,6 +18,7 @@ import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { getAuditEvents } from './getAuditEvents';
 import { AuditLogRepository } from './repos/audit-log.repo';
+import { AuditRepository } from '@/handlers/audit/repos/audit.repo';
 import { OrganizationRepository } from '@/handlers/dental-org/repos/organization.repo';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { MembershipRepository } from '@/handlers/dental-org/repos/membership.repo';
@@ -259,6 +260,157 @@ describe('V-AUD-003: contract DTO mapping', () => {
     const body = (await res.json()) as any;
     expect(body.data).toHaveLength(1);
     expect(body.data[0].eventType).toBe('security');
+    expect(body.meta.total).toBe(1);
+  });
+});
+
+// ----------------------------------------------------------------------------
+// V-AUD-SINK-001 (#18 / decision-log Q2): SINGLE PANE. Base-module PHI-access
+// reads (data-access events that land in the base `audit_log_entry` sink #3) are
+// surfaced into the dental viewer, scoped to the viewed branch's own active
+// members (actor-scope — base rows carry no branch/tenant column). Resolves the
+// MODULE_SPEC §10c "CANNOT see base PHI reads" boundary now that Q2 is decided.
+// The physical 3→1 sink merge stays deferred to V2 (this is a read-time union).
+// ----------------------------------------------------------------------------
+
+const NON_MEMBER_ID = 'da090001-0000-0000-0000-0000000000f0';
+const PATIENT_ID = 'da090001-0000-0000-0000-0000000000a1';
+
+async function seedBasePhiRead(opts: {
+  user: string;
+  resourceType?: string;
+  resource?: string;
+  details?: Record<string, unknown>;
+}) {
+  // Mirrors how listMedicalHistory et al. record a PHI read into the BASE audit
+  // sink (`audit.logEvent`), the events the dental viewer historically could not see.
+  await new AuditRepository(db, {
+    debug: () => {}, info: () => {}, warn: () => {}, error: () => {},
+  } as any).logEvent(
+    {
+      eventType: 'data-access',
+      category: 'clinical',
+      action: 'read',
+      outcome: 'success',
+      user: opts.user,
+      userType: 'client',
+      resourceType: opts.resourceType ?? 'medical-history',
+      resource: opts.resource ?? PATIENT_ID,
+      description: 'Medical history listed for patient',
+      details: opts.details ?? { resultCount: 3 },
+    },
+    opts.user,
+  );
+}
+
+describe('V-AUD-SINK-001: base-module PHI reads surface in the dental viewer (single pane)', () => {
+  afterEach(async () => {
+    await db.execute(
+      sql`TRUNCATE TABLE dental_audit_log, dental_membership, dental_branch, dental_organization, audit_log_entry CASCADE`,
+    );
+  });
+
+  test('a base PHI read by a branch member is merged into the viewer alongside dental events', async () => {
+    await seedOwnerBranch();
+    // One dental sink-#1 event ...
+    await new AuditLogRepository(db).insert({
+      tenantId: TENANT_ID, branchId: BRANCH_ID, actorId: OWNER_ID,
+      eventType: 'data-modification', action: 'invoice.voided', targetType: 'dental_invoice',
+    });
+    // ... and one base sink-#3 PHI read by the same (member) owner.
+    await seedBasePhiRead({ user: OWNER_ID, resourceType: 'medical-history', resource: PATIENT_ID });
+
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(`/dental/audit-events?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+
+    // Single pane: both the dental modification AND the base PHI read are present.
+    const baseRead = body.data.find((e: any) => e.resourceType === 'medical-history');
+    expect(baseRead).toBeDefined();
+    expect(baseRead.action).toBe('read');
+    expect(baseRead.eventType).toBe('data-access');
+    expect(baseRead.actorId).toBe(OWNER_ID);
+    expect(baseRead.resourceId).toBe(PATIENT_ID);
+    // Provenance marker so the owner can tell platform reads from dental events.
+    expect(baseRead.metadata).toEqual({ source: 'base' });
+    expect(body.meta.total).toBe(2);
+  });
+
+  test('a base PHI read by a NON-member (other clinic) does NOT leak into the viewer', async () => {
+    await seedOwnerBranch();
+    // POSITIVE CONTROL: a member's read MUST be visible — proves the absence below
+    // is real scoping, not an accidentally-empty result.
+    await seedBasePhiRead({ user: OWNER_ID, resourceType: 'medical-history', resource: PATIENT_ID });
+    // A data-access read performed by someone with no active membership in BRANCH_ID.
+    await seedBasePhiRead({ user: NON_MEMBER_ID, resourceType: 'medical-history' });
+
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(`/dental/audit-events?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    // The member's read is present ...
+    expect(body.data.some((e: any) => e.actorId === OWNER_ID)).toBe(true);
+    // ... but no row is attributable to the non-member; cross-tenant scope holds.
+    expect(body.data.some((e: any) => e.actorId === NON_MEMBER_ID)).toBe(false);
+  });
+
+  test('base PHI-read details are dropped — latent PHI never reaches the viewer', async () => {
+    await seedOwnerBranch();
+    await seedBasePhiRead({
+      user: OWNER_ID,
+      resourceType: 'medical-history',
+      details: { resultCount: 3, patientName: 'SHOULD NOT LEAK' },
+    });
+
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(`/dental/audit-events?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(JSON.stringify(body)).not.toContain('SHOULD NOT LEAK');
+    const baseRead = body.data.find((e: any) => e.resourceType === 'medical-history');
+    // The base `details` JSONB must not survive onto the DTO under any key.
+    expect(baseRead).not.toHaveProperty('details');
+    expect(baseRead.metadata).toEqual({ source: 'base' });
+  });
+
+  test('a freeform dental action filter does not crash the base-sink enum query (EM-AUD regression)', async () => {
+    // base `audit_log_entry.action` is a Postgres ENUM; the viewer action filter is
+    // freeform. A dental action like `patient.registered` must not reach the enum
+    // comparison (would 500) — the base sink simply contributes nothing.
+    await seedOwnerBranch();
+    await new AuditLogRepository(db).insert({
+      tenantId: TENANT_ID, branchId: BRANCH_ID, actorId: OWNER_ID,
+      eventType: 'data-modification', action: 'patient.registered', targetType: 'dental_patient',
+    });
+    await seedBasePhiRead({ user: OWNER_ID, resourceType: 'medical-history' });
+
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(
+      `/dental/audit-events?branchId=${BRANCH_ID}&action=patient.registered`,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].action).toBe('patient.registered');
+  });
+
+  test('eventType=data-modification excludes base data-access reads (filter is honored across sinks)', async () => {
+    await seedOwnerBranch();
+    await new AuditLogRepository(db).insert({
+      tenantId: TENANT_ID, branchId: BRANCH_ID, actorId: OWNER_ID,
+      eventType: 'data-modification', action: 'invoice.voided', targetType: 'dental_invoice',
+    });
+    await seedBasePhiRead({ user: OWNER_ID, resourceType: 'medical-history' });
+
+    const app = buildTestApp({ id: OWNER_ID, role: 'dentist_owner' });
+    const res = await app.request(
+      `/dental/audit-events?branchId=${BRANCH_ID}&eventType=data-modification`,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].eventType).toBe('data-modification');
     expect(body.meta.total).toBe(1);
   });
 });
