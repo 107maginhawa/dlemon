@@ -22,7 +22,7 @@ import {
 import {
   type InvoiceData,
   showIssueButton, showVoidButton, showRecordButton, showMarkUncollectibleButton,
-  showDiscountButton, canVoidPaymentRow,
+  showDiscountButton, canVoidPaymentRow, showCreatePlanButton,
   validatePaymentForm, buildPaymentPayload, validateDiscountForm,
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
@@ -30,6 +30,7 @@ import {
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canApplyDiscount, canVoidPayment, type DentalRole } from '@/lib/rbac';
 import { PaymentReceipt } from './payment-receipt';
+import { PaymentPlanCreate } from './payment-plan-create';
 
 export type { LineItem, Payment, InvoiceData } from './invoice-detail.helpers';
 export {
@@ -78,6 +79,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
   const [paymentVoidReason, setPaymentVoidReason] = useState('');
   const [paymentVoidError, setPaymentVoidError] = useState<string | null>(null);
+  // FIX-005: payment-plan create dialog open state.
+  const [showPlanCreate, setShowPlanCreate] = useState(false);
 
   const qc = useQueryClient();
   // The recording staff member comes from the PIN-authenticated org context.
@@ -323,6 +326,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     setVoidingPaymentId(null);
     setPaymentVoidReason('');
     setPaymentVoidError(null);
+    setShowPlanCreate(false);
     onClose();
   }
 
@@ -635,6 +639,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
             {onViewPlan && (
               <button type="button" onClick={onViewPlan} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">View Payment Plan</button>
             )}
+            {showCreatePlanButton(invoice.status, canWrite, invoice.balanceCents) && (
+              <button type="button" onClick={() => setShowPlanCreate(true)} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">Create Payment Plan</button>
+            )}
             {showDiscountButton(invoice.status, canDiscount) && !showDiscountForm && (
               <button type="button" onClick={() => { setShowDiscountForm(true); setDiscountErrors([]); }} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">Apply Discount</button>
             )}
@@ -649,6 +656,18 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           </div>
         )}
       </div>
+
+      {/* FIX-005: create payment plan dialog */}
+      {showPlanCreate && invoice && (
+        <PaymentPlanCreate
+          invoiceId={invoiceId}
+          patientId={invoice.patientId}
+          balanceCents={invoice.balanceCents}
+          open={showPlanCreate}
+          onClose={() => setShowPlanCreate(false)}
+          onCreated={() => { invalidateInvoice(); onUpdated?.(); }}
+        />
+      )}
 
       {/* FR4.6: printable payment receipt overlay */}
       {receiptPaymentId && invoice && (

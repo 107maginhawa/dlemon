@@ -96,6 +96,13 @@ export function canVoidPaymentRow(isOwner: boolean, payment: { isVoid?: boolean 
   return isOwner && !payment.isVoid;
 }
 
+// FIX-005: offer "Create Payment Plan" on a live, billable invoice with an
+// outstanding balance. Gated by canWrite (owner||associate) per the backend create
+// gate; the backend additionally rejects voided/zero-balance/existing-plan.
+export function showCreatePlanButton(status: string, canWrite: boolean, balanceCents: number): boolean {
+  return canWrite && balanceCents > 0 && (status === 'issued' || status === 'partial' || status === 'overdue');
+}
+
 // FIX-003: mirror the backend discount gates client-side. percentageRate is a
 // 0–100 PERCENTAGE (not cents, not a 0–1 fraction); a meaningful discount is
 // >0 and ≤100. reason is required (the backend 422s DISCOUNT_REASON_REQUIRED on

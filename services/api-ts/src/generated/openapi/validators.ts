@@ -3516,6 +3516,19 @@ export const DentalPaymentSchema = z.object({
 
 export const PaymentPlanStatusSchema = z.enum(["on_track", "behind", "completed", "defaulted"]);
 
+export const InstallmentStatusSchema = z.enum(["pending", "paid", "overdue", "waived"]);
+
+export const DentalPaymentPlanInstallmentSchema = z.object({
+  id: UUIDSchema,
+  planId: UUIDSchema,
+  installmentNumber: z.number().int(),
+  dueDate: z.string().datetime().transform((str) => new Date(str)),
+  amountCents: z.number().int(),
+  paidCents: z.number().int(),
+  paidDate: z.string().datetime().transform((str) => new Date(str)).optional(),
+  status: InstallmentStatusSchema
+});
+
 export const DentalPaymentPlanSchema = z.object({
   id: UUIDSchema,
   invoiceId: UUIDSchema,
@@ -3527,7 +3540,8 @@ export const DentalPaymentPlanSchema = z.object({
   amountPerInstallmentCents: z.number().int(),
   status: PaymentPlanStatusSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
-  updatedAt: z.string().datetime().transform((str) => new Date(str))
+  updatedAt: z.string().datetime().transform((str) => new Date(str)),
+  installments: z.array(DentalPaymentPlanInstallmentSchema)
 });
 
 export const DentalPaymentReceiptInvoiceSchema = z.object({

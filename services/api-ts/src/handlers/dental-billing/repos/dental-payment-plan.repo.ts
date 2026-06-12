@@ -11,6 +11,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import { BusinessLogicError } from '@/core/errors';
+import { setPatientActivePaymentPlanFlag } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import {
   dentalPaymentPlans,
   dentalPaymentPlanInstallments,
@@ -19,6 +20,9 @@ import {
   type DentalPaymentPlanInstallment,
   type NewDentalPaymentPlanInstallment,
 } from './dental-payment-plan.schema';
+
+/** Plan statuses that count as "active" for the patient archive guard (FIX-006). */
+const ACTIVE_PLAN_STATUSES: ReadonlyArray<DentalPaymentPlan['status']> = ['on_track', 'behind'];
 
 /**
  * FSM: allowed transitions for each payment plan status.
@@ -97,6 +101,9 @@ export class DentalPaymentPlanRepository {
       .values(installmentValues)
       .returning();
 
+    // FIX-006: a newly created plan is active → maintain the patient archive flag.
+    await this.syncPatientActivePaymentPlanFlag(plan!.patientId);
+
     return { plan: plan!, installments };
   }
 
@@ -121,6 +128,22 @@ export class DentalPaymentPlanRepository {
       .select()
       .from(dentalPaymentPlans)
       .where(eq(dentalPaymentPlans.patientId, patientId));
+  }
+
+  /**
+   * FIX-006: recompute patients.hasActivePaymentPlan from the patient's plans and
+   * persist it via the patient facade. The flag is true iff the patient holds ≥1
+   * plan in an active state (on_track | behind); a patient may hold plans across
+   * multiple invoices, so the clear is GUARDED by the remaining-active check (never
+   * clear while another plan is still active). Called after EVERY plan mutation
+   * (create + status change) from a single choke point so the EC1 archive guard
+   * (patient.repo.ts) reflects reality. The cross-module write goes through the
+   * facade (a billing repo must not touch the patients table directly).
+   */
+  private async syncPatientActivePaymentPlanFlag(patientId: string): Promise<void> {
+    const plans = await this.findByPatient(patientId);
+    const hasActive = plans.some((p) => ACTIVE_PLAN_STATUSES.includes(p.status));
+    await setPatientActivePaymentPlanFlag(this.db, patientId, hasActive);
   }
 
   async findInstallmentsByPlan(planId: string): Promise<DentalPaymentPlanInstallment[]> {
@@ -177,6 +200,9 @@ export class DentalPaymentPlanRepository {
       .set({ status: newStatus, updatedAt: new Date() })
       .where(eq(dentalPaymentPlans.id, planId))
       .returning();
+    // FIX-006: a terminal transition (completed|defaulted) may release the patient's
+    // last active plan → recompute the archive flag (guarded by other active plans).
+    await this.syncPatientActivePaymentPlanFlag(updated!.patientId);
     return updated!;
   }
 
@@ -216,6 +242,9 @@ export class DentalPaymentPlanRepository {
       })
       .where(eq(dentalPaymentPlans.id, planId))
       .returning();
+    // FIX-006: the FR4.3 sweep / re-eval can drive a plan to terminal (completed|
+    // defaulted) → recompute the patient's archive flag from a single choke point.
+    if (updated) await this.syncPatientActivePaymentPlanFlag(updated.patientId);
     return updated ?? null;
   }
 

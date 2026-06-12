@@ -168,6 +168,14 @@ model DentalPaymentPlan {
   status: PaymentPlanStatus;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
+
+  // AHA FIX-005 §15 reconcile: both createPaymentPlan (201) and getPaymentPlan (200)
+  // return the plan WITH its installment schedule (`ctx.json({ ...plan, installments })`)
+  // and the Hurl contract already pins `$.installments` — but the model omitted the
+  // field, forcing the FE to cast `data as unknown`. Declared now so the SDK type
+  // carries it and the FE renders the schedule from typed truth (the
+  // DentalPaymentPlanInstallment model below already existed, just unreferenced).
+  installments: DentalPaymentPlanInstallment[];
 }
 
 model DentalPaymentPlanInstallment {

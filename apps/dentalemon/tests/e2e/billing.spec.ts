@@ -242,4 +242,28 @@ test.describe('Billing (FR4.x)', () => {
     const totalRow = page.locator('div').filter({ has: page.getByText('Total', { exact: true }) }).last();
     await expect(totalRow.getByText('₱45.00')).toBeVisible();
   });
+
+  // FIX-005: the owner creates a payment plan end-to-end and the plan view renders
+  // its installment schedule — the headline PH installment journey.
+  test('FR4.3: owner creates a 6×monthly payment plan and the plan view shows it', async ({ page }) => {
+    const { branchId, memberId } = await signUpAndSeedBilling(page);
+    const invoiceId = await seedIssuedInvoice(page, branchId, memberId);
+
+    await spaNavigate(page, '/billing');
+    await page.getByTestId(`invoice-row-${invoiceId}`).click();
+    await expect(page.getByTestId('invoice-detail')).toBeVisible();
+
+    await page.getByRole('button', { name: /create payment plan/i }).click();
+    await expect(page.getByTestId('payment-plan-create')).toBeVisible();
+    await page.getByLabel(/start date/i).fill('2026-07-01');
+    await page.getByRole('button', { name: /create plan/i }).click();
+
+    // Dialog closes on success → open the plan view and assert the schedule rendered
+    // (default 6 installments, derived "Installments" stat + "Installment Schedule").
+    await expect(page.getByTestId('payment-plan-create')).toBeHidden({ timeout: 7000 });
+    await page.getByRole('button', { name: /view payment plan/i }).click();
+    await expect(page.getByTestId('payment-plan-view')).toBeVisible();
+    await expect(page.getByText('Installment Schedule')).toBeVisible();
+    await expect(page.getByText('On Track')).toBeVisible();
+  });
 });

@@ -7976,6 +7976,18 @@ export type DentalPaymentPlan = {
     status: PaymentPlanStatus;
     createdAt: Date;
     updatedAt: Date;
+    installments: Array<DentalPaymentPlanInstallment>;
+};
+
+export type DentalPaymentPlanInstallment = {
+    id: Uuid;
+    planId: Uuid;
+    installmentNumber: number;
+    dueDate: Date;
+    amountCents: number;
+    paidCents: number;
+    paidDate?: Date;
+    status: InstallmentStatus;
 };
 
 export type DentalPaymentReceiptInvoice = {
@@ -57443,6 +57455,8 @@ export type InformedRefusal = {
     patientAcknowledgement: string;
     refusedAt: Date;
 };
+
+export type InstallmentStatus = 'pending' | 'paid' | 'overdue' | 'waived';
 
 /**
  * An invoice-anchored, multi-line HMO claim (the submittable unit)

@@ -466,10 +466,19 @@ export const voidDentalPaymentResponseTransformer = async (data: any): Promise<V
     return data;
 };
 
+const dentalPaymentPlanInstallmentSchemaResponseTransformer = (data: any) => {
+    data.dueDate = new Date(data.dueDate);
+    if (data.paidDate) {
+        data.paidDate = new Date(data.paidDate);
+    }
+    return data;
+};
+
 const dentalPaymentPlanSchemaResponseTransformer = (data: any) => {
     data.startDate = new Date(data.startDate);
     data.createdAt = new Date(data.createdAt);
     data.updatedAt = new Date(data.updatedAt);
+    data.installments = data.installments.map((item: any) => dentalPaymentPlanInstallmentSchemaResponseTransformer(item));
     return data;
 };
 

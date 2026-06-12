@@ -24,9 +24,9 @@ interface Installment {
   status: string;
 }
 
-// The SDK's DentalPaymentPlan type does not yet include installments[], paidCents,
-// remainingCents, installmentsCount, or nextDueDate (backend enrichments not in spec).
-// We cast via `select` — same pattern as use-invoices.ts.
+// The view's display shape. The SDK now carries installments[]; paidCents,
+// remainingCents, installmentsCount, and nextDueDate are DERIVED from it in `select`
+// (FIX-005) rather than read from absent wire fields.
 interface PaymentPlan {
   id: string;
   invoiceId: string;
@@ -69,8 +69,8 @@ export function getPlanStatusClass(status: string): string {
       return 'bg-red-100 text-red-700';
     case 'completed':
       return 'bg-green-100 text-green-700';
-    case 'cancelled':
-      return 'bg-gray-100 text-gray-500';
+    case 'defaulted':
+      return 'bg-red-100 text-red-700';
     default:
       return 'bg-gray-100 text-gray-500';
   }
@@ -91,15 +91,19 @@ function formatCents(cents: number): string {
 }
 
 function formatPlanStatus(status: string): string {
+  // FIX-005: the key was 'onTrack' (camelCase) but the status enum is 'on_track'
+  // (snake) — so a real plan rendered the raw 'on_track'. Latent until the view was
+  // populated by the create flow. Keyed on the actual PaymentPlanStatus values.
   const map: Record<string, string> = {
-    onTrack: 'On Track',
+    on_track: 'On Track',
     behind: 'Behind',
     completed: 'Completed',
-    cancelled: 'Cancelled',
+    defaulted: 'Defaulted',
   };
   return map[status] ?? status;
 }
 
+// InstallmentStatus enum = pending | paid | overdue | waived ('waived' = forgiven).
 function getInstallmentNumClass(status: string): string {
   switch (status) {
     case 'paid':
@@ -108,6 +112,8 @@ function getInstallmentNumClass(status: string): string {
       return 'bg-orange-100 text-orange-700';
     case 'pending':
       return 'bg-orange-50 text-orange-600';
+    case 'waived':
+      return 'bg-gray-100 text-gray-500';
     default:
       return 'bg-gray-100 text-muted-foreground';
   }
@@ -121,6 +127,8 @@ function getInstallmentBadgeClass(status: string): string {
       return 'bg-red-100 text-red-700';
     case 'pending':
       return 'bg-orange-50 text-orange-600';
+    case 'waived':
+      return 'bg-gray-100 text-gray-500';
     default:
       return 'bg-gray-100 text-muted-foreground';
   }
@@ -128,10 +136,10 @@ function getInstallmentBadgeClass(status: string): string {
 
 function formatInstallmentStatus(status: string): string {
   const map: Record<string, string> = {
+    pending: 'Pending',
     paid: 'Paid',
     overdue: 'Overdue',
-    pending: 'Pending',
-    upcoming: 'Upcoming',
+    waived: 'Waived',
   };
   return map[status] ?? status;
 }
@@ -144,9 +152,46 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
   const planQuery = useQuery({
     ...getDentalPaymentPlanOptions({ path: { invoiceId } }),
     enabled: open && !!invoiceId,
-    // The SDK DentalPaymentPlan type is a subset of the backend-enriched response.
-    // Cast to the local PaymentPlan shape via select — same pattern as InvoiceData above.
-    select: (data): PaymentPlan => data as unknown as PaymentPlan,
+    // FIX-005: the wire returns the plan + installments[] (now declared in the SDK
+    // type), but NOT the plan-level paidCents/remainingCents/installmentsCount/
+    // nextDueDate or a per-installment `number`/`method`. DERIVE them from
+    // installments[] (the lighter §15 option) — no contract surface, no `as unknown`
+    // cast, and the schedule renders from typed truth.
+    select: (data): PaymentPlan => {
+      const raw = data.installments ?? [];
+      const toIso = (d: Date | string | undefined | null): string | undefined =>
+        d == null ? undefined : d instanceof Date ? d.toISOString() : String(d);
+      const paidCents = raw.reduce((sum, i) => sum + (i.paidCents ?? 0), 0);
+      const remainingCents = Math.max(0, data.totalCents - paidCents);
+      const installments: Installment[] = raw.map((i) => ({
+        id: i.id,
+        number: i.installmentNumber,
+        dueDate: toIso(i.dueDate) ?? '',
+        amountCents: i.amountCents,
+        paidDate: toIso(i.paidDate),
+        status: i.status,
+      }));
+      // A paid OR waived installment is settled → not "next due".
+      const unpaidDueMs = raw
+        .filter((i) => i.status !== 'paid' && i.status !== 'waived')
+        .map((i) => new Date(i.dueDate).getTime())
+        .sort((a, b) => a - b);
+      const nextDueDate = unpaidDueMs.length ? new Date(unpaidDueMs[0]!).toISOString() : undefined;
+      return {
+        id: data.id,
+        invoiceId: data.invoiceId,
+        status: data.status,
+        frequency: data.frequency,
+        totalCents: data.totalCents,
+        paidCents,
+        remainingCents,
+        installmentsCount: data.numberOfInstallments,
+        amountPerInstallmentCents: data.amountPerInstallmentCents,
+        startDate: toIso(data.startDate) ?? '',
+        nextDueDate,
+        installments,
+      };
+    },
   });
 
   const plan = planQuery.data ?? null;
