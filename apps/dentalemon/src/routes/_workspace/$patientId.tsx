@@ -26,6 +26,7 @@ import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { TreatmentTable } from '@/features/workspace/components/treatment-table';
+import { ApplyTemplateButton } from '@/features/workspace/components/apply-template-button';
 import { CarryOverPrompt } from '@/features/workspace/components/carry-over-prompt';
 import { WorkspaceImagingOverlay } from '@/features/workspace/components/workspace-imaging-overlay';
 import { PerioChartOverlay } from '@/features/workspace/components/perio/perio-chart-overlay';
@@ -481,6 +482,14 @@ function WorkspacePage() {
           data-testid="workspace-table-zone"
           className="flex-1 min-w-0 bg-background overflow-auto"
         >
+          {/* #13: apply a treatment template to populate the visit (reachable even
+              when the table is empty — the primary apply case). Owner/associate-gated
+              inside the component; only shown for an active, editable visit. */}
+          {currentVisitId && !isReadOnly && (
+            <div className="px-4 pt-3">
+              <ApplyTemplateButton visitId={currentVisitId} patientId={patientId} />
+            </div>
+          )}
           <TreatmentTable
             visitId={currentVisitId ?? undefined}
             treatments={treatments}
