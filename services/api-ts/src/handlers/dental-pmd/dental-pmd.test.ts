@@ -15,6 +15,7 @@ import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { generatePMD } from './generatePMD';
+import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { getPMDForVisit } from './getPMDForVisit';
 import { importPMD } from './importPMD';
 import { getImportedPMD } from './getImportedPMD';
@@ -911,5 +912,51 @@ describe('FR12.1 Batch B: PMD snapshot safety floor + demographics + attestor', 
     const second = await (await generatePmd(visit!.id)).json() as any;
     expect(second.content).toBe(first.content);
     expect(second.checksum).toBe(first.checksum);
+  });
+});
+
+// ===========================================================================
+// Batch C / schema-fix #4: at most one live (generated) PMD per visit, and
+// concurrent completion resolves idempotently (no duplicate generated rows).
+// ===========================================================================
+
+describe('Batch C: single-generated-PMD-per-visit invariant + race safety', () => {
+  // Deterministic DB-invariant check: the partial unique index forbids a second
+  // 'generated' row for the same visit.
+  test('a second generated PMD row for the same visit is rejected by the DB', async () => {
+    const visit = await seedCompletedVisit();
+    const repo = new PMDDocumentRepository(db);
+    const base = {
+      visitId: visit!.id,
+      patientId: PATIENT_ID,
+      authorMemberId: DENTIST_MEMBER_ID,
+      branchId: BRANCH_ID,
+      checksum: 'sha256-deadbeef',
+    };
+    await repo.createOne({ ...base, content: '{"n":1}' });
+    // second 'generated' row for the same visit → partial unique index violation
+    await expect(repo.createOne({ ...base, content: '{"n":2}' })).rejects.toThrow();
+  });
+
+  // Concurrent completion: two generations fired together must not produce two
+  // 'generated' rows, and neither call may 500 — the loser resolves idempotently.
+  test('concurrent generation for the same visit yields exactly one generated PMD', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const fire = () =>
+      app.request(`/dental/visits/${visit!.id}/pmd`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: PATIENT_ID }),
+      });
+
+    const results = await Promise.all([fire(), fire(), fire()]);
+    for (const r of results) {
+      expect(r.status).toBe(201); // no 500 — race handled idempotently
+    }
+
+    const repo = new PMDDocumentRepository(db);
+    const generated = await repo.findMany({ visitId: visit!.id, status: 'generated' });
+    expect(generated.length).toBe(1);
   });
 });

@@ -66,12 +66,18 @@ export class PMDDocumentRepository extends DatabaseRepository<PMDDocument, NewPM
   }
 
   async supersede(oldId: string, newPMD: NewPMDDocument): Promise<PMDDocument> {
-    // Mark old as superseded
+    // Supersession (schema-fix #4): mark the old row superseded FIRST, then insert
+    // the replacement. Order matters under the pmd_document_visit_generated_unique
+    // partial index — the old row must leave 'generated' before the new 'generated'
+    // row is inserted. Under a concurrent completion the loser's insert trips the
+    // index; generatePmdForVisit catches that and resolves idempotently.
+    // (Kept as two statements rather than a db.transaction so repo tests using the
+    // openTestTx BEGIN/ROLLBACK harness — where a nested db.transaction would COMMIT
+    // the outer test tx — stay isolated.)
     await this.db
       .update(pmdDocuments)
       .set({ status: 'superseded', updatedAt: new Date() })
       .where(eq(pmdDocuments.id, oldId));
-    // Insert new with supersedesId
     const [created] = await this.db
       .insert(pmdDocuments)
       .values({ ...newPMD, supersedesId: oldId })

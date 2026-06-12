@@ -5,7 +5,8 @@
  * A new PMD supersedes the previous one via supersedesId.
  */
 
-import { pgTable, uuid, text, timestamp, pgEnum, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, uniqueIndex, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
 
 export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
@@ -35,7 +36,16 @@ export const pmdDocuments = pgTable('pmd_document', {
   supersedesId: uuid('supersedes_id').references((): AnyPgColumn => pmdDocuments.id, { onDelete: 'set null' }),
   /** SHA-256 checksum of content */
   checksum: text('checksum').notNull(),
-});
+}, (table) => ({
+  // schema-fix #4: at most one LIVE (generated) PMD per visit. Supersession
+  // marks the prior row 'superseded', so a visit has exactly one 'generated'
+  // row. This partial unique index makes that a DB invariant and the race
+  // backstop for concurrent visit-completion (generatePmdForVisit catches the
+  // violation and resolves idempotently). Mirrors dental_visit_active_patient_unique.
+  visitGeneratedUnique: uniqueIndex('pmd_document_visit_generated_unique')
+    .on(table.visitId, table.status)
+    .where(sql`status = 'generated'`),
+}));
 
 // V-PMD-002 (§7.2 item 1): imported PMD rows store patient_id as a plain UUID with
 // NO DB foreign key. An external record from a defunct facility must be importable

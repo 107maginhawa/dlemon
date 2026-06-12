@@ -33,6 +33,13 @@ function sha256Hex(content: string): string {
   return `sha256-${createHash('sha256').update(content).digest('hex')}`;
 }
 
+/** Postgres unique-violation (SQLSTATE 23505) detector — same shape as core/database.schema.ts. */
+function isUniqueViolation(err: unknown): boolean {
+  const code = (err as { cause?: { code?: string }; code?: string })?.cause?.code
+    ?? (err as { code?: string })?.code;
+  return code === '23505';
+}
+
 /** Minimal visit shape the PMD snapshot needs (visit row satisfies it). */
 export interface VisitForPmd {
   id: string;
@@ -127,24 +134,34 @@ export async function generatePmdForVisit(
   const existing = await pmdRepo.findByVisit(visitId);
 
   let pmd;
-  if (existing) {
-    pmd = await pmdRepo.supersede(existing.id, {
-      visitId,
-      patientId,
-      authorMemberId,
-      branchId: visit.branchId,
-      content: contentSnapshot,
-      checksum,
-    });
-  } else {
-    pmd = await pmdRepo.createOne({
-      visitId,
-      patientId,
-      authorMemberId,
-      branchId: visit.branchId,
-      content: contentSnapshot,
-      checksum,
-    });
+  try {
+    pmd = existing
+      ? await pmdRepo.supersede(existing.id, {
+          visitId,
+          patientId,
+          authorMemberId,
+          branchId: visit.branchId,
+          content: contentSnapshot,
+          checksum,
+        })
+      : await pmdRepo.createOne({
+          visitId,
+          patientId,
+          authorMemberId,
+          branchId: visit.branchId,
+          content: contentSnapshot,
+          checksum,
+        });
+  } catch (err) {
+    // schema-fix #4: a concurrent visit-completion raced us to create the single
+    // live (generated) PMD for this visit and tripped the partial unique index
+    // (pmd_document_visit_generated_unique). The winner has already created — and
+    // audited — the document, so resolve idempotently by returning it rather than
+    // surfacing a raw 500. Any non-uniqueness error propagates.
+    if (!isUniqueViolation(err)) throw err;
+    const winner = await pmdRepo.findByVisit(visitId);
+    if (!winner) throw err;
+    return winner;
   }
 
   const branchForAudit = await getBranchOrgId(db, visit.branchId);

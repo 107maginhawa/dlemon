@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "pmd_document_visit_generated_unique" ON "pmd_document" USING btree ("visit_id","status") WHERE status = 'generated';

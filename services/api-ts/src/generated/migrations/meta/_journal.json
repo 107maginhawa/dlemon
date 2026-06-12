@@ -715,6 +715,13 @@
       "when": 1781191890755,
       "tag": "0101_complete_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1781228605668,
+      "tag": "0102_opposite_chamber",
+      "breakpoints": true
     }
   ]
 }
