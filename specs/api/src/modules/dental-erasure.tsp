@@ -98,7 +98,7 @@ namespace DentalErasureModule {
     @operationId("requestErasure")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     requestErasure(
       @body body: RequestErasureRequest,
     ): ApiCreatedResponse<ErasureRequest>
@@ -111,7 +111,7 @@ namespace DentalErasureModule {
     @operationId("listErasureRequests")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     listErasureRequests(
       @query status?: ErasureRequestStatus,
       @query subjectPersonId?: UUID,
@@ -126,7 +126,7 @@ namespace DentalErasureModule {
     @get
     @route("/{id}")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     getErasureRequest(
       @path id: UUID,
     ): ApiOkResponse<ErasureRequest>
@@ -140,7 +140,7 @@ namespace DentalErasureModule {
     @post
     @route("/{id}/approve")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     approveErasure(
       @path id: UUID,
       @body body: ApproveErasureRequest,
@@ -156,7 +156,7 @@ namespace DentalErasureModule {
     @post
     @route("/{id}/reject")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     rejectErasure(
       @path id: UUID,
       @body body: RejectErasureRequest,

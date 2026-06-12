@@ -814,28 +814,28 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // requestErasure
   app.post('/dental/erasure-requests',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('json', validators.RequestErasureBody, validationErrorHandler),
     registry.requestErasure as unknown as Handler
   );
 
   // listErasureRequests
   app.get('/dental/erasure-requests',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('query', validators.ListErasureRequestsQuery, validationErrorHandler),
     registry.listErasureRequests as unknown as Handler
   );
 
   // getErasureRequest
   app.get('/dental/erasure-requests/:id',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.GetErasureRequestParams, validationErrorHandler),
     registry.getErasureRequest as unknown as Handler
   );
 
   // approveErasure
   app.post('/dental/erasure-requests/:id/approve',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.ApproveErasureParams, validationErrorHandler),
     zValidator('json', validators.ApproveErasureBody, validationErrorHandler),
     registry.approveErasure as unknown as Handler
@@ -843,7 +843,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // rejectErasure
   app.post('/dental/erasure-requests/:id/reject',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.RejectErasureParams, validationErrorHandler),
     zValidator('json', validators.RejectErasureBody, validationErrorHandler),
     registry.rejectErasure as unknown as Handler
@@ -1133,21 +1133,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // placeLegalHold
   app.post('/dental/legal-holds',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('json', validators.PlaceLegalHoldBody, validationErrorHandler),
     registry.placeLegalHold as unknown as Handler
   );
 
   // listLegalHolds
   app.get('/dental/legal-holds',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('query', validators.ListLegalHoldsQuery, validationErrorHandler),
     registry.listLegalHolds as unknown as Handler
   );
 
   // releaseLegalHold
   app.post('/dental/legal-holds/:id/release',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.ReleaseLegalHoldParams, validationErrorHandler),
     registry.releaseLegalHold as unknown as Handler
   );
