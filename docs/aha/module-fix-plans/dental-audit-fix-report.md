@@ -63,6 +63,22 @@ GAP-2 auditor role (Q1/#17 owner-only resolve), GAP-3 base-PHI routing INTO the 
 
 | Item | Note |
 | --- | --- |
-| Q1/#17 auditor-role visibility | Owner-only resolve — Track 3. |
-| Q2/#18 single-pane sink routing (base PHI → dental viewer) | FIX-004 §10c boundary doc is the decision input; deferred. |
+| Q1/#17 auditor-role visibility | **RESOLVED 2026-06-13 (`bd33f664`)** — owner-only (code already enforced; ROLE_PERMISSION_MATRIX reconciled). |
+| Q2/#18 single-pane sink routing (base PHI → dental viewer) | **RESOLVED 2026-06-13 (`f561388e`)** — read-time union (NOT a write-path change / NOT the 3→1 merge). |
 | Q3 legacy `dental_audit` sunset | FIX-004 canary now provides the divergence baseline; confirm before sunset. |
+
+## Track 3 — auditor-role + sink (#17/#18) — DONE 2026-06-13 (`f561388e` feat + `bd33f664` docs)
+
+**§15 corrected the fix-ready premise on BOTH items** (treated as unverified, per protocol):
+- **#17 = doc-only, not code.** The viewer was ALREADY owner-only — `getAuditEvents.ts:129` `assertBranchRole(db, user.id, branchId, ['dentist_owner'])`, with a `staff_full`→403 pin and a cross-tenant (ORG_A owner passing ORG_B branchId)→403 pin in `getAuditEvents.test.ts`. The append-only DB trigger (migration `0080`, proven by `audit-immutability-db.test.ts`) and the FIX-004 divergence canary were ALSO already in place. So #17 collapsed to reconciling the internally-inconsistent `ROLE_PERMISSION_MATRIX.md` (line 100 "auditor/observer" analog implied audit-read vs line 183 owner-only) → owner-only binding, auditor read-only role = Phase-2.
+- **#18 = read-time union, the faithful reading of "single pane NOW + defer 3→1 merge to V2".** The fix-ready flagged the *write-routing* interpretation as cross-module-risky ("touches other modules' write paths, plan as its own batch"); a READ-side union avoids that entirely. §15 traced that 8 dental PHI-read handlers (listMedicalHistory/listPrescriptions/listConsentForms/listLabOrders/listAmendments/listAttachments/getDentalInvoice/getImportedPMD) record `data-access` reads into the BASE `audit_log_entry` sink #3 via `audit.logEvent` — these are the "base PHI reads the owner couldn't see."
+
+**Scoping (the hard part):** base `audit_log_entry` carries NO branch/tenant column (`baseEntityFields` only). Resource-scoping is heterogeneous (visitId×5 / patientId×2 / invoiceId / importedPmdId) and partially unreliable (patient branch anchor is nullable per C-batch). So the union scopes by **actor ∈ active members of the viewed branch** (`dental_membership.personId == audit_log_entry.user`, the same table the viewer authorizes against). Leak-safe for V1's single-org product; documented residual = a bare resource UUID only under hypothetical cross-org membership (not creatable in V1) → ROADMAP harden to resource-scope when the patient anchor is non-nullable.
+
+**PHI-safety:** the facade projection never SELECTs base `details` (structural guarantee, stronger than a runtime drop); rows surface as ids/actor/resourceType/timestamp + `metadata.source='base'`; FE tags them "platform".
+
+**Real bug caught by the dental-audit hurl (not the unit):** the viewer's freeform `action` filter (e.g. `patient.registered`) reached the base ENUM `audit_log_entry.action` comparison → `invalid input value for enum audit_action` → **500**. Fixed with a `BASE_AUDIT_ACTIONS` guard (non-base action ⇒ base sink contributes nothing) + a regression unit pin.
+
+**3-lens adversarial (mechanism+consumer = product code):** Lens-1 security SHIP (empty-member early-return can't degrade to unscoped; details never selected; actor-scope is in-query not post-filter). Lens-2 correctness — REJECTED its "pagination BLOCKER" (the `window=offset+limit` per-source fetch is the correct k-way-merge bound: any global top-N row is within its own source's top-N); folded its MINORs (dropped `resolvedTenant` caller-param echo → stamp base rows `branchId`). Lens-3 test-quality — folded MAJORs (added a positive control to the no-leak test so absence ≠ accidental-empty; assert `details` absent from the DTO; FE badge row-identity). count-scan MAJOR left (mirrors the authoritative `audit-log.repo.ts` `select({id}).length` convention).
+
+**Gate:** backend viewer **14/0** (mutation-RED proven on actor-scope + details-drop), FE settings **87/0** (audit badge), dental-audit hurl **10/10** + all-audit hurl **20/20** (fresh :7213), api-ts+FE typecheck **0**, lint **0 errors**, boundaries clean. No TypeSpec/SDK regen (response shape unchanged — `metadata` already on the model). **dental-audit MODULE fully closed (A–C + Track-3 #17/#18).** Deferred to V2/Phase-2: 3→1 sink merge, legacy `dental_audit` sunset (Q3), auditor read-only role, resource-scope hardening, CSV export.
