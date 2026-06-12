@@ -112,7 +112,9 @@ describe('usePMD — error', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
+    // 5s timeout (default 1s): under the coverage-instrumented CI runner the
+    // query error state can take >1s to settle, which flaked this test.
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
     // retry: false on both qc defaults and hook — should call exactly once
     expect(callCount).toBe(1);
   });
@@ -126,7 +128,8 @@ describe('usePMD — error', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
+    // 5s timeout (default 1s) — see note above; this is the test that flaked in CI.
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
     expect(result.current.data).toBeUndefined();
   });
 });
