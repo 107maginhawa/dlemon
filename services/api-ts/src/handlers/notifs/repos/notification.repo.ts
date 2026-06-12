@@ -20,6 +20,10 @@ import * as OneSignal from '@onesignal/node-onesignal';
 import { SYSTEM_USER_ID } from '@/core/constants';
 import { subDays } from 'date-fns';
 import type { EmailService } from '@/core/email';
+import {
+  isMedicalNotificationType,
+  mapNotificationTypeToEmailTemplate,
+} from '../notification-classification';
 
 export class NotificationRepository extends DatabaseRepository<Notification, NewNotification, NotificationFilters> {
   private oneSignalClient?: OneSignal.DefaultApi;
@@ -547,27 +551,22 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
   }
 
   /**
-   * Check if a notification type requires medical consent
+   * Whether a notification type is medical/safety-critical (FIX-004). Delegates to
+   * the pure, tested classifier; medical types fail open (high push priority). V1
+   * defines no medical types, so this is currently false for every type — but it is
+   * a real classifier now, not a hardcoded constant.
    */
   private isMedicalNotification(type: string): boolean {
-    return false; // No medical notifications in current system
+    return isMedicalNotificationType(type);
   }
-  
+
   /**
-   * Map notification type to email template tag
+   * Map notification type to email template tag (FIX-003). Delegates to the pure,
+   * tested map; see notification-classification.ts for the registered-vs-Phase-2
+   * tag distinction.
    */
   private mapNotificationToEmailTemplate(type: string): string | null {
-    const mapping: Record<string, string> = {
-      'security': 'auth.password-reset',
-      'system': 'auth.welcome',
-      // P1-24: appointment reminder + recall (continuing-care) templates
-      'appointment.reminder': 'appointment.reminder',
-      'appointment.confirmation-request': 'appointment.confirmation-request',
-      'recall.due': 'recall.due',
-      'recall.reminder': 'recall.reminder',
-    };
-    
-    return mapping[type] || null;
+    return mapNotificationTypeToEmailTemplate(type);
   }
 
   /**
