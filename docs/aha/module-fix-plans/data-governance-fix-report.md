@@ -47,3 +47,34 @@ The list endpoint is platform-admin only and **platform-wide by design**; the op
 ## Not implemented (per plan §9–§11)
 
 Batch B (enforced-mode retention integration test), Batch C (retention read API + role-truth regen), Batch D (retention settings panel — blocked on dental-org settings shell), Batch E (governance admin UI — blocked on Q1 who-may-erase). No changes to `erasure-targets.ts` / `legal-hold.facade.ts` (frozen safety core), no new scheduler, no FE.
+
+---
+
+# Addendum — Batch C (retention read API + role-truth regen) — 2026-06-12
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (consolidated via `outputs/EXECUTION-TODO.md` Track 1) · **Superpowers:** Yes (TDD). Closes the two Batch-C items this report's decision queue flagged.
+
+## Fixes
+| Fix | Status | Commit | What shipped |
+| --- | --- | --- | --- |
+| Retention read API (FR8.14, schema-fix #5) | Fixed | `a1fc138c` | New `dental-retention.tsp` → `getRetentionStatus` (GET `/dental/retention-status`, admin, optional `tenantId`) wrapping the existing `summarizeRetentionEnforcement` (no logic change). Tag `Retention` → handler co-located in `handlers/retention/` (no cross-module import). SDK regen. |
+| Erasure/legal-hold role truth (FIX-005, cross-cutting fix #4) | Fixed | `e595e150` | Flipped 8 ops `#["user"]→#["admin"]` (5 erasure + 3 legal-hold). Handlers already enforced admin + both module docstrings already said "Admin-only" → pure contract-correctness; the generated `authMiddleware` now gates admin too (defense-in-depth) and the published OpenAPI security is accurate. |
+
+## Tests run (fresh)
+| Command | Result |
+| --- | --- |
+| `getRetentionStatus.test.ts` (RED→GREEN: 401/403/200 never-run/200 enforced) | 4 / 0 |
+| retention module suite | 10 files, 45 / 0 |
+| erasure + legal-hold backend suites (post-regen) | 10 files, 49 / 0 |
+| Contract `dental-retention.hurl` (fresh :7213) | **6 / 6** — admin 200 / non-admin 403 through the generated admin gate |
+| Contract `dental-erasure.hurl` + `dental-legalhold.hurl` (fresh :7213) | **33/33 + 21/21** — admin gate now at middleware, zero regression |
+| api-ts `tsc` + root typecheck | both exit 0 |
+
+## Still deferred (out of consolidated Batch C scope)
+| Item | Reason |
+| --- | --- |
+| Remove now-server-owned `tenantId`/`branchId` from `RequestErasureRequest` TypeSpec | Ties to decision **C-4 (patients-only erasure subjects)** + the Batch E governance-admin redesign — do the request-shape cleanup with that erasure-subject model, not piecemeal. |
+| Batch B (enforced-mode retention proof), Batch E (governance admin UI #1/C-4), Batch D (settings panel) | Unchanged — Tracks 2/3 of EXECUTION-TODO. |
+
+## Completion decision
+`COMPLETE` (Batch C) — both consolidated Batch-C items fixed, gate-green at unit + contract layers.
