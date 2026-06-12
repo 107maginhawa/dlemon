@@ -187,3 +187,76 @@ A 3-lens adversarial workflow (contract/§15 · FE/FSM · blast-radius/test-hone
 ## C.8 Completion
 
 `COMPLETE` (Batch C) — FIX-006 landed RED-first across component + contract + E2E. The orphaned `listPrescriptions`/`updatePrescription` lifecycle (WF-016) is now reachable from the real product UI with FSM- and role-gated dispense/cancel. **Remaining:** D (amendments visibility + role parity), E (consent-template picker — coordinate dental-org), F (docs reconcile: lab enum + 50MB attachment cap).
+
+---
+
+# Batch D — Amendments visibility (FR1.16) + Notes/Attachments role parity (FIX-007 + FIX-008) · 2026-06-12 · commit `10f28217`
+
+## D.1 Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch D — Amendments visibility + role-gating parity |
+| Fix scope | FIX-007 (P2, GAP-4 / FR1.16 "both visible") — wire the orphaned `listAmendments` into a read-only list **+ the user-approved create-path coherence fix** so the surface works end-to-end. FIX-008 (P3, GAP-11) — Notes/Med-history role parity. |
+| Superpowers used | Yes (Vertical TDD + verification-before-completion); §15 handler-vs-SDK-vs-contract check run first; 3-lens adversarial review before commit |
+| Product decision taken | **Option 1 (Fix create + read list, E2E loop)** — surfaced via AskUserQuestion because §15 found the only UI create path broken; user chose to make amendments work end-to-end rather than ship a read list beside a broken button |
+| Out of scope | BR-019 amendment supervisor approval (V2, feature-flagged 501 stub — not touched); Batches E/F; consent-gate facades (V-CLN-010, untouched) |
+| Shared files touched | `tooth-slideout.tsx` (shared read-only review surface — additive); `workspace-top-bar.tsx` (comment-only); `$patientId.tsx` (1-line `originalRecordId` thread) |
+| Schema/migration/TypeSpec/SDK | **None** — §15 found the read contract/SDK already correct (see D.2); no regen this batch |
+| Code commit | `10f28217` |
+
+## D.2 §15 verification — NO contract drift; an FE create-path bug (TWO defects) found + fixed
+
+This is the **first batch in the series where §15 found the wire clean** — verified, not assumed:
+- `listAmendments` returns the offset envelope `{ data: Amendment[], pagination }` (the **list-shape trap** — unwrap `data.data`, NOT a bare array / `{items}`). The SDK `ListAmendmentsResponses[200]` matches the handler exactly. The TypeSpec `Amendment` model omits only `createdBy`/`updatedBy` (audit fields the handler returns as a harmless response **superset**); every field the FE reads (`reason`, `content`, `originalRecordType`, `createdAt`) is in the contract. **No actionable drift → no regen.** (Opposite of B/C, where the contract *omitted* fields the FE needed.)
+
+Instead §15 surfaced a real **FE bug** on the *create* side (an FE defect, not a contract drift — the contract is correct), with **two** defects masked by a 201-returning fetch mock + an `as`-cast:
+1. **Empty `originalRecordId`.** `tooth-slideout.tsx` mounted `AmendmentForm` with `originalRecordId={originalRecordId ?? ''}` and `$patientId.tsx` passed **no** `originalRecordId` → `''` → `CreateAmendmentRequestSchema.originalRecordId` is `UUIDSchema` → 400. So the **only** UI path that creates an `amendment`-table row was broken. (The note-addendum + medical-history "amendment" paths are *different* endpoints.)
+2. **Missing `visitId` in the body.** The handler reads `visitId` from the path, but `CreateAmendmentRequestSchema` **also requires `visitId` in the body**; `amendment-form.tsx` omitted it (the `as Parameters<…>['body']` cast masked the missing field). Even with a valid `originalRecordId`, the UI create would 400 on missing `visitId`.
+
+Both were fixed FE-side (the contract is right): wire a real `originalRecordId` (the selected tooth's treatment id), gate the affordance on it, add `visitId` to the body, and **drop the cast** (the complete body now matches `CreateAmendmentRequest` exactly — dropping the cast *restored* type safety and would have caught defect 2 at compile time).
+
+## D.3 FIX-008 — matrix-verified visibility PIN (no affordance removed)
+
+Resolved the `ROLE_PERMISSION_MATRIX` truth FIRST (per the task's caution). "Notes / Medical History" (`onNotes`→`SoapNotesSheet`) and "Attachments" (`onAttachments`→`AttachmentsSheet`) are **VIEW + supervised-draft entry points**, not pure write launchers: the matrix grants Draft-notes + Upload to `dental_assistant`, `staff_full` is "Clinical Workspace: View-only", and Sign-&-Lock is already role-gated *inside* `SoapNotesSheet`. So the current unconditional render is **correct** — hiding these would wrongly strip legitimate VIEW access. FIX-008 therefore **pins** the intended visibility (a regression guard, green-on-arrival) rather than removing a button: added role-parity assertions (`staff_full` sees Notes+Attachments, hides all 5 write launchers; Notes/Attachments stay across writer + supervised-assistant) and a clarified rationale comment. This is exactly the outcome the fix-ready plan anticipated for a P3 "FE parity, not security" fix.
+
+## D.4 Changes
+
+| Layer | Change | Files |
+| --- | --- | --- |
+| FE (FIX-007 read) | NEW `amendments-list.tsx` — read-only, visit-scoped list (direct-SDK `listAmendments`, unwrap `data.data`, deterministic newest-first display, loading/empty/error states, stale-response guard, `reloadToken` refetch). Mounted in the tooth-slideout read-only area alongside the original record (FR1.16 "both visible"). | `amendments-list.tsx` (new) |
+| FE (FIX-007 create coherence) | Gate "Add Amendment" on `canAmend = readOnly && visitId && originalRecordId`; mount `AmendmentsList`; bump `reloadToken` on save | `tooth-slideout.tsx` |
+| FE (FIX-007 create coherence) | Thread `originalRecordId = treatments.find(t => t.toothNumber === selectedTooth)?.id` | `$patientId.tsx` |
+| FE (FIX-007 create bug) | Add `visitId` to the createAmendment **body**; drop the masking `as` cast | `amendment-form.tsx` |
+| FE (FIX-008) | Comment-only: clarify Notes/Attachments are view/supervised-draft entry points (+ flag the pre-existing route-guard / sheet-gating gaps) | `workspace-top-bar.tsx` |
+| Contract (FIX-007 pin) | Strengthen list-amendments asserts: `data[0].reason/originalRecordType/content/id` + `pagination.totalCount` | `dental-clinical.hurl` |
+
+## D.5 Tests (RED→GREEN)
+
+| Test | Type | Result |
+| --- | --- | --- |
+| `amendments-list.test.ts` (NEW, +6: envelope-unwrap + row-count coherence oracle; type/reason labels; empty; error; read-only no-controls; refetch-on-reloadToken) | frontend/component | 6/6 |
+| `tooth-slideout.test.ts` (+4: Add-Amendment gated on `originalRecordId`; list renders in readOnly; absent in edit) | frontend/component | 13/13 |
+| `amendment-form.test.ts` (+1: body must include `visitId`) — RED on the masked bug → GREEN after fix | frontend/component | 3/3 |
+| `workspace-top-bar.test.ts` (+2 FIX-008 parity pins) | frontend/component + RBAC | 7/7 |
+| `dental-clinical.hurl` (strengthened list-amendments row asserts) | contract | 52 requests, 100% |
+| `workspace-readonly.spec.ts` (seed performed treatment on tooth 21; **read a pre-filed amendment back + file one via the UI → reads back** = closed write→read loop) | E2E/Playwright | 3/3 chromium (loop stable 2/2 repeat) |
+| `amendment.repo` (sanity — backend untouched) | backend unit | 7/0 |
+
+## D.6 Gate
+
+Full FE **2357/0** · amendments-list 6/0 · tooth-slideout 13/0 · top-bar 7/0 · amendment-form 3/0 · contract **52/0** · E2E **3/0** (loop 2/2 repeat) · backend amendment.repo 7/0 · typecheck (FE + api-ts) **0** · sdk-ts typecheck **n/a** (no regen) · lint **0 errors** (2 pre-existing warnings: `useNavigate`/`APP` unused, untouched) · module boundaries **n/a** (zero api-ts changes).
+
+## D.7 Adversarial review (pre-commit)
+
+A 3-lens adversarial workflow (§15/contract · FE-coherence · blast-radius/test-honesty) returned **no blockers, no majors** and independently verified the create-path fix (visitId-in-body + dropped cast = type-safe **and** runtime-correct), the read-path unwrap, and a tight blast radius (AmendmentForm/AmendmentsList consumed only by tooth-slideout; ToothSlideout's new prop is optional). **Actioned:** closed the E2E write→read loop (assert the UI-filed correction reads back — confirmed not false-green: a failed create keeps the form open + shows the error banner); made the displayed list **deterministic** (FE sort newest-first) + added a **stale-response guard**; tightened the FIX-008 wording to "workspace-VIEW-capable roles" and the create-path comment to "UUID-format" (the backend does not verify `tooth_treatment` record existence). **Documented, not fixed (pre-existing, flagged for roadmap):** (a) the `_workspace` route guard does not enforce `canAccess(role,'workspace')`; (b) `SoapNotesSheet`/`AttachmentsSheet` do not client-gate Save/upload by draft/upload capability (backend 403 is the hard gate); (c) the contract's `data[0]` assertion + `originalRecordId` pick rely on unordered backend queries — robust today (single amendment / one treatment per tooth in the suite) and the user-facing list is now FE-ordered, but a deterministic backend `orderBy` is the durable fix.
+
+## D.8 Cross-module / notes
+
+- **Backend untouched** — no handler/schema/TypeSpec/SDK change; the §15 finding was an FE create-path bug, not a contract drift.
+- Consent-gate facades / V-CLN-010 untouched. No scheduler, no migration.
+- Cross-references: dental-pmd Batch A/D already own the PMD chain; FIX-002 button landed in Batch A. Batch E (consent-template picker) still pending (coordinate dental-org).
+
+## D.9 Completion
+
+`COMPLETE` (Batch D) — FIX-007 + FIX-008 landed RED-first across component + contract + a genuine UI write→read E2E loop. The orphaned `listAmendments` (FR1.16) is now reachable from the real UI **and the amendment create path actually works** (both masked defects fixed); Notes/Attachments visibility is pinned to the role matrix. **Remaining:** E (consent-template picker — coordinate dental-org), F (docs reconcile: lab enum + 50MB attachment cap).
