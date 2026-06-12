@@ -58181,6 +58181,26 @@ export type MerchantAccount = {
 };
 
 /**
+ * Result of merging an imported PMD's safety-floor items into the patient's
+ * living medical history (FIX-003 / decision #20). The imported PMD itself is
+ * never mutated (BR-022); its safety-critical items are surfaced as NEW,
+ * append-only medical-history entries that then appear in the clinical Safety
+ * Floor. The merge is idempotent — a second merge of the same imported PMD → 409.
+ */
+export type MergeImportedPmdSafetyFloorResult = {
+    importedPmdId: Uuid;
+    /**
+     * True once the merge has been applied (idempotency marker).
+     */
+    safetyFloorMerged: boolean;
+    /**
+     * Number of new medical-history entries created by this merge.
+     */
+    mergedEntryCount: number;
+    mergedAt: Date;
+};
+
+/**
  * Message type enumeration
  */
 export type MessageType = 'text' | 'system' | 'video_call';
@@ -71586,6 +71606,45 @@ export type GetImportedPmdResponses = {
 };
 
 export type GetImportedPmdResponse = GetImportedPmdResponses[keyof GetImportedPmdResponses];
+
+export type MergeImportedPmdSafetyFloorData = {
+    body?: never;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/pmd/imported/{id}/merge-safety-floor';
+};
+
+export type MergeImportedPmdSafetyFloorErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type MergeImportedPmdSafetyFloorError = MergeImportedPmdSafetyFloorErrors[keyof MergeImportedPmdSafetyFloorErrors];
+
+export type MergeImportedPmdSafetyFloorResponses = {
+    /**
+     * Success response with data
+     */
+    200: MergeImportedPmdSafetyFloorResult;
+};
+
+export type MergeImportedPmdSafetyFloorResponse = MergeImportedPmdSafetyFloorResponses[keyof MergeImportedPmdSafetyFloorResponses];
 
 export type ExportPatientCareRecordData = {
     body?: never;

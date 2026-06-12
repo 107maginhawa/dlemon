@@ -18196,6 +18196,13 @@ export const MedicalHistoryReviewSchema = z.object({
   reviewedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
+export const MergeImportedPMDSafetyFloorResultSchema = z.object({
+  importedPmdId: UUIDSchema,
+  safetyFloorMerged: z.boolean(),
+  mergedEntryCount: z.number().int(),
+  mergedAt: z.string().datetime().transform((str) => new Date(str))
+});
+
 export const MessageTypeSchema = z.enum(["text", "system", "video_call"]);
 
 export const MultipartPartSchema = z.object({
@@ -21970,6 +21977,13 @@ export const GetImportedPMDParams = z.object({
 export type GetImportedPMDParams = z.infer<typeof GetImportedPMDParams>;
 
 export const GetImportedPMDResponse = ImportedPMDSchema;
+
+export const MergeImportedPMDSafetyFloorParams = z.object({
+  id: UUIDSchema,
+});
+export type MergeImportedPMDSafetyFloorParams = z.infer<typeof MergeImportedPMDSafetyFloorParams>;
+
+export const MergeImportedPMDSafetyFloorResponse = MergeImportedPMDSafetyFloorResultSchema;
 
 export const ExportPatientCareRecordParams = z.object({
   patientId: UUIDSchema,

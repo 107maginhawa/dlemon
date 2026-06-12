@@ -133,6 +133,32 @@ describe('PMDImport — shipped component', () => {
     }
   });
 
+  test('confirm imports AND merges the imported PMD safety floor (FIX-003 — no longer inert)', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      renderImport();
+      await user.type(screen.getByLabelText(/Source Facility/i), 'City Dental Clinic');
+      await user.type(screen.getByLabelText(/Source Software/i), 'Open Dental v21.1');
+      fireEvent.change(screen.getByLabelText(/PMD Content/i), {
+        target: { value: '{"allergies":["Penicillin"]}' },
+      });
+      await user.click(screen.getByRole('button', { name: /^preview$/i }));
+      await user.click(await screen.findByRole('button', { name: /confirm import/i }));
+
+      // The import POST returns { id: 'pmd-1' }; the component must then merge it so
+      // the previewed Safety Floor items actually land (the "Safety Floor updated" claim).
+      await waitFor(() =>
+        expect(f.calls.some(c =>
+          c.method === 'POST' && c.url.endsWith('/dental/pmd/imported/pmd-1/merge-safety-floor'),
+        )).toBe(true),
+      );
+      await waitFor(() => expect(screen.getByText(/imported successfully/i)).not.toBeNull());
+    } finally {
+      f.restore();
+    }
+  });
+
   test('a failed import returns to the form with an error and does not call onImported', async () => {
     const user = userEvent.setup();
     const f = installFetch(false);

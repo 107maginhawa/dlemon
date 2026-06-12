@@ -7,7 +7,13 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
-import { importedPmds, type ImportedPMD, type NewImportedPMD } from './pmd-document.schema';
+import {
+  importedPmds,
+  importedPmdSafetyFloorEvents,
+  type ImportedPMD,
+  type NewImportedPMD,
+  type ImportedPMDSafetyFloorEvent,
+} from './pmd-document.schema';
 import type { Logger } from '@/types/logger';
 
 export interface ImportedPMDFilters {
@@ -49,5 +55,23 @@ export class ImportedPMDRepository extends DatabaseRepository<ImportedPMD, NewIm
       .where(eq(importedPmds.id, id))
       .returning();
     return updated ?? null;
+  }
+
+  /**
+   * EF-PMD-003 (decision #20): record the safety-floor merge as an APPEND-ONLY
+   * event. The unique index on imported_pmd_id makes merge-once a DB invariant —
+   * a concurrent or repeat merge raises 23505, which the handler maps to 409.
+   * Never updates an existing event (immutability by construction).
+   */
+  async recordSafetyFloorMergeEvent(
+    importedPmdId: string,
+    mergedBy: string | null,
+  ): Promise<ImportedPMDSafetyFloorEvent> {
+    const [event] = await this.db
+      .insert(importedPmdSafetyFloorEvents)
+      .values({ importedPmdId, mergedBy })
+      .returning();
+    if (!event) throw new Error('Failed to record safety-floor merge event');
+    return event;
   }
 }

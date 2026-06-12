@@ -1847,6 +1847,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getImportedPMD as unknown as Handler
   );
 
+  // mergeImportedPMDSafetyFloor
+  app.post('/dental/pmd/imported/:id/merge-safety-floor',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.MergeImportedPMDSafetyFloorParams, validationErrorHandler),
+    registry.mergeImportedPMDSafetyFloor as unknown as Handler
+  );
+
   // exportPatientCareRecord
   app.get('/dental/pmd/patient/:patientId/care-record',
     authMiddleware({ roles: ["user"] }),

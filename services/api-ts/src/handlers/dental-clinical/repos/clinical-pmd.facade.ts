@@ -9,6 +9,7 @@ import { eq, and, asc, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { prescriptions } from './prescription.schema';
 import { medicalHistoryEntries } from './medical-history.schema';
+import type { MedicalHistoryEntryType } from './medical-history.schema';
 
 export async function getPrescriptionsForPMD(
   db: DatabaseInstance,
@@ -97,4 +98,39 @@ export async function getSafetyFloorForPMD(
     else if (r.entryType === 'condition') floor.conditions.push(entry);
   }
   return floor;
+}
+
+/** One safety-floor item to surface from an imported PMD into the patient's med-history. */
+export interface ImportedSafetyFloorItem {
+  entryType: Extract<MedicalHistoryEntryType, 'condition' | 'medication' | 'allergy'>;
+  displayName: string;
+}
+
+/**
+ * FIX-003 (decision #20): APPEND-ONLY write of an imported PMD's safety-critical
+ * items into the patient's living medical history. These new rows then surface in
+ * the clinical Safety Floor (getActiveMedicalHistoryByPatientId / getSafetyFloorForPMD).
+ *
+ * Strictly insert-only — never updates or deletes existing entries (BR-022 boundary:
+ * the imported PMD is immutable; merging copies its data forward as new entries).
+ * Returns the number of rows inserted. The dental-pmd merge handler is the sole caller.
+ */
+export async function insertImportedSafetyFloorEntries(
+  db: DatabaseInstance,
+  patientId: string,
+  items: ImportedSafetyFloorItem[],
+  actorId: string,
+): Promise<number> {
+  if (items.length === 0) return 0;
+  await db.insert(medicalHistoryEntries).values(
+    items.map(i => ({
+      patientId,
+      entryType: i.entryType,
+      displayName: i.displayName,
+      active: true,
+      createdBy: actorId,
+      updatedBy: actorId,
+    })),
+  );
+  return items.length;
 }

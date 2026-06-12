@@ -117,6 +117,22 @@ model ImportPMDRequest {
   checksum?: string;
 }
 
+/**
+ * Result of merging an imported PMD's safety-floor items into the patient's
+ * living medical history (FIX-003 / decision #20). The imported PMD itself is
+ * never mutated (BR-022); its safety-critical items are surfaced as NEW,
+ * append-only medical-history entries that then appear in the clinical Safety
+ * Floor. The merge is idempotent — a second merge of the same imported PMD → 409.
+ */
+model MergeImportedPMDSafetyFloorResult {
+  importedPmdId: UUID;
+  /** True once the merge has been applied (idempotency marker). */
+  safetyFloorMerged: boolean;
+  /** Number of new medical-history entries created by this merge. */
+  mergedEntryCount: int32;
+  mergedAt: utcDateTime;
+}
+
 // ---------------------------------------------------------------------------
 // Models — Continuity-of-Care export (P2-18)
 // ---------------------------------------------------------------------------
@@ -234,6 +250,28 @@ namespace DentalPMDModule {
       @path id: UUID
     ): ApiOkResponse<ImportedPMD>
       | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    /**
+     * FIX-003 (decision #20): merge an imported PMD's safety-critical items
+     * (conditions / medications / allergies) into the patient's living medical
+     * history as APPEND-ONLY entries, so imported safety data actually surfaces
+     * in the clinical Safety Floor (the import flow's clinical reason to exist).
+     * The imported PMD itself stays immutable (BR-022); the merge is recorded as
+     * an append-only event and is idempotent — a second merge for the same
+     * imported PMD returns 409 SAFETY_FLOOR_ALREADY_MERGED.
+     */
+    @post
+    @route("/pmd/imported/{id}/merge-safety-floor")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("mergeImportedPMDSafetyFloor")
+    mergeSafetyFloor(
+      @path id: UUID
+    ): ApiOkResponse<MergeImportedPMDSafetyFloorResult>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiConflictResponse
       | ApiUnauthorizedResponse;
 
     /**

@@ -284,6 +284,7 @@ import { getPMDForVisit } from '../../handlers/dental-pmd/getPMDForVisit';
 import { importPMD } from '../../handlers/dental-pmd/importPMD';
 import { listImportedPMDs } from '../../handlers/dental-pmd/listImportedPMDs';
 import { listPMDs } from '../../handlers/dental-pmd/listPMDs';
+import { mergeImportedPMDSafetyFloor } from '../../handlers/dental-pmd/mergeImportedPMDSafetyFloor';
 import { getRetentionStatus } from '../../handlers/retention/getRetentionStatus';
 import { applyTemplate } from '../../handlers/dental-visit/templates/applyTemplate';
 import { carryOverTreatments } from '../../handlers/dental-visit/treatments/carryOverTreatments';
@@ -685,6 +686,7 @@ export const registry = {
   importPMD,
   listImportedPMDs,
   listPMDs,
+  mergeImportedPMDSafetyFloor,
 
   // Retention handlers
   getRetentionStatus,
