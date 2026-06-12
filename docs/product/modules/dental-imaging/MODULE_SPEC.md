@@ -69,16 +69,27 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ### WF-030 — Run Ceph Analysis (v1.4, `imagingTier = cbct` required)
 1. Dentist uploads a lateral cephalometric radiograph (panoramic or CBCT series).
 2. Server validates `imagingTier` for the branch (BR-016c) → 403 if insufficient.
-3. Auto-landmark detection runs (server-side isomorphic math engine). Results returned within 5s (P95).
-4. Dentist reviews auto-placed landmarks in the ceph viewer; can drag to correct (WF-031).
-5. On confirmation: ceph analysis record saved with landmark coordinates, derived angles (ANB, SNA, SNB, etc.), and skeletal classification.
+3. Dentist places cephalometric landmarks **manually** on the ceph viewer (WF-031). Manual placement is the default and only committed V1 input path (no-AI — see the no-AI note below).
+4. Angles recalculate live as landmarks are placed/adjusted (server-side isomorphic math engine, pure functions).
+5. On "Lock Analysis": ceph analysis record saved with landmark coordinates, derived angles (ANB, SNA, SNB, etc.), and skeletal classification.
+
+> **No-AI note (product decision #2, 2026-06-12):** automatic landmark detection is **not** part of the committed V1 workflow. An optional, addon-gated auto-detect affordance exists behind the `dental_imaging_auto_landmark` feature flag (**default OFF** — see §18; `detectCephLandmarks` returns 403 `FEATURE_DISABLED` when off). It is backed by a deterministic `FakeDetector` dev/test fixture (`repos/ceph-landmark-detector.ts`) — **not a clinical AI detector** — and every suggested point is an explicitly-disclosed draft the clinician must confirm. The platform is local-first / no-AI; manual landmark placement is the shipped path. (Aligned with `docs/clinical/STANDARDS_COMPLIANCE.md` — AI auto-tracing is an intentional non-goal.)
 
 ### WF-031 — Place / Adjust Ceph Landmarks (v1.4)
-1. Follows WF-030 auto-detection or can be triggered manually on a CBCT-tier study.
+1. Triggered manually on a CBCT-tier study (the default path); the optional, flag-gated auto-detect (above) seeds draft landmarks only when enabled.
 2. Ceph viewer displays the radiograph with landmark overlay (circles with IDs).
 3. Dentist drags each landmark to corrected position. Angles recalculate live.
 4. "Lock Analysis" commits the final landmark set — further edits require a new analysis record.
 5. Locked analysis results included in PMD export and printable ceph report.
+
+### WF-030b — Cephalometric Superimposition (P1-11, V1: preview-only) — Phase-2 persistence
+1. Dentist in the ceph workspace selects two report snapshots (earlier vs later timepoint) to compare.
+2. Registration reference = cranial-base S–N only in V1; maxillary/mandibular structural registration is deferred to Phase-2.
+3. Backend computes a similarity transform; the viewer renders the two tracings stacked with an opacity slider + onion-skin, plus a per-landmark mm delta table.
+4. **V1 is preview-only and NOT persisted** — results compute on the fly (`POST …/ceph/superimpositions/preview`, response `id: null`) and recompute on revisit. The persist trio (`POST …/ceph/superimpositions`, `GET …/{id}`, list) is built but has **no V1 production consumer** and is Phase-2-dormant (product decision #19, 2026-06-12). Honesty: this is a simplified two-point (S–N) superimposition, not ABO-grade structural superimposition.
+
+### CBCT / 3-D volumes (P2-7) — declared OUT of V1 launch scope
+The schema accepts `modality='cbct'` and stores DICOM volume metadata, and `finalizeCbctStudy` parses DICOM tags server-side, but the full CBCT ingest chain (large-volume multipart upload UI, finalize wiring, 3-D viewer handoff) is **out of V1 launch scope** (product decision #19, 2026-06-12). `finalizeCbctStudy` has **0 production consumers** (exercised only by seed/integration tests); a clinician cannot complete a CBCT upload in the V1 app. CBCT is Phase-2 / addon-dormant; the schema unique-constraint hardening is deferred with it.
 
 ---
 
@@ -203,6 +214,8 @@ Coverage: see BUSINESS_RULES.md §Imaging coverage summary (imaging.test.ts, cep
 - Finding/measurement/image-management on a study from a branch the caller can't access → 403 (non-ceph) / 404-mask (ceph endpoints, info-hiding)
 - Landmark placement does NOT require calibration — landmarks may be placed uncalibrated; `recomputeCephAnalysis` returns 422 NOT_CALIBRATED only when an mm (linear) metric is requested on an image whose pixel spacing is missing/anisotropic. Pixel-based angle metrics still compute.
 - Unknown `analysisType` query param → 422 UNSUPPORTED_ANALYSIS_TYPE (never silently defaulted)
+- Ceph superimposition is preview-only in V1 (no persistence): `…/ceph/superimpositions/preview` returns `id: null` and there is no V1 fetch-by-id consumer; structural multi-point registration is Phase-2 (decision #19).
+- CBCT studies cannot be finalized in the V1 app (the multipart upload + finalize chain is not wired into production UI); `finalizeCbctStudy` is reachable only via seed/integration harnesses (decision #19).
 
 ---
 
@@ -243,7 +256,7 @@ dental-imaging.study-uploaded (INFO, studyId, branchId), dental-imaging.ceph-com
 | Flag | Default | Description |
 |------|---------|-------------|
 | dental_imaging_ceph_enabled | false | Gate ceph workspace by imagingTier |
-| dental_imaging_auto_landmark | false | AI-assisted landmark placement |
+| dental_imaging_auto_landmark | false | Optional auto-landmark detection — **default OFF**, addon-gated. No-AI: backed by a deterministic `FakeDetector` dev/test fixture, not a clinical AI detector; every point is a draft-to-confirm (decision #2). |
 
 ---
 
