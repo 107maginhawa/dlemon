@@ -108,6 +108,35 @@ test.describe('Patient Profile: Edit demographics (FR2.4)', () => {
     await expect(profileName).toContainText(/REYES/i);
     await expect(profileName).not.toContainText(/Wrongname/i);
   });
+
+  // #14 (V-PAT-014): edit contact info (phone/email) → save → reload renders it.
+  test('add contact info: edit email/phone → save → reload shows the contact info', async ({ page }) => {
+    const { branchId } = await setupDentalOrg(page);
+    const patientId = await createDentalPatient(page, {
+      displayName: 'Contact Patient',
+      branchId,
+    });
+
+    await gotoApp(page, `/patients/${patientId}`);
+    await page.waitForLoadState('networkidle');
+    // Fresh patient has no contact info.
+    await expect(page.locator('body')).toContainText(/no contact info/i);
+
+    await page.getByTestId('edit-patient-button').click();
+    await page.getByLabel(/email/i).fill('contact@clinic.test');
+    await page.getByLabel(/phone/i).fill('+639170000234');
+    await page.getByRole('button', { name: /save changes/i }).click();
+
+    // Reload from scratch — the contact info must come from the API, not state.
+    await page.waitForLoadState('networkidle');
+    await gotoApp(page, `/patients/${patientId}`);
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByTestId('profile-name')).toBeVisible();
+    await expect(page.locator('body')).toContainText('contact@clinic.test');
+    await expect(page.locator('body')).toContainText('+639170000234');
+    await expect(page.locator('body')).not.toContainText(/no contact info/i);
+  });
 });
 
 // ─── AC-PROF-02: Open workspace from profile ──────────────────────────────
