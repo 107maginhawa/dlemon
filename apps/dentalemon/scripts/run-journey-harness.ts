@@ -61,6 +61,7 @@ const EXPECTED: Record<
   J08: { name: 'Informed refusal', set: 'A', expected: 'PASS', rubricIds: ['Q20'] },
   J09: { name: 'Treatment-plan versioning', set: 'A', expected: 'PASS', rubricIds: ['Q34', 'Q35'] },
   J10: { name: 'Void / amend a signed entry', set: 'A', expected: 'PASS', rubricIds: ['Q36', 'Q37', 'Q38', 'Q39'] },
+  J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   // B01/B02 PASS where a ceph image is seeded (local, MinIO present). In CI there
   // is no MinIO → no seeded ceph image → these journeys record SKIPPED (honest
   // environment skip, tolerated by the gate), not a fake BROKEN.
