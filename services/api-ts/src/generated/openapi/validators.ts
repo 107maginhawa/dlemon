@@ -18836,10 +18836,13 @@ export const PrescriptionSchema = z.object({
   quantity: z.string().optional(),
   instructions: z.string().optional(),
   dispenseAsWritten: z.boolean(),
+  status: z.enum(["pending", "dispensed", "cancelled"]),
   controlledSubstanceSchedule: z.enum(["none", "II", "III", "IV", "V"]).optional(),
   prescriberDea: z.string().optional(),
   prescriberNpi: z.string().optional()
 });
+
+export const PrescriptionStatusSchema = z.enum(["pending", "dispensed", "cancelled"]);
 
 export const PrimaryPharmacyInfoSchema = z.object({
   name: z.string().min(1).max(100),
@@ -19383,6 +19386,7 @@ export const UpdatePrescriptionRequestSchema = z.object({
   duration: z.string().optional(),
   quantity: z.string().optional(),
   instructions: z.string().optional(),
+  status: z.enum(["pending", "dispensed", "cancelled"]).optional(),
   controlledSubstanceSchedule: ControlledSubstanceScheduleSchema.optional(),
   prescriberDea: z.string().optional(),
   prescriberNpi: z.string().optional()

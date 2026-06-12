@@ -94,6 +94,8 @@ prescription_id: jsonpath "$.id"
 jsonpath "$.drugName" == "Amoxicillin"
 jsonpath "$.dosage" == "500mg"
 jsonpath "$.dispenseAsWritten" == false
+# EM-CLI-012: new prescriptions default to `pending` (status now on the contract).
+jsonpath "$.status" == "pending"
 
 
 # 3. List prescriptions for visit
@@ -102,6 +104,7 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" count >= 1
+jsonpath "$.data[0].status" exists
 
 
 # 4. Update prescription
@@ -117,6 +120,75 @@ HTTP 200
 jsonpath "$.dosage" == "250mg"
 jsonpath "$.instructions" == "Take with food"
 jsonpath "$.drugName" == "Amoxicillin"
+# Field edit leaves the lifecycle status untouched.
+jsonpath "$.status" == "pending"
+
+
+# 4a. No-op self-transition (pending → pending) is not a legal edge → 422
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "pending"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "INVALID_PRESCRIPTION_TRANSITION"
+
+
+# 4b. Dispense the prescription (FSM: pending → dispensed) — EM-CLI-012 / WF-016
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "dispensed"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "dispensed"
+
+
+# 4c. Invalid transition from a terminal state (dispensed → cancelled) → 422
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "cancelled"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "INVALID_PRESCRIPTION_TRANSITION"
+
+
+# 4d. Create a second prescription to pin the cancel happy-path
+POST {{api}}/dental/visits/{{visit_id}}/prescriptions
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "prescriberMemberId": "{{dentist_member_id}}",
+  "drugName": "Ibuprofen",
+  "dosage": "400mg",
+  "frequency": "BID"
+}
+HTTP 201
+[Captures]
+prescription_id_2: jsonpath "$.id"
+[Asserts]
+jsonpath "$.status" == "pending"
+
+
+# 4e. Cancel the second prescription (FSM: pending → cancelled) → 200
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id_2}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "cancelled"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "cancelled"
 
 
 # ============================================================

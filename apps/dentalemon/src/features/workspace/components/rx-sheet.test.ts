@@ -246,3 +246,207 @@ describe('RxSheet — shipped component', () => {
     }
   });
 });
+
+// ── FIX-006 (WF-016): Rx list + dispense/cancel lifecycle ────────────────────
+
+type RxRow = {
+  id: string;
+  drugName: string;
+  dosage?: string;
+  frequency?: string;
+  status: 'pending' | 'dispensed' | 'cancelled';
+};
+
+/**
+ * A realistic fetch router for the per-visit prescription list + PATCH lifecycle.
+ *   GET   .../prescriptions          → 200 { data: RxRow[], pagination }   (list-shape trap)
+ *   PATCH .../prescriptions/:id       → 200 updated row (status echoed from body);
+ *                                       also mutates the backing list so a refetch flips it
+ *   POST  .../prescriptions           → 201 created row (status 'pending')
+ */
+type RxRequestBody = { status?: string; drugName?: string };
+
+function installRxRouter(initial: RxRow[]) {
+  const list: RxRow[] = initial.map(r => ({ ...r }));
+  const calls: Array<{ url: string; method: string; body: RxRequestBody | undefined }> = [];
+  const original = global.fetch;
+  global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+    const url = req instanceof Request ? req.url : String(req);
+    const method = (req instanceof Request ? req.method : init?.method ?? 'GET').toUpperCase();
+    const raw = req instanceof Request ? await req.clone().text() : (init?.body as string | undefined);
+    const body = raw ? (JSON.parse(raw) as RxRequestBody) : undefined;
+    calls.push({ url, method, body });
+
+    if (method === 'GET' && /\/prescriptions$/.test(url.split('?')[0]!)) {
+      return json(200, {
+        data: list,
+        pagination: { offset: 0, limit: 50, count: list.length, totalCount: list.length, totalPages: 1, currentPage: 1, hasNextPage: false, hasPreviousPage: false },
+      });
+    }
+    if (method === 'PATCH') {
+      const id = url.split('/').pop()!;
+      const row = list.find(r => r.id === id);
+      if (row && typeof body?.status === 'string') row.status = body.status as RxRow['status'];
+      return json(200, row ?? { id, status: body?.status });
+    }
+    if (method === 'POST') {
+      return json(201, { id: 'rx-new', visitId: 'v-1', drugName: body?.drugName ?? 'Drug', status: 'pending' });
+    }
+    return json(200, {});
+  }) as unknown as typeof fetch;
+  return { calls, list, restore: () => { global.fetch = original; } };
+}
+
+function json(status: number, payload: unknown) {
+  return new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } });
+}
+
+function renderLifecycleSheet(
+  overrides: Partial<{ onSaved: () => void; onClose: () => void; canManage: boolean }> = {},
+) {
+  return render(
+    React.createElement(RxSheet, {
+      visitId: 'v-1',
+      patientId: 'p-1',
+      prescriberMemberId: 'm-1',
+      canManage: overrides.canManage,
+      open: true,
+      onClose: overrides.onClose ?? (() => {}),
+      onSaved: overrides.onSaved,
+    } as React.ComponentProps<typeof RxSheet>),
+  );
+}
+
+/** Click the "Prescriptions" list tab to switch out of the create form. */
+async function openList(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('tab', { name: /prescriptions/i }));
+}
+
+describe('RxSheet — prescription list + lifecycle (FIX-006)', () => {
+  test('list tab renders per-visit prescriptions with status badges (unwraps {data,pagination})', async () => {
+    const user = userEvent.setup();
+    const f = installRxRouter([
+      { id: 'rx-1', drugName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', status: 'pending' },
+      { id: 'rx-2', drugName: 'Ibuprofen', dosage: '400mg', frequency: 'BID', status: 'dispensed' },
+    ]);
+    try {
+      renderLifecycleSheet();
+      await openList(user);
+
+      // Both rows render (proves the {data,pagination} envelope was unwrapped, not a bare array).
+      await waitFor(() => expect(screen.getByTestId('rx-row-rx-1')).not.toBeNull());
+      expect(screen.getByTestId('rx-row-rx-2')).not.toBeNull();
+      // Status badges reflect the row status.
+      expect(screen.getByTestId('rx-status-rx-1').textContent?.toLowerCase()).toContain('pending');
+      expect(screen.getByTestId('rx-status-rx-2').textContent?.toLowerCase()).toContain('dispensed');
+      // The GET hit the per-visit prescriptions route.
+      expect(f.calls.some(c => c.method === 'GET' && c.url.includes('/visits/v-1/prescriptions'))).toBe(true);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('dispense on a pending Rx PATCHes status=dispensed, refetches, and the badge flips', async () => {
+    const user = userEvent.setup();
+    const f = installRxRouter([
+      { id: 'rx-1', drugName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', status: 'pending' },
+    ]);
+    try {
+      renderLifecycleSheet({ canManage: true });
+      await openList(user);
+
+      await waitFor(() => expect(screen.getByTestId('rx-row-rx-1')).not.toBeNull());
+      await user.click(screen.getByRole('button', { name: /mark amoxicillin dispensed/i }));
+
+      // PATCH carried the FSM transition to the right resource.
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'PATCH' && c.url.includes('/prescriptions/rx-1'))).toBe(true),
+      );
+      const patch = f.calls.find(c => c.method === 'PATCH')!;
+      expect(patch.body?.status).toBe('dispensed');
+      // After the refetch the badge flips and the dispense action is gone (terminal).
+      await waitFor(() =>
+        expect(screen.getByTestId('rx-status-rx-1').textContent?.toLowerCase()).toContain('dispensed'),
+      );
+      expect(screen.queryByRole('button', { name: /mark amoxicillin dispensed/i })).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('cancel on a pending Rx PATCHes status=cancelled', async () => {
+    const user = userEvent.setup();
+    const f = installRxRouter([
+      { id: 'rx-1', drugName: 'Amoxicillin', dosage: '500mg', frequency: 'TID', status: 'pending' },
+    ]);
+    try {
+      renderLifecycleSheet({ canManage: true });
+      await openList(user);
+
+      await waitFor(() => expect(screen.getByTestId('rx-row-rx-1')).not.toBeNull());
+      await user.click(screen.getByRole('button', { name: /cancel amoxicillin prescription/i }));
+
+      await waitFor(() =>
+        expect(f.calls.some(c => c.method === 'PATCH' && c.url.includes('/prescriptions/rx-1'))).toBe(true),
+      );
+      const patch = f.calls.find(c => c.method === 'PATCH')!;
+      expect(patch.body?.status).toBe('cancelled');
+      await waitFor(() =>
+        expect(screen.getByTestId('rx-status-rx-1').textContent?.toLowerCase()).toContain('cancelled'),
+      );
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('FSM-gated: no dispense/cancel actions on terminal (dispensed/cancelled) rows', async () => {
+    const user = userEvent.setup();
+    const f = installRxRouter([
+      { id: 'rx-1', drugName: 'Amoxicillin', status: 'dispensed' },
+      { id: 'rx-2', drugName: 'Ibuprofen', status: 'cancelled' },
+    ]);
+    try {
+      renderLifecycleSheet({ canManage: true });
+      await openList(user);
+
+      await waitFor(() => expect(screen.getByTestId('rx-row-rx-1')).not.toBeNull());
+      expect(screen.queryByRole('button', { name: /mark amoxicillin dispensed/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /cancel amoxicillin prescription/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /mark ibuprofen dispensed/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /cancel ibuprofen prescription/i })).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('role-gated: dispense/cancel hidden when canManage is false (list still readable)', async () => {
+    const user = userEvent.setup();
+    const f = installRxRouter([
+      { id: 'rx-1', drugName: 'Amoxicillin', status: 'pending' },
+    ]);
+    try {
+      renderLifecycleSheet({ canManage: false });
+      await openList(user);
+
+      await waitFor(() => expect(screen.getByTestId('rx-row-rx-1')).not.toBeNull());
+      // Read affordance present, write affordances absent.
+      expect(screen.getByTestId('rx-status-rx-1').textContent?.toLowerCase()).toContain('pending');
+      expect(screen.queryByRole('button', { name: /mark amoxicillin dispensed/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /cancel amoxicillin prescription/i })).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('empty state when the visit has no prescriptions', async () => {
+    const user = userEvent.setup();
+    const f = installRxRouter([]);
+    try {
+      renderLifecycleSheet({ canManage: true });
+      await openList(user);
+      await waitFor(() => expect(screen.getByText(/no prescriptions for this visit/i)).not.toBeNull());
+    } finally {
+      f.restore();
+    }
+  });
+});

@@ -552,6 +552,7 @@ function WorkspacePage() {
           visitId={currentVisitId}
           patientId={patientId}
           prescriberMemberId={prescriberMemberId}
+          canManage={orgRole === 'dentist_owner' || orgRole === 'dentist_associate'}
           open={rxSheetOpen}
           onClose={() => setRxSheetOpen(false)}
         />

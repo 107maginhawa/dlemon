@@ -60335,6 +60335,13 @@ export type Prescription = {
     instructions?: string;
     dispenseAsWritten: boolean;
     /**
+     * Lifecycle status (EM-CLI-012). Always present on every response; the row
+     * defaults to `pending` and transitions to `dispensed`/`cancelled` via PATCH.
+     * Read-only on this response model — clients change it through
+     * `UpdatePrescriptionRequest.status`.
+     */
+    status: 'pending' | 'dispensed' | 'cancelled';
+    /**
      * P2-13: US-context legal Rx fields (record-only; EPCS/Surescripts
      * transmission is out of scope). All optional + additive so the ₱/PH
      * non-controlled flow is unaffected.
@@ -60387,6 +60394,15 @@ export type PrescriptionData = {
      */
     notes?: string;
 };
+
+/**
+ * Prescription lifecycle status (EM-CLI-012).
+ * FSM: `pending` → `dispensed` | `cancelled` (both terminal). New
+ * prescriptions default to `pending`; the transition is externally driven
+ * (pharmacy dispense/cancel) so it stays allowed even on a locked/completed
+ * visit — the same carve-out as lab orders (§13).
+ */
+export type PrescriptionStatus = 'pending' | 'dispensed' | 'cancelled';
 
 /**
  * Lightweight free-form description of a pharmacy.
@@ -62011,6 +62027,13 @@ export type UpdatePrescriptionRequest = {
     duration?: string;
     quantity?: string;
     instructions?: string;
+    /**
+     * Lifecycle transition (EM-CLI-012). When present, the handler routes to the
+     * FSM guard (`pending` → `dispensed` | `cancelled`); an invalid transition
+     * returns 422 `INVALID_PRESCRIPTION_TRANSITION`. Status progression is the one
+     * field permitted on a locked/completed visit (external pharmacy dispense).
+     */
+    status?: 'pending' | 'dispensed' | 'cancelled';
     controlledSubstanceSchedule?: ControlledSubstanceSchedule;
     prescriberDea?: string;
     prescriberNpi?: string;
