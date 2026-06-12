@@ -30,7 +30,7 @@ Manages the dental-specific patient registry. Wraps the platform `patient` table
 Patient CRUD, bulk archive, CSV/JSON import/export, safety floor aggregation, recall scheduling, treatment plan view, financial statement, dentition chart init, GDPR erasure request tracking, **read-only household (family file) view**.
 
 ### Out of Scope
-Visit/treatment records (dental-visit), billing invoices (dental-billing), clinical records (dental-clinical), **household write operations (create / add-member / remove-member — Phase-2, see §1.1)**.
+Visit/treatment records (dental-visit), billing invoices (dental-billing), clinical records (dental-clinical), **household write operations (create / add-member / remove-member — Phase-2, see §1.1)**, **insurance claims (Phase-2; billing owns the single source of truth — the `dental-patient/insurance/createClaimDraft` backend op is dormant and must NOT be wired independently, decision #3)**.
 
 ### 1.1 Households — V1 read-only, Phase-2 writes (product decision #16, 2026-06-12)
 The module exposes a **read-only** household aggregation wired into the patient profile (`getPatientHousehold` → `use-household.ts` / `HouseholdCard`). The household **write** operations (`createHousehold`, `addHouseholdMember`, `removeHouseholdMember`) are fully implemented in the backend but are **parked for Phase-2**: they have **zero FE consumers** (verified `grep apps/dentalemon household` → reads only) and the PRD treats household management as a Phase-2 (§2.5) surface. Keep the reads shipped (harmless); **do not wire household write affordances** until Phase-2.
