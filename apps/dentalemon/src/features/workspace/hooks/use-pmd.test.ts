@@ -112,15 +112,19 @@ describe('usePMD — error', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // 5s timeout (default 1s): under the coverage-instrumented CI runner the
-    // query error state can take >1s to settle, which flaked this test.
-    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+    await waitFor(() => expect(result.current.isError).toBe(true));
     // retry: false on both qc defaults and hook — should call exactly once
     expect(callCount).toBe(1);
   });
 
-  test('data is undefined when fetch fails', async () => {
-    global.fetch = mock(() => jsonResponse({}, 404)) as unknown as typeof fetch;
+  // NOTE: this asserts the SERVER-ERROR path (500), not 404. usePMD deliberately
+  // maps a 404 to `null` ("no PMD yet", not an error — see use-pmd.ts queryFn),
+  // so a 404 must NOT set isError. The previous version mocked a 404 and asserted
+  // isError; it only passed on macOS because the mocked 404 surfaced as a
+  // non-SdkError there, while on Linux CI the SDK produced SdkError(404), the
+  // hook swallowed it to null, isError never fired, and the test hung to timeout.
+  test('data is undefined on a server error (5xx)', async () => {
+    global.fetch = mock(() => jsonResponse({}, 500)) as unknown as typeof fetch;
 
     const qc = freshClient();
     const { result } = renderHook(
@@ -128,8 +132,7 @@ describe('usePMD — error', () => {
       { wrapper: makeWrapper(qc) },
     );
 
-    // 5s timeout (default 1s) — see note above; this is the test that flaked in CI.
-    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.data).toBeUndefined();
   });
 });
