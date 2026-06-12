@@ -147,6 +147,12 @@ model DentalPayment {
   isVoid: boolean;
   voidedAt?: utcDateTime;
   voidReason?: string;
+  // AHA FIX-004 §15 reconcile: the void soft-delete records WHO voided the
+  // payment (dental_payment.voided_by_member_id). The handler returns the full
+  // row via .returning(), so the wire already carries this on a voided payment;
+  // the contract previously omitted it (same drift class as the clinical-B
+  // consent revokedBy reconcile). Optional — null until the payment is voided.
+  voidedByMemberId?: UUID;
   createdAt: utcDateTime;
 }
 
@@ -212,6 +218,18 @@ model RecordDentalPaymentRequest {
   notes?: string;
 }
 
+// AHA FIX-004 §15 ROADMAP FLAG (deliberate deferral, not an omission): unlike the
+// sibling VoidDentalInvoiceRequest below (@minLength(5)/@maxLength(500)), voidReason
+// carries NO length bound — and voidDentalPayment.ts does not trim/empty-guard it
+// either — so a direct API caller can void a payment (a financial reversal) with an
+// empty reason and write an empty-reason audit row. The FE wired in Batch B
+// (invoice-detail.tsx handleVoidPayment) imposes a 5-char floor, but the contract +
+// handler stay lenient, so the two now diverge on the validation floor. This is a
+// server-validation/behavior change (RED-first 422 test + handler guard), out of
+// scope for the FE-wiring batch; tracked in dental-billing-fix-report.md Batch B
+// roadmap flags. [V2: add @minLength(5)/@maxLength(500) + a handler trim/empty guard,
+// mirroring the invoice void; consider the same bound for ApplyDentalDiscountRequest
+// .percentageRate (also contract-unbounded, handler-only INVALID_DISCOUNT_RATE).]
 model VoidDentalPaymentRequest {
   voidReason: string;
 }

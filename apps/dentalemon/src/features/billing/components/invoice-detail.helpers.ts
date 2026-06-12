@@ -16,6 +16,11 @@ export interface Payment {
   recordedByMemberId?: string;
   recordedByName?: string;
   createdAt: string;
+  // FIX-004: void is a soft-delete — a voided payment stays in the list as a
+  // reversal row (isVoid=true) with its reason preserved, never removed.
+  isVoid?: boolean;
+  voidedAt?: string;
+  voidReason?: string;
 }
 
 export interface InvoiceData {
@@ -76,6 +81,32 @@ export function showRecordButton(status: string): boolean {
 
 export function showMarkUncollectibleButton(status: string, canWrite: boolean): boolean {
   return canWrite && canMarkUncollectible(status);
+}
+
+// FIX-003: applying a discount is an OWNER-ONLY money write-down (backend
+// assertBranchRole(['dentist_owner'])). Offered on the same live-billable set as
+// void/record (issued/partial/overdue); the backend also blocks paid/voided.
+export function showDiscountButton(status: string, isOwner: boolean): boolean {
+  return isOwner && (status === 'issued' || status === 'partial' || status === 'overdue');
+}
+
+// FIX-004: an owner may void a single recorded payment that is not already
+// voided. The whole-invoice void (footer) is a separate, broader action.
+export function canVoidPaymentRow(isOwner: boolean, payment: { isVoid?: boolean }): boolean {
+  return isOwner && !payment.isVoid;
+}
+
+// FIX-003: mirror the backend discount gates client-side. percentageRate is a
+// 0–100 PERCENTAGE (not cents, not a 0–1 fraction); a meaningful discount is
+// >0 and ≤100. reason is required (the backend 422s DISCOUNT_REASON_REQUIRED on
+// an empty/whitespace reason).
+export function validateDiscountForm(form: { percentageRate: number; reason: string }): string[] {
+  const errors: string[] = [];
+  if (!form.reason.trim()) errors.push('Discount reason is required');
+  if (!Number.isFinite(form.percentageRate) || form.percentageRate <= 0 || form.percentageRate > 100) {
+    errors.push('Discount must be greater than 0 and at most 100 percent');
+  }
+  return errors;
 }
 
 export function validatePaymentForm(form: {

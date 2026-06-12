@@ -256,7 +256,17 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.discountCents" > 0
+# AHA FIX-003 §15: applyDentalDiscount returns the FULL updated invoice with
+# RECALCULATED totals (not just the discount row), so the FE re-renders coherently
+# from one round-trip. Pin the EXACT arithmetic against the deterministic seed
+# (subtotal 23500, 20% off → discount 4700, total 18800, balance 18800): a
+# stale/un-recomputed total would fail these, so the coherence the FE depends on is
+# contract-bound, not merely present.
+jsonpath "$.subtotalCents" == 23500
+jsonpath "$.discountCents" == 4700
+jsonpath "$.totalCents" == 18800
+jsonpath "$.balanceCents" == 18800
+jsonpath "$.status" == "issued"
 
 
 # 10. Record payment (partial)
@@ -297,6 +307,9 @@ HTTP 200
 [Asserts]
 jsonpath "$.isVoid" == true
 jsonpath "$.voidReason" == "Entry error"
+# AHA FIX-004 §15: the void soft-delete records WHO voided the payment. The wire
+# carries voided_by_member_id via .returning(); the contract now declares it.
+jsonpath "$.voidedByMemberId" isString
 
 
 # 13. Create payment plan

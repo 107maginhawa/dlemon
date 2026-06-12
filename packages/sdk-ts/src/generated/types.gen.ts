@@ -7960,6 +7960,7 @@ export type DentalPayment = {
     isVoid: boolean;
     voidedAt?: Date;
     voidReason?: string;
+    voidedByMemberId?: Uuid;
     createdAt: Date;
 };
 

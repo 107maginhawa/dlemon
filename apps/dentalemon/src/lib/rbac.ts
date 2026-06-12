@@ -218,6 +218,29 @@ export function canWriteBilling(role: DentalRole): boolean {
 }
 
 /**
+ * Apply a discount to an invoice (applyDentalDiscount). OWNER-ONLY — mirrors the
+ * backend `assertBranchRole(db, userId, branchId, ['dentist_owner'])` gate. This
+ * is STRICTER than canWriteBilling (which also allows associates): a discount is
+ * a money write-down only the practice owner may authorize. The backend is the
+ * hard gate (403); this hides the affordance so associates never see a button
+ * that would 403.
+ */
+export function canApplyDiscount(role: DentalRole): boolean {
+  return role === 'dentist_owner';
+}
+
+/**
+ * Void a recorded payment (voidDentalPayment). OWNER-ONLY — mirrors the backend
+ * `assertBranchRole(db, userId, branchId, ['dentist_owner'])` gate. A payment
+ * reversal is an owner-authorized money correction; same stricter gate as
+ * {@link canApplyDiscount}. Distinct from the whole-invoice void footer action
+ * (canWriteBilling) — this voids a single payment row.
+ */
+export function canVoidPayment(role: DentalRole): boolean {
+  return role === 'dentist_owner';
+}
+
+/**
  * Check if a role can PRESENT a treatment plan / case presentation to a patient
  * (the treatment-presentation surface). Mirrors the backend gate on
  * createCasePresentation + the plan "presented" transition: clinicians plus the

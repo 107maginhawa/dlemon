@@ -3510,6 +3510,7 @@ export const DentalPaymentSchema = z.object({
   isVoid: z.boolean(),
   voidedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   voidReason: z.string().optional(),
+  voidedByMemberId: UUIDSchema.optional(),
   createdAt: z.string().datetime().transform((str) => new Date(str))
 });
 
