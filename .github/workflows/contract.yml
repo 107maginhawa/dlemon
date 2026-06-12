@@ -182,16 +182,13 @@ jobs:
           CONTRACT_SKIP: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
         run: bun run test:contract
 
-      # Infra-gated (MinIO + Stripe, 6 files). The backing services are now
+      # Infra-gated (MinIO + Stripe, 6 files) — BLOCKING. The backing services are
       # provisioned above and need no email-verification flow, so they run against
-      # the same verification-OFF server. Held non-blocking for ONE CI cycle to
-      # confirm the MinIO/Stripe wiring is green on ubuntu (couldn't be validated
-      # locally without Docker). Promote to blocking — remove continue-on-error —
-      # once a CI run passes it. (iPad-CI-job precedent.) The 2 Mailpit
-      # verification scenarios (auth-verification, auth-password-reset) are
+      # the same verification-OFF server. Promoted to blocking after run
+      # 27443529051 confirmed the MinIO/Stripe wiring green on ubuntu (6/6). The 2
+      # Mailpit verification scenarios (auth-verification, auth-password-reset) are
       # excluded: they need a verification-ON server boot (deferred follow-up).
-      - name: Hurl contract — infra-gated (promote after first green)
-        continue-on-error: true
+      - name: Hurl contract — infra-gated (MinIO + Stripe)
         env:
           CONTRACT_ONLY: storage,dental-imaging,dental-assistant,billing-lifecycle
         run: bun run test:contract
