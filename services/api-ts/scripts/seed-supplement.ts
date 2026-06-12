@@ -15,6 +15,7 @@
 
 import { createDatabase } from '@/core/database';
 import { patients } from '@/handlers/patient/repos/patient.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
 import { dentalVisits, type NewDentalVisit } from '@/handlers/dental-visit/repos/visit.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -1057,9 +1058,46 @@ async function seed() {
   }
 
   // cpPlanSpecs is defined at module scope (exported for testing) — see top of file.
+  //
+  // DETERMINISTIC patient binding by displayName (durable fix for the §15 note in
+  // cpPlanSpecs / J19 and the J08 break): the original `allPatients[patientIdx]`
+  // bound each cp plan to a patient by NON-deterministic physical-row order, which
+  // landed the TERMINAL `rejected` plan on Ana Reyes. J08 (informed refusal) needs
+  // Ana to hold a DECLINABLE non-terminal plan, so it broke. Bind by name instead:
+  // Ana → `presented` (declinable; J08 declines an item before J19 runs), and the
+  // terminal `rejected`/`approved` plans → other demo patients. J19 still finds a
+  // `presented` + `draft` plan by status, so its accept/reject legs are unaffected.
+  // Map name → patient using ONLY the persons that are actually patients. The
+  // persons table carries many non-patient rows (staff, plus duplicate-name
+  // persons across reseeds), so a global name→person map collides and resolves a
+  // name to a non-patient person. Scope it to patient persons so the lookup is exact.
+  const patientPersonIds = allPatients.map((p) => p.person).filter((id): id is string => !!id);
+  const patientPersonRows = patientPersonIds.length
+    ? await db.select({ id: persons.id, firstName: persons.firstName, lastName: persons.lastName })
+        .from(persons).where(inArray(persons.id, patientPersonIds))
+    : [];
+  const nameByPersonId = new Map(patientPersonRows.map((p) => [p.id, `${p.firstName} ${p.lastName ?? ''}`.trim()]));
+  // Bind each cp plan to a SPECIFIC demo patient by name. Ana Reyes is deliberately
+  // EXCLUDED: J08 (informed refusal) declines her FIRST pending treatment, and a cp
+  // plan's items live on a COMPLETED visit — declining a treatment on a completed
+  // visit is blocked (createDentalTreatment.ts visit-status guard), so any cp plan on
+  // Ana shadows her active-visit declinable treatments and breaks J08. Diego Ramos
+  // (no Set-A journey depends on him) carries the `presented` plan instead; J19
+  // discovers presented/draft plans by STATUS, so its accept/reject legs still work.
+  const cpPatientNameByKey: Record<string, string> = {
+    'cp-presented': 'Diego Ramos',
+    'cp-accepted': 'Carlos Mendoza',
+    'cp-rejected': 'Miguel Torres',
+    'cp-draft': 'Maria Santos',
+  };
+  const cpPatientByName = (name: string | undefined) =>
+    name ? allPatients.find((p) => p.person != null && nameByPersonId.get(p.person) === name) : undefined;
+
   let cpPlans = 0, cpPresentations = 0;
   for (const spec of cpPlanSpecs) {
-    const patient = allPatients[spec.patientIdx % allPatients.length];
+    // Prefer the deterministic name binding; fall back to the legacy index so the
+    // seed still works on a patient set that lacks the named demo patients.
+    const patient = cpPatientByName(cpPatientNameByKey[spec.key]) ?? allPatients[spec.patientIdx % allPatients.length];
     if (!patient) continue;
     const visitId = await ensureVisit(patient.id, spec.key);
     const planId = detUuid(`cp-plan:${spec.key}`);
