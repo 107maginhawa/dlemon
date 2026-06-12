@@ -50,6 +50,24 @@ jsonpath "$.name" contains "Bright Smiles Dental"
 jsonpath "$.tier" == "clinic"
 jsonpath "$.countryCode" == "PH"
 jsonpath "$.active" == true
+# C-1: a self-service onboarded org starts provisional (PHI gate).
+jsonpath "$.status" == "provisional"
+
+
+# 2b. Activate the provisional clinic (owner accepts terms/BAA → status live).
+POST {{api}}/dental/organizations/{{org_id}}/activate
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{org_id}}"
+jsonpath "$.status" == "live"
+
+# 2c. Activation is idempotent — re-activating an already-live org returns 200 live.
+POST {{api}}/dental/organizations/{{org_id}}/activate
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "live"
 
 
 # 3. Update the organization name

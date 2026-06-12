@@ -105,6 +105,7 @@ import { DentalMembershipManagement_verifyPin } from '../../handlers/dental-org/
 import { DentalOrganizationManagement_create } from '../../handlers/dental-org/DentalOrganizationManagement_create';
 import { DentalOrganizationManagement_get } from '../../handlers/dental-org/DentalOrganizationManagement_get';
 import { DentalOrganizationManagement_update } from '../../handlers/dental-org/DentalOrganizationManagement_update';
+import { activateOrganization } from '../../handlers/dental-org/activateOrganization';
 import { createConsentTemplate } from '../../handlers/dental-org/createConsentTemplate';
 import { createMember } from '../../handlers/dental-org/createMember';
 import { createOnboarding } from '../../handlers/dental-org/createOnboarding';
@@ -493,6 +494,7 @@ export const registry = {
   DentalOrganizationManagement_create,
   DentalOrganizationManagement_get,
   DentalOrganizationManagement_update,
+  activateOrganization,
   createConsentTemplate,
   createMember,
   createOnboarding,

@@ -1255,6 +1255,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.DentalOrganizationManagement_update as unknown as Handler
   );
 
+  // activateOrganization
+  app.post('/dental/organizations/:id/activate',
+    authMiddleware(),
+    zValidator('param', validators.ActivateOrganizationParams, validationErrorHandler),
+    registry.activateOrganization as unknown as Handler
+  );
+
   // DentalBranchManagement_create
   app.post('/dental/organizations/:orgId/branches',
     authMiddleware(),

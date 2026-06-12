@@ -9,6 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ConflictError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { assertOrgLive } from '@/handlers/shared/assert-org-live';
 import { VisitRepository } from '../repos/visit.repo';
 import { VisitNotesRepository } from '../repos/treatment.repo';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -35,6 +36,8 @@ export async function createDentalVisit(
       ? (['dentist_owner', 'dentist_associate', 'hygienist'] as const)
       : (['dentist_owner', 'dentist_associate'] as const);
   await assertBranchRole(db, user.id, body.branchId, [...allowedRoles]);
+  // C-1: provisional clinics cannot accumulate PHI until activated (production-only).
+  await assertOrgLive(db, body.branchId);
 
   const repo = new VisitRepository(db);
 

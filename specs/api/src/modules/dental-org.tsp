@@ -36,6 +36,24 @@ namespace DentalOrgModule {
     enterprise: "enterprise",
   }
 
+  @doc("""
+    Organization lifecycle status (PHI go-live gate, C-1 / ADR-007).
+    - `provisional` — self-service onboarded; in PRODUCTION, patient/visit PHI writes
+      are blocked until the owner activates the clinic.
+    - `live` — admin/seed provisioned, or activated by the owner accepting terms/BAA.
+    - `suspended` — reserved for future ops use.
+    """)
+  enum OrgStatus {
+    @doc("Self-service onboarded; PHI writes gated until activated")
+    provisional: "provisional",
+
+    @doc("Activated / admin-provisioned — full access")
+    live: "live",
+
+    @doc("Reserved for future ops use")
+    suspended: "suspended",
+  }
+
   @doc("Imaging feature tier (null treated as free)")
   enum ImagingTier {
     @doc("No imaging features")
@@ -104,6 +122,7 @@ namespace DentalOrgModule {
     ownerPersonId: "p1a2b3c4-0000-4000-8000-000000000001",
     countryCode: "PH",
     active: true,
+    status: OrgStatus.live,
   }, #{ title: "Sunrise Dental Clinic — clinic tier" })
   @doc("Dental practice organization — top-level tenant boundary")
   model DentalOrganization extends BaseEntity {
@@ -124,6 +143,9 @@ namespace DentalOrgModule {
 
     @doc("Whether the organization is active")
     active: boolean;
+
+    @doc("Lifecycle status — PHI go-live gate (C-1 / ADR-007)")
+    status: OrgStatus;
   }
 
   @example(#{
@@ -418,6 +440,9 @@ namespace DentalOrgModule {
 
     @doc("Subscription tier")
     tier: string;
+
+    @doc("Lifecycle status — 'provisional' clinics must be activated before PHI writes (C-1)")
+    status: OrgStatus;
   }
 
   @doc("Resolved branch in the org-context response")
@@ -782,6 +807,18 @@ namespace DentalOrgModule {
       @path id: UUID,
       @body body: UpdateOrganizationRequest,
     ): DentalOrganization | NotFoundError | ApiUnauthorizedResponse | ErrorResponse;
+
+    @doc("Activate a provisional clinic (owner accepts terms/BAA → status 'live', unlocking PHI writes per C-1/ADR-007). Owner-only; idempotent (already-live returns 200).")
+    @useAuth(bearerAuth)
+    @operationId("activateOrganization")
+    @post
+    @route("/{id}/activate")
+    activate(@path id: UUID):
+      DentalOrganization
+      | NotFoundError
+      | ApiForbiddenResponse
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
   }
 
   @doc("Self-service clinic onboarding — provisions org + default branch + owner membership in one call")

@@ -4351,6 +4351,10 @@ export type DentalOrgModuleDentalOrganization = {
      * Whether the organization is active
      */
     active: boolean;
+    /**
+     * Lifecycle status — PHI go-live gate (C-1 / ADR-007)
+     */
+    status: 'provisional' | 'live' | 'suspended';
 };
 
 /**
@@ -4533,6 +4537,10 @@ export type DentalOrgModuleOrgContextOrg = {
      * Subscription tier
      */
     tier: string;
+    /**
+     * Lifecycle status — 'provisional' clinics must be activated before PHI writes (C-1)
+     */
+    status: 'provisional' | 'live' | 'suspended';
 };
 
 /**
@@ -4558,6 +4566,10 @@ export type DentalOrgModuleOrgContextResponse = {
          * Subscription tier
          */
         tier: string;
+        /**
+         * Lifecycle status — 'provisional' clinics must be activated before PHI writes (C-1)
+         */
+        status: 'provisional' | 'live' | 'suspended';
     } | null;
     /**
      * Caller's active branch (null when no branch resolved)
@@ -4594,6 +4606,15 @@ export type DentalOrgModuleOrgContextResponse = {
         displayName: string;
     } | null;
 };
+
+/**
+ * Organization lifecycle status (PHI go-live gate, C-1 / ADR-007).
+ * - `provisional` — self-service onboarded; in PRODUCTION, patient/visit PHI writes
+ * are blocked until the owner activates the clinic.
+ * - `live` — admin/seed provisioned, or activated by the owner accepting terms/BAA.
+ * - `suspended` — reserved for future ops use.
+ */
+export type DentalOrgModuleOrgStatus = 'provisional' | 'live' | 'suspended';
 
 /**
  * Subscription tier controlling feature access and device limits
@@ -68598,6 +68619,37 @@ export type DentalOrganizationManagementUpdateResponses = {
 };
 
 export type DentalOrganizationManagementUpdateResponse = DentalOrganizationManagementUpdateResponses[keyof DentalOrganizationManagementUpdateResponses];
+
+export type ActivateOrganizationData = {
+    body?: never;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/organizations/{id}/activate';
+};
+
+export type ActivateOrganizationErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ActivateOrganizationError = ActivateOrganizationErrors[keyof ActivateOrganizationErrors];
+
+export type ActivateOrganizationResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalOrgModuleDentalOrganization | NotFoundError | ErrorResponse;
+};
+
+export type ActivateOrganizationResponse = ActivateOrganizationResponses[keyof ActivateOrganizationResponses];
 
 export type DentalBranchManagementListData = {
     body?: never;

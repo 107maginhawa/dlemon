@@ -55,7 +55,7 @@ export async function getOrgContext(ctx: Context): Promise<Response> {
   }
 
   return ctx.json({
-    org: { id: org.id, name: org.name, tier: org.tier as string },
+    org: { id: org.id, name: org.name, tier: org.tier as string, status: org.status as string },
     branch: branch ? { id: branch.id, name: branch.name, timezone: branch.timezone } : null,
     member: member ? { id: member.id, role: member.role as string, displayName: member.displayName } : null,
   }, 200);

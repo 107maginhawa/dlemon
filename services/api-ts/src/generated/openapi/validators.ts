@@ -2260,7 +2260,8 @@ export const DentalOrgModuleDentalOrganizationSchema = z.object({
   tier: z.enum(["solo", "clinic", "group", "enterprise"]),
   ownerPersonId: z.string().uuid(),
   countryCode: z.string().max(2),
-  active: z.boolean()
+  active: z.boolean(),
+  status: z.enum(["provisional", "live", "suspended"])
 });
 
 export const DentalOrgModuleDentalWorkingHoursDaySchema = z.object({
@@ -2331,14 +2332,16 @@ export const DentalOrgModuleOrgContextMemberSchema = z.object({
 export const DentalOrgModuleOrgContextOrgSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  tier: z.string()
+  tier: z.string(),
+  status: z.enum(["provisional", "live", "suspended"])
 });
 
 export const DentalOrgModuleOrgContextResponseSchema = z.object({
   org: z.union([z.object({
   id: z.string().uuid(),
   name: z.string(),
-  tier: z.string()
+  tier: z.string(),
+  status: z.enum(["provisional", "live", "suspended"])
 }), z.null()]),
   branch: z.union([z.object({
   id: z.string().uuid(),
@@ -2351,6 +2354,8 @@ export const DentalOrgModuleOrgContextResponseSchema = z.object({
   displayName: z.string()
 }), z.null()])
 });
+
+export const DentalOrgModuleOrgStatusSchema = z.enum(["provisional", "live", "suspended"]);
 
 export const DentalOrgModuleOrgTierSchema = z.enum(["solo", "clinic", "group", "enterprise"]);
 
@@ -21195,6 +21200,13 @@ export const DentalOrganizationManagement_updateBody = DentalOrgModuleUpdateOrga
 export type DentalOrganizationManagement_updateBody = z.infer<typeof DentalOrganizationManagement_updateBody>;
 
 export const DentalOrganizationManagement_updateResponse = z.union([DentalOrgModuleDentalOrganizationSchema, NotFoundErrorSchema, ErrorResponseSchema]);
+
+export const ActivateOrganizationParams = z.object({
+  id: UUIDSchema,
+});
+export type ActivateOrganizationParams = z.infer<typeof ActivateOrganizationParams>;
+
+export const ActivateOrganizationResponse = z.union([DentalOrgModuleDentalOrganizationSchema, NotFoundErrorSchema, ErrorResponseSchema]);
 
 export const DentalBranchManagement_createParams = z.object({
   orgId: UUIDSchema,
