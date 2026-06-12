@@ -8,16 +8,20 @@
 
 import { describe, test, expect, afterEach, spyOn } from 'bun:test';
 import { sql, eq, and } from 'drizzle-orm';
-import { ZodError } from 'zod';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { updateMember } from './updateMember';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
 import { AuditLogRepository } from '@/handlers/dental-audit/repos/audit-log.repo';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
+
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness (Track 4): PATCH /dental/org/members/:memberId now runs through the
+// real generated route table (authMiddleware → param+json zValidator → handler),
+// so the 400 no-valid-fields / invalid-role / bad-NPI cases and the fail-closed
+// 5xx audit-sink case exercise the exact validation + error envelope production
+// runs.
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -29,32 +33,7 @@ const NONEXISTENT_ID = 'd5000000-0000-1000-8000-000000000099';
 const authedUser = { id: PERSON_ID, email: 'owner@clinic.com' };
 
 function buildTestApp(user?: typeof authedUser) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    if (err instanceof ZodError) {
-      return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
-    }
-    return c.json({ error: String(err.message) }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.patch('/dental/org/members/:memberId', updateMember);
-
-  return app;
+  return buildHarnessApp({ db, user: user ?? null });
 }
 
 async function seedAll() {

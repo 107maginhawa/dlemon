@@ -65,8 +65,7 @@ const ALLOWLIST: ReadonlySet<string> = new Set([
   'src/handlers/dental-imaging/imaging-links.test.ts',
   'src/handlers/dental-imaging/imaging-metadata.test.ts',
   'src/handlers/dental-org/activateOrganization.test.ts',
-  'src/handlers/dental-org/createMember.test.ts',
-  'src/handlers/dental-org/deactivateMember.test.ts',
+  // createMember.test.ts + deactivateMember.test.ts + updateMember.test.ts migrated to buildTestApp (ratchet tightened).
   'src/handlers/dental-org/dental-org-events.test.ts',
   'src/handlers/dental-org/dental-org.clinic-settings.test.ts',
   'src/handlers/dental-org/dental-org.dashboard-summary-extended.test.ts',
@@ -75,7 +74,6 @@ const ALLOWLIST: ReadonlySet<string> = new Set([
   // getBranchesByUser.test.ts + getOrgContext.test.ts + listMembers.test.ts + permissions.test.ts migrated to buildTestApp (ratchet tightened).
   // org-member-role-active.test.ts migrated to buildTestApp (ratchet tightened).
   'src/handlers/dental-org/resetMemberPin.test.ts',
-  'src/handlers/dental-org/updateMember.test.ts',
   'src/handlers/dental-patient/dental-patient.bulk-import.test.ts',
   'src/handlers/dental-portal/dental-portal.test.ts',
   'src/handlers/dental-visit/dental-visit.cross-tenant-rbac.test.ts',
