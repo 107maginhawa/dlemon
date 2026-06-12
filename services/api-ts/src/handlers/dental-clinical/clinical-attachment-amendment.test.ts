@@ -258,6 +258,39 @@ describe('createAttachment handler', () => {
     expect(body.imageType).toBe('xray');
     expect(body.fileName).toBe('panoramic.jpg');
   });
+
+  // FIX-010 (doc reconcile): this endpoint is metadata-only — it records the
+  // client-reported fileSizeBytes/mimeType with NO size cap and NO MIME allow-list.
+  // The real byte ceiling lives one layer up in the storage module
+  // (POST /storage/files/upload → maxUploadSizeForMime: 100 MB non-DICOM / 2 GB DICOM).
+  // Pinning this design on purpose: a cap added HERE would 422 after storage already
+  // accepted the bytes, orphaning the stored S3 object — so any future cap is a
+  // conscious change, not an accident. (See API_CONTRACTS.md attachment section.)
+  test('records client-reported size/MIME with no cap (metadata-only; storage is the byte boundary)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const res = await app.request(`/dental/visits/${visit.id}/attachments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        imageType: 'document',
+        fileName: 'oversized-report.bin',
+        filePath: '/uploads/oversized-report.bin',
+        // 80 MB — ABOVE the 50 MB UI guard and an arbitrary non-image/pdf MIME;
+        // both are accepted here because enforcement lives in storage, not this endpoint.
+        fileSizeBytes: 83886080,
+        mimeType: 'application/octet-stream',
+        note: 'metadata-only endpoint enforces no size/MIME cap',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(Number(body.fileSizeBytes)).toBe(83886080);
+    expect(body.mimeType).toBe('application/octet-stream');
+  });
 });
 
 // ---------------------------------------------------------------------------

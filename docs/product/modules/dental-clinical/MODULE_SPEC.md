@@ -82,8 +82,16 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ### WF-039 — File Attachment Upload
 1. Dentist or Staff Full opens visit → "Attachments" panel → drag-drop or file picker.
 2. Smart Attachment tagging: file-category image type (`xray`, `photo`, `scan`, `document`, `other`) + optional tooth numbers. This is a coarse file bucket; the clinical radiograph **modality** taxonomy (periapical/bitewing/panoramic/cephalometric/cbct/…) is owned by the dental-imaging module (`ModalityEnum`), which is the system-of-record for true radiograph studies. Legacy attachments tagged `xray`/`photo`/`scan` surface in the imaging workspace via `clinical-imaging.facade` (`source: 'legacy'`).
-3. File stored in S3/MinIO via `storage` module. Metadata record linked to `dental_visit_id`.
-4. Max file size: 50 MB per file. Accepted types: JPEG, PNG, TIFF, DICOM, PDF.
+3. File stored in S3/MinIO via `storage` module (presigned-URL upload). The `dental-clinical`
+   attachment record is **metadata-only** (`file_path` = the storage key); it does not move bytes.
+4. **Size enforcement is layered (FIX-010 — reconciled to code truth):** the clinic UI guards
+   uploads at **50 MB** per file (the product-documented user-facing limit, decision Q5). The
+   actual byte ceiling is enforced by the **storage** module on the presigned-upload step
+   (`maxUploadSizeForMime`): **100 MB** for images/PDF, **2 GB** for DICOM, 8 GB absolute, all
+   env-configurable. The dental-clinical attachment endpoint itself enforces **no** size cap and
+   **no** MIME allow-list (it records client-reported `file_size_bytes`/`mime_type`). Accepted UI
+   types: JPEG, PNG, PDF (file picker `image/*,.pdf`). DICOM/CBCT studies are owned by the
+   **dental-imaging** module, not this attachment sheet.
 5. Attachment list updates optimistically; S3 upload confirmed before persisting DB record.
 
 ---

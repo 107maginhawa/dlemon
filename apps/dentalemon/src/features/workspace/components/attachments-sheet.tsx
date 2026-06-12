@@ -120,7 +120,11 @@ function UploadZone({
   const [dragOver, setDragOver] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
-  const MAX_BYTES = 50 * 1024 * 1024; // 50 MB — matches backend limit
+  // 50 MB client-side convenience guard — the product-documented user-facing limit
+  // (decision Q5). It is intentionally BELOW the storage service's real byte ceiling
+  // (100 MB non-DICOM, enforced at the presigned-upload step), so it blocks before the
+  // upload starts and can't orphan a stored object. Not a server boundary. (FIX-010)
+  const MAX_BYTES = 50 * 1024 * 1024;
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0 || !visitId) return;

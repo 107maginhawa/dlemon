@@ -8,6 +8,12 @@
 > All responses wrap in `{ data, meta }`.
 > Key rules: BR-003 (locked visit immutable), BR-014 (consent), BR-017 (Rx prescriber), BR-018 (lab orders).
 > Medical history: append-only (no PATCH/DELETE).
+>
+> **Field-casing note (2026-06-12 FIX-010 reconcile):** field names in this legacy
+> contract are snake_case, but the live wire is camelCase (e.g. `file_size_bytes` →
+> `fileSizeBytes`). The **lab-order status** and **attachment** sections below were
+> reconciled to code truth in Batch F; the remaining sections may still carry
+> pre-camelCase field names (separate, larger reconcile — flagged for roadmap).
 
 ---
 
@@ -86,7 +92,7 @@ Create a lab order.
 | `id` | string (uuid) | NO | |
 | `visit_id` | string (uuid) | NO | |
 | `lab_name` | string | NO | |
-| `status` | string | NO | `pending` |
+| `status` | string | NO | initial state = `ordered` (BR-018 FSM) |
 | `due_date` | string (date) | YES | |
 | `created_at` | string (date-time) | NO | |
 
@@ -102,17 +108,22 @@ Update lab order status (progression through FSM).
 **Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
 **Path params:** `id` (visit uuid), `lid` (lab order uuid)
 
-**Request body:**
+**Request body:** (all fields optional — `status` routes to the FSM guard; the rest are field edits. Matches `UpdateLabOrderRequest`.)
 
-| Field | Type | Nullable | Required | Enum | Example |
-|-------|------|----------|----------|------|---------|
-| `status` | string | NO | YES | `sent`, `received`, `completed`, `rejected` | `"completed"` |
-| `notes` | string | YES | NO | max:500 | |
+| Field | Type | Nullable | Required | Enum / Constraints | Example |
+|-------|------|----------|----------|--------------------|---------|
+| `status` | string | NO | NO | `ordered`, `in_fabrication`, `delivered`, `fitted`, `cancelled` (BR-018 forward-only FSM) | `"in_fabrication"` |
+| `shade` | string | YES | NO | restoration shade | `"A2"` |
+| `material` | string | YES | NO | e.g. `"Zirconia"`, `"PFM"` | `"PFM"` |
+| `due_date` | string (date-time) | YES | NO | chairside-needed date | |
+| `expected_delivery_date` | string (date-time) | YES | NO | | |
+| `cancel_reason` | string | YES | NO | required context when cancelling | `"Remake — wrong shade"` |
+| `is_defective` | boolean | YES | NO | flags a defective delivery | `false` |
 
 **Response 200:** `{ data: LabOrder }`
 
-**Errors:** `NOT_FOUND(404)`, `INVALID_STATUS_TRANSITION(422)`, `FORBIDDEN(403)`
-**Events emitted:** DE-015 LabOrderCompleted (when status → completed)
+**Errors:** `NOT_FOUND(404)`, `INVALID_STATUS_TRANSITION(422)` (illegal/backward FSM move, V-CLN-008 — a business-rule violation, not a 400), `FORBIDDEN(403)` (write requires `dentist_owner`/`dentist_associate`)
+**Events emitted:** DE-015 LabOrderCompleted — emitted on the `→ delivered` transition (the lab marking fabrication complete / handing the case back), and only when the status actually changes. There is **no** `completed` status; `delivered` is the "completed" milestone, `fitted` is the chairside-fit terminal.
 
 ---
 
@@ -216,22 +227,57 @@ patient's `preferredBranchId` (not a caller-supplied branch).
 
 ### POST /api/v1/dental/visits/:id/attachments
 
-Upload a file attachment to a visit.
+Register an attachment **metadata record** against a visit. This endpoint does **not**
+receive bytes — it is **step 4 of the upload flow**. The client first uploads the file
+to the **storage** module, then records the resulting storage key here:
 
-**Auth:** `staff_full`, `dentist_associate`, `dentist_owner`
+1. `POST /storage/files/upload` → returns a presigned URL (storage enforces the byte
+   ceiling here — see *Size & MIME enforcement* below).
+2. `PUT` the bytes to the presigned URL (direct to S3/MinIO).
+3. `POST /storage/files/{file}/complete`.
+4. `POST /dental/visits/:id/attachments` (**this endpoint**) — store the metadata row
+   (`file_path` = the storage key from step 1).
+
+**Auth:** `dentist_owner`, `dentist_associate`, `staff_full`, `dental_assistant` (E2: assistant may upload under dentist supervision)
 **Path params:** `id` (visit uuid)
-**Content-Type:** `multipart/form-data`
+**Content-Type:** `application/json` (metadata record — **not** multipart)
 
-**Request body:**
+**Request body (JSON):**
 
-| Field | Type | Required | Format | Constraints |
-|-------|------|----------|--------|-------------|
-| `file` | file | YES | — | Max 5 MB; MIME: `image/*`, `application/pdf` |
-| `description` | string | NO | — | max:200 |
+| Field | Type | Nullable | Required | Constraints | Example |
+|-------|------|----------|----------|-------------|---------|
+| `patient_id` | string (uuid) | NO | YES | | `"01JX..."` |
+| `image_type` | string | NO | YES | enum: `xray`, `photo`, `scan`, `document`, `other` (coarse file bucket — NOT the imaging-module radiograph modality) | `"xray"` |
+| `tooth_numbers` | integer[] | YES | NO | FDI notation | `[36]` |
+| `file_name` | string | NO | YES | | `"panoramic.jpg"` |
+| `file_path` | string | NO | YES | storage key / file id from step 1 | `"a1b2…"` |
+| `file_size_bytes` | integer (int64) | NO | YES | **client-reported**; not re-verified here | `512000` |
+| `mime_type` | string | NO | YES | **client-reported**; no allow-list here | `"image/jpeg"` |
+| `note` | string | YES | NO | | `"Panoramic x-ray"` |
 
-**Response 201:** `{ data: { id: "uuid", file_url: "presigned-url", expires_at: "ISO8601" } }`
+**Response 201:** `{ data: DentalAttachment }` — the full stored metadata row
+(`id`, `visit_id`, `patient_id`, `image_type`, `tooth_numbers`, `file_name`,
+`file_path`, `file_size_bytes`, `mime_type`, `note`, `created_at`, `updated_at`,
+`version`). It does **not** return a presigned URL (downloads go through
+`GET /storage/files/{file_path}/download`).
 
-**Errors:** `NOT_FOUND(404)`, `VISIT_IMMUTABLE(422)`, `UNSUPPORTED_MIME_TYPE(422)`, `FORBIDDEN(403)`
+**Errors:** `UNAUTHORIZED(401)`, `NOT_FOUND(404)` (visit), `VISIT_LOCKED(422)` (visit is locked or completed — BR-003), `FORBIDDEN(403)` (branch role). There is **no** `UNSUPPORTED_MIME_TYPE` — this endpoint enforces no MIME allow-list.
+
+**Size & MIME enforcement (FIX-010 — reconciled to code truth):**
+- This metadata endpoint enforces **no** size cap and **no** MIME allow-list; it stores
+  the client-reported `file_size_bytes`/`mime_type` verbatim.
+- The real byte ceiling is enforced one layer up, in **storage** (`POST /storage/files/upload`,
+  `maxUploadSizeForMime`): **100 MB** for images/PDF (non-DICOM), **2 GB** for
+  `application/dicom`, clamped to an **8 GB** absolute hard cap — all env-configurable
+  (`STORAGE_MAX_FILE_SIZE_BYTES`, `STORAGE_DICOM_MAX_FILE_SIZE_BYTES`,
+  `STORAGE_ABSOLUTE_MAX_FILE_SIZE_BYTES`). Over-limit → `400 VALIDATION_ERROR`
+  ("File size exceeds maximum limit of …").
+- The clinic UI (`attachments-sheet.tsx`) applies a tighter **50 MB** client-side guard
+  (the product-documented user-facing limit, decision Q5) and a `image/*,.pdf` file-picker
+  filter. The guard is a UX convenience below the storage cap — not a server boundary.
+  A cap is deliberately **not** added here: storage has already accepted the bytes by the
+  time this call runs, so a lower clinical cap would orphan the stored object.
+- DICOM/CBCT studies are owned by the **dental-imaging** module, not this attachment path.
 
 ---
 

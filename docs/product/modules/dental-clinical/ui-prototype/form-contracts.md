@@ -10,6 +10,6 @@ Medical history form: `allergies[]` (array of `{ allergen, severity }`), `medica
 
 Consent request: pick a template + optional override of title/version. Sign action requires non-empty signature canvas strokes + signer name.
 
-File attachment: accepted mime types per screen (PDF, PNG, JPG, HEIC, .dcm pointer). Max size 25 MB per file (UI-side; server may differ).
+File attachment: file picker accepts `image/*,.pdf` (PDF, PNG, JPG, HEIC). UI-side guard = **50 MB** per file (FIX-010 / decision Q5). Server byte ceiling is enforced one layer up in the storage module (100 MB images-PDF / 2 GB DICOM, env-configurable); the dental-clinical attachment endpoint records metadata only and applies no cap/MIME check. DICOM/CBCT (`.dcm`) studies are owned by the dental-imaging module, not this sheet.
 
 Amendment append: `text` (required, min 4 chars, max 4000).
