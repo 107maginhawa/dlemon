@@ -547,23 +547,28 @@ namespace DentalOrgModule {
     @doc("New role (dentist_owner only)")
     role?: MemberRole;
 
-    @doc("Profile photo URL")
-    avatarUrl?: string;
+    // avatarUrl + the provider-credential fields are nullable so a clinic can
+    // CLEAR them (send null). The handler schema (updateMember.ts) is
+    // .optional().nullable() for exactly this reason; the contract must allow
+    // null too or the generated validator rejects the clear with a 400 before
+    // the handler ever runs.
+    @doc("Profile photo URL (null to clear)")
+    avatarUrl?: string | null;
 
-    @doc("Provider license number")
+    @doc("Provider license number (null to clear)")
     @maxLength(64)
-    licenseNumber?: string;
+    licenseNumber?: string | null;
 
-    @doc("National Provider Identifier (NPI) — 10 digits")
+    @doc("National Provider Identifier (NPI) — 10 digits (null to clear)")
     @pattern("^\\d{10}$")
-    npi?: string;
+    npi?: string | null;
 
-    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'")
+    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH' (null to clear)")
     @maxLength(32)
-    credentialType?: string;
+    credentialType?: string | null;
 
-    @doc("License expiry date (ISO 8601 date)")
-    licenseExpiry?: utcDateTime;
+    @doc("License expiry date (ISO 8601 date, null to clear)")
+    licenseExpiry?: utcDateTime | null;
   }
 
   @doc("Reset a member's PIN")

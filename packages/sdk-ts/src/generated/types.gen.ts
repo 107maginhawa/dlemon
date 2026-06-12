@@ -4804,25 +4804,25 @@ export type DentalOrgModuleUpdateMemberRequest = {
      */
     role?: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
-     * Profile photo URL
+     * Profile photo URL (null to clear)
      */
-    avatarUrl?: string;
+    avatarUrl?: string | null;
     /**
-     * Provider license number
+     * Provider license number (null to clear)
      */
-    licenseNumber?: string;
+    licenseNumber?: string | null;
     /**
-     * National Provider Identifier (NPI) — 10 digits
+     * National Provider Identifier (NPI) — 10 digits (null to clear)
      */
-    npi?: string;
+    npi?: string | null;
     /**
-     * Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'
+     * Credential / license type label, e.g. 'DDS', 'DMD', 'RDH' (null to clear)
      */
-    credentialType?: string;
+    credentialType?: string | null;
     /**
-     * License expiry date (ISO 8601 date)
+     * License expiry date (ISO 8601 date, null to clear)
      */
-    licenseExpiry?: Date;
+    licenseExpiry?: Date | null;
 };
 
 /**

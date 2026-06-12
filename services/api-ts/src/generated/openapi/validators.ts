@@ -2419,11 +2419,11 @@ export const DentalOrgModuleUpdateDentalConsentTemplateRequestSchema = z.object(
 export const DentalOrgModuleUpdateMemberRequestSchema = z.object({
   displayName: z.string().min(1).max(80).optional(),
   role: z.enum(["dentist_owner", "dentist_associate", "hygienist", "staff_full", "staff_scheduling", "dental_assistant", "front_desk", "billing_staff", "treatment_coordinator", "read_only"]).optional(),
-  avatarUrl: z.string().optional(),
-  licenseNumber: z.string().max(64).optional(),
-  npi: z.string().regex(/^\d{10}$/).optional(),
-  credentialType: z.string().max(32).optional(),
-  licenseExpiry: z.string().datetime().transform((str) => new Date(str)).optional()
+  avatarUrl: z.union([z.string(), z.null()]).optional(),
+  licenseNumber: z.union([z.string().max(64), z.null()]).optional(),
+  npi: z.union([z.string().regex(/^\d{10}$/), z.null()]).optional(),
+  credentialType: z.union([z.string().max(32), z.null()]).optional(),
+  licenseExpiry: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]).optional()
 });
 
 export const DentalOrgModuleUpdateOrganizationRequestSchema = z.object({
