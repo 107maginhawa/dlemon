@@ -7,13 +7,16 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { listMembers } from './listMembers';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
+
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness (Track 4): the `400 missing branchId` case now exercises the real
+// generated query validator (authMiddleware → zValidator → handler), not a
+// handler self-check.
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -22,32 +25,6 @@ const BRANCH_ID = 'b3000000-0000-1000-8000-000000000001';
 const PERSON_ID = 'c3000000-0000-1000-8000-000000000001';
 
 const authedUser = { id: PERSON_ID, email: 'owner@clinic.com' };
-
-function buildTestApp(user?: typeof authedUser) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: String(err.message) }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.get('/dental/org/members', listMembers);
-
-  return app;
-}
 
 async function seedAll() {
   const orgRepo = new OrganizationRepository(db);
@@ -89,7 +66,7 @@ describe('listMembers handler', () => {
   // --------------------------------------------------------------------------
 
   test('returns 401 when user is not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
 
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`);
 
@@ -102,7 +79,7 @@ describe('listMembers handler', () => {
 
   test('returns 400 when branchId query param is missing', async () => {
     await seedAll();
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request('/dental/org/members');
 
@@ -115,7 +92,7 @@ describe('listMembers handler', () => {
 
   test('returns 200 with empty items array when no members exist', async () => {
     await seedAll(); // seedAll seeds 1 owner membership for auth; expect 1 total
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`);
 
@@ -142,7 +119,7 @@ describe('listMembers handler', () => {
       status: 'active',
       pinFailedAttempts: 0,
     });
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`);
 
@@ -174,7 +151,7 @@ describe('listMembers handler', () => {
       status: 'inactive',
       pinFailedAttempts: 0,
     });
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`);
 

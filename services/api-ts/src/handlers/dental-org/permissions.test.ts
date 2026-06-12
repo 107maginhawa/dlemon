@@ -7,16 +7,18 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { ZodError } from 'zod';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { getPermissionGrid } from './getPermissionGrid';
-import { updatePermissions } from './updatePermissions';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 import { assertPermission, resolvePermission } from '@/handlers/shared/assert-permission';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
+
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness (Track 4): the GET/PUT permission routes now run through the real
+// generated route table (authMiddleware → zValidator → handler), so the
+// 400 unknown-feature / 403 non-owner / anti-lockout cases exercise the exact
+// validation + error envelope production runs.
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -29,25 +31,7 @@ const ownerUser = { id: OWNER_ID, email: 'owner@clinic.com' };
 const assocUser = { id: ASSOC_ID, email: 'assoc@clinic.com' };
 
 function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof ZodError) return c.json({ error: err.issues.map((i) => i.message).join('; ') }, 400);
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-  app.get('/dental/org/permissions', getPermissionGrid);
-  app.put('/dental/org/permissions', updatePermissions);
-  return app;
+  return buildHarnessApp({ db, user: user ?? null });
 }
 
 async function seed() {

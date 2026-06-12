@@ -1,11 +1,13 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { getBranchesByUser } from './getBranchesByUser';
+
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness (Track 4): requests traverse the real generated route table
+// (authMiddleware → zValidator → handler), the same chain production runs.
 
 const DB_URL = process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test';
 const db = createDatabase({ url: DB_URL });
@@ -21,18 +23,7 @@ const MEMBER_A2   = 'ff000000-0000-1000-8000-000000000021';
 const MEMBER_A_INACTIVE = 'ff000000-0000-1000-8000-000000000022';
 
 function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    (c as any).set('database', db);
-    if (user) (c as any).set('user', user);
-    await next();
-  });
-  app.get('/dental/branches', getBranchesByUser as any);
-  return app;
+  return buildTestApp({ db, user: user ?? null });
 }
 
 beforeAll(async () => {

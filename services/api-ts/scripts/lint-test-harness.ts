@@ -72,11 +72,8 @@ const ALLOWLIST: ReadonlySet<string> = new Set([
   'src/handlers/dental-org/dental-org.dashboard-summary-extended.test.ts',
   'src/handlers/dental-org/dental-org.fee-schedule.test.ts',
   'src/handlers/dental-org/dental-org.pin-recovery.test.ts',
-  'src/handlers/dental-org/getBranchesByUser.test.ts',
-  'src/handlers/dental-org/getOrgContext.test.ts',
-  'src/handlers/dental-org/listMembers.test.ts',
+  // getBranchesByUser.test.ts + getOrgContext.test.ts + listMembers.test.ts + permissions.test.ts migrated to buildTestApp (ratchet tightened).
   // org-member-role-active.test.ts migrated to buildTestApp (ratchet tightened).
-  'src/handlers/dental-org/permissions.test.ts',
   'src/handlers/dental-org/resetMemberPin.test.ts',
   'src/handlers/dental-org/updateMember.test.ts',
   'src/handlers/dental-patient/dental-patient.bulk-import.test.ts',
