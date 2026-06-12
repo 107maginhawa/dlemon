@@ -58810,7 +58810,10 @@ export type PmdDocument = {
     branchId: Uuid;
     status: PmdDocumentStatus;
     /**
-     * JSON snapshot of visit data: ICD-10/CDT/RxNorm coded
+     * JSON snapshot of the completed visit (V1 narrowed set, decision #6): narrowed
+     * demographics (name/DOB/sex) + safety floor (allergies/medications/conditions) +
+     * CDT-coded treatments + RxNorm-coded prescriptions. Structured ICD-10 diagnoses and
+     * free-text clinical notes are Phase-2 (not present in V1).
      */
     content: string;
     /**

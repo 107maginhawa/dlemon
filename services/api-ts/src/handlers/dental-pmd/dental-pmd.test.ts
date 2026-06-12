@@ -884,6 +884,32 @@ describe('FR12.1 Batch B: PMD snapshot safety floor + demographics + attestor', 
     expect(penicillin.codeSystem).toBe('ICD-10');
   });
 
+  // Decision #6 honesty pin: the V1 snapshot is the NARROWED set. The fields deferred
+  // to Phase-2 (structured ICD-10 diagnoses + free-text clinical notes + full
+  // identifiers) must NOT appear, and allergies live ONLY nested under safetyFloor
+  // (never top-level) — the exact shape the corrected TypeSpec @example documents. A
+  // wide-snapshot regression, or a return of the old fake `{allergies,diagnoses}`
+  // example shape, flips this RED.
+  test('snapshot is the narrowed V1 set: no top-level diagnoses/clinicalNotes/identifiers/allergies (#6)', async () => {
+    const visit = await seedCompletedVisitTreatedBy(TREATING_DENTIST_MEMBER_ID);
+    const res = await generatePmd(visit!.id);
+    expect(res.status).toBe(201);
+    const content = JSON.parse((await res.json() as any).content);
+    // narrowed-set keys present
+    expect(content).toHaveProperty('demographics');
+    expect(content).toHaveProperty('safetyFloor');
+    expect(content).toHaveProperty('treatments');
+    expect(content).toHaveProperty('prescriptions');
+    // Phase-2 / wide-set fields absent
+    expect(content.diagnoses).toBeUndefined();
+    expect(content.clinicalNotes).toBeUndefined();
+    expect(content.notes).toBeUndefined();
+    expect(content.identifiers).toBeUndefined();
+    // allergies are nested under safetyFloor only, never top-level (matches the @example)
+    expect(content.allergies).toBeUndefined();
+    expect(content.safetyFloor).toHaveProperty('allergies');
+  });
+
   // Decision #5: the attesting clinician is the visit's treating dentist —
   // NOT the actor who triggered completion (the actor is in the audit trail).
   test('snapshot attestor (authorMemberId) is the visit treating dentist, not the completing actor', async () => {

@@ -49,7 +49,7 @@ enum PMDDocumentStatus {
   authorMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
   status: PMDDocumentStatus.generated,
-  content: "{\"treatments\":[{\"cdtCode\":\"D2392\",\"toothNumber\":36,\"status\":\"performed\"}],\"allergies\":[],\"diagnoses\":[{\"code\":\"K02.1\",\"display\":\"Dental caries\"}]}",
+  content: "{\"visitId\":\"v1a2b3c4-0000-4000-8000-000000000001\",\"patientId\":\"d1a2b3c4-0000-4000-8000-000000000001\",\"authorMemberId\":\"m1a2b3c4-0000-4000-8000-000000000001\",\"visitDate\":\"2026-03-15T12:00:00Z\",\"demographics\":{\"firstName\":\"Maria\",\"lastName\":\"Santos\",\"dateOfBirth\":\"1990-04-02\",\"gender\":\"female\"},\"safetyFloor\":{\"allergies\":[{\"displayName\":\"Penicillin\",\"code\":null,\"codeSystem\":null,\"notes\":null,\"onsetDate\":null}],\"medications\":[],\"conditions\":[]},\"treatments\":[{\"id\":\"t1a2b3c4-0000-4000-8000-000000000001\",\"cdtCode\":\"D2392\",\"description\":\"Resin composite, one surface, posterior\",\"toothNumber\":36,\"surfaces\":[\"O\"],\"conditionCode\":null,\"status\":\"performed\",\"priceCents\":150000}],\"prescriptions\":[]}",
   checksum: "sha256-a1b2c3d4e5f6...",
 }, #{ title: "Generated PMD for a completed visit (V1: unsigned, checksum-sealed)" })
 model PMDDocument {
@@ -62,7 +62,10 @@ model PMDDocument {
   authorMemberId: UUID;
   branchId: UUID;
   status: PMDDocumentStatus;
-  /** JSON snapshot of visit data: ICD-10/CDT/RxNorm coded */
+  /** JSON snapshot of the completed visit (V1 narrowed set, decision #6): narrowed
+   *  demographics (name/DOB/sex) + safety floor (allergies/medications/conditions) +
+   *  CDT-coded treatments + RxNorm-coded prescriptions. Structured ICD-10 diagnoses and
+   *  free-text clinical notes are Phase-2 (not present in V1). */
   content: string;
   /** Phase-2 (FR12.4): reserved for the facility digital signature; NOT populated in V1. */
   signature?: string;
