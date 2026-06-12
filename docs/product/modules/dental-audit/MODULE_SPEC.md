@@ -68,20 +68,25 @@ Consumed: ALL domain events (DE-001 through DE-024) → each writes one audit ev
 
 ## 10c. Sink boundary (three audit sinks) — FIX-004
 
-Audit history is currently fragmented across **three** physical sinks. This is a
-documented boundary, not a bug to silently work around; consolidation (routing
-base-module events into the dental viewer + a 3→1 merge) is **`[NEEDS PRODUCT
-DECISION]` Q2 / deferred** — this section is the decision input.
+Audit history is fragmented across **three** physical sinks. This is a documented
+boundary, not a bug to silently work around. **Q2 is now RESOLVED (decision #18,
+2026-06-13): the dental viewer surfaces base-module PHI-access reads in a single
+pane (read-time union, actor-scoped — see below); the physical 3→1 sink merge stays
+deferred to V2.** The append-only DB trigger (sink #1, migration 0080) and the
+sink #1↔#2 divergence canary are in place as the safety baseline for that future
+merge.
 
 | # | Table | Written by | Read by | What it holds | In the dental viewer (getAuditEvents)? |
 |---|-------|-----------|---------|---------------|----------------------------------------|
 | 1 | `dental_audit_log` (**authoritative**) | `core/audit-logger.ts#logAuditEvent` → `AuditLogRepository.insert` (FIRST; fail-closed for security / opt-in financial/clinical) | **WF-028 dental viewer** `GET /dental/audit-events` (FIX-001) | All dental domain audit events (visit/invoice/consent/Rx/role/PIN/…) + the viewer's own `audit_log.accessed` self-audit | **YES** — this is the only table the viewer reads |
 | 2 | `dental_audit` (**legacy**) | `logAuditEvent` → `DentalAuditRepository.log` (SECOND; fire-and-forget, swallowed on failure) | Legacy wiring tests only — **no viewer** | A duplicate of every event in sink #1 (dual-write) | **NO** — not surfaced anywhere; retained for back-compat |
-| 3 | `audit_log_entry` (**base platform**) | base `handlers/audit/repos/audit.repo.ts#AuditRepository.logEvent` | base `GET` `listAuditLogs`; retention job `audit.retention` (purges > 7y / 2555d) | Base-module / platform events incl. base PHI-access reads | **NO** — separate module, separate table, separate endpoint |
+| 3 | `audit_log_entry` (**base platform**) | base `handlers/audit/repos/audit.repo.ts#AuditRepository.logEvent` (dental PHI-read handlers — listMedicalHistory, listPrescriptions, getDentalInvoice, getImportedPMD, … — record their `data-access` reads here) | base `GET` `listAuditLogs`; retention job `audit.retention` (purges > 7y / 2555d); **+ the dental viewer (read-only union, `data-access` PHI reads only, scoped to the branch's own active members)** | Base-module / platform events incl. base PHI-access reads | **PARTIAL (V1)** — `data-access` PHI reads attributable to the viewed branch's members are surfaced read-only; all other base events stay base-only |
 
-**Viewer visibility — what the dental owner CAN and CANNOT see:**
-- **CAN see:** every event the dental modules write via `logAuditEvent` (sink #1) — who voided an invoice, who amended a signed note, who changed a role, who accessed the audit log, etc.
-- **CANNOT see:** base-module PHI-access events that only land in sink #3 (`audit_log_entry`). A clinic owner reviewing the dental audit log does **not** get a single pane over base-platform reads. **This is the intentional, documented boundary** (Q2). Surfacing sink #3 in the dental viewer touches other modules' write paths and is out of scope until Q2 is decided.
+**Viewer visibility — what the dental owner CAN and CANNOT see (single pane, decision #18):**
+- **CAN see (sink #1):** every event the dental modules write via `logAuditEvent` — who voided an invoice, who amended a signed note, who changed a role, who accessed the audit log, etc.
+- **CAN see (sink #3, NEW):** base-platform **PHI-access reads** (`eventType='data-access'`) attributable to the **viewed branch's own active members** — e.g. a clinician who listed a patient's medical history or opened an invoice. The viewer unions these at READ time (`getAuditEvents` + `repos/base-phi-reads.facade.ts`); they are marked `metadata.source='base'` and the FE tags them "platform". The base `details` JSONB is **dropped** (latent-PHI guard, same posture as the snapshot columns) — only ids/actor/resourceType/timestamp surface.
+- **Scoping & its bound:** base rows carry no branch/tenant column, so the union scopes by **actor ∈ active branch members** (`dental_membership`) — leak-safe for V1's single-org product (only the caller's own members' reads appear, ids only). **ROADMAP:** if cross-org membership ever becomes possible, harden to resource-scoping (patient/visit ∈ branch) once the patient branch anchor is non-nullable.
+- **STILL CANNOT see:** non-`data-access` base events (auth/login, base person/storage writes) and reads by non-members. These remain base-only by design; full consolidation is the deferred V2 3→1 merge.
 
 **Divergence guard (sinks #1 ↔ #2):** because sink #2 is fire-and-forget, it can silently drop while sink #1 succeeds. `legacy-sink-divergence.test.ts` is the canary: after N mixed `logAuditEvent` calls it asserts `count(dental_audit) == count(dental_audit_log)` (and per-action parity). It fails loudly if the legacy write ever starts diverging — giving the eventual legacy-sunset decision (Q3) a measured baseline. The canary does **not** cover sink #3 (a different module's table, not dual-written).
 

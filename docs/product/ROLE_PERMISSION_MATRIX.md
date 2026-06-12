@@ -97,7 +97,7 @@ The `member_role` enum (`dental-org/repos/membership.schema.ts`) defines **6 add
 | `treatment_coordinator` | ❌ | non-clinical financial/case-presentation | Present treatment plans / case presentations to patients; billing surface to present costs + payment options; no clinical writes | ❌ |
 | `front_desk` | ❌ | staff_full (reception subset) | Check-in, scheduling, demographics | ❌ |
 | `billing_staff` | ❌ | staff_full (billing subset) | Invoices, payments, fee-schedule **read** | ❌ |
-| `read_only` | ❌ | auditor/observer | Read-only on permitted records; no writes | ❌ |
+| `read_only` | ❌ | observer (clinical/billing records) | Read-only on permitted records; no writes. **Does NOT read the audit log in V1** — audit-trail access is `dentist_owner`-only (decision #17); a dedicated auditor read-only audit role is deferred to Phase-2. | ❌ |
 
 > Only `dentist_owner` passes `assertBranchRole(['dentist_owner'])`. All ten roles carry Better-Auth system role `user`; capability is scoped by the context role above.
 
@@ -185,6 +185,8 @@ The `member_role` enum (`dental-org/repos/membership.schema.ts`) defines **6 add
 | Configure branch hours | ✅ | ❌ | ❌ | ❌ |
 | Export reports | ✅ | ❌ | ❌ | ❌ |
 | Generate PMD | ✅ | ✅ | ❌ | ❌ |
+
+> **Audit-log access (decision #17, resolved 2026-06-13):** `dentist_owner`-only is the binding V1 rule, enforced by `getAuditEvents` via `assertBranchRole(['dentist_owner'])`. The earlier `read_only`="auditor/observer" analog above does **not** confer audit-trail read in V1; a dedicated read-only auditor audit role is Phase-2. The owner viewer now also surfaces base-platform PHI-access reads scoped to the branch's own members (single pane, decision #18) — see dental-audit MODULE_SPEC §10c.
 
 ---
 
