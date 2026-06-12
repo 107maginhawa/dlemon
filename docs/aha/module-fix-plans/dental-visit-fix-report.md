@@ -98,3 +98,59 @@ The carry-over **auto-discovery** path and the demo seed's **Ana/Elena "planned-
 
 ## Not implemented (still per plan §9–§11)
 Batch C (FIX-005 rbac + FIX-006 docs), Batch D (FIX-004 lock cron), Batch E (FIX-003 viewer wiring — waits on case-presentation). No FSM/handler/scheduler changes.
+
+---
+
+# AHA Fix Report: Dental Visit & Charting — GAP-2 Templates (decision #13, WIRE FE)
+
+**Executed:** 2026-06-13 · **Driver:** `outputs/EXECUTION-TODO.md` Track 3 (#13) · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Commits:** `ca6527c2` (Slice 0 contract) → `179f1d8a` (Slice 1 settings panel) → `298394ec` (Slice 2 apply + E2E/docs-close). **Superpowers:** Vertical TDD + verification-before-completion.
+
+Decision #13 took the **deviation** path (product-decisions.md): WIRE the templates FE now (not park), **keep** the seeded templates. The fix-ready plan had this as a blocked item (§9, Q1).
+
+## §15 — FIX-001 was INCOMPLETE (the load-bearing pre-work was real)
+
+FIX-001 (Batch A, 2026-06-11) reconciled the template *body* shapes but left two residual drifts that block the FE wire:
+
+1. **`listTreatmentTemplates` missing the required `branchId` query param.** The handler reads `ctx.req.query('branchId')` and throws when absent (`treatmentTemplates.ts:49`), but the op declared **no `@query`** → the generated SDK had `query?: never` (could not send it) and a missing param hit a bare `throw new Error` → **500**. This is the exact createMember-class drift FIX-001 fixed for `getTreatmentPlan` but did not apply here. **Fix:** `@query branchId: UUID` (+ `ApiBadRequestResponse`) → SDK sends it + the generated query validator returns a clean **400**. Wiring before this would have coded the list hook against a type that can't send the param.
+2. **`applyTemplate` declared `ApiOkResponse` (200) but the handler returns 201** (it creates treatment rows) and the Hurl pin already asserts 201. **Fix:** moved to `ApiCreatedResponse`. SDK response type is unchanged (`ApplyTemplateResponse`); hey-api registers the `responseTransformer` unconditionally and runs it on any 2xx body, so `data.count` is still correct at 201.
+
+Regen window verified safe — **0 FE consumers** of any template op (grepped). Also dropped the now-stale `treatments:'stub'` placeholder + lying comment from `seed-demo.ts` (the validator accepts `items[]` post-FIX-001). RED→GREEN contract pin: `GET /dental/treatment-templates` without `branchId` → 400 (was 500). Regen diff is template-scoped only (verified).
+
+## Shipped
+
+| Slice | Unit | What |
+| --- | --- | --- |
+| 0 | `dental-visit.tsp` + regen + `dental-visit.hurl` + seed | the §15 reconcile above |
+| 1 | `features/settings/components/treatment-templates.tsx` + hook + registry | Settings → **Treatment Templates** panel (mirrors ConsentTemplates): owner-only create/edit/soft-delete with a dynamic items editor (CDT code + description + price). Price entered in pesos → `priceCents` on the wire (`Math.round(pesos*100)`) — **unit trap pinned** (1200→120000). Reads the `{ templates: [...] }` envelope via the reconciled `@query branchId`. |
+| 2 | `features/workspace/components/apply-template-button.tsx` + `use-apply-template.ts` + `$patientId.tsx` mount | **Apply Template** affordance in `workspace-table-zone` ABOVE the table (fix-ready Q2 "treatment-table area"), gated on `currentVisitId && !isReadOnly` so it's reachable on an **empty** visit — the primary "populate this visit from a template" case (the table early-returns on empty, so a header-only control could not reach it). Owner/associate-only (parity with backend `assertBranchRole`); the role check sits in an outer gate component so non-clinical roles never fire the template fetch. On success invalidates the visit treatment list + the patient treatment-plan aggregate (same keys as carry-over) → new `planned` rows surface in the table + chart layers. SDK-only. Empty-templates → a "configure in Settings" nudge. |
+
+## Affordance placement (Q2) — fork resolved inline
+
+Tracing surfaced a genuine fork the fix-ready Q2 default ("treatment-table header action") could not satisfy: **TreatmentTable early-returns on an empty visit BEFORE its header** (`treatment-table.tsx:180`), and an empty visit is the primary apply-template target. Resolution that honours the Q2 intent ("treatment-table area, always discoverable mid-visit") without a product fork: mount the control in the `workspace-table-zone` directly above the table, so it renders for any active editable visit regardless of rows. No AskUserQuestion needed.
+
+## Adversarial review (3 parallel reviewers) — both "MAJOR"s verified away
+
+- **[INVALID] cancelled-visit write gap** (Lens B) — hallucinated a non-existent status. The enum is `draft|active|completed|locked|discarded` (`visit.schema.ts:64`); `applyTemplate`'s completed/locked guard **exactly matches** the canonical `createDentalTreatment.ts:51` treatment-write guard. No fold.
+- **[INVALID] empty-items → wrong error shape** (Lens A) — `errors.ts:320/367` maps a thrown `ZodError` to a **400 ValidationError** envelope, so the handler's self-validation returns a proper 400, not a 500/shape-mismatch. No fold.
+- **[FOLDED NIT]** split `ApplyTemplateButton` so the data hooks run only for owner/associate (non-clinical roles no longer fire a wasted template fetch).
+- **[FOLDED NIT]** added an Edit-absent assertion to the non-owner panel test.
+
+## Verification (fresh)
+
+| Layer | Result |
+| --- | --- |
+| Contract (`CONTRACT_ONLY=dental-visit`, server restarted after regen) | **67/67** |
+| Backend treatment-templates | **32/0** |
+| FE: treatment-templates panel / apply-template-button | **8/0** / **4/0** |
+| Full FE unit suite | **2455/0** (225 files) |
+| Create→apply **E2E** (chromium, live API): Settings create → workspace apply → planned row renders | **1 passed** |
+| Typecheck FE + api-ts + sdk-ts · lint | exit 0 · 0 errors |
+
+## Residuals / roadmap (deferred — not in #13 scope)
+
+| Item | Why deferred |
+| --- | --- |
+| Backend template create/update/delete gate only on branch membership (no owner role) | FE gate is intentionally stricter; backend owner-parity is a hardening gap (applyTemplate IS owner/associate-gated). |
+| `deleteTreatmentTemplate` returns `{success:true}` vs TypeSpec `ApiOkResponse<{}>` | NIT, 0 consumers read the delete body. |
+| create/update return the raw DB row superset (`createdBy`/`updatedBy`) vs the `TreatmentTemplate` model | harmless JSON superset; no consumer references the undeclared fields. |
+| `getTreatmentPlan` `byTooth` items omit `carriedOver`/`toothNumber` | pre-existing FIX-001 Batch A residual (already logged). |
