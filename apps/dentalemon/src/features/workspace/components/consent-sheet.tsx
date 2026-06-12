@@ -40,6 +40,13 @@ const CONSENT_TEMPLATES = [
 export interface ConsentTemplateOption {
   id: string;
   name: string;
+  /**
+   * Per-clinic consent wording (FR8.4b) — the actual consent text the patient
+   * reads and signs, configured by the owner in Settings → Consent Forms. When
+   * present, it is surfaced read-only on selection. Absent on the generic
+   * name-only fallback options below.
+   */
+  body?: string;
 }
 
 type SheetMode = 'consent' | 'refusal' | 'history';
@@ -68,8 +75,9 @@ export interface ConsentSheetProps {
 }
 
 export function ConsentSheet({ visitId, patientId, currentMemberId, templates, canRevoke = false, open, onClose, onSaved }: ConsentSheetProps) {
+  const usingFallbackTemplates = !(templates && templates.length > 0);
   const templateOptions: ReadonlyArray<ConsentTemplateOption> =
-    templates && templates.length > 0 ? templates : CONSENT_TEMPLATES;
+    usingFallbackTemplates ? CONSENT_TEMPLATES : templates!;
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -301,6 +309,10 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
     }
   }
 
+  // The clinic-configured template currently selected (carries the per-clinic
+  // `body` wording). Generic fallback options have no body.
+  const selectedTemplate = templateOptions.find(t => t.id === templateId);
+
   if (!open) return null;
 
   return (
@@ -404,7 +416,32 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
+                {usingFallbackTemplates && (
+                  <p
+                    data-testid="consent-template-fallback-hint"
+                    className="mt-1.5 text-xs text-amber-700"
+                  >
+                    Using default templates. Add your clinic&apos;s own wording in
+                    Settings → Consent Forms for per-clinic consent text.
+                  </p>
+                )}
               </div>
+
+              {/* Per-clinic consent wording (FR8.4b) — read-only reference text the
+                  patient reads and signs; shown when a configured template is chosen. */}
+              {selectedTemplate?.body && (
+                <div className="rounded-xl border border-border bg-secondary/20 px-3.5 py-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                    Clinic consent wording
+                  </p>
+                  <p
+                    data-testid="consent-template-body"
+                    className="text-sm whitespace-pre-wrap break-words text-foreground/90"
+                  >
+                    {selectedTemplate.body}
+                  </p>
+                </div>
+              )}
 
               {/* ADA structured content (P1-3) */}
               <div className="rounded-xl border border-border bg-secondary/20 px-3.5 py-3 flex flex-col gap-3">

@@ -574,7 +574,7 @@ function WorkspacePage() {
           visitId={currentVisitId}
           patientId={patientId}
           currentMemberId={prescriberMemberId}
-          templates={consentTemplates.map((t) => ({ id: t.id, name: t.name }))}
+          templates={consentTemplates.map((t) => ({ id: t.id, name: t.name, body: t.body }))}
           canRevoke={orgRole === 'dentist_owner' || orgRole === 'dentist_associate'}
           open={consentSheetOpen}
           onClose={() => setConsentSheetOpen(false)}

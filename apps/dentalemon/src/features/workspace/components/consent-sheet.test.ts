@@ -364,3 +364,110 @@ describe('ConsentSheet — consent history + revoke (Batch B / FIX-004)', () => 
     }
   });
 });
+
+// ── Batch E (FIX-009): clinic consent-template body wording (FR8.4b) ─────────
+// dental-org owns the per-clinic consent templates ({ name, body, ... }). The
+// picker must surface the clinic's configured `body` — the actual consent text
+// the patient reads and signs — read-only when a template is selected, instead
+// of dropping it. When the clinic has configured NONE, the picker falls back to
+// generic name-only options with a nudge to configure real per-clinic wording.
+
+const CLINIC_TEMPLATES = [
+  { id: 'srv-1', name: 'Clinic Surgical Consent', body: 'I authorize Dr. Cruz to surgically extract tooth #48 under local anesthesia.' },
+  { id: 'srv-2', name: 'Clinic Endo Consent', body: 'I consent to root canal therapy on the indicated tooth, including possible retreatment.' },
+];
+
+function renderWithTemplates(templates: Array<{ id: string; name: string; body?: string }>) {
+  return render(
+    React.createElement(ConsentSheet, {
+      visitId: 'v-1',
+      patientId: 'p-1',
+      currentMemberId: 'm-1',
+      open: true,
+      onClose: () => {},
+      templates,
+    } as React.ComponentProps<typeof ConsentSheet>),
+  );
+}
+
+describe('ConsentSheet — clinic template body wording (Batch E / FIX-009)', () => {
+  test('selecting a clinic template surfaces its body as read-only consent wording', async () => {
+    renderWithTemplates(CLINIC_TEMPLATES);
+    const user = userEvent.setup();
+
+    // Nothing rendered before a template is chosen.
+    expect(screen.queryByTestId('consent-template-body')).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText(/select consent form template/i), 'srv-1');
+
+    const panel = await screen.findByTestId('consent-template-body');
+    expect(panel.textContent).toContain('surgically extract tooth #48');
+    // Read-only reference — the wording is NOT an editable form field.
+    expect(screen.queryByDisplayValue(/surgically extract tooth #48/)).toBeNull();
+  });
+
+  test('switching the selected template swaps the displayed wording', async () => {
+    renderWithTemplates(CLINIC_TEMPLATES);
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText(/select consent form template/i), 'srv-1');
+    expect((await screen.findByTestId('consent-template-body')).textContent).toContain('extract tooth #48');
+
+    await user.selectOptions(screen.getByLabelText(/select consent form template/i), 'srv-2');
+    await waitFor(() =>
+      expect(screen.getByTestId('consent-template-body').textContent).toContain('root canal therapy'),
+    );
+    expect(screen.getByTestId('consent-template-body').textContent).not.toContain('extract tooth #48');
+  });
+
+  test('a clinic template with an empty body renders no wording panel', async () => {
+    // Guard pin: `selectedTemplate?.body &&` must suppress the panel for ''
+    // (body is a required string but can legitimately come back empty).
+    renderWithTemplates([{ id: 'empty-1', name: 'Empty Body Template', body: '' }]);
+    await userEvent.setup().selectOptions(
+      screen.getByLabelText(/select consent form template/i),
+      'empty-1',
+    );
+    expect(screen.queryByTestId('consent-template-body')).toBeNull();
+  });
+
+  test('generic fallback options (no body) show no wording panel', async () => {
+    // No templates prop → hardcoded name-only fallback list.
+    render(
+      React.createElement(ConsentSheet, {
+        visitId: 'v-1',
+        patientId: 'p-1',
+        currentMemberId: 'm-1',
+        open: true,
+        onClose: () => {},
+      }),
+    );
+    await userEvent.setup().selectOptions(
+      screen.getByLabelText(/select consent form template/i),
+      'tpl-extraction',
+    );
+    expect(screen.queryByTestId('consent-template-body')).toBeNull();
+  });
+
+  test('shows a configure-in-settings nudge only when falling back to defaults', async () => {
+    // Fallback (no clinic templates) → nudge present.
+    const fallback = render(
+      React.createElement(ConsentSheet, {
+        visitId: 'v-1',
+        patientId: 'p-1',
+        currentMemberId: 'm-1',
+        open: true,
+        onClose: () => {},
+      }),
+    );
+    const hint = screen.getByTestId('consent-template-fallback-hint');
+    expect(hint.textContent).toMatch(/settings/i);
+    expect(hint.textContent).toMatch(/consent forms/i);
+    fallback.unmount();
+    cleanup();
+
+    // Clinic templates configured → no nudge.
+    renderWithTemplates(CLINIC_TEMPLATES);
+    expect(screen.queryByTestId('consent-template-fallback-hint')).toBeNull();
+  });
+});
