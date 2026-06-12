@@ -83,6 +83,12 @@ export async function updateTreatmentPlan(ctx: HandlerContext): Promise<Response
   const plan = await repo.update(planId, patientId, updates);
   if (!plan) throw new NotFoundError('Treatment plan not found');
 
+  // TP-BR-006 (FIX-006): once items are linked (e.g. just claimed at `presented`,
+  // or already attached), the server owns the money — derive the denormalized
+  // totalEstimateCents from the item prices, overriding any caller-supplied value.
+  // No-op for itemless drafts, so the manual ballpark estimate is preserved.
+  const finalPlan = (await repo.recomputeTotal(planId, patientId)) ?? plan;
+
   // P2-8: append a status-history row whenever the status actually changes.
   if (body.status !== undefined && body.status !== existing.status) {
     await repo.recordStatusHistory({
@@ -97,5 +103,5 @@ export async function updateTreatmentPlan(ctx: HandlerContext): Promise<Response
 
   logger?.info({ action: 'updateTreatmentPlan', patientId, planId, updates }, 'Treatment plan updated');
 
-  return ctx.json(plan, 200);
+  return ctx.json(finalPlan, 200);
 }

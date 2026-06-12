@@ -8,8 +8,8 @@
  *   updatePatient    PATCH /patients/:id
  *   deactivatePatient DELETE /patients/:id
  *   deletePatient    (tested via handler directly — not in generated routes)
- *   mergePatients    POST /patients/merge   (not implemented — 500 expected)
- *   unmergePatients  POST /patients/unmerge (not implemented — 500 expected)
+ *   mergePatients    POST /patients/merge   (not implemented — 501 expected)
+ *   unmergePatients  POST /patients/unmerge (not implemented — 501 expected)
  *
  * afterEach truncates: patient, person, user (cascade)
  */
@@ -535,7 +535,7 @@ describe('mergePatients handler', () => {
 });
 
 // =============================================================================
-// unmergePatients  (not yet implemented — throws Error('Not implemented'))
+// unmergePatients  (not yet implemented — returns a clean 501, EM-PAT-007)
 // =============================================================================
 
 describe('unmergePatients handler', () => {
@@ -558,7 +558,7 @@ describe('unmergePatients handler', () => {
     expect(res.status).not.toBe(201);
   });
 
-  test('returns 500 (not implemented) for valid request body', async () => {
+  test('returns 501 (not implemented) for valid request body', async () => {
     const app = buildTestApp(adminUser);
 
     const res = await app.request('/patients/unmerge', {
@@ -571,7 +571,10 @@ describe('unmergePatients handler', () => {
       }),
     });
 
-    // Handler throws Error('Not implemented: unmergePatients')
-    expect(res.status).toBe(500);
+    // EM-PAT-007: unimplemented stub returns a clean 501 (mirrors mergePatients),
+    // not a 500 — BR-020 unmerge is deferred to Phase 2 alongside merge.
+    expect(res.status).toBe(501);
+    const body = await res.json() as any;
+    expect(body.code).toBe('NOT_IMPLEMENTED');
   });
 });

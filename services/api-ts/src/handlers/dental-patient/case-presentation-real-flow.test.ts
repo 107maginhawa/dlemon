@@ -207,6 +207,49 @@ describe('case-presentation G1+G3: accept succeeds, links items, records approva
     const body = await acceptRes.json() as any;
     expect(body.consentFormId).toBeDefined();
     expect(body.plan.status).toBe('approved');
+    // FIX-006: the returned plan carries the item-derived total (500000+2000000).
+    expect(body.plan.totalEstimateCents).toBe(2500000);
+  });
+
+  // FIX-006: the accept path is a THIRD linkPendingTreatments caller. When items
+  // are bound at accept (not at present), the header total MUST still derive — else
+  // the plans-sheet estimate drifts from the case grandTotalCents. This pins the
+  // accept-path recompute specifically: present happens with ZERO items (derives
+  // nothing), items appear afterwards, and accept claims + re-derives them.
+  test('FIX-006: accept that binds items late re-derives the plan total', async () => {
+    const app = buildTestApp();
+    const { dentalTreatmentPlans } = await import('./repos/treatment-plan.schema');
+    const { dentalTreatments } = await import('@/handlers/dental-visit/repos/treatment.schema');
+
+    // Draft plan with a manual estimate, no items yet.
+    const [plan] = await db.insert(dentalTreatmentPlans).values({
+      patientId: PATIENT_ID, providerId: TEST_USER.id, status: 'draft',
+      totalEstimateCents: 12345, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).returning();
+
+    // Present with NO items → links nothing, total stays the manual 12345.
+    await presentPlan(app, plan!.id);
+    const presentation = await createPresentation(app, plan!.id);
+
+    // Items appear AFTER present (unlinked) — only the accept link will claim them.
+    await db.insert(dentalTreatments).values([
+      { visitId: VISIT_ID, patientId: PATIENT_ID, toothNumber: 14, cdtCode: 'D2391',
+        description: 'Filling', conditionCode: 'caries', status: 'planned', priceCents: 300000,
+        phase: 'disease_control', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { visitId: VISIT_ID, patientId: PATIENT_ID, toothNumber: 30, cdtCode: 'D2740',
+        description: 'Crown', conditionCode: 'fracture', status: 'diagnosed', priceCents: 700000,
+        phase: 'definitive', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]);
+
+    const acceptRes = await app.request(`/dental/patients/${PATIENT_ID}/case-presentations/${presentation.id}/accept`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatureData: 'data:image/png;base64,iVBORw0KGgo=', signerName: 'Juan Dela Cruz' }),
+    });
+    expect(acceptRes.status).toBe(200);
+    const body = await acceptRes.json() as any;
+    expect(body.plan.status).toBe('approved');
+    // 300000 + 700000 — derived at accept, NOT the manual 12345.
+    expect(body.plan.totalEstimateCents).toBe(1000000);
   });
 
   test('G3: after accept, the plan has linked items AND a TreatmentPlanApproval record', async () => {

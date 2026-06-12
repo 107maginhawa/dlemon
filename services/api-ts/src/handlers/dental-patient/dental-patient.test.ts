@@ -56,6 +56,7 @@ import { getDentalPatientStatement } from './identity/getDentalPatientStatement'
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { patients } from '../patient/repos/patient.schema';
 import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
+import { MedicalHistoryRepository } from '../dental-clinical/repos/medical-history.repo';
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
 import { DentalAuditRepository } from '@/db/audit.repo';
@@ -788,6 +789,63 @@ describe('FR2.15: patient safety floor', () => {
     const app = buildTestApp(authedUser);
     const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/safety-floor`);
     expect(res.status).toBe(404);
+  });
+
+  // FIX-004 (GAP-8): equality pin — the safety-floor endpoint and the FE alert
+  // floor (derived from listMedicalHistory) MUST agree. The endpoint filters
+  // active=true then splits by entryType; listMedicalHistory returns ALL entries
+  // (active + inactive) and the FE filters active itself. This pin proves the two
+  // alert sources cannot silently diverge — specifically that BOTH honour the
+  // active filter and the entryType split. Decision-neutral (GAP-6/Q3): it does
+  // not choose a source of truth, only locks the two candidates to equality.
+  // Non-vacuous: an INACTIVE allergy is seeded and must be excluded by BOTH sides.
+  test('FIX-004: safety-floor == active-filtered listMedicalHistory derivation', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Floor Equality Patient');
+
+    const seed = [
+      { entryType: 'allergy', displayName: 'Penicillin', active: true },
+      { entryType: 'medication', displayName: 'Warfarin', active: true },
+      { entryType: 'condition', displayName: 'Hypertension', active: true },
+      // The trap: an inactive allergy that BOTH sources must drop.
+      { entryType: 'allergy', displayName: 'Latex (resolved)', active: false },
+    ] as const;
+    for (const e of seed) {
+      await db.insert(medicalHistoryEntries).values({
+        id: crypto.randomUUID(),
+        patientId: p.id,
+        entryType: e.entryType,
+        displayName: e.displayName,
+        active: e.active,
+        createdBy: STAFF_USER_ID,
+        updatedBy: STAFF_USER_ID,
+      });
+    }
+
+    // SOURCE 1: the safety-floor endpoint (active-filtered + entryType-split).
+    const res = await app.request(`/dental/patients/${p.id}/safety-floor`);
+    expect(res.status).toBe(200);
+    const floor = await res.json() as {
+      hasAlerts: boolean;
+      allergies: Array<{ displayName: string }>;
+      medications: Array<{ displayName: string }>;
+      conditions: Array<{ displayName: string }>;
+    };
+
+    // SOURCE 2: the FE path — listMedicalHistory returns ALL rows; the FE derives
+    // the floor by filtering active===true then splitting on entryType.
+    const all = await new MedicalHistoryRepository(db).findMany({ patientId: p.id });
+    const fe = (type: string) =>
+      all.filter((e) => e.active && e.entryType === type).map((e) => e.displayName).sort();
+
+    expect(floor.allergies.map((a) => a.displayName).sort()).toEqual(fe('allergy'));
+    expect(floor.medications.map((m) => m.displayName).sort()).toEqual(fe('medication'));
+    expect(floor.conditions.map((c) => c.displayName).sort()).toEqual(fe('condition'));
+
+    // Concrete, non-vacuous expectations (would fail if either side dropped the filter).
+    expect(floor.allergies.map((a) => a.displayName)).toEqual(['Penicillin']);
+    expect(floor.allergies.map((a) => a.displayName)).not.toContain('Latex (resolved)');
+    expect(floor.hasAlerts).toBe(true); // active allergies > 0
   });
 });
 

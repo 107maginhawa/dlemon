@@ -85,7 +85,9 @@ export async function approveTreatmentPlan(ctx: HandlerContext): Promise<Respons
   }
 
   // Derive completion (covers the rare case where linked items are already done).
-  const finalPlan = await repo.recomputeStatus(planId, patientId);
+  await repo.recomputeStatus(planId, patientId);
+  // TP-BR-006: keep the denormalized total in lock-step with the linked items.
+  const finalPlan = await repo.recomputeTotal(planId, patientId);
 
   // dental-audit P1-B / dental-patient G5: plan approval is a sensitive clinical
   // sign-off — write an audit row with before/after status (fail-closed so the

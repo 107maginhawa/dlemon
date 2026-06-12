@@ -169,6 +169,12 @@ function buildTestApp(user?: typeof TEST_USER) {
 
 async function truncatePlans() {
   const { dentalTreatmentPlans } = await import('./repos/treatment-plan.schema');
+  const { dentalTreatments } = await import('../dental-visit/repos/treatment.schema');
+  const { dentalVisits } = await import('../dental-visit/repos/visit.schema');
+  // Order matters loosely (treatmentPlanId is a soft ref, not an FK): clear items
+  // and visits seeded by the FIX-006 derive tests before the plan rows.
+  await db.delete(dentalTreatments).where(eq(dentalTreatments.patientId, PATIENT_ID));
+  await db.delete(dentalVisits).where(eq(dentalVisits.patientId, PATIENT_ID));
   await db.delete(dentalTreatmentPlans).where(eq(dentalTreatmentPlans.patientId, PATIENT_ID));
 }
 
@@ -504,5 +510,138 @@ describe('Auth + 404 (AC-009..AC-011)', () => {
       body: JSON.stringify({ status: 'presented' }),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+// =============================================================================
+// FIX-006 (GAP-12 / TP-BR-006): plan total derives from Σ linked item prices.
+//
+// The stored header `totalEstimateCents` is a denormalized aggregate. The
+// authoritative case money everywhere else (case-presentation grandTotalCents,
+// the dental-visit getTreatmentPlan total, the billing invoice subtotal) is
+// DERIVED from item `priceCents`. A caller-supplied header total can silently
+// drift from the item sum. The decided fix (long-term/standards: single source
+// of truth) is to RECOMPUTE the header total from the linked items at the same
+// choke-point that recomputes plan status — never to trust a client-maintained
+// money aggregate. While a plan is itemless (draft ballpark), the manual
+// estimate stands; the moment items attach, the total derives.
+// =============================================================================
+
+const VISIT_ID = 'aa000000-0000-1000-8000-000000000033';
+const MEMBER_ID = 'a1000000-0000-1000-8000-000000000033'; // TEST_USER's membership
+
+async function seedLinkedTreatments(
+  planId: string,
+  prices: number[],
+  status: 'diagnosed' | 'planned' = 'diagnosed',
+) {
+  const { dentalVisits } = await import('../dental-visit/repos/visit.schema');
+  const { dentalTreatments } = await import('../dental-visit/repos/treatment.schema');
+  await db.insert(dentalVisits).values({
+    id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  for (const priceCents of prices) {
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: VISIT_ID, patientId: PATIENT_ID,
+      cdtCode: 'D2740', description: 'Crown', status, priceCents,
+      treatmentPlanId: planId,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+  }
+}
+
+describe('FIX-006: plan total derives from Σ linked item prices (TP-BR-006)', () => {
+  async function createPlan(app: Hono, totalEstimateCents = 10000) {
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId: TEST_USER.id, totalEstimateCents }),
+    });
+    return (await res.json()) as any;
+  }
+
+  // The drift point: a PATCH on a plan WITH linked items must reflect the item
+  // sum, not whatever total the caller created the plan with.
+  test('PATCH on a plan with linked items recomputes total to Σ item prices', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 10000); // manual ballpark at draft
+
+    // 30000 + 120000 = 150000 of linked clinical items.
+    await seedLinkedTreatments(plan.id, [30000, 120000]);
+
+    // Any mutation flows through the recompute choke-point.
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: 'reviewed' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.totalEstimateCents).toBe(150000);
+  });
+
+  // A caller cannot override the derived total once items exist — the server owns
+  // the money (TP-BR-006). The supplied 999 is ignored in favour of Σ items.
+  test('caller-supplied total is overridden by Σ items when items exist', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 10000);
+    await seedLinkedTreatments(plan.id, [45000, 55000]); // 100000
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totalEstimateCents: 999 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.totalEstimateCents).toBe(100000);
+  });
+
+  // Draft/itemless plan keeps its manual estimate — the forward ballpark a
+  // dentist enters before charting procedures (preserves AC-001 semantics).
+  test('itemless plan preserves the caller estimate (no items → no derive)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 7500);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totalEstimateCents: 8200 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.totalEstimateCents).toBe(8200);
+  });
+
+  // End-to-end through the present transition: linkPendingTreatments attaches the
+  // patient's pending items, and the header total derives to match.
+  test('draft → presented links pending items and derives the total', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 10000);
+    // Pending (diagnosed), unlinked — linkPendingTreatments claims these at present.
+    const { dentalVisits } = await import('../dental-visit/repos/visit.schema');
+    const { dentalTreatments } = await import('../dental-visit/repos/treatment.schema');
+    await db.insert(dentalVisits).values({
+      id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+    for (const priceCents of [20000, 80000]) { // 100000
+      await db.insert(dentalTreatments).values({
+        id: crypto.randomUUID(), visitId: VISIT_ID, patientId: PATIENT_ID,
+        cdtCode: 'D2740', description: 'Crown', status: 'diagnosed', priceCents,
+        createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+      });
+    }
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'presented' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.status).toBe('presented');
+    expect(body.totalEstimateCents).toBe(100000);
   });
 });

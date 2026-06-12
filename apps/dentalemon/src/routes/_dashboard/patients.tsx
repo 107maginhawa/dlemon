@@ -26,6 +26,7 @@ import {
 } from '@/features/patients/hooks/use-patient-actions';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { persistCommunicationConsentWithRetry } from '@/features/patients/lib/communication-consent';
 
 export const Route = createFileRoute('/_dashboard/patients')({
   component: PatientsPage,
@@ -84,16 +85,12 @@ function PatientsPage() {
     }
 
     // P1-28: persist per-channel communication consent on the new patient.
+    // FIX-003 (GAP-4): registration has committed, so a consent-save failure is
+    // non-fatal — but it MUST be surfaced (error toast + Retry), not silently
+    // swallowed. The helper never throws, so the flow below still completes.
     const created = (await res.json().catch(() => null)) as { id?: string } | null;
     if (created?.id && data.communicationConsent) {
-      await fetch(`${API}/dental/patients/${created.id}/communication-consent`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data.communicationConsent),
-      }).catch(() => {
-        /* non-blocking: registration already succeeded */
-      });
+      await persistCommunicationConsentWithRetry(created.id, data.communicationConsent);
     }
 
     setShowRegistration(false);

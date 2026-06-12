@@ -85,6 +85,11 @@ export async function acceptCasePresentation(ctx: HandlerContext): Promise<Respo
   // and makes accept robust even for a plan presented before the G1 fix.
   // Idempotent: only unlinked treatments are claimed.
   await planRepo.linkPendingTreatments(plan.id, patientId);
+  // TP-BR-006 (FIX-006): this is a third linkPendingTreatments caller — like the
+  // present/approve paths it MUST re-derive the denormalized header total from the
+  // just-claimed item prices, or the plans-sheet estimate drifts from the case
+  // money (grandTotalCents) for any plan whose items are bound at accept.
+  await planRepo.recomputeTotal(plan.id, patientId);
 
   // 1. Immutable consent e-sig, hung off the plan's visit.
   const visitId = await repo.findPlanVisitId(plan.id, patientId);
