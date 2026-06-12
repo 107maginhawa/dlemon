@@ -170,6 +170,10 @@ export async function setupDentalOrg(page: Page) {
   const onb = await onbRes.json();
   const ctx = { orgId: onb.organizationId as string, branchId: onb.branchId as string, memberId: onb.membershipId as string };
 
+  // C-1: activate the freshly-onboarded (provisional) org so journeys run against
+  // a live clinic (PHI writes allowed; no provisional-activation banner).
+  await page.request.post(`${API}/dental/organizations/${ctx.orgId}/activate`);
+
   // Set localStorage context
   await page.evaluate((ids) => {
     localStorage.setItem('currentOrgId', ids.orgId);

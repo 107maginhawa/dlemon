@@ -549,6 +549,16 @@ async function seed() {
     log(`✓ Onboarded: ${org.name} / ${branch.name} (owner membership ${ownerMember.id})`)
   }
 
+  // C-1: ensure the demo clinic is activated (owner terms/BAA acceptance → 'live').
+  // Idempotent + UNCONDITIONAL: reset-db preserves the demo org across reseeds, so
+  // the onboarding branch above is skipped on re-runs — without this the clinic would
+  // stay 'provisional' (PHI gate / dashboard activation banner). Owner-only; the seed
+  // cookie is the org owner.
+  if (org?.id) {
+    await post(`/dental/organizations/${org.id}/activate`, {}, cookie)
+    log(`✓ Clinic activated (status: live)`)
+  }
+
   // ── Working hours (G1) ───────────────────────────────────────────────────
   // Populate the ENFORCED `dental_branch.working_hours` column in the canonical
   // {enabled,open,close} shape so the scheduler actually gates booking against
@@ -1612,6 +1622,8 @@ async function seed() {
       fOrgId = onb.organizationId; fBranchId = onb.branchId; fMemberId = onb.membershipId
       log('✓ Onboarded free clinic: Budget Dental Clinic')
     }
+    // C-1: activate the free clinic too (idempotent) so it can write PHI / no banner.
+    await post(`/dental/organizations/${fOrgId}/activate`, {}, free.cookie)
     await post(`/dental/organizations/${fOrgId}/branches/${fBranchId}/members/${fMemberId}/set-pin`, { pin: '111111' }, free.cookie)
     const fPatient = must(await post('/dental/patients', {
       displayName: 'Free Patient', dateOfBirth: '1990-01-01', gender: 'male',

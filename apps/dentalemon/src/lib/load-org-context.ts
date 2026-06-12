@@ -31,6 +31,7 @@ export async function loadOrgContext(): Promise<string | null> {
       orgId: ctx.org?.id ?? null,
       role: session?.role ?? ctx.member?.role ?? null,
       memberId: session?.memberId ?? ctx.member?.id ?? null,
+      orgStatus: ctx.org?.status ?? null,
     })
     return ctx.branch.id
   } catch {

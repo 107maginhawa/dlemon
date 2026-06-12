@@ -5,6 +5,7 @@ import { loadOrgContext } from '@/lib/load-org-context'
 import { pinSession } from '@/lib/pin-session'
 import { AppSidebar, filterNavGroupsByRole, type NavGroup } from '@/components/app-sidebar'
 import { NotificationBell } from '@/features/notifications/notification-bell'
+import { ClinicActivationBanner } from '@/features/org/components/clinic-activation-banner'
 import { usePushNotificationRouting } from '@/features/notifications/hooks/use-push-notification-routing'
 import type { DentalRole } from '@/lib/rbac'
 import {
@@ -151,6 +152,7 @@ function DashboardLayout() {
             <NotificationBell />
           </div>
         </header>
+        <ClinicActivationBanner />
         <main className="flex-1">
           <Outlet />
         </main>

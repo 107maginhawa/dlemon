@@ -33,7 +33,7 @@ export interface OnboardResult {
  */
 export async function signUpOnboardAndUnlock(
   page: Page,
-  opts: { tier?: 'solo' | 'clinic'; label?: string; pin?: string } = {},
+  opts: { tier?: 'solo' | 'clinic'; label?: string; pin?: string; activate?: boolean } = {},
 ): Promise<OnboardResult> {
   const tier = opts.tier ?? 'clinic';
   const label = opts.label ?? 'E2E';
@@ -100,6 +100,13 @@ export async function signUpOnboardAndUnlock(
   const orgId = onb.organizationId as string;
   const branchId = onb.branchId as string;
   const memberId = onb.membershipId as string;
+
+  // C-1: onboarding leaves the org 'provisional'. Activate by default so E2E
+  // flows behave like a live clinic (PHI writes allowed; no activation banner).
+  // Pass { activate: false } to exercise the provisional state itself.
+  if (opts.activate !== false) {
+    await page.request.post(`${API}/dental/organizations/${orgId}/activate`);
+  }
 
   await page.evaluate(
     ({ orgId, branchId, memberId }) => {
