@@ -35,6 +35,7 @@ import "./modules/dental-perio.tsp";
 import "./modules/dental-erasure.tsp";
 import "./modules/dental-audit.tsp";
 import "./modules/dental-legal-hold.tsp";
+import "./modules/dental-retention.tsp";
 import "./modules/dental-patient-engagement.tsp";
 import "./modules/dental-patient-finance.tsp";
 import "./modules/dental-clinical-ops.tsp";
@@ -507,6 +508,12 @@ namespace MonobaseAPI {
   @tag("Dental:LegalHold")
   @route("/dental/legal-holds")
   interface DentalLegalHoldMgmt extends DentalLegalHoldModule.LegalHoldManagement {}
+
+  // Dental Retention status read (FR8.14). Tag "Retention" → handlers/retention/
+  // (co-located with the retention engine + summarizeRetentionEnforcement logic).
+  @tag("Retention")
+  @route("/dental/retention-status")
+  interface DentalRetentionMgmt extends DentalRetentionModule.RetentionManagement {}
 
   // ── TR-DG-002 manual-route migration: patient engagement ─────────────────
   @tag("Dental:Patient")

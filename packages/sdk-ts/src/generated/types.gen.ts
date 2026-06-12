@@ -8185,6 +8185,41 @@ export type DentalQueueModuleUpdateQueueItemStatusRequest = {
     notes?: string;
 };
 
+/**
+ * Mode of the most recent retention run
+ */
+export type DentalRetentionModuleRetentionRunMode = 'enforced' | 'dry-run';
+
+/**
+ * Operator-visible retention enforcement status (FR8.14)
+ */
+export type DentalRetentionModuleRetentionStatus = {
+    /**
+     * Whether the cron runs LIVE (archives) or dry-run only
+     */
+    enforcementEnabled: boolean;
+    /**
+     * ISO 8601 UTC timestamp of the most recent retention run, or null if never run
+     */
+    lastRunAt: Date | null;
+    /**
+     * Mode of the most recent run, or null if never run
+     */
+    lastRunMode: 'enforced' | 'dry-run';
+    /**
+     * Count of run-outcome events observed (dry_run + enforced)
+     */
+    runsObserved: number;
+    /**
+     * `actionedCount` recorded on the most recent run event
+     */
+    lastActionedCount: number;
+    /**
+     * `eligibleCount` recorded on the most recent run event
+     */
+    lastEligibleCount: number;
+};
+
 export type DentalTreatment = {
     id: Uuid;
     createdAt: Date;
@@ -71821,6 +71856,37 @@ export type ListDueRecallsResponses = {
 };
 
 export type ListDueRecallsResponse = ListDueRecallsResponses[keyof ListDueRecallsResponses];
+
+export type GetRetentionStatusData = {
+    body?: never;
+    path?: never;
+    query?: {
+        tenantId?: Uuid;
+    };
+    url: '/dental/retention-status';
+};
+
+export type GetRetentionStatusErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type GetRetentionStatusError = GetRetentionStatusErrors[keyof GetRetentionStatusErrors];
+
+export type GetRetentionStatusResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalRetentionModuleRetentionStatus | ErrorResponse;
+};
+
+export type GetRetentionStatusResponse = GetRetentionStatusResponses[keyof GetRetentionStatusResponses];
 
 export type ListSyncLogsData = {
     body?: never;

@@ -3616,6 +3616,17 @@ export const DentalQueueModuleUpdateQueueItemStatusRequestSchema = z.object({
   notes: z.string().optional()
 });
 
+export const DentalRetentionModuleRetentionRunModeSchema = z.enum(["enforced", "dry-run"]);
+
+export const DentalRetentionModuleRetentionStatusSchema = z.object({
+  enforcementEnabled: z.boolean(),
+  lastRunAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]),
+  lastRunMode: z.union([z.enum(["enforced", "dry-run"]), z.null()]),
+  runsObserved: z.number().int(),
+  lastActionedCount: z.number().int(),
+  lastEligibleCount: z.number().int()
+});
+
 export const DentalTreatmentPhaseSchema = z.enum(["systemic", "disease_control", "re_evaluation", "definitive", "maintenance"]);
 
 export const DentalVisitSchema = z.object({
@@ -22022,6 +22033,13 @@ export const ListDueRecallsQuery = z.object({
 export type ListDueRecallsQuery = z.infer<typeof ListDueRecallsQuery>;
 
 export const ListDueRecallsResponse = z.union([z.array(DentalPatientEngagementModuleRecallDueItemSchema), ErrorResponseSchema]);
+
+export const GetRetentionStatusQuery = z.object({
+  tenantId: UUIDSchema.optional(),
+});
+export type GetRetentionStatusQuery = z.infer<typeof GetRetentionStatusQuery>;
+
+export const GetRetentionStatusResponse = z.union([DentalRetentionModuleRetentionStatusSchema, ErrorResponseSchema]);
 
 export const CreateSyncLogBody = DentalPatientFinanceModuleCreateSyncLogRequestSchema;
 export type CreateSyncLogBody = z.infer<typeof CreateSyncLogBody>;

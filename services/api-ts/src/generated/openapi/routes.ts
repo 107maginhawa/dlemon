@@ -1908,6 +1908,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listDueRecalls as unknown as Handler
   );
 
+  // getRetentionStatus
+  app.get('/dental/retention-status',
+    authMiddleware({ roles: ["admin"] }),
+    zValidator('query', validators.GetRetentionStatusQuery, validationErrorHandler),
+    registry.getRetentionStatus as unknown as Handler
+  );
+
   // createSyncLog
   app.post('/dental/sync-logs',
     authMiddleware({ roles: ["user"] }),
