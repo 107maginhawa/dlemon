@@ -121,6 +121,7 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Visit` / `Treatment` | No | Anonymize patient reference | CDT codes, procedure codes retain for statistical/billing compliance | Yes |
 | `Prescription` | No | Anonymize patient reference | Drug name retains; patient identity gone | Yes |
 | `ImagingStudy` | Yes — S3 delete (implemented V-DG-002) | Delete S3 object (radiograph) + storage `file` row; retain anonymized metadata | CephAnalysis anonymized | Yes |
+| `DentalAttachment` | Yes — S3 delete (implemented V-DG-002) | Null `fileName`/`note` (PHI) + redact `filePath`; delete the S3 object + storage `file` row for **confirmed object-store keys**; retain `imageType`/`toothNumbers` clinical metadata; mark row deleted | None | Yes |
 | `PMDDocument` | **No** — legal hold | Cannot delete signed PMD | PMD remains; patient name may be anonymized in DB record | Yes |
 | `Invoice` | No | Anonymize patient name; retain for 7-year tax compliance | LineItems retain CDT codes; patient identity gone | Yes |
 | `AuditEvent` | **No** — never | Append-only; no deletion | None | N/A (is audit trail) |
@@ -135,8 +136,12 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > far: **Person** (name→`[ERASED]` pseudonym, all other identifiers nulled, row
 > kept), **Patient** (emergency contact / provider / pharmacy / history /
 > comms-prefs nulled), **ConsentForm** (signature + name snapshot redacted, state
-> kept), and **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
-> archived), all via boundary-compliant `*-erasure.facade.ts`. A real **LegalHold
+> kept), **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
+> archived), and **Attachment** (x-ray/photo `fileName`/`note` nulled, `filePath`
+> redacted, row marked deleted; only filePaths confirmed as object-store keys are
+> surfaced for physical S3 delete — legacy free-form `/uploads/…` paths have their
+> DB PHI erased but are never handed to the storage client as a bogus delete),
+> all via boundary-compliant `*-erasure.facade.ts`. A real **LegalHold
 > store** (`dental_legal_hold`) blocks erasure of held subjects (and is consulted
 > by retention). Visit/Treatment/Prescription/Invoice are verified NO-OP (they
 > only reference patientId → resolves to the anonymized Person; clinical/billing
@@ -145,14 +150,26 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > `POST /dental/erasure-requests`, `GET /dental/erasure-requests[/{id}]`,
 > `POST /dental/erasure-requests/{id}/approve|reject`, plus
 > `POST|GET /dental/legal-holds`, `POST /dental/legal-holds/{id}/release`.
-> **Physical S3 object deletion of imaging radiographs — implemented (V-DG-002, 2026-06-01).**
-> The imaging facade surfaces `fileIdsPendingS3Delete`; `approveErasureHandler` (handler scope,
-> `ctx.get('storage')`) now calls `physicalDeleteErasedFiles` to delete the S3 objects AND their
+> **Physical S3 object deletion of imaging radiographs + clinical attachments — implemented (V-DG-002,
+> imaging 2026-06-01; attachments 2026-06-12).**
+> The imaging and attachment facades surface `fileIdsPendingS3Delete`; `approveErasureHandler` (handler
+> scope, `ctx.get('storage')`) calls `physicalDeleteErasedFiles` to delete the S3 objects AND their
 > storage `file` rows, with an `erasure.s3_deleted` audit event. Fail-open: anonymization is already
 > committed before delete runs, so a storage error records the object as pending (idempotent — the
 > id set is recomputed each run) rather than failing the erasure. See
-> `services/api-ts/src/handlers/dental-erasure/erasure-storage.ts`. The remaining §3 entities are
-> covered above. (PHI at-rest encryption: resolved separately — AG-6/G-012, §1.1.)
+> `services/api-ts/src/handlers/dental-erasure/erasure-storage.ts`.
+> For **attachments**, `dental_attachment.filePath` is an unvalidated client string with no FK: the
+> facade nulls DB PHI (`fileName`/`note`) + redacts `filePath` for **every** row, but only surfaces
+> filePaths it can confirm as real object-store `stored_file` keys (`filterExistingStoredFileIds`) for
+> the S3 delete — so a legacy free-form `/uploads/…` path is never issued as a silently-succeeding
+> bogus `DeleteObject`. **Residual (roadmap):** a true legacy filesystem object whose real location is
+> not an object-store key cannot be physically located by this code (its DB PHI is still erased); the
+> durable fix is to validate `filePath` at write time / migrate legacy rows. (Two further erasure-wide
+> infra items remain open and shared with imaging: there is no operator-reachable retry path for an
+> S3-delete left pending after an outage, and `physicalDeleteErasedFiles` counts a non-throwing
+> `DeleteObject` as deleted without a `HeadObject` confirmation — both tracked for a future
+> erasure-hardening pass.) The remaining §3 entities are covered above. (PHI at-rest encryption:
+> resolved separately — AG-6/G-012, §1.1.)
 
 ---
 

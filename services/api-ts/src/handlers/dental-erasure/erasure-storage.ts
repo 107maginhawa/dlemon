@@ -72,11 +72,14 @@ export async function physicalDeleteErasedFiles(
       deletedFileIds.push(fileId);
     } catch (error) {
       // Anonymization already committed; do not fail the erasure. Leave the
-      // file pending — a retry recomputes the list and re-deletes.
+      // object pending (un-erased). NOTE: for attachments the DB filePath handle
+      // is redacted on erasure, so a pending object is NOT recoverable from the
+      // source row — this event is the surviving record. ERROR-level so it is
+      // alertable, not buried at warn (durable pending-record is a roadmap item).
       pendingFileIds.push(fileId);
-      logger?.warn(
+      logger?.error(
         { error, fileId, subjectPersonId: ctx.subjectPersonId },
-        'erasure: S3 object delete failed — left pending for retry',
+        'erasure: S3 object delete failed — object left pending (un-erased); manual remediation may be required',
       );
     }
   }
