@@ -29,7 +29,10 @@ Manages the multi-tenant organizational hierarchy: Organization → Branch → M
 Organization CRUD, Branch CRUD, Membership management (create/update/deactivate), fee schedule per branch, consent templates, PIN lockout, subscription tiers (`orgTier`, `imagingTier`), dashboard summary, audit log viewer.
 
 ### Out of Scope
-Patient records, clinical data, billing invoices, appointment scheduling (those modules own their own scoping).
+Patient records, clinical data, billing invoices, appointment scheduling (those modules own their own scoping). **Multi-branch UI (branch create/switcher, org-level cross-branch dashboards) — Phase-2, see §1.1.**
+
+### 1.1 Multi-branch is data-model-ready, UI-deferred (product decision #10, 2026-06-12)
+The data model is multi-tenant (Organization → Branch → Membership) from day one, but **V1 ships a single-branch UI only**: there is **no branch-create, branch-switcher, or cross-branch dashboard UI** (verified — `grep apps/dentalemon` finds no branch-switcher component; all workspace operations resolve a single implicit `branchId` from session/context). Multi-branch UI is **Phase-2 / growth-phase**; the PRD's §2.5 "multi-branch from day one" is **aspirational for the data model, not a V1 UI commitment**. Building branch create/switcher now is scope the pilot does not need; keeping the model multi-branch avoids a painful later refactor.
 
 ---
 
@@ -163,7 +166,7 @@ The `member_role` enum (`membership.schema.ts`) defines **10** context roles sco
 | person_id | Yes | FK → person | — |
 | branch_id | Yes | FK → dental_branch | — |
 | member_role | Yes | One of the 10 `member_role` enum values (see §6 Member Role Catalog — the source of truth) | enum |
-| member_status | Yes | active / inactive / invited (`revoked` is a legacy enum value not used by the lifecycle — see §8) | enum |
+| member_status | Yes | active / inactive / invited (`revoked` is **reserved Phase-2** — present in the Drizzle `member_status` enum but with **no live transition**; see §8) | enum |
 | pin_hash | No | Local PIN auth | bcrypt |
 | pin_failed_attempts | No | Lockout counter | default 0 |
 | pin_locked_until | No | Lockout timestamp | nullable |
@@ -194,12 +197,16 @@ The `member_role` enum (`membership.schema.ts`) defines **10** context roles sco
 ### Membership Status
 ```
 invited ──► active ──► inactive
+              ▲          │
+              └──────────┘
 ```
 | From | To | Trigger |
 |------|----|---------|
 | invited | active | Staff completes first login |
 | active | inactive | Owner deactivates |
 | inactive | active | Owner reactivates |
+
+**Canonical active set = `{invited, active, inactive}`** (product decision C-2, 2026-06-12). The three systems are reconciled to this active set: the Drizzle enum (`membership.schema.ts`) and `LEGAL_STATUS_TRANSITIONS` (`membership.repo.ts`) are the source of truth; the TypeSpec `MemberStatus` enum documents the operator-facing subset (`active`/`inactive`). **`revoked` is documentation-reserved for Phase-2** (e.g. credential expiry / abuse termination) — it exists in the Drizzle `member_status` enum for forward compatibility but has **no live transition path** (`transitionStatus` rejects any jump to it; no production code sets it). Avoiding it keeps `revoked` reservable without a destructive enum migration. Do not add a `→ revoked` transition until the Phase-2 termination flow is specified.
 
 ---
 
