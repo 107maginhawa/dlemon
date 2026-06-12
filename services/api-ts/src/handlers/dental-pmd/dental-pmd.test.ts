@@ -232,12 +232,19 @@ describe('generatePMD handler [AC-PMD-01]', () => {
     expect(body.status).toBe('generated');
     expect(body.checksum).not.toBeNull();
     expect(body.content).not.toBeNull();
+    // Signing honestly deferred (decision #4 / FR12.4): V1 produces an UNSIGNED,
+    // checksum-sealed document. Pin the honest deferral so a future accidental wiring
+    // of signing (status 'signed' / a signature) is caught as a regression.
+    expect(body.status).not.toBe('signed');
+    expect(body.signature ?? null).toBeNull();
+    expect(body.signedAt ?? null).toBeNull();
   });
 
   // N-PMD-02 (immutable-record integrity): the PMD's patientId is derived from the
   // visit (single source of truth). A body.patientId that disagrees with the visit's
   // patientId must be rejected — a caller must not be able to bind an arbitrary patient
-  // into a checksum-sealed, non-repudiation PMD record.
+  // into a checksum-sealed PMD record. (The checksum is tamper-evidence integrity,
+  // NOT non-repudiation — digital signing is Phase-2/FR12.4.)
   test('returns 422 PATIENT_VISIT_MISMATCH when body.patientId does not match the visit patient', async () => {
     const visit = await seedCompletedVisit();
     const app = buildTestApp(TEST_USER);
@@ -734,8 +741,10 @@ describe('FR12.1: PMD content includes coded clinical data', () => {
     expect(content.visitId).toBe(visit!.id);
   });
 
-  // EF-PMD-004: authorMemberId must be in the snapshot so checksum binds author identity
-  test('PMD content snapshot includes authorMemberId for non-repudiation [EF-PMD-004]', async () => {
+  // EF-PMD-004: authorMemberId must be in the snapshot so the checksum binds the
+  // attesting author to the content (integrity/attestation — NOT non-repudiation, which
+  // would require a digital signature; signing is Phase-2/FR12.4).
+  test('PMD content snapshot includes authorMemberId so the checksum binds the attesting author [EF-PMD-004]', async () => {
     const visit = await seedCompletedVisit();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {

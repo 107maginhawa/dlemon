@@ -1,8 +1,13 @@
 /**
  * PMDDocumentRepository — data access for PMD documents (immutable)
  *
- * PMDs are append-only: no update after creation.
- * Signing adds signature + signedAt. Superseding marks old as superseded.
+ * PMDs are append-only: no update after creation. Superseding marks old as superseded.
+ *
+ * Phase-2 (FR12.4): `sign()` would add signature + signedAt, but facility digital
+ * signing is honestly deferred — it has NO production callers in V1, so no PMD ever
+ * reaches the `signed` state. The method + columns are retained as a forward-compatible
+ * stub (exercised by repo unit tests only). Content integrity in V1 is the SHA-256
+ * checksum (tamper-evidence), not a digital signature / non-repudiation.
  */
 
 import { eq, and } from 'drizzle-orm';
@@ -56,6 +61,7 @@ export class PMDDocumentRepository extends DatabaseRepository<PMDDocument, NewPM
     return row ?? null;
   }
 
+  /** Phase-2 (FR12.4) stub — no production callers in V1; digital signing is deferred. */
   async sign(id: string, signature: string): Promise<PMDDocument | null> {
     const [updated] = await this.db
       .update(pmdDocuments)

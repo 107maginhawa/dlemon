@@ -1,8 +1,10 @@
 /**
  * Drizzle schema for PMD documents (Portable Medical Document)
  *
- * PMDs are immutable: generated once from a completed visit, signed, never updated.
- * A new PMD supersedes the previous one via supersedesId.
+ * PMDs are immutable: generated once from a completed visit, never updated.
+ * A new PMD supersedes the previous one via supersedesId. Content integrity is
+ * sealed with a SHA-256 checksum; digital signing (FR12.4) is Phase-2 — the
+ * signature/signed_at columns and the 'signed' status are reserved but not used in V1.
  */
 
 import { pgTable, uuid, text, timestamp, pgEnum, uniqueIndex, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
@@ -11,6 +13,8 @@ import { baseEntityFields } from '@/core/database.schema';
 
 export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
   'generated',
+  // Phase-2 (FR12.4) reserved: digital signing is not implemented in V1, so no PMD
+  // reaches 'signed'. Retained for forward compatibility (no enum migration).
   'signed',
   'superseded',
 ]);
@@ -29,8 +33,9 @@ export const pmdDocuments = pgTable('pmd_document', {
   status: pmdDocumentStatusEnum('status').notNull().default('generated'),
   /** JSON snapshot of the visit at generation time */
   content: text('content').notNull(),
-  /** Base64 digital signature */
+  /** Phase-2 (FR12.4): reserved for the facility digital signature; NULL in V1. */
   signature: text('signature'),
+  /** Phase-2 (FR12.4): reserved signing timestamp; NULL in V1. */
   signedAt: timestamp('signed_at'),
   /** ID of the older PMD this supersedes */
   supersedesId: uuid('supersedes_id').references((): AnyPgColumn => pmdDocuments.id, { onDelete: 'set null' }),

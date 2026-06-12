@@ -7,7 +7,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ---
 
 ## 1. Module Overview
-**Purpose:** Portable Medical Document generation (per-visit signed snapshots) and import of external PMDs. PMDs are immutable, checksum-verified compliance records. One completed visit = one PMD.
+**Purpose:** Portable Medical Document generation (per-visit checksum-sealed snapshots) and import of external PMDs. PMDs are immutable, checksum-verified compliance records. One completed visit = one PMD. (Digital signing per FR12.4 is honestly deferred to Phase-2 — see §8b; V1 seals integrity with a SHA-256 checksum, not a signature.)
 
 **Users:** dentist_owner, dentist_associate (generate), staff_full (view), patient (download)
 
@@ -18,7 +18,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ## 2. Domain Terms
 | Term | Definition |
 |------|-----------|
-| PMD | Portable Medical Document — open signed document for portable health records. (Canonical expansion; supersedes any "Patient Medical Data"/"Patient Medical Dossier" usage — V-PMD-009.) |
+| PMD | Portable Medical Document — open, checksum-sealed document for portable health records. (Canonical expansion; supersedes any "Patient Medical Data"/"Patient Medical Dossier" usage — V-PMD-009. Digital signing is Phase-2 — see §8b.) |
 | Checksum | SHA-256 of serialized visit snapshot; verified on import (BR-021) |
 | ImportedPMD | External PMD stored as-is; never merged into editable records (BR-022) |
 | Safety Floor merge | V-PMD-012: the act of surfacing an imported PMD's safety-critical items (allergies, conditions, medications) into the patient's **Safety Floor** — the dental-patient aggregate's minimum set of safety-critical info a dentist must always see (owned by dental-patient, see `getDentalPatientSafetyFloor`). Merge is **add-only**: it never mutates the imported PMD content and never overwrites existing Safety Floor entries. The `imported_pmd.safety_floor_merged` flag records whether this has occurred. |
@@ -70,7 +70,7 @@ The PMD snapshot aggregates data from the source modules at generation time. Fie
 | dental-patient / person (demographics) | `demographics` = firstName, lastName, dateOfBirth, gender (narrowed set) | FR12.1 patient identity; narrowed to name/DOB/sex for V1 (decision #6) |
 | dental-visit (treating dentist) | `authorMemberId` = visit.dentistMemberId | Attestation: the clinician who delivered the care attests the PMD (decision #5); the triggering actor is captured in the audit trail |
 
-**Excluded / deferred:** dental_chart tooth state (large JSONB, not standard PMD format), lab orders (not yet in snapshot scope), imaging studies (separate export flow); full FR12.1 demographics (insurance/identifiers/address), structured ICD-10 diagnosis list, and free-text clinical notes are **Phase-2** (narrowed-set decision #6). PMD digital signing (FR12.4) is honestly deferred to Phase-2 (decision #4) — see §-signing note; the checksum seals content integrity in V1.
+**Excluded / deferred:** dental_chart tooth state (large JSONB, not standard PMD format), lab orders (not yet in snapshot scope), imaging studies (separate export flow); full FR12.1 demographics (insurance/identifiers/address), structured ICD-10 diagnosis list, and free-text clinical notes are **Phase-2** (narrowed-set decision #6). PMD digital signing (FR12.4) is honestly deferred to Phase-2 (decision #4) — see §8b; the checksum seals content integrity in V1.
 
 ---
 
@@ -92,9 +92,18 @@ PMDDocument: immutable after creation. ImportedPMD: read-only aggregate root. Bo
 ---
 
 ## 8. State Transitions
-PMDDocument: `generated` → `signed` (digital signature applied) | `generated` → `superseded` (a re-generation for the same visit creates a new `generated` document and marks the prior one `superseded`). A `superseded` document is otherwise immutable and retained for the audit trail (never deleted). `signed` and `superseded` are terminal. ImportedPMD: `imported` (terminal — read-only).
+PMDDocument: `generated` → `superseded` (a re-generation for the same visit creates a new `generated` document and marks the prior one `superseded`). A `superseded` document is otherwise immutable and retained for the audit trail (never deleted). `superseded` is terminal. The `generated` → `signed` transition is **Phase-2 reserved** (FR12.4 — see §8b): no V1 code path produces a `signed` PMD. ImportedPMD: `imported` (terminal — read-only).
 
 > V-PMD-011: `generated` is the entry state, not strictly terminal. Re-generation (BR/§13 "multiple PMDs per visit") is the only path that mutates an existing row's status, transitioning the older row `generated → superseded` via `PMDDocumentRepository.supersede()`. Content/checksum of a superseded row are never altered.
+
+---
+
+## 8b. Signing posture (FR12.4 — Phase-2 honestly deferred)
+**Decision #4 (2026-06-12): strip + defer honestly.** V1 does **not** digitally sign PMDs. The document's integrity is sealed with a **SHA-256 checksum** (`sha256-<hex>`), which provides **tamper-evidence** (any content change is detectable on import/verification) but is **NOT** a digital signature and provides **NO non-repudiation** (it does not cryptographically bind a facility's identity to the content).
+
+- The `signature` / `signed_at` columns, the `signed` document status, and `PMDDocumentRepository.sign()` are **reserved forward-compatible stubs** with **zero production callers** — no PMD ever reaches the `signed` state in V1. Retained (not removed) to avoid a destructive enum/column migration and to keep the Phase-2 signing path ready.
+- Facility digital signing — a self-signed pilot certificate scheme binding the issuing clinic to each PMD (FR12.4) — is **Phase-2**. It requires per-clinic cert custody (dental-org settings) and is out of V1 scope.
+- **Honesty rule:** product copy, API descriptions, and recipient-facing language must say "checksum-sealed / integrity-verified", **never** "digitally signed" or "non-repudiable", until FR12.4 ships. Shipping a non-repudiation claim we do not enforce is a compliance liability.
 
 ---
 
@@ -134,7 +143,7 @@ Integration: complete visit → generate PMD → verify checksum.
 ---
 
 ## 13. Edge Cases
-- GDPR erasure request: PMD cannot be deleted (signed, non-repudiable); anonymize DB record only
+- GDPR erasure request: PMD cannot be deleted (immutable, checksum-sealed compliance record); anonymize DB record only
 - Import with corrupted file → 422 CHECKSUM_MISMATCH
 - Multiple PMDs per visit (re-generate) → allowed, creates new version [VERIFY]
 

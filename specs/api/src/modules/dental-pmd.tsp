@@ -2,10 +2,13 @@
  * Dental PMD (Portable Medical Document) Module
  *
  * Covers FR12.x:
- * - PMDDocument: immutable record generated from a completed visit, digitally signed
+ * - PMDDocument: immutable, checksum-sealed record generated from a completed visit
  * - ImportedPMD: read-only PMD imported from an external/source facility
  *
- * PMDs are generated once from completed visits, signed, and never mutated.
+ * PMDs are generated once from completed visits and never mutated; their content
+ * integrity is sealed with a SHA-256 checksum (tamper-evidence, NOT non-repudiation).
+ * Digital signing (FR12.4) is honestly deferred to Phase-2: the `signature`/`signedAt`
+ * fields and the `signed` status are reserved in the model but are NOT produced in V1.
  * Imported PMDs are parsed and linked to a patient; Safety Floor merge is add-only.
  */
 
@@ -26,6 +29,8 @@ using TypeSpec.OpenAPI;
 
 enum PMDDocumentStatus {
   generated,
+  /** Phase-2 (FR12.4) reserved: digital signing is not implemented in V1, so no
+   *  PMD reaches this state. Kept for forward compatibility. */
   signed,
   superseded,
 }
@@ -37,18 +42,16 @@ enum PMDDocumentStatus {
 @example(#{
   id: "pmd-1a2b3c4d-0000-4000-8000-000000000001",
   createdAt: utcDateTime.fromISO("2026-03-15T12:00:00Z"),
-  updatedAt: utcDateTime.fromISO("2026-03-15T12:05:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T12:00:00Z"),
   version: 1,
   visitId: "v1a2b3c4-0000-4000-8000-000000000001",
   patientId: "d1a2b3c4-0000-4000-8000-000000000001",
   authorMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
-  status: PMDDocumentStatus.signed,
+  status: PMDDocumentStatus.generated,
   content: "{\"treatments\":[{\"cdtCode\":\"D2392\",\"toothNumber\":36,\"status\":\"performed\"}],\"allergies\":[],\"diagnoses\":[{\"code\":\"K02.1\",\"display\":\"Dental caries\"}]}",
-  signature: "MEYCIQDsX3...",
-  signedAt: utcDateTime.fromISO("2026-03-15T12:05:00Z"),
-  checksum: "sha256:a1b2c3d4e5f6...",
-}, #{ title: "Signed PMD for completed visit" })
+  checksum: "sha256-a1b2c3d4e5f6...",
+}, #{ title: "Generated PMD for a completed visit (V1: unsigned, checksum-sealed)" })
 model PMDDocument {
   id: UUID;
   createdAt: utcDateTime;
@@ -61,8 +64,9 @@ model PMDDocument {
   status: PMDDocumentStatus;
   /** JSON snapshot of visit data: ICD-10/CDT/RxNorm coded */
   content: string;
-  /** Base64-encoded digital signature */
+  /** Phase-2 (FR12.4): reserved for the facility digital signature; NOT populated in V1. */
   signature?: string;
+  /** Phase-2 (FR12.4): reserved signing timestamp; NOT populated in V1. */
   signedAt?: utcDateTime;
   /** If this document supersedes an older one */
   supersedesId?: UUID;

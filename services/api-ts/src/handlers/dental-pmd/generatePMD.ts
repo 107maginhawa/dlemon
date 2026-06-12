@@ -63,6 +63,10 @@ export interface VisitForPmd {
  *
  * Callers are responsible for authorization + visit-status gating; this core
  * assumes the visit is generation-eligible.
+ *
+ * V1 produces an UNSIGNED document (status `generated`, signature/signedAt null):
+ * the SHA-256 checksum seals content integrity (tamper-evidence) but is not a
+ * digital signature. Facility signing (FR12.4) is honestly deferred to Phase-2.
  */
 export async function generatePmdForVisit(
   db: DatabaseInstance,
@@ -216,10 +220,11 @@ export async function generatePMD(
 
   // N-PMD-02 (immutable-record integrity): the PMD's patient identity is derived from
   // the visit, the single source of truth (same rule as branch_id; see API_CONTRACTS.md).
-  // The request body must not be able to bind an arbitrary patient into a checksum-sealed,
-  // non-repudiation PMD record. A body.patientId that disagrees with the visit is rejected;
-  // the immutable record below (in the shared core) uses `visit.patientId` exclusively so
-  // the body cannot influence the sealed content.
+  // The request body must not be able to bind an arbitrary patient into a checksum-sealed
+  // PMD record. A body.patientId that disagrees with the visit is rejected; the immutable
+  // record below (in the shared core) uses `visit.patientId` exclusively so the body cannot
+  // influence the sealed content. (The SHA-256 checksum provides tamper-evidence integrity,
+  // NOT non-repudiation; digital signing is Phase-2/FR12.4 — see generatePmdForVisit.)
   if (body.patientId !== visit.patientId) {
     throw new BusinessLogicError(
       'patientId does not match the visit patient',

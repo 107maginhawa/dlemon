@@ -1,7 +1,7 @@
 # Screens — dental-pmd
 <!-- oli: v3-dentalemon | dental-pmd | ui-prototype -->
 
-Portable Medical Documents — per-visit signed snapshots (immutable, checksum-verified) and imports of external PMDs. One completed visit = one PMD. PMDs are compliance records.
+Portable Medical Documents — per-visit checksum-sealed snapshots (immutable, checksum-verified) and imports of external PMDs. One completed visit = one PMD. PMDs are compliance records. (Digital signing per FR12.4 is Phase-2-deferred — see MODULE_SPEC §8b.)
 
 **Roles in this module:**
 - `dentist_owner`, `dentist_associate` — generate and import PMDs

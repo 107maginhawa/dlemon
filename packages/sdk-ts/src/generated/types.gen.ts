@@ -58733,9 +58733,12 @@ export type PmdDocument = {
      */
     content: string;
     /**
-     * Base64-encoded digital signature
+     * Phase-2 (FR12.4): reserved for the facility digital signature; NOT populated in V1.
      */
     signature?: string;
+    /**
+     * Phase-2 (FR12.4): reserved signing timestamp; NOT populated in V1.
+     */
     signedAt?: Date;
     /**
      * If this document supersedes an older one

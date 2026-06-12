@@ -44,7 +44,9 @@ export function PMDViewer({ pmd }: Props) {
         </span>
       </div>
 
-      {/* Signature status */}
+      {/* Signature status — Phase-2 (FR12.4): digital signing is honestly deferred, so
+          no V1 PMD reaches the 'signed' state and this banner is never rendered in V1.
+          Kept as a forward-compatible stub mirroring the backend sign() path. */}
       {pmd.status === 'signed' && pmd.signedAt && (
         <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 flex items-center gap-2">
           <span>✓</span>
