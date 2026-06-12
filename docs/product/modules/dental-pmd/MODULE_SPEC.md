@@ -57,17 +57,20 @@ Generate PMD: dentist_owner, dentist_associate | Import PMD: dentist_owner, dent
 
 ## 7.1 Data Scope
 
-The PMD snapshot aggregates data from 3 source modules at generation time. Fields are serialized into an immutable JSON content blob; the snapshot is never updated after creation.
+The PMD snapshot aggregates data from the source modules at generation time. Fields are serialized into an immutable JSON content blob; the snapshot is never updated after creation.
+
+**V1 snapshot field set (narrowed — AHA decision #6).** PRD FR12.1 lists a broader content set; for V1 the snapshot ships the **decision-free minimum**: visit identity + treatments + prescriptions + the **safety floor** + **narrowed demographics**. The narrowed set documented here is the **V1 truth**; the remaining FR12.1 fields (e.g. full identifiers, structured ICD-10 diagnoses, free-text clinical notes) are deferred. The attesting author is the visit's **treating dentist**, not the actor who triggered generation (AHA decision #5).
 
 | Source Module | Fields Included | Rationale |
 |---|---|---|
-| dental-visit | visit.id, visit.status, visit.activatedAt/createdAt, visit.branchId | Core visit identity and date; required for compliance record |
+| dental-visit | visit.id, visit.activatedAt/createdAt (as `visitDate`) | Core visit identity and date; required for compliance record |
 | dental-visit (treatments) | treatment.id, cdtCode, description, toothNumber, surfaces, conditionCode, status, priceCents | Complete treatment record; CDT codes required for insurance portability |
 | dental-clinical (prescriptions) | prescription.id, rxNormCode, drugName, dosage, frequency | Medication record at time of visit; required for continuity of care |
-| dental-org (membership) | membership.id (author) | Non-repudiation: identifies the clinician who generated the PMD |
-| request body | patientId | Patient identifier binding; required for portability |
+| dental-clinical (safety floor) | `safetyFloor` = active allergies, medications, conditions (each: displayName, code, codeSystem, notes, onsetDate) | FR12.1/FR12.3: the safety-critical data the document exists to carry; sourced from medical-history (active entries only) |
+| dental-patient / person (demographics) | `demographics` = firstName, lastName, dateOfBirth, gender (narrowed set) | FR12.1 patient identity; narrowed to name/DOB/sex for V1 (decision #6) |
+| dental-visit (treating dentist) | `authorMemberId` = visit.dentistMemberId | Attestation: the clinician who delivered the care attests the PMD (decision #5); the triggering actor is captured in the audit trail |
 
-**Excluded (by design):** dental_chart tooth state (large JSONB, not standard PMD format), lab orders (not yet in snapshot scope), imaging studies (separate export flow).
+**Excluded / deferred:** dental_chart tooth state (large JSONB, not standard PMD format), lab orders (not yet in snapshot scope), imaging studies (separate export flow); full FR12.1 demographics (insurance/identifiers/address), structured ICD-10 diagnosis list, and free-text clinical notes are **Phase-2** (narrowed-set decision #6). PMD digital signing (FR12.4) is honestly deferred to Phase-2 (decision #4) — see §-signing note; the checksum seals content integrity in V1.
 
 ---
 

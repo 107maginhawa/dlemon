@@ -14,7 +14,8 @@ import { UnauthorizedError, ForbiddenError, BusinessLogicError } from '@/core/er
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { getTreatmentsForPMD } from '@/handlers/dental-visit/repos/visit-pmd.facade';
-import { getPrescriptionsForPMD } from '@/handlers/dental-clinical/repos/clinical-pmd.facade';
+import { getPrescriptionsForPMD, getSafetyFloorForPMD } from '@/handlers/dental-clinical/repos/clinical-pmd.facade';
+import { getPatientDemographicsForPMD } from '@/handlers/patient/repos/patient-pmd.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getActiveMembershipId, getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -37,6 +38,8 @@ export interface VisitForPmd {
   id: string;
   patientId: string;
   branchId: string;
+  /** The visit's treating clinician — the PMD's attesting author (#5). */
+  dentistMemberId: string;
   activatedAt: Date | null;
   createdAt: Date;
 }
@@ -61,23 +64,42 @@ export async function generatePmdForVisit(
   const { visit, actorUserId, logger } = opts;
   const visitId = visit.id;
 
-  // Resolve membership ID from personId + branchId
+  // Authorization guard: the actor must hold an active membership at the
+  // visit's branch (the triggering actor is recorded in the audit trail below).
   const membership = await getActiveMembershipId(db, actorUserId, visit.branchId);
   if (!membership) throw new ForbiddenError('No active membership at this branch');
 
   const patientId = visit.patientId;
 
+  // #5: the PMD attests the clinical care, so the attesting author is the
+  // visit's TREATING dentist — not whoever triggered completion.
+  const authorMemberId = visit.dentistMemberId;
+
   // Collect visit data snapshot
   const treatments = await getTreatmentsForPMD(db, visitId);
   const prescriptions = await getPrescriptionsForPMD(db, visitId);
+  // Batch B (#6, FR12.1): the document exists to carry the safety floor +
+  // patient identity, so capture them at generation time via read-only facades.
+  const demographics = await getPatientDemographicsForPMD(db, patientId);
+  const safetyFloor = await getSafetyFloorForPMD(db, patientId);
 
-  // EF-PMD-004: authorMemberId must be included in the snapshot before hashing
-  // so that the checksum binds the author identity to the content (non-repudiation).
+  // EF-PMD-004: authorMemberId is included in the snapshot before hashing so the
+  // checksum binds the attesting clinician to the content. Key order is fixed so
+  // the sha256 seal is deterministic across regenerations.
   const contentSnapshot = JSON.stringify({
     visitId,
     patientId,
-    authorMemberId: membership.id,
+    authorMemberId,
     visitDate: visit.activatedAt ?? visit.createdAt,
+    demographics: demographics
+      ? {
+          firstName: demographics.firstName,
+          lastName: demographics.lastName,
+          dateOfBirth: demographics.dateOfBirth,
+          gender: demographics.gender,
+        }
+      : null,
+    safetyFloor,
     treatments: treatments.map(t => ({
       id: t.id,
       cdtCode: t.cdtCode,
@@ -109,7 +131,7 @@ export async function generatePmdForVisit(
     pmd = await pmdRepo.supersede(existing.id, {
       visitId,
       patientId,
-      authorMemberId: membership.id,
+      authorMemberId,
       branchId: visit.branchId,
       content: contentSnapshot,
       checksum,
@@ -118,7 +140,7 @@ export async function generatePmdForVisit(
     pmd = await pmdRepo.createOne({
       visitId,
       patientId,
-      authorMemberId: membership.id,
+      authorMemberId,
       branchId: visit.branchId,
       content: contentSnapshot,
       checksum,
