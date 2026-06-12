@@ -534,11 +534,19 @@ jsonpath "$.originalRecordType" == "treatment"
 
 
 # 23. List amendments for visit
+# FIX-007 (FR1.16): the read-only amendments list reads reason / originalRecordType /
+# content off each row, so pin those fields on the list shape (not just the envelope).
+# §15: list returns the offset envelope {data,pagination}, NOT a bare array.
 GET {{api}}/dental/visits/{{visit_id}}/amendments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" count >= 1
+jsonpath "$.data[0].reason" == "Documentation error"
+jsonpath "$.data[0].originalRecordType" == "treatment"
+jsonpath "$.data[0].content" exists
+jsonpath "$.data[0].id" exists
+jsonpath "$.pagination.totalCount" >= 1
 
 
 # ============================================================

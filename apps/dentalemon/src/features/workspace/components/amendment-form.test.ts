@@ -95,6 +95,9 @@ describe('AmendmentForm — shipped component', () => {
         expect(f.calls.some(c => c.method === 'POST' && c.url.includes('/dental/visits/v-1/amendments'))).toBe(true),
       );
       const post = f.calls.find(c => c.url.includes('/amendments'))!;
+      // CreateAmendmentRequest requires visitId IN THE BODY (the handler reads it from
+      // the path, but the wire validator still requires it) — omitting it 400s. Pin it.
+      expect(post.body.visitId).toBe('v-1');
       expect(post.body.patientId).toBe('p-1');
       expect(post.body.originalRecordType).toBe('tooth');
       expect(post.body.originalRecordId).toBe('tooth-11');

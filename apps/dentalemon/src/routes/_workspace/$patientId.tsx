@@ -297,6 +297,15 @@ function WorkspacePage() {
       )
     : undefined;
 
+  // FIX-007: the original record an amendment references. For the read-only tooth
+  // review this is the selected tooth's treatment record on the current visit. The
+  // amendment validator requires a real UUID, so the slideout only offers
+  // "Add Amendment" when this resolves (see ToothSlideout `canAmend`).
+  const selectedToothRecordId =
+    selectedTooth != null
+      ? treatments.find((t) => t.toothNumber === selectedTooth)?.id
+      : undefined;
+
   const currentVisitDate = currentVisit
     ? new Date(currentVisit.createdAt).toLocaleDateString('en-PH', {
         month: 'short',
@@ -488,6 +497,7 @@ function WorkspacePage() {
         onSaveAndNext={handleSaveAndNext}
         readOnly={isReadOnly}
         visitId={currentVisitId ?? undefined}
+        originalRecordId={selectedToothRecordId}
         layerExplanation={selectedToothLayerExplanation}
       />
 

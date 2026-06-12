@@ -151,3 +151,53 @@ describe('WorkspaceTopBar — Lab + PMD affordances (FIX-001/002)', () => {
     expect(screen.queryByLabelText('Portable medical document')).toBeNull();
   });
 });
+
+// =============================================================================
+// AHA dental-clinical FIX-008 (GAP-11): Notes / Medical History + Attachments are
+// VIEW + supervised-draft ENTRY POINTS, not pure write launchers — they open
+// SoapNotesSheet / AttachmentsSheet, which a view-capable role may legitimately open
+// to review the record (write is gated backend-403 + Sign inside the notes sheet).
+// Per ROLE_PERMISSION_MATRIX these must NOT be role-hidden in the top bar. These pins
+// lock that intent so a future "blindly hide Notes/MH" change can't regress a role's
+// VIEW access, while the 5 dentist-only WRITE launchers stay hidden for non-writers.
+// =============================================================================
+
+describe('WorkspaceTopBar — Notes/Attachments view-entry-point parity (FIX-008)', () => {
+  beforeEach(() => {
+    global.fetch = mockFetch as unknown as typeof fetch;
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(emptyResponse);
+  });
+  afterEach(() => {
+    global.fetch = originalFetch;
+    useOrgContextStore.setState({ role: null });
+    cleanup();
+    mockFetch.mockReset();
+  });
+
+  // staff_full has "Clinical Workspace: View-only" + records payments + may upload
+  // attachments (matrix). It must KEEP the Notes + Attachments view entry points but
+  // see NONE of the dentist-only write launchers (Rx / Consent / Treatment Plan / Lab / PMD).
+  test('staff_full (view-only workspace) SEES Notes + Attachments, HIDES all 5 write launchers', async () => {
+    renderBar('staff_full');
+    await waitFor(() => expect(screen.getByLabelText('Notes / Medical History')).not.toBeNull());
+    expect(screen.getByLabelText('Attachments')).not.toBeNull();
+    // All dentist-only write launchers hidden.
+    expect(screen.queryByLabelText('Write prescription')).toBeNull();
+    expect(screen.queryByLabelText('Consent')).toBeNull();
+    expect(screen.queryByLabelText('Treatment Plan')).toBeNull();
+    expect(screen.queryByLabelText('Lab orders')).toBeNull();
+    expect(screen.queryByLabelText('Portable medical document')).toBeNull();
+  });
+
+  // The Notes + Attachments entry points are present for BOTH a writer (dentist_owner)
+  // and a supervised assistant (dental_assistant) — view access is not role-hidden.
+  test('Notes + Attachments stay visible across writer and supervised-assistant roles', async () => {
+    for (const role of ['dentist_owner', 'dental_assistant'] as const) {
+      renderBar(role);
+      await waitFor(() => expect(screen.getByLabelText('Notes / Medical History')).not.toBeNull());
+      expect(screen.getByLabelText('Attachments')).not.toBeNull();
+      cleanup();
+    }
+  });
+});

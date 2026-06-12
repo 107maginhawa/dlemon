@@ -49,15 +49,20 @@ export function AmendmentForm({
       // `{ error }` on both network failures and non-2xx responses rather than
       // throwing. Inspect that result so a failed amendment surfaces an error
       // instead of silently closing the form as if it succeeded.
+      // visitId is required in the body by CreateAmendmentRequest (the handler reads it
+      // from the path, but the wire validator still requires it). Including all fields
+      // means the body matches the generated type exactly — no cast needed (the prior
+      // cast masked the missing visitId, which 400s against the real validator).
       const { error: apiError } = await createAmendment({
         path: { visitId },
         body: {
+          visitId,
           patientId,
           originalRecordType,
           originalRecordId,
           reason,
           content: content.trim(),
-        } as Parameters<typeof createAmendment>[0]['body'],
+        },
       });
       if (apiError) {
         setError('Failed to save amendment. Please try again.');

@@ -98,10 +98,20 @@ export function WorkspaceTopBar({
   const { data: profile } = usePatientProfile({ patientId });
   const { entries } = useMedicalHistory(patientId);
 
-  // E2: hide dentist-only affordances for dental_assistant. The assistant works
-  // under dentist supervision: it may draft notes + manage attachments (kept),
-  // but must NOT prescribe, add/finalize treatments, or capture consent.
-  // (Backend gates are the hard guarantee; this keeps the UI honest.)
+  // E2 / FIX-008: role-gate the WRITE-launcher affordances (Rx / Consent / Treatment
+  // Plan / Lab / PMD) — these have no read value for a non-clinical role, so hide them
+  // when the role can't exercise them. Notes ("Notes / Medical History") and Attachments
+  // are deliberately NOT role-hidden: they are VIEW + supervised-draft ENTRY POINTS into
+  // SoapNotesSheet / AttachmentsSheet, which workspace-VIEW-capable roles may open to
+  // review the record (staff_full is "Clinical Workspace: View-only"; dental_assistant
+  // may draft notes + upload under supervision — ROLE_PERMISSION_MATRIX). The actual
+  // write gates live deeper: backend 403 is the hard guarantee, and Sign-&-Lock is
+  // role-gated inside SoapNotesSheet (canSignNotesForVisitType). Hiding these top-bar
+  // entry points would wrongly strip legitimate VIEW access — so they stay (FIX-008).
+  // NOTE (pre-existing, flagged for roadmap): the _workspace route guard does not yet
+  // enforce canAccess(role,'workspace'), and SoapNotesSheet/AttachmentsSheet do not
+  // client-gate their Save/upload by draft/upload capability — so non-drafting roles get
+  // an editable form that fails only on the backend 403. Tracked separately, not in FIX-008.
   const role = useOrgContextStore((s) => s.role) as DentalRole | null;
   const allowRx = role ? canPrescribe(role) : true;
   const allowTreatmentPlan = role ? canAddTreatment(role) : true;
