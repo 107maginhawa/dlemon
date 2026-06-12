@@ -78,3 +78,39 @@ Batch B (enforced-mode retention integration test), Batch C (retention read API 
 
 ## Completion decision
 `COMPLETE` (Batch C) — both consolidated Batch-C items fixed, gate-green at unit + contract layers.
+
+---
+
+# Addendum — Batch B (enforced-mode retention proof) — 2026-06-12
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (consolidated via `outputs/EXECUTION-TODO.md` Track 2, line 43) · **Superpowers:** Yes (TDD). **Closes Track 2 §8** — the final decision-free Track-2 item. Test-only; no code, no regen.
+
+## Fix
+| Fix | Status | Commit | What shipped |
+| --- | --- | --- | --- |
+| FIX-003: no end-to-end `dryRun:false` retention test through the real facades (GAP-6, `[TEST GAP]`) | Fixed | `8db01774` | New `services/api-ts/src/handlers/retention/retention-enforced-run.test.ts` exercises the **exact production seam** — `RetentionPolicyRepository.findEnabled()` loads a real, enabled, tenant-wide `attachment` policy row → `evaluateRetention(db, logger, policies, { dryRun:false, now })` runs through the **default `RETENTION_TARGETS`** (no injected fakes) and the **default `logAuditEvent`** writer (no injected spy), against a real seeded DB. The first enforced run is no longer the first real run. |
+
+## What the test proves (against the real DB, no injection)
+1. **Eligible attachment really soft-archived** — an aged (`createdAt` 2010) attachment past the 10-year cutoff has `deletedAt` set by the real `archiveAttachments` facade.
+2. **Legally-held record untouched** — a second aged attachment whose owning Person (PATIENT_2) is under an active legal hold is excluded; its `deletedAt` stays `null`. Engine reports `eligibleCount:1 / legalHeldCount:1 / actionedCount:1`.
+3. **`retention.enforced` audit row written** — a real `dental_audit_log` row (`actorId = RETENTION_SYSTEM_ACTOR`, `targetType = retention_policy`, `targetId = policyId`, metadata `actionedCount:1 / legalHeldCount:1 / dryRun:false`).
+4. **Audit trail untouched** — a pre-existing `visit_note.signed` audit row in the same tenant survives the run (retention never purges the audit table).
+
+## §15 / facade-bug check
+The fix-ready flagged that the never-proven `dryRun:false` path "may expose real facade bugs — that is the point." **It did not.** The safety core is genuinely sound: the engine passes only non-held ids to the real facade, `archiveAttachments` soft-archives with a `deletedAt` stamp + `isNull(deletedAt)` guard, and `logAuditEvent` is a plain insert on the passed `db` (openTestTx-safe, no nested transaction). So Batch B stayed **test-only** (no facade change), matching the fix-ready's "test-only nominal" prediction.
+
+## Non-vacuous proof (GREEN-on-arrival → mutation-tested)
+Because the code was already correct, the test was GREEN on arrival; non-vacuousness was proven with two load-bearing mutations, each restored after:
+- Defeat the engine's legal-hold filter (`eligible = candidates`) → held attachment wrongly counted/archived → **RED**.
+- No-op the real `archiveAttachments` write (early `return ids.length`) → `deletedAt` never set despite the engine reporting `actionedCount:1` → **RED** (proves the test verifies the real DB mutation, not just the return count).
+
+## Tests run (fresh)
+| Command | Result |
+| --- | --- |
+| `retention-enforced-run.test.ts` (new) | 1 / 0 |
+| Full `retention/` suite (per-file isolated, 10 files) | **42 / 0** |
+| api-ts `tsc` + lint | tsc 0 errors · lint 0 errors (warnings pre-existing) |
+| Contract / SDK / E2E | none — no handler/TypeSpec/SDK change (test-only) |
+
+## Completion decision
+`COMPLETE` (Batch B) — FIX-003 closed; the enforced-mode path is now proven end-to-end through the real facades + the real audit writer before any production enable of `RETENTION_ENFORCEMENT_ENABLED`. Track 2 §8 is **done**. Remaining data-governance work (Batch D settings panel, Batch E governance admin UI, GAP-5 target wiring, GAP-8 spec) is Track 3 / decision-gated, unchanged.
