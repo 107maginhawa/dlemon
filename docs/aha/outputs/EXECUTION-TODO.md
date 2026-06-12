@@ -11,7 +11,7 @@ Check items off as completed. Tracks 1 & 2 are **decision-free and parallelizabl
 - [ ] Confirm exact **session-TTL** value for ADR-007 (~15–30 min idle) before the data-gov/org session work.
 
 ## Track 1 — Decision-free P1 slice (START HERE, parallel)
-- [ ] **dental-scheduling** — `listAppointments` + `appointment-patient.facade` add `isNull(deletedAt)` filter (soft-archived calendar leak). RED: archive appointment → absent from GET list/detail. (schema fix #3)
+- [x] **dental-scheduling** — `listAppointments` + `appointment-patient.facade` add `isNull(deletedAt)` filter (soft-archived calendar leak). RED: archive appointment → absent from GET list/detail. (schema fix #3) — DONE 2026-06-12: both facade reads filter `isNull(deletedAt)`; 2 RED→GREEN tests; 219 scheduling + 75 retention pass; both typechecks clean. Backend-only (no HTTP archive trigger → no Hurl; FE trusts backend → no FE/E2E; wire shape + SDK unchanged).
 - [ ] **dental-pmd Batch B** — extend snapshot to safety-floor + demographics (narrowed set per decision #6); attestor = visit's **treating dentist** (decision #5). RED: snapshot includes floor+demographics; checksum stable.
 - [ ] **dental-pmd Batch C** — partial `unique(visit_id) WHERE generated` + upsert/FOR UPDATE (race); add-only safety-floor merge; **finish mig-0063** (add Drizzle model `imported_pmd_safety_floor_events` + switch merge to append-only INSERT events, decision #20). RED: concurrent double-completion → exactly one generated PMD. (schema fix #4)
 - [ ] **data-governance Batch C** — retention read API (FR8.14) + erasure/legal-hold TypeSpec role fix `["user"]→["admin"]` (own TypeSpec→regen). Contract pins: GET retention status 200 admin / 403 non-admin. (schema fix #5, cross-cutting fix #4)
