@@ -50,13 +50,22 @@ const suffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,
 // matching files (e.g. CONTRACT_ONLY=dental-patient) — used by the per-module
 // verification sweep so a single module's gate doesn't pay for the whole suite
 // (incl. the storage/mail files that fail when Docker deps are down). Unset = all.
+//
+// CONTRACT_SKIP=<substr>[,<substr>...] EXCLUDES matching files from the run. CI
+// uses it to split the suite into a Postgres-only blocking core and an
+// infra-gated (MinIO/Mailpit/Stripe) set. ONLY is applied first, then SKIP.
 const onlyFilters = (process.env.CONTRACT_ONLY ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+const skipFilters = (process.env.CONTRACT_SKIP ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
 const files = readdirSync(contractDir)
   .filter((f) => f.endsWith('.hurl'))
   .filter((f) => onlyFilters.length === 0 || onlyFilters.some((sub) => f.includes(sub)))
+  .filter((f) => skipFilters.length === 0 || !skipFilters.some((sub) => f.includes(sub)))
   .sort()
   .map((f) => join(contractDir, f))
 

@@ -1,12 +1,21 @@
 name: Contract Tests
 
-# Spec-first contract tests. Two layers:
-#   1. Hurl scenarios under specs/api/tests/contract/ — required check.
-#   2. Schemathesis schema fuzzing — shadow check (allowed to fail).
+# Spec-first contract tests. Layers:
+#   1. Hurl core — Postgres-only scenarios (39 files) — BLOCKING.
+#   2. Hurl infra-gated — MinIO/Mailpit/Stripe scenarios (8 files) — non-blocking
+#      until a CI run confirms the infra wiring, then promote to blocking.
+#   3. Schemathesis schema fuzzing — shadow check (allowed to fail by design:
+#      it surfaces spec-precision nits, not impl bugs).
 #
-# Both run against whichever HTTP implementation is booted on $API_URL,
+# All run against whichever HTTP implementation is booted on $API_URL,
 # so the same workflow can be retargeted at a Rust impl, a remote staging
 # environment, etc., by swapping the boot step.
+#
+# The core/infra split is by `CONTRACT_SKIP` / `CONTRACT_ONLY` (substring filters
+# in scripts/run-contract-tests.ts). The 8 infra-gated files were identified
+# empirically — each fails ONLY because its backing service is absent (storage
+# study/upload → MinIO 500; auth verify/reset → Mailpit; merchant-accounts →
+# Stripe). The other 39 pass on Postgres alone.
 
 on:
   push:
@@ -44,6 +53,15 @@ jobs:
       STORAGE_BUCKET: monobase-files
       STORAGE_ACCESS_KEY_ID: minioadmin
       STORAGE_SECRET_ACCESS_KEY: minioadmin
+      # Email → Mailpit (auth-verification / auth-password-reset scenarios).
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      MAILPIT_API: http://localhost:8025
+      AUTH_REQUIRE_EMAIL_VERIFICATION: 'true'
+      # Stripe → stripe-mock (billing-lifecycle merchant-accounts scenario).
+      STRIPE_SECRET_KEY: sk_test_stripe_mock
+      STRIPE_URL: http://localhost:12111
       BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
 
     steps:
@@ -87,6 +105,26 @@ jobs:
             curl -fsS http://localhost:9000/minio/health/live && break || sleep 1
           done
 
+      - name: Start Mailpit
+        run: |
+          docker run -d \
+            -p 1025:1025 -p 8025:8025 \
+            --name mailpit \
+            axllent/mailpit:v1.21.0
+          for i in {1..20}; do
+            curl -fsS http://localhost:8025/api/v1/info && break || sleep 1
+          done
+
+      - name: Start stripe-mock
+        run: |
+          docker run -d \
+            -p 12111:12111 \
+            --name stripe-mock \
+            stripe/stripe-mock:v0.193.0
+          for i in {1..20}; do
+            curl -fsS http://localhost:12111/v1/ && break || sleep 1
+          done
+
       # ----- Implementation under test: services/api-ts (TypeScript) -----
       # Swap this step when testing a different impl (e.g. services/api-rs).
 
@@ -116,14 +154,26 @@ jobs:
 
       # ----- Contract checks -----
 
-      # Non-blocking until pre-existing failures (audit-side-effects, auth-password-reset,
-      # auth-verification, billing-lifecycle, dental-billing, dental-pmd, dental-visit,
-      # email, expand, expand-edge) are fixed. These were failing on main before this branch.
-      # Track in: https://github.com/mycurelabs/monobase-js-lfh/issues (follow-up).
-      - name: Hurl contract scenarios
-        continue-on-error: true
+      # Core (Postgres-only, 39 files) — BLOCKING. Verified green locally; these
+      # have no infra dependency so a failure here is a real contract regression.
+      - name: Hurl contract — core (blocking)
+        env:
+          CONTRACT_SKIP: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
         run: bun run test:contract
 
+      # Infra-gated (MinIO/Mailpit/Stripe, 8 files). The backing services are now
+      # provisioned above; this step is held non-blocking for ONE CI cycle to
+      # confirm the MinIO/Mailpit/Stripe wiring is green on ubuntu (couldn't be
+      # validated locally without Docker). Promote to blocking — remove
+      # continue-on-error — once a CI run passes it. (iPad-CI-job precedent.)
+      - name: Hurl contract — infra-gated (promote after first green)
+        continue-on-error: true
+        env:
+          CONTRACT_ONLY: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
+        run: bun run test:contract
+
+      # Shadow check by design: Schemathesis fuzzing surfaces spec-precision nits
+      # (under-declared 401s, datetime query params), not impl bugs — kept advisory.
       - name: Schemathesis fuzz (shadow)
         continue-on-error: true
         run: bun run test:contract:fuzz
