@@ -5,8 +5,9 @@
  */
 
 import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { importPmdMutation, mergeImportedPmdSafetyFloorMutation } from '@monobase/sdk-ts/generated/react-query';
+import { medicalHistoryKey } from '@/features/workspace/hooks/use-medical-history';
 
 interface SafetyFloorPreview {
   conditions: string[];
@@ -46,6 +47,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const queryClient = useQueryClient();
   const importMut = useMutation(importPmdMutation());
   const mergeMut = useMutation(mergeImportedPmdSafetyFloorMutation());
 
@@ -98,6 +100,10 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
     // conditions actually surface in the Safety Floor (honest "updated" claim).
     try {
       await mergeMut.mutateAsync({ path: { id: imported.id } });
+      // The merge wrote new med-history entries — refresh the Safety Floor cache
+      // (the same key the workspace top bar reads) so the update is visible live,
+      // not just on the next reload.
+      await queryClient.invalidateQueries({ queryKey: medicalHistoryKey(patientId) });
       setStep('done');
       onImported?.();
     } catch {
