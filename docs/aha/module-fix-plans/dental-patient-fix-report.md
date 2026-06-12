@@ -128,3 +128,31 @@ New backend pin in `dental-patient.test.ts`: `getDentalPatientSafetyFloor` (acti
 ## Not implemented (per plan §9–§11 + decisions)
 
 GAP-2 statement UI (Batch B — print utility landed, runnable next), #14 contactInfo build (Track 3), #16 households writes (parked), #8 recordedByMemberId (separate handler-trust batch), GAP-3 claims, GAP-5 contacts, GAP-9 offline localId, patient merge, reminders, second print utility — all out of Batch C scope.
+
+---
+
+# Track-3 close: #14 contactInfo build (expose + edit + audited)
+
+**Executed:** 2026-06-13 · **Commits:** `719df174` (logger prereq) → `8b1882f9` (backend) → `834df644` (FE) → `29444a94` (E2E) → this docs-close · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Protocol:** Vertical TDD (RED→GREEN) + 3-lens adversarial.
+
+**Resolves the Batch-A decision-queue item** ("Phone/email editing (V-PAT-014)") — product chose **(b) expose contactInfo on the profile (declared, audited) + add phone/email to the edit form**, the deviation-from-recommended-(a) recorded as decision #14. The Batch-A fix-report recommended (a) for honest minimisation; the product decision overrides for V1 contact delivery.
+
+## §15 verdict (code-truth before wiring)
+- **contactInfo column already exists** (`person.schema.ts` `contact_info` JSONB `$type<ContactInfo>` = `{email?,phone?}`); `getDentalPatient` *deliberately omitted* it (declared subset). → **contract change + regen** (not FE-only): TypeSpec `DentalPatient` had no contactInfo field.
+- **Edit path:** rides the Batch-A demographics edit (`updateDentalPatient` → `updatePatientDemographics` facade). TypeSpec `UpdateDentalPatientRequest` comment explicitly said contactInfo "NOT editable … no read surface" — exposing the read removes that blocker.
+- **Audit GAP:** `updateDentalPatient` logged only field NAMES (`logger.info`), **no `logAuditEvent`** (unlike get/create/archive). Decision #14 "audited" → added a `patient.contact.update` audit event.
+- **Logger prereq (load-bearing):** `core/logger.ts` PHI redaction was **single-level** (Pino `*.field` globs) and explicitly did not descend JSONB — a logged contactInfo blob would leak. Done FIRST.
+
+## What shipped
+1. **Logger (`719df174`)** — replaced Pino depth-limited `redact.paths` with a recursive walking redactor (`formatters.log`) that builds a redacted COPY at any depth (incl. arrays). 3-lens folded two majors pre-commit: Date/non-plain objects clobbered to `{}` → only walk plain objects + arrays; shared (DAG) refs falsely `[Circular]` → path-based ancestor tracking. Lint guard: `no-console` (all methods) in `src/handlers/**` (zero churn). Tests: logger 13/0.
+2. **Contract + backend (`8b1882f9`)** — `DentalPatientContactInfo` model on `DentalPatientPerson` (read) + `UpdateDentalPatientRequest` (write); regenerated validators + SDK. `getDentalPatient` surfaces `person.contactInfo` **only when set** (absent, not null → existing V-PAT-014 exclusion pins still hold). `updatePatientDemographics` does a **partial merge** (omitted sub-field keeps stored value). Edits emit a PHI-free `patient.contact.update` audit. 3-lens clean (Lens-2: audit PHI-free pinned + no list/export/create leak). Tests: dental-patient 83/0, records 11/0, hurl 49/49.
+3. **FE (`834df644`)** — read path was already wired (mapper + header render, just always-empty pre-API). Added Email/Phone inputs to `PatientEditForm`; profile page maps onSubmit → contactInfo body **only when a non-empty contact value changed** (no no-op audit, no empty-string 400). Tests: edit-form 9/0, profile-page 15/0 (suppression + partial both non-vacuous).
+4. **E2E (`29444a94`)** — fresh patient "No contact info" → edit email/phone → save → reload renders persisted contact (chromium 1/1).
+
+## Verification (fresh runs)
+logger 13/0 · dental-patient 83/0 · dental-patient-records 11/0 · dental-patient.hurl 49/49 (`:7213` restarted) · FE edit-form 9/0 · profile-page 15/0 · patients suite 141/0 · E2E chromium 1/1 · root typecheck 0 · lint 0 · module boundaries clean · no `dist` (gitignored, CI-rebuilt).
+
+## Roadmap / V2
+- **No explicit single-field clear:** `email:''` merge-sets/omits rather than clears (FE skips empty sub-fields; server partial merge keeps stored value). A deliberate clear needs an explicit-null contract + handler path.
+- **Empty `{}` contactInfo body** still audits as a no-op `patient.contact.update` (unreachable from the FE, which suppresses unchanged contact).
+- **Contact format validation** relies on the TypeSpec `Email`/`PhoneNumber` scalars; no stricter server-side normalisation.
