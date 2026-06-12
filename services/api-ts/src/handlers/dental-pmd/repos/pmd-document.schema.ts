@@ -5,7 +5,7 @@
  * A new PMD supersedes the previous one via supersedesId.
  */
 
-import { pgTable, uuid, text, timestamp, pgEnum, uniqueIndex, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, uniqueIndex, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
 
@@ -72,10 +72,38 @@ export const importedPmds = pgTable('imported_pmd', {
   safetyFloorMerged: text('safety_floor_merged').notNull().default('false'),
 });
 
+/**
+ * EF-PMD-003 (mig 0063): append-only "Safety Floor merge" event log for imported PMDs.
+ * 0063 created this table as raw SQL with NO Drizzle model, leaving it orphaned (absent
+ * from the Drizzle snapshot). This model brings it under the ORM so db:generate tracks it;
+ * the reconcile migration syncs the snapshot idempotently against the table 0063 already
+ * created on every environment. The append-only MERGE MECHANISM (markSafetyFloorMerged)
+ * and its FIX-003 clinical consumer are intentionally DEFERRED (decision #20) — this is the
+ * table definition only, so the snapshot stops trying to re-CREATE the orphan.
+ *
+ * Shape mirrors 0063 exactly: no baseEntityFields (only id/imported_pmd_id/merged_at/
+ * merged_by), explicit FK name so the generated constraint matches the 0063 one.
+ */
+export const importedPmdSafetyFloorEvents = pgTable('imported_pmd_safety_floor_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  importedPmdId: uuid('imported_pmd_id').notNull(),
+  mergedAt: timestamp('merged_at').notNull().defaultNow(),
+  mergedBy: uuid('merged_by'),
+}, (table) => ({
+  importedPmdFk: foreignKey({
+    columns: [table.importedPmdId],
+    foreignColumns: [importedPmds.id],
+    name: 'imported_pmd_safety_floor_events_imported_pmd_id_fk',
+  }).onDelete('cascade'),
+  pmdUniq: uniqueIndex('imported_pmd_safety_floor_events_pmd_uniq').on(table.importedPmdId),
+}));
+
 export type PMDDocument = typeof pmdDocuments.$inferSelect;
 export type NewPMDDocument = typeof pmdDocuments.$inferInsert;
 export type ImportedPMD = typeof importedPmds.$inferSelect;
 export type NewImportedPMD = typeof importedPmds.$inferInsert;
+export type ImportedPMDSafetyFloorEvent = typeof importedPmdSafetyFloorEvents.$inferSelect;
+export type NewImportedPMDSafetyFloorEvent = typeof importedPmdSafetyFloorEvents.$inferInsert;
 
 export const VALID_PMD_STATUSES = ['generated', 'signed', 'superseded'] as const;
 export type PMDDocumentStatus = typeof VALID_PMD_STATUSES[number];

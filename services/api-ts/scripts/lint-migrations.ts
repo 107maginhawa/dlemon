@@ -12,7 +12,10 @@
  *   - DELETE FROM         — permanent data loss
  *   - ALTER TYPE ADD VALUE — non-transactional in PG < 12 (project targets PG 16, but still flag)
  *   - ALTER TYPE RENAME VALUE — non-transactional in PG < 12
- *   - NOT NULL (on ALTER) — fails on non-empty tables without a DEFAULT
+ *   - SET NOT NULL (on ALTER) — fails on non-empty tables without a prior backfill
+ *   - ADD COLUMN ... NOT NULL without DEFAULT — fails on non-empty tables (PG 23502); this is
+ *     the exact shape that shipped in 0069 and broke populated-DB upgrades. Add the column
+ *     nullable, backfill, then SET NOT NULL (or give it a DEFAULT) instead.
  *
  * To acknowledge a finding, add on the line immediately before the flagged statement:
  *   -- MIGRATION-SAFETY: <justification>
@@ -39,6 +42,13 @@ const UNSAFE_PATTERNS: UnsafePattern[] = [
   {
     pattern: /\bALTER\s+(?:TABLE|COLUMN)\b.*\bSET\s+NOT\s+NULL\b/i,
     label: "SET NOT NULL without DEFAULT",
+  },
+  // ADD COLUMN ... NOT NULL with NO DEFAULT in the same statement. Rejected by Postgres
+  // (23502) on a populated table — this is the 0069 hazard. The negative lookahead skips
+  // the safe forms `ADD COLUMN ... NOT NULL DEFAULT ...` / `... DEFAULT ... NOT NULL`.
+  {
+    pattern: /\bADD\s+COLUMN\b(?![^;]*\bDEFAULT\b)[^;]*\bNOT\s+NULL\b/i,
+    label: "ADD COLUMN NOT NULL without DEFAULT",
   },
 ];
 
