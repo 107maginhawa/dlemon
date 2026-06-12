@@ -260,3 +260,71 @@ A 3-lens adversarial workflow (§15/contract · FE-coherence · blast-radius/tes
 ## D.9 Completion
 
 `COMPLETE` (Batch D) — FIX-007 + FIX-008 landed RED-first across component + contract + a genuine UI write→read E2E loop. The orphaned `listAmendments` (FR1.16) is now reachable from the real UI **and the amendment create path actually works** (both masked defects fixed); Notes/Attachments visibility is pinned to the role matrix. **Remaining:** E (consent-template picker — coordinate dental-org), F (docs reconcile: lab enum + 50MB attachment cap).
+
+---
+
+# Batch E — Consent-template picker: surface per-clinic body wording (FIX-009) · 2026-06-12 · commit `c8bfcb89`
+
+## E.1 Scope
+
+| Item | Details |
+| --- | --- |
+| Batch executed | Batch E — Consent-template picker (FR8.4b, per-clinic consent wording); **consumer-side only** — consumes dental-org's existing `listConsentTemplates` backend |
+| Fix scope | FIX-009 (P2, `[CROSS-MODULE RISK]`) — the consent sheet dropped the clinic template's configured `body` wording (picker passed only `{id,name}`); surface it. |
+| Superpowers used | Yes (Vertical TDD + verification-before-completion); §15 handler-vs-SDK-vs-contract check run FIRST; 3-lens adversarial review before commit |
+| Product decisions taken | **Q1 = Option A (read-only reference panel, FE-only)** and **Q2 = graceful fallback + nudge** — both surfaced via AskUserQuestion (content-fill design + empty-state copy are genuine forks) |
+| Out of scope | Any consent-template **backend** (owned by dental-org, §11 Do Not Build — NOT touched); witness-signature capture (no `ConsentForm` witness fields → roadmap, deliberately not surfaced); body-snapshot-onto-signed-form (Q1 deferral → roadmap); consent-gate facades (V-CLN-010, untouched); Batch F |
+| Shared files touched | `consent-sheet.tsx` (clinical-owned consumer — additive); `$patientId.tsx` (1-line map passthrough) |
+| Schema/migration/TypeSpec/SDK | **None** — §15 found the SDK shape already carries `body`; FE-only, no regen |
+| Code commit | `c8bfcb89` |
+
+## E.2 §15 verification — the fix-ready "hardcodes CONSENT_TEMPLATES" is STALE; real gap is dropped `body`
+
+The mandatory §15 pre-wire check **corrected the fix-ready plan's premise** and isolated the true gap (verified, not assumed):
+- The picker is **already wired** to read clinic templates — dental-org's FIX-004 shipped the producer (settings panel + `use-consent-templates` hook + CRUD) **and** the consumer reading `{id,name}` (`templates` prop + `$patientId` `useConsentTemplates` + a passing "uses API-provided templates" test). So "replace the hardcoded const" was **already done**.
+- The fix-ready/task hypothesis that "the const carries full content, dynamic leaves it blank" is **inaccurate**: the const `CONSENT_TEMPLATES` is **also** just `{id,name}`, and `handleSelectTemplate` only ever set `templateId`+`templateName` — neither path ever filled the 5 structured ADA fields (those are always free-text). Nothing was "going blank."
+- **The real gap (plan line 76 "selecting a template fills body text"):** the dental-org template model carries a single plain-text **`body`** (`DentalOrgModuleDentalConsentTemplate.body`, required string, SDK `types.gen.ts:4213`; Drizzle `body text NOT NULL`; handler returns the full row as a bare array) — the actual consent wording the patient reads and signs. The picker's `ConsentTemplateOption` was `{id,name}` only, and `$patientId.tsx` mapped `{ id, name }` — **so the configured per-clinic wording was dropped entirely.** Selecting a clinic template populated only the name.
+- **Shape match:** `ConsentForm` (the signed record) has the 5 structured ADA fields but **no single `body` field**, and neither does `CreateConsentFormRequest`. So the template's one `body` blob has nowhere to be *persisted* without a contract change. Per §15, the SDK shape is **not** deficient (it carries `body`); the gap is purely the **FE mapping dropping content** → the §15 decision tree's "fix the prop wiring, FE-only, no regen" branch. **No drift → no regen** (consistent with Batch D; opposite of B/C where the contract omitted fields).
+
+## E.3 Product forks (AskUserQuestion) — resolved before coding
+
+| Fork | Options | Decision | Rationale |
+| --- | --- | --- | --- |
+| Q1 — how to surface the template `body` | (A) read-only reference panel, FE-only · (B) snapshot `templateBody` onto the signed form, contract change · (C) prefill `procedureNature` from body | **A** | Matches the plan's FE-only scope + §15 "FE mapping" branch; semantically honest (body = full clinic document, the 5 ADA fields = structured discussion); B's persistence-snapshot recorded as roadmap (templates are versioned, so the `templateId` reference is traceable today) |
+| Q2 — empty-state when no clinic templates | (A) keep generic fallback + nudge · (B) fallback, no nudge · (C) require configured templates (block) | **A** | Industry norm (Dentrix/Open Dental/Curve ship default templates, never block care); generic fallback carries names only (no legal text → can't masquerade as clinic consent); nudge drives FR8.4b configuration without blocking same-day care |
+
+## E.4 Changes
+
+| Layer | Change | Files |
+| --- | --- | --- |
+| FE (picker contract) | `ConsentTemplateOption` += optional `body?` (per-clinic wording; absent on generic fallback) | `consent-sheet.tsx` |
+| FE (body surface) | Derive `selectedTemplate = templateOptions.find(t => t.id === templateId)`; render a **read-only** "Clinic consent wording" panel (`whitespace-pre-wrap`, plain-text → React-escaped, XSS-safe) when the selected template has a `body`. Mode-gated to `consent`; resets on close (derives from `templateId`, cleared in the `!open` effect) | `consent-sheet.tsx` |
+| FE (empty-state) | `usingFallbackTemplates` flag → subtle amber "Using default templates. Add your clinic's own wording in Settings → Consent Forms" nudge, shown only on fallback | `consent-sheet.tsx` |
+| FE (consumer passthrough) | Map now passes `body: t.body` (was `{id,name}` only) | `$patientId.tsx` |
+
+## E.5 Tests (RED→GREEN)
+
+| Test | Type | Result |
+| --- | --- | --- |
+| `consent-sheet.test.ts` (+5: select clinic template surfaces body read-only; switching swaps wording; empty-string body renders no panel [review NIT pin]; generic fallback shows no panel; nudge shows only on fallback) | frontend/component | 15/15 |
+| `consent-template-picker.spec.ts` (NEW — owner POSTs a real clinic template to the dental-org API → opens the sheet → asserts the template appears, the nudge is absent, selecting it renders the configured body read-only) | E2E/Playwright | 1/1 chromium |
+| `consent-templates.test.tsx` (dental-org settings panel — regression) | frontend/component | green (20/0 combined with consent-sheet) |
+| `dental-org.hurl` (consent-template CRUD round-trip the picker consumes) | contract | 33 requests, 100% |
+
+## E.6 Gate
+
+Full FE **2362/0** (+5 new) · consent-sheet 15/0 · contract `dental-org` **33/0** · E2E **1/0** · typecheck (FE + api-ts) **0** · sdk-ts typecheck **n/a** (no regen) · lint **0 errors** (1 pre-existing `useNavigate` warning, untouched) · backend/module-boundaries **n/a** (zero api-ts changes).
+
+## E.7 Adversarial review (pre-commit)
+
+A 3-lens adversarial workflow (§15/contract · FE-coherence · blast-radius/test-honesty) returned **2× SHIP + 1× SHIP_WITH_NITS — no blockers, no majors**. The blast-radius lens **mutation-tested** the new component tests (disabled the body panel + nudge → 3 of 4 fail) confirming they're honest, not vacuous; verified `$patientId.tsx` is the **only** `ConsentSheet` mount/`templates=` passthrough (optional `body?` breaks no call site); and confirmed the E2E drives the **real** app + real dental-org POST (no stubbed fetch). The contract lens confirmed the FE-only decision masked **no** SDK shape gap (`body` is a required string end-to-end, no `any`/cast) and the `templates!` non-null assertion is provably safe. **Actioned:** added the empty-string-body guard pin (FE NIT). **Documented, not fixed (roadmap):** (a) **body-snapshot onto the signed `ConsentForm`** — Q1-deferred; for full medico-legal fidelity a future contract change would persist `bodySnapshot`+`templateVersion` at sign time so a later template edit/soft-delete can't alter what a patient signed (today the `templateId` reference is to a versioned record); (b) `templateName` is an imperative point-in-time snapshot that can theoretically diverge from the re-derived `selectedTemplate` on a mid-sheet refetch — **pre-existing**, not introduced here, and the read-time body derivation is the more-correct of the two.
+
+## E.8 Cross-module / coordination
+
+- **dental-org FIX-004 is the producer and is DONE** (settings consent-templates panel + CRUD + `use-consent-templates` hook + picker reading `{id,name}` all shipped). Batch E closes the one thing that wiring left out — surfacing the `body`. The two are only useful together; both are now live.
+- **Backend untouched** — no handler/schema/TypeSpec/SDK change; §11 "Do Not Build any consent-template backend in dental-clinical" honored.
+- Consent-gate facades / V-CLN-010 untouched. No scheduler, no migration.
+
+## E.9 Completion
+
+`COMPLETE` (Batch E) — FIX-009 landed RED-first across component + a real cross-module E2E (owner configures a clinic template via the dental-org API → the picker surfaces its wording). The clinic's per-clinic consent `body` (FR8.4b) is now reachable in the consent capture flow as read-only reference text, with a graceful fallback + nudge when none is configured. **Remaining:** F (docs reconcile: lab-status enum + 50MB attachment-cap).
