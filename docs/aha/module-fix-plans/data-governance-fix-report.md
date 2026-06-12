@@ -114,3 +114,41 @@ Because the code was already correct, the test was GREEN on arrival; non-vacuous
 
 ## Completion decision
 `COMPLETE` (Batch B) — FIX-003 closed; the enforced-mode path is now proven end-to-end through the real facades + the real audit writer before any production enable of `RETENTION_ENFORCEMENT_ENABLED`. Track 2 §8 is **done**. Remaining data-governance work (Batch D settings panel, Batch E governance admin UI, GAP-5 target wiring, GAP-8 spec) is Track 3 / decision-gated, unchanged.
+
+---
+
+# Addendum — Batch E (governance admin UI + E2E, #1 / C-4) — 2026-06-12
+
+**Prompt:** `04-module-or-group-fix-tdd.md` (consolidated via `outputs/EXECUTION-TODO.md` Track 3, line 46). **Superpowers:** Yes (Vertical TDD). Closes the data-governance Track-3 erasure operator-surface gap (GAP-1 erasure FE) + the C-4 patients-only backend hardening. Decision #1 (owner-initiates → platform-admin-approves) + C-4 (patients-only) from `product-decisions.md`.
+
+## §15 — the fix-ready premise was two-sided stale
+Decision #1's text ("clinic `dentist_owner` initiates → platform-admin approves; list/get/approve tenant-scoped to caller's org") was **internally tense** with its own "Unblocks" column ("admin UI + E2E" + the already-shipped `["user"]→["admin"]` RBAC), and the shipped backend had already taken the **platform-wide-by-design** list path (FIX-002, pinned in `erasure-tenancy.test.ts`). The erasure endpoints are gated to the Better-Auth **platform `admin`** role; the clinic app has only org roles and no platform-admin area. **Resolution (user-delegated):** ship the decision's concrete operationalization — a single **admin-operated** queue, no erasure-RBAC reopening (the fix-ready explicitly warned against speculative RBAC churn on this compliance-critical module). Clinic-owner-initiated requests deferred to Phase-2.
+
+## Fixes
+| Fix | Status | Commit | What shipped |
+| --- | --- | --- | --- |
+| C-4: person-only erasure subjects accepted (bare person keeps caller-supplied tenantId — the cross-tenant leak) | Fixed | `d837a56c` | `requestErasure` rejects a subject with no patient anchor (4xx) — every request now carries a server-resolved tenant via FIX-001. Flipped the bare-person tenancy pin (201→4xx, RED-proven); reworked the list-scoping test to two real patient subjects in two real orgs; reworked `dental-erasure.hurl` to a real patient subject (subject user self-onboards + registers a patient) + a person-only-reject pin (**36/36**). |
+| GAP-1: zero FE for erasure (compliance workflow API-only) | Fixed | `cffadfda` | New **Data Erasure** Settings panel — platform-admin queue (list + status filter + status badges + legal-hold flag) with **Approve** (runs the anonymize engine) / **Reject** (with reason) on `requested` rows. Presentational `DataErasurePanel` (props, unit-tested 9/0) + thin container (useSession admin gate + generated react-query hooks). Self-gates so a non-admin owner sees a notice, not a 403 wall; server hard-gates independently. |
+| GAP-1: no governance E2E | Fixed | `da612551` | Admin approve+reject journey through the real Settings panel + independent API read (`anonymized` + `rejected`). New dev-only `POST /dev/promote-admin` (mirrors `/dev/verify-email`) so a fresh self-onboarded owner can exercise the admin-gated queue. |
+
+## What's deferred (documented, not built)
+- **Clinic-owner-initiated erasure surface** (decision #1's two-tier ideal) → Phase-2. V1 = platform-admin-operated; clinic owners raise requests out-of-band.
+- **Per-caller-org list scoping** → the list stays platform-wide-by-design for the platform admin (FIX-002), with per-row server-resolved **tenant attribution** (FIX-001) + a patients-only anchor (C-4) as the isolation guarantee; a tenant **filter** in the panel UI is a Phase-2 nicety (status filter shipped).
+- **GAP-8** (dental-erasure MODULE_SPEC) — unchanged, P3.
+
+## 3-lens adversarial review (FE panel)
+Security lens **SHIP** (server hard-gates all 4 ops; non-admin never fires the list; PHI rendered as truncated UUIDs per the sibling audit-log convention; no XSS/log leak; no settings-shell regression — the panel lazy-mounts so unrelated settings tests need no auth-client context). Folded the one real FE-state finding (**lock the reject-reason input during a mutation** so the shown value can't diverge from the submitted one) + its pinning test. The double-action window is backend-guarded (double-approve → 400, hurl scenario 9). Lens-1's `body:{}`/invalidation "blockers" were verified non-issues (legal hold is server-derived; the no-args query key partial-matches all filtered variants).
+
+## Tests run (fresh)
+| Command | Result |
+| --- | --- |
+| `dental-erasure/*` backend suite (8 files) | **40 / 0** |
+| `dental-erasure.hurl` (server restarted) | **36 / 36** |
+| `data-erasure.test.tsx` (FE unit) | **9 / 0** |
+| `features/settings` FE suite | **86 / 0** |
+| `data-erasure-admin.spec.ts` (E2E, chromium, live API) | **1 / 1** |
+| api-ts `tsc` · FE `tsc` · lint | 0 · 0 · 0 errors |
+| regen | none — no TypeSpec/SDK change |
+
+## Completion decision
+`COMPLETE` (Batch E) — the right-to-erasure compliance workflow is now operable in-product by a platform admin, and person-only subjects can no longer be erased with a forged tenant (C-4). Closes EXECUTION-TODO Track-3 line 46.
