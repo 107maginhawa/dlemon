@@ -52,3 +52,49 @@ The full contract suite has 8 environmental failures (storage/imaging need MinIO
 ## Not implemented (per plan §9–§11)
 
 Batch B (FIX-002 carry-over FE affordance), Batch C (FIX-005 rbac wiring + FIX-006 orphan-op docs), Batch D (FIX-004 visit-lock cron), Batch E (FIX-003 accepted-plan viewer wiring — waits on case-presentation's shared viewer). No handler/FSM changes, no new scheduler, no duplicate viewer — all out of Batch A scope.
+
+---
+
+# AHA Fix Report: Dental Visit & Charting — Batch B (FIX-002 carry-over affordance)
+
+**Executed:** 2026-06-12 · **Prompt:** `04-module-or-group-fix-tdd.md` (via `outputs/EXECUTION-TODO.md` Track 2) · **Branch:** `chore/workflow-verification-sweep` (NOT pushed) · **Commit:** `57b96bef` · **Superpowers:** Yes (Vertical TDD + verification-before-completion). Type: FE-only (backend untouched).
+
+## §15 pre-flight (mandatory)
+Verified the CURRENT generated SDK before wiring (not trusting the Batch A report): `CarryOverTreatmentsResponse = { carriedOver: DentalTreatment[], restoredDismissed: DentalTreatment[], message }`, request `{ sourceVisitId?, restoreDismissedIds? }`, `DentalTreatment` carries `carriedOver` + `sourceVisitId`. Hook = `carryOverTreatmentsMutation` from `@monobase/sdk-ts/generated/react-query`. Contract pin already present (dental-visit.hurl §carry-over, from Batch A). Shape verified-correct → no TypeSpec/SDK change.
+
+## The blocker the fix-ready plan missed (mechanism deviation)
+The plan assumed carry-over = "auto-discover the prior visit's diagnosed/planned treatments." But the **visit-completion gate** (`updateDentalVisit.ts:136`, `VISIT_HAS_OPEN_TREATMENTS`) **forbids completing a visit that still has diagnosed/planned treatments**. Consequences (all verified in source + live):
+- A returning patient's prior visits are all *completed* (one-open-visit rule) → they retain **no** diagnosed/planned work → auto-discovery carries nothing, and a candidate-gate on the treatment-plan's diagnosed/planned is always false.
+- This defeats even the **demo seed**: `seed-demo.ts:completeVisit` resolves planned→performed before completing, so Ana Reyes's (P5, "carry-over case") V2 completes with the cleaning at **performed**, and her V3 auto-discovery carry-over (`{}` body) carries **0**. The seed comment ("D1110 left at planned") is stale.
+- The functional, FR1.11-aligned path is **dismiss-to-defer → restore-next-visit** (the **Maria** seed pattern, lines 838-888): a *dismissed* treatment survives the gate and is restored into the next visit via `restoreDismissedIds`.
+
+**Resolution (product-confirmed 2026-06-12):** redesign the affordance to **restore-dismissed**, FE-only, prioritising long-term stability.
+
+## Real bug found + fixed (treatment-table coherence)
+Wiring carry-over exposed a latent double-count: a carried row lives in BOTH the current visit's `treatments` (carriedOver=true once restored) AND the plan-derived `carriedOverItems`, so it rendered twice and the **Grand Total double-counted it**. Fixed by excluding `carriedOver` rows from the main list + `thisVisitTotal` (`nativeTreatments`) → each carried row is displayed and totalled once (carried section). RED→GREEN; valid independent of the carry-over mechanism. (The existing coherence fixtures only used disjoint props, so the overlap state was uncovered.)
+
+## Shipped
+| Unit | What |
+| --- | --- |
+| `CarryOverPrompt` + test | New-visit-entry-point prompt; when the previous visit has DEFERRED (dismissed) treatments, offers to restore them into the just-created visit via the canonical endpoint (`restoreDismissedIds`). Self-gates on candidates. SDK (no raw fetch). |
+| `useCarryOverTreatments` + test | Mutation; on success invalidates the destination visit's treatment list + the patient treatment-plan aggregate (carried rows + chart amber rings); BE-authored success toast. |
+| `usePreviousVisitDeferred` + test | Reads the previous visit's treatments → dismissed ids (getTreatmentPlan excludes dismissed). FE-only candidate source. |
+| `treatment-table.tsx` coherence fix + test | `nativeTreatments` dedup (above). |
+| `_workspace/$patientId.tsx` | Opens the prompt after a new visit is created; passes `deferredIds`. |
+| `returning-patient-carryover-ui.spec.ts` | E2E: dismiss-to-defer on Visit A → New Visit → prompt → restore → restored row renders once. |
+
+## Verification (fresh)
+| Layer | Result |
+| --- | --- |
+| treatment-table coherence | RED→GREEN (19/19) |
+| CarryOverPrompt / usePreviousVisitDeferred | RED→GREEN (5/5 + 2/2; prompt asserts `restoreDismissedIds` in the body) |
+| Full FE unit suite | **2336 / 0** (211 files) |
+| Returning-patient restore-dismissed **E2E** (chromium, real API) | **1 passed** |
+| Root typecheck (FE + api-ts) + eslint | exit 0 / 0 errors (2 pre-existing warnings) |
+| Backend / contract | unchanged (Batch A already pinned carry-over; no wire change) |
+
+## Follow-up surfaced (roadmap)
+The carry-over **auto-discovery** path and the demo seed's **Ana/Elena "planned-on-completed"** carry-over scenarios are **dead under the completion gate** (Ana's demo carry-over visibly carries 0). Recommend a product/seed reconcile: either (a) update the demo to the dismiss-to-defer pattern for all carry-over personas, and/or (b) decide whether auto-discovery should be removed or the completion gate relaxed. Tracked in EXECUTION-TODO Track 2.
+
+## Not implemented (still per plan §9–§11)
+Batch C (FIX-005 rbac + FIX-006 docs), Batch D (FIX-004 lock cron), Batch E (FIX-003 viewer wiring — waits on case-presentation). No FSM/handler/scheduler changes.
