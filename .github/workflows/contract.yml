@@ -2,7 +2,7 @@ name: Contract Tests
 
 # Spec-first contract tests. Layers:
 #   1. Hurl core — Postgres-only scenarios (39 files) — BLOCKING.
-#   2. Hurl infra-gated — MinIO/Mailpit/Stripe scenarios (8 files) — non-blocking
+#   2. Hurl infra-gated — MinIO/Stripe scenarios (6 files) — non-blocking
 #      until a CI run confirms the infra wiring, then promote to blocking.
 #   3. Schemathesis schema fuzzing — shadow check (allowed to fail by design:
 #      it surfaces spec-precision nits, not impl bugs).
@@ -16,6 +16,16 @@ name: Contract Tests
 # empirically — each fails ONLY because its backing service is absent (storage
 # study/upload → MinIO 500; auth verify/reset → Mailpit; merchant-accounts →
 # Stripe). The other 39 pass on Postgres alone.
+#
+# IMPORTANT — email verification is a SERVER-BOOT config, not per-request. The
+# core scenarios sign up a user and immediately reuse the returned session
+# cookie, which Better-Auth only issues when `requireEmailVerification` is FALSE
+# (auth.ts:81). The two Mailpit scenarios (auth-verification, auth-password-reset)
+# need the OPPOSITE (verification ON) so they can drive the email→token flow.
+# A single booted server cannot satisfy both, so the server boots verification-OFF
+# (matching the locally-verified-green core config) and the 2 verification-ON
+# scenarios are deferred to a dedicated verification-on boot (tracked follow-up) —
+# they are NOT in the infra-gated promote candidate below.
 
 on:
   push:
@@ -58,7 +68,12 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: 1025
       MAILPIT_API: http://localhost:8025
-      AUTH_REQUIRE_EMAIL_VERIFICATION: 'true'
+      # Verification OFF so sign-up returns a session cookie immediately — the
+      # core scenarios (and the admin preflight) depend on it. This matches the
+      # local dev-server config the 39 core files were verified green against.
+      # The 2 Mailpit verification scenarios need this ON and are deferred to a
+      # separate verification-on boot (see header note).
+      AUTH_REQUIRE_EMAIL_VERIFICATION: 'false'
       # Stripe → stripe-mock (billing-lifecycle merchant-accounts scenario).
       STRIPE_SECRET_KEY: sk_test_stripe_mock
       STRIPE_URL: http://localhost:12111
@@ -161,15 +176,18 @@ jobs:
           CONTRACT_SKIP: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
         run: bun run test:contract
 
-      # Infra-gated (MinIO/Mailpit/Stripe, 8 files). The backing services are now
-      # provisioned above; this step is held non-blocking for ONE CI cycle to
-      # confirm the MinIO/Mailpit/Stripe wiring is green on ubuntu (couldn't be
-      # validated locally without Docker). Promote to blocking — remove
-      # continue-on-error — once a CI run passes it. (iPad-CI-job precedent.)
+      # Infra-gated (MinIO + Stripe, 6 files). The backing services are now
+      # provisioned above and need no email-verification flow, so they run against
+      # the same verification-OFF server. Held non-blocking for ONE CI cycle to
+      # confirm the MinIO/Stripe wiring is green on ubuntu (couldn't be validated
+      # locally without Docker). Promote to blocking — remove continue-on-error —
+      # once a CI run passes it. (iPad-CI-job precedent.) The 2 Mailpit
+      # verification scenarios (auth-verification, auth-password-reset) are
+      # excluded: they need a verification-ON server boot (deferred follow-up).
       - name: Hurl contract — infra-gated (promote after first green)
         continue-on-error: true
         env:
-          CONTRACT_ONLY: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
+          CONTRACT_ONLY: storage,dental-imaging,dental-assistant,billing-lifecycle
         run: bun run test:contract
 
       # Shadow check by design: Schemathesis fuzzing surfaces spec-precision nits
