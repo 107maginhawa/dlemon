@@ -406,3 +406,13 @@ Full 3-lens not warranted (no code-behavior change — docs + one comment + a gr
 ## F.8 Completion
 
 `COMPLETE` (Batch F) — FIX-010 reconciled three drifting docs (lab enum + attachment cap) to verified code truth, corrected a misleading FE comment, and pinned the metadata-only attachment design. **This closes the dental-clinical module** — all active-scope batches (A consent/lab/PMD top-bar, B consent revoke+history, C Rx FSM, D amendments+role parity, E consent-template body, F docs reconcile) are COMPLETE. Decision-gated items remain in Track 3 (GAP-5 allergy confirm-dialog #11; attachment erasure #7).
+
+---
+
+## Track 3 — dental_attachment erasure (#7) — DONE 2026-06-12 (commit `cc29f221`)
+
+Decision #7 (erase by imaging parity) shipped — closes the database-schema-audit P1 "dental_attachment PHI survives erasure". New `repos/attachment-erasure.facade.ts` + an `attachment` target in `dental-erasure/erasure-targets.ts`: nulls `fileName`/`note`, redacts `filePath`, marks the row deleted, and surfaces only confirmed object-store keys for the existing `physicalDeleteErasedFiles` S3 + storage-row delete.
+
+**3-lens caught a real security BLOCKER** (full report in `EXECUTION-TODO.md` line 47): `filePath` is an unvalidated client string with no FK — legacy `/uploads/…` rows (seed + the imaging "legacy attachment" path) would have been issued as silently-succeeding bogus `DeleteObject`s (false-erasure) and the PHI-bearing path was retained. Fixed inline via a new `filterExistingStoredFileIds` storage facade (uuid-guarded existence check) + `filePath` redaction. Gate: backend 50/0, erasure contract 33/33, typecheck/lint/boundaries clean, no regen. Roadmap (shared with imaging): operator-reachable pending-S3 retry + durable pending-record + HeadObject confirm + validate-filePath-at-write.
+
+Remaining dental-clinical Track-3 item: **GAP-5 allergy confirm-dialog (#11)**.
