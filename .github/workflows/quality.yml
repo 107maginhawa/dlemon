@@ -309,3 +309,101 @@ jobs:
       - name: Stop api-ts
         if: always()
         run: kill "$(cat /tmp/api-journey.pid)" || true
+
+  ipad-device-coverage:
+    name: iPad Device Coverage (perio)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # FIX-007 (dental-perio Batch C): the iPad perio layout spec
+    # (apps/dentalemon/tests/e2e/ipad-perio-charting.spec.ts) is wired into the
+    # `test:e2e` project matrix (ipad-portrait / ipad-landscape) and passes
+    # locally, but the `e2e` job above has NO database, so the spec's UI self-seed
+    # throws and the device assertions SILENTLY SKIP — the coverage claim was
+    # overstated. This job gives it a real postgres + api-ts (mirroring
+    # journey-verification) and runs ONLY the iPad projects (which match
+    # `ipad-*.spec.ts`), so the 1024×768 grid + 44px tap-target assertions
+    # actually execute in CI. The spec self-seeds via the sign-up UI, so no
+    # `db:reseed` is needed.
+    #
+    # continue-on-error until the first green run confirms webkit-on-ubuntu + the
+    # full-stack boot in CI; once confirmed, drop this line to make it a hard gate.
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: monobase
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monobase"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
+      PORT: 7213
+      API_URL: http://localhost:7213
+      AUTH_SECRET: ipad-perio-test-secret-do-not-use-in-prod
+      # Minimal storage config so api-ts boots without crashing (perio is manual
+      # chart data — no image bytes / MinIO needed).
+      STORAGE_PROVIDER: minio
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_BUCKET: monobase-files
+      STORAGE_ACCESS_KEY_ID: minioadmin
+      STORAGE_SECRET_ACCESS_KEY: minioadmin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      # iPad device descriptors (`devices['iPad (gen 7)']`) run on webkit.
+      - name: Install Playwright browsers (webkit)
+        run: cd apps/dentalemon && bunx playwright install --with-deps webkit
+
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
+
+      - name: Boot api-ts (auto-migrates on start)
+        run: |
+          cd services/api-ts
+          bun dev > /tmp/api-ipad.log 2>&1 &
+          echo $! > /tmp/api-ipad.pid
+
+      - name: Wait for /livez
+        run: |
+          for i in {1..60}; do
+            curl -fsS "$API_URL/livez" && break || sleep 1
+          done
+          curl -fsS "$API_URL/livez" || { echo "api-ts never became ready"; tail -100 /tmp/api-ipad.log; exit 1; }
+
+      # The Playwright webServer reuses the api-ts booted above (reuseExistingServer)
+      # and boots the Vite app on :3003. The iPad spec self-seeds via the sign-up UI.
+      - name: Run iPad perio device specs
+        run: cd apps/dentalemon && bunx playwright test --project=ipad-portrait --project=ipad-landscape
+
+      - name: Upload iPad Playwright artifacts (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ipad-playwright-artifacts
+          path: apps/dentalemon/test-results/
+          retention-days: 7
+
+      - name: api-ts logs (always)
+        if: always()
+        run: tail -200 /tmp/api-ipad.log || true
+
+      - name: Stop api-ts
+        if: always()
+        run: kill "$(cat /tmp/api-ipad.pid)" || true
