@@ -22119,6 +22119,11 @@ export type UpdateSyncLogBody = z.infer<typeof UpdateSyncLogBody>;
 
 export const UpdateSyncLogResponse = z.union([DentalPatientFinanceModuleSyncLogSchema, ErrorResponseSchema]);
 
+export const ListTreatmentTemplatesQuery = z.object({
+  branchId: UUIDSchema,
+});
+export type ListTreatmentTemplatesQuery = z.infer<typeof ListTreatmentTemplatesQuery>;
+
 export const ListTreatmentTemplatesResponse = ListTreatmentTemplatesResponseSchema;
 
 export const CreateTreatmentTemplateBody = CreateTreatmentTemplateRequestSchema;

@@ -1953,6 +1953,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   // listTreatmentTemplates
   app.get('/dental/treatment-templates',
     authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListTreatmentTemplatesQuery, validationErrorHandler),
     registry.listTreatmentTemplates as unknown as Handler
   );
 

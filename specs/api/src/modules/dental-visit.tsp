@@ -996,7 +996,10 @@ namespace DentalVisitModule {
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     @operationId("listTreatmentTemplates")
-    listTreatmentTemplates(): ApiOkResponse<ListTreatmentTemplatesResponse>
+    listTreatmentTemplates(
+      @query branchId: UUID
+    ): ApiOkResponse<ListTreatmentTemplatesResponse>
+      | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
     @post
@@ -1043,7 +1046,7 @@ namespace DentalVisitModule {
     applyTemplate(
       @path visitId: UUID,
       @path templateId: UUID
-    ): ApiOkResponse<ApplyTemplateResponse>
+    ): ApiCreatedResponse<ApplyTemplateResponse>
       | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;

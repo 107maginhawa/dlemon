@@ -617,18 +617,19 @@ async function seed() {
   const tierR = await patch(`/dental/organizations/${org.id}`, { imagingTier: 'addon' }, cookie)
   log(tierR.ok ? '✓ imagingTier: addon (ceph unlocked)' : `⚠ imagingTier (${tierR.status})`)
 
-  // Note: generated validator requires `treatments:string`; handler reads raw body with `items:array`.
-  // Pass both so the middleware passes and the handler gets the real shape.
+  // FIX-001 reconciled the create-template contract to the real `{ name, branchId,
+  // items[] }` shape, so the generated validator now accepts `items` directly (the
+  // old stringly-typed `treatments` stub is no longer needed).
   const tplDefs = [
-    { name: 'New Patient Exam', treatments: 'stub', branchId: branch.id, description: 'Standard comprehensive exam', items: [
+    { name: 'New Patient Exam', branchId: branch.id, description: 'Standard comprehensive exam', items: [
       { cdtCode: 'D0150', description: 'Comprehensive oral evaluation', priceCents: 150000 },
       { cdtCode: 'D0210', description: 'Full-mouth X-ray series', priceCents: 250000 },
     ]},
-    { name: 'Adult Prophylaxis + Fluoride', treatments: 'stub', branchId: branch.id, description: 'Routine cleaning', items: [
+    { name: 'Adult Prophylaxis + Fluoride', branchId: branch.id, description: 'Routine cleaning', items: [
       { cdtCode: 'D1110', description: 'Adult prophylaxis', priceCents: 250000 },
       { cdtCode: 'D1206', description: 'Fluoride varnish', priceCents: 80000 },
     ]},
-    { name: 'Crown Workflow', treatments: 'stub', branchId: branch.id, description: 'RCT + crown (lab)', items: [
+    { name: 'Crown Workflow', branchId: branch.id, description: 'RCT + crown (lab)', items: [
       { cdtCode: 'D3330', description: 'Root canal — molar', priceCents: 1200000 },
       { cdtCode: 'D2740', description: 'Crown — porcelain/ceramic', priceCents: 1800000 },
     ]},

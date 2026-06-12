@@ -859,6 +859,16 @@ jsonpath "$.templates" count >= 1
 jsonpath "$.templates[0].items" isCollection
 
 
+# FIX-001-A1b — branchId is REQUIRED on listTreatmentTemplates. The handler reads
+# `?branchId=` and the op now declares it as a required @query param, so a request
+# that omits it is rejected by the generated query validator (400) — NOT a bare
+# `throw new Error` 500 (the pre-reconcile behaviour, when the SDK could not even
+# send the param). Pins the FIX-001-completion drift fix (#13 prereq).
+GET {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+HTTP 400
+
+
 # FIX-001-A2 — apply the template to the active second visit. Real
 # ApplyTemplateResponse is { applied: Treatment[], count } (NOT { applied: int, visitId }).
 POST {{api}}/dental/visits/{{visit2_id}}/apply-template/{{template_id}}

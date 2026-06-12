@@ -4781,12 +4781,12 @@ export const updateSyncLogMutation = (options?: Partial<Options<UpdateSyncLogDat
     return mutationOptions;
 };
 
-export const listTreatmentTemplatesQueryKey = (options?: Options<ListTreatmentTemplatesData>) => createQueryKey('listTreatmentTemplates', options);
+export const listTreatmentTemplatesQueryKey = (options: Options<ListTreatmentTemplatesData>) => createQueryKey('listTreatmentTemplates', options);
 
 /**
  * Operation requires role: 'user'
  */
-export const listTreatmentTemplatesOptions = (options?: Options<ListTreatmentTemplatesData>) => queryOptions<ListTreatmentTemplatesResponse2, ListTreatmentTemplatesError, ListTreatmentTemplatesResponse2, ReturnType<typeof listTreatmentTemplatesQueryKey>>({
+export const listTreatmentTemplatesOptions = (options: Options<ListTreatmentTemplatesData>) => queryOptions<ListTreatmentTemplatesResponse2, ListTreatmentTemplatesError, ListTreatmentTemplatesResponse2, ReturnType<typeof listTreatmentTemplatesQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
         const { data } = await listTreatmentTemplates({
             ...options,

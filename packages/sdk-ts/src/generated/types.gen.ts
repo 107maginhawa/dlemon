@@ -72206,11 +72206,17 @@ export type UpdateSyncLogResponse = UpdateSyncLogResponses[keyof UpdateSyncLogRe
 export type ListTreatmentTemplatesData = {
     body?: never;
     path?: never;
-    query?: never;
+    query: {
+        branchId: Uuid;
+    };
     url: '/dental/treatment-templates';
 };
 
 export type ListTreatmentTemplatesErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
     /**
      * Unauthorized access response
      */
@@ -72854,9 +72860,9 @@ export type ApplyTemplateError = ApplyTemplateErrors[keyof ApplyTemplateErrors];
 
 export type ApplyTemplateResponses = {
     /**
-     * Success response with data
+     * Resource created response
      */
-    200: ApplyTemplateResponse;
+    201: ApplyTemplateResponse;
 };
 
 export type ApplyTemplateResponse2 = ApplyTemplateResponses[keyof ApplyTemplateResponses];

@@ -2834,7 +2834,7 @@ export const updateSyncLog = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Operation requires role: 'user'
  */
-export const listTreatmentTemplates = <ThrowOnError extends boolean = false>(options?: Options<ListTreatmentTemplatesData, ThrowOnError>) => (options?.client ?? client).get<ListTreatmentTemplatesResponses, ListTreatmentTemplatesErrors, ThrowOnError>({
+export const listTreatmentTemplates = <ThrowOnError extends boolean = false>(options: Options<ListTreatmentTemplatesData, ThrowOnError>) => (options.client ?? client).get<ListTreatmentTemplatesResponses, ListTreatmentTemplatesErrors, ThrowOnError>({
     responseTransformer: listTreatmentTemplatesResponseTransformer,
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/dental/treatment-templates',
