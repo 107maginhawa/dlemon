@@ -50,6 +50,9 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 
 // Suite-unique tag (xt = cross-tenant) to avoid cross-suite collisions.
 const USER_A = { id: '00000000-0000-0000-0000-0000000a7a01', email: 'a@clinic-a.com' };
+// FIX-009: a caller with ZERO branch memberships (never seeded) must get EMPTY
+// results — not 500, not the whole DB — on every omitted-branchId report.
+const USER_ZERO = { id: '00000000-0000-0000-0000-0000000a7a09', email: 'zero@nomember.com' };
 
 const ORG_A = 'ed000000-0000-1000-8000-0000000000a1';
 const ORG_B = 'ed000000-0000-1000-8000-0000000000b1';
@@ -132,7 +135,7 @@ const validationErrorHandler = (result: any, c: any) => {
   if (!result.success) return c.json({ error: 'Validation failed', issues: result.error.issues }, 400);
 };
 
-function buildApp() {
+function buildApp(user: { id: string; email: string } = USER_A) {
   const app = new Hono();
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
@@ -142,8 +145,8 @@ function buildApp() {
     const ctx = c as any;
     ctx.set('database', db);
     ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
-    ctx.set('user', USER_A);
-    ctx.set('session', { id: 's', userId: USER_A.id });
+    ctx.set('user', user);
+    ctx.set('session', { id: 's', userId: user.id });
     await next();
   });
   app.get('/dental/billing/collections/aging', zValidator('query', GetArAgingQuery, validationErrorHandler), getArAging as any);
@@ -203,5 +206,46 @@ describe('EM-BIL-002: omitted-branchId reports are scoped to caller branches (no
     const ids = body.statements.map((s: any) => s.patientId);
     expect(ids).toContain(PA.patient);
     expect(ids).not.toContain(PB.patient);
+  });
+});
+
+describe('FIX-009: a zero-branch-membership caller gets EMPTY reports (no whole-DB leak)', () => {
+  test('getArAging → empty buckets, zero summary', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/collections/aging');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.patients).toEqual([]);
+    expect(body.summary.totalOutstandingCents).toBe(0);
+  });
+
+  test('getCollectionsSummary → zero collected/billed', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/collections/summary?period=year');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.totalCollectedCents).toBe(0);
+  });
+
+  test('getPayerArAging → empty payers, zero summary', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/claims/aging');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.payers).toEqual([]);
+    expect(body.summary.totalOutstandingCents).toBe(0);
+  });
+
+  test('listInsuranceClaims → empty items', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/claims');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.items).toEqual([]);
+  });
+
+  test('generateStatementBatch → empty statements', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/statements/batch', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.statements).toEqual([]);
   });
 });

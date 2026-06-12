@@ -107,6 +107,13 @@ async function seed() {
     patientIdx: number;
     status: 'paid' | 'partial' | 'overdue' | 'draft' | 'issued';
     lines: LineSpec[];
+    /**
+     * FIX-011: for `overdue` invoices, how many days PAST DUE — drives the AR-aging
+     * bucket (≤30 current, 31–60 days30, 61–90 days60, >90 days90Plus). Spread the
+     * demo's overdue receivables across buckets so the AR-aging report demos real
+     * data in every bucket instead of all-empty. Defaults to 45 (days30).
+     */
+    ageDays?: number;
   };
 
   // ~10 invoices spread across statuses: paid, partial, overdue, draft, issued.
@@ -122,7 +129,7 @@ async function seed() {
     { key: 'INV-S0003', patientIdx: 2, status: 'paid',    lines: [
       { cdtCode: 'D2740', description: 'Crown — porcelain/ceramic (#46)', toothNumber: 46, unitPriceCents: 1800000 },
     ]},
-    { key: 'INV-S0004', patientIdx: 3, status: 'overdue', lines: [
+    { key: 'INV-S0004', patientIdx: 3, status: 'overdue', ageDays: 45, lines: [
       { cdtCode: 'D7210', description: 'Surgical extraction (#48)', toothNumber: 48, unitPriceCents: 800000 },
       { cdtCode: 'D9110', description: 'Palliative treatment of pain', unitPriceCents: 120000 },
     ]},
@@ -137,7 +144,7 @@ async function seed() {
       { cdtCode: 'D0340', description: 'Panoramic radiographic image', unitPriceCents: 250000 },
       { cdtCode: 'D8080', description: 'Comprehensive orthodontic treatment', unitPriceCents: 8500000 },
     ]},
-    { key: 'INV-S0008', patientIdx: 7, status: 'overdue', lines: [
+    { key: 'INV-S0008', patientIdx: 7, status: 'overdue', ageDays: 78, lines: [
       { cdtCode: 'D4341', description: 'Scaling and root planing — UR/UL', unitPriceCents: 500000 },
       { cdtCode: 'D0120', description: 'Periodic oral evaluation', unitPriceCents: 100000 },
     ]},
@@ -147,6 +154,10 @@ async function seed() {
     ]},
     { key: 'INV-S0010', patientIdx: 9, status: 'issued',  lines: [
       { cdtCode: 'D2750', description: 'Crown prep — full cast metal (#46)', toothNumber: 46, unitPriceCents: 900000 },
+    ]},
+    // FIX-011: a deeply-aged receivable so the AR-aging 90+ bucket is non-empty.
+    { key: 'INV-S0011', patientIdx: 3, status: 'overdue', ageDays: 120, lines: [
+      { cdtCode: 'D2950', description: 'Core buildup, including any pins (#48)', toothNumber: 48, unitPriceCents: 350000 },
     ]},
   ];
 
@@ -164,7 +175,7 @@ async function seed() {
     const totalCents = subtotalCents; // no discount/tax in demo
     // Derive money fields from status (BR: amountCents >= 1).
     let paidCents = 0;
-    let status = spec.status;
+    const status = spec.status;
     if (status === 'paid') paidCents = totalCents;
     else if (status === 'partial') paidCents = Math.round(totalCents * 0.5);
     const balanceCents = totalCents - paidCents;
@@ -172,7 +183,9 @@ async function seed() {
     const invoiceId = detUuid(`invoice:${spec.key}`);
     const issuedAt = status === 'draft' ? null : daysAgo(20);
     const dueDate =
-      status === 'overdue' ? daysAgo(15)
+      // FIX-011: overdue invoices are past due by spec.ageDays (default 45) so the
+      // demo spreads receivables across the AR-aging buckets (days30/60/90+).
+      status === 'overdue' ? daysAgo(spec.ageDays ?? 45)
       : status === 'draft' ? null
       : daysFromNow(15);
     const paidAt = status === 'paid' ? daysAgo(5) : null;

@@ -155,6 +155,13 @@ issued / partial / overdue → uncollectible (BR-013 write-off, owner-only, term
 **Reports (branchId OPTIONAL — scoped to caller's branches when omitted, EM-BIL-002):** `GET /dental/billing/patients/:patientId/balance`, `GET /dental/billing/collections/summary`, `GET /dental/billing/collections/aging`, `POST /dental/billing/statements/batch`.
 **Revenue cycle (HMO claims):** `POST /dental/billing/claims`, `GET /dental/billing/claims` (worklist), `GET /dental/billing/claims/aging`, `GET /dental/billing/claims/:claimId`, `PATCH …/status`, `POST …/lines`, `PATCH …/lines/:lineId`, `POST …/remittance`, `POST /dental/billing/estimate`.
 
+> **AHA dental-billing Batch D notes (FIX-009/010/011/012, 2026-06-12):**
+> - **FIX-012 — `GET /dental/billing/collections/summary` is BACKEND-ONLY by choice** `[DO NOT OVERBUILD]`. The dashboard derives collected totals from the invoice list (`use-dashboard-summary.ts`), so `getCollectionsSummary` is intentionally a 0-consumer endpoint kept for API completeness — do NOT wire a new dashboard KPI surface for it.
+> - **FIX-009 (pin)** — every omitted-`branchId` report scopes to the caller's branches; a caller with **zero** branch memberships gets EMPTY results (not 500, not whole-DB). Pinned in `dental-billing.cross-tenant-reports.test.ts`.
+> - **FIX-010 (pin)** — `getPatientBalance.outstandingBalanceCents` equals Σ non-voided per-invoice `balanceCents` (the FE's source), voided excluded on both sides. Pinned in `dental-billing.patient-balance-coherence.test.ts`. **Roadmap flag:** the `PatientBalanceResponse` TypeSpec model (`{ balanceCents, overdueInvoices }`) drifts from the handler's richer shape (`{ outstandingBalanceCents, totalBilledCents, totalPaidCents, overdueAmountCents, invoiceCount, … }`) — harmless today (0-consumer orphan), a separate §15 reconcile when the endpoint is wired.
+> - **FIX-011 (seed)** — the demo (`seed-supplement.ts`) ages overdue receivables across the AR-aging buckets (45d→days30, 78d→days60, 120d→days90Plus) so `collections/aging` demos non-empty buckets. The aging logic itself is covered by `utils/aging.test.ts` + `dental-billing.ar-aging-statements.test.ts`.
+> - **Deferred (Track 4 platform):** the billing-list "overdue" filter E2E (Batch A "during" item) needs a test-only cron-trigger hook to flip an issued invoice to `overdue` in a fresh E2E org (the demo seed's aged data is invisible to the E2E's `signUpOnboardAndUnlock` org) — deferred per the Batch A report §9.
+
 ---
 
 ## 10b. Domain Events
