@@ -145,6 +145,15 @@ export function useStaffMutations(branchId: string) {
     isDeactivating: deactivateMut.isPending,
     deactivateError: deactivateMut.error as Error | null,
 
+    // Owner-reset-only PIN recovery (decision #9). Standalone reset for an EXISTING
+    // member — the owner-gated resetMemberPin handler backs the "ask your owner to
+    // reset your PIN via Staff settings" path shown on the PIN-entry screen.
+    resetPin: (memberId: string, newPin: string) =>
+      resetPinMut.mutateAsync({ path: { memberId }, body: { newPin } }),
+    isResettingPin: resetPinMut.isPending,
+    resetPinError: resetPinMut.error as Error | null,
+    resetResetPin: () => resetPinMut.reset(),
+
     update: (memberId: string, body: UpdateMemberInput) =>
       updateMut.mutateAsync({ path: { memberId }, body }),
     isUpdating: updateMut.isPending,

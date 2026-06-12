@@ -109,6 +109,53 @@ test.describe('Staff Management', () => {
     await expect(rowAfter.getByText('Staff - Scheduling')).toBeVisible({ timeout: 8000 });
   });
 
+  test('FR9.7 / decision #9: owner resets a staff PIN via Staff settings and the new PIN works', async ({ page }) => {
+    const { orgId, branchId } = await signUpAndSetupPractice(page);
+    await spaNavigate(page, `/staff`);
+
+    // Create a staff member with an initial PIN.
+    const oldPin = '111222';
+    const newPin = '999888';
+    await page.getByRole('button', { name: /add staff/i }).click();
+    await page.getByLabel(/display name/i).fill('Pin Pat');
+    await page.getByText('Staff - Full Operations').click();
+    await page.getByLabel(/pin.*6 digits/i).fill(oldPin);
+    await page.getByLabel(/confirm pin/i).fill(oldPin);
+    await page.getByRole('button', { name: /create staff member/i }).click();
+    await expect(page.getByTestId('staff-create-modal')).not.toBeVisible({ timeout: 10000 });
+    const row = page.getByRole('row', { name: /pin pat/i });
+    await expect(row).toBeVisible({ timeout: 8000 });
+
+    // Resolve the new member's id (independent oracle for verify-pin below).
+    const memberId = await page.evaluate(async ({ api, branchId }: { api: string; branchId: string }) => {
+      const r = await fetch(`${api}/dental/org/members?branchId=${branchId}`, { credentials: 'include' });
+      const j = await r.json() as { data?: Array<{ id: string; displayName: string }> };
+      return (j.data ?? []).find((m) => m.displayName === 'Pin Pat')?.id ?? '';
+    }, { api: API, branchId });
+    expect(memberId).not.toBe('');
+
+    // Owner resets the PIN through the Edit modal's Reset PIN section (owner-reset-only).
+    await row.getByRole('button', { name: /^edit$/i }).click();
+    await expect(page.getByTestId('staff-edit-modal')).toBeVisible();
+    await page.getByTestId('staff-reset-pin-input').fill(newPin);
+    await page.getByTestId('staff-reset-pin-btn').click();
+    await expect(page.getByTestId('staff-reset-pin-success')).toBeVisible({ timeout: 8000 });
+
+    // Prove server-side effect: the NEW pin verifies, the OLD pin no longer does.
+    const verify = await page.evaluate(async ({ api, orgId, branchId, memberId, oldPin, newPin }: { api: string; orgId: string; branchId: string; memberId: string; oldPin: string; newPin: string }) => {
+      const call = async (pin: string) => {
+        const r = await fetch(`${api}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/verify-pin`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ pin }),
+        });
+        return (await r.json() as { success?: boolean }).success === true;
+      };
+      return { newOk: await call(newPin), oldOk: await call(oldPin) };
+    }, { api: API, orgId, branchId, memberId, oldPin, newPin });
+    expect(verify.newOk).toBe(true);
+    expect(verify.oldOk).toBe(false);
+  });
+
   test('FR8.13: non-owner role is denied access to staff page', async ({ browser }) => {
     // The RBAC route guard (requireRole) blocks staff_full from /staff at the route level,
     // redirecting to /dashboard. The StaffAccessDenied component is a secondary in-page

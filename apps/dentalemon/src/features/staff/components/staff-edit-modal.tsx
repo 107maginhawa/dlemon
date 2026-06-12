@@ -81,7 +81,8 @@ export function buildUpdateMemberPayload(member: Member, form: EditFormState): U
 // ---------------------------------------------------------------------------
 
 export function StaffEditModal({ branchId, member, open, onClose, onSaved }: StaffEditModalProps) {
-  const { update, isUpdating, updateError, resetUpdate } = useStaffMutations(branchId);
+  const { update, isUpdating, updateError, resetUpdate, resetPin, isResettingPin, resetPinError, resetResetPin } =
+    useStaffMutations(branchId);
 
   const [displayName, setDisplayName] = useState(member.displayName);
   const [role, setRole] = useState<string>(member.role);
@@ -89,6 +90,11 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
   const [npi, setNpi] = useState(member.npi ?? '');
   const [credentialType, setCredentialType] = useState(member.credentialType ?? '');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Owner-reset-only PIN recovery (decision #9 / FR9.7).
+  const [newPin, setNewPin] = useState('');
+  const [pinValidation, setPinValidation] = useState<string | null>(null);
+  const [pinResetDone, setPinResetDone] = useState(false);
 
   // Re-prefill when a different member is selected for editing.
   useEffect(() => {
@@ -98,6 +104,9 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
     setNpi(member.npi ?? '');
     setCredentialType(member.credentialType ?? '');
     setValidationErrors([]);
+    setNewPin('');
+    setPinValidation(null);
+    setPinResetDone(false);
   }, [member]);
 
   if (!open) return null;
@@ -106,8 +115,30 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
 
   function handleClose() {
     setValidationErrors([]);
+    setNewPin('');
+    setPinValidation(null);
+    setPinResetDone(false);
     resetUpdate();
+    resetResetPin();
     onClose();
+  }
+
+  async function handleResetPin() {
+    if (!/^\d{6}$/.test(newPin)) {
+      setPinValidation('PIN must be exactly 6 digits');
+      setPinResetDone(false);
+      return;
+    }
+    setPinValidation(null);
+    setPinResetDone(false);
+    resetResetPin();
+    try {
+      await resetPin(member.id, newPin);
+      setNewPin('');
+      setPinResetDone(true);
+    } catch {
+      // resetPinError is surfaced in the UI
+    }
   }
 
   async function handleSubmit() {
@@ -270,6 +301,55 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
               placeholder="e.g. DDS, DMD, RDH"
               className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
             />
+          </div>
+
+          {/* Security — owner-reset PIN (decision #9 / FR9.7). Distinct op from
+              the profile Save above; shared clinic devices use owner-reset only,
+              never a self-service security-question flow. */}
+          <div className="border-t pt-4">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="staff-reset-pin">
+              Reset PIN
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Set a new 6-digit PIN for this member (e.g. after they are locked out or forget it).
+            </p>
+            {pinValidation && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive mb-2">
+                {pinValidation}
+              </div>
+            )}
+            {resetPinError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive mb-2">
+                {resetPinError.message}
+              </div>
+            )}
+            {pinResetDone && (
+              <div data-testid="staff-reset-pin-success" className="rounded-lg bg-green-100 border border-green-300 px-3 py-2 text-sm text-green-800 mb-2">
+                PIN has been reset.
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <input
+                id="staff-reset-pin"
+                data-testid="staff-reset-pin-input"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={newPin}
+                onChange={e => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinResetDone(false); }}
+                placeholder="New 6-digit PIN"
+                className="flex-1 h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
+              />
+              <button
+                type="button"
+                data-testid="staff-reset-pin-btn"
+                onClick={handleResetPin}
+                disabled={isResettingPin}
+                className="h-11 px-4 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
+              >
+                {isResettingPin ? 'Resetting…' : 'Reset PIN'}
+              </button>
+            </div>
           </div>
         </div>
 

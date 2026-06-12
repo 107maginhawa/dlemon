@@ -181,6 +181,50 @@ describe('useStaffMutations — create', () => {
   });
 });
 
+describe('useStaffMutations — resetPin (owner reset for an existing member)', () => {
+  // Decision #9 (AHA): PIN recovery is owner-reset-only. The owner-gated
+  // resetMemberPin handler already exists and is wired into create; this pins a
+  // STANDALONE reset path for an existing member so the "ask your owner to reset
+  // your PIN via Staff settings" promise on the PIN screen is actually honoured.
+  test('calls POST /dental/org/members/{id}/reset-pin with the new PIN', async () => {
+    let capturedUrl = '';
+    let capturedMethod = '';
+    let capturedBody: { newPin?: string } | null = null;
+    global.fetch = mock(async (req: Request | string | URL, opts?: RequestInit) => {
+      capturedUrl = req instanceof Request ? req.url : String(req);
+      capturedMethod = req instanceof Request ? req.method : (opts?.method ?? 'GET');
+      if (opts?.body) capturedBody = JSON.parse(opts.body as string);
+      else if (req instanceof Request) { try { capturedBody = await req.clone().json(); } catch { /* none */ } }
+      return jsonResponse({ success: true });
+    });
+    const qc = freshClient();
+    const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
+    await act(async () => {
+      await result.current.resetPin('m2', '654321');
+    });
+    expect(capturedMethod).toBe('POST');
+    expect(capturedUrl).toContain('/dental/org/members/m2/reset-pin');
+    expect(capturedBody?.newPin).toBe('654321');
+  });
+
+  test('exposes resetPinError when the reset fails', async () => {
+    global.fetch = mock(() =>
+      Promise.resolve(new Response(JSON.stringify({ message: 'forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      })),
+    );
+    const qc = freshClient();
+    const { result } = renderHook(() => useStaffMutations(BRANCH_ID), { wrapper: makeWrapper(qc) });
+    let caught: unknown = null;
+    await act(async () => {
+      try { await result.current.resetPin('m2', '654321'); }
+      catch (e) { caught = e; }
+    });
+    expect(caught).not.toBeNull();
+  });
+});
+
 describe('useStaffMutations — deactivate', () => {
   test('calls DELETE members/{id} on deactivate', async () => {
     let capturedUrl = '';

@@ -33,9 +33,11 @@ const MEMBER: Member = {
 
 const originalFetch = global.fetch;
 let patchCalls: Array<{ url: string; body: any }> = [];
+let resetPinCalls: Array<{ url: string; body: any }> = [];
 
 beforeEach(() => {
   patchCalls = [];
+  resetPinCalls = [];
   global.fetch = (async (input: any, init?: any) => {
     const req = typeof input === 'string' ? null : input;
     const url = req ? req.url : input;
@@ -46,6 +48,13 @@ beforeEach(() => {
       else if (req) { try { body = await req.clone().json(); } catch { /* no body */ } }
       patchCalls.push({ url, body });
       return jsonResponse({ ...MEMBER, ...body, version: 2, updatedAt: '2026-01-02T00:00:00.000Z' });
+    }
+    if (method === 'POST' && url.includes('/reset-pin')) {
+      let body: any = {};
+      if (init?.body) body = JSON.parse(init.body);
+      else if (req) { try { body = await req.clone().json(); } catch { /* no body */ } }
+      resetPinCalls.push({ url, body });
+      return jsonResponse({ success: true });
     }
     return jsonResponse({ data: [] });
   }) as typeof fetch;
@@ -129,5 +138,45 @@ describe('StaffEditModal — save wiring (mutation-call assertions)', () => {
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
     await waitFor(() => expect(screen.getByText(/display name is required/i)).toBeDefined());
     expect(patchCalls.length).toBe(0);
+  });
+});
+
+describe('StaffEditModal — owner reset PIN (decision #9, FR9.7)', () => {
+  // The PIN-entry "Forgot PIN?" message tells staff to ask their owner to reset
+  // the PIN via Staff settings. This is that affordance — owner-reset only; the
+  // backend resetMemberPin handler is owner-gated and already exists.
+  test('renders a Reset PIN section with a 6-digit input and Reset PIN button', () => {
+    renderModal();
+    expect(screen.getByTestId('staff-reset-pin-input')).toBeDefined();
+    expect(screen.getByTestId('staff-reset-pin-btn')).toBeDefined();
+  });
+
+  test('Reset PIN issues POST /dental/org/members/{memberId}/reset-pin with newPin', async () => {
+    renderModal();
+    fireEvent.change(screen.getByTestId('staff-reset-pin-input'), { target: { value: '654321' } });
+    fireEvent.click(screen.getByTestId('staff-reset-pin-btn'));
+
+    await waitFor(() => expect(resetPinCalls.length).toBe(1));
+    expect(resetPinCalls[0].url).toContain(`/dental/org/members/${MEMBER.id}/reset-pin`);
+    expect(resetPinCalls[0].body.newPin).toBe('654321');
+    // A PIN reset must NOT also fire a profile PATCH (distinct operation).
+    expect(patchCalls.length).toBe(0);
+    await waitFor(() => expect(screen.getByText(/pin (has been )?reset/i)).toBeDefined());
+  });
+
+  test('a non-6-digit PIN is blocked client-side (no request)', async () => {
+    renderModal();
+    fireEvent.change(screen.getByTestId('staff-reset-pin-input'), { target: { value: '12' } });
+    fireEvent.click(screen.getByTestId('staff-reset-pin-btn'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(resetPinCalls.length).toBe(0);
+    expect(screen.getByText(/6 digits/i)).toBeDefined();
+  });
+
+  test('the PIN input only accepts digits and caps at 6', () => {
+    renderModal();
+    const input = screen.getByTestId('staff-reset-pin-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '12ab34567' } });
+    expect(input.value).toBe('123456');
   });
 });
