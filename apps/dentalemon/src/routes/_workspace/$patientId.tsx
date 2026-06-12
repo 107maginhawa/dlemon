@@ -25,6 +25,7 @@ import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { TreatmentTable } from '@/features/workspace/components/treatment-table';
+import { CarryOverPrompt } from '@/features/workspace/components/carry-over-prompt';
 import { WorkspaceImagingOverlay } from '@/features/workspace/components/workspace-imaging-overlay';
 import { PerioChartOverlay } from '@/features/workspace/components/perio/perio-chart-overlay';
 import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-bar';
@@ -34,6 +35,7 @@ import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-quer
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
+import { usePreviousVisitDeferred } from '@/features/workspace/hooks/use-previous-visit-deferred';
 import { useConsentTemplates } from '@/features/settings/hooks/use-consent-templates';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
@@ -91,6 +93,8 @@ function WorkspacePage() {
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
+  // FIX-002: carry-over prompt shown at the new-visit entry point (returning patient).
+  const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
 
@@ -132,6 +136,11 @@ function WorkspacePage() {
   const isReadOnly =
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
   const carriedOverItems = treatmentPlan?.treatments.filter((t) => t.carriedOver) ?? [];
+  // FIX-002: deferred (dismissed) treatments from the previous visit, restorable into a
+  // freshly-started visit. The completion gate means a completed prior visit never retains
+  // diagnosed/planned work, so the carry-over path is restore-dismissed (FR1.11). Gates the
+  // prompt so a patient with nothing deferred is never prompted.
+  const { deferredIds: carryOverDeferredIds } = usePreviousVisitDeferred({ visits, currentVisitId });
 
   // ── Year filter ───────────────────────────────────────────────────────────
   const years = [
@@ -206,6 +215,9 @@ function WorkspacePage() {
         // double-toast on failure.
         onSuccess: (visit) => {
           setCurrentVisitId(visit.id);
+          // FIX-002: at the new-visit entry point, offer to carry the patient's prior
+          // pending treatments into this visit. The prompt self-hides when there are none.
+          setCarryOverPromptOpen(true);
         },
       },
     );
@@ -653,6 +665,16 @@ function WorkspacePage() {
         }))}
         open={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
+      />
+
+      {/* FIX-002: carry-over affordance at the new-visit entry point (returning patient) */}
+      <CarryOverPrompt
+        open={carryOverPromptOpen}
+        visitId={currentVisitId}
+        patientId={patientId}
+        branchId={branchId}
+        deferredIds={carryOverDeferredIds}
+        onClose={() => setCarryOverPromptOpen(false)}
       />
     </div>
   );

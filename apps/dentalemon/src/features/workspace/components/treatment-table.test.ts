@@ -287,6 +287,43 @@ describe('TreatmentTable — Phase 3', () => {
     // BR-008: carried-over item must appear in the rendered table
     expect(screen.getByText(/Crown \(PFM\)/i)).not.toBeNull();
   });
+
+  // FIX-002 coherence: once carry-over actually runs, the copied rows live in the
+  // CURRENT visit (so they arrive in `treatments` with carriedOver=true) AND surface
+  // in the plan-derived `carriedOverItems`. The table must render + total each such
+  // row ONCE (carried section only) — never double-display it as a this-visit row or
+  // double-count it in the Grand Total. (Guards the summary-vs-body bug class for the
+  // overlap state the disjoint fixtures above never visit.)
+  test('[FIX-002] a carried-over row present in both treatments and carriedOverItems is counted once', () => {
+    const carried = {
+      id: 't-co-dup',
+      visitId: 'v-current',
+      toothNumber: 36,
+      cdtCode: 'D2710',
+      description: 'CarryDup Crown',
+      status: 'diagnosed' as const,
+      priceCents: 600000,
+      surfaces: null,
+      conditionCode: null,
+      carriedOver: true,
+    };
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-current',
+        // same logical row, as the current visit's treatments list returns it
+        treatments: [{ ...carried, priceAmount: 6000 }],
+        carriedOverItems: [carried],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    // rendered exactly once — in the carried section, NOT also as a this-visit row
+    expect(screen.getAllByText(/CarryDup Crown/).length).toBe(1);
+    expect(screen.queryByTestId('treatment-row-t-co-dup')).toBeNull();
+    // grand total counts it once (6,000), never doubled (12,000)
+    const total = screen.getByTestId('grand-total-row').textContent ?? '';
+    expect(total).toContain('6,000');
+    expect(total).not.toContain('12,000');
+  });
 });
 
 // ── P1-003: useUpdateTreatment onError toast ──────────────────────────────────

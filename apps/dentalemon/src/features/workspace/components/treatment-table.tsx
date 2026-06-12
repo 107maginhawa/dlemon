@@ -92,6 +92,12 @@ export function TreatmentTable({
   const carriedOverItems = selectedTooth == null
     ? carriedOverItemsProp
     : carriedOverItemsProp.filter((i) => i.toothNumber === selectedTooth);
+  // FIX-002 coherence: once carry-over actually runs, the copied rows live in the
+  // CURRENT visit (so they arrive in `treatments` with carriedOver=true) AND surface in
+  // the plan-derived `carriedOverItems`. Drive the main "This Visit" list + subtotal from
+  // the NON-carried rows only, so each carried row is displayed and totalled exactly once
+  // (in the Carried-Over section) — never double-counted in the Grand Total.
+  const nativeTreatments = treatments.filter((t) => !t.carriedOver);
   // WR-01: with no active visit, visitId is '' → inline mutations would hit
   // PATCH /dental/visits//treatments/:id (invalid). Force read-only so no edit,
   // dismiss, price, notes, or mark-done control can fire against an empty visitId.
@@ -139,23 +145,24 @@ export function TreatmentTable({
     setShowCompleted(false);
   }, [visitId]);
 
-  const hasRows = treatments.length > 0 || carriedOverItems.length > 0;
-  const completedCount = treatments.filter(
+  const hasRows = nativeTreatments.length > 0 || carriedOverItems.length > 0;
+  const completedCount = nativeTreatments.filter(
     (t) => t.status === 'performed' || t.status === 'verified',
   ).length;
   // A visit is "pending" if it has any not-yet-done work. When nothing is pending
   // (e.g. a finished/locked historical visit), there are no rows to focus on, so the
   // hide-completed default would leave the table empty under a real money total.
-  const hasPending = treatments.some(
+  const hasPending = nativeTreatments.some(
     (t) => t.status !== 'performed' && t.status !== 'verified',
   );
 
   // TXTBL-01: subtotal computations
   // price contract: priceCents (API) ÷ 100 → dollars (display); t.priceAmount already in dollars
-  // NOTE: this sums ALL treatments, including dismissed/declined-priced ones. Those rows
-  // also render (the filter below only hides performed/verified), so visible rows still
-  // match this total. Whether declined work should be billed is a separate product call.
-  const thisVisitTotal = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
+  // NOTE: this sums ALL native (this-visit, non-carried) treatments, including
+  // dismissed/declined-priced ones. Those rows also render (the filter below only hides
+  // performed/verified), so visible rows still match this total. Carried-over rows are
+  // summed separately below so the Grand Total never counts a carried row twice.
+  const thisVisitTotal = nativeTreatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
   const carriedOverTotal = carriedOverItems.reduce(
     (sum, i) => sum + (i.priceCents / 100), // price contract: priceCents (API) ÷ 100 → dollars (display)
     0,
@@ -167,8 +174,8 @@ export function TreatmentTable({
   // renders an empty body beneath a non-zero Grand Total.
   const effectiveShowCompleted = showCompleted || !hasPending;
   const displayedTreatments = effectiveShowCompleted
-    ? treatments
-    : treatments.filter((t) => t.status !== 'performed' && t.status !== 'verified');
+    ? nativeTreatments
+    : nativeTreatments.filter((t) => t.status !== 'performed' && t.status !== 'verified');
 
   if (!hasRows) {
     return (
@@ -525,7 +532,7 @@ export function TreatmentTable({
           {/* TXTBL-01: dual subtotal rows above grand total */}
           {/* thisVisitTotal is always the grand total of ALL visit treatments (financial total), */}
           {/* regardless of the showCompleted filter — this is intentional for complete billing visibility */}
-          {treatments.length > 0 && (
+          {nativeTreatments.length > 0 && (
             <tr data-testid="subtotal-this-visit-row" className="border-t border-border/40">
               <td colSpan={7} className="px-4 py-1.5 text-right text-xs text-muted-foreground">
                 This Visit (all)
@@ -549,7 +556,7 @@ export function TreatmentTable({
           )}
 
           {/* Grand Total row */}
-          {(treatments.length > 0 || carriedOverItems.length > 0) && (
+          {(nativeTreatments.length > 0 || carriedOverItems.length > 0) && (
             <tr data-testid="grand-total-row" className="border-t-2 border-border font-semibold">
               <td colSpan={7} className="px-4 py-2 text-right text-sm">
                 Grand Total
