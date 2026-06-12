@@ -573,7 +573,7 @@ describe('ImagingMgmt_getImagingStudy wrapper', () => {
 // ---------------------------------------------------------------------------
 
 describe('ImagingMgmt_deleteImage wrapper', () => {
-  test('delegates to deleteImage — dentist can delete, returns 200', async () => {
+  test('delegates to deleteImage — dentist can delete, returns 204', async () => {
     const { ImagingMgmt_deleteImage } = await import('./ImagingMgmt_deleteImage');
     const app = buildApp(ImagingMgmt_deleteImage as any, {
       user: DENTIST_USER,
@@ -582,7 +582,7 @@ describe('ImagingMgmt_deleteImage wrapper', () => {
       path: '/:imageId',
     });
     const res = await app.request(`/${IMAGE_ID}`, { method: 'DELETE' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 
   test('returns 401 when unauthenticated', async () => {

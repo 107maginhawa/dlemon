@@ -281,7 +281,11 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
           </SheetHeader>
           {editingItem && (
             <div className="mt-4">
+              {/* key per image → fresh editor instance: its useState-seeded
+                  modality / confirm-delete / error state can never leak across
+                  images if the editor is ever reused without an unmount. */}
               <ImageMetadataEditor
+                key={editingItem.id}
                 item={editingItem}
                 patientId={patientId}
                 branchId={branchId}

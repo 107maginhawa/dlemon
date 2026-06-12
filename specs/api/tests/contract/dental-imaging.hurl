@@ -786,7 +786,7 @@ jsonpath "$.modality" == "panoramic"
 # 30. Delete imaging image
 DELETE {{api}}/dental/imaging/images/{{image_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP 200
+HTTP 204
 
 
 # 31. Findings auth check → 401 (invalid bearer overrides hurl's stored cookie)

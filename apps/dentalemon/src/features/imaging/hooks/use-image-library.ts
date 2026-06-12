@@ -16,13 +16,17 @@ import {
 } from '@monobase/sdk-ts/generated/react-query'
 import {
   imagingMgmtUpdateImageMetadata,
+  imagingMgmtUpdateImageModality,
+  imagingMgmtDeleteImage,
   imagingMgmtCreateImageLink,
   imagingMgmtDeleteImageLink,
   type DentalImagingModuleUpdateImageMetadataBody,
+  type DentalImagingModuleModalityEnum,
   type DentalImagingModuleImagingLink,
 } from '@monobase/sdk-ts/generated'
 
 export type ImageLinkType = DentalImagingModuleImagingLink['linkType']
+export type ImageModality = DentalImagingModuleModalityEnum
 
 export interface ImageLinkView {
   id: string
@@ -91,6 +95,30 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
     onSettled: () => invalidateList(),
   })
 
+  const updateModality = useMutation({
+    mutationFn: async ({ imageId, modality }: { imageId: string; modality: ImageModality }) => {
+      const { data } = await imagingMgmtUpdateImageModality({
+        path: { imageId },
+        body: { modality },
+        throwOnError: true,
+      })
+      if (!data || 'error' in data) throw new Error('Unexpected error response from updateImageModality')
+      return data
+    },
+    onError: (e) => console.error('[image-library] updateModality', e),
+    onSettled: () => invalidateList(),
+  })
+
+  const deleteImage = useMutation({
+    // Soft-delete (archive). The 200 body is ignored — the list refetch is the
+    // source of truth; the archived image drops out of listPatientImages.
+    mutationFn: async ({ imageId }: { imageId: string }): Promise<void> => {
+      await imagingMgmtDeleteImage({ path: { imageId }, throwOnError: true })
+    },
+    onError: (e) => console.error('[image-library] deleteImage', e),
+    onSettled: () => invalidateList(),
+  })
+
   const createLink = useMutation({
     mutationFn: async ({ imageId, linkType, targetId }: CreateLinkInput): Promise<ImageLinkView> => {
       const { data } = await imagingMgmtCreateImageLink({
@@ -121,9 +149,17 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
 
   return {
     updateMetadata,
+    updateModality,
+    deleteImage,
     createLink,
     deleteLink,
-    mutationError: updateMetadata.error ?? createLink.error ?? deleteLink.error ?? null,
+    mutationError:
+      updateMetadata.error ??
+      updateModality.error ??
+      deleteImage.error ??
+      createLink.error ??
+      deleteLink.error ??
+      null,
   }
 }
 

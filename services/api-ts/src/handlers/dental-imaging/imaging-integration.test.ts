@@ -877,14 +877,12 @@ describe('deleteMeasurement', () => {
 // =============================================================================
 
 describe('deleteImage', () => {
-  test('happy path: dentist soft-deletes any image, returns 200 success', async () => {
+  test('happy path: dentist soft-deletes any image, returns 204', async () => {
     const { studyId, imageId } = await seedStudyWithImage();
     const app = buildTestApp(DENTIST);
     const res = await app.request(`/dental/imaging/images/${imageId}`, { method: 'DELETE' });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
-    expect(body.success).toBe(true);
+    expect(res.status).toBe(204);
 
     // archived → no longer returned by listImagesByStudy (status='active' filter)
     const getRes = await app.request(`/dental/imaging/studies/${studyId}`);
@@ -904,9 +902,7 @@ describe('deleteImage', () => {
     const { imageId } = await seedStudyWithImage({ acquiredBy: ASSOCIATE.id });
     const app = buildTestApp(ASSOCIATE);
     const res = await app.request(`/dental/imaging/images/${imageId}`, { method: 'DELETE' });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
-    expect(body.success).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   test('403 hygienist forbidden (BR-026)', async () => {

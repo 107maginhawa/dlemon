@@ -95,6 +95,79 @@ describe('ImageMetadataEditor — metadata', () => {
   })
 })
 
+describe('ImageMetadataEditor — reclassify modality', () => {
+  test('changing modality and reclassifying PATCHes the modality endpoint', async () => {
+    const calls: Call[] = []
+    global.fetch = trackingFetch(calls)
+    const user = userEvent.setup()
+    render(
+      React.createElement(ImageMetadataEditor, { item: makeItem({ modality: 'periapical' }), ...PROPS }),
+      { wrapper: makeWrapper() },
+    )
+
+    // Reclassify is inert until the modality actually changes.
+    expect((screen.getByTestId('reclassify-modality') as HTMLButtonElement).disabled).toBe(true)
+
+    await user.selectOptions(screen.getByTestId('meta-modality'), 'bitewing')
+    expect((screen.getByTestId('reclassify-modality') as HTMLButtonElement).disabled).toBe(false)
+    await user.click(screen.getByTestId('reclassify-modality'))
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'PATCH' && c.url.includes('/modality'))).toBe(true),
+    )
+    const patch = calls.find((c) => c.method === 'PATCH' && c.url.includes('/modality'))!
+    expect(patch.url).toContain('/dental/imaging/images/img-1/modality')
+    expect(patch.body).toMatchObject({ modality: 'bitewing' })
+  })
+})
+
+describe('ImageMetadataEditor — per-image state isolation (key remount)', () => {
+  test('a fresh key resets the seeded modality (no stale value leaks across images)', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [] }))
+    const user = userEvent.setup()
+    const { rerender } = render(
+      React.createElement(ImageMetadataEditor, { key: 'img-A', item: makeItem({ id: 'img-A', modality: 'periapical' }), ...PROPS }),
+      { wrapper: makeWrapper() },
+    )
+    // Dirty image A's modality WITHOUT saving.
+    await user.selectOptions(screen.getByTestId('meta-modality'), 'bitewing')
+    expect((screen.getByTestId('meta-modality') as HTMLSelectElement).value).toBe('bitewing')
+
+    // Switch to image B via a new key → React remounts → seeded state resets to B's modality.
+    rerender(
+      React.createElement(ImageMetadataEditor, { key: 'img-B', item: makeItem({ id: 'img-B', modality: 'panoramic' }), ...PROPS }),
+    )
+    expect((screen.getByTestId('meta-modality') as HTMLSelectElement).value).toBe('panoramic')
+    // Reclassify is inert again (B unchanged), proving no stale 'bitewing' dirty state carried over.
+    expect((screen.getByTestId('reclassify-modality') as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe('ImageMetadataEditor — delete image', () => {
+  test('delete requires a confirm step, then DELETEs and calls onSaved', async () => {
+    const calls: Call[] = []
+    global.fetch = trackingFetch(calls)
+    const onSaved = mock(() => {})
+    const user = userEvent.setup()
+    render(
+      React.createElement(ImageMetadataEditor, { item: makeItem(), ...PROPS, onSaved }),
+      { wrapper: makeWrapper() },
+    )
+
+    // First click arms the confirm; it must NOT fire the delete yet.
+    await user.click(screen.getByTestId('delete-image'))
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false)
+
+    await user.click(screen.getByTestId('delete-image-confirm'))
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'DELETE')).toBe(true))
+    const del = calls.find((c) => c.method === 'DELETE')!
+    expect(del.url).toContain('/dental/imaging/images/img-1')
+    expect(del.url).not.toContain('/links')
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  })
+})
+
 describe('ImageMetadataEditor — links', () => {
   test('Add is disabled until the target is a valid uuid, then POSTs the link', async () => {
     const calls: Call[] = []

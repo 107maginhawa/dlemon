@@ -24,6 +24,7 @@ import { ZodError } from 'zod';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
 import { createImagingStudy } from './createImagingStudy';
+import { createFinding } from './createFinding';
 import { updateFinding } from './updateFinding';
 import { recomputeCephAnalysis } from './recomputeCephAnalysis';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
@@ -61,6 +62,7 @@ function buildTestApp(user?: { id: string; email: string }) {
     await next();
   });
   app.post('/dental/imaging/studies', createImagingStudy as any);
+  app.post('/dental/imaging/images/:imageId/findings', createFinding as any);
   app.patch('/dental/imaging/findings/:findingId', updateFinding as any);
   app.post('/dental/imaging/images/:imageId/ceph/analysis/recompute', recomputeCephAnalysis as any);
   return app;
@@ -203,6 +205,53 @@ describe('DE-018 ImagingStudyUploaded — audit-row marker on study create', () 
     expect(res.status).toBe(422);
     const rows = await db.select().from(dentalAuditLog)
       .where(and(eq(dentalAuditLog.action, 'imaging_study.create'), eq(dentalAuditLog.branchId, BRANCH_ID)));
+    expect(rows).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V-IMG-006 createFinding — audit-row marker on finding create (FIX-004)
+//
+// DE-019 (below) covers the draft→confirmed transition via updateFinding; this
+// pins the *create* mutation's own audit row (action 'imaging_finding.create'),
+// closing the named-representative gap in the AHA imaging fix plan.
+//
+// §15 NOTE: createCephReport — the other representative named by the plan — does
+// NOT write a dental_audit_log row (it emits a Pino info marker only; it is
+// absent from the logAuditEvent call-site set), so there is no row to assert for
+// it. The mutation audit surface pinned here is the set that actually persists.
+// ---------------------------------------------------------------------------
+
+describe('createFinding — audit-row marker on finding create', () => {
+  test('writes a dental_audit_log row (imaging_finding.create) referencing the new finding', async () => {
+    const app = buildTestApp(DENTIST);
+    const { imageId } = await seedStudyWithImage();
+
+    const res = await app.request(`/dental/imaging/images/${imageId}/findings`, {
+      method: 'POST',
+      ...json({ type: 'caries', toothNumber: 14, surfaces: ['occlusal'] }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+
+    const rows = await auditRows('imaging_finding.create', body.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.targetType).toBe('imaging_finding');
+    expect(rows[0]?.actorId).toBe(DENTIST.id);
+    expect(rows[0]?.branchId).toBe(BRANCH_ID);
+  });
+
+  test('does NOT write an imaging_finding.create row when create fails (image missing)', async () => {
+    const app = buildTestApp(DENTIST);
+    const missingImageId = uuidv4();
+
+    const res = await app.request(`/dental/imaging/images/${missingImageId}/findings`, {
+      method: 'POST',
+      ...json({ type: 'caries', toothNumber: 14, surfaces: ['occlusal'] }),
+    });
+    expect(res.status).toBe(404);
+    const rows = await db.select().from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.action, 'imaging_finding.create'), eq(dentalAuditLog.branchId, BRANCH_ID)));
     expect(rows).toHaveLength(0);
   });
 });

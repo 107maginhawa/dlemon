@@ -126,6 +126,18 @@ ImagingStudy (aggregate root) owns ImagingImage, ImagingAnnotation, ImagingFindi
 CephAnalysis (aggregate root) owns CephLandmark.
 Both reference Patient, Visit by UUID only — no DB FKs (intentional loose coupling pattern).
 
+### Two finding systems are intentional and separate — DO NOT merge
+The platform has **two distinct "finding" tables that must not be unified**:
+
+| | `imaging_finding` (this module) | `dental_finding` (dental-visit) |
+| --- | --- | --- |
+| Schema | `dental-imaging/repos/imaging_finding.schema.ts` | `dental-visit/repos/dental-finding.schema.ts` |
+| Scope | **image-scoped** — anchored to an `imaging_study_image` | **visit-scoped** — anchored to a visit/chart |
+| Purpose | radiographic reads (caries/lesion seen *on an X-ray*) | clinical charting condition vocabulary (a condition observed *in the mouth* → proposed treatment) |
+| Lifecycle | SM-01 FSM `draft → confirmed → resolved` (§8) | condition→treatment derivation (charting, migration 0100) |
+
+They model **different clinical acts at different anchors** and deliberately do not share a row, a status machine, or a foreign key. A radiograph finding may *inform* a chart condition, but the two are recorded independently. Future contributors must **not** "deduplicate" them into one table: doing so would collapse the image-evidence audit trail (SM-01 confirm/resolve on a specific X-ray) into the visit chart and break both this module's finding FSM and dental-visit's condition→treatment flow.
+
 ---
 
 ## 8. State Transitions
@@ -156,6 +168,7 @@ not a standalone `ceph-analyses` resource). Canonical routes:
 - `GET|POST /dental/imaging/images/:imageId/ceph/landmarks` (batch upsert), `PATCH|DELETE .../ceph/landmarks/:code`
 - `GET /dental/imaging/images/:imageId/ceph/analysis`, `POST .../ceph/analysis/recompute`
 - `GET|POST /dental/imaging/images/:imageId/ceph/reports`
+- Library admin (G5 / AHA Batch B FIX-003): `PATCH /dental/imaging/images/:imageId/metadata` (diagnostic flag / quality / tags), `PATCH /dental/imaging/images/:imageId/modality` (reclassify a mis-captured image), `DELETE /dental/imaging/images/:imageId` (soft-delete/archive → **204 No Content**, consistent with the module's other delete ops). All three are wired into the per-image editor (`ImageMetadataEditor`); modality + delete are owner/associate-gated (BR-026/BR-027) on the backend.
 
 ---
 

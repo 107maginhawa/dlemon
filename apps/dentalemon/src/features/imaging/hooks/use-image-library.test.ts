@@ -116,6 +116,57 @@ describe('useImageLibrary — deleteLink', () => {
   })
 })
 
+describe('useImageLibrary — updateModality', () => {
+  test('PATCHes the modality endpoint with the new modality', async () => {
+    const calls: { url: string; method: string; body: unknown }[] = []
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      calls.push({ url: reqUrl(req), method: reqMethod(req, init), body: await reqBody(req, init) })
+      return jsonResponse({ id: 'img-1', studyId: 's1', modality: 'bitewing', status: 'active' })
+    })
+
+    const qc = freshClientWithMutations()
+    const { result } = renderHook(
+      () => useImageLibrary({ patientId: 'p1', branchId: 'b1' }),
+      { wrapper: makeWrapper(qc) },
+    )
+
+    await act(async () => {
+      await result.current.updateModality.mutateAsync({ imageId: 'img-1', modality: 'bitewing' })
+    })
+
+    const patch = calls.find((c) => c.method === 'PATCH')
+    expect(patch).toBeDefined()
+    expect(patch!.url).toContain('/dental/imaging/images/img-1/modality')
+    expect(patch!.body).toMatchObject({ modality: 'bitewing' })
+  })
+})
+
+describe('useImageLibrary — deleteImage', () => {
+  test('DELETEs the image endpoint by imageId', async () => {
+    const calls: { url: string; method: string }[] = []
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      calls.push({ url: reqUrl(req), method: reqMethod(req, init) })
+      // 204 No Content — matches the real handler (see deleteImage.ts).
+      return new Response(null, { status: 204 })
+    })
+
+    const qc = freshClientWithMutations()
+    const { result } = renderHook(
+      () => useImageLibrary({ patientId: 'p1', branchId: 'b1' }),
+      { wrapper: makeWrapper(qc) },
+    )
+
+    await act(async () => {
+      await result.current.deleteImage.mutateAsync({ imageId: 'img-1' })
+    })
+
+    const del = calls.find((c) => c.method === 'DELETE')
+    expect(del).toBeDefined()
+    expect(del!.url).toContain('/dental/imaging/images/img-1')
+    expect(del!.url).not.toContain('/links')
+  })
+})
+
 describe('useImageLinks — query', () => {
   test('returns links for an image', async () => {
     global.fetch = mock(() =>

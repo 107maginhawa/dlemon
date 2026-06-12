@@ -69,10 +69,10 @@ async function uploadDemoImage(fileId: string, mimeType: string): Promise<void> 
 // CEPH_EXPECTED in _journey-helpers → B02/B04). U1A/L1A apices are left unplaced
 // (not visible without expert annotation) so the panel shows them as "missing".
 // Throws on failure.
-async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string): Promise<string> {
+async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string, filename = 'torres-miguel-ceph-lateral.jpg'): Promise<string> {
   const studyR = await post('/dental/imaging/studies', {
     patientId, ...(visitId ? { visitId } : {}), branchId,
-    modality: 'cephalometric', filename: 'torres-miguel-ceph-lateral.jpg',
+    modality: 'cephalometric', filename,
     mimeType: 'image/jpeg', size: 2048000,
   }, cookie)
   if (!studyR.ok) throw new Error(`ceph study POST → ${studyR.status}: ${JSON.stringify(studyR.data).slice(0, 160)}`)
@@ -1570,6 +1570,21 @@ async function seed() {
     } catch (e: any) {
       log(`  ⚠ CBCT seed skipped: ${String(e?.message).slice(0, 100)}`)
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // FIX-005 (AHA imaging Batch B): a SECOND ceph-viewable patient.
+  // Until now Miguel Torres (P6) was the only patient with a cephalometric
+  // chain, leaving the comparison / multi-patient ceph flows (B0x journeys)
+  // data-starved. Angela Reyes (P19) was always intended as the second ceph
+  // patient (see patientDefs comment) but never got the chain. Visit-independent
+  // (visitId null) so the completion cascade can't block it; non-fatal if storage
+  // is down (the study/landmark/report rows still seed; only the image bytes,
+  // which need MinIO, are skipped). Additive — touches no existing patient.
+  if (P[19]) {
+    log(`\n── ${P[19].displayName}`)
+    try { await seedCephChain(P[19].id, branch.id, null, cookie, 'reyes-angela-ceph-lateral.jpg') }
+    catch (e: any) { log(`  ⚠ P19 ceph skipped: ${String(e?.message).slice(0, 140)}`) }
   }
 
   // 8.6 Longitudinal multi-visit patients: seeded in seed-supplement.ts (Section 4)
