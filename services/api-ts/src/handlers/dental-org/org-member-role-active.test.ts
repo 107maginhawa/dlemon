@@ -14,16 +14,18 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { ZodError } from 'zod';
-import { Hono } from 'hono';
-import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalOrganizations } from './repos/organization.schema';
 import { dentalBranches } from './repos/branch.schema';
 import { dentalMemberships } from './repos/membership.schema';
-import { getMemberRole as getMemberRoleSettings, updateBranchSettings } from './branchSettings';
+import { getMemberRole as getMemberRoleSettings } from './branchSettings';
 import { getMemberRole as getMemberRoleConsent } from './consentTemplates';
-import { getOrgContext } from './getOrgContext';
+
+// EF-ORG-P022 / P020 handler tests now drive requests through the shared
+// validator-mounting harness (the real generated route table: authMiddleware →
+// zValidator → handler) instead of a bespoke raw mount, so they exercise the
+// same chain production runs. Migrated off the raw-handler pattern (Track 4).
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -112,27 +114,6 @@ describe('EF-ORG-P020: getMemberRole returns role only for active members', () =
 // EF-ORG-P022 — getOrgContext skips inactive branches
 // ---------------------------------------------------------------------------
 
-function buildOrgContextApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof ZodError) return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-  app.get('/dental/org/context', getOrgContext);
-  return app;
-}
-
 describe('EF-ORG-P022: getOrgContext skips inactive branches', () => {
   test('selects the active branch, not the inactive one', async () => {
     await db.insert(dentalOrganizations).values({
@@ -156,7 +137,7 @@ describe('EF-ORG-P022: getOrgContext skips inactive branches', () => {
       },
     ]).onConflictDoNothing();
 
-    const app = buildOrgContextApp(OWNER_USER);
+    const app = buildTestApp({ db, user: OWNER_USER });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -177,7 +158,7 @@ describe('EF-ORG-P022: getOrgContext skips inactive branches', () => {
       createdBy: OWNER_USER.id, updatedBy: OWNER_USER.id,
     }).onConflictDoNothing();
 
-    const app = buildOrgContextApp(OWNER_USER);
+    const app = buildTestApp({ db, user: OWNER_USER });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -194,27 +175,10 @@ describe('EF-ORG-P022: getOrgContext skips inactive branches', () => {
 // ---------------------------------------------------------------------------
 
 describe('EF-ORG-P020: revoked owner cannot update branch settings', () => {
-  function buildSettingsApp(user?: { id: string; email: string }) {
-    const app = new Hono();
-    app.onError((err, c) => {
-      if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-      if (err instanceof ZodError) return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
-      return c.json({ error: String(err.message) }, 500);
-    });
-    app.use('*', async (c, next) => {
-      const ctx = c as any;
-      ctx.set('database', db);
-      if (user) ctx.set('user', user);
-      await next();
-    });
-    app.put('/dental/branches/:branchId/settings', updateBranchSettings);
-    return app;
-  }
-
   test('revoked dentist_owner is denied (403) when updating settings', async () => {
     await seedOrgBranch();
     await seedMember('revoked');
-    const app = buildSettingsApp(OWNER_USER);
+    const app = buildTestApp({ db, user: OWNER_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -226,7 +190,7 @@ describe('EF-ORG-P020: revoked owner cannot update branch settings', () => {
   test('active dentist_owner can update settings (200)', async () => {
     await seedOrgBranch();
     await seedMember('active');
-    const app = buildSettingsApp(OWNER_USER);
+    const app = buildTestApp({ db, user: OWNER_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
