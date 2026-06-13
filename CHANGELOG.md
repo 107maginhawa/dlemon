@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+The tagged entries below track released versions. Substantial product work
+has landed since `0.2.0.0` (2026-05-18) on feature branches; it is recorded in
+the git history and merged PRs rather than per-commit here, and the next
+version bump will consolidate it. For interim changes see `git log
+v0.2.0.0..HEAD` and the PR list; for tracked debt see
+[docs/KNOWN_LIMITATIONS.md](./docs/KNOWN_LIMITATIONS.md).
+
 ## [0.2.0.0] - 2026-05-18
 
 ### Added
