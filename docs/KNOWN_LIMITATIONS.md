@@ -16,24 +16,36 @@ are tracked here so a new developer is not surprised. Last reviewed: 2026-06-13.
 
 ## Frontend spec-drift TODOs (2 remaining)
 
-Three of the original four were closed 2026-06-13 by modeling the fields the handlers
-already return (commit *"fix(api): model invoice/prescription/treatment-plan fields…"*):
-prescription `warnings` (rx-sheet), invoice-list `patientName`/`visitDate` (use-invoices),
-and the `acceptTreatmentPlan` `branchId` query (use-treatment-plan) — each FE workaround
-was dropped. Two remain, each deferred for a concrete reason:
+Three of the four FE workarounds were removed 2026-06-13 by modeling the fields the
+handlers already return (commit *"fix(api): model invoice/prescription/treatment-plan
+fields…"*): prescription `warnings` (rx-sheet), invoice-list `patientName`/`visitDate`
+(use-invoices), and the `acceptTreatmentPlan` `branchId` query (use-treatment-plan).
+Two items remain, each deferred for a concrete reason:
 
-- `apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts:47` —
-  `lineItems`/`payments` on the invoice **detail** response. (`patientName`/`visitDate`/
-  `outstandingCents` are now inherited from `DentalInvoice`.) Modeling `lineItems`/`payments`
-  would pull `payments.createdAt` under the SDK date transformer — a real `string`→`Date`
-  runtime shift for the detail sheet — and the dental `method` union is wider than the
-  generated `PaymentMethod`. Needs a slice that also updates the detail-sheet rendering.
+- `apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts` —
+  `outstandingCents`/`lineItems`/`payments` on the invoice **detail** response.
+  (`patientName`/`visitDate` are now inherited from the base `DentalInvoice`.) Modeling
+  `lineItems`/`payments` would pull `payments.createdAt` under the SDK date transformer —
+  a real `string`→`Date` runtime shift for the detail sheet — and the dental `method`
+  union is wider than the generated `PaymentMethod`; `outstandingCents` aliases
+  `balanceCents` (V-BIL-012). Needs a slice that also updates the detail-sheet rendering.
   The FE keeps a single narrowing `as` (no `as unknown as`).
-- `apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts` — `getTreatmentPlan`
-  is modeled as `TreatmentPlanResponse`, but the handler returns the richer
-  `TreatmentPlanData` (a `byTooth` map, `completedToothNumbers`, phase/priority), so the
-  queryFn keeps an `as … TreatmentPlanData` cast. Modeling that enriched read-aggregate
-  (incl. a `Record`-shaped `byTooth`) is a separate slice.
+- `apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts` — `getTreatmentPlan`'s
+  generated `TreatmentPlanResponse` and the FE `TreatmentPlanData` interface now carry the
+  same fields (`byTooth`, `completedToothNumbers`, phase/priority) but disagree on **shape**:
+  the SDK marks `byTooth`/`treatmentCount` optional and requires a `version` the FE omits,
+  while the FE marks some fields required that the SDK leaves optional. The queryFn keeps an
+  `as any as TreatmentPlanData` cast (eslint-disabled) until the FE interface and the spec
+  are reconciled — a separate slice. (Note: that `as any as` cast is NOT caught by the GAP-D
+  ESLint rule, which targets `as unknown as` only.)
+
+## Performance
+
+- **`listDentalInvoices` N+1**: `services/api-ts/src/handlers/dental-billing/listDentalInvoices.ts`
+  resolves `patientName` + `visitDate` per row (two facade calls each, inside `Promise.all`)
+  — 2 round-trips per invoice. Correct, but O(n) DB calls; at scale, batch the patient-name
+  and visit-date lookups by invoice id into two queries. (Pre-existing; surfaced when the
+  enrichment fields were modeled in the contract, 2026-06-13.)
 
 ## Logging hygiene
 

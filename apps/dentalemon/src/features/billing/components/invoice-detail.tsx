@@ -97,8 +97,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
   // ---------------------------------------------------------------------------
   // GET invoice — replaces the manual useEffect+setState fetch
-  // The SDK DentalInvoice type does not yet include lineItems/payments/patientName/
-  // visitDate (backend enrichments not in spec). We cast via `select` and convert
+  // The SDK DentalInvoice type carries patientName/visitDate (modeled 2026-06-13) but
+  // still not lineItems/payments (backend enrichments not in spec). We cast via `select` and convert
   // Date fields back to strings (the SDK transformer converts dueDate/issuedAt to
   // Date objects; InvoiceData consumers expect strings, per the pre-migration contract).
   // Same pattern as use-visits.ts.

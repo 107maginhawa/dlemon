@@ -351,6 +351,10 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{invoice_id}}"
 jsonpath "$.lineItems" count == 2
+# Read-side enrichment (modeled on DentalInvoice 2026-06-13): the detail response
+# joins the patient display name. Asserting it guards the enrichment join against a
+# silent regression (the field is optional in the spec, so a broken join would 200).
+jsonpath "$.patientName" isString
 
 
 # NEW: G2-S4 — payment plan installment structure verification
