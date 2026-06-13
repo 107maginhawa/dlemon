@@ -39,7 +39,7 @@ workspace.
   Note: `@monobase/api-spec` (consumed by SDK + apps for generated OpenAPI types) lives at `specs/api/`, not under `packages/`.
 - `scripts/run-contract-tests.ts` - Runs the Hurl contract suite against `$API_URL`
 - `.github/workflows/contract.yml` - CI: boots the impl, runs Hurl + Schemathesis
-- `.claude/skills/` - 17 Claude Code skills for end-to-end development workflow (commit, db-migrate, debug, dev-api, dev-app, develop, frontend-module, handler, module-review, prd, pre-commit, shadcn, test-api, test-contract, test-e2e, typecheck, typespec). Surface as `/skill-name` in Claude Code sessions.
+- `.claude/skills/` - Claude Code skills for the end-to-end development workflow (handler, typespec, test-api, test-contract, test-e2e, db-migrate, module-review, commit, pre-commit, …). Surface as `/skill-name` in Claude Code sessions; see the directory for the full set.
 
 ## Business Domain Modules
 
@@ -110,10 +110,10 @@ The canonical API reference is at: `specs/api/dist/openapi/openapi.json`
 
 ## Frontend Development
 
-Three frontend workspaces exist; their roles are distinct:
+Four frontend workspaces exist; their roles are distinct:
 
 ### `apps/dentalemon/` — Primary application (work here)
-- **Port**: 3001
+- **Port**: 3003
 - **Routing**: TanStack Router, file-based in `src/routes/`
 - **Auth**: Better-Auth with TanStack integration
 - **Data Fetching**: TanStack Query via `@monobase/sdk-ts` hooks
@@ -130,6 +130,12 @@ Three frontend workspaces exist; their roles are distinct:
 ### `apps/sample-workspace/` — Prototype sandbox (do not ship from)
 - UI prototypes and design explorations only
 - Code here is not production-ready; migrate proven patterns to `apps/dentalemon/`
+
+### `apps/website/` — Marketing site (separate from the product)
+- **Port**: 3004
+- Standalone **Next.js** site for marketing/landing pages — not part of the
+  Vite/TanStack product apps and shares no code with them except (optionally)
+  brand assets. Linked into the workspace separately.
 
 **Standards**: See [docs/development/CONTRIBUTING_FRONTEND.md](./docs/development/CONTRIBUTING_FRONTEND.md)
 
@@ -201,7 +207,7 @@ cd apps/account && bun run test:e2e     # E2E tests
 - ✅ **packages/sdk-ts/** - Auto-generated TanStack Query hooks + hand-written client/flows/utils
 - ✅ **packages/eslint-config/** - Shared ESLint flat configs
 - ✅ **specs/api/tests/contract/** - Hurl contract suite (22 scenarios, ~5s)
-- ✅ **.claude/skills/** - 16 Claude Code skills (curated for the post-merge structure)
+- ✅ **.claude/skills/** - Claude Code dev-workflow skills (see the directory for the full set)
 - ✅ **Authentication** via Better-Auth (integrated, not a separate module)
 - ✅ **Consent** as JSONB fields on Person model (not a separate module)
 - ✅ **9 API handler modules** (person, booking, billing, audit, notifs, comms, storage, email, reviews)
@@ -211,10 +217,11 @@ cd apps/account && bun run test:e2e     # E2E tests
   (e.g., `apps/admin`, `services/api-ts/src/handlers/tenant/`) on top of the base.
 
 ### Known In-Progress Areas
-- `apps/account/src-tauri/src/sync.rs` wires the cadence imports but the
-  `SyncEngine`/`SqliteBackend` integration in `init`/`start` is still a
-  stub (see `TODO` comments). `cargo check` is green; runtime sync is
-  not yet activated end-to-end.
+- Offline P2P sync (cadence) is wired into the account Tauri wrapper at
+  `apps/account/src-tauri/src/cadence_embed.rs` — `init`/`start` construct the
+  `SqliteBackend` metadata store and the `SyncEngine` (the earlier `sync.rs`
+  stub is gone). `cargo check` is green; treat end-to-end runtime sync as not
+  yet fully exercised until validated against a live peer.
 
 ### Working with Cadence (Rust)
 - Cadence lives at `services/cadence/` and is a Cargo crate independent of

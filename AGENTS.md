@@ -55,13 +55,14 @@ Before marking any module complete:
 - [ ] Type check clean (`bun run typecheck`)
 - [ ] No regressions in other modules
 
-## App Roles (Three Frontend Workspaces)
+## App Roles (Four Frontend Workspaces)
 
 | App | Role | Port |
 |-----|------|------|
-| `apps/dentalemon/` | **Primary** — build all features here | 3001 |
+| `apps/dentalemon/` | **Primary** — build all features here | 3003 |
 | `apps/account/` | Upstream-template reference — do not add features | 3002 |
 | `apps/sample-workspace/` | Prototype sandbox — do not ship from here | — |
+| `apps/website/` | Marketing site (standalone Next.js) | 3004 |
 
 Unless explicitly told otherwise, all frontend work targets `apps/dentalemon/`.
 

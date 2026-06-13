@@ -89,13 +89,14 @@ notificationRepo.createNotificationForModule({
 
 ### Frontend App Roles
 
-The monorepo contains three frontend workspaces with distinct, non-overlapping roles:
+The monorepo contains four frontend workspaces with distinct, non-overlapping roles:
 
 | App | Port | Role | Status |
 |-----|------|------|--------|
-| `apps/dentalemon/` | 3001 | **Production app** — all product features live here | Active |
+| `apps/dentalemon/` | 3003 | **Production app** — all product features live here | Active |
 | `apps/account/` | 3002 | **Upstream-template reference** — frozen at merge; pull auth/account patterns from here, do not add product features | Frozen (Phase 8) |
 | `apps/sample-workspace/` | — | **Prototype sandbox** — UI explorations and proof-of-concepts only; code is not production-ready. Migrate proven patterns to `apps/dentalemon/` before shipping. Do not commit feature work here. | Sandbox only |
+| `apps/website/` | 3004 | **Marketing site** — standalone Next.js site, separate from the Vite/TanStack product apps | Active |
 
 **Rule**: Feature development happens exclusively in `apps/dentalemon/`. `apps/account/` and `apps/sample-workspace/` are read-only references for their respective purposes.
 
