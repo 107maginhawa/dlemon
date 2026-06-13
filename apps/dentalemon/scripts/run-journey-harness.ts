@@ -3,7 +3,7 @@ import { computeExitCode } from './journey-harness-exit-code'
 /**
  * Journey Harness Runner — Phase 3.
  *
- * Drives the 14 UI-only clinical journey specs and emits a machine-readable
+ * Drives the clinical journey specs (the EXPECTED roster below) and emits a machine-readable
  * verdict report (`apps/dentalemon/journey-results.json`).
  *
  * What it does:
@@ -62,6 +62,10 @@ const EXPECTED: Record<
   J09: { name: 'Treatment-plan versioning', set: 'A', expected: 'PASS', rubricIds: ['Q34', 'Q35'] },
   J10: { name: 'Void / amend a signed entry', set: 'A', expected: 'PASS', rubricIds: ['Q36', 'Q37', 'Q38', 'Q39'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
+  J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
+  J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
+  J18: { name: 'New clinic owner self-onboards via the setup wizard', set: 'A', expected: 'PASS', rubricIds: ['WF-ORG-001'] },
+  J20: { name: 'Imported external PMD merges its safety floor into the patient record', set: 'A', expected: 'PASS', rubricIds: ['FR12.5', 'BR-022'] },
   // B01/B02 PASS where a ceph image is seeded (local, MinIO present). In CI there
   // is no MinIO → no seeded ceph image → these journeys record SKIPPED (honest
   // environment skip, tolerated by the gate), not a fake BROKEN.
@@ -69,6 +73,9 @@ const EXPECTED: Record<
   B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'PASS', rubricIds: ['CIMG-003'] },
   B03: { name: 'Locked landmark immutability', set: 'B', expected: 'PASS', rubricIds: ['CIMG-004'] },
   B04: { name: 'Report gate + immutable versioned snapshot', set: 'B', expected: 'PASS', rubricIds: ['CIMG-006', 'CIMG-008'] },
+  // J15 is Set B (sync-log lifecycle). It needs a seeded branch + a P10+ patient
+  // but not MinIO; with the demo seed present it runs to PASS.
+  J15: { name: 'Offline sync metadata — sync-log lifecycle + server-default syncStatus', set: 'B', expected: 'PASS', rubricIds: ['LF-BR-001', 'LF-BR-002', 'LF-BR-003', 'LF-BR-004'] },
 }
 
 interface JourneyResult {

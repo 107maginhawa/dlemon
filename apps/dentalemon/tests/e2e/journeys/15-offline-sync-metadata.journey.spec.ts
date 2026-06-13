@@ -16,6 +16,7 @@ import {
   expect,
   type JourneyMeta,
   recordJourneyError,
+  recordJourneyPass,
   readOrgContext,
   readPatientIdByName,
   API,
@@ -145,6 +146,10 @@ test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
     }
     const visitBody = await visitResp.json()
     expect(visitBody.syncStatus, 'server-created visit syncStatus defaults to synced').toBe('synced')
+
+    // Emit the per-journey PASS record so the harness can gate this journey
+    // (J15 previously ran but never recorded a verdict, so it could not be gated).
+    recordJourneyPass(META)
   } catch (err) {
     recordJourneyError(META, err)
     throw err

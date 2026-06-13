@@ -277,7 +277,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
 
-      - name: Run journey harness (14 specs, no-reseed — data already seeded)
+      - name: Run journey harness (20 gated journeys, no-reseed — data already seeded)
         # Exit code: 0 = all PASS-expected journeys returned PASS and no specs crashed.
         # Exit 1 = any PASS-expected journey returned BROKEN/ERROR (regression), OR any spec crashed.
         # BROKEN-expected journeys returning BROKEN are always OK (no regression).
