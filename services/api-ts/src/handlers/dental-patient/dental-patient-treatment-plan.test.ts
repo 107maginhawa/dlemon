@@ -13,8 +13,13 @@
  * AC-010  404 for non-existent patient
  * AC-011  404 for non-existent planId
  * AC-012  400 for missing providerId on create
- * BR-001  Only one 'draft' plan per patient allowed (409 on duplicate)
  * BR-002  totalEstimateCents must be non-negative
+ *
+ * NOTE (TRACEABILITY 2026-06-08): an earlier header listed "BR-001 — only one
+ * 'draft' plan per patient (409 on duplicate)". That rule is NOT implemented
+ * (no guard in createTreatmentPlan.ts, no unique partial index) and was never
+ * tested — the line was an aspirational over-claim and has been removed to keep
+ * this header honest. If the constraint is wanted, build it as a real slice.
  */
 
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
@@ -41,6 +46,15 @@ const ORG_ID = 'c0000000-0000-1000-8000-000000000033';
 const PATIENT_ID = 'd0000000-0000-1000-8000-000000000033';
 const PERSON_ID = 'e0000000-0000-1000-8000-000000000033';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
+
+// I1/I2 authz fixtures:
+// - SCHEDULER_USER: active member of the patient's branch, non-presenter role.
+// - OUTSIDER_USER:  authenticated user with NO membership in the patient's branch
+//                   (a different org entirely) — proves the cross-tenant floor.
+const SCHEDULER_USER = { id: 'a3000000-0000-1000-8000-000000000033', email: 'sched@clinic.com' };
+const OUTSIDER_USER = { id: 'a9000000-0000-1000-8000-000000000099', email: 'outsider@other.org' };
+const OTHER_ORG_ID = 'c9000000-0000-1000-8000-000000000099';
+const OTHER_BRANCH_ID = 'b9000000-0000-1000-8000-000000000099';
 
 const ve = (result: any, c: any) => {
   if (!result.success) {
@@ -72,6 +86,33 @@ beforeAll(async () => {
     branchId: BRANCH_ID, personId: TEST_USER.id,
     displayName: 'Dentist', role: 'dentist_owner', status: 'active',
     pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // I2(a): non-presenter member of the patient's branch.
+  await db.insert(dentalMemberships).values({
+    id: 'a3100000-0000-1000-8000-000000000033',
+    branchId: BRANCH_ID, personId: SCHEDULER_USER.id,
+    displayName: 'Scheduler', role: 'staff_scheduling', status: 'active',
+    pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // I2(b): a separate org/branch with its own member — NOT a member of the
+  // patient's branch, proving the cross-tenant access floor.
+  await db.insert(dentalOrganizations).values({
+    id: OTHER_ORG_ID, name: 'Other Clinic', tier: 'solo',
+    ownerPersonId: OUTSIDER_USER.id, countryCode: 'PH',
+    createdBy: OUTSIDER_USER.id, updatedBy: OUTSIDER_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: OTHER_BRANCH_ID, organizationId: OTHER_ORG_ID,
+    name: 'Other Branch', timezone: 'Asia/Manila',
+    createdBy: OUTSIDER_USER.id, updatedBy: OUTSIDER_USER.id,
+  }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({
+    id: 'a9100000-0000-1000-8000-000000000099',
+    branchId: OTHER_BRANCH_ID, personId: OUTSIDER_USER.id,
+    displayName: 'Outsider Owner', role: 'dentist_owner', status: 'active',
+    pinFailedAttempts: 0, createdBy: OUTSIDER_USER.id, updatedBy: OUTSIDER_USER.id,
   }).onConflictDoNothing();
 
   await db.insert(persons).values({
@@ -128,6 +169,12 @@ function buildTestApp(user?: typeof TEST_USER) {
 
 async function truncatePlans() {
   const { dentalTreatmentPlans } = await import('./repos/treatment-plan.schema');
+  const { dentalTreatments } = await import('../dental-visit/repos/treatment.schema');
+  const { dentalVisits } = await import('../dental-visit/repos/visit.schema');
+  // Order matters loosely (treatmentPlanId is a soft ref, not an FK): clear items
+  // and visits seeded by the FIX-006 derive tests before the plan rows.
+  await db.delete(dentalTreatments).where(eq(dentalTreatments.patientId, PATIENT_ID));
+  await db.delete(dentalVisits).where(eq(dentalVisits.patientId, PATIENT_ID));
   await db.delete(dentalTreatmentPlans).where(eq(dentalTreatmentPlans.patientId, PATIENT_ID));
 }
 
@@ -366,6 +413,71 @@ describe('TreatmentPlan FSM (AC-003..AC-008)', () => {
 });
 
 // =============================================================================
+// I1/I2: branch-access floor + presented-transition role gate (authz)
+// =============================================================================
+
+describe('updateTreatmentPlan authz (I1/I2)', () => {
+  async function createOwnerPlan() {
+    const ownerApp = buildTestApp(TEST_USER);
+    const res = await ownerApp.request(`/dental/patients/${PATIENT_ID}/treatment-plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId: TEST_USER.id, totalEstimateCents: 10000 }),
+    });
+    return (await res.json()) as any;
+  }
+
+  function patch(user: typeof TEST_USER | undefined, planId: string, body: object) {
+    const app = buildTestApp(user);
+    return app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${planId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  // I2(a): a member of the patient's branch but with a non-presenter role may not
+  // present the plan to the patient.
+  test('I2(a): non-presenter (staff_scheduling) PATCH {status:presented} → 403', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(SCHEDULER_USER, plan.id, { status: 'presented' });
+    expect(res.status).toBe(403);
+    // assertBranchRole (presented-only role gate) → generic FORBIDDEN, distinct
+    // from the BRANCH_ACCESS_DENIED the membership floor throws for non-members.
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('FORBIDDEN');
+  });
+
+  // A non-presenter member CAN still perform a non-presented mutation (e.g. notes) —
+  // the role gate is presented-only; the floor only requires branch membership.
+  test('non-presenter member can still PATCH notes (branch member, non-presented) → 200', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(SCHEDULER_USER, plan.id, { notes: 'scheduler note' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.notes).toBe('scheduler note');
+  });
+
+  // I2(b): the cross-tenant floor — a user from a DIFFERENT org (no membership in
+  // the patient's branch) cannot PATCH any field, even a non-status one.
+  test('I2(b): non-member (different org) PATCH {notes} → 403', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(OUTSIDER_USER, plan.id, { notes: 'cross-tenant edit' });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('BRANCH_ACCESS_DENIED');
+  });
+
+  test('I2(b): non-member (different org) PATCH {status:approved} → 403', async () => {
+    const plan = await createOwnerPlan();
+    const res = await patch(OUTSIDER_USER, plan.id, { status: 'approved' });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('BRANCH_ACCESS_DENIED');
+  });
+});
+
+// =============================================================================
 // AC-009..AC-011: Auth + 404
 // =============================================================================
 
@@ -398,5 +510,138 @@ describe('Auth + 404 (AC-009..AC-011)', () => {
       body: JSON.stringify({ status: 'presented' }),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+// =============================================================================
+// FIX-006 (GAP-12 / TP-BR-006): plan total derives from Σ linked item prices.
+//
+// The stored header `totalEstimateCents` is a denormalized aggregate. The
+// authoritative case money everywhere else (case-presentation grandTotalCents,
+// the dental-visit getTreatmentPlan total, the billing invoice subtotal) is
+// DERIVED from item `priceCents`. A caller-supplied header total can silently
+// drift from the item sum. The decided fix (long-term/standards: single source
+// of truth) is to RECOMPUTE the header total from the linked items at the same
+// choke-point that recomputes plan status — never to trust a client-maintained
+// money aggregate. While a plan is itemless (draft ballpark), the manual
+// estimate stands; the moment items attach, the total derives.
+// =============================================================================
+
+const VISIT_ID = 'aa000000-0000-1000-8000-000000000033';
+const MEMBER_ID = 'a1000000-0000-1000-8000-000000000033'; // TEST_USER's membership
+
+async function seedLinkedTreatments(
+  planId: string,
+  prices: number[],
+  status: 'diagnosed' | 'planned' = 'diagnosed',
+) {
+  const { dentalVisits } = await import('../dental-visit/repos/visit.schema');
+  const { dentalTreatments } = await import('../dental-visit/repos/treatment.schema');
+  await db.insert(dentalVisits).values({
+    id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+  for (const priceCents of prices) {
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: VISIT_ID, patientId: PATIENT_ID,
+      cdtCode: 'D2740', description: 'Crown', status, priceCents,
+      treatmentPlanId: planId,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+  }
+}
+
+describe('FIX-006: plan total derives from Σ linked item prices (TP-BR-006)', () => {
+  async function createPlan(app: Hono, totalEstimateCents = 10000) {
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId: TEST_USER.id, totalEstimateCents }),
+    });
+    return (await res.json()) as any;
+  }
+
+  // The drift point: a PATCH on a plan WITH linked items must reflect the item
+  // sum, not whatever total the caller created the plan with.
+  test('PATCH on a plan with linked items recomputes total to Σ item prices', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 10000); // manual ballpark at draft
+
+    // 30000 + 120000 = 150000 of linked clinical items.
+    await seedLinkedTreatments(plan.id, [30000, 120000]);
+
+    // Any mutation flows through the recompute choke-point.
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: 'reviewed' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.totalEstimateCents).toBe(150000);
+  });
+
+  // A caller cannot override the derived total once items exist — the server owns
+  // the money (TP-BR-006). The supplied 999 is ignored in favour of Σ items.
+  test('caller-supplied total is overridden by Σ items when items exist', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 10000);
+    await seedLinkedTreatments(plan.id, [45000, 55000]); // 100000
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totalEstimateCents: 999 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.totalEstimateCents).toBe(100000);
+  });
+
+  // Draft/itemless plan keeps its manual estimate — the forward ballpark a
+  // dentist enters before charting procedures (preserves AC-001 semantics).
+  test('itemless plan preserves the caller estimate (no items → no derive)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 7500);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totalEstimateCents: 8200 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.totalEstimateCents).toBe(8200);
+  });
+
+  // End-to-end through the present transition: linkPendingTreatments attaches the
+  // patient's pending items, and the header total derives to match.
+  test('draft → presented links pending items and derives the total', async () => {
+    const app = buildTestApp(TEST_USER);
+    const plan = await createPlan(app, 10000);
+    // Pending (diagnosed), unlinked — linkPendingTreatments claims these at present.
+    const { dentalVisits } = await import('../dental-visit/repos/visit.schema');
+    const { dentalTreatments } = await import('../dental-visit/repos/treatment.schema');
+    await db.insert(dentalVisits).values({
+      id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID,
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+    for (const priceCents of [20000, 80000]) { // 100000
+      await db.insert(dentalTreatments).values({
+        id: crypto.randomUUID(), visitId: VISIT_ID, patientId: PATIENT_ID,
+        cdtCode: 'D2740', description: 'Crown', status: 'diagnosed', priceCents,
+        createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+      });
+    }
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'presented' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.status).toBe('presented');
+    expect(body.totalEstimateCents).toBe(100000);
   });
 });

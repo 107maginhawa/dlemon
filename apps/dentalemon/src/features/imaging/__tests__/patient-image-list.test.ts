@@ -130,6 +130,22 @@ describe('PatientImageList', () => {
     expect(cbox.checked).toBe(false);
   });
 
+  test('G5 Edit button opens the metadata/links editor for the row', async () => {
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req);
+      if (url.includes('/links')) return jsonResponse({ items: [] });
+      return jsonResponse({ items: [makeItem('img-1')], total: 1 });
+    });
+    const user = userEvent.setup();
+    render(React.createElement(PatientImageList, DEFAULT_PROPS), { wrapper: makeWrapper() });
+    await waitFor(() => expect(screen.getByTestId('edit-image-img-1')).not.toBeNull());
+
+    expect(screen.queryByTestId('image-metadata-editor')).toBeNull();
+    await user.click(screen.getByTestId('edit-image-img-1'));
+    await waitFor(() => expect(screen.getByTestId('image-metadata-editor')).not.toBeNull());
+    expect(screen.getByTestId('meta-save')).not.toBeNull();
+  });
+
   test('compare button click calls onCompare with two selected items', async () => {
     global.fetch = mock(() => jsonResponse({
       items: [makeItem('x'), makeItem('y')],

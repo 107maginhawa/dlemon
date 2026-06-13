@@ -44,6 +44,27 @@ export async function getTreatmentStatusesByPlan(
     .where(eq(dentalTreatments.treatmentPlanId, planId)) as Promise<Array<{ status: string }>>;
 }
 
+/**
+ * TP-BR-006: price cents of every treatment linked to a plan, patient-scoped.
+ * Drives the plan's denormalized `totalEstimateCents` derivation (the item set is
+ * the single source of truth for case money — same set `grandTotalCents` sums).
+ */
+export async function getTreatmentPriceCentsByPlan(
+  db: DatabaseInstance,
+  planId: string,
+  patientId: string,
+): Promise<Array<{ priceCents: number }>> {
+  return db
+    .select({ priceCents: dentalTreatments.priceCents })
+    .from(dentalTreatments)
+    .where(
+      and(
+        eq(dentalTreatments.treatmentPlanId, planId),
+        eq(dentalTreatments.patientId, patientId),
+      ),
+    ) as Promise<Array<{ priceCents: number }>>;
+}
+
 /** Set (or clear, when appointmentId is null) a treatment's loose appointment ref. Patient-scoped. */
 export async function setTreatmentAppointment(
   db: DatabaseInstance,

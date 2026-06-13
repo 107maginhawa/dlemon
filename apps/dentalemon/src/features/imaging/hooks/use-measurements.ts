@@ -14,6 +14,7 @@ import {
   imagingMgmtDeleteMeasurement,
   type DentalImagingModuleImagingAnnotation,
   type DentalImagingModuleCreateMeasurementBody,
+  type DentalImagingModuleMeasurementListResponse,
 } from '@monobase/sdk-ts/generated'
 
 // View-model: preserve string-dated shape consumers already depend on.
@@ -84,18 +85,25 @@ export function useMeasurements(imageId: string) {
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey })
-      const previous = queryClient.getQueryData<ImagingAnnotation[]>(queryKey)
-      const tempItem: ImagingAnnotation = {
+      // The query cache holds the raw SDK response { items: [...] } (the `select`
+      // above reads `data.items`). Optimistic updates MUST preserve that shape —
+      // treating it as a bare array makes the spread throw on a non-iterable object.
+      const previous = queryClient.getQueryData<DentalImagingModuleMeasurementListResponse>(queryKey)
+      const tempItem = {
         id: `temp-${Date.now()}`,
         imageId,
-        type: input.type,
-        geometry: input.geometry,
+        type: input.type as DentalImagingModuleImagingAnnotation['type'],
+        geometry: (input.geometry ?? {}) as { [key: string]: unknown },
         measurementValue: input.measurementValue ?? null,
         measurementUnit: input.measurementUnit ?? null,
+        toothNumber: null,
         visible: true,
-        createdAt: new Date().toISOString(),
-      }
-      queryClient.setQueryData<ImagingAnnotation[]>(queryKey, (old) => [...(old ?? []), tempItem])
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } satisfies DentalImagingModuleImagingAnnotation
+      queryClient.setQueryData<DentalImagingModuleMeasurementListResponse>(queryKey, (old) => ({
+        items: [...(old?.items ?? []), tempItem],
+      }))
       return { previous }
     },
     onError: (_err, _input, context) => {
@@ -117,9 +125,10 @@ export function useMeasurements(imageId: string) {
     },
     onMutate: async (measurementId) => {
       await queryClient.cancelQueries({ queryKey })
-      const previous = queryClient.getQueryData<ImagingAnnotation[]>(queryKey)
-      queryClient.setQueryData<ImagingAnnotation[]>(queryKey, (old) =>
-        (old ?? []).filter((m) => m.id !== measurementId),
+      // Same { items: [...] } cache shape as createMeasurement — filter inside it.
+      const previous = queryClient.getQueryData<DentalImagingModuleMeasurementListResponse>(queryKey)
+      queryClient.setQueryData<DentalImagingModuleMeasurementListResponse>(queryKey, (old) =>
+        old ? { items: old.items.filter((m) => m.id !== measurementId) } : old,
       )
       return { previous }
     },

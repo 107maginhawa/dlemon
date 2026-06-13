@@ -251,4 +251,25 @@
 
   /* Remove shadows & rounded corners for print */
   .shadow, .shadow-sm, .shadow-md { box-shadow: none !important; }
+
+  /*
+   * Shared print primitive isolation (AHA FIX-008).
+   * The rules above are a hide-LIST (only known chrome is hidden), which lets a
+   * host's surrounding markup — e.g. a parent modal backdrop/body the receipt is
+   * rendered inside — bleed onto the page. When a <PrintableDocument> (which
+   * carries .print-document) is mounted, switch to region ISOLATION: hide
+   * everything and re-show only the document. Scoped via :has(.print-document)
+   * so it has ZERO effect on existing prints that don't use the primitive
+   * (and degrades safely to the hide-list behaviour where :has is unsupported).
+   */
+  body:has(.print-document) * { visibility: hidden; }
+  body:has(.print-document) .print-document,
+  body:has(.print-document) .print-document * { visibility: visible; }
+  body:has(.print-document) .print-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 auto;
+  }
 }

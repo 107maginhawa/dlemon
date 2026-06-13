@@ -62,6 +62,22 @@ jsonpath "$.needsFollowUp" == false
 jsonpath "$.person" isCollection
 
 
+# 1b. BR-015 / AC-PAT-001 — registration consent is required (single-consent
+# model V-PAT-004). Omitting/falsifying consentGiven → 422 CONSENT_REQUIRED, not 201.
+# Pins the FE↔BE error contract surfaced by the registration modal.
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "No Consent {{suffix}}",
+  "consentGiven": false,
+  "branchId": "{{branch_id}}"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "CONSENT_REQUIRED"
+
+
 # 2. List dental patients
 GET {{api}}/dental/patients?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
@@ -106,6 +122,83 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.needsFollowUp" == true
+
+
+# 5a. FR2.4: correct a registration typo in demographics (name/DOB/gender).
+# These live on the linked PERSON record; the response surfaces the updated
+# declared subset + displayName. contactInfo is absent here (none set) — it is
+# exposed only when present (#14, tested in 5d below).
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "firstName": "Mariana",
+  "lastName": "Reyes",
+  "dateOfBirth": "1991-05-01",
+  "gender": "female"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.person.firstName" == "Mariana"
+jsonpath "$.person.lastName" == "Reyes"
+jsonpath "$.person.dateOfBirth" == "1991-05-01"
+jsonpath "$.person.gender" == "female"
+jsonpath "$.displayName" == "Mariana Reyes"
+# V-PAT-014: the PATCH response must NOT leak person PII (contactInfo / address)
+# or raw DB-row internals (actor UUIDs, version). Declared subset only.
+jsonpath "$.person.contactInfo" not exists
+jsonpath "$.person.primaryAddress" not exists
+jsonpath "$.version" not exists
+jsonpath "$.createdBy" not exists
+jsonpath "$.updatedBy" not exists
+
+
+# 5b. Persisted across a fresh read (edit-save-reload).
+GET {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.person.firstName" == "Mariana"
+jsonpath "$.displayName" == "Mariana Reyes"
+
+
+# 5d. #14 (V-PAT-014): contact info (phone/email) edit — exposed + persisted.
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "contactInfo": { "email": "mariana@clinic.test", "phone": "+639170000123" }
+}
+HTTP 200
+[Asserts]
+jsonpath "$.person.contactInfo.email" == "mariana@clinic.test"
+jsonpath "$.person.contactInfo.phone" == "+639170000123"
+
+# 5e. Persisted contact info surfaces on a fresh read; partial edit keeps email.
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "contactInfo": { "phone": "+639170000999" }
+}
+HTTP 200
+
+GET {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.person.contactInfo.email" == "mariana@clinic.test"
+jsonpath "$.person.contactInfo.phone" == "+639170000999"
+
+
+# 5c. Demographics validation: an invalid gender is rejected.
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "gender": "banana"
+}
+HTTP 400
 
 
 # 6. List patients with needsFollowUp filter
@@ -167,12 +260,16 @@ jsonpath "$.payments" isCollection
 
 
 # 11. Export patients as JSON
+# Response key is `patients` (ExportDentalPatientsResponse) — not `data`.
+# The FE useExportPatients reads `data.patients`, and each row carries a derived
+# `displayName` for the CSV name column.
 GET {{api}}/dental/patients/export?format=json&branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
-jsonpath "$.total" >= 0
+jsonpath "$.patients" isCollection
+jsonpath "$.patients[0].displayName" isString
+jsonpath "$.total" >= 1
 jsonpath "$.exportedAt" isString
 
 
@@ -199,6 +296,20 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "archived"
+
+
+# 13b. BR-015b / AC-PAT-002 — an archived patient record is read-only. A write
+# (PATCH demographics) against the now-archived patient → 403 PATIENT_ARCHIVED.
+# Pins the read-only guard at the wire layer (backend unit covers it; contract did not).
+PATCH {{api}}/dental/patients/{{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "needsFollowUp": true
+}
+HTTP 403
+[Asserts]
+jsonpath "$.code" == "PATIENT_ARCHIVED"
 
 
 # 14. Restore archived patient
@@ -322,9 +433,12 @@ HTTP 401
 
 
 # G2.5-S6 — get treatment plan: a new patient has an empty v0 plan (branchId required)
+# CHART-XV: response carries cumulative completedToothNumbers for the chart's Completed layer.
 GET {{api}}/dental/patients/{{patient_id}}/treatment-plan?branchId={{branch_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+[Asserts]
+jsonpath "$.completedToothNumbers" isCollection
 
 
 # G2.5-S6 — accept the treatment plan → creates version 1 (branchId required)

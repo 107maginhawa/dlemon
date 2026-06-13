@@ -65,7 +65,7 @@ Required spec artifacts:
 - Role permission matrix — `docs/product/ROLE_PERMISSION_MATRIX.md` or Role/Permission section in MASTER_PRD.md
 
 Optional:
-- `docs/product/MASTER_PRD.md` — cross-module rules
+- `docs/prd/v3-dentalemon.md` — canonical PRD, cross-module rules (companions: `docs/prd/BUSINESS_RULES.md`, `docs/prd/ACCEPTANCE_CRITERIA.md`)
 - `docs/execution/VERTICAL_SLICE_PLAN.md` — slice completion status
 - `ARCHITECTURE.md` — pattern expectations
 </context>

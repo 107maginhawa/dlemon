@@ -325,6 +325,11 @@ export function useCephLandmarks(imageId: string) {
   // landmark set, which seeds the caches so AI points render immediately. Tier/flag
   // gating surfaces as a thrown error (reuses isAddonError / FEATURE_DISABLED).
   const autoDetect = useMutation<CephDetectionResult, Error, void>({
+    // Fail fast on a permanent gate (no addon tier / flag off). normalizeThrown
+    // collapses the SdkError into a plain Error, so the shared shouldRetry policy
+    // can't see the 4xx and would otherwise retry this user-initiated action 3× with
+    // backoff — a ~5s+ "Detecting…" spinner before the tier/flag error appears.
+    retry: false,
     mutationFn: async (): Promise<CephDetectionResult> => {
       try {
         const { data } = await cephMgmtDetectCephLandmarks({

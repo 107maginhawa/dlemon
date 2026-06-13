@@ -12,11 +12,12 @@ import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { getBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { computeCephAnalysis } from '@monobase/ceph-math';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ImagingCephRepository } from './repos/imaging_ceph.repo';
+import { isCephDraftRole, isCephSignoffRole } from './repos/imaging_ceph.schema';
 
 type LandmarkInput = {
   landmarkCode: string;
@@ -62,10 +63,25 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
   const study = await imagingRepo.findStudyById(image.studyId);
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
-  try {
-    await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
-  } catch {
+  // G4-B sign-off split: DRAFT roles (incl. dental_assistant) may place/edit
+  // landmarks; non-members/non-clinical roles → 404 (anti-enumeration). An
+  // assistant (draft-but-not-signoff) may NOT write 'confirmed'/'locked' — that
+  // is the clinician's sign-off (403, explicit because they ARE a member).
+  const role = await getBranchRole(db, user.id, study.branchId);
+  if (!isCephDraftRole(role)) {
     throw new NotFoundError('Image not found');
+  }
+  if (!isCephSignoffRole(role)) {
+    const finalizeAttempt = (body.landmarks ?? []).find(
+      (lm) => lm.status === 'confirmed' || lm.status === 'locked',
+    );
+    if (finalizeAttempt) {
+      throw new ForbiddenError(
+        `Landmark '${finalizeAttempt.landmarkCode}' cannot be set to '${finalizeAttempt.status}'. ` +
+          `Assistants may prepare drafts ('placed') only; a dentist must confirm or lock.`,
+        'ASSISTANT_CANNOT_FINALIZE',
+      );
+    }
   }
 
   const imagingTier = await getImagingTierForBranch(db, study.branchId);
@@ -90,6 +106,7 @@ export async function batchUpsertCephLandmarks(ctx: BaseContext): Promise<Respon
       confidence: lm.confidence,
       status: lm.status as 'placed' | 'confirmed' | 'locked' | undefined,
     })),
+    user.id,
   );
 
   const allLandmarks = await cephRepo.listByImage(imageId);

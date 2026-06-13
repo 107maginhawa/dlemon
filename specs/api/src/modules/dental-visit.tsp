@@ -29,6 +29,18 @@ enum DentalVisitStatus {
   active,
   completed,
   locked,
+  // Abandoned before completion (BR-005 auto-discard of empty visits, and the
+  // owner-initiated "Discard visit" escape hatch). The DB + FSM already produce
+  // this state — declaring it here makes the wire type honest.
+  discarded,
+}
+
+// E3: visit type scopes which roles may create/own/sign a visit.
+//   general → dentist-led (owner/associate only); the default for all rows
+//   hygiene → hygienist-led recall/prophy/perio (hygienist may create/check-in/sign)
+enum DentalVisitType {
+  general,
+  hygiene,
 }
 
 enum DentalTreatmentStatus {
@@ -91,6 +103,7 @@ enum ChartEntryClassification {
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
   dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
   status: DentalVisitStatus.active,
+  visitType: DentalVisitType.general,
   activatedAt: utcDateTime.fromISO("2026-03-15T09:05:00Z"),
   chiefComplaint: "Tooth sensitivity on lower left molar",
 }, #{ title: "Active dental visit" })
@@ -103,6 +116,9 @@ model DentalVisit {
   branchId: UUID;
   dentistMemberId: UUID;
   status: DentalVisitStatus;
+
+  /** E3: 'general' (dentist-led, default) or 'hygiene' (hygienist-led). */
+  visitType: DentalVisitType;
   activatedAt?: utcDateTime;
   completedAt?: utcDateTime;
   lockedAt?: utcDateTime;
@@ -114,6 +130,12 @@ model CreateDentalVisitRequest {
   branchId: UUID;
   dentistMemberId: UUID;
   chiefComplaint?: string;
+
+  /**
+   * E3: 'general' (default, dentist-led) or 'hygiene' (hygienist-led recall/prophy/perio).
+   * A hygienist may only create a 'hygiene'-typed visit; 'general' stays owner/associate-only.
+   */
+  visitType?: DentalVisitType;
 
   /** GAP-001: optional client-generated id for offline-first idempotent sync */
   localId?: string;
@@ -132,6 +154,13 @@ model ToothChartState {
   note?: string;
   surfaceConditionMap?: Record<string>;
   entryClassification?: ChartEntryClassification;
+
+  /**
+   * SL-02 / F-G03: monotonic per-tooth logical clock for offline-first
+   * last-write-wins merge. Higher clock wins; a lower incoming clock is a stale
+   * offline write and is rejected by the server merge. Omit for online writes.
+   */
+  clock?: int32;
 }
 
 model DentalChart {
@@ -160,6 +189,178 @@ model UpdateToothRequest {
   note?: string;
   surfaceConditionMap?: Record<string>;
   entryClassification?: ChartEntryClassification;
+}
+
+// ---------------------------------------------------------------------------
+// P0-A: Offline conflict visibility & resolution
+//
+// The server already rejects stale offline chart writes (clock-aware baseline
+// merge) and persists the loser to dental_chart.conflictPayload with
+// syncStatus='conflict' — but nothing could read or resolve them, so dropped
+// clinical edits accumulated invisibly. These ops surface and resolve them.
+// ---------------------------------------------------------------------------
+
+/** How a clinician resolves an open chart sync conflict. */
+enum ChartConflictResolution {
+  /** The rejected (offline) write becomes the truth — re-applied as a NEW change
+   *  with a NEW (higher) clock. Never mutates history. */
+  accept,
+  /** Keep the current value; discard the rejected offline write. Requires a reason. */
+  dismiss,
+}
+
+/** A durable record of one chart write rejected as a stale offline edit. */
+model ChartConflict {
+  chartId: UUID;
+  visitId: UUID;
+  patientId: UUID;
+  /** Machine reason the write was rejected (e.g. 'stale_clock_rejected'). */
+  reason: string;
+  /** The tooth states that lost the clock comparison and were not applied. */
+  rejectedTeeth: ToothChartState[];
+  /** When the conflict was recorded (chart updatedAt). */
+  detectedAt: utcDateTime;
+}
+
+model ResolveChartConflictRequest {
+  resolution: ChartConflictResolution;
+  /**
+   * Required when resolution = dismiss (5–500 chars): why the offline edit was
+   * discarded. Ignored for 'accept'.
+   */
+  @minLength(5)
+  @maxLength(500)
+  reason?: string;
+}
+
+// ---------------------------------------------------------------------------
+// P0-B: Structured chart export
+//
+// A structured (not screenshot) snapshot of a visit's chart: patient/provider/
+// date header, the odontogram tooth/surface table with derived layers, a legend,
+// and a treatment-plan summary (proposed/completed/declined). Mirrors exportPMD.
+// ---------------------------------------------------------------------------
+
+model ChartExportTooth {
+  toothNumber: int32;
+  state: string;
+  /** Derived display layer: baseline | proposed | completed | declined | unset. */
+  layer: string;
+  surfaces?: string[];
+  conditionCode?: string;
+  entryClassification?: ChartEntryClassification;
+  note?: string;
+}
+
+model ChartExportTreatment {
+  toothNumber?: int32;
+  cdtCode: string;
+  description: string;
+  surfaces?: string[];
+  status: DentalTreatmentStatus;
+  priceCents: int32;
+}
+
+model ChartExportLegendEntry {
+  key: string;
+  label: string;
+}
+
+model ChartExportSummary {
+  proposedCount: int32;
+  completedCount: int32;
+  declinedCount: int32;
+  /** Sum of priceCents of the proposed (diagnosed/planned) treatments. */
+  totalProposedCents: int32;
+}
+
+model ChartExport {
+  patientId: UUID;
+  patientName: string;
+  patientDateOfBirth?: string;
+  visitId: UUID;
+  visitDate: utcDateTime;
+  visitStatus: DentalVisitStatus;
+  providerMemberId?: UUID;
+  providerName?: string;
+  branchId: UUID;
+  branchName?: string;
+  /** Canonical tooth notation of the export — always FDI. */
+  notation: string;
+  generatedAt: utcDateTime;
+  teeth: ChartExportTooth[];
+  treatments: ChartExportTreatment[];
+  summary: ChartExportSummary;
+  legend: ChartExportLegendEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// P0-C: Condition-vocabulary enrichment + finding → treatment
+//
+// `state` stays the high-level visual layer on the odontogram. A curated
+// findings vocabulary lets common diagnoses be recorded as structured findings
+// (tooth- or surface-level) instead of collapsing into a generic note, and a
+// finding can be converted into a treatment. Inactive (resolved) findings stop
+// rendering as active.
+// ---------------------------------------------------------------------------
+
+/** Curated v1 clinical findings vocabulary. `other` requires a note. */
+enum ConditionCode {
+  caries,
+  abscess,
+  calculus,
+  gingival_recession,
+  impacted_unerupted,
+  retained_root,
+  sensitive_dentin,
+  fracture_crack,
+  wear_erosion,
+  developmental_anomaly,
+  other,
+}
+
+enum FindingStatus {
+  active,
+  resolved,
+}
+
+model DentalFinding {
+  id: UUID;
+  createdAt: utcDateTime;
+  updatedAt: utcDateTime;
+  visitId: UUID;
+  patientId: UUID;
+  toothNumber: int32;
+  surface?: ToothSurfaceCode;
+  conditionCode: ConditionCode;
+  note?: string;
+  status: FindingStatus;
+  /** Set when the finding has been converted to / linked with a treatment. */
+  linkedTreatmentId?: UUID;
+}
+
+model CreateFindingRequest {
+  toothNumber: int32;
+  surface?: ToothSurfaceCode;
+  conditionCode: ConditionCode;
+  /** Required when conditionCode = other (free-text diagnosis). */
+  note?: string;
+  /** GAP-001: optional client-generated id for offline-first idempotent sync. */
+  localId?: string;
+}
+
+model UpdateFindingRequest {
+  conditionCode?: ConditionCode;
+  surface?: ToothSurfaceCode;
+  note?: string;
+  status?: FindingStatus;
+}
+
+model ConvertFindingToTreatmentRequest {
+  cdtCode: string;
+  description: string;
+  /** Optional — defaults from the branch fee schedule when omitted. */
+  priceCents?: int32;
 }
 
 @example(#{
@@ -218,7 +419,12 @@ model CreateDentalTreatmentRequest {
   cdtCode: string;
   description: string;
   conditionCode?: string;
-  priceCents: int32;
+  /**
+   * Price in cents. Optional: when omitted, the server defaults it from the
+   * branch fee schedule (per-branch override, else catalog default) — closes
+   * AC-ORG-002 / dental-org G2. An explicit value always wins.
+   */
+  priceCents?: int32;
   clinicalNotes?: string;
 
   /** P1-18: clinical sequencing phase */
@@ -310,45 +516,106 @@ model ToothHistoryEntry {
   treatmentPriceCents?: int32;
 }
 
+/** A single treatment item inside a treatment template (FR1.8). */
+model TemplateTreatmentItem {
+  cdtCode: string;
+  description: string;
+  priceCents: int32;
+  toothNumber?: int32;
+  surfaces?: string[];
+}
+
 model TreatmentTemplate {
   id: UUID;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
+  branchId: UUID;
   name: string;
   description?: string;
-  treatments: string;
+  /** Reusable treatment items applied to a visit in one action. */
+  items: TemplateTreatmentItem[];
+  active: boolean;
 }
 
 model CreateTreatmentTemplateRequest {
   name: string;
+  branchId: UUID;
   description?: string;
-  treatments: string;
+  items: TemplateTreatmentItem[];
 }
 
 model UpdateTreatmentTemplateRequest {
   name?: string;
   description?: string;
-  treatments?: string;
+  items?: TemplateTreatmentItem[];
+  /** Activate/deactivate the template (handler accepts it; DELETE only sets false). */
+  active?: boolean;
 }
 
+model ListTreatmentTemplatesResponse {
+  templates: TreatmentTemplate[];
+}
+
+/** Real shape: the created treatment rows + their count (NOT { applied: int, visitId }). */
 model ApplyTemplateResponse {
-  applied: int32;
-  visitId: UUID;
+  applied: DentalTreatment[];
+  count: int32;
 }
 
 model CarryOverTreatmentsRequest {
+  /** Source visit to copy unperformed treatments from; auto-discovers recent prior visits when omitted. */
   sourceVisitId?: UUID;
+
+  /** FR1.11: dismissed treatment ids to restore (as `planned`) into the current visit. */
+  restoreDismissedIds?: UUID[];
 }
 
+/** Real shape: the carried + restored treatment rows + a human message (NOT { carried: int }). */
 model CarryOverTreatmentsResponse {
-  carried: int32;
+  carriedOver: DentalTreatment[];
+  restoredDismissed: DentalTreatment[];
+  message: string;
 }
 
+/** One pending (diagnosed/planned/declined) treatment in the patient treatment-plan aggregate. */
+model TreatmentPlanItem {
+  id: UUID;
+  toothNumber?: int32;
+  cdtCode: string;
+  description: string;
+  surfaces?: ToothSurfaceCode[];
+  priceCents: int32;
+  status: DentalTreatmentStatus;
+  conditionCode?: string;
+  visitId: UUID;
+
+  /** Optional: present on the flat `treatments[]` projection; the `byTooth`
+   *  grouping omits it (and `toothNumber`), so it is optional on the shared item. */
+  carriedOver?: boolean;
+  phase?: DentalTreatmentPhase;
+  priority: int32;
+  reason?: string;
+}
+
+/** Patient treatment-plan aggregate across all visits (getTreatmentPlan). */
 model TreatmentPlanResponse {
   patientId: UUID;
-  visits: string;
-  treatments: string;
-  acceptedPlanVersionId?: UUID;
+  version: int32;
+  totalEstimateCents: int32;
+
+  /** Count of pending treatments; omitted on the empty-plan response. */
+  treatmentCount?: int32;
+  toothCount: int32;
+
+  /** Pending treatments grouped by FDI tooth number (and "general"); omitted on the empty-plan response. */
+  byTooth?: Record<TreatmentPlanItem[]>;
+
+  treatments: TreatmentPlanItem[];
+
+  /** CHART-XV: FDI tooth numbers with a performed/verified treatment across ALL
+   *  the patient's visits. Drives the odontogram's cumulative Completed layer
+   *  (living document) rather than a per-visit completed view. */
+  completedToothNumbers?: int32[];
 }
 
 model TreatmentPlanVersion {
@@ -405,6 +672,14 @@ model PatientConditionEntry {
 // ---------------------------------------------------------------------------
 
 namespace DentalVisitModule {
+  @doc("Body to discard (abandon) an open visit. Reason required (5–500 chars); audited.")
+  model DiscardVisitRequest {
+    @doc("Why the visit is being abandoned (e.g. 'patient left', 'created in error').")
+    @minLength(5)
+    @maxLength(500)
+    reason: string;
+  }
+
   interface DentalVisitManagement {
     @post
     @useAuth(bearerAuth)
@@ -451,6 +726,19 @@ namespace DentalVisitModule {
       | ApiBadRequestResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
+
+    @post
+    @route("/{visitId}/discard")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("discardVisit")
+    discardVisit(
+      @path visitId: UUID,
+      @body body: DiscardVisitRequest
+    ): ApiOkResponse<DentalVisit>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 
   interface DentalChartManagement {
@@ -487,6 +775,102 @@ namespace DentalVisitModule {
       @path toothNumber: int32,
       @body body: UpdateToothRequest
     ): ApiOkResponse<DentalChart>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-A: list open (unresolved) chart sync conflicts for a patient across visits.")
+    @get
+    @route("/chart-conflicts/{patientId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listChartConflicts")
+    listChartConflicts(
+      @path patientId: UUID
+    ): ApiOkResponse<ChartConflict[]>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-A: resolve a visit chart's open sync conflict. 'accept' re-applies the rejected write with a NEW clock; 'dismiss' (reason required) discards it. Never mutates history.")
+    @post
+    @route("/{visitId}/chart/resolve-conflict")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("resolveChartConflict")
+    resolveChartConflict(
+      @path visitId: UUID,
+      @body body: ResolveChartConflictRequest
+    ): ApiOkResponse<DentalChart>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-B: structured (not screenshot) chart export for a visit — header (patient/provider/date), odontogram tooth/surface table with derived layers, legend, and proposed/completed/declined treatment summary.")
+    @get
+    @route("/{visitId}/chart/export")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("exportDentalChart")
+    exportDentalChart(
+      @path visitId: UUID
+    ): ApiOkResponse<ChartExport>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+  }
+
+  interface DentalFindingManagement {
+    @doc("P0-C: record a structured clinical finding (curated vocabulary) on a tooth/surface.")
+    @post
+    @route("/{visitId}/findings")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createDentalFinding")
+    createFinding(
+      @path visitId: UUID,
+      @body body: CreateFindingRequest
+    ): ApiCreatedResponse<DentalFinding>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-C: list findings for a visit (active + resolved).")
+    @get
+    @route("/{visitId}/findings")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listDentalFindings")
+    listFindings(
+      @path visitId: UUID
+    ): ApiOkResponse<PaginatedResponse<DentalFinding>>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-C: edit a finding or resolve it (status='resolved' → stops rendering as active).")
+    @patch(#{implicitOptionality: true})
+    @route("/{visitId}/findings/{findingId}")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("updateDentalFinding")
+    updateFinding(
+      @path visitId: UUID,
+      @path findingId: UUID,
+      @body body: UpdateFindingRequest
+    ): ApiOkResponse<DentalFinding>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @doc("P0-C: convert a finding into a treatment (carries tooth/surface) and link them.")
+    @post
+    @route("/{visitId}/findings/{findingId}/treatment")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("convertFindingToTreatment")
+    convertFindingToTreatment(
+      @path visitId: UUID,
+      @path findingId: UUID,
+      @body body: ConvertFindingToTreatmentRequest
+    ): ApiCreatedResponse<DentalTreatment>
       | ApiBadRequestResponse
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
@@ -612,7 +996,10 @@ namespace DentalVisitModule {
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     @operationId("listTreatmentTemplates")
-    listTreatmentTemplates(): ApiOkResponse<TreatmentTemplate[]>
+    listTreatmentTemplates(
+      @query branchId: UUID
+    ): ApiOkResponse<ListTreatmentTemplatesResponse>
+      | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
     @post
@@ -659,7 +1046,7 @@ namespace DentalVisitModule {
     applyTemplate(
       @path visitId: UUID,
       @path templateId: UUID
-    ): ApiOkResponse<ApplyTemplateResponse>
+    ): ApiCreatedResponse<ApplyTemplateResponse>
       | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
@@ -685,7 +1072,10 @@ namespace DentalVisitModule {
     @extension("x-security-required-roles", #["user"])
     @operationId("getTreatmentPlan")
     getTreatmentPlan(
-      @path patientId: UUID
+      @path patientId: UUID,
+
+      @doc("Branch context — required by the handler (contract field; auth is via patient-branch access).")
+      @query branchId: UUID
     ): ApiOkResponse<TreatmentPlanResponse>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
@@ -697,6 +1087,9 @@ namespace DentalVisitModule {
     @operationId("acceptTreatmentPlan")
     acceptTreatmentPlan(
       @path patientId: UUID,
+
+      @doc("Branch context — required by the handler (contract field; auth is via patient-branch access).")
+      @query branchId: UUID,
       @body body: AcceptTreatmentPlanRequest
     ): ApiCreatedResponse<TreatmentPlanVersion>
       | ApiBadRequestResponse

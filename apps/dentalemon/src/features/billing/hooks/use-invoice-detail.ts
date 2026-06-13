@@ -39,17 +39,17 @@ export interface InvoicePayment {
 }
 
 // Cause-fix recipe (QA_ESCAPES §6): intersect the generated SDK `DentalInvoice`
-// instead of re-declaring an independent interface + `as unknown as` cast. tsc
-// now checks every SDK-modeled field (cents/status/invoiceNumber drift) against
-// the real backend type; the enrichments below are explicit because they are NOT
-// in the OpenAPI spec/SDK (the response also carries `outstandingCents` —
-// V-BIL-012 — aliasing `balanceCents`).
-// TODO(spec): add outstandingCents/patientName/visitDate/lineItems/payments to
-// the invoice-detail response schema, regenerate the SDK, then drop this intersection.
+// instead of re-declaring an independent interface + `as unknown as` cast. tsc now
+// checks every SDK-modeled field against the real backend type. `patientName` and
+// `visitDate` are now on the base `DentalInvoice` (modeled 2026-06-13), so they are
+// dropped from this intersection; the enrichments below are still NOT in the spec.
+// TODO(spec): add `outstandingCents` (V-BIL-012, aliases `balanceCents`) + `lineItems`
+// + `payments` to the invoice-detail response, regen, then drop this intersection.
+// Deferred because modeling the payment/lineItem timestamps would pull them under the
+// SDK date transformer (a `string`→`Date` shift) and the dental `method` union is
+// wider than the generated `PaymentMethod`.
 export type InvoiceDetail = DentalInvoice & {
   outstandingCents?: number;
-  patientName?: string;
-  visitDate?: string;
   lineItems: InvoiceLineItem[];
   payments: InvoicePayment[];
 };

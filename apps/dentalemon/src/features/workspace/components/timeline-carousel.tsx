@@ -31,7 +31,7 @@ import { ChartCompareOverlay } from '@/features/workspace/components/chart-compa
 
 export interface VisitCard {
   id: string;
-  status: 'draft' | 'active' | 'completed' | 'locked';
+  status: 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
   createdAt: string;
   chiefComplaint?: string;
   activatedAt?: string;
@@ -44,14 +44,26 @@ export interface TimelineCarouselProps {
   currentVisitId?: string;
   onSelectVisit: (visitId: string) => void;
   onNewVisit: () => void;
+  /**
+   * When set, the New Visit affordance is DISABLED and shows this hint — the
+   * patient already has an open (active/draft) visit, so starting another is
+   * forbidden by the one-active-visit rule. Resume/continue the open visit instead.
+   */
+  newVisitDisabledHint?: string;
   /** Called when a tooth is selected on the active slide */
   onSelectTooth?: (toothNumber: number) => void;
   /** When true, narrows the carousel to make room for the slideout panel */
   panelOpen?: boolean;
   /** Patient date of birth (ISO date string) — used to select dentition type */
   patientDateOfBirth?: string | null;
-  /** FDI numbers with a completed (performed) treatment on the current visit — drives the chart's 'completed' layer. */
+  /** CHART-XV cumulative cross-visit layer sets — applied to the ACTIVE card only
+   *  (the living document); historical cards stay per-visit snapshots. */
   completedToothNumbers?: Set<number>;
+  proposedToothNumbers?: Set<number>;
+  declinedToothNumbers?: Set<number>;
+  carriedOverToothNumbers?: Set<number>;
+  /** P0-A: FDI numbers with an open offline conflict — marked on the active chart. */
+  conflictedToothNumbers?: Set<number>;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -65,6 +77,10 @@ function VisitChartCard({
   lockPending,
   dentitionType,
   completedToothNumbers,
+  proposedToothNumbers,
+  declinedToothNumbers,
+  carriedOverToothNumbers,
+  conflictedToothNumbers,
   onTeethLoaded,
 }: {
   visit: VisitCard;
@@ -76,6 +92,10 @@ function VisitChartCard({
   lockPending?: boolean;
   dentitionType: DentitionType;
   completedToothNumbers?: Set<number>;
+  proposedToothNumbers?: Set<number>;
+  declinedToothNumbers?: Set<number>;
+  carriedOverToothNumbers?: Set<number>;
+  conflictedToothNumbers?: Set<number>;
   /** Called with the fetched tooth data when the active card loads (for compare diff). */
   onTeethLoaded?: (teeth: ToothData[]) => void;
 }) {
@@ -109,6 +129,14 @@ function VisitChartCard({
       className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-lemon-hover border-2 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_6px_rgba(0,0,0,0.04)]' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
     >
       {isActive && <div data-accent-bar className="h-1 rounded-full bg-lemon" />}
+      {/* CHART-XV: name the scope so the cumulative active chart isn't misread as
+          data loss vs the per-visit historical snapshots. */}
+      <span
+        data-testid="chart-scope-label"
+        className="text-[10px] font-medium text-muted-foreground px-0.5"
+      >
+        {isActive ? 'Current — all visits' : 'Visit snapshot'}
+      </span>
       <div className="overflow-x-auto flex-1 min-h-0">
         {isLoading ? (
           <div data-testid="visit-chart-loading" className="flex flex-col gap-2 p-2">
@@ -163,7 +191,13 @@ function VisitChartCard({
             toothSize={isActive ? 'md' : 'xs'}
             showLegend={false}
             showLayerToggle={isActive}
+            // CHART-XV: cumulative cross-visit layers apply only to the ACTIVE card
+            // (the living document); historical cards remain per-visit snapshots.
             completedToothNumbers={isActive ? completedToothNumbers : undefined}
+            proposedToothNumbers={isActive ? proposedToothNumbers : undefined}
+            declinedToothNumbers={isActive ? declinedToothNumbers : undefined}
+            carriedOverToothNumbers={isActive ? carriedOverToothNumbers : undefined}
+            conflictedToothNumbers={isActive ? conflictedToothNumbers : undefined}
             dentitionType={dentitionType}
           />
         )}
@@ -221,10 +255,15 @@ export function TimelineCarousel({
   currentVisitId,
   onSelectVisit,
   onNewVisit,
+  newVisitDisabledHint,
   onSelectTooth,
   panelOpen = false,
   patientDateOfBirth = null,
   completedToothNumbers,
+  proposedToothNumbers,
+  declinedToothNumbers,
+  carriedOverToothNumbers,
+  conflictedToothNumbers,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
@@ -340,6 +379,10 @@ export function TimelineCarousel({
                 lockPending={lockMutation.isPending}
                 dentitionType={dentitionType}
                 completedToothNumbers={completedToothNumbers}
+                proposedToothNumbers={proposedToothNumbers}
+                declinedToothNumbers={declinedToothNumbers}
+                carriedOverToothNumbers={carriedOverToothNumbers}
+                conflictedToothNumbers={conflictedToothNumbers}
                 onTeethLoaded={isActive ? setActiveTeeth : undefined}
               />
             </SwiperSlide>
@@ -347,15 +390,27 @@ export function TimelineCarousel({
         })}
       </Swiper>
 
+      {/* One-active-visit rule: when the patient already has an open (active/draft)
+          visit, starting another is forbidden (409 ACTIVE_VISIT_EXISTS). Disable the
+          affordance with a reason instead of inviting a guaranteed-fail click —
+          the open visit is already auto-selected; resume it. */}
       <button
         type="button"
         data-testid="new-visit-btn"
         onClick={onNewVisit}
-        className="self-center rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 px-6 py-3 opacity-60 hover:opacity-100 transition-opacity"
+        disabled={!!newVisitDisabledHint}
+        aria-disabled={!!newVisitDisabledHint}
+        title={newVisitDisabledHint}
+        className="self-center rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 px-6 py-3 opacity-60 hover:opacity-100 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
         aria-label="Start new visit"
       >
         <span className="text-2xl text-muted-foreground leading-none">+</span>
         <span className="text-xs text-muted-foreground font-medium">New Visit</span>
+        {newVisitDisabledHint && (
+          <span data-testid="new-visit-disabled-hint" className="text-[10px] text-muted-foreground/80 max-w-[10rem] text-center leading-tight">
+            {newVisitDisabledHint}
+          </span>
+        )}
       </button>
     </div>
   );

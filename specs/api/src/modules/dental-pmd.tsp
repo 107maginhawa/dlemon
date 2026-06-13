@@ -2,10 +2,13 @@
  * Dental PMD (Portable Medical Document) Module
  *
  * Covers FR12.x:
- * - PMDDocument: immutable record generated from a completed visit, digitally signed
+ * - PMDDocument: immutable, checksum-sealed record generated from a completed visit
  * - ImportedPMD: read-only PMD imported from an external/source facility
  *
- * PMDs are generated once from completed visits, signed, and never mutated.
+ * PMDs are generated once from completed visits and never mutated; their content
+ * integrity is sealed with a SHA-256 checksum (tamper-evidence, NOT non-repudiation).
+ * Digital signing (FR12.4) is honestly deferred to Phase-2: the `signature`/`signedAt`
+ * fields and the `signed` status are reserved in the model but are NOT produced in V1.
  * Imported PMDs are parsed and linked to a patient; Safety Floor merge is add-only.
  */
 
@@ -26,6 +29,8 @@ using TypeSpec.OpenAPI;
 
 enum PMDDocumentStatus {
   generated,
+  /** Phase-2 (FR12.4) reserved: digital signing is not implemented in V1, so no
+   *  PMD reaches this state. Kept for forward compatibility. */
   signed,
   superseded,
 }
@@ -37,18 +42,16 @@ enum PMDDocumentStatus {
 @example(#{
   id: "pmd-1a2b3c4d-0000-4000-8000-000000000001",
   createdAt: utcDateTime.fromISO("2026-03-15T12:00:00Z"),
-  updatedAt: utcDateTime.fromISO("2026-03-15T12:05:00Z"),
+  updatedAt: utcDateTime.fromISO("2026-03-15T12:00:00Z"),
   version: 1,
   visitId: "v1a2b3c4-0000-4000-8000-000000000001",
   patientId: "d1a2b3c4-0000-4000-8000-000000000001",
   authorMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
   branchId: "b1a2b3c4-0000-4000-8000-000000000001",
-  status: PMDDocumentStatus.signed,
-  content: "{\"treatments\":[{\"cdtCode\":\"D2392\",\"toothNumber\":36,\"status\":\"performed\"}],\"allergies\":[],\"diagnoses\":[{\"code\":\"K02.1\",\"display\":\"Dental caries\"}]}",
-  signature: "MEYCIQDsX3...",
-  signedAt: utcDateTime.fromISO("2026-03-15T12:05:00Z"),
-  checksum: "sha256:a1b2c3d4e5f6...",
-}, #{ title: "Signed PMD for completed visit" })
+  status: PMDDocumentStatus.generated,
+  content: "{\"visitId\":\"v1a2b3c4-0000-4000-8000-000000000001\",\"patientId\":\"d1a2b3c4-0000-4000-8000-000000000001\",\"authorMemberId\":\"m1a2b3c4-0000-4000-8000-000000000001\",\"visitDate\":\"2026-03-15T12:00:00Z\",\"demographics\":{\"firstName\":\"Maria\",\"lastName\":\"Santos\",\"dateOfBirth\":\"1990-04-02\",\"gender\":\"female\"},\"safetyFloor\":{\"allergies\":[{\"displayName\":\"Penicillin\",\"code\":null,\"codeSystem\":null,\"notes\":null,\"onsetDate\":null}],\"medications\":[],\"conditions\":[]},\"treatments\":[{\"id\":\"t1a2b3c4-0000-4000-8000-000000000001\",\"cdtCode\":\"D2392\",\"description\":\"Resin composite, one surface, posterior\",\"toothNumber\":36,\"surfaces\":[\"O\"],\"conditionCode\":null,\"status\":\"performed\",\"priceCents\":150000}],\"prescriptions\":[]}",
+  checksum: "sha256-a1b2c3d4e5f6...",
+}, #{ title: "Generated PMD for a completed visit (V1: unsigned, checksum-sealed)" })
 model PMDDocument {
   id: UUID;
   createdAt: utcDateTime;
@@ -59,10 +62,14 @@ model PMDDocument {
   authorMemberId: UUID;
   branchId: UUID;
   status: PMDDocumentStatus;
-  /** JSON snapshot of visit data: ICD-10/CDT/RxNorm coded */
+  /** JSON snapshot of the completed visit (V1 narrowed set, decision #6): narrowed
+   *  demographics (name/DOB/sex) + safety floor (allergies/medications/conditions) +
+   *  CDT-coded treatments + RxNorm-coded prescriptions. Structured ICD-10 diagnoses and
+   *  free-text clinical notes are Phase-2 (not present in V1). */
   content: string;
-  /** Base64-encoded digital signature */
+  /** Phase-2 (FR12.4): reserved for the facility digital signature; NOT populated in V1. */
   signature?: string;
+  /** Phase-2 (FR12.4): reserved signing timestamp; NOT populated in V1. */
   signedAt?: utcDateTime;
   /** If this document supersedes an older one */
   supersedesId?: UUID;
@@ -111,6 +118,22 @@ model ImportPMDRequest {
   /** Optional SHA-256 checksum (format: sha256-<hex>). When provided the server
    *  verifies the digest of `content` matches before persisting. Mismatch → 422. */
   checksum?: string;
+}
+
+/**
+ * Result of merging an imported PMD's safety-floor items into the patient's
+ * living medical history (FIX-003 / decision #20). The imported PMD itself is
+ * never mutated (BR-022); its safety-critical items are surfaced as NEW,
+ * append-only medical-history entries that then appear in the clinical Safety
+ * Floor. The merge is idempotent — a second merge of the same imported PMD → 409.
+ */
+model MergeImportedPMDSafetyFloorResult {
+  importedPmdId: UUID;
+  /** True once the merge has been applied (idempotency marker). */
+  safetyFloorMerged: boolean;
+  /** Number of new medical-history entries created by this merge. */
+  mergedEntryCount: int32;
+  mergedAt: utcDateTime;
 }
 
 // ---------------------------------------------------------------------------
@@ -230,6 +253,28 @@ namespace DentalPMDModule {
       @path id: UUID
     ): ApiOkResponse<ImportedPMD>
       | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    /**
+     * FIX-003 (decision #20): merge an imported PMD's safety-critical items
+     * (conditions / medications / allergies) into the patient's living medical
+     * history as APPEND-ONLY entries, so imported safety data actually surfaces
+     * in the clinical Safety Floor (the import flow's clinical reason to exist).
+     * The imported PMD itself stays immutable (BR-022); the merge is recorded as
+     * an append-only event and is idempotent — a second merge for the same
+     * imported PMD returns 409 SAFETY_FLOOR_ALREADY_MERGED.
+     */
+    @post
+    @route("/pmd/imported/{id}/merge-safety-floor")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("mergeImportedPMDSafetyFloor")
+    mergeSafetyFloor(
+      @path id: UUID
+    ): ApiOkResponse<MergeImportedPMDSafetyFloorResult>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiConflictResponse
       | ApiUnauthorizedResponse;
 
     /**

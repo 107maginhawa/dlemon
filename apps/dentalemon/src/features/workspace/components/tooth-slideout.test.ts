@@ -126,12 +126,17 @@ describe('ToothSlideout', () => {
     expect(screen.getAllByText(/₱125\.00/).length).toBeGreaterThanOrEqual(2);
   });
 
-  // P4 regression: the read-only Add-Amendment affordance must render only when a
-  // visitId is supplied. The $patientId route was not passing visitId, so the
-  // button silently never appeared. Footer renders it on `readOnly && visitId`.
-  test('P4: shows "Add Amendment" in read-only mode when a visitId is present', () => {
+  // P4 + FIX-007: the read-only Add-Amendment affordance must render only when a
+  // visitId AND a resolvable originalRecordId are supplied. The amendment validator
+  // requires originalRecordId to be a real UUID, so showing the button without one
+  // would file a 400 (empty-UUID). Footer renders it on `readOnly && visitId &&
+  // originalRecordId`.
+  test('FIX-007: shows "Add Amendment" in read-only mode when visitId + originalRecordId are present', () => {
     global.fetch = mock(() => jsonResponse({ data: [], pagination: { totalCount: 0, limit: 20, offset: 0 } })) as unknown as typeof fetch;
-    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    render(
+      React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1', originalRecordId: 'f1000000-0000-4000-8000-000000000099' })),
+      { wrapper: makeWrapper() },
+    );
     expect(screen.getByText('Add Amendment')).not.toBeNull();
   });
 
@@ -139,5 +144,31 @@ describe('ToothSlideout', () => {
     global.fetch = mock(() => jsonResponse({ data: [], pagination: { totalCount: 0, limit: 20, offset: 0 } })) as unknown as typeof fetch;
     render(React.createElement(ToothSlideout, baseProps({ readOnly: true })), { wrapper: makeWrapper() });
     expect(screen.queryByText('Add Amendment')).toBeNull();
+  });
+
+  // FIX-007 coherence: a visitId without a resolvable originalRecordId (e.g. a tooth
+  // with no treatment record on this visit) must NOT show "Add Amendment" — there is
+  // no record to amend, and an empty originalRecordId 400s. The read-only amendments
+  // LIST still renders so existing corrections remain visible (FR1.16 "both visible").
+  test('FIX-007: omits "Add Amendment" when readOnly+visitId but no originalRecordId, yet still shows the list', () => {
+    global.fetch = mock(() => jsonResponse({ data: [], pagination: { totalCount: 0, limit: 20, offset: 0 } })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.queryByText('Add Amendment')).toBeNull();
+    expect(screen.getByTestId('amendments-list')).not.toBeNull();
+  });
+
+  // FIX-007: the read-only review area surfaces the visit's amendments (corrections)
+  // alongside the original record — the orphan listAmendments is now consumed.
+  test('FIX-007: renders the AmendmentsList in read-only mode when a visitId is present', () => {
+    global.fetch = mock(() => jsonResponse({ data: [], pagination: { totalCount: 0, limit: 20, offset: 0 } })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.getByTestId('amendments-list')).not.toBeNull();
+  });
+
+  // The list is read-only review scaffolding — it must NOT appear during active charting.
+  test('FIX-007: does not render the AmendmentsList in edit (non-readOnly) mode', () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.queryByTestId('amendments-list')).toBeNull();
   });
 });

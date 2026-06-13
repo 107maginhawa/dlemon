@@ -237,6 +237,7 @@ function PinEntryRoute() {
     const { branchId: storeBranchId } = useOrgContextStore.getState();
     const branchId = storeBranchId ?? localStorage.getItem('currentBranchId');
     if (!branchId) return;
+    // eslint-disable-next-line no-restricted-syntax -- bootstrap auth phase: PIN device-auth runs before a session/SDK client exists
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',
     })
@@ -257,6 +258,7 @@ function PinEntryRoute() {
       return;
     }
 
+    // eslint-disable-next-line no-restricted-syntax -- bootstrap auth phase: PIN verification runs before a session/SDK client exists
     const res = await fetch(
       `${API}/dental/organizations/${orgId}/branches/${branchId}/members/${memberId}/verify-pin`,
       {

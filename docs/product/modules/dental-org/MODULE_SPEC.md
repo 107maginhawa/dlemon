@@ -29,7 +29,10 @@ Manages the multi-tenant organizational hierarchy: Organization → Branch → M
 Organization CRUD, Branch CRUD, Membership management (create/update/deactivate), fee schedule per branch, consent templates, PIN lockout, subscription tiers (`orgTier`, `imagingTier`), dashboard summary, audit log viewer.
 
 ### Out of Scope
-Patient records, clinical data, billing invoices, appointment scheduling (those modules own their own scoping).
+Patient records, clinical data, billing invoices, appointment scheduling (those modules own their own scoping). **Multi-branch UI (branch create/switcher, org-level cross-branch dashboards) — Phase-2, see §1.1.**
+
+### 1.1 Multi-branch is data-model-ready, UI-deferred (product decision #10, 2026-06-12)
+The data model is multi-tenant (Organization → Branch → Membership) from day one, but **V1 ships a single-branch UI only**: there is **no branch-create, branch-switcher, or cross-branch dashboard UI** (verified — `grep apps/dentalemon` finds no branch-switcher component; all workspace operations resolve a single implicit `branchId` from session/context). Multi-branch UI is **Phase-2 / growth-phase**; the PRD's §2.5 "multi-branch from day one" is **aspirational for the data model, not a V1 UI commitment**. Building branch create/switcher now is scope the pilot does not need; keeping the model multi-branch avoids a painful later refactor.
 
 ---
 
@@ -115,7 +118,7 @@ Patient records, clinical data, billing invoices, appointment scheduling (those 
 
 ### Member Role Catalog (G8-S3)
 
-The `member_role` enum (`membership.schema.ts`) defines **9** context roles scoped to a branch. Only `dentist_owner` holds admin authority; all others are scoped staff. The four marked ✦ are also enumerated in `ROLE_PERMISSION_MATRIX.md`; the five below them (previously undocumented) are catalogued here as the source of truth.
+The `member_role` enum (`membership.schema.ts`) defines **10** context roles scoped to a branch (verified against `repos/membership.schema.ts` `memberRoleEnum`). Only `dentist_owner` holds admin authority; all others are scoped staff. The four marked ✦ are also enumerated in `ROLE_PERMISSION_MATRIX.md`; the six below them (previously undocumented) are catalogued here as the source of truth.
 
 | Role | Clinical? | Summary | Typical capabilities |
 |------|-----------|---------|----------------------|
@@ -127,6 +130,7 @@ The `member_role` enum (`membership.schema.ts`) defines **9** context roles scop
 | `dental_assistant` | Yes (assist) | Chairside assistant | Clinical assist — chart updates under a dentist, imaging capture; no role/fee admin |
 | `front_desk` | No | Reception | Check-in, scheduling, patient demographics; no clinical write, no billing edits |
 | `billing_staff` | No | Billing / claims | Invoices, payments, fee-schedule **read**; no clinical, no role admin |
+| `treatment_coordinator` | No | Case presentation / financial coordinator | Present treatment plans & case presentations; billing surface to present costs + payment options; no clinical writes, no role/fee admin |
 | `read_only` | No | Auditor / observer | Read access to permitted records; no writes anywhere |
 
 > All non-`dentist_owner` roles fail `assertBranchRole(['dentist_owner'])` guards (staff/role/fee/audit-config writes). Clinical write authority for `hygienist`/`dental_assistant` is gated per clinical-module rules, not org-admin rules.
@@ -161,8 +165,8 @@ The `member_role` enum (`membership.schema.ts`) defines **9** context roles scop
 | id | Yes | UUID PK | — |
 | person_id | Yes | FK → person | — |
 | branch_id | Yes | FK → dental_branch | — |
-| member_role | Yes | dentist_owner / dentist_associate / staff_full / staff_scheduling | enum |
-| member_status | Yes | active / inactive / invited | enum |
+| member_role | Yes | One of the 10 `member_role` enum values (see §6 Member Role Catalog — the source of truth) | enum |
+| member_status | Yes | active / inactive / invited (`revoked` is **reserved Phase-2** — present in the Drizzle `member_status` enum but with **no live transition**; see §8) | enum |
 | pin_hash | No | Local PIN auth | bcrypt |
 | pin_failed_attempts | No | Lockout counter | default 0 |
 | pin_locked_until | No | Lockout timestamp | nullable |
@@ -193,12 +197,16 @@ The `member_role` enum (`membership.schema.ts`) defines **9** context roles scop
 ### Membership Status
 ```
 invited ──► active ──► inactive
+              ▲          │
+              └──────────┘
 ```
 | From | To | Trigger |
 |------|----|---------|
 | invited | active | Staff completes first login |
 | active | inactive | Owner deactivates |
 | inactive | active | Owner reactivates |
+
+**Canonical active set = `{invited, active, inactive}`** (product decision C-2, 2026-06-12). The three systems are reconciled to this active set: the Drizzle enum (`membership.schema.ts`) and `LEGAL_STATUS_TRANSITIONS` (`membership.repo.ts`) are the source of truth; the TypeSpec `MemberStatus` enum documents the operator-facing subset (`active`/`inactive`). **`revoked` is documentation-reserved for Phase-2** (e.g. credential expiry / abuse termination) — it exists in the Drizzle `member_status` enum for forward compatibility but has **no live transition path** (`transitionStatus` rejects any jump to it; no production code sets it). Avoiding it keeps `revoked` reservable without a destructive enum migration. Do not add a `→ revoked` transition until the Phase-2 termination flow is specified.
 
 ---
 

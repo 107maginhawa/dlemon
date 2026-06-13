@@ -191,8 +191,9 @@ describe('GET /dental/branches/:branchId/inventory (inv01-AC-002)', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBe(0);
+    // G10: { data, pagination } envelope (was a bare array).
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(0);
   });
 
   test('inv01-AC-002: returns all items for the branch', async () => {
@@ -213,7 +214,9 @@ describe('GET /dental/branches/:branchId/inventory (inv01-AC-002)', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.length).toBe(2);
+    // G10: { data, pagination } envelope (was a bare array).
+    expect(body.data.length).toBe(2);
+    expect(body.pagination.totalCount).toBe(2);
   });
 });
 
@@ -287,7 +290,7 @@ describe('POST adjustment (inv01-AC-004)', () => {
 
     // Verify item.quantityOnHand was updated
     const listRes = await app.request(`/dental/branches/${BRANCH_ID}/inventory`);
-    const items = await listRes.json() as any[];
+    const items = (await listRes.json() as { data: any[] }).data;
     const refreshed = items.find((i) => i.id === item.id);
     expect(refreshed.quantityOnHand).toBe(15);
   });
@@ -311,7 +314,7 @@ describe('POST adjustment (inv01-AC-004)', () => {
     expect(adjRes.status).toBe(201);
 
     const listRes = await app.request(`/dental/branches/${BRANCH_ID}/inventory`);
-    const items = await listRes.json() as any[];
+    const items = (await listRes.json() as { data: any[] }).data;
     const refreshed = items.find((i) => i.id === item.id);
     expect(refreshed.quantityOnHand).toBe(17);
   });
@@ -378,8 +381,10 @@ describe('GET adjustments (inv01-AC-005)', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBe(2);
+    // G10: { data, pagination } envelope (was a bare array).
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(2);
+    expect(body.pagination.totalCount).toBe(2);
   });
 });
 

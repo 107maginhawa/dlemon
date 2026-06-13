@@ -90,7 +90,10 @@ describe('erasure HTTP routes (V-DG-002)', () => {
 
     const list = await app.request('/dental/erasure-requests');
     expect(list.status).toBe(200);
-    expect(((await list.json()) as any[]).length).toBeGreaterThanOrEqual(1);
+    // ER-P2-1: contract shape is { data: ErasureRequest[] }, not a bare array.
+    const listBody = (await list.json()) as { data: unknown[] };
+    expect(Array.isArray(listBody.data)).toBe(true);
+    expect(listBody.data.length).toBeGreaterThanOrEqual(1);
 
     const approved = await app.request(`/dental/erasure-requests/${reqRow.id}/approve`, J({}));
     expect(approved.status).toBe(200);

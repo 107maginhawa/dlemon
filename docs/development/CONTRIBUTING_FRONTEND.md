@@ -132,6 +132,56 @@ import { Button } from '@/components/ui/button'
 **For complete details and code examples**, see individual app documentation:
 - Account App: `apps/account/CONTRIBUTING.md`
 
+## Honest affordances & cross-element coherence (test conventions)
+
+A large green suite still missed two bug classes because every layer tested
+*wiring / presence / the happy path* — never *cross-element value invariants* or
+*affordance effect-persistence* — and unit tests fed a summary and its body from
+one mock, so a divergence between them was invisible. Two rules close the gap.
+
+### 1. Coherence: derive the expected figure from the rendered DOM, not the mock
+
+When a screen shows a **total or count header over an itemised / actionable body**
+(invoice total over line items, "N pending · ₱X" over the treatments a button will
+bill, a filterable table with a count badge), add ONE render test whose oracle is
+computed from the rendered rows — never from a fixture constant. Use the shared
+helpers in `@/test-utils`:
+
+```ts
+import { parseMoney, assertTotalExplainedByRows, assertCountMatchesItems } from '@/test-utils'
+
+// total a human reads === sum of the rows actually rendered, and a non-zero
+// total is never shown with zero rows to explain it:
+assertTotalExplainedByRows({ total: parseMoney(headerEl.textContent), rowAmounts })
+
+// a count a user reads === the items the adjacent action operates on
+// (e.g. "Continue to Payment (N)" vs the line items the modal will bill):
+assertCountMatchesItems({ count: buttonCount, itemCount: treatments.length })
+```
+
+Pin a constant (`expect(total).toBe(3500)`) and the test passes even when the
+header reads a different field than its rows — the exact bug it must catch.
+Reference: `invoice-detail.coherence.test.ts`, `payment-summary-bar.test.tsx`.
+
+**Screens that need a coherence test** (extend as you build): invoice-detail,
+workspace payment footer (`PaymentSummaryBar`), treatment-breakdown / treatment
+report summary cards, revenue-report, billing-list summary. A figure and the body
+it summarises must come from the same source — if they can't, the test makes it loud.
+
+### 2. Data-state matrix: render the states the happy path never visits
+
+The forward "all-pending" seed hid the payment-footer bug. For any summary screen,
+render it in **empty / partial / all-completed** states (cheap component render
+tests, not E2E/seed). The all-completed and mixed states are where summaries diverge.
+
+### 3. Affordance honesty: assert the effect, not a stub callback
+
+For a control backed by a TanStack mutation, assert the **real request shape**
+(intercept `fetch`, assert URL + body) — not merely that a stub prop callback fired.
+A passing `expect(onSave).toHaveBeenCalled()` does not prove anything persisted.
+Reference: `treatment-plan-tab.test.ts`. A disabled control must carry a visible
+reason (`title` / `aria-describedby`), as `MeasurementToolbar` does.
+
 ## Hook Architecture Patterns
 
 ### Domain-Based Hook Organization

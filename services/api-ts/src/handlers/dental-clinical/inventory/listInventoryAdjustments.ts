@@ -5,6 +5,7 @@
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { InventoryRepository } from '../repos/inventory.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -26,5 +27,8 @@ export async function listInventoryAdjustments(ctx: HandlerContext): Promise<Res
 
   const adjustments = await repo.findAdjustmentsByItemId(itemId);
 
-  return ctx.json(adjustments, 200);
+  // G10: conform to the platform `{ data, pagination }` envelope (was a bare array).
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
+  const page = adjustments.slice(offset, offset + limit);
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, adjustments.length, limit, offset) }, 200);
 }

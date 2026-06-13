@@ -4,7 +4,8 @@
  * Treatment lifecycle: diagnosed → planned → performed → verified → dismissed
  */
 
-import { pgTable, uuid, text, integer, boolean, jsonb, index, unique, pgEnum, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, jsonb, index, unique, uniqueIndex, pgEnum, timestamp } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields, syncableEntityFields, versionedSnapshotFields } from '@/core/database.schema';
 import { dentalVisits } from './visit.schema';
 import { patients } from '../../patient/repos/patient.schema';
@@ -119,6 +120,12 @@ export const dentalTreatments = pgTable('dental_treatment', {
   treatmentPlanIdx: index('dental_treatment_treatment_plan_id_idx').on(table.treatmentPlanId),
   appointmentIdx: index('dental_treatment_appointment_id_idx').on(table.appointmentId),
   optionGroupIdx: index('dental_treatment_option_group_id_idx').on(table.optionGroupId),
+  // SL-01: offline-replay idempotency backstop — a (visit, localId) pair may exist
+  // at most once. The handler pre-check returns the existing row on replay; this
+  // index guards against a concurrent-retry race.
+  visitLocalIdUnique: uniqueIndex('dental_treatment_visit_local_id_unique')
+    .on(table.visitId, table.localId)
+    .where(sql`local_id is not null`),
 }));
 
 export const visitNotes = pgTable('visit_notes', {
@@ -172,3 +179,36 @@ export const TREATMENT_TRANSITIONS: Record<DentalTreatmentStatus, DentalTreatmen
   dismissed: [], // terminal
   declined: [],  // terminal — patient declined recommended treatment
 };
+
+/**
+ * SL-09 / CAND-A18: monotonic rank along the treatment lifecycle. Higher = further
+ * along. The progression axis is diagnosed→planned→performed→verified; the terminal
+ * decisions (dismissed/declined) rank above the whole progression so a clinically-
+ * or legally-significant terminal outcome is never undone by a stale progression op.
+ */
+export const TREATMENT_STATUS_RANK: Record<DentalTreatmentStatus, number> = {
+  diagnosed: 0,
+  planned: 1,
+  performed: 2,
+  verified: 3,
+  dismissed: 4,
+  declined: 4,
+};
+
+/**
+ * SL-09 / CAND-A18: monotonic merge of a treatment status under offline sync.
+ *
+ * The HTTP PATCH path enforces forward-only transitions, but the sync-apply path
+ * (cadence row-level LWW) bypasses that guard — a stale offline status could clobber
+ * a newer one by arrival order, regressing e.g. performed→planned (P1 data-loss).
+ * This is the canonical guard the sync apply must use: the status that is FURTHER
+ * along the FSM wins; a lower-ranked (stale) incoming status is rejected. On equal
+ * rank the current status is kept (deterministic — covers same-status replays and a
+ * dismissed/declined tie).
+ */
+export function mergeTreatmentStatus(
+  current: DentalTreatmentStatus,
+  incoming: DentalTreatmentStatus,
+): DentalTreatmentStatus {
+  return TREATMENT_STATUS_RANK[incoming] > TREATMENT_STATUS_RANK[current] ? incoming : current;
+}

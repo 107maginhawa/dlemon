@@ -9,10 +9,12 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature } from 'lucide-react';
+import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard } from 'lucide-react';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { BRAND_GOLD_TEXT } from '@/constants/brand';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { canPrescribe, canAddTreatment, canCaptureConsent, type DentalRole } from '@/lib/rbac';
 
 interface WorkspaceTopBarProps {
   patientId: string;
@@ -25,7 +27,7 @@ interface WorkspaceTopBarProps {
   onNotes: () => void;
   onTreatmentPlan: () => void;
   onCompleteVisit: () => void;
-  visitStatus?: 'draft' | 'active' | 'completed' | 'locked';
+  visitStatus?: 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
 }
 
 function IconButton({
@@ -96,6 +98,29 @@ export function WorkspaceTopBar({
   const { data: profile } = usePatientProfile({ patientId });
   const { entries } = useMedicalHistory(patientId);
 
+  // E2 / FIX-008: role-gate the WRITE-launcher affordances (Rx / Consent / Treatment
+  // Plan / Lab / PMD) — these have no read value for a non-clinical role, so hide them
+  // when the role can't exercise them. Notes ("Notes / Medical History") and Attachments
+  // are deliberately NOT role-hidden: they are VIEW + supervised-draft ENTRY POINTS into
+  // SoapNotesSheet / AttachmentsSheet, which workspace-VIEW-capable roles may open to
+  // review the record (staff_full is "Clinical Workspace: View-only"; dental_assistant
+  // may draft notes + upload under supervision — ROLE_PERMISSION_MATRIX). The actual
+  // write gates live deeper: backend 403 is the hard guarantee, and Sign-&-Lock is
+  // role-gated inside SoapNotesSheet (canSignNotesForVisitType). Hiding these top-bar
+  // entry points would wrongly strip legitimate VIEW access — so they stay (FIX-008).
+  // NOTE (pre-existing, flagged for roadmap): the _workspace route guard does not yet
+  // enforce canAccess(role,'workspace'), and SoapNotesSheet/AttachmentsSheet do not
+  // client-gate their Save/upload by draft/upload capability — so non-drafting roles get
+  // an editable form that fails only on the backend 403. Tracked separately, not in FIX-008.
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null;
+  const allowRx = role ? canPrescribe(role) : true;
+  const allowTreatmentPlan = role ? canAddTreatment(role) : true;
+  const allowConsent = role ? canCaptureConsent(role) : true;
+  // FIX-001/002: Lab orders match the backend createLabOrder gate (dentists);
+  // PMD generation is dentist-only. Both reuse the dentist-level treatment gate.
+  const allowLab = role ? canAddTreatment(role) : true;
+  const allowPmd = role ? canAddTreatment(role) : true;
+
   const firstName = profile?.firstName ?? '';
   const lastName = profile?.lastName ?? '';
   const initials = (
@@ -162,21 +187,37 @@ export function WorkspaceTopBar({
         {visitDate && (
           <span className="text-xs text-muted-foreground mr-2">{visitDate}</span>
         )}
-        <IconButton label="Write prescription" onClick={onRx}>
-          <Pill className="h-4 w-4" />
-        </IconButton>
-        <IconButton label="Consent" onClick={onConsent}>
-          <FileSignature className="h-4 w-4" />
-        </IconButton>
+        {allowRx && (
+          <IconButton label="Write prescription" onClick={onRx}>
+            <Pill className="h-4 w-4" />
+          </IconButton>
+        )}
+        {allowConsent && (
+          <IconButton label="Consent" onClick={onConsent}>
+            <FileSignature className="h-4 w-4" />
+          </IconButton>
+        )}
         <IconButton label="Notes / Medical History" onClick={onNotes}>
           <Pencil className="h-4 w-4" />
         </IconButton>
         <IconButton label="Attachments" onClick={onAttachments}>
           <Paperclip className="h-4 w-4" />
         </IconButton>
-        <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>
-          <List className="h-4 w-4" />
-        </IconButton>
+        {allowTreatmentPlan && (
+          <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>
+            <List className="h-4 w-4" />
+          </IconButton>
+        )}
+        {allowLab && (
+          <IconButton label="Lab orders" onClick={onLab}>
+            <FlaskConical className="h-4 w-4" />
+          </IconButton>
+        )}
+        {allowPmd && (
+          <IconButton label="Portable medical document" onClick={onPmd}>
+            <IdCard className="h-4 w-4" />
+          </IconButton>
+        )}
         <IconButton
           label="Complete visit"
           onClick={onCompleteVisit}

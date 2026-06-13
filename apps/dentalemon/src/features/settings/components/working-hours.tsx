@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useBranchSettings, useUpdateBranchSettings } from '../hooks/use-branch-settings';
+import { useWorkingHours, useUpdateWorkingHours } from '../hooks/use-working-hours';
+import {
+  DAYS,
+  type DayOfWeek,
+  type WorkingHoursMap,
+  defaultWorkingHours,
+  fromCanonical,
+  toCanonical,
+  validateWorkingHours as validateWorkingHoursLogic,
+} from './working-hours.logic';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 /* ------------------------------------------------------------------ */
-/*  Types & helpers (tested in working-hours.test.ts)                  */
+/*  Labels + display-aware validation (transforms live in .logic.ts)   */
 /* ------------------------------------------------------------------ */
-
-interface DaySchedule {
-  open: boolean;
-  start: string;
-  end: string;
-}
-
-type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
-
-type WorkingHoursMap = Record<DayOfWeek, DaySchedule>;
-
-const DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const DAY_LABELS: Record<DayOfWeek, string> = {
   monday: 'Monday',
@@ -28,44 +25,14 @@ const DAY_LABELS: Record<DayOfWeek, string> = {
   sunday: 'Sunday',
 };
 
-function defaultWorkingHours(): WorkingHoursMap {
-  const base: WorkingHoursMap = {} as WorkingHoursMap;
-  for (const day of DAYS) {
-    base[day] = { open: day !== 'sunday', start: '09:00', end: '17:00' };
-  }
-  return base;
-}
-
-function parseWorkingHours(raw: string | undefined | null): WorkingHoursMap {
-  if (!raw) return defaultWorkingHours();
-  try {
-    const parsed = JSON.parse(raw);
-    const result = defaultWorkingHours();
-    for (const day of DAYS) {
-      if (parsed[day]) {
-        result[day] = {
-          open: typeof parsed[day].open === 'boolean' ? parsed[day].open : result[day].open,
-          start: typeof parsed[day].start === 'string' ? parsed[day].start : result[day].start,
-          end: typeof parsed[day].end === 'string' ? parsed[day].end : result[day].end,
-        };
-      }
-    }
-    return result;
-  } catch {
-    return defaultWorkingHours();
-  }
-}
-
+// Wrap the pure validator to surface day LABELS (e.g. "Monday") in the UI while
+// the logic module keys errors by lowercase day name.
 function validateWorkingHours(hours: WorkingHoursMap): string[] {
-  const errors: string[] = [];
-  for (const day of DAYS) {
-    const d = hours[day];
-    if (!d.open) continue;
-    if (!/^\d{2}:\d{2}$/.test(d.start)) { errors.push(`${DAY_LABELS[day]}: invalid start time`); continue; }
-    if (!/^\d{2}:\d{2}$/.test(d.end)) { errors.push(`${DAY_LABELS[day]}: invalid end time`); continue; }
-    if (d.start >= d.end) errors.push(`${DAY_LABELS[day]}: start must be before end`);
-  }
-  return errors;
+  return validateWorkingHoursLogic(hours).map((err) => {
+    const [day, ...rest] = err.split(': ');
+    const label = DAY_LABELS[day as DayOfWeek] ?? day;
+    return `${label}: ${rest.join(': ')}`;
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -90,16 +57,16 @@ const TIME_OPTIONS = generateTimeOptions();
 
 export function WorkingHours() {
   const branchId = useOrgContextStore((s) => s.branchId);
-  const { settings, isLoading, isError } = useBranchSettings(branchId);
-  const { update, isPending, isSuccess, error: saveError, reset } = useUpdateBranchSettings(branchId);
+  const { workingHours, isLoading, isError } = useWorkingHours(branchId);
+  const { update, isPending, isSuccess, error: saveError, reset } = useUpdateWorkingHours(branchId);
 
   const [hours, setHours] = useState<WorkingHoursMap>(defaultWorkingHours);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!settings) return;
-    setHours(parseWorkingHours(settings.workingHours as string | undefined));
-  }, [settings]);
+    if (!workingHours) return;
+    setHours(fromCanonical(workingHours));
+  }, [workingHours]);
 
   function handleToggle(day: DayOfWeek) {
     setHours((prev) => ({ ...prev, [day]: { ...prev[day], open: !prev[day].open } }));
@@ -115,7 +82,9 @@ export function WorkingHours() {
     setValidationErrors([]);
     reset();
     try {
-      await update({ workingHours: JSON.stringify(hours) });
+      // Write the ENFORCED canonical shape to the dedicated working-hours column
+      // (not the settings blob) so the scheduler actually gates booking (G1).
+      await update(toCanonical(hours));
     } catch {
       // error exposed via saveError
     }

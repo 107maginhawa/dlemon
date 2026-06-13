@@ -14,7 +14,7 @@
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError, NotFoundError, BusinessLogicError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { createSnapshotVersion } from '@/core/database.schema';
 import { treatmentPlanVersions } from '../repos/treatment-plan-version.schema';
@@ -82,11 +82,14 @@ export async function acceptTreatmentPlan(ctx: BaseContext) {
   if (!branchId) throw new ValidationError('branchId query parameter is required');
 
   const db = ctx.get('database') as DatabaseInstance;
-  await assertBranchAccess(db, user.id, branchId);
-
-  // EF-PAT-001: block writes on archived patients
+  // V-VIS-011: authorize against the PATIENT's branch, not the caller-supplied
+  // branchId. Gating on the query param let a foreign-branch caller snapshot another
+  // branch's patient plan (cross-tenant write leak) — audit 2026-06-08.
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
+
+  // EF-PAT-001: block writes on archived patients
   if (patient.status === 'archived') {
     throw new BusinessLogicError('Cannot modify an archived patient', 'PATIENT_ARCHIVED');
   }

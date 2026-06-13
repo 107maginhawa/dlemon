@@ -256,7 +256,17 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.discountCents" > 0
+# AHA FIX-003 §15: applyDentalDiscount returns the FULL updated invoice with
+# RECALCULATED totals (not just the discount row), so the FE re-renders coherently
+# from one round-trip. Pin the EXACT arithmetic against the deterministic seed
+# (subtotal 23500, 20% off → discount 4700, total 18800, balance 18800): a
+# stale/un-recomputed total would fail these, so the coherence the FE depends on is
+# contract-bound, not merely present.
+jsonpath "$.subtotalCents" == 23500
+jsonpath "$.discountCents" == 4700
+jsonpath "$.totalCents" == 18800
+jsonpath "$.balanceCents" == 18800
+jsonpath "$.status" == "issued"
 
 
 # 10. Record payment (partial)
@@ -297,6 +307,9 @@ HTTP 200
 [Asserts]
 jsonpath "$.isVoid" == true
 jsonpath "$.voidReason" == "Entry error"
+# AHA FIX-004 §15: the void soft-delete records WHO voided the payment. The wire
+# carries voided_by_member_id via .returning(); the contract now declares it.
+jsonpath "$.voidedByMemberId" isString
 
 
 # 13. Create payment plan
@@ -338,6 +351,10 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{invoice_id}}"
 jsonpath "$.lineItems" count == 2
+# Read-side enrichment (modeled on DentalInvoice 2026-06-13): the detail response
+# joins the patient display name. Asserting it guards the enrichment join against a
+# silent regression (the field is optional in the spec, so a broken join would 200).
+jsonpath "$.patientName" isString
 
 
 # NEW: G2-S4 — payment plan installment structure verification
@@ -381,9 +398,22 @@ jsonpath "$.overdueInvoiceCount" isInteger
 
 
 # NEW: G2.5-S6 — payment receipt
+# Drift pin (AHA dental-billing FIX-007): the receipt is the rich NESTED document
+# the handler returns and the reconciled TypeSpec now declares — receiptNumber +
+# isVoid + nested payment/invoice/patient + generatedAt — not the old flat
+# { amountCents, method, paidAt } projection. The FE PaymentReceipt depends on
+# this shape (patient name, invoice number, void watermark).
 GET {{api}}/dental/billing/invoices/{{invoice_id}}/payments/{{payment_id}}/receipt
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+[Asserts]
+jsonpath "$.receiptNumber" isString
+jsonpath "$.isVoid" isBoolean
+jsonpath "$.payment.amountCents" isInteger
+jsonpath "$.payment.method" isString
+jsonpath "$.invoice.invoiceNumber" isString
+jsonpath "$.patient.name" isString
+jsonpath "$.generatedAt" isString
 
 
 # NEW: G2.5-S6 — void invoice.

@@ -1,8 +1,13 @@
 /**
  * PMDDocumentRepository — data access for PMD documents (immutable)
  *
- * PMDs are append-only: no update after creation.
- * Signing adds signature + signedAt. Superseding marks old as superseded.
+ * PMDs are append-only: no update after creation. Superseding marks old as superseded.
+ *
+ * Phase-2 (FR12.4): `sign()` would add signature + signedAt, but facility digital
+ * signing is honestly deferred — it has NO production callers in V1, so no PMD ever
+ * reaches the `signed` state. The method + columns are retained as a forward-compatible
+ * stub (exercised by repo unit tests only). Content integrity in V1 is the SHA-256
+ * checksum (tamper-evidence), not a digital signature / non-repudiation.
  */
 
 import { eq, and } from 'drizzle-orm';
@@ -56,6 +61,7 @@ export class PMDDocumentRepository extends DatabaseRepository<PMDDocument, NewPM
     return row ?? null;
   }
 
+  /** Phase-2 (FR12.4) stub — no production callers in V1; digital signing is deferred. */
   async sign(id: string, signature: string): Promise<PMDDocument | null> {
     const [updated] = await this.db
       .update(pmdDocuments)
@@ -66,12 +72,18 @@ export class PMDDocumentRepository extends DatabaseRepository<PMDDocument, NewPM
   }
 
   async supersede(oldId: string, newPMD: NewPMDDocument): Promise<PMDDocument> {
-    // Mark old as superseded
+    // Supersession (schema-fix #4): mark the old row superseded FIRST, then insert
+    // the replacement. Order matters under the pmd_document_visit_generated_unique
+    // partial index — the old row must leave 'generated' before the new 'generated'
+    // row is inserted. Under a concurrent completion the loser's insert trips the
+    // index; generatePmdForVisit catches that and resolves idempotently.
+    // (Kept as two statements rather than a db.transaction so repo tests using the
+    // openTestTx BEGIN/ROLLBACK harness — where a nested db.transaction would COMMIT
+    // the outer test tx — stay isolated.)
     await this.db
       .update(pmdDocuments)
       .set({ status: 'superseded', updatedAt: new Date() })
       .where(eq(pmdDocuments.id, oldId));
-    // Insert new with supersedesId
     const [created] = await this.db
       .insert(pmdDocuments)
       .values({ ...newPMD, supersedesId: oldId })

@@ -19,6 +19,7 @@ import { approveTreatmentPlan } from './approveTreatmentPlan';
 import { TreatmentPlanPlanParams, ApproveTreatmentPlanBody } from '../utils/treatment-plan-validators';
 import { dentalTreatmentPlans } from '../repos/treatment-plan.schema';
 import { dentalTreatments } from '@/handlers/dental-visit/repos/treatment.schema';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -97,6 +98,7 @@ async function planStatus(planId: string): Promise<string> {
 }
 
 async function truncate() {
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
   await db.execute(sql`TRUNCATE TABLE dental_treatment_plan_approval, dental_treatment, dental_treatment_plan CASCADE`);
   await db.execute(sql`TRUNCATE TABLE dental_visit CASCADE`);
 }
@@ -153,6 +155,32 @@ describe('approveTreatmentPlan + recompute (TP-BR-005)', () => {
     });
     expect(r2.status).toBe(200);
     expect(await planStatus(plan.id)).toBe('completed');
+  });
+
+  // dental-audit P1-B / dental-patient G5: plan approval is a sensitive clinical
+  // sign-off and must write an audit row (before/after status).
+  test('[P1-B/G5] approval writes a treatment_plan.approved audit row', async () => {
+    const app = buildApp();
+    visitId = await seedVisitWithConsent();
+    const plan = await seedPlan('presented');
+    await seedTreatment(visitId);
+
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatment-plans/${plan.id}/approval`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approvedByPersonId: PERSON_ID, method: 'signature', signatureData: 'data:image/png;base64,sig' }),
+    });
+    expect(res.status).toBe(201);
+
+    const [row] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, plan.id));
+
+    expect(row).toBeTruthy();
+    expect(row!.action).toBe('treatment_plan.approved');
+    expect(row!.targetType).toBe('dental_treatment_plan');
+    expect(row!.actorId).toBe(TEST_USER.id);
+    expect((row!.afterSnapshot as any)?.status).toBe('approved');
   });
 
   test('approving a draft plan → 422 PLAN_NOT_APPROVABLE', async () => {

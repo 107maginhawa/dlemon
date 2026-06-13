@@ -114,3 +114,66 @@ Tests for `utils/` files are co-located in `utils/` next to the file under test.
 | `dental-patient/` | 46 | **Bucketed** (Phase 11) | 8 sub-domains |
 | `dental-visit/` | ~26 | **Bucketed** (Phase 11) | 6 sub-domains |
 | `dental-clinical/` | ~27 | **Bucketed** (Phase 11) | 9 sub-domains |
+
+---
+
+## Handler-Dir Naming: Tag-Derived, Not Spec-Filename-Derived
+
+### How the generator computes the handler directory name
+
+`scripts/generate.ts` (line 657) derives the module/handler-dir name directly from the first OpenAPI tag on each operation:
+
+```typescript
+const module = (operation.tags?.[0]?.toLowerCase() || 'default').replace(/:/g, '-');
+```
+
+The colon is replaced with a dash and the whole string is lowercased. This means:
+
+| TypeSpec `@tag(...)` | Derived module name | Handler dir |
+|---|---|---|
+| `"Dental:LegalHold"` | `dental-legalhold` | `services/api-ts/src/handlers/dental-legalhold/` |
+| `"Dental:Clinical"` | `dental-clinical` | `services/api-ts/src/handlers/dental-clinical/` |
+| `"Dental:Patient"` | `dental-patient` | `services/api-ts/src/handlers/dental-patient/` |
+| `"Dental:Org"` | `dental-org` | `services/api-ts/src/handlers/dental-org/` |
+| `"Dental:Scheduling"` | `dental-scheduling` | `services/api-ts/src/handlers/dental-scheduling/` |
+
+### Do NOT rename handler dirs to match spec filenames
+
+The `dental-legalhold/` handler dir is the canonical example: its spec file is
+`dental-legal-hold.tsp` and its URL prefix is `/dental/legal-holds`, but the
+handler dir is correctly named `dental-legalhold/` because that is what the tag
+`"Dental:LegalHold"` produces. **Renaming the dir to `dental-legal-hold/` would
+break codegen** — the generator's glob would no longer find the handlers and
+would produce broken imports in the generated `registry.ts`.
+
+The rule is: **handler-dir name = tag-derived name, always**. Spec filenames and
+URL slugs may use different hyphenation; that is expected and fine.
+
+---
+
+## Spec-File → Handler-Dir Mapping (Intentional Non-1:1 Cases)
+
+Some TypeSpec module files distribute their operations across multiple
+bounded-context handler dirs instead of having a single matching dir. This is
+intentional — handlers are grouped by bounded context, not by spec file. **This
+is NOT drift.** 1:1 spec-file ↔ handler-dir correspondence is NOT required.
+
+| TypeSpec file | OpenAPI tag(s) used | Handler dir(s) |
+|---|---|---|
+| `dental-clinical-ops.tsp` | `Dental:Clinical` | `dental-clinical/{occlusion/,postop/,inventory/}` |
+| `dental-patient-engagement.tsp` | `Dental:Patient` | `dental-patient/{contacts/,recalls/,alerts/,engagement/}` |
+| `dental-patient-finance.tsp` | `Dental:Patient` | `dental-patient/{treatment-plans/,household/,case-presentation/,sync/,insurance/}` |
+| `dental-ops-extras.tsp` | `Dental:Org` (fee-schedule) + `Dental:Scheduling` (queue-board, waitlist) | `dental-org/` + `dental-scheduling/` |
+
+The operations from `dental-patient-engagement.tsp` and `dental-patient-finance.tsp`
+both carry the `Dental:Patient` tag, so their handlers land in sub-domains of
+the same `dental-patient/` bucketed module — grouped by business context, not
+by spec file.
+
+### Intentionally non-HTTP directories (no spec file)
+
+- `shared/` — Contains `assertBranchAccess` and `assertBranchRole` guards.
+  These are runtime-only middleware helpers, not HTTP handlers. No TypeSpec spec
+  exists or is needed.
+- `retention/` — Contains scheduled data-retention jobs. These run on a cron
+  schedule, not HTTP routes. No TypeSpec spec exists or is needed.

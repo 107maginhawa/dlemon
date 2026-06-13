@@ -100,11 +100,13 @@ export interface CalendarDayProps {
   onSlotClick: (time: string) => void;
   onCheckIn: (appointmentId: string) => void;
   onConfirm?: (appointmentId: string) => void;
+  /** FR3.4: cancel affordance — supplied only for cancel-capable roles. */
+  onCancel?: (appointment: Appointment) => void;
   /** Drag-to-reschedule callback. newStartAt is a full ISO-8601 UTC timestamp. */
   onReschedule?: (appointmentId: string, newStartAt: string, newDurationMinutes: number) => void;
 }
 
-export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClick, onCheckIn, onConfirm, onReschedule }: CalendarDayProps) {
+export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClick, onCheckIn, onConfirm, onCancel, onReschedule }: CalendarDayProps) {
   const slots = generateTimeSlots();
   const columns = React.useMemo(() => computeAppointmentColumns(appointments), [appointments]);
 
@@ -174,6 +176,7 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
               onAppointmentClick={onAppointmentClick}
               onCheckIn={onCheckIn}
               onConfirm={onConfirm}
+              onCancel={onCancel}
               onReschedule={onReschedule}
             />
           ))}
@@ -209,6 +212,7 @@ interface DraggableAppointmentProps {
   onAppointmentClick: (appointment: Appointment) => void;
   onCheckIn: (appointmentId: string) => void;
   onConfirm?: (appointmentId: string) => void;
+  onCancel?: (appointment: Appointment) => void;
   onReschedule?: (appointmentId: string, newStartAt: string, newDurationMinutes: number) => void;
 }
 
@@ -236,7 +240,7 @@ function columnStyle({ col, cols }: AppointmentColumn): React.CSSProperties {
  * statuses (checked-in / completed / cancelled / no-show).
  */
 function DraggableAppointment({
-  appt, top, height, column, onAppointmentClick, onCheckIn, onConfirm, onReschedule,
+  appt, top, height, column, onAppointmentClick, onCheckIn, onConfirm, onCancel, onReschedule,
 }: DraggableAppointmentProps) {
   const dragEnabled = !!onReschedule && canReschedule(appt.status);
   const [offsetY, setOffsetY] = React.useState(0);
@@ -306,6 +310,7 @@ function DraggableAppointment({
           onClick={onAppointmentClick}
           onCheckIn={onCheckIn}
           onConfirm={onConfirm}
+          onCancel={onCancel}
         />
       </div>
       {dragEnabled && (

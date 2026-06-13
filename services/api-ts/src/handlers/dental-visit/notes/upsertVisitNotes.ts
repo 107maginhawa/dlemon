@@ -29,7 +29,15 @@ export async function upsertVisitNotes(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E2: dental_assistant may DRAFT visit notes under dentist supervision.
+  // E3: on a hygiene-typed visit, the hygienist may ALSO draft (and sign — see
+  // signVisitNotes) the notes. General visits stay dentist/assistant-scoped; the
+  // hygienist is only added when the visit is hygiene-typed.
+  const draftRoles =
+    visit.visitType === 'hygiene'
+      ? (['dentist_owner', 'dentist_associate', 'dental_assistant', 'hygienist'] as const)
+      : (['dentist_owner', 'dentist_associate', 'dental_assistant'] as const);
+  await assertBranchRole(db, user.id, visit.branchId, [...draftRoles]);
 
   // EM-VIS-007: completed OR locked visits cannot be modified — lock gate
   if (visit.status === 'completed' || visit.status === 'locked') {

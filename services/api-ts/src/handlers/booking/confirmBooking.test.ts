@@ -5,44 +5,22 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { Hono } from 'hono';
-import { confirmBooking } from './confirmBooking';
-import { AppError } from '@/core/errors';
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    ctx.set('auth', { api: { getSession: async () => null } });
-    ctx.set('notifs', { createNotification: async () => ({}) });
-    ctx.set('ws', { publishToUser: async () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session', user: { id: user.id, email: user.email, role: 'user' } });
-    }
-    await next();
-  });
-
-  app.post('/booking/bookings/:booking/confirm', confirmBooking as any);
-
-  return app;
-}
+// Empty-mock db (matches the original bespoke helper): handlers crash at the repo
+// level, which is what these loose status-code assertions intentionally exercise.
+const db = {} as any;
+const services = {
+  notifs: { createNotification: async () => ({}) } as any,
+  ws: { publishToUser: async () => {} } as any,
+};
 
 describe('confirmBooking handler', () => {
   const host = { id: 'host-1', email: 'host@test.com' };
 
   test('returns error when user is not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db, services });
 
     const res = await app.request('/booking/bookings/booking-1/confirm', {
       method: 'POST',
@@ -54,7 +32,7 @@ describe('confirmBooking handler', () => {
   });
 
   test('returns error when booking does not exist', async () => {
-    const app = buildTestApp(host);
+    const app = buildTestApp({ db, user: host, services });
 
     const res = await app.request('/booking/bookings/nonexistent/confirm', {
       method: 'POST',
@@ -67,7 +45,7 @@ describe('confirmBooking handler', () => {
   });
 
   test('handler requires booking param', async () => {
-    const app = buildTestApp(host);
+    const app = buildTestApp({ db, user: host, services });
 
     const res = await app.request('/booking/bookings/booking-123/confirm', {
       method: 'POST',

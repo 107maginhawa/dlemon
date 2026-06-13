@@ -67,7 +67,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 
 | Rule ID | Rule | Applies To | Expected Behavior |
 |---------|------|-----------|-------------------|
-| BR-001 | No concurrent active visits per patient per branch | createVisit | 409 |
+| BR-001 | No concurrent active visits per patient (enforced globally per patient, across all branches — a partial unique index on `(patient_id, status) WHERE status='active'` plus the `findActiveByPatient` app guard; stricter than the original "per branch" wording) | createVisit / activate | 409 ACTIVE_VISIT_EXISTS |
 | BR-002 | Visit transitions linear: draft→active→completed→locked | All status changes | 422 on invalid |
 | BR-003 | Visit immutable after completed/locked | All write handlers | 422 + isReadOnly flag |
 | BR-005 | Auto-discard empty visit (deferred ADR-010) | Empty visit on complete | Gated behind default-false flag `dental_visit_auto_discard` (V-VIS-004). When OFF (default), empty visits complete via the normal path; when ON, a complete with no treatments/notes/attachments redirects to `discarded`. |
@@ -84,6 +84,8 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 | Create/complete visit | dentist_owner, dentist_associate | — |
 | Read workspace | all dental roles | — |
 | Add chart entries / treatments | dentist_owner, dentist_associate | — |
+| Apply treatment template (creates treatments) | dentist_owner, dentist_associate | V-VIS-012: clinical-role gate, parity with create-treatment (fixed audit 2026-06-08; template must belong to the visit's branch) |
+| Read / accept treatment plan, read plan version | all dental roles | V-VIS-011: authorized against the **patient's** branch, not the caller-supplied `branchId` query param (cross-tenant guard, fixed audit 2026-06-08) |
 | Sign SOAP notes | dentist_owner, dentist_associate | Clinical role required |
 | Add note addendum | dentist_owner, dentist_associate | After sign |
 | Lock visit (job) | System | Automated |
@@ -184,7 +186,7 @@ E2E: full visit workflow (check-in → chart → notes → complete).
 - Visit completed with no treatments (allowed — dentist may only do exam)
 - SOAP note addendum after sign (allowed via addendum endpoint, not edit)
 - Treatment template applied to locked visit (422)
-- Carry-over from visit in different branch (blocked — assertBranchAccess)
+- Carry-over scoping: `carryOverTreatments` authorizes on the **current** visit's branch (assertBranchRole owner/associate) and validates the source visit belongs to the **same patient** — but does NOT block a source visit in a *different* branch (auto-discovery also spans all of the patient's branches). This favors cross-branch clinical continuity for one patient over strict branch isolation. ⚠ Drift vs the original "blocked — assertBranchAccess" intent — PRODUCT DECISION pending (audit 2026-06-08): keep patient-scoped, or add a source-branch guard. Not unilaterally changed.
 
 ---
 

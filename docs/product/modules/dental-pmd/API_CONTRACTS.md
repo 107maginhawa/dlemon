@@ -7,7 +7,13 @@
 # API Contracts — dental-pmd
 
 > PMD = **Portable Medical Document** (canonical; V-PMD-009). Generated documents are immutable (BR-021/BR-022).
-> Generated: `generated` → `signed`/`superseded`. Imported: read-only.
+> Generated: `generated` → `superseded`. Imported: read-only.
+>
+> **Signing (FR12.4) — Phase-2 honestly deferred (decision #4):** V1 does NOT digitally sign PMDs.
+> Integrity is sealed with a SHA-256 `checksum` (tamper-evidence), which is NOT a digital signature
+> and provides NO non-repudiation. The `signature`/`signedAt` fields and the `signed` status are
+> reserved forward-compatible stubs — **never populated in V1** (no code path produces a `signed` PMD).
+> See MODULE_SPEC §8b.
 >
 > **V-PMD-006 reconciliation note:** The original contract specced presigned-URL downloads,
 > multipart file upload, and `download_url`/`expires_at`/`file_url`/`size_bytes` fields. None of
@@ -41,13 +47,13 @@ Generate a PMD for a completed (or locked) visit. Re-generation supersedes the p
 | `id` | string (uuid) | NO | |
 | `visitId` | string (uuid) | NO | plain UUID, no DB FK (§7.2) |
 | `patientId` | string (uuid) | NO | plain UUID, no DB FK (§7.2) |
-| `authorMemberId` | string (uuid) | NO | clinician (non-repudiation) |
+| `authorMemberId` | string (uuid) | NO | treating clinician (attesting author, #5) |
 | `branchId` | string (uuid) | YES | |
-| `status` | string | NO | `generated` \| `signed` \| `superseded` |
+| `status` | string | NO | `generated` \| `superseded` (`signed` is Phase-2 reserved — never returned in V1) |
 | `content` | string | NO | JSON snapshot of visit (CDT/RxNorm coded) |
-| `checksum` | string | NO | `sha256-<hex>` of content |
-| `signature` | string | YES | base64 digital signature |
-| `signedAt` | string (date-time) | YES | |
+| `checksum` | string | NO | `sha256-<hex>` of content (integrity seal, NOT a signature) |
+| `signature` | string | YES | **Phase-2 (FR12.4) reserved — always null in V1** |
+| `signedAt` | string (date-time) | YES | **Phase-2 (FR12.4) reserved — always null in V1** |
 | `supersedesId` | string (uuid) | YES | prior PMD this replaces |
 | `createdAt` / `updatedAt` | string (date-time) | NO | |
 
@@ -94,7 +100,7 @@ Download the current PMD as an attachment.
 **Path params:** `visitId` (uuid)
 
 **Response 200:** `application/json` body with `Content-Disposition: attachment; filename="pmd-<visit8>-<date>.json"`.
-The body is an export envelope: `{ pmdId, visitId, patientId, branchId, status, checksum, generatedAt, signedAt, content }`.
+The body is an export envelope: `{ pmdId, visitId, patientId, branchId, status, checksum, generatedAt, signedAt, content }` (`signedAt` is Phase-2-reserved — always null in V1; see signing note above).
 
 > There is no presigned `download_url`/`expires_at`. The file is streamed inline. (V-PMD-006)
 

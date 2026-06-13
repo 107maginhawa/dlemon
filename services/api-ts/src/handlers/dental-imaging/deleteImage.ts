@@ -46,5 +46,10 @@ export async function deleteImage(ctx: BaseContext): Promise<Response> {
   // Soft-delete
   await repo.archiveImage(imageId);
 
-  return ctx.json({ success: true }, 200);
+  // 204 No Content — matches the module's other delete handlers
+  // (deleteImageLink, deleteFinding, deleteCephLandmark). The TypeSpec declares
+  // `void | ErrorResponse`; returning a 200 JSON body instead made the generated
+  // SDK response transformer (which treats the success branch as ErrorResponse)
+  // crash on `data.error.timestamp`, so a real FE consumer of deleteImage threw.
+  return new Response(null, { status: 204 });
 }

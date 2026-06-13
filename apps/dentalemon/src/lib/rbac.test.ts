@@ -16,6 +16,19 @@ import {
   canWriteBilling,
   canManageStaff,
   canAccessReports,
+  canPresentCase,
+  canCaptureImaging,
+  canDraftNotes,
+  canEditChart,
+  canSignNotes,
+  canAddTreatment,
+  canPrescribe,
+  canCaptureConsent,
+  canCreateHygieneVisit,
+  canCreateGeneralVisit,
+  canSignHygieneNotes,
+  canSignNotesForVisitType,
+  canDraftNotesForVisitType,
   type DentalRole,
   type DentalModule,
 } from './rbac';
@@ -62,6 +75,12 @@ const EXPECTED: Record<DentalRole, Record<DentalModule, boolean>> = {
   // billing_staff: invoices/payments/fee-schedule READ; patient read floor
   billing_staff: {
     dashboard: true, workspace: false, patients: true, calendar: false,
+    billing: true, reports: false, staff: false, settings: false,
+  },
+  // treatment_coordinator: presents plans + financials → workspace + billing
+  // reachable; no staff/reports/settings admin surface. (E1)
+  treatment_coordinator: {
+    dashboard: true, workspace: true, patients: true, calendar: true,
     billing: true, reports: false, staff: false, settings: false,
   },
   // read_only: read across granted modules (dashboard + patients + calendar).
@@ -132,6 +151,7 @@ describe('canViewFinancials', () => {
     dental_assistant: false,
     front_desk: false,
     billing_staff: false,
+    treatment_coordinator: false,
     read_only: false,
   };
   for (const role of ALL_ROLES) {
@@ -162,6 +182,7 @@ describe('canWriteBilling', () => {
     dental_assistant: false,
     front_desk: false,
     billing_staff: false,
+    treatment_coordinator: false,
     read_only: false,
   };
   for (const role of ALL_ROLES) {
@@ -201,5 +222,204 @@ describe('canAccessReports', () => {
   });
   test('dentist_associate === false', () => {
     expect(canAccessReports('dentist_associate')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// canPresentCase — treatment-presentation surface (E1)
+// Clinicians + treatment_coordinator. Mirrors backend createCasePresentation gate.
+// ---------------------------------------------------------------------------
+
+describe('canPresentCase', () => {
+  const expected: Record<DentalRole, boolean> = {
+    dentist_owner: true,
+    dentist_associate: true,
+    treatment_coordinator: true,
+    staff_full: false,
+    staff_scheduling: false,
+    hygienist: false,
+    dental_assistant: false,
+    front_desk: false,
+    billing_staff: false,
+    read_only: false,
+  };
+  for (const role of ALL_ROLES) {
+    test(`canPresentCase("${role}") === ${expected[role]}`, () => {
+      expect(canPresentCase(role)).toBe(expected[role]);
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// E2: dental_assistant clinical-assist capability helpers.
+// Each truth table mirrors the backend assertBranchRole gate for the operation.
+// ---------------------------------------------------------------------------
+
+const CLINICAL_CAPS: Record<
+  string,
+  { fn: (r: DentalRole) => boolean; expected: Record<DentalRole, boolean> }
+> = {
+  // ALLOW assistant — capture imaging (createImagingStudy)
+  canCaptureImaging: {
+    fn: canCaptureImaging,
+    expected: {
+      dentist_owner: true, dentist_associate: true, hygienist: true, dental_assistant: true,
+      staff_full: false, staff_scheduling: false, treatment_coordinator: false,
+      front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // ALLOW assistant — draft notes (upsertVisitNotes)
+  canDraftNotes: {
+    fn: canDraftNotes,
+    expected: {
+      dentist_owner: true, dentist_associate: true, dental_assistant: true,
+      hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // ALLOW assistant — chart-condition writes (upsertDentalChart/updateTooth/initializeDentition)
+  canEditChart: {
+    fn: canEditChart,
+    expected: {
+      dentist_owner: true, dentist_associate: true, hygienist: true, dental_assistant: true,
+      staff_full: false, staff_scheduling: false, treatment_coordinator: false,
+      front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — sign notes (signVisitNotes)
+  canSignNotes: {
+    fn: canSignNotes,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — add/finalize treatment (createDentalTreatment)
+  canAddTreatment: {
+    fn: canAddTreatment,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — prescribe (Rx)
+  canPrescribe: {
+    fn: canPrescribe,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // DENY assistant — capture consent (createConsentForm); dentists only
+  canCaptureConsent: {
+    fn: canCaptureConsent,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      dental_assistant: false, hygienist: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+};
+
+for (const [name, { fn, expected }] of Object.entries(CLINICAL_CAPS)) {
+  describe(name, () => {
+    for (const role of ALL_ROLES) {
+      test(`${name}("${role}") === ${expected[role]}`, () => {
+        expect(fn(role)).toBe(expected[role]);
+      });
+    }
+  });
+}
+
+// Explicit dental_assistant scope summary (the heart of E2).
+describe('dental_assistant clinical-assist scope', () => {
+  test('ALLOW: capture imaging, draft notes, edit chart conditions', () => {
+    expect(canCaptureImaging('dental_assistant')).toBe(true);
+    expect(canDraftNotes('dental_assistant')).toBe(true);
+    expect(canEditChart('dental_assistant')).toBe(true);
+  });
+  test('DENY: sign notes, add treatment, prescribe, capture consent', () => {
+    expect(canSignNotes('dental_assistant')).toBe(false);
+    expect(canAddTreatment('dental_assistant')).toBe(false);
+    expect(canPrescribe('dental_assistant')).toBe(false);
+    expect(canCaptureConsent('dental_assistant')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// E3: hygienist hygiene-led visit capability helpers.
+// A hygienist gains create/sign authority ONLY on a HYGIENE-typed visit.
+// GENERAL-visit gates are unchanged (owner/associate). Mirrors the conditional
+// backend assertBranchRole logic.
+// ---------------------------------------------------------------------------
+
+const E3_CAPS: Record<
+  string,
+  { fn: (r: DentalRole) => boolean; expected: Record<DentalRole, boolean> }
+> = {
+  // Create a hygiene visit — dentists OR hygienist
+  canCreateHygieneVisit: {
+    fn: canCreateHygieneVisit,
+    expected: {
+      dentist_owner: true, dentist_associate: true, hygienist: true,
+      dental_assistant: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // Create a GENERAL visit — dentists only (unchanged gate)
+  canCreateGeneralVisit: {
+    fn: canCreateGeneralVisit,
+    expected: {
+      dentist_owner: true, dentist_associate: true,
+      hygienist: false, dental_assistant: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+  // Sign a hygiene visit's notes — dentists OR hygienist
+  canSignHygieneNotes: {
+    fn: canSignHygieneNotes,
+    expected: {
+      dentist_owner: true, dentist_associate: true, hygienist: true,
+      dental_assistant: false, staff_full: false, staff_scheduling: false,
+      treatment_coordinator: false, front_desk: false, billing_staff: false, read_only: false,
+    },
+  },
+};
+
+for (const [name, { fn, expected }] of Object.entries(E3_CAPS)) {
+  describe(name, () => {
+    for (const role of ALL_ROLES) {
+      test(`${name}("${role}") === ${expected[role]}`, () => {
+        expect(fn(role)).toBe(expected[role]);
+      });
+    }
+  });
+}
+
+describe('canSignNotesForVisitType — visitType scoping', () => {
+  test('general visit: hygienist DENIED, dentist ALLOWED (unchanged gate)', () => {
+    expect(canSignNotesForVisitType('hygienist', 'general')).toBe(false);
+    expect(canSignNotesForVisitType('dentist_owner', 'general')).toBe(true);
+    expect(canSignNotesForVisitType('dentist_associate', 'general')).toBe(true);
+  });
+  test('hygiene visit: hygienist ALLOWED, dentist still ALLOWED', () => {
+    expect(canSignNotesForVisitType('hygienist', 'hygiene')).toBe(true);
+    expect(canSignNotesForVisitType('dentist_owner', 'hygiene')).toBe(true);
+  });
+  test('hygiene visit: dental_assistant still DENIED (never signs)', () => {
+    expect(canSignNotesForVisitType('dental_assistant', 'hygiene')).toBe(false);
+  });
+});
+
+describe('canDraftNotesForVisitType — visitType scoping', () => {
+  test('general visit: hygienist DENIED draft (unchanged)', () => {
+    expect(canDraftNotesForVisitType('hygienist', 'general')).toBe(false);
+  });
+  test('hygiene visit: hygienist ALLOWED draft; assistant still allowed (supervised)', () => {
+    expect(canDraftNotesForVisitType('hygienist', 'hygiene')).toBe(true);
+    expect(canDraftNotesForVisitType('dental_assistant', 'hygiene')).toBe(true);
   });
 });

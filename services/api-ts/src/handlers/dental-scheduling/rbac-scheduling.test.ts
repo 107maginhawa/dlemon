@@ -359,6 +359,48 @@ describe('RBAC — DELETE appointment: scheduling/associate excluded, owner allo
 });
 
 // ---------------------------------------------------------------------------
+// EM-SCH-001 — PATCH-cancel bypass: cancelling via PATCH {status:'cancelled'}
+// must honour the SAME narrow cancel permission as DELETE (owner/staff_full only).
+// Regression: the broad write-role gate let staff_scheduling/dentist_associate
+// cancel through PATCH, bypassing the dedicated cancel-role restriction.
+// ---------------------------------------------------------------------------
+
+describe('RBAC — PATCH {status:cancelled}: scheduling/associate excluded (parity with DELETE) [EM-SCH-001]', () => {
+  test('staff_scheduling PATCH status=cancelled → 403 (cancel is owner/staff_full only)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_SCHED);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled', cancellationReason: 'sched tries PATCH-cancel' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_associate PATCH status=cancelled → 403 (cancel is owner/staff_full only)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_ASSOC);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled', cancellationReason: 'assoc tries PATCH-cancel' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('dentist_owner PATCH status=cancelled → not 403 (role gate passes)', async () => {
+    const appt = await seedScheduledAppointment();
+    const app = makeApp(USER_OWNER);
+    const res = await app.request(`/dental/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled', cancellationReason: 'owner cancels via PATCH' }),
+    });
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // EM-SCH-001 — non-dental-role user (no branch membership) cannot book
 // ---------------------------------------------------------------------------
 

@@ -69,16 +69,27 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ### WF-030 — Run Ceph Analysis (v1.4, `imagingTier = cbct` required)
 1. Dentist uploads a lateral cephalometric radiograph (panoramic or CBCT series).
 2. Server validates `imagingTier` for the branch (BR-016c) → 403 if insufficient.
-3. Auto-landmark detection runs (server-side isomorphic math engine). Results returned within 5s (P95).
-4. Dentist reviews auto-placed landmarks in the ceph viewer; can drag to correct (WF-031).
-5. On confirmation: ceph analysis record saved with landmark coordinates, derived angles (ANB, SNA, SNB, etc.), and skeletal classification.
+3. Dentist places cephalometric landmarks **manually** on the ceph viewer (WF-031). Manual placement is the default and only committed V1 input path (no-AI — see the no-AI note below).
+4. Angles recalculate live as landmarks are placed/adjusted (server-side isomorphic math engine, pure functions).
+5. On "Lock Analysis": ceph analysis record saved with landmark coordinates, derived angles (ANB, SNA, SNB, etc.), and skeletal classification.
+
+> **No-AI note (product decision #2, 2026-06-12):** automatic landmark detection is **not** part of the committed V1 workflow. An optional, addon-gated auto-detect affordance exists behind the `dental_imaging_auto_landmark` feature flag (**default OFF** — see §18; `detectCephLandmarks` returns 403 `FEATURE_DISABLED` when off). It is backed by a deterministic `FakeDetector` dev/test fixture (`repos/ceph-landmark-detector.ts`) — **not a clinical AI detector** — and every suggested point is an explicitly-disclosed draft the clinician must confirm. The platform is local-first / no-AI; manual landmark placement is the shipped path. (Aligned with `docs/clinical/STANDARDS_COMPLIANCE.md` — AI auto-tracing is an intentional non-goal.)
 
 ### WF-031 — Place / Adjust Ceph Landmarks (v1.4)
-1. Follows WF-030 auto-detection or can be triggered manually on a CBCT-tier study.
+1. Triggered manually on a CBCT-tier study (the default path); the optional, flag-gated auto-detect (above) seeds draft landmarks only when enabled.
 2. Ceph viewer displays the radiograph with landmark overlay (circles with IDs).
 3. Dentist drags each landmark to corrected position. Angles recalculate live.
 4. "Lock Analysis" commits the final landmark set — further edits require a new analysis record.
 5. Locked analysis results included in PMD export and printable ceph report.
+
+### WF-030b — Cephalometric Superimposition (P1-11, V1: preview-only) — Phase-2 persistence
+1. Dentist in the ceph workspace selects two report snapshots (earlier vs later timepoint) to compare.
+2. Registration reference = cranial-base S–N only in V1; maxillary/mandibular structural registration is deferred to Phase-2.
+3. Backend computes a similarity transform; the viewer renders the two tracings stacked with an opacity slider + onion-skin, plus a per-landmark mm delta table.
+4. **V1 is preview-only and NOT persisted** — results compute on the fly (`POST …/ceph/superimpositions/preview`, response `id: null`) and recompute on revisit. The persist trio (`POST …/ceph/superimpositions`, `GET …/{id}`, list) is built but has **no V1 production consumer** and is Phase-2-dormant (product decision #19, 2026-06-12). Honesty: this is a simplified two-point (S–N) superimposition, not ABO-grade structural superimposition.
+
+### CBCT / 3-D volumes (P2-7) — declared OUT of V1 launch scope
+The schema accepts `modality='cbct'` and stores DICOM volume metadata, and `finalizeCbctStudy` parses DICOM tags server-side, but the full CBCT ingest chain (large-volume multipart upload UI, finalize wiring, 3-D viewer handoff) is **out of V1 launch scope** (product decision #19, 2026-06-12). `finalizeCbctStudy` has **0 production consumers** (exercised only by seed/integration tests); a clinician cannot complete a CBCT upload in the V1 app. CBCT is Phase-2 / addon-dormant; the schema unique-constraint hardening is deferred with it.
 
 ---
 
@@ -97,20 +108,27 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 
 | Action | Allowed | Notes |
 |--------|---------|-------|
-| Upload study | dentist_owner, dentist_associate | — |
+| Capture / upload study | dentist_owner, dentist_associate, **hygienist, dental_assistant** | E2/E3 reconciliation: capture is clinical-write — hygienist + dental_assistant may capture under dentist supervision (`createImagingStudy` `assertBranchRole`). Authoritative grid: ROLE_PERMISSION_MATRIX.md §Clinical Write ("Capture imaging study"). |
+| CBCT *finalize* (`finalizeCbctStudy`) | dentist_owner, dentist_associate | Stays dentist-only (DICOM parse + volume commit). |
+| Image management (delete / calibration / modality / **metadata** / **links**) | dentist_owner, dentist_associate | Not hygienist/assistant — see deleteImage BR-026/027, calibration/modality/metadata/link `assertBranchRole`. |
 | Annotate / record finding | dentist_owner, dentist_associate | — |
-| Run ceph | dentist_owner, dentist_associate | imagingTier required |
-| View studies | all dental roles | Branch-scoped |
+| **Ceph landmark drafting** | dentist_owner, dentist_associate, **dental_assistant** | **G4-B**: assistants may place/edit landmarks in draft; writing/transitioning to `confirmed`/`locked` → 403 `ASSISTANT_CANNOT_FINALIZE`. Only `dental_assistant` drafts (hygienist/coordinator excluded). |
+| **Ceph finalize** (confirm/lock landmarks, generate report) | dentist_owner, dentist_associate | **G4-B**: clinician sign-off only; report snapshot pins `prepared_by`/`finalized_by`. |
+| Run ceph | dentist_owner, dentist_associate | imagingTier=`addon` required (BR-016c) |
+| View studies / images / ceph | all clinical dental roles (read) | Branch-scoped; non-ceph reads 403 on no-access, ceph reads 404-mask (info-hiding) |
 
 ---
 
 ## 7. Data Requirements (key fields)
 **`imaging_study`:** id, patient_id (UUID ref), branch_id, dentist_member_id, study_type (enum), capture_method (enum), created_at
-**`imaging_study_image`:** id, study_id, storage_file_id, tooth_fdi (nullable), sequence_order
+**`imaging_study_image`:** id, study_id, storage_file_id, tooth_fdi (nullable), sequence_order, **`is_diagnostic` (bool, default true), `quality_status` (enum ok|retake, default ok), `retake_reason` (nullable), `tags` (jsonb string[])** — G5a library metadata (migration 0098)
+**`imaging_link`:** id, image_id (FK→image), `link_type` (enum treatment_plan|ortho_case|report), `target_id` (uuid, loose-coupled — no DB FK to target module), created_at, created_by; unique(image_id, link_type, target_id) — G5b context links (migration 0099)
+**`imaging_calibration`:** id, image_id (FK→image), `version` (monotonic per image), `point_a`/`point_b` (jsonb {x,y}), `known_distance_mm`, `pixel_distance`, `pixel_spacing_mm`, `method`, created_at, created_by — G6 append-only versioned 2-point ruler record (migration 0097)
 **`imaging_annotation`:** id, image_id, type (enum: line/angle/area/label/arrow/freehand/shape/tooth), geometry (JSONB), measurement_value, measurement_unit, tooth_number, visible (bool). V-IMG-008: annotations are presentation overlays with a `visible` flag — they do NOT carry the SM-01 finding state machine.
 **`imaging_finding`:** id, image_id, tooth_number, type, status (SM-01: draft/confirmed/resolved)
 **`ceph_analysis`:** id, study_id, analysis_type (steiner_hybrid_sn), status, calibration_method (enum), mm_per_pixel
-**`ceph_landmark`:** id, analysis_id, landmark_type, x, y, status (not_placed/placed/locked), source (manual/auto)
+**`ceph_landmark`:** id, analysis_id, landmark_type, x, y, status (not_placed/placed/locked), source (manual/auto), created_by/updated_by (G4-B sign-off authorship)
+**`imaging_ceph_report`:** id, image_id, version, snapshot (jsonb — pins analysis_type/norm_population/norm_version/formula_version/calibration record + `prepared_by`/`finalized_by`), **`revision_of` (nullable self-ref), `revision_reason` (nullable)** — G1-B revision lineage (migration 0096); append-only/immutable
 
 ---
 
@@ -118,6 +136,18 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ImagingStudy (aggregate root) owns ImagingImage, ImagingAnnotation, ImagingFinding.
 CephAnalysis (aggregate root) owns CephLandmark.
 Both reference Patient, Visit by UUID only — no DB FKs (intentional loose coupling pattern).
+
+### Two finding systems are intentional and separate — DO NOT merge
+The platform has **two distinct "finding" tables that must not be unified**:
+
+| | `imaging_finding` (this module) | `dental_finding` (dental-visit) |
+| --- | --- | --- |
+| Schema | `dental-imaging/repos/imaging_finding.schema.ts` | `dental-visit/repos/dental-finding.schema.ts` |
+| Scope | **image-scoped** — anchored to an `imaging_study_image` | **visit-scoped** — anchored to a visit/chart |
+| Purpose | radiographic reads (caries/lesion seen *on an X-ray*) | clinical charting condition vocabulary (a condition observed *in the mouth* → proposed treatment) |
+| Lifecycle | SM-01 FSM `draft → confirmed → resolved` (§8) | condition→treatment derivation (charting, migration 0100) |
+
+They model **different clinical acts at different anchors** and deliberately do not share a row, a status machine, or a foreign key. A radiograph finding may *inform* a chart condition, but the two are recorded independently. Future contributors must **not** "deduplicate" them into one table: doing so would collapse the image-evidence audit trail (SM-01 confirm/resolve on a specific X-ray) into the visit chart and break both this module's finding FSM and dental-visit's condition→treatment flow.
 
 ---
 
@@ -149,6 +179,7 @@ not a standalone `ceph-analyses` resource). Canonical routes:
 - `GET|POST /dental/imaging/images/:imageId/ceph/landmarks` (batch upsert), `PATCH|DELETE .../ceph/landmarks/:code`
 - `GET /dental/imaging/images/:imageId/ceph/analysis`, `POST .../ceph/analysis/recompute`
 - `GET|POST /dental/imaging/images/:imageId/ceph/reports`
+- Library admin (G5 / AHA Batch B FIX-003): `PATCH /dental/imaging/images/:imageId/metadata` (diagnostic flag / quality / tags), `PATCH /dental/imaging/images/:imageId/modality` (reclassify a mis-captured image), `DELETE /dental/imaging/images/:imageId` (soft-delete/archive → **204 No Content**, consistent with the module's other delete ops). All three are wired into the per-image editor (`ImageMetadataEditor`); modality + delete are owner/associate-gated (BR-026/BR-027) on the backend.
 
 ---
 
@@ -177,10 +208,14 @@ Coverage: see BUSINESS_RULES.md §Imaging coverage summary (imaging.test.ts, cep
 ---
 
 ## 13. Edge Cases
-- Ceph analysis recompute with missing landmarks → error with list of missing landmarks
-- Study upload with unsupported MIME type → 422
-- Finding on study from different branch → 403 (assertBranchAccess)
-- Calibration not set before landmark placement → 422 NOT_CALIBRATED
+- Ceph analysis recompute with missing landmarks → returns `missing[]` list (analysis is never 404; mm metrics that depend on absent landmarks are null)
+- Study upload with unsupported MIME type → 422 UNSUPPORTED_MIME_TYPE
+- Study upload exceeding the per-modality byte ceiling → 422 FILE_TOO_LARGE
+- Finding/measurement/image-management on a study from a branch the caller can't access → 403 (non-ceph) / 404-mask (ceph endpoints, info-hiding)
+- Landmark placement does NOT require calibration — landmarks may be placed uncalibrated; `recomputeCephAnalysis` returns 422 NOT_CALIBRATED only when an mm (linear) metric is requested on an image whose pixel spacing is missing/anisotropic. Pixel-based angle metrics still compute.
+- Unknown `analysisType` query param → 422 UNSUPPORTED_ANALYSIS_TYPE (never silently defaulted)
+- Ceph superimposition is preview-only in V1 (no persistence): `…/ceph/superimpositions/preview` returns `id: null` and there is no V1 fetch-by-id consumer; structural multi-point registration is Phase-2 (decision #19).
+- CBCT studies cannot be finalized in the V1 app (the multipart upload + finalize chain is not wired into production UI); `finalizeCbctStudy` is reachable only via seed/integration harnesses (decision #19).
 
 ---
 
@@ -194,10 +229,16 @@ Coverage: see BUSINESS_RULES.md §Imaging coverage summary (imaging.test.ts, cep
 
 | Scenario | HTTP | Code |
 |----------|------|------|
-| imagingTier insufficient | 403 | IMAGING_TIER_REQUIRED |
-| Invalid annotation state | 422 | INVALID_STATUS_TRANSITION |
-| Not calibrated | 422 | NOT_CALIBRATED |
-| Unsupported image type | 422 | UNSUPPORTED_MIME_TYPE |
+| imagingTier insufficient (not `addon`, incl. `free`/`basic`/null) | 403 | IMAGING_TIER_REQUIRED |
+| Invalid finding state transition (SM-01, e.g. confirmed→draft) | 422 | INVALID_STATUS_TRANSITION |
+| mm metric requested on uncalibrated/anisotropic image | 422 | NOT_CALIBRATED |
+| Unsupported image MIME type | 422 | UNSUPPORTED_MIME_TYPE |
+| Upload exceeds per-modality byte ceiling | 422 | FILE_TOO_LARGE |
+| Unknown ceph `analysisType` | 422 | UNSUPPORTED_ANALYSIS_TYPE |
+| Malformed DICOM on CBCT finalize (no half-written volume) | 422 | INVALID_DICOM |
+| Locked ceph landmark mutated/deleted | 422 | LANDMARK_LOCKED |
+| viewer-link on a non-volume study | 422 | NOT_A_VOLUME |
+| Non-member on ceph endpoint (info-hiding) | 404 | (masked) |
 
 ---
 
@@ -215,7 +256,7 @@ dental-imaging.study-uploaded (INFO, studyId, branchId), dental-imaging.ceph-com
 | Flag | Default | Description |
 |------|---------|-------------|
 | dental_imaging_ceph_enabled | false | Gate ceph workspace by imagingTier |
-| dental_imaging_auto_landmark | false | AI-assisted landmark placement |
+| dental_imaging_auto_landmark | false | Optional auto-landmark detection — **default OFF**, addon-gated. No-AI: backed by a deterministic `FakeDetector` dev/test fixture, not a clinical AI detector; every point is a draft-to-confirm (decision #2). |
 
 ---
 

@@ -53,7 +53,7 @@ Required inputs:
 
 Optional inputs:
 - UI prototype packs: `docs/product/modules/{name}/ui-prototype/`
-- MASTER_PRD.md (reference for cross-module workflows)
+- `docs/prd/v3-dentalemon.md` — canonical PRD (reference for cross-module workflows)
 - ARCHITECTURE.md (technical constraints)
 </context>
 

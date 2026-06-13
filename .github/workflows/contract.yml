@@ -1,12 +1,31 @@
 name: Contract Tests
 
-# Spec-first contract tests. Two layers:
-#   1. Hurl scenarios under specs/api/tests/contract/ — required check.
-#   2. Schemathesis schema fuzzing — shadow check (allowed to fail).
+# Spec-first contract tests. Layers:
+#   1. Hurl core — Postgres-only scenarios (39 files) — BLOCKING.
+#   2. Hurl infra-gated — MinIO/Stripe scenarios (6 files) — non-blocking
+#      until a CI run confirms the infra wiring, then promote to blocking.
+#   3. Schemathesis schema fuzzing — shadow check (allowed to fail by design:
+#      it surfaces spec-precision nits, not impl bugs).
 #
-# Both run against whichever HTTP implementation is booted on $API_URL,
+# All run against whichever HTTP implementation is booted on $API_URL,
 # so the same workflow can be retargeted at a Rust impl, a remote staging
 # environment, etc., by swapping the boot step.
+#
+# The core/infra split is by `CONTRACT_SKIP` / `CONTRACT_ONLY` (substring filters
+# in scripts/run-contract-tests.ts). The 8 infra-gated files were identified
+# empirically — each fails ONLY because its backing service is absent (storage
+# study/upload → MinIO 500; auth verify/reset → Mailpit; merchant-accounts →
+# Stripe). The other 39 pass on Postgres alone.
+#
+# IMPORTANT — email verification is a SERVER-BOOT config, not per-request. The
+# core scenarios sign up a user and immediately reuse the returned session
+# cookie, which Better-Auth only issues when `requireEmailVerification` is FALSE
+# (auth.ts:81). The two Mailpit scenarios (auth-verification, auth-password-reset)
+# need the OPPOSITE (verification ON) so they can drive the email→token flow.
+# A single booted server cannot satisfy both, so the server boots verification-OFF
+# (matching the locally-verified-green core config) and the 2 verification-ON
+# scenarios are deferred to a dedicated verification-on boot (tracked follow-up) —
+# they are NOT in the infra-gated promote candidate below.
 
 on:
   push:
@@ -44,6 +63,20 @@ jobs:
       STORAGE_BUCKET: monobase-files
       STORAGE_ACCESS_KEY_ID: minioadmin
       STORAGE_SECRET_ACCESS_KEY: minioadmin
+      # Email → Mailpit (auth-verification / auth-password-reset scenarios).
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      MAILPIT_API: http://localhost:8025
+      # Verification OFF so sign-up returns a session cookie immediately — the
+      # core scenarios (and the admin preflight) depend on it. This matches the
+      # local dev-server config the 39 core files were verified green against.
+      # The 2 Mailpit verification scenarios need this ON and are deferred to a
+      # separate verification-on boot (see header note).
+      AUTH_REQUIRE_EMAIL_VERIFICATION: 'false'
+      # Stripe → stripe-mock (billing-lifecycle merchant-accounts scenario).
+      STRIPE_SECRET_KEY: sk_test_stripe_mock
+      STRIPE_URL: http://localhost:12111
       BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
 
     steps:
@@ -54,10 +87,16 @@ jobs:
         with:
           bun-version: 1.2.21
 
+      # Pin Hurl to 8.0.1 to match the version contributors run locally. Hurl
+      # 6.0.0's `contains` predicate type-errored on JSONPath COLLECTIONS
+      # ("$[*].id contains X", "$.warnings contains X", "$.fieldErrors[*].field
+      # contains X") — that membership check moved from the now-removed `includes`
+      # predicate to `contains` in later releases. 6.0.0 failed 6 core scenarios
+      # purely on this tooling skew; 8.0.1 evaluates them correctly.
       - name: Install Hurl
         run: |
           curl -fsSL -o /tmp/hurl.deb \
-            https://github.com/Orange-OpenSource/hurl/releases/download/6.0.0/hurl_6.0.0_amd64.deb
+            https://github.com/Orange-OpenSource/hurl/releases/download/8.0.1/hurl_8.0.1_amd64.deb
           sudo dpkg -i /tmp/hurl.deb
 
       - name: Install Schemathesis
@@ -85,6 +124,26 @@ jobs:
             minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
           for i in {1..20}; do
             curl -fsS http://localhost:9000/minio/health/live && break || sleep 1
+          done
+
+      - name: Start Mailpit
+        run: |
+          docker run -d \
+            -p 1025:1025 -p 8025:8025 \
+            --name mailpit \
+            axllent/mailpit:v1.21.0
+          for i in {1..20}; do
+            curl -fsS http://localhost:8025/api/v1/info && break || sleep 1
+          done
+
+      - name: Start stripe-mock
+        run: |
+          docker run -d \
+            -p 12111:12111 \
+            --name stripe-mock \
+            stripe/stripe-mock:v0.193.0
+          for i in {1..20}; do
+            curl -fsS http://localhost:12111/v1/ && break || sleep 1
           done
 
       # ----- Implementation under test: services/api-ts (TypeScript) -----
@@ -116,14 +175,37 @@ jobs:
 
       # ----- Contract checks -----
 
-      # Non-blocking until pre-existing failures (audit-side-effects, auth-password-reset,
-      # auth-verification, billing-lifecycle, dental-billing, dental-pmd, dental-visit,
-      # email, expand, expand-edge) are fixed. These were failing on main before this branch.
-      # Track in: https://github.com/mycurelabs/monobase-js-lfh/issues (follow-up).
-      - name: Hurl contract scenarios
-        continue-on-error: true
+      # Core (Postgres-only, 39 files) — BLOCKING. Verified green locally; these
+      # have no infra dependency so a failure here is a real contract regression.
+      - name: Hurl contract — core (blocking)
+        env:
+          CONTRACT_SKIP: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
         run: bun run test:contract
 
+      # Infra-gated MinIO (storage, dental-imaging, dental-assistant) — BLOCKING.
+      # MinIO is provisioned above and these run against the verification-OFF server.
+      # Confirmed green on ubuntu (run 27443529051). The 2 Mailpit verification
+      # scenarios (auth-verification, auth-password-reset) are excluded: they need a
+      # verification-ON server boot (deferred follow-up).
+      - name: Hurl contract — infra-gated MinIO (blocking)
+        env:
+          CONTRACT_ONLY: storage,dental-imaging,dental-assistant
+        run: bun run test:contract
+
+      # Stripe (billing-lifecycle) — NON-BLOCKING. Exercises Stripe Connect merchant
+      # onboarding against stripe-mock, which intermittently 500s on
+      # POST /billing/merchant-accounts (the mock's Account API is incomplete and
+      # boot-timing sensitive). The earlier promotion to blocking off a single green
+      # run proved unstable, so it is demoted to continue-on-error. Re-promote once
+      # stripe-mock is reliable or replaced with a recorded-fixture mock.
+      - name: Hurl contract — Stripe (non-blocking)
+        continue-on-error: true
+        env:
+          CONTRACT_ONLY: billing-lifecycle
+        run: bun run test:contract
+
+      # Shadow check by design: Schemathesis fuzzing surfaces spec-precision nits
+      # (under-declared 401s, datetime query params), not impl bugs — kept advisory.
       - name: Schemathesis fuzz (shadow)
         continue-on-error: true
         run: bun run test:contract:fuzz

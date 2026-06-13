@@ -11,6 +11,7 @@ import {
 import { ANALYSIS_TYPES, NORM_POPULATIONS, DEFAULT_POPULATION, getPopulationLabel } from '@monobase/ceph-math'
 import { useMutation } from '@tanstack/react-query'
 import { cephMgmtCreateCephReport } from '@monobase/sdk-ts/generated'
+import { useOrgContextStore } from '@/stores/org-context.store'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephLandmarkCode } from '../hooks/use-ceph-landmarks'
@@ -33,10 +34,23 @@ export interface CephWorkspacePanelProps {
    */
   selectedCode?: CephLandmarkCode | null
   onSelectCode?: (code: CephLandmarkCode | null) => void
+  /**
+   * Controlled analysis protocol. When provided, the workspace owns the selected
+   * analysisType so the on-canvas angle arcs (driven by the workspace's own
+   * useCephAnalysis) and this panel's measurements table read the SAME protocol.
+   * Omit for the uncontrolled fallback (internal state) used by isolated tests.
+   */
+  analysisType?: string
+  onAnalysisTypeChange?: (analysisType: string) => void
 }
 
 // D-L: report gate landmarks
 const GATE_CODES: CephLandmarkCode[] = ['A', 'B', 'Go', 'Po']
+
+// G4-B sign-off split: only a dentist may finalize (confirm/lock landmarks +
+// generate the report). dental_assistant may prepare drafts — the backend
+// enforces this; the UI hides the finalize controls to match (403 otherwise).
+const CEPH_SIGNOFF_ROLES = ['dentist_owner', 'dentist_associate']
 
 // #15 / P1-8: human-readable protocol labels for the analysis switcher.
 // Wits is a single metric (AO-BO), NOT a protocol — intentionally not listed.
@@ -72,10 +86,16 @@ export function CephWorkspacePanel({
   onLayerChange,
   selectedCode: controlledSelectedCode,
   onSelectCode,
+  analysisType: controlledAnalysisType,
+  onAnalysisTypeChange,
 }: CephWorkspacePanelProps) {
   const { landmarks, commitLandmark, autoDetect } = useCephLandmarks(imageId)
   // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
-  const [analysisType, setAnalysisType] = useState<string>('steiner_hybrid_sn')
+  // Controlled/uncontrolled (mirrors selectedCode): when the workspace owns
+  // analysisType it shares the value with the canvas arc layer so both stay in sync.
+  const [internalAnalysisType, setInternalAnalysisType] = useState<string>('steiner_hybrid_sn')
+  const analysisType = controlledAnalysisType ?? internalAnalysisType
+  const setAnalysisType = onAnalysisTypeChange ?? setInternalAnalysisType
   // P2-6: reference-population selector for norm display (default = classic literature).
   const [population, setPopulation] = useState<string>(DEFAULT_POPULATION)
   const { analysis, isError } = useCephAnalysis(imageId, analysisType)
@@ -92,11 +112,17 @@ export function CephWorkspacePanel({
     arcs: true,
   })
   const [createdVersion, setCreatedVersion] = useState<number | null>(null)
+  // G4-B: gate the finalize controls on the caller's clinic role.
+  const role = useOrgContextStore((s) => s.role)
+  const canFinalize = role != null && CEPH_SIGNOFF_ROLES.includes(role)
 
   const createReport = useMutation({
     mutationFn: async () => {
       const { data } = await cephMgmtCreateCephReport({
         path: { imageId },
+        // G2: pin the analysis + reference population the clinician is viewing so
+        // the immutable report records what was actually used (not a default).
+        body: { analysisType, normPopulation: population },
         throwOnError: true,
       })
       // data is DentalImagingModuleCephReport | ErrorResponse; narrow via 'version'.
@@ -217,26 +243,33 @@ export function CephWorkspacePanel({
               </div>
             )}
 
-            <div className="flex gap-2 mt-3">
-              <Button
-                type="button"
-                disabled={!gatePassed || createReport.isPending}
-                onClick={() => createReport.mutate()}
-                className="bg-lemon text-zinc-900 hover:bg-lemon/90 text-xs font-medium flex-1"
-              >
-                <FileText size={12} className="mr-1" />
-                {createReport.isPending ? 'Creating…' : 'Generate Report'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleLockAll}
-                className="border-zinc-600 text-zinc-300 text-xs"
-              >
-                <Lock size={12} className="mr-1" />
-                Lock all confirmed
-              </Button>
-            </div>
+            {canFinalize ? (
+              <div className="flex gap-2 mt-3">
+                <Button
+                  type="button"
+                  disabled={!gatePassed || createReport.isPending}
+                  onClick={() => createReport.mutate()}
+                  className="bg-lemon text-zinc-900 hover:bg-lemon/90 text-xs font-medium flex-1"
+                >
+                  <FileText size={12} className="mr-1" />
+                  {createReport.isPending ? 'Creating…' : 'Generate Report'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLockAll}
+                  className="border-zinc-600 text-zinc-300 text-xs"
+                >
+                  <Lock size={12} className="mr-1" />
+                  Lock all confirmed
+                </Button>
+              </div>
+            ) : (
+              // G4-B: assistants prepare drafts; a dentist confirms + finalizes.
+              <p className="text-[10px] text-zinc-500 mt-3" data-testid="ceph-draft-only-notice">
+                Drafting only — a dentist must confirm landmarks and generate the report.
+              </p>
+            )}
 
             {createdVersion != null && (
               <div className="flex gap-2 mt-2">

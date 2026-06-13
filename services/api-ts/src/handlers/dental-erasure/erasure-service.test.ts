@@ -5,10 +5,11 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { openTestTx } from '@/core/test-tx';
 import { persons } from '../person/repos/person.schema';
 import { patients } from '../patient/repos/patient.schema';
+import { dentalAuditLog } from '../dental-audit/repos/audit-log.schema';
 import { ERASED_MARKER } from '../person/repos/person-erasure.facade';
 import { requestErasure, approveErasure, rejectErasure } from './erasure-service';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -95,6 +96,36 @@ describe('erasure workflow service', () => {
 
     const [p] = await db.select().from(persons).where(eq(persons.id, PID));
     expect(p!.firstName).toBe('Jane');
+  });
+
+  test('the erasure audit trail SURVIVES the anonymization it records (DATA_GOVERNANCE §3 "audit preserved")', async () => {
+    // Headline compliance invariant: erasing a subject must NOT delete the audit
+    // trail of the erasure. The engine writes to dental_audit_log (no FK to person,
+    // anonymize-not-delete), so the row must persist after the subject is gone.
+    // Use the REAL audit sink (no spy) so a durable row is actually written.
+    const req = await requestErasure(db, noopLogger, baseInput); // writes erasure.requested
+    const { request: approved } = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER }); // writes erasure.anonymized
+
+    // Subject IS anonymized.
+    expect(approved.status).toBe('anonymized');
+    const [p] = await db.select().from(persons).where(eq(persons.id, PID));
+    expect(p!.firstName).toBe(ERASED_MARKER);
+
+    // The audit row recording the anonymization still exists, attributed to the
+    // subject person and the reviewer — the trail outlives the erased identity.
+    const [erasedEvent] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(and(eq(dentalAuditLog.action, 'erasure.anonymized'), eq(dentalAuditLog.targetId, PID)));
+    expect(erasedEvent).toBeDefined();
+    expect(erasedEvent!.actorId).toBe(REVIEWER);
+    expect(erasedEvent!.eventType).toBe('security');
+    // And the request-time event is also retained (full append-only trail).
+    const [requestedEvent] = await db
+      .select()
+      .from(dentalAuditLog)
+      .where(eq(dentalAuditLog.action, 'erasure.requested'));
+    expect(requestedEvent).toBeDefined();
   });
 
   test('cannot approve/reject a request that is not in requested state', async () => {

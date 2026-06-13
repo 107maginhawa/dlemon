@@ -11,11 +11,11 @@
  * - 401 without auth
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { Hono } from 'hono';
-import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -25,7 +25,6 @@ import { labOrders } from '@/handlers/dental-clinical/repos/lab-order.schema';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
-import { getDashboardSummary } from './getDashboardSummary';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -42,23 +41,6 @@ const MEMBER_ID = 'dddddddd-0000-1000-8000-000000000077';
 // practice-wide financials are gated to dentist_owner only.
 const STAFF_USER = { id: '00000000-0000-0000-0000-000000000099', email: 'staff@clinic.com' };
 const STAFF_MEMBER_ID = 'dddddddd-0000-1000-8000-000000000099';
-
-function buildTestApp(user?: typeof TEST_USER) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.get('/dental/dashboard/summary', getDashboardSummary);
-  return app;
-}
 
 async function seedBaseData() {
   await db.insert(dentalOrganizations).values({
@@ -141,7 +123,7 @@ afterEach(async () => {
 describe('GET /dental/dashboard/summary', () => {
   test('returns zeros when no data', async () => {
     await seedBaseData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -150,7 +132,7 @@ describe('GET /dental/dashboard/summary', () => {
   });
 
   test('401 without auth', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
   });
@@ -166,7 +148,7 @@ describe('GET /dental/dashboard/summary', () => {
       status: 'on_track',
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(1);
@@ -193,7 +175,7 @@ describe('GET /dental/dashboard/summary', () => {
         createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
       },
     ]);
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(2);
@@ -210,7 +192,7 @@ describe('GET /dental/dashboard/summary', () => {
       status: 'completed',
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.activePaymentPlans.count).toBe(0);
@@ -236,7 +218,7 @@ describe('GET /dental/dashboard/summary', () => {
         createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
       },
     ]);
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.totalPending).toBe(2);
@@ -254,7 +236,7 @@ describe('GET /dental/dashboard/summary', () => {
       orderedAt: new Date(),
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.totalPending).toBe(0);
@@ -272,7 +254,7 @@ describe('GET /dental/dashboard/summary', () => {
       expectedDeliveryDate: pastDate,
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     expect(body.labOrders.overdueDelivery).toBe(1);
@@ -293,7 +275,7 @@ describe('GET /dental/dashboard/summary', () => {
       status: 'on_track',
       createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
     });
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -305,7 +287,7 @@ describe('GET /dental/dashboard/summary', () => {
   test('N-ORG-01: staff_scheduling branch member is denied financials (403)', async () => {
     await seedBaseData();
     await seedStaffMember('staff_scheduling');
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(403);
   });
@@ -313,7 +295,7 @@ describe('GET /dental/dashboard/summary', () => {
   test('N-ORG-01: staff_full branch member is denied financials (403)', async () => {
     await seedBaseData();
     await seedStaffMember('staff_full');
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(403);
   });
@@ -321,7 +303,7 @@ describe('GET /dental/dashboard/summary', () => {
   test('N-ORG-01: read_only branch member is denied financials (403)', async () => {
     await seedBaseData();
     await seedStaffMember('read_only');
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/dashboard/summary?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(403);
   });

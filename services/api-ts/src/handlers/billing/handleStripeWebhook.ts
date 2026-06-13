@@ -12,7 +12,7 @@ import type Stripe from 'stripe';
 /**
  * handleStripeWebhook
  * 
- * Path: POST /billing/stripe-webhook
+ * Path: POST /billing/webhooks/stripe
  * OperationId: handleStripeWebhook
  * 
  * Handle Stripe webhook events for invoice payments and merchant account updates

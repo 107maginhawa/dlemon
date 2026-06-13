@@ -54,6 +54,11 @@ const ROLE_OPTIONS: { value: DentalRole; label: string; description: string; dis
     label: 'Staff - Scheduling',
     description: 'Calendar and patient read access only',
   },
+  {
+    value: 'treatment_coordinator',
+    label: 'Treatment Coordinator',
+    description: 'Presents treatment plans + financials to patients',
+  },
 ];
 
 const MODULES: DentalModule[] = [

@@ -16,6 +16,7 @@ import { AppError } from '@/core/errors';
 import { DentalAuditRepository } from '@/db/audit.repo';
 import { createDatabase } from '@/core/database';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { archiveAppointments } from './repos/dental-appointment-retention.facade';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -316,6 +317,32 @@ describe('createAppointment handler', () => {
     const body = await res.json() as any;
     expect(body.walkIn).toBe(true);
   });
+
+  // STEP 3a contract-drift pin (SCH-DRIFT-001): the wire body must carry every
+  // field the SDK/TypeSpec DentalAppointment model declares. `version` is a
+  // REQUIRED field (optimistic-lock counter from baseEntityFields) but toWire
+  // was dropping it; `confirmedVia` is a declared optional field also dropped.
+  // SDK consumers typed against DentalAppointment would read undefined for both.
+  test('SCH-DRIFT-001: created appointment wire body includes contract-required version + confirmedVia key', async () => {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(VALID_APPOINTMENT_BODY),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    // `version` is REQUIRED in the contract — must be a number, never undefined.
+    expect(typeof body.version).toBe('number');
+    expect(body.version).toBeGreaterThanOrEqual(1);
+    // `confirmedVia` is declared (optional) — the key must be present in the
+    // serialized shape (null until a confirm action sets it), not silently absent.
+    expect('confirmedVia' in body).toBe(true);
+    // `noShowAt` is the camelCase wire name (matches every other *At field +
+    // the existing no_show assertions at L482/L785); the TypeSpec field is
+    // likewise noShowAt post-fix.
+    expect('noShowAt' in body).toBe(true);
+  });
 });
 
 // ===========================================================================
@@ -345,6 +372,18 @@ describe('getAppointment handler', () => {
     expect(body.id).toBe(appt.id);
     expect(body.patientId).toBe(PATIENT_ID);
     expect(body.status).toBe('scheduled');
+  });
+
+  // SCHEMA-FIX-3: soft-archived appointments (deletedAt stamped by V-DG-003
+  // retention) must not be retrievable via the staff detail read.
+  test('returns 404 when appointment is soft-archived (deletedAt set)', async () => {
+    const appt = await seedAppointment();
+    const archived = await archiveAppointments(db, [appt.id]);
+    expect(archived).toBe(1);
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}`);
+    expect(res.status).toBe(404);
   });
 });
 
@@ -425,6 +464,22 @@ describe('listAppointments handler', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body)).toBe(true);
+  });
+
+  // SCHEMA-FIX-3: soft-archived appointments must not leak into the staff
+  // calendar list; live appointments in the same window remain visible.
+  test('excludes soft-archived appointments (deletedAt set) from the list', async () => {
+    const live = await seedAppointment();
+    const archived = await seedAppointment();
+    const n = await archiveAppointments(db, [archived.id]);
+    expect(n).toBe(1);
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/appointments?${LIST_QS}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.some((a: any) => a.id === live.id)).toBe(true);
+    expect(body.every((a: any) => a.id !== archived.id)).toBe(true);
   });
 });
 

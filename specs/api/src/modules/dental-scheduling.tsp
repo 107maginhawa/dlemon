@@ -33,13 +33,17 @@ enum AppointmentStatus {
   no_show,
 }
 
-// V-SCH-007: visit_type is a constrained enum (checkup/treatment/emergency/recall),
+// V-SCH-007: visit_type is a constrained enum (checkup/treatment/emergency/recall/hygiene),
 // not free-text. Wire field name is `visitType` (camelCase per repo convention).
+// E3: 'hygiene' marks a hygienist-led recall/prophy/perio appointment — on check-in it
+// derives a hygiene-typed dental_visit, which is the only context where a hygienist may
+// create/own a visit. All other service types derive a 'general' (dentist-led) visit.
 enum VisitType {
   checkup,
   treatment,
   emergency,
   recall,
+  hygiene,
 }
 
 // ---------------------------------------------------------------------------
@@ -87,7 +91,10 @@ model DentalAppointment {
   notes?: string;
   cancelledAt?: utcDateTime;
   cancellationReason?: string;
-  no_showAt?: utcDateTime;
+  // V-SCH-006 (SCH-DRIFT-001): camelCase to match every other *At field and the
+  // actual handler wire output (toWire emits `noShowAt`). Was authored as the
+  // lone snake_case `no_showAt`, which drifted the SDK type away from the wire.
+  noShowAt?: utcDateTime;
   warnings?: string[];
 }
 

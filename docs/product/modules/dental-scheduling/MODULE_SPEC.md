@@ -51,6 +51,36 @@ Actor: staff_full | Steps: 1. Select date/time/dentist 2. System checks for over
 
 ---
 
+## 4b. Extended Workflows (implemented beyond the original P0 spec)
+
+This spec was authored for the appointment core (book / check-in / cancel / reschedule /
+calendar). The shipped module has since grown several adjacent capabilities. They are fully
+implemented, codegen'd, and tested; listed here so the spec stops under-claiming the surface.
+(Confirmed against `handlers/dental-scheduling/` + the `IDEAL_DENTAL_MODULE_WORKFLOW_STANDARD §3.3`
+"IMPLEMENTED" status.)
+
+| Capability | Endpoints | Handlers | TypeSpec |
+|------------|-----------|----------|----------|
+| Appointment confirmation | `POST /dental/appointments/:id/confirm` | `confirmAppointment.ts` | `dental-scheduling.tsp` AppointmentManagement |
+| Reminder self-confirm (token) | `POST /dental/appointments/:id/confirm/:token` | `confirmAppointmentByToken.ts` | `dental-scheduling.tsp` PublicBookingManagement |
+| Public booking config / availability | `GET /dental/branches/:id/booking-config`, `GET /dental/branches/:id/availability` | `getPublicBookingConfig.ts`, `getPublicAvailability.ts`, `availability.service.ts` | `dental-scheduling.tsp` PublicBookingManagement |
+| Booking holds (slot lock, TTL-expiring) | `POST /dental/branches/:id/holds` | `createBookingHold.ts` | `dental-scheduling.tsp` PublicBookingManagement |
+| Online self-service booking + lookup | `POST /dental/branches/:id/bookings`, `GET /dental/bookings/:confirmationCode` | `createOnlineBooking.ts`, `getOnlineBooking.ts` | `dental-scheduling.tsp` PublicBookingManagement |
+| Waitlist (FIFO promote) | waitlist CRUD + promote | `createWaitlistEntry.ts`, `listWaitlist.ts`, `promoteWaitlistEntry.ts` | `dental-ops-extras.tsp` |
+| Chairside queue board | queue create / list / status | `createQueueItem.ts`, `listQueueBoard.ts`, `updateQueueItemStatus.ts` | `dental-ops-extras.tsp` |
+| Reminder arming job | pg-boss reminder armer | `jobs/` | — (flag-gated, see §18) |
+
+Online bookings land with `source='online'` + `confirmationState='pending'` (schema P1-25) so staff
+can review them; the public lookup uses an unguessable `confirmationCode` bearer. Public availability
++ holds are rate-limited (`public-booking-ratelimit.ts`).
+
+> Note: the waitlist/queue **TypeSpec** lives in `dental-ops-extras.tsp` (a shared extras module),
+> while the **handlers** live under `handlers/dental-scheduling/`. The queue is a real lifecycle here
+> (`createQueueItem`/`updateQueueItemStatus`), which refines the §8 "no standalone queue table"
+> deviation note — a `dental_queue_item` table DOES back the chairside board.
+
+---
+
 ## 5. Business Rules
 
 | Rule ID | Rule | Expected Behavior |
@@ -78,7 +108,7 @@ Actor: staff_full | Steps: 1. Select date/time/dentist 2. System checks for over
 ## 7. Data Requirements
 **`dental_appointment`:** id, patient_id, branch_id, dentist_member_id, scheduled_at, duration_minutes, status (enum: scheduled/checked_in/completed/cancelled/no_show), walk_in (bool), cancellation_reason, cancelled_at, checked_in_at, visit_id (nullable, set on check-in)
 
-**Wire vs storage field mapping (V-SCH-006/007):** The canonical wire contract (API_CONTRACTS.md) exposes `providerId` / `startAt` / `endAt` / `visitType`. The DB columns retain their historical names `dentist_member_id` / `scheduled_at` / `duration_minutes` / `service_type` to avoid a destructive migration; handlers translate via `appointment-wire.ts` (duration = endAt − startAt). `visitType` is a constrained enum — `checkup` | `treatment` | `emergency` | `recall`.
+**Wire vs storage field mapping (V-SCH-006/007):** The canonical wire contract (API_CONTRACTS.md) exposes `providerId` / `startAt` / `endAt` / `visitType`. The DB columns retain their historical names `dentist_member_id` / `scheduled_at` / `duration_minutes` / `service_type` to avoid a destructive migration; handlers translate via `appointment-wire.ts` (duration = endAt − startAt). `visitType` is a constrained enum — `checkup` | `treatment` | `emergency` | `recall` | `hygiene`. (`hygiene` was added with the hygienist-led visit workflow: a `hygiene` appointment derives a hygiene-typed visit at check-in and lets the hygienist role check in — see `checkInAppointment.ts` E3.)
 
 ---
 
@@ -89,17 +119,27 @@ Appointment is an aggregate root. Visit referenced by visit_id (UUID only) after
 
 ## 8. State Transitions
 ```
-scheduled  ──► checked_in | cancelled | no_show
-checked_in ──► completed   | cancelled | no_show
+scheduled  ──► confirmed | checked_in | cancelled | no_show
+confirmed  ──► checked_in | cancelled | no_show
+checked_in ──► completed  | cancelled | no_show
 no_show    ──► completed   (reversible revert)
 completed  ──► (terminal)
 cancelled  ──► (terminal)
 ```
+**`confirmed` state (V-SCH-011):** `confirmed` is an optional patient-acknowledgement step between `scheduled` and `checked_in` (set via PATCH `status=confirmed`, the reminder self-confirm token, or the online-booking confirm). It is NOT mandatory — `scheduled` can go straight to `checked_in`. It is a real enum value in `appointment_status` and a node in `APPOINTMENT_TRANSITIONS`; transitions out of `confirmed` mirror those out of `scheduled` (minus re-confirm).
+
 **FSM clarification (V-SCH-009):** `checked_in → cancelled`, `checked_in → no_show`, and `no_show → completed` are intentional transitions backed by `APPOINTMENT_TRANSITIONS` in `repos/dental-appointment.schema.ts`. `no_show → completed` is the documented "revert no-show" path (a patient who was marked no-show but actually attended). All other transitions are rejected with a 422/validation error.
 
 No DB unique constraint on dentist+time (see FR3.7 — intentional).
 
-**QueueItem state naming deviation (IDEAL-GAP-P2-011):** The IDEAL §3.3 standard names queue states as `waiting → with_provider → ready_for_checkout → checked_out`. The implementation uses `with_provider` and `ready_for_checkout` as the enum values (matching the standard for those two), but the overall QueueItem lifecycle in this codebase follows the appointment/visit flow rather than a separate queue entity. This is a deliberate structural deviation — no standalone `dental_queue_item` table exists; queue state is derived from appointment + visit status.
+**QueueItem state naming deviation (IDEAL-GAP-P2-011) — corrected 2026-06-08:** A standalone
+`dental_queue_item` table DOES exist (`repos/queue-item.schema.ts`), backing the chairside queue board
+(`createQueueItem` / `updateQueueItemStatus` / `listQueueBoard`). Its FSM is
+`waiting → called → in_progress → completed | cancelled` (`QUEUE_ITEM_FSM`). The IDEAL §3.3 standard
+names the states `waiting → with_provider → ready_for_checkout → checked_out`; the implementation
+deviates in naming (`called` / `in_progress` rather than `with_provider` / `ready_for_checkout`) but
+**is** a real, separate queue entity — not a derivation of appointment+visit status. The prior wording
+("no standalone table … state derived from appointment+visit") was stale doc drift and is wrong.
 
 ---
 

@@ -19,6 +19,9 @@ import { ToothOverviewStep } from './tooth-overview-step';
 import { CdtCodeBrowser } from './cdt-code-browser';
 import type { CdtCodeSelection } from './cdt-code-browser';
 import { AmendmentForm } from './amendment-form';
+import { AmendmentsList } from './amendments-list';
+import { logger } from '@/lib/logger';
+import { FindingsPanel } from './findings-panel';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 type Step = 'overview' | 'treatment' | 'review';
@@ -52,9 +55,12 @@ export interface ToothSlideoutProps {
   visitId?: string;
   /** ID of the original treatment record being viewed (for amendment reference) */
   originalRecordId?: string;
+  /** P0-D: why this tooth shows its current odontogram layer/color (derived from
+   *  the same resolveToothLayer the chart uses, so it can't disagree). */
+  layerExplanation?: { layer: string; label: string; reason: string };
 }
 
-export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId }: ToothSlideoutProps) {
+export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId, layerExplanation }: ToothSlideoutProps) {
   // WCAG 2.4.3: Escape closes the slideout; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -70,6 +76,8 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
   const [entryClassification, setEntryClassification] = useState<ChartEntryClassification | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [showAmendment, setShowAmendment] = useState(false);
+  // FIX-007: bump to refetch the read-only amendments list after a new one is saved.
+  const [amendmentReloadToken, setAmendmentReloadToken] = useState(0);
 
   // Reset all step state when a different tooth is selected (D11)
   useEffect(() => {
@@ -83,6 +91,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
     setClinicalNotes('');
     setEntryClassification(undefined);
     setShowAmendment(false);
+    setAmendmentReloadToken(0);
   }, [toothNumber, open]);
 
   // Build review summary: group surfaces by condition (must be before early returns)
@@ -140,6 +149,12 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
 
   const steps: Step[] = ['overview', 'treatment', 'review'];
   const stepIdx = steps.indexOf(step);
+
+  // FIX-007: an amendment may only be filed against a resolvable original record.
+  // createAmendment requires originalRecordId to be a real UUID, so the affordance is
+  // gated on having one (a read-only tooth with no treatment record on this visit
+  // cannot be amended). The read-only amendments LIST is independent of this gate.
+  const canAmend = !!(readOnly && visitId && originalRecordId);
 
   function handleFocusSurface(surface: ToothSurface) {
     setFocusedSurface(surface);
@@ -206,7 +221,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
       onClose();
     } catch (err) {
       // Surface error — do NOT close so user can retry without losing data
-      console.error('Save failed', err);
+      logger.error('tooth-slideout', 'save failed', err);
     } finally {
       setSaving(false);
     }
@@ -221,7 +236,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
       // Notify parent to clear tooth selection but keep panel open
       onSaveAndNext?.();
     } catch (err) {
-      console.error('Save failed', err);
+      logger.error('tooth-slideout', 'save failed', err);
     } finally {
       setSaving(false);
     }
@@ -255,6 +270,18 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
           ✕
         </button>
       </div>
+
+      {/* P0-D: explain why this tooth shows its current odontogram color/layer. */}
+      {layerExplanation && (
+        <div
+          data-testid="tooth-layer-explanation"
+          data-layer={layerExplanation.layer}
+          className="px-4 py-2 border-b bg-muted/30 text-xs"
+        >
+          <span className="font-semibold">{layerExplanation.label}</span>
+          <span className="text-muted-foreground"> — {layerExplanation.reason}</span>
+        </div>
+      )}
 
       {/* Step indicator — numbered circles with connecting lines */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -306,6 +333,11 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             entryClassification={entryClassification}
             onSelectEntryClassification={setEntryClassification}
           />
+        )}
+
+        {/* P0-C: structured findings (curated vocabulary) for this tooth. */}
+        {step === 'overview' && !readOnly && visitId && (
+          <FindingsPanel visitId={visitId} toothNumber={toothNumber} patientId={patientId} />
         )}
 
         {step === 'treatment' && (
@@ -386,15 +418,28 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
         )}
       </div>
 
-      {/* Amendment form — shown inline when user clicks "Add Amendment" in readOnly mode */}
-      {readOnly && showAmendment && visitId && (
+      {/* FIX-007 / FR1.16: read-only review of this visit's amendments (corrections),
+          surfaced alongside the original record. Consumes the previously-orphaned
+          listAmendments. Visible whenever the visit is read-only, independent of
+          whether THIS tooth has a record that can be amended. */}
+      {readOnly && visitId && (
+        <AmendmentsList visitId={visitId} reloadToken={amendmentReloadToken} />
+      )}
+
+      {/* Amendment form — shown inline when the user clicks "Add Amendment". Gated on a
+          resolvable originalRecordId (the validator requires a real UUID — an empty id
+          would 400). */}
+      {readOnly && showAmendment && visitId && originalRecordId && (
         <AmendmentForm
           visitId={visitId}
           patientId={patientId}
           originalRecordType="tooth_treatment"
-          originalRecordId={originalRecordId ?? ''}
+          originalRecordId={originalRecordId}
           onClose={() => setShowAmendment(false)}
-          onSaved={() => setShowAmendment(false)}
+          onSaved={() => {
+            setShowAmendment(false);
+            setAmendmentReloadToken((t) => t + 1);
+          }}
         />
       )}
 
@@ -409,7 +454,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             >
               Close
             </button>
-            {visitId && !showAmendment && (
+            {canAmend && !showAmendment && (
               <button
                 type="button"
                 onClick={() => setShowAmendment(true)}

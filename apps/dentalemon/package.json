@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint src --max-warnings 200",
     "test": "bun test src/",
     "test:e2e": "playwright test --project=chromium --project=ipad-portrait --project=ipad-landscape",
     "test:journeys": "bun scripts/run-journey-harness.ts",

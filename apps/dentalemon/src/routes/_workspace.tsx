@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { requireAuth } from '@/lib/guards'
 import { loadOrgContext } from '@/lib/load-org-context'
 import { pinSession } from '@/lib/pin-session'
+import { PushOptInPrompt } from '@/features/notifications/push-opt-in-prompt'
 
 export const Route = createFileRoute('/_workspace')({
   beforeLoad: async (opts) => {
@@ -34,6 +35,10 @@ function WorkspaceLayout() {
       <main className="flex-1 overflow-hidden">
         <Outlet />
       </main>
+      {/* FIX-002 (Q2): prompt push opt-in at the first relevant clinical action —
+          opening a patient workspace — not on a cold login screen. Renders nothing
+          when push is unconfigured or already handled. */}
+      <PushOptInPrompt />
     </div>
   )
 }

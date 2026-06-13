@@ -24,8 +24,34 @@ export async function assertBranchRole(
   branchId: string,
   allowedRoles: MemberRole[],
 ): Promise<void> {
+  const role = await getBranchRole(db, userId, branchId);
+
+  if (!role) {
+    throw new ForbiddenError('You do not have access to this branch');
+  }
+
+  if (!allowedRoles.includes(role)) {
+    throw new ForbiddenError('You do not have access to this branch');
+  }
+}
+
+/**
+ * Returns the caller's active membership role in the given branch, or null if
+ * they have no active membership there.
+ *
+ * Use this (instead of assertBranchRole) when a handler needs to branch on the
+ * role itself — e.g. a graded permission where a wider set may PREPARE a draft
+ * but only a narrower set may FINALIZE (ceph sign-off split, G4-B). The handler
+ * decides which denial to surface (404 anti-enumeration for non-members vs an
+ * explicit 403 for a member who lacks the finalize right).
+ */
+export async function getBranchRole(
+  db: DatabaseInstance,
+  userId: string,
+  branchId: string,
+): Promise<MemberRole | null> {
   const [membership] = await db
-    .select({ id: dentalMemberships.id, role: dentalMemberships.role })
+    .select({ role: dentalMemberships.role })
     .from(dentalMemberships)
     .where(and(
       eq(dentalMemberships.personId, userId),
@@ -34,11 +60,5 @@ export async function assertBranchRole(
     ))
     .limit(1);
 
-  if (!membership) {
-    throw new ForbiddenError('You do not have access to this branch');
-  }
-
-  if (!allowedRoles.includes(membership.role)) {
-    throw new ForbiddenError('You do not have access to this branch');
-  }
+  return membership?.role ?? null;
 }

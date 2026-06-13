@@ -7,6 +7,8 @@ import { ClaimDraftRepository } from '../repos/claim-draft.repo';
 import { CLAIM_DRAFT_FSM, type ClaimDraftStatus, type DentalClaimDraft } from '../repos/claim-draft.schema';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { logAuditEvent } from '@/core/audit-logger';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -51,6 +53,22 @@ export async function updateClaimStatus(ctx: HandlerContext): Promise<Response> 
   }
 
   const updated = await repo.update(claimId, patientId, updateFields);
+
+  // dental-patient G5 / dental-audit P1-B: a claim-status transition is a
+  // billing-sensitive change — write an audit row with before/after status.
+  const auditBranchId = patient.preferredBranchId ?? undefined;
+  const branchForAudit = auditBranchId ? await getBranchOrgId(db, auditBranchId) : null;
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? auditBranchId ?? patientId,
+    branchId: auditBranchId,
+    eventType: 'data-modification',
+    action: 'claim.status_changed',
+    resourceType: 'dental_claim_draft',
+    resourceId: claimId,
+    before: { status: currentStatus },
+    after: { status: newStatus },
+  }, { failClosed: true });
 
   logger?.info({ action: 'updateClaimStatus', patientId, claimId, from: currentStatus, to: newStatus }, 'Claim status updated');
 

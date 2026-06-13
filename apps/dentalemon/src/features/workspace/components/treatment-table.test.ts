@@ -144,18 +144,36 @@ describe('TreatmentTable — Phase 3', () => {
       }
     });
 
-    test('completed row shows check icon instead of Mark Done button', async () => {
-      const user = userEvent.setup();
+    test('all-completed visit shows the row by default (no toggle needed)', () => {
       render(
         React.createElement(TreatmentTable, {
           treatments: [TREATMENT_COMPLETED],
         }),
         { wrapper: makeWrapper() },
       );
-      // Performed/verified rows are hidden by default — click "View Completed" to show them
-      await user.click(screen.getByTestId('view-completed-btn'));
+      // No pending work → completed rows are visible without any toggle click,
+      // so the table never sits empty beneath a non-zero total. The now-pointless
+      // "View Completed" toggle is hidden.
+      expect(screen.getByTestId(`treatment-row-${TREATMENT_COMPLETED.id}`)).not.toBeNull();
+      expect(screen.queryByTestId('view-completed-btn')).toBeNull();
       expect(document.querySelector('[data-testid="icon-check"]')).not.toBeNull();
       expect(screen.queryByTestId('mark-done-btn')).toBeNull();
+    });
+
+    test('mixed visit hides completed by default; toggle reveals them', async () => {
+      const user = userEvent.setup();
+      render(
+        React.createElement(TreatmentTable, {
+          treatments: [TREATMENT_COMPLETED, TREATMENT_PENDING],
+        }),
+        { wrapper: makeWrapper() },
+      );
+      // pending visible, completed hidden by default
+      expect(screen.getByTestId(`treatment-row-${TREATMENT_PENDING.id}`)).not.toBeNull();
+      expect(screen.queryByTestId(`treatment-row-${TREATMENT_COMPLETED.id}`)).toBeNull();
+      // toggle present and reveals the completed row
+      await user.click(screen.getByTestId('view-completed-btn'));
+      expect(screen.getByTestId(`treatment-row-${TREATMENT_COMPLETED.id}`)).not.toBeNull();
     });
 
     test('does not render Mark Done button when readOnly=true', () => { // [BR-007] [BR-003]
@@ -204,6 +222,45 @@ describe('TreatmentTable — Phase 3', () => {
     });
   });
 
+  // Cross-element coherence invariant — the class-catcher.
+  // A money total a human reads must be explained by a visible line item. A non-zero
+  // Grand Total with an empty body ("amount but no service") is the bug we are fixing,
+  // and this guards the whole class across the data states our forward-building flows
+  // never visit (all-completed / locked history in particular).
+  describe('invariant: non-zero grand total ⇒ at least one visible line item', () => {
+    const CARRIED_OVER = {
+      id: 't-carried-inv',
+      visitId: 'v-prev',
+      toothNumber: 36,
+      cdtCode: 'D2710',
+      description: 'Crown (PFM) — carried over',
+      status: 'diagnosed' as const,
+      priceCents: 600000,
+      surfaces: null,
+      conditionCode: null,
+      carriedOver: true,
+    };
+    const cases: Array<{ name: string; props: React.ComponentProps<typeof TreatmentTable> }> = [
+      { name: 'all-pending', props: { treatments: [TREATMENT_PENDING] } },
+      { name: 'all-completed', props: { treatments: [TREATMENT_COMPLETED] } },
+      { name: 'mixed', props: { treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED] } },
+      { name: 'carried-over-only', props: { treatments: [], carriedOverItems: [CARRIED_OVER] } },
+    ];
+    for (const c of cases) {
+      test(`${c.name}: money shown is backed by a visible row`, () => {
+        render(React.createElement(TreatmentTable, c.props), { wrapper: makeWrapper() });
+        const totalRow = screen.queryByTestId('grand-total-row');
+        if (!totalRow) return; // no total → nothing owed, nothing to explain
+        const amount = Number((totalRow.textContent ?? '').replace(/[^0-9.]/g, '')) || 0;
+        if (amount <= 0) return;
+        const treatmentRows = document.querySelectorAll('[data-testid^="treatment-row-"]').length;
+        const carriedRows = c.props.carriedOverItems?.length ?? 0;
+        // money on screen ⇒ at least one line item visible to explain it
+        expect(treatmentRows + carriedRows).toBeGreaterThan(0);
+      });
+    }
+  });
+
   // [BR-008] Carried-over treatments from previous visits are visually distinguished
   test('[BR-008] renders carried-over treatments in the table', () => {
     const carriedOver = {
@@ -229,6 +286,43 @@ describe('TreatmentTable — Phase 3', () => {
 
     // BR-008: carried-over item must appear in the rendered table
     expect(screen.getByText(/Crown \(PFM\)/i)).not.toBeNull();
+  });
+
+  // FIX-002 coherence: once carry-over actually runs, the copied rows live in the
+  // CURRENT visit (so they arrive in `treatments` with carriedOver=true) AND surface
+  // in the plan-derived `carriedOverItems`. The table must render + total each such
+  // row ONCE (carried section only) — never double-display it as a this-visit row or
+  // double-count it in the Grand Total. (Guards the summary-vs-body bug class for the
+  // overlap state the disjoint fixtures above never visit.)
+  test('[FIX-002] a carried-over row present in both treatments and carriedOverItems is counted once', () => {
+    const carried = {
+      id: 't-co-dup',
+      visitId: 'v-current',
+      toothNumber: 36,
+      cdtCode: 'D2710',
+      description: 'CarryDup Crown',
+      status: 'diagnosed' as const,
+      priceCents: 600000,
+      surfaces: null,
+      conditionCode: null,
+      carriedOver: true,
+    };
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-current',
+        // same logical row, as the current visit's treatments list returns it
+        treatments: [{ ...carried, priceAmount: 6000 }],
+        carriedOverItems: [carried],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    // rendered exactly once — in the carried section, NOT also as a this-visit row
+    expect(screen.getAllByText(/CarryDup Crown/).length).toBe(1);
+    expect(screen.queryByTestId('treatment-row-t-co-dup')).toBeNull();
+    // grand total counts it once (6,000), never doubled (12,000)
+    const total = screen.getByTestId('grand-total-row').textContent ?? '';
+    expect(total).toContain('6,000');
+    expect(total).not.toContain('12,000');
   });
 });
 

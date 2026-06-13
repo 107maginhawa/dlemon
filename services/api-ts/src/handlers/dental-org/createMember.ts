@@ -2,9 +2,14 @@
  * createMember — canonical endpoint for creating a branch member
  *
  * Path: POST /dental/org/members?branchId=...
- * Body: { displayName, role, avatarUrl?, personId?, pin? }
+ * Body: { displayName, role, avatarUrl?, personId? }
  *
  * Enforces FR6.3 tier-based member limits (migrated from DentalMembershipManagement_create).
+ *
+ * NOTE: there is intentionally NO create-time `pin`. The generated CreateMemberBody
+ * contract carries no pin field, and PINs are set only through the owner-gated
+ * resetMemberPin flow (two-call create → reset-pin, decision #9) so every PIN write
+ * goes through the audited reset path. Do not re-add pin handling here.
  */
 
 import { z } from 'zod';
@@ -33,7 +38,6 @@ const createMemberSchema = z.object({
   branchId: z.string().uuid().optional(),
   personId: z.string().uuid().optional().nullable(),
   avatarUrl: z.string().optional().nullable(),
-  pin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits').optional(),
 });
 
 export async function createMember(ctx: Context): Promise<Response> {
@@ -85,11 +89,6 @@ export async function createMember(ctx: Context): Promise<Response> {
     );
   }
 
-  let pinHash: string | null = null;
-  if (body.pin) {
-    pinHash = await Bun.password.hash(body.pin);
-  }
-
   const membership = await memberRepo.createOne({
     branchId: resolvedBranchId,
     displayName: body.displayName.trim(),
@@ -100,9 +99,10 @@ export async function createMember(ctx: Context): Promise<Response> {
     personId: body.personId ?? (isOwnerBootstrap ? user.id : null),
     avatarUrl: body.avatarUrl ?? null,
     status: 'active',
-    ...(pinHash ? { pinHash } : {}),
   });
 
+  // Defensive: never surface a pin hash on the create response (the column is
+  // populated only by the owner-gated resetMemberPin flow).
   const { pinHash: _ph, ...safeResponse } = membership;
 
   // AL-003: HIPAA §164.312 — audit membership creation

@@ -77,7 +77,10 @@ export async function listConsentTemplates(ctx: BaseContext): Promise<Response> 
       eq(dentalConsentTemplates.active, true),
     ));
 
-  return ctx.json({ templates }, 200);
+  // Contract: listConsentTemplates → ApiOkResponse<DentalConsentTemplate[]>,
+  // i.e. a bare array body. Returning a wrapped { templates } drifted from the
+  // OpenAPI/SDK contract (no FE consumer + no hurl test had masked it).
+  return ctx.json(templates, 200);
 }
 
 export async function createConsentTemplate(ctx: BaseContext): Promise<Response> {
@@ -130,7 +133,9 @@ export async function createConsentTemplate(ctx: BaseContext): Promise<Response>
     logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write consent_template.create audit log');
   }
 
-  return ctx.json({ template: created }, 201);
+  // Contract: createConsentTemplate → ApiCreatedResponse<DentalConsentTemplate>
+  // (bare created object body).
+  return ctx.json(created, 201);
 }
 
 export async function updateConsentTemplate(ctx: BaseContext): Promise<Response> {
@@ -187,7 +192,9 @@ export async function updateConsentTemplate(ctx: BaseContext): Promise<Response>
     logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write consent_template.update audit log');
   }
 
-  return ctx.json({ template: updated }, 200);
+  // Contract: updateConsentTemplate → ApiOkResponse<DentalConsentTemplate>
+  // (bare updated object body).
+  return ctx.json(updated, 200);
 }
 
 export async function deleteConsentTemplate(ctx: BaseContext): Promise<Response> {
@@ -235,5 +242,6 @@ export async function deleteConsentTemplate(ctx: BaseContext): Promise<Response>
     logger?.warn?.({ auditErr }, 'V-ORG-002: failed to write consent_template.delete audit log');
   }
 
-  return ctx.json({ deleted: true }, 200);
+  // Contract: deleteConsentTemplate → ApiOkResponse<{}> (empty object body).
+  return ctx.json({}, 200);
 }

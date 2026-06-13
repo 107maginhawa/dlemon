@@ -6,6 +6,7 @@
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { PostopTemplateRepository } from '../repos/postop-template.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { parsePagination, buildPaginationMeta } from '@/utils/query';
 import type { DatabaseInstance } from '@/core/database';
 import { eq } from 'drizzle-orm';
 import type { PostopCategory } from '../repos/postop-template.schema';
@@ -33,5 +34,8 @@ export async function listPostopTemplates(ctx: HandlerContext): Promise<Response
   const repo = new PostopTemplateRepository(db, logger);
   const templates = await repo.findByBranchId(branchId, category);
 
-  return ctx.json(templates);
+  // G10: conform to the platform `{ data, pagination }` envelope (was a bare array).
+  const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
+  const page = templates.slice(offset, offset + limit);
+  return ctx.json({ data: page, pagination: buildPaginationMeta(page, templates.length, limit, offset) });
 }

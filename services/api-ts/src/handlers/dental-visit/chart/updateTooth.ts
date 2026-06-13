@@ -9,10 +9,11 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalChartRepository } from '../repos/dental-chart.repo';
+import { DentalChartBaselineRepository } from '../repos/dental-chart-baseline.repo';
 import { VisitRepository } from '../repos/visit.repo';
 import type { User } from '@/types/auth';
 import type { UpdateToothBody, UpdateToothParams } from '@/generated/openapi/validators';
-import type { ChartEntryClassification } from '../repos/dental-chart.schema';
+import type { ChartEntryClassification, ToothChartState } from '../repos/dental-chart.schema';
 
 export async function updateTooth(
   ctx: ValidatedContext<UpdateToothBody, never, UpdateToothParams>
@@ -34,7 +35,8 @@ export async function updateTooth(
   const visitRepo = new VisitRepository(db);
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E2: dental_assistant may write tooth/surface CONDITIONS under dentist supervision.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'dental_assistant']);
 
   // EF-VIS-002: completed/locked visits cannot be modified — lock gate
   if (visit.status === 'completed' || visit.status === 'locked') {
@@ -54,6 +56,22 @@ export async function updateTooth(
     surfaceConditionMap: body.surfaceConditionMap,
     entryClassification: body.entryClassification as ChartEntryClassification | undefined,
   });
+
+  // B-G1: the odontogram is a living document — every chart write path (full
+  // upsert AND per-tooth PATCH) must merge into the patient baseline, or a
+  // single-tooth edit is silently dropped from next-visit carry-over (CHART-BR-002,
+  // WF-032). Mirror upsertDentalChart: merge the full post-edit teeth array
+  // (existing/existing_other baseline entries are protected by mergeTeeth).
+  if (updated) {
+    const baselineRepo = new DentalChartBaselineRepository(db);
+    const { conflicts } = await baselineRepo.mergeVisitChart(chart.patientId, visitId, updated.teeth as ToothChartState[], user.id);
+    // SL-12 / F-G04: a stale tooth that lost the baseline clock merge is recorded as
+    // a durable sync conflict on the chart rather than silently dropped.
+    if (conflicts.length > 0) {
+      const flagged = await repo.flagSyncConflict(chart.id, conflicts);
+      return ctx.json(flagged ?? updated);
+    }
+  }
 
   return ctx.json(updated);
 }

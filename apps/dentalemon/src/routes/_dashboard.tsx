@@ -4,6 +4,9 @@ import { useOrgContextStore } from '@/stores/org-context.store'
 import { loadOrgContext } from '@/lib/load-org-context'
 import { pinSession } from '@/lib/pin-session'
 import { AppSidebar, filterNavGroupsByRole, type NavGroup } from '@/components/app-sidebar'
+import { NotificationBell } from '@/features/notifications/notification-bell'
+import { ClinicActivationBanner } from '@/features/org/components/clinic-activation-banner'
+import { usePushNotificationRouting } from '@/features/notifications/hooks/use-push-notification-routing'
 import type { DentalRole } from '@/lib/rbac'
 import {
   SidebarProvider,
@@ -59,6 +62,10 @@ function DashboardLayout() {
   // source the route `requireRole(module)` guards read (org-context store), so
   // the sidebar and the route guards stay in lockstep (J-RBAC-NAV-001).
   const role = useOrgContextStore((s) => s.role) as DentalRole | null
+
+  // FIX-002: register the push-notification click → deep-link router once the
+  // authenticated shell is mounted (no-op when push is unconfigured).
+  usePushNotificationRouting()
 
   // Each item declares the RBAC `module` that gates its route. `Dashboard` is
   // intentionally ungated — it is the universal redirect fallback every guard
@@ -141,7 +148,11 @@ function DashboardLayout() {
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" data-testid="sidebar-toggle" />
+          <div className="ml-auto flex items-center">
+            <NotificationBell />
+          </div>
         </header>
+        <ClinicActivationBanner />
         <main className="flex-1">
           <Outlet />
         </main>

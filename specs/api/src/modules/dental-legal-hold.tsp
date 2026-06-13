@@ -72,7 +72,7 @@ namespace DentalLegalHoldModule {
     @operationId("placeLegalHold")
     @post
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     placeLegalHold(
       @body body: PlaceLegalHoldRequest,
     ): ApiCreatedResponse<LegalHold>
@@ -85,7 +85,7 @@ namespace DentalLegalHoldModule {
     @operationId("listLegalHolds")
     @get
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     listLegalHolds(
       @query status?: LegalHoldStatus,
       @query subjectPersonId?: UUID,
@@ -100,7 +100,7 @@ namespace DentalLegalHoldModule {
     @post
     @route("/{id}/release")
     @useAuth(bearerAuth)
-    @extension("x-security-required-roles", #["user"])
+    @extension("x-security-required-roles", #["admin"])
     releaseLegalHold(
       @path id: UUID,
     ): ApiOkResponse<LegalHold>

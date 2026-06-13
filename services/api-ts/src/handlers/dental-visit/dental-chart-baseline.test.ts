@@ -7,10 +7,12 @@
 import { describe, test, expect } from 'bun:test';
 import { DentalChartBaselineRepository } from './repos/dental-chart-baseline.repo';
 
-// Access private method via subclass for unit testing
+// Access private method via subclass for unit testing.
+// SL-12: mergeTeeth now returns { merged, conflicts }; these BR-002 cases assert on
+// the merged teeth array.
 class TestableRepo extends DentalChartBaselineRepository {
   public testMerge(baseline: any[], incoming: any[]) {
-    return (this as any).mergeTeeth(baseline, incoming);
+    return (this as any).mergeTeeth(baseline, incoming).merged;
   }
 }
 

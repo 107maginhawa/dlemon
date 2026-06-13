@@ -54,17 +54,23 @@ export async function voidDentalPayment(
   await invoiceRepo.removePayment(invoiceId, payment.amountCents);
 
   // V-BIL-013: financial reversal must leave an audit trail.
+  // P1-C: fail-closed — a void must never silently commit without an audit row.
+  // P2-A (AUD-BR-004): capture before/after + reason (non-PHI; sanitized at the sink).
   const logger = ctx.get('logger');
   const branchForAudit = await getBranchOrgId(db, payment.branchId);
   await logAuditEvent(db, logger, {
     personId: session.userId,
     tenantId: branchForAudit?.organizationId ?? payment.branchId,
     branchId: payment.branchId,
+    eventType: 'data-modification',
     action: 'payment.void',
     resourceType: 'dental_payment',
     resourceId: paymentId,
+    reason: body.voidReason,
+    before: { isVoid: false, amountCents: payment.amountCents },
+    after: { isVoid: true, voidReason: body.voidReason },
     metadata: { invoiceId, amountCents: payment.amountCents, voidReason: body.voidReason },
-  });
+  }, { failClosed: true });
 
   return ctx.json(voided);
 }

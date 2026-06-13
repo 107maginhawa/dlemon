@@ -38,7 +38,7 @@ Arguments: $ARGUMENTS
 
 Parse $ARGUMENTS:
 - First non-flag token = path to PRD file
-- If no path: auto-detect `docs/product/MASTER_PRD.md` or `docs/plans/*/plan.md`
+- If no path: auto-detect the canonical PRD `docs/prd/v3-dentalemon.md` or `docs/plans/*/plan.md`
 - `--modules X,Y`: only generate listed modules
 - `--all`: generate all modules in MODULE_MAP without asking
 - `--auto`: non-interactive mode

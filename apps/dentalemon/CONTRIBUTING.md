@@ -36,7 +36,7 @@ This guide covers `apps/dentalemon/`-specific development details. For shared pr
 
 **API Integration**: Uses `@monobase/sdk-ts` package for type-safe backend communication.
 
-**Port**: 3001 (development)
+**Port**: 3003 (development)
 
 ---
 
@@ -110,7 +110,7 @@ routes/
 
 ```bash
 # Start the app (API must be running on port 7213)
-cd apps/dentalemon && bun dev        # port 3001
+cd apps/dentalemon && bun dev        # port 3003
 
 # Typecheck
 cd apps/dentalemon && bun run typecheck

@@ -20,6 +20,14 @@ export const dentalVisitStatusEnum = pgEnum('dental_visit_status', [
   'discarded',
 ]);
 
+// E3: visit type scopes which roles may create/own/sign a visit.
+//   'general'  → dentist-led (owner/associate only), the default for all existing rows
+//   'hygiene'  → hygienist-led recall/prophy/perio; hygienist may create, check-in, draft AND sign
+export const dentalVisitTypeEnum = pgEnum('dental_visit_type', [
+  'general',
+  'hygiene',
+]);
+
 export const dentalVisits = pgTable('dental_visit', {
   ...baseEntityFields,
   ...syncableEntityFields,
@@ -27,6 +35,9 @@ export const dentalVisits = pgTable('dental_visit', {
   branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
   dentistMemberId: uuid('dentist_member_id').notNull().references(() => dentalMemberships.id),
   status: dentalVisitStatusEnum('status').notNull().default('draft'),
+  // E3: hygiene-typed visits unlock hygienist authority (create/check-in/sign).
+  // Existing rows backfill to 'general' (dentist-led, unchanged gates).
+  visitType: dentalVisitTypeEnum('visit_type').notNull().default('general'),
   activatedAt: timestamp('activated_at'),
   completedAt: timestamp('completed_at'),
   lockedAt: timestamp('locked_at'),
@@ -39,6 +50,12 @@ export const dentalVisits = pgTable('dental_visit', {
   activePatientUnique: uniqueIndex('dental_visit_active_patient_unique')
     .on(table.patientId, table.status)
     .where(sql`status = 'active'`),
+  // SL-01 / F-G02: offline-replay idempotency backstop — a (branch, localId) pair
+  // may exist at most once. The handler pre-check returns the existing row on
+  // replay; this index guards against a concurrent-retry race.
+  branchLocalIdUnique: uniqueIndex('dental_visit_branch_local_id_unique')
+    .on(table.branchId, table.localId)
+    .where(sql`local_id is not null`),
 }));
 
 export type DentalVisit = typeof dentalVisits.$inferSelect;
@@ -46,6 +63,9 @@ export type NewDentalVisit = typeof dentalVisits.$inferInsert;
 
 export const VALID_VISIT_STATUSES = ['draft', 'active', 'completed', 'locked', 'discarded'] as const;
 export type DentalVisitStatus = typeof VALID_VISIT_STATUSES[number];
+
+export const VALID_VISIT_TYPES = ['general', 'hygiene'] as const;
+export type DentalVisitType = typeof VALID_VISIT_TYPES[number];
 
 export const VISIT_TRANSITIONS: Record<DentalVisitStatus, DentalVisitStatus[]> = {
   draft: ['active'],

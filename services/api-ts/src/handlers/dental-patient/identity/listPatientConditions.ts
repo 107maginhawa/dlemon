@@ -9,8 +9,9 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
-import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getDentalPatientRecord } from '../../patient/repos/patient-dental-patient.facade';
 import { findVisits } from '@/handlers/dental-visit/utils/visit.service';
 import { getChartForPatientVisit, getTreatmentsForPatientConditions } from '@/handlers/dental-visit/repos/visit-dental-patient.facade';
 import { parsePagination, buildPaginationMeta } from '@/utils/query';
@@ -38,7 +39,13 @@ export async function listPatientConditions(ctx: HandlerContext) {
   const branchId = ctx.req.query('branchId');
 
   const db = ctx.get('database') as DatabaseInstance;
-  if (branchId) await assertBranchAccess(db, user.id, branchId);
+
+  // V-PAT-002: derive the branch from the patient record and ALWAYS assert
+  // membership. `branchId` is an optional filter, never the auth boundary —
+  // gating on it left an omit-branchId cross-tenant PHI bypass.
+  const patient = await getDentalPatientRecord(db, patientId!);
+  if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   const filters: { patientId: string; branchId?: string } = { patientId: patientId! };
   if (branchId) filters.branchId = branchId;

@@ -101,7 +101,9 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | WF-P02 | Record tooth-level readings (probing, BOP, recession, mobility, furcation) | Dentist | P1 |
 | WF-P03 | Complete / lock perio chart | Dentist | P1 |
 | WF-P04 | View perio chart (historical) | Dentist, Staff Full | P1 |
-| WF-P05 | Print perio chart (PDF export) | Dentist, Staff Full | P1 |
+| WF-P05 | Print perio chart (PDF export) | Dentist, Staff Full | **V2 DEFERRED** (not built) |
+
+> **WF-P05 reconcile (2026-06-12):** PDF export / printable perio chart is **not implemented** (no server-side render, no `@media print` route, no Print button in `apps/dentalemon/.../components/perio/`). `docs/clinical/STANDARDS_COMPLIANCE.md` correctly lists it under the deferred non-AI backlog; this row is annotated to match (deferred wins). Re-promote to P1 only when the export is actually built.
 
 ### EMR-Consultation (emr-consultation §3, platform module)
 
@@ -298,11 +300,22 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 
 ### Taylor — Patient
 
-**WF-078 [INFERRED]: Patient portal session**
+**WF-078: Patient portal session (E4 Phase 1 — read-only foundation, BUILT)**
 1. Login via magic link (WF-003)
-2. View own PMD documents (WF-066)
-3. View appointment history [INFERRED — no explicit PRD flow]
-4. Revoke consent (WF-035)
+2. View own appointments — `GET /me/appointments` (`dental-portal/listMyAppointments`)
+3. View own invoices — `GET /me/invoices` (`dental-portal/listMyInvoices`)
+4. View own outstanding balance — `GET /me/balance` (`dental-portal/getMyBalance`)
+
+> **IDOR boundary (V-PORTAL-001):** every portal read is self-scoped by deriving
+> the patient id server-side from the session (`resolveSelfPatientIdOrThrow`,
+> invariant `user.id === person.id → dental_patient.person_id`); no route accepts a
+> client-supplied `patientId`, so a patient can only ever read their OWN data. A
+> staff-only account (no linked patient) → 403; unauthenticated → 401.
+>
+> **DEFERRED (Phase 2, NOT built):** view own PMD documents (WF-066), revoke
+> consent (WF-035), self-booking/reschedule, online self-pay, secure messaging,
+> guardian/household-dependent access, and `/me` imaging/clinical reads. The
+> read-only surface (no `/me` write route exists) is itself the write-scope guarantee.
 
 ### Platform Admin
 
@@ -320,11 +333,11 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 |-------|-------------|-------------|-----------|-----------|
 | BR-001 | No concurrent active visits | WF-007 | 409 — prompt staff to complete existing visit | No |
 | BR-002 | Visit transitions linear only | WF-012, WF-046 | 422 — invalid status transition | No |
-| BR-003 | Visit immutable after completed | WF-009, WF-010, WF-016, WF-017 | 403 / UI readOnly flag | No |
+| BR-003 | Visit immutable after completed | WF-009, WF-010, WF-016, WF-017 | 422 VISIT_IMMUTABLE / VISIT_LOCKED (+ UI readOnly flag) | No |
 | BR-004 | Delete appointment ≠ delete visit | WF-059 | Soft-delete appointment only | No |
-| BR-005 | Auto-discard empty visit | WF-047 [INFERRED] | **ORPHAN** — not yet enforced (ADR-010) | — |
+| BR-005 | Auto-discard empty visit | WF-047 [INFERRED] | Implemented behind default-OFF flag `dental_visit_auto_discard` (V-VIS-004, ADR-010) — when ON, an empty `completed` redirects to `discarded` | — |
 | BR-006 | Treatment transitions forward-only | WF-010, WF-048–WF-050 | 422 | No |
-| BR-007 | Completed treatment immutable | WF-010 | 403 | No |
+| BR-007 | Completed treatment immutable | WF-010 | 422 TREATMENT_IMMUTABLE | No |
 | BR-008 | Carry-over display only | WF-033 | UI indicator only | N/A |
 | BR-009 | Invoice requires ≥1 line item | WF-013 | 422 | No |
 | BR-010 | Tax = 0 stub | WF-013 | N/A (stub) | Phase 2 |
@@ -361,7 +374,7 @@ draft ──────────► active ──────────►
 | Transition | Trigger | Precondition | Side Effect |
 |-----------|---------|-------------|------------|
 | draft → active | Check-in (WF-007) | BR-001 (no other active) | Creates visitId |
-| active → completed | Complete visit (WF-012) | At least 1 chart entry | Immutable flag set |
+| active → completed | Complete visit (WF-012) | No open (diagnosed/planned) treatments; signed consent + notes present (empty visit completes, or auto-discards when the V-VIS-004 flag is ON) | Immutable flag set |
 | completed → locked | Scheduled job (WF-046) | Time elapsed | All edits blocked |
 | active → discarded | System (WF-047) | BR-005 (empty session) | Visit soft-deleted |
 
@@ -519,7 +532,7 @@ Applied to the 10 highest-impact core workflows:
 | Visit | Locked (completed + time) | Immutable archive | Indefinite (clinical record) | HIPAA/RA-10173 |
 | Treatment | Verified or dismissed | Soft-state in visit | Indefinite | Clinical record |
 | Invoice | Paid, void, uncollectible | Archived | 7 years (financial) | Local tax law |
-| Patient | GDPR erasure request | PHI purge — **Gap WFG-006** | 0 after erasure | GDPR Art. 17 |
+| Patient | GDPR erasure request | PHI **anonymized** (not hard-deleted) — WFG-006 implemented (V-DG-002, `dental-erasure`) | PII redacted, de-identified clinical/billing record + audit trail retained | GDPR Art. 17 |
 | Appointment | Cancelled, completed | Soft-delete | 1 year | Admin |
 | PMD | N/A (snapshot, immutable) | Patient retains | Indefinite | Portable record |
 | Consent Form | Revoked | Revoked state persists | Indefinite (audit trail) | HIPAA |
@@ -527,11 +540,11 @@ Applied to the 10 highest-impact core workflows:
 | Staff Membership | Removed | Deactivated | Indefinite (audit) | — |
 | Imaging Study | N/A | No delete defined | Indefinite | Clinical |
 
-**WF-088 [INFERRED]: GDPR Patient Erasure**
-- Triggered by: Patient request
-- Actors: Platform Admin, Dentist-Owner
-- Actions: PHI purge across patient, visit, clinical, billing records; audit log entry preserved
-- Gap: No implementation in any module. **WFG-006.**
+**WF-088: GDPR Patient Erasure — IMPLEMENTED (V-DG-002, `handlers/dental-erasure/`)**
+- Triggered by: Patient request → admin-filed `dental_erasure_request`
+- Actors: Platform Admin (admin-role; place/approve/reject — cross-tenant admin scope is a known product decision, see IDEAL standard)
+- Actions: Two-step audited workflow (request → approve/reject). Approval runs the anonymize engine — PII is **anonymized in place** across Person/Patient/ConsentForm/Imaging (never hard-deleted), radiograph S3 objects physically deleted, and the **audit trail is preserved** (the erasure events outlive the erased identity — no FK cascade). An active legal hold blocks erasure.
+- Status: **RESOLVED (WFG-006).** Remaining (deferred, not gaps): additional entity targets as needed; Art. 20 bulk portability export blocked on a PRD format decision (see DATA_GOVERNANCE §4).
 
 ---
 
@@ -602,7 +615,7 @@ Applied to the 10 highest-impact core workflows:
 | WFG-003 | Missing error path | BR-001 concurrent visit conflict — client recovery UX undefined | MEDIUM | BR-001 |
 | WFG-004 | Missing error path | Concurrent invoice creation for same visit — two invoices possible | HIGH — billing integrity | BR-009, BR-012 |
 | WFG-005 | SLA undefined | PMD generation SLA unspecified — sync or async unclear | MEDIUM — UX impact | BR-021 |
-| WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/dental-erasure/` (Person+Patient targets, two-step audited, legal-hold blocks) + admin HTTP endpoints `/dental/erasure-requests`. Remaining: more entity targets, real LegalHold store | RESOLVED | — |
+| WFG-006 | ~~Missing workflow~~ Implemented (V-DG-002) | GDPR patient erasure — anonymize-on-request workflow in `handlers/dental-erasure/` (Person/Patient/ConsentForm/Imaging targets + radiograph S3 delete, two-step audited, real `dental_legal_hold` store blocks erasure) + admin HTTP endpoints `/dental/erasure-requests` & `/dental/legal-holds`. Retention enforcement (`handlers/retention/`) complements it (env-gated cron, legal-hold-excluded). Deferred (not gaps): more entity targets; Art. 20 bulk portability (PRD format decision). | RESOLVED | — |
 | WFG-007 | Missing workflow | Patient merge (BR-020) — no workflow, no cross-module cascade defined | HIGH — data integrity | BR-020 |
 | WFG-008 | ~~Orphan BR~~ **Implemented** | BR-013 markUncollectible — **IMPLEMENTED** 2026-06-04 (owner-only write-off; outstanding → `uncollectible`, else 422; AC-BIL-005). Tests in `dental-billing.test.ts` + `business-rules.test.ts`. | RESOLVED (implemented) | BR-013 |
 | WFG-009 | Missing notification | Appointment reminder (24h) — not implemented | LOW–MEDIUM | — |

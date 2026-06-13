@@ -72,6 +72,11 @@ namespace DentalImagingModule {
     seriesInstanceUid?: string | null;
     studyInstanceUid?: string | null;
     viewerKind?: "image" | "volume";
+    // G5 library metadata (additive)
+    isDiagnostic?: boolean;
+    qualityStatus?: "ok" | "retake";
+    retakeReason?: string | null;
+    tags?: string[];
   }
 
   model ImagingStudyWithImages extends ImagingStudy {
@@ -97,6 +102,15 @@ namespace DentalImagingModule {
     isVolume?: boolean;
     frameCount?: int32 | null;
     viewerKind?: "image" | "volume";
+    // G5 library metadata — surfaced so the list can badge non-diagnostic / retake
+    // images and render tags without a follow-up fetch. Legacy attachments default
+    // to isDiagnostic=true / qualityStatus="ok" / tags=[] (no metadata backing).
+    isDiagnostic?: boolean;
+    qualityStatus?: "ok" | "retake";
+    retakeReason?: string | null;
+    tags?: string[];
+    // G5b: context links (treatment plan / ortho case / report). Empty for legacy.
+    links?: ImagingLink[];
   }
 
   model ListPatientImagesResponse {
@@ -196,12 +210,61 @@ namespace DentalImagingModule {
     updatedAt: utcDateTime;
   }
 
+  // G6: a 2-point ruler calibration in image-space pixels.
+  model CalibrationPoint {
+    x: float64;
+    y: float64;
+  }
+
+  // G6: when pointA/pointB/knownDistanceMm are supplied the server persists a
+  // first-class VERSIONED calibration record (the two ruler points + known
+  // distance), not just the derived pixelSpacingMm — so a finalized report can
+  // pin the EXACT calibration version it was traced against. `pixelSpacingMm`
+  // stays required for back-compat (pre-G6 callers send only the derived value).
   model UpdateCalibrationBody {
     pixelSpacingMm: float64;
+    pointA?: CalibrationPoint;
+    pointB?: CalibrationPoint;
+    knownDistanceMm?: float64;
+  }
+
+  // G5: partial update of an image's library metadata. All fields optional — only
+  // the supplied ones are changed (clearing retakeReason → send null/empty).
+  model UpdateImageMetadataBody {
+    isDiagnostic?: boolean;
+    qualityStatus?: "ok" | "retake";
+    retakeReason?: string | null;
+    tags?: string[];
+  }
+
+  // G5b: a context link from an image to a treatment plan / ortho case / ceph report.
+  model ImagingLink {
+    id: string;
+    imageId: string;
+    linkType: "treatment_plan" | "ortho_case" | "report";
+    targetId: string;
+    createdAt: utcDateTime;
+  }
+
+  model CreateImagingLinkBody {
+    linkType: "treatment_plan" | "ortho_case" | "report";
+    targetId: string;
+  }
+
+  model ImagingLinkListResponse {
+    items: ImagingLink[];
   }
 
   model CreateMeasurementBody {
-    type: "distance" | "angle" | "area";
+    // Measurement types (distance/angle/area) are tier-gated; annotation types
+    // (label/arrow/freehand/shape/tooth) are available to all tiers (D3). The
+    // handler (createMeasurement.ts) accepts all eight and validates `geometry`
+    // against a per-type discriminated union. The generated validator runs
+    // BEFORE the handler in production, so this enum MUST list every input type
+    // the handler supports — otherwise annotation creates 400 at the validator
+    // and never reach the handler (contract drift surfaced by the buildTestApp
+    // migration of imaging-integration.test.ts).
+    type: "distance" | "angle" | "area" | "label" | "arrow" | "freehand" | "shape" | "tooth";
     geometry: Record<unknown>;
     measurementValue?: float64;
     measurementUnit?: string;
@@ -232,6 +295,28 @@ namespace DentalImagingModule {
     @route("/images/{imageId}/modality")
     @useAuth(bearerAuth)
     updateImageModality(@path imageId: string, @body body: UpdateImageModalityBody): ImagingStudyImage | ErrorResponse;
+
+    // G5: update an image's library metadata (diagnostic flag, quality/retake, tags).
+    @patch
+    @route("/images/{imageId}/metadata")
+    @useAuth(bearerAuth)
+    updateImageMetadata(@path imageId: string, @body body: UpdateImageMetadataBody): ImagingStudyImage | ErrorResponse;
+
+    // G5b: context links (treatment plan / ortho case / report).
+    @post
+    @route("/images/{imageId}/links")
+    @useAuth(bearerAuth)
+    createImageLink(@path imageId: string, @body body: CreateImagingLinkBody): ImagingLink | ErrorResponse;
+
+    @get
+    @route("/images/{imageId}/links")
+    @useAuth(bearerAuth)
+    listImageLinks(@path imageId: string): ImagingLinkListResponse | ErrorResponse;
+
+    @delete
+    @route("/links/{linkId}")
+    @useAuth(bearerAuth)
+    deleteImageLink(@path linkId: string): void | ErrorResponse;
 
     // P2-7 CBCT finalize: server-side DICOM parse + populate volume metadata + set
     // is_volume=true. Called after the storage multipart upload completes.
@@ -271,7 +356,20 @@ namespace DentalImagingModule {
     @get
     @route("/{patientId}/images")
     @useAuth(bearerAuth)
-    listPatientImages(@path patientId: string, @query branchId: string): ListPatientImagesResponse | ErrorResponse;
+    listPatientImages(
+      @path patientId: string,
+      @query branchId: string,
+      // G5 filters (all optional, additive): narrow the library to diagnostic-only,
+      // a quality status, or a single tag. Filters apply to imaging-source rows;
+      // legacy attachments (no metadata) are treated as diagnostic/ok/untagged.
+      @query isDiagnostic?: boolean,
+      @query qualityStatus?: "ok" | "retake",
+      @query tag?: string,
+      // G5b: filter to images linked to a specific target (treatment plan / ortho
+      // case / report id), optionally narrowed by link type.
+      @query linkTargetId?: string,
+      @query linkType?: "treatment_plan" | "ortho_case" | "report",
+    ): ListPatientImagesResponse | ErrorResponse;
   }
 
   enum ImagingFindingType {
@@ -332,9 +430,14 @@ namespace DentalImagingModule {
     note?: string;
     annotationId?: string;
     treatmentId?: string;
-    visitId: string;
-    patientId: string;
-    branchId: string;
+    // visitId/patientId/branchId are DERIVED from the parent study by the handler
+    // (createFinding.ts) — the "derive branch from the resource, never the caller"
+    // invariant. They are optional in the contract: the handler ignores any value the
+    // caller sends. Requiring them previously rejected the imaging-workspace UI (which
+    // correctly sends only {type,status,note,...}) with a 400 before the handler ran.
+    visitId?: string;
+    patientId?: string;
+    branchId?: string;
     // P2-7 CBCT: optional slice index for a finding placed on a volume frame.
     frameIndex?: int32;
   }
@@ -472,12 +575,30 @@ namespace DentalImagingModule {
   }
 
   // D-I: immutable versioned snapshot — never mutated after creation
+  // G1-B: explicit revision lineage. `revisionOf` points to the report version
+  // this one supersedes (null for v1); `revisionReason` records why a finalized
+  // trace was re-finalized. The version chain is linear; these make it explicit
+  // and reasoned without a separate session FSM.
   model CephReport {
     id: string;
     imageId: string;
     version: int32;
     snapshot: Record<unknown>;
+    revisionOf: string | null;
+    revisionReason: string | null;
     createdAt: utcDateTime;
+  }
+
+  // G2 (reproducibility): the analysis + reference population the clinician was
+  // viewing when finalizing. Pinned into the snapshot so a finalized report
+  // records the analysis ACTUALLY used (not a hardcoded default). Both optional
+  // and back-compatible — omitted → steiner_hybrid_sn / default population.
+  // G1-B: optional `revisionReason` — captured when re-finalizing over a prior
+  // version. `revisionOf` is server-derived (prior latest version), not client-set.
+  model CreateCephReportBody {
+    analysisType?: string;
+    normPopulation?: string;
+    revisionReason?: string;
   }
 
   // =========================================================================
@@ -629,7 +750,7 @@ namespace DentalImagingModule {
     @post
     @route("/dental/imaging/images/{imageId}/ceph/reports")
     @useAuth(bearerAuth)
-    createCephReport(@path imageId: string): CephReport | ErrorResponse;
+    createCephReport(@path imageId: string, @body body: CreateCephReportBody): CephReport | ErrorResponse;
 
     @get
     @route("/dental/imaging/images/{imageId}/ceph/reports")

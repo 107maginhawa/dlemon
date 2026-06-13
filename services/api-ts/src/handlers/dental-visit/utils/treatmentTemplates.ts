@@ -12,6 +12,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { dentalTreatmentTemplates } from '../repos/treatment-template.schema';
 import { TreatmentRepository } from '../repos/treatment.repo';
 import { VisitRepository } from '../repos/visit.repo';
@@ -136,7 +137,11 @@ export async function applyTemplate(ctx: BaseContext) {
   const visit = await visitRepo.findOneById(visitId);
   if (!visit) throw new NotFoundError('Visit not found');
 
-  await assertBranchAccess(db, user.id, visit.branchId);
+  // Applying a template creates billable treatments on the visit — gate it on the
+  // same clinical role as the dedicated createDentalTreatment endpoint (owner/associate).
+  // assertBranchAccess alone let any branch member (incl. read_only/staff_full) inject
+  // treatments through this path, bypassing the clinical-role gate (audit 2026-06-08).
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
   // FR1.16: Block on completed/locked
   if (visit.status === 'completed' || visit.status === 'locked') {
@@ -144,7 +149,12 @@ export async function applyTemplate(ctx: BaseContext) {
   }
 
   const [template] = await db.select().from(dentalTreatmentTemplates).where(eq(dentalTreatmentTemplates.id, templateId));
-  if (!template || !template.active) throw new NotFoundError('Treatment template not found');
+  // Templates are branch-scoped (BR-016). The template MUST belong to the visit's
+  // branch — otherwise one clinic's template (CDT codes + pricing) leaks into another
+  // clinic's visit. Treat a foreign-branch template as not-found (audit 2026-06-08).
+  if (!template || !template.active || template.branchId !== visit.branchId) {
+    throw new NotFoundError('Treatment template not found');
+  }
 
   const treatmentRepo = new TreatmentRepository(db);
   const created = await Promise.all(

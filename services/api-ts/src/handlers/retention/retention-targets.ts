@@ -9,10 +9,11 @@
  * Cross-module data access goes through each owning module's `*.facade.ts`
  * (Phase 10 boundary lint) — never the other module's repos/schemas directly.
  *
- * Legal-hold: no legal-hold store exists in the codebase yet, so the hold
- * predicate currently reports `false` for every candidate. When a legal-hold
- * table lands, surface it from the owning facade — the engine already excludes
- * anything flagged held (see retention-engine.test.ts).
+ * Legal-hold: each target queries the real `dental_legal_hold` store via
+ * `personsUnderLegalHold` and flags any candidate whose owning Person has an
+ * ACTIVE hold; the engine then excludes every flagged candidate from action
+ * (see retention-legalhold.test.ts). The hold predicate is never bypassable by
+ * a policy row's `legalHoldExempt` flag.
  */
 
 import type { DatabaseInstance } from '@/core/database';

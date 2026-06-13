@@ -106,6 +106,51 @@ describe('useCreateVisit', () => {
     expect((result.current.data as { status?: string })?.status).toBe('active');
   });
 
+  test('E3: forwards visitType to the create POST body (hygienist → hygiene)', async () => {
+    let createBody: any = null;
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : (init?.method ?? 'GET');
+      if (method === 'POST' && /\/dental\/visits$/.test(url)) {
+        const raw = req instanceof Request ? await req.text() : String(init?.body ?? '');
+        createBody = raw ? JSON.parse(raw) : null;
+        return jsonResponse({ id: 'v1', patientId: 'p1', status: 'draft', visitType: 'hygiene', createdAt: '2026-05-01T00:00:00Z' });
+      }
+      return jsonResponse({ id: 'v1', patientId: 'p1', status: 'active', visitType: 'hygiene', createdAt: '2026-05-01T00:00:00Z' });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useCreateVisit('p1'), { wrapper: makeWrapper(qc) });
+
+    // This is exactly what handleNewVisit sends for a hygienist (visitType: 'hygiene').
+    result.current.mutate({ patientId: 'p1', branchId: 'b1', dentistMemberId: 'm1', visitType: 'hygiene' });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(createBody?.visitType).toBe('hygiene');
+  });
+
+  test('E3: omitting visitType sends no visitType (server defaults to general — dentist path unchanged)', async () => {
+    let createBody: any = null;
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : (init?.method ?? 'GET');
+      if (method === 'POST' && /\/dental\/visits$/.test(url)) {
+        const raw = req instanceof Request ? await req.text() : String(init?.body ?? '');
+        createBody = raw ? JSON.parse(raw) : null;
+        return jsonResponse({ id: 'v1', patientId: 'p1', status: 'draft', visitType: 'general', createdAt: '2026-05-01T00:00:00Z' });
+      }
+      return jsonResponse({ id: 'v1', patientId: 'p1', status: 'active', visitType: 'general', createdAt: '2026-05-01T00:00:00Z' });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useCreateVisit('p1'), { wrapper: makeWrapper(qc) });
+
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(createBody?.visitType).toBeUndefined();
+  });
+
   test('error: sets isError and does not invalidate on fetch failure', async () => {
     global.fetch = mock(() => jsonResponse({}, 500));
 
@@ -133,5 +178,31 @@ describe('useCreateVisit', () => {
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
+  });
+
+  // Regression for the "Failed to create visit. Please try again." bug: a 409
+  // ACTIVE_VISIT_EXISTS carries a clear, actionable backend message — the toast
+  // must SHOW that message, not the generic fallback. (The test above only proved
+  // *a* toast fired; this asserts the CONTENT, which is what actually broke.)
+  test('surfaces the actionable backend message on 409 ACTIVE_VISIT_EXISTS (not the generic fallback)', async () => {
+    const backendMessage = 'Active visit already exists for this patient. Complete or discard it first.';
+    global.fetch = mock(() =>
+      jsonResponse(
+        { code: 'ACTIVE_VISIT_EXISTS', message: backendMessage, statusCode: 409 },
+        409,
+      ),
+    );
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useCreateVisit('p1'), { wrapper: makeWrapper(qc) });
+
+    result.current.mutate(input);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // toastError(err, fallback) → toast.error(getErrorMessage(...)). The mocked
+    // sonner toast.error (_toastError) receives the RESOLVED string.
+    const shown = _toastError.mock.calls.at(-1)?.[0];
+    expect(shown).toBe(backendMessage);
+    expect(shown).not.toMatch(/please try again/i);
   });
 });

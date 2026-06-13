@@ -348,4 +348,28 @@ describe('createAppointment working hours enforcement (FR3.10)', () => {
     const body = await res.json() as any;
     expect(body.code).toBe('OUTSIDE_WORKING_HOURS');
   });
+
+  test('BR-SCH-002: walk-in bypasses the working-hours block (closed day → 201)', async () => {
+    // Sunday is a closed day — a normal appt at this time is rejected 422 (proven above).
+    // A walk-in (walkIn:true) must skip the working-hours gate entirely (createAppointment.ts:59).
+    await seedBranch(JSON.stringify(workingHours));
+    const app = buildTestApp(TEST_USER);
+    const endAt = new Date(new Date(sundayAt10).getTime() + 60 * 60 * 1000).toISOString();
+    const res = await app.request('/dental/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        providerId: MEMBER_ID,
+        branchId: BRANCH_ID,
+        startAt: sundayAt10,
+        endAt,
+        visitType: 'checkup',
+        walkIn: true,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.walkIn).toBe(true);
+  });
 });

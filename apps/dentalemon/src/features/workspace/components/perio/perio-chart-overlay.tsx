@@ -22,11 +22,12 @@ import { isFeatureEnabled } from '@/lib/feature-flags';
 import { usePerioChart } from '../../hooks/use-perio-chart';
 import { useVoicePerio } from '../../hooks/use-voice-perio';
 import { PerioChartGrid } from './perio-chart-grid';
+import { PerioComparison } from './perio-comparison';
 import { PerioSummaryBar } from './perio-summary-bar';
 import { PerioClassificationPanel } from './perio-classification-panel';
 import { VoicePerioControls } from './voice/voice-perio-controls';
 import { WebSpeechProvider, isSpeechRecognitionSupported, type SpeechProvider } from './voice/speech-provider';
-import { DEFAULT_DEPTH_THRESHOLD, countOverThreshold } from './perio-types';
+import { DEFAULT_DEPTH_THRESHOLD, countOverThreshold, computeLivePerioSummary } from './perio-types';
 import type { CompletePerioChartRequest } from '@monobase/sdk-ts/generated';
 
 export interface PerioChartOverlayProps {
@@ -83,6 +84,9 @@ export function PerioChartOverlay({
 
   const [threshold, setThreshold] = useState(DEFAULT_DEPTH_THRESHOLD);
   const [riskFactors, setRiskFactors] = useState<CompletePerioChartRequest>({});
+  // Multi-exam comparison: toggle between this visit's chart and the patient's
+  // longitudinal perio history (read-only trend across past completed exams).
+  const [view, setView] = useState<'current' | 'history'>('current');
 
   const status = chart?.status ?? null;
   const readOnly = status === 'completed' || status === 'locked';
@@ -127,6 +131,12 @@ export function PerioChartOverlay({
   }
   const readingCount = readings.length;
   const overThresholdCount = useMemo(() => countOverThreshold(readings, threshold), [readings, threshold]);
+  // In draft the backend hasn't computed the summary yet. Rather than show "–" next to
+  // a live over-threshold count (incoherent mixed sources), compute BOP%/mean/deep live
+  // from the same readings with the same formula — the preview equals the finalized
+  // numbers. Once completed/locked we use the canonical persisted summary.
+  const liveSummary = useMemo(() => computeLivePerioSummary(readings), [readings]);
+  const isDraft = status === 'draft';
 
   // Stage/Grade/Extent: from the completion response, else from a chart that is
   // already completed (re-opened). The persisted chart does not carry stage, so
@@ -168,7 +178,26 @@ export function PerioChartOverlay({
         </div>
 
         <div className="flex items-center gap-3">
-          {chart && (
+          {/* Current exam ↔ multi-exam history toggle */}
+          <div className="flex items-center rounded-lg border border-border p-0.5" role="tablist" aria-label="Perio view">
+            {(['current', 'history'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                data-testid={`perio-view-${v}`}
+                onClick={() => setView(v)}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  view === v ? 'bg-lemon text-lemon-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {v === 'current' ? 'Current exam' : 'History'}
+              </button>
+            ))}
+          </div>
+          {view === 'current' && chart && (
             <label className="flex items-center gap-1 text-xs text-muted-foreground">
               Threshold
               <select
@@ -199,7 +228,9 @@ export function PerioChartOverlay({
 
       {/* Body */}
       <div className="flex-1 overflow-auto p-4">
-        {isLoading ? (
+        {view === 'history' ? (
+          <PerioComparison patientId={patientId} enabled={open} />
+        ) : isLoading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Loading perio chart…</p>
         ) : isError ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
@@ -223,9 +254,9 @@ export function PerioChartOverlay({
         ) : (
           <div className="flex flex-col gap-4">
             <PerioSummaryBar
-              bopPercent={chart.summaryBopPercent}
-              meanDepth={chart.summaryMeanDepth}
-              deepPocketCount={chart.summaryDeepPocketCount}
+              bopPercent={isDraft ? liveSummary.bopPercent : chart.summaryBopPercent}
+              meanDepth={isDraft ? liveSummary.meanDepth : chart.summaryMeanDepth}
+              deepPocketCount={isDraft ? liveSummary.deepPocketCount : chart.summaryDeepPocketCount}
               overThresholdCount={overThresholdCount}
               stage={stage}
               grade={grade}

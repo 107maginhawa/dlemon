@@ -182,7 +182,17 @@ HTTP 200
 jsonpath "$.status" == "completed"
 
 
-# 5. Generate PMD from completed visit
+# 4b. AHA dental-pmd FIX-001: completing the visit AUTO-GENERATES the PMD
+# (WF-021/FR12.1) — a PMD now exists for the visit with NO manual generate call.
+GET {{api}}/dental/visits/{{visit_id}}/pmd
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.status" == "generated"
+
+
+# 5. Generate PMD from completed visit (manual re-generate supersedes the auto one)
 POST {{api}}/dental/visits/{{visit_id}}/pmd
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
@@ -281,6 +291,39 @@ HTTP 400
 
 
 # ============================================================
+# FIX-003 / decision #20 — append-only safety-floor merge
+# ============================================================
+
+# 11b. Merge the imported PMD's safety items into the patient's living med-history.
+# The imported content was {"conditions":["I10"],"medications":["Amoxicillin"]} → 2 entries.
+POST {{api}}/dental/pmd/imported/{{imported_id}}/merge-safety-floor
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.importedPmdId" == "{{imported_id}}"
+jsonpath "$.safetyFloorMerged" == true
+jsonpath "$.mergedEntryCount" == 2
+
+
+# 11c. The merged items now surface in the patient's Safety Floor (the clinical
+# reason the import flow exists — imported data is no longer inert).
+GET {{api}}/dental/patients/{{patient_id}}/safety-floor
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.medications[?(@.displayName=='Amoxicillin')].displayName" == "Amoxicillin"
+jsonpath "$.conditions[?(@.displayName=='I10')].displayName" == "I10"
+
+
+# 11d. Re-merging the same imported PMD is idempotent → 409.
+POST {{api}}/dental/pmd/imported/{{imported_id}}/merge-safety-floor
+Cookie: better-auth.session_token={{session_token}}
+HTTP 409
+[Asserts]
+jsonpath "$.code" == "SAFETY_FLOOR_ALREADY_MERGED"
+
+
+# ============================================================
 # NEW: G2.5-S6 — imported PMD get by ID, visit PMD export
 # ============================================================
 
@@ -314,6 +357,11 @@ HTTP 200
 
 # NEW: G2.5-S6 — imported PMD auth check
 GET {{api}}/dental/pmd/imported/{{imported_id}}
+HTTP 401
+
+
+# FIX-003 — merge-safety-floor auth check
+POST {{api}}/dental/pmd/imported/{{imported_id}}/merge-safety-floor
 HTTP 401
 
 

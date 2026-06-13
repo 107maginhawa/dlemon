@@ -5,7 +5,7 @@ source: docs/prd/v3-dentalemon.md §8 NFR + codebase audit
 
 # Threat Model — Dentalemon
 
-**Date**: 2026-05-24 | **Classification**: CONFIDENTIAL — PHI SYSTEM
+**Date**: 2026-05-24 (status updated 2026-06-13) | **Classification**: CONFIDENTIAL — PHI SYSTEM
 
 ---
 
@@ -57,10 +57,10 @@ source: docs/prd/v3-dentalemon.md §8 NFR + codebase audit
 
 | Threat | Likelihood | Impact | Mitigation | Status |
 |--------|-----------|--------|-----------|--------|
-| PHI in application logs | **HIGH** | CRITICAL | Pino logs email+userId at `info` level (G-005) | ❌ **OPEN** |
+| PHI in application logs | LOW | CRITICAL | Recursive PHI redaction in the Pino formatter (`core/logger.ts` `redactPhi`, redacts PHI field names at any depth) + header sanitizer; 13 tests (G-005) | ✅ Mitigated |
 | PHI cached in browser | MEDIUM | HIGH | `Cache-Control: no-store` on all non-exempt routes | ✅ Mitigated |
 | PHI exposure via CORS misconfiguration | LOW | HIGH | Dynamic origin validator; credentials=true only for allowlisted origins | ✅ Mitigated |
-| PHI at-rest not encrypted | MEDIUM | HIGH | No column-level encryption (G-012) | ⚠️ Open |
+| PHI at-rest not encrypted | MEDIUM | HIGH | Storage-layer at-rest encryption attested + boot-enforced in production (`DB_AT_REST_ENCRYPTION`, config.ts:306); no column-level encryption yet (G-012) | ⚠️ Partial |
 | Associate dentist accessing other's patients | MEDIUM | HIGH | "Own patients" check in repo layer [VERIFY enforcement] | ⚠️ Partial |
 
 ### D — Denial of Service
@@ -76,7 +76,7 @@ source: docs/prd/v3-dentalemon.md §8 NFR + codebase audit
 |--------|-----------|--------|-----------|--------|
 | Role string injection (comma exploit) | LOW | HIGH | `user.role.split(',')` — if role field ever written from input | ⚠️ Open |
 | Membership role bypass | LOW | HIGH | `assertBranchRole` in all clinical handlers | ✅ Mitigated |
-| Email verification bypass | MEDIUM | MEDIUM | `requireEmailVerification: false` hardcoded (G-004) | ❌ **OPEN** |
+| Email verification bypass | LOW | MEDIUM | `requireEmailVerification` env-gated, defaults on in production (config.ts:172) (G-004) | ✅ Mitigated |
 
 ---
 
@@ -84,9 +84,9 @@ source: docs/prd/v3-dentalemon.md §8 NFR + codebase audit
 
 | ID | Threat | Priority | Fix |
 |----|--------|---------|-----|
-| T-001 | PHI in logs (`logger.info` with email/userId) | **P1** | Pino redaction config for PHI fields |
-| T-002 | Email verification disabled in all envs | **P1** | Gate `requireEmailVerification` with NODE_ENV |
-| T-003 | No at-rest column encryption for PHI | **P2** | Column-level encryption or PG TDE |
+| ~~T-001~~ | PHI in logs — **RESOLVED** | ~~P1~~ | Recursive `redactPhi` in the Pino formatter (commit 719df174) |
+| ~~T-002~~ | Email verification disabled in all envs — **RESOLVED** | ~~P1~~ | `requireEmailVerification` gated by NODE_ENV/env, defaults on in production (config.ts:172, commit db6b6d81) |
+| T-003 | No at-rest *column* encryption for PHI | **P2** | Storage-layer at-rest encryption is attested + boot-enforced (`DB_AT_REST_ENCRYPTION`, config.ts:306); add column-level encryption or PG TDE for defense-in-depth |
 | T-004 | Admin impersonation: no break-glass audit trail | **P1** | Log impersonation events with reason field |
 | T-005 | CRDT conflict resolution semantics undefined | **P1** | Document and enforce conflict resolution rules |
 | T-006 | API key rotation policy undefined | **P2** | Define and implement key rotation |
@@ -98,7 +98,7 @@ source: docs/prd/v3-dentalemon.md §8 NFR + codebase audit
 
 | Regulation | Key Requirements | Status |
 |-----------|-----------------|--------|
-| HIPAA (US) | PHI encryption at rest + transit, audit logs, access controls | ⚠️ Partial (no at-rest encryption, PHI in logs) |
+| HIPAA (US) | PHI encryption at rest + transit, audit logs, access controls | ⚠️ Partial (storage-layer at-rest attestation boot-enforced; column-level encryption pending; PHI redacted in logs) |
 | GDPR (EU) | Consent, right to erasure, data retention, DPA | ⚠️ Partial (consent implemented, retention period unspecified) |
 | RA 10173 (PH) | DPA consent, data breach notification, privacy officer | ⚠️ Partial |
 | WCAG 2.1 AA | Accessibility for all UI | ⚠️ Declared but not verified |

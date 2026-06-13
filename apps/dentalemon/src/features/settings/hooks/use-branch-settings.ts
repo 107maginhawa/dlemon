@@ -37,12 +37,15 @@ export interface BranchSettings {
   [key: string]: unknown;
 }
 
-// BranchSettings is a superset view-model; the SDK type satisfies it structurally.
-// Cast via intersection rather than `as unknown as` to keep tsc checking SDK fields.
-type BranchSettingsCompat = DentalOrgModuleDentalBranchSettings & BranchSettings;
-
+// The API returns the ENVELOPE `{ branchId, settings: { ...bag } }` — the settings
+// bag is nested under `.settings`, not spread flat on the response. We unwrap it
+// here so the panels (clinic/fee/locale/working-hours/notifications) read their
+// fields off the bag (`settings.clinicName`) rather than off the envelope (where
+// those keys are undefined). Saving sends the bag's keys directly, which the
+// handler merges — the round-trip only broke on READ before this unwrap.
 function toSettings(raw: DentalOrgModuleDentalBranchSettings): BranchSettings {
-  return raw as BranchSettingsCompat;
+  const bag = (raw as { settings?: Record<string, unknown> })?.settings;
+  return (bag ?? {}) as BranchSettings;
 }
 
 export function branchSettingsKey(branchId: string | null) {

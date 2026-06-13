@@ -26,6 +26,8 @@ import { registerBookingJobs } from '@/handlers/booking/jobs';
 import { registerRetentionJobs } from '@/handlers/retention/jobs';
 import { registerDentalSchedulingJobs } from '@/handlers/dental-scheduling/jobs/holdCleanup';
 import { registerDentalPatientJobs } from '@/handlers/dental-patient/jobs';
+import { registerDentalBillingJobs } from '@/handlers/dental-billing/jobs';
+import { seedProcedureCatalog } from '@/handlers/dental-visit/repos/seed-procedure-catalog';
 
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
@@ -126,6 +128,19 @@ export function createApp(config: Config): App {
       async (c: BaseContext) => {
         const sessionUser = c.get('user');
         await database.update(userTable).set({ emailVerified: true }).where(eq(userTable.id, sessionUser!.id));
+        return c.json({ ok: true });
+      }
+    );
+    // Dev-only: promote the current session user to the platform `admin` role
+    // (for E2E tests of admin-gated surfaces, e.g. the data-governance erasure
+    // queue). Mirrors the AUTH_ADMIN_EMAILS auto-promotion the auth hook applies
+    // at sign-up; the middleware reads role live from getSession, so the next
+    // request sees `admin` without re-auth. NEVER mounted in production.
+    app.post('/dev/promote-admin',
+      authMiddleware({ roles: ['user'] }),
+      async (c: BaseContext) => {
+        const sessionUser = c.get('user');
+        await database.update(userTable).set({ role: 'admin' }).where(eq(userTable.id, sessionUser!.id));
         return c.json({ ok: true });
       }
     );
@@ -256,6 +271,12 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
     logger.debug('Running database migrations...');
     await runMigrations(database);
     logger.debug('Database migrations completed successfully');
+
+    // dental-org G2: seed the global CDT procedure-code catalog (reference data
+    // the fee schedule reads). Idempotent — never clobbers operator edits.
+    logger.debug('Seeding CDT procedure-code catalog...');
+    await seedProcedureCatalog(database);
+    logger.debug('CDT procedure-code catalog seeded');
   }
 
   // Initialize email templates
@@ -283,6 +304,7 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
   registerRetentionJobs(jobs);
   registerDentalSchedulingJobs(jobs, app.notifs);
   registerDentalPatientJobs(jobs, app.notifs);
+  registerDentalBillingJobs(jobs);
 
   logger.debug('Starting background job scheduler...');
   await jobs.start();

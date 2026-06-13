@@ -964,4 +964,52 @@ describe('revokeConsentForm handler', () => {
     const body = await revokeRes.json() as any;
     expect(body.code).toBe('CONSENT_ALREADY_SIGNED');
   });
+
+  // V-CLN-010: the symmetric guard — a REVOKED consent cannot be signed.
+  // Without it, sign() only checked signed=false, so a patient's revocation
+  // could be silently overturned (revoked → signed) and the signed-only
+  // treatment gate would let the refused treatment proceed.
+  test('returns 422 CONSENT_FORM_REVOKED when signing a revoked consent form', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const createRes = await app.request(`/dental/visits/${visit.id}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        templateId: 'tpl-revoke-then-sign',
+        templateName: 'Withdrawn Consent',
+      }),
+    });
+    const created = await createRes.json() as any;
+    expect(createRes.status).toBe(201);
+
+    // Patient withdraws (revoke a still-pending consent — legal per the state machine).
+    const revokeRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/revoke`,
+      { method: 'PATCH' },
+    );
+    expect(revokeRes.status).toBe(200);
+
+    // Attempting to sign the revoked form must be rejected.
+    const signRes = await app.request(
+      `/dental/visits/${visit.id}/consents/${created.id}/sign`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureData: 'data:image/png;base64,abc123' }),
+      },
+    );
+    expect(signRes.status).toBe(422);
+    const signBody = await signRes.json() as any;
+    expect(signBody.code).toBe('CONSENT_FORM_REVOKED');
+
+    // And it must remain unsigned.
+    const listRes = await app.request(`/dental/visits/${visit.id}/consents`);
+    const listBody = await listRes.json() as any;
+    const form = listBody.data.find((f: any) => f.id === created.id);
+    expect(form.signed).toBe(false);
+    expect(form.revoked).toBe(true);
+  });
 });

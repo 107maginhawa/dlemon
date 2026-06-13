@@ -16,7 +16,13 @@ jobs:
   api-unit-tests:
     name: API Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 45m: the 344-file suite clones a fresh DB per file (so files can't contaminate
+    # each other), which is ~10x slower on CI's dockerized postgres than locally
+    # (~80s local). The gate run alone is ~20m and the job also generates coverage
+    # (a second full run), so 15m was canceling mid-suite (run reached 234/344 with
+    # 0 failures, then timed out). 45m covers both runs with margin. (Follow-up: the
+    # duplicate coverage run could be split to its own parallel job to halve this.)
+    timeout-minutes: 45
 
     services:
       postgres:

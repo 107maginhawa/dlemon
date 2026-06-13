@@ -16,6 +16,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
 import { getStatementInvoices } from './repos/billing-report.facade';
 import { computePatientStatement, type AgingInvoice, type PatientStatement } from './utils/aging';
 import type { GenerateStatementBatchBody } from '@/generated/openapi/validators';
@@ -30,8 +31,14 @@ export async function generateStatementBatch(
   const logger = ctx.get('logger');
   const body = ctx.req.valid('json');
 
+  // EM-BIL-002: branchId is OPTIONAL. When supplied, assert membership. When
+  // omitted, scope to the caller's own active branches — never the whole
+  // (multi-tenant) DB, which would leak other orgs' statements + patient PHI.
+  let allowedBranchIds: string[] | undefined;
   if (body.branchId) {
     await assertBranchAccess(db, user.id, body.branchId);
+  } else {
+    allowedBranchIds = await getActiveBranchIdsForPerson(db, user.id);
   }
 
   const asOf = body.asOf ? new Date(body.asOf) : new Date();
@@ -40,6 +47,7 @@ export async function generateStatementBatch(
   const rows = await getStatementInvoices(db, {
     branchId: body.branchId,
     patientIds: body.patientIds,
+    allowedBranchIds,
   });
 
   const byPatient = new Map<string, { name: string; invoices: AgingInvoice[] }>();

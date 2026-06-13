@@ -37,10 +37,22 @@ export async function checkInAppointment(ctx: HandlerContext) {
   const appointment = await appointmentRepo.findOneById(appointmentId);
   if (!appointment) throw new NotFoundError('Appointment');
 
-  // Authorization: user must have a check-in-capable role in the target branch (EM-SCH-001)
-  await assertBranchRole(db, user.id, appointment.branchId, [
-    'dentist_owner', 'dentist_associate', 'staff_full',
-  ]);
+  // E3: derive the visit type from the appointment's serviceType. A 'hygiene'
+  // appointment (the hygienist-led recall/prophy/perio service type) produces a
+  // hygiene-typed visit; every other service type produces a 'general' (dentist-led)
+  // visit. This is the single signal that conveys hygiene-ness appointment → visit.
+  const derivedVisitType: 'general' | 'hygiene' =
+    appointment.serviceType === 'hygiene' ? 'hygiene' : 'general';
+
+  // Authorization: user must have a check-in-capable role in the target branch (EM-SCH-001).
+  // E3: hygienist may check in ONLY a hygiene-typed appointment (which yields a hygiene
+  // visit). General appointments stay owner/associate/staff_full — hygienist is NOT
+  // appended unconditionally.
+  const allowedCheckInRoles =
+    derivedVisitType === 'hygiene'
+      ? (['dentist_owner', 'dentist_associate', 'staff_full', 'hygienist'] as const)
+      : (['dentist_owner', 'dentist_associate', 'staff_full'] as const);
+  await assertBranchRole(db, user.id, appointment.branchId, [...allowedCheckInRoles]);
 
   if (!APPOINTMENT_TRANSITIONS[appointment.status].includes('checked_in')) {
     throw new ValidationError(`Cannot check in appointment with status '${appointment.status}'`);
@@ -68,7 +80,10 @@ export async function checkInAppointment(ctx: HandlerContext) {
     const visit = await createVisit(tx, {
       patientId: appointment.patientId,
       branchId: appointment.branchId,
+      // For a hygiene appointment booked with the hygienist as provider, this is the
+      // hygienist's own membership id — an acceptable provider-of-record for a hygiene visit (E3).
       dentistMemberId: appointment.dentistMemberId,
+      visitType: derivedVisitType,
     });
 
     const linked = await txAppointmentRepo.linkVisit(appointmentId, visit.id);

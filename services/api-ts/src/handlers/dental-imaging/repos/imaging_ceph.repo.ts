@@ -71,8 +71,12 @@ export class ImagingCephRepository {
     return row ?? null;
   }
 
-  /** Upsert landmarks; silently skips rows whose existing status is 'locked' (D-E). */
-  async batchUpsert(items: UpsertLandmarkInput[]): Promise<void> {
+  /**
+   * Upsert landmarks; silently skips rows whose existing status is 'locked' (D-E).
+   * G4-B: records authorship (createdBy on insert, updatedBy on update) so the
+   * report snapshot can attribute who PREPARED each landmark.
+   */
+  async batchUpsert(items: UpsertLandmarkInput[], userId: string | null = null): Promise<void> {
     if (items.length === 0) return;
     const values: NewImagingCephLandmark[] = items.map((item) => ({
       imageId: item.imageId,
@@ -82,6 +86,8 @@ export class ImagingCephRepository {
       source: item.source ?? 'manual',
       confidence: item.confidence ?? null,
       status: item.status ?? 'placed',
+      createdBy: userId,
+      updatedBy: userId,
     }));
 
     await this.db
@@ -94,6 +100,7 @@ export class ImagingCephRepository {
           y: sql`excluded.y`,
           source: sql`excluded.source`,
           confidence: sql`excluded.confidence`,
+          updatedBy: sql`excluded.updated_by`,
           updatedAt: sql`now()`,
         },
         // Condition on the existing row: only update if NOT locked
@@ -101,10 +108,14 @@ export class ImagingCephRepository {
       });
   }
 
-  async update(id: string, data: UpdateLandmarkPayload): Promise<ImagingCephLandmark | null> {
+  async update(
+    id: string,
+    data: UpdateLandmarkPayload,
+    userId: string | null = null,
+  ): Promise<ImagingCephLandmark | null> {
     const [row] = await this.db
       .update(imagingCephLandmarks)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...data, updatedBy: userId, updatedAt: new Date() })
       .where(eq(imagingCephLandmarks.id, id))
       .returning();
     return row ?? null;
@@ -174,11 +185,16 @@ export class ImagingCephRepository {
   // Reports (immutable, append-only — D-I)
   // -------------------------------------------------------------------------
 
-  /** Inserts a new report version with monotonically increasing version number. */
+  /**
+   * Inserts a new report version with monotonically increasing version number.
+   * G1-B: `revisionOf` (prior version's report id) + `revisionReason` make the
+   * linear version chain an explicit, reasoned lineage. Both null for v1.
+   */
   async createReportVersion(
     imageId: string,
     snapshot: Record<string, unknown>,
     userId: string | null,
+    lineage: { revisionOf?: string | null; revisionReason?: string | null } = {},
   ): Promise<ImagingCephReport> {
     return createSnapshotVersion(
       this.db,
@@ -186,7 +202,13 @@ export class ImagingCephRepository {
       imagingCephReports.imageId,
       imagingCephReports.version,
       imageId,
-      { imageId, snapshot, createdBy: userId ?? null },
+      {
+        imageId,
+        snapshot,
+        createdBy: userId ?? null,
+        revisionOf: lineage.revisionOf ?? null,
+        revisionReason: lineage.revisionReason ?? null,
+      },
     ).then(row => row as ImagingCephReport);
   }
 

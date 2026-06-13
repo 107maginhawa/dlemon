@@ -15,6 +15,7 @@ import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { generatePMD } from './generatePMD';
+import { PMDDocumentRepository } from './repos/pmd-document.repo';
 import { getPMDForVisit } from './getPMDForVisit';
 import { importPMD } from './importPMD';
 import { getImportedPMD } from './getImportedPMD';
@@ -45,6 +46,12 @@ const ORG_ID = 'ef000000-0000-1000-8000-000000000001';
 
 const PERSON_ID = 'f1000000-0000-1000-8000-000000000001';
 
+// Batch B: a SECOND dentist who is the visit's treating clinician — distinct
+// from the completing actor (TEST_USER → DENTIST_MEMBER_ID) so the attestor
+// test can prove authorMemberId binds the treating dentist, not the actor (#5).
+const TREATING_DENTIST_MEMBER_ID = '7c000000-0000-4000-8000-000000000b04';
+const TREATING_DENTIST_PERSON_ID = 'f1000000-0000-1000-8000-000000000b04';
+
 beforeAll(async () => {
   const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
   const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
@@ -54,8 +61,14 @@ beforeAll(async () => {
   await db.insert(dentalOrganizations).values({ id: ORG_ID, name: 'PMD Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalBranches).values({ id: BRANCH_ID, organizationId: ORG_ID, name: 'Main Branch', timezone: 'Asia/Manila', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(dentalMemberships).values({ id: DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Dr. Test', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
-  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  // Batch B: narrowed demographics (DOB + sex) on the test patient's Person so
+  // the PMD snapshot's demographics block has real values to capture (#6).
+  await db.insert(persons).values({ id: PERSON_ID, firstName: 'Test', lastName: 'Patient', dateOfBirth: '1990-05-15', gender: 'female', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  // Batch B: the treating dentist (distinct from the actor) referenced by the
+  // visit's dentistMemberId in the attestor test.
+  await db.insert(persons).values({ id: TREATING_DENTIST_PERSON_ID, firstName: 'Treating', lastName: 'Dentist', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+  await db.insert(dentalMemberships).values({ id: TREATING_DENTIST_MEMBER_ID, branchId: BRANCH_ID, personId: TREATING_DENTIST_PERSON_ID, displayName: 'Dr. Treating', role: 'dentist_associate', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
 });
 
 function buildTestApp(user?: typeof TEST_USER) {
@@ -130,13 +143,25 @@ async function seedCompletedVisitWithTreatment() {
   return visitRepo.complete(visit.id);
 }
 
+// Batch B: a completed visit whose treating dentist is the given member —
+// used to prove the snapshot attestor is the visit clinician, not the actor.
+async function seedCompletedVisitTreatedBy(treatingMemberId: string) {
+  const repo = new VisitRepository(db);
+  const visit = await repo.createOne({
+    patientId: PATIENT_ID,
+    branchId: BRANCH_ID,
+    dentistMemberId: treatingMemberId,
+  });
+  return repo.complete(visit.id);
+}
+
 // ---------------------------------------------------------------------------
 // Teardown
 // ---------------------------------------------------------------------------
 
 afterEach(async () => {
   await db.execute(
-    sql`TRUNCATE TABLE pmd_document, imported_pmd, dental_visit CASCADE`,
+    sql`TRUNCATE TABLE pmd_document, imported_pmd, dental_visit, medical_history_entry CASCADE`,
   );
 });
 
@@ -207,12 +232,19 @@ describe('generatePMD handler [AC-PMD-01]', () => {
     expect(body.status).toBe('generated');
     expect(body.checksum).not.toBeNull();
     expect(body.content).not.toBeNull();
+    // Signing honestly deferred (decision #4 / FR12.4): V1 produces an UNSIGNED,
+    // checksum-sealed document. Pin the honest deferral so a future accidental wiring
+    // of signing (status 'signed' / a signature) is caught as a regression.
+    expect(body.status).not.toBe('signed');
+    expect(body.signature ?? null).toBeNull();
+    expect(body.signedAt ?? null).toBeNull();
   });
 
   // N-PMD-02 (immutable-record integrity): the PMD's patientId is derived from the
   // visit (single source of truth). A body.patientId that disagrees with the visit's
   // patientId must be rejected — a caller must not be able to bind an arbitrary patient
-  // into a checksum-sealed, non-repudiation PMD record.
+  // into a checksum-sealed PMD record. (The checksum is tamper-evidence integrity,
+  // NOT non-repudiation — digital signing is Phase-2/FR12.4.)
   test('returns 422 PATIENT_VISIT_MISMATCH when body.patientId does not match the visit patient', async () => {
     const visit = await seedCompletedVisit();
     const app = buildTestApp(TEST_USER);
@@ -709,8 +741,10 @@ describe('FR12.1: PMD content includes coded clinical data', () => {
     expect(content.visitId).toBe(visit!.id);
   });
 
-  // EF-PMD-004: authorMemberId must be in the snapshot so checksum binds author identity
-  test('PMD content snapshot includes authorMemberId for non-repudiation [EF-PMD-004]', async () => {
+  // EF-PMD-004: authorMemberId must be in the snapshot so the checksum binds the
+  // attesting author to the content (integrity/attestation — NOT non-repudiation, which
+  // would require a digital signature; signing is Phase-2/FR12.4).
+  test('PMD content snapshot includes authorMemberId so the checksum binds the attesting author [EF-PMD-004]', async () => {
     const visit = await seedCompletedVisit();
     const app = buildTestApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}/pmd`, {
@@ -784,5 +818,180 @@ describe('FR12.4: PMD checksum (integrity anchor for digital signature)', () => 
     const body2 = await res2.json() as any;
     // Different visit IDs → different content → different checksums
     expect(body1.checksum).not.toBe(body2.checksum);
+  });
+});
+
+// ===========================================================================
+// FR12.1 Batch B: snapshot carries the safety floor + narrowed demographics,
+// and the attesting clinician is the visit's treating dentist (#5, #6).
+// ===========================================================================
+
+describe('FR12.1 Batch B: PMD snapshot safety floor + demographics + attestor', () => {
+  async function generatePmd(visitId: string) {
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visitId}/pmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID }),
+    });
+    return res;
+  }
+
+  // Decision #6: ship the narrowed demographics minimum (name, DOB, sex).
+  test('snapshot includes narrowed patient demographics (name, DOB, sex)', async () => {
+    const visit = await seedCompletedVisitTreatedBy(TREATING_DENTIST_MEMBER_ID);
+    const res = await generatePmd(visit!.id);
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    const content = JSON.parse(body.content);
+    expect(content.demographics).toBeTruthy();
+    expect(content.demographics.firstName).toBe('Test');
+    expect(content.demographics.lastName).toBe('Patient');
+    expect(content.demographics.dateOfBirth).toBe('1990-05-15');
+    expect(content.demographics.gender).toBe('female');
+  });
+
+  // Decision #6 / FR12.1: the document exists to carry the safety floor.
+  test('snapshot includes the safety floor (active allergies, medications, conditions)', async () => {
+    const { medicalHistoryEntries } = await import('@/handlers/dental-clinical/repos/medical-history.schema');
+    await db.insert(medicalHistoryEntries).values([
+      { patientId: PATIENT_ID, entryType: 'allergy', displayName: 'Penicillin', code: 'Z88.0', codeSystem: 'ICD-10', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { patientId: PATIENT_ID, entryType: 'medication', displayName: 'Warfarin', code: '11289', codeSystem: 'RxNorm', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { patientId: PATIENT_ID, entryType: 'condition', displayName: 'Type 2 Diabetes', code: 'E11.9', codeSystem: 'ICD-10', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      // inactive → must be excluded from the floor
+      { patientId: PATIENT_ID, entryType: 'allergy', displayName: 'Resolved Latex Allergy', active: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      // non-floor type → must be excluded
+      { patientId: PATIENT_ID, entryType: 'procedure', displayName: 'Appendectomy', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]);
+
+    const visit = await seedCompletedVisitTreatedBy(TREATING_DENTIST_MEMBER_ID);
+    const res = await generatePmd(visit!.id);
+    expect(res.status).toBe(201);
+    const content = JSON.parse((await res.json() as any).content);
+
+    expect(content.safetyFloor).toBeTruthy();
+    const allergyNames = content.safetyFloor.allergies.map((a: any) => a.displayName);
+    const medNames = content.safetyFloor.medications.map((m: any) => m.displayName);
+    const condNames = content.safetyFloor.conditions.map((c: any) => c.displayName);
+    expect(allergyNames).toContain('Penicillin');
+    expect(allergyNames).not.toContain('Resolved Latex Allergy'); // inactive excluded
+    expect(medNames).toContain('Warfarin');
+    expect(condNames).toContain('Type 2 Diabetes');
+    expect(condNames).not.toContain('Appendectomy'); // non-floor type excluded
+    // coded entries carry their code + codeSystem for portability
+    const penicillin = content.safetyFloor.allergies.find((a: any) => a.displayName === 'Penicillin');
+    expect(penicillin.code).toBe('Z88.0');
+    expect(penicillin.codeSystem).toBe('ICD-10');
+  });
+
+  // Decision #6 honesty pin: the V1 snapshot is the NARROWED set. The fields deferred
+  // to Phase-2 (structured ICD-10 diagnoses + free-text clinical notes + full
+  // identifiers) must NOT appear, and allergies live ONLY nested under safetyFloor
+  // (never top-level) — the exact shape the corrected TypeSpec @example documents. A
+  // wide-snapshot regression, or a return of the old fake `{allergies,diagnoses}`
+  // example shape, flips this RED.
+  test('snapshot is the narrowed V1 set: no top-level diagnoses/clinicalNotes/identifiers/allergies (#6)', async () => {
+    const visit = await seedCompletedVisitTreatedBy(TREATING_DENTIST_MEMBER_ID);
+    const res = await generatePmd(visit!.id);
+    expect(res.status).toBe(201);
+    const content = JSON.parse((await res.json() as any).content);
+    // narrowed-set keys present
+    expect(content).toHaveProperty('demographics');
+    expect(content).toHaveProperty('safetyFloor');
+    expect(content).toHaveProperty('treatments');
+    expect(content).toHaveProperty('prescriptions');
+    // Phase-2 / wide-set fields absent
+    expect(content.diagnoses).toBeUndefined();
+    expect(content.clinicalNotes).toBeUndefined();
+    expect(content.notes).toBeUndefined();
+    expect(content.identifiers).toBeUndefined();
+    // allergies are nested under safetyFloor only, never top-level (matches the @example)
+    expect(content.allergies).toBeUndefined();
+    expect(content.safetyFloor).toHaveProperty('allergies');
+  });
+
+  // Decision #5: the attesting clinician is the visit's treating dentist —
+  // NOT the actor who triggered completion (the actor is in the audit trail).
+  test('snapshot attestor (authorMemberId) is the visit treating dentist, not the completing actor', async () => {
+    // TEST_USER (actor) resolves to DENTIST_MEMBER_ID; the visit is treated by
+    // a different member, so the two genuinely differ.
+    const visit = await seedCompletedVisitTreatedBy(TREATING_DENTIST_MEMBER_ID);
+    const res = await generatePmd(visit!.id);
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.authorMemberId).toBe(TREATING_DENTIST_MEMBER_ID);
+    const content = JSON.parse(body.content);
+    expect(content.authorMemberId).toBe(TREATING_DENTIST_MEMBER_ID);
+    expect(content.authorMemberId).not.toBe(DENTIST_MEMBER_ID); // not the actor's membership
+  });
+
+  // "checksum stable": the checksum seals the FULL extended content, and
+  // regenerating over unchanged source is byte-deterministic (ordered reads).
+  test('checksum seals the extended content and regeneration is deterministic', async () => {
+    const { createHash } = await import('node:crypto');
+    const { medicalHistoryEntries } = await import('@/handlers/dental-clinical/repos/medical-history.schema');
+    await db.insert(medicalHistoryEntries).values([
+      { patientId: PATIENT_ID, entryType: 'medication', displayName: 'Metformin', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { patientId: PATIENT_ID, entryType: 'allergy', displayName: 'Aspirin', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]);
+
+    const visit = await seedCompletedVisitTreatedBy(TREATING_DENTIST_MEMBER_ID);
+    const first = await (await generatePmd(visit!.id)).json() as any;
+    const content1 = JSON.parse(first.content);
+    // the seal covers demographics + safety floor (RED until Batch B lands)
+    expect(content1.demographics).toBeTruthy();
+    expect(content1.safetyFloor).toBeTruthy();
+    expect(first.checksum).toBe(`sha256-${createHash('sha256').update(first.content).digest('hex')}`);
+
+    // regenerate (supersede) — same source → byte-identical content + checksum
+    const second = await (await generatePmd(visit!.id)).json() as any;
+    expect(second.content).toBe(first.content);
+    expect(second.checksum).toBe(first.checksum);
+  });
+});
+
+// ===========================================================================
+// Batch C / schema-fix #4: at most one live (generated) PMD per visit, and
+// concurrent completion resolves idempotently (no duplicate generated rows).
+// ===========================================================================
+
+describe('Batch C: single-generated-PMD-per-visit invariant + race safety', () => {
+  // Deterministic DB-invariant check: the partial unique index forbids a second
+  // 'generated' row for the same visit.
+  test('a second generated PMD row for the same visit is rejected by the DB', async () => {
+    const visit = await seedCompletedVisit();
+    const repo = new PMDDocumentRepository(db);
+    const base = {
+      visitId: visit!.id,
+      patientId: PATIENT_ID,
+      authorMemberId: DENTIST_MEMBER_ID,
+      branchId: BRANCH_ID,
+      checksum: 'sha256-deadbeef',
+    };
+    await repo.createOne({ ...base, content: '{"n":1}' });
+    // second 'generated' row for the same visit → partial unique index violation
+    await expect(repo.createOne({ ...base, content: '{"n":2}' })).rejects.toThrow();
+  });
+
+  // Concurrent completion: two generations fired together must not produce two
+  // 'generated' rows, and neither call may 500 — the loser resolves idempotently.
+  test('concurrent generation for the same visit yields exactly one generated PMD', async () => {
+    const visit = await seedCompletedVisit();
+    const app = buildTestApp(TEST_USER);
+    const fire = () =>
+      app.request(`/dental/visits/${visit!.id}/pmd`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: PATIENT_ID }),
+      });
+
+    const results = await Promise.all([fire(), fire(), fire()]);
+    for (const r of results) {
+      expect(r.status).toBe(201); // no 500 — race handled idempotently
+    }
+
+    const repo = new PMDDocumentRepository(db);
+    const generated = await repo.findMany({ visitId: visit!.id, status: 'generated' });
+    expect(generated.length).toBe(1);
   });
 });

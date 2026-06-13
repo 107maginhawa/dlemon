@@ -15,6 +15,7 @@
 
 import { createDatabase } from '@/core/database';
 import { patients } from '@/handlers/patient/repos/patient.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
 import { dentalVisits, type NewDentalVisit } from '@/handlers/dental-visit/repos/visit.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
@@ -34,7 +35,18 @@ import {
   type NewDentalTreatment, type NewVisitNotes,
 } from '@/handlers/dental-visit/repos/treatment.schema';
 import { dentalPatientChartBaselines } from '@/handlers/dental-visit/repos/dental-chart-baseline.schema';
+import { dentalPerioCharts } from '@/handlers/dental-perio/repos/perio-chart.schema';
+import { dentalPerioToothReadings } from '@/handlers/dental-perio/repos/perio-reading.schema';
+import {
+  dentalTreatmentPlans, dentalTreatmentPlanApprovals, dentalTreatmentPlanStatusHistory,
+  type NewDentalTreatmentPlan, type TreatmentPlanStatus,
+} from '@/handlers/dental-patient/repos/treatment-plan.schema';
+import {
+  dentalCasePresentations, type NewDentalCasePresentation,
+} from '@/handlers/dental-patient/repos/case-presentation.schema';
 import { eq, and, inArray } from 'drizzle-orm';
+import { detUuid, cpPlanSpecs } from './seed-shared';
+import { workingSlotISO } from './lib/seed-clock';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 const db = createDatabase({ url: DATABASE_URL });
@@ -46,26 +58,8 @@ const daysAgo = (n: number, h = 9) => {
 const daysFromNow = (n: number, h = 10) => {
   const d = new Date(); d.setDate(d.getDate() + n); d.setHours(h, 0, 0, 0); return d;
 };
-const atToday = (h: number, m = 0) => {
-  const d = new Date(); d.setHours(h, m, 0, 0); return d;
-};
-
-// ─── Deterministic UUID helper (idempotent ids from a stable seed string) ────
-// Builds an RFC-4122-shaped v4 UUID deterministically from a label so re-runs
-// produce the same id and .onConflictDoNothing() de-dupes on the PK.
-function detUuid(seed: string): string {
-  let h = 2166136261 >>> 0;
-  const bytes: number[] = [];
-  for (let i = 0; i < 16; i++) {
-    h ^= seed.charCodeAt((i * 7 + 13) % seed.length) || (i + 1);
-    h = Math.imul(h, 16777619) >>> 0;
-    bytes.push((h >>> ((i % 4) * 8)) & 0xff);
-  }
-  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
-  const hex = bytes.map((b) => b.toString(16).padStart(2, '0'));
-  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
-}
+// Appointment slots come from workingSlotISO (timezone- + working-hours-aware);
+// daysAgo/daysFromNow remain for non-appointment date fields (invoice issued/due/paid).
 
 function log(msg: string) { console.log(`  ${msg}`); }
 function section(title: string) { console.log(`\n▶ ${title}`); }
@@ -114,6 +108,13 @@ async function seed() {
     patientIdx: number;
     status: 'paid' | 'partial' | 'overdue' | 'draft' | 'issued';
     lines: LineSpec[];
+    /**
+     * FIX-011: for `overdue` invoices, how many days PAST DUE — drives the AR-aging
+     * bucket (≤30 current, 31–60 days30, 61–90 days60, >90 days90Plus). Spread the
+     * demo's overdue receivables across buckets so the AR-aging report demos real
+     * data in every bucket instead of all-empty. Defaults to 45 (days30).
+     */
+    ageDays?: number;
   };
 
   // ~10 invoices spread across statuses: paid, partial, overdue, draft, issued.
@@ -129,7 +130,7 @@ async function seed() {
     { key: 'INV-S0003', patientIdx: 2, status: 'paid',    lines: [
       { cdtCode: 'D2740', description: 'Crown — porcelain/ceramic (#46)', toothNumber: 46, unitPriceCents: 1800000 },
     ]},
-    { key: 'INV-S0004', patientIdx: 3, status: 'overdue', lines: [
+    { key: 'INV-S0004', patientIdx: 3, status: 'overdue', ageDays: 45, lines: [
       { cdtCode: 'D7210', description: 'Surgical extraction (#48)', toothNumber: 48, unitPriceCents: 800000 },
       { cdtCode: 'D9110', description: 'Palliative treatment of pain', unitPriceCents: 120000 },
     ]},
@@ -144,7 +145,7 @@ async function seed() {
       { cdtCode: 'D0340', description: 'Panoramic radiographic image', unitPriceCents: 250000 },
       { cdtCode: 'D8080', description: 'Comprehensive orthodontic treatment', unitPriceCents: 8500000 },
     ]},
-    { key: 'INV-S0008', patientIdx: 7, status: 'overdue', lines: [
+    { key: 'INV-S0008', patientIdx: 7, status: 'overdue', ageDays: 78, lines: [
       { cdtCode: 'D4341', description: 'Scaling and root planing — UR/UL', unitPriceCents: 500000 },
       { cdtCode: 'D0120', description: 'Periodic oral evaluation', unitPriceCents: 100000 },
     ]},
@@ -154,6 +155,10 @@ async function seed() {
     ]},
     { key: 'INV-S0010', patientIdx: 9, status: 'issued',  lines: [
       { cdtCode: 'D2750', description: 'Crown prep — full cast metal (#46)', toothNumber: 46, unitPriceCents: 900000 },
+    ]},
+    // FIX-011: a deeply-aged receivable so the AR-aging 90+ bucket is non-empty.
+    { key: 'INV-S0011', patientIdx: 3, status: 'overdue', ageDays: 120, lines: [
+      { cdtCode: 'D2950', description: 'Core buildup, including any pins (#48)', toothNumber: 48, unitPriceCents: 350000 },
     ]},
   ];
 
@@ -171,7 +176,7 @@ async function seed() {
     const totalCents = subtotalCents; // no discount/tax in demo
     // Derive money fields from status (BR: amountCents >= 1).
     let paidCents = 0;
-    let status = spec.status;
+    const status = spec.status;
     if (status === 'paid') paidCents = totalCents;
     else if (status === 'partial') paidCents = Math.round(totalCents * 0.5);
     const balanceCents = totalCents - paidCents;
@@ -179,7 +184,9 @@ async function seed() {
     const invoiceId = detUuid(`invoice:${spec.key}`);
     const issuedAt = status === 'draft' ? null : daysAgo(20);
     const dueDate =
-      status === 'overdue' ? daysAgo(15)
+      // FIX-011: overdue invoices are past due by spec.ageDays (default 45) so the
+      // demo spreads receivables across the AR-aging buckets (days30/60/90+).
+      status === 'overdue' ? daysAgo(spec.ageDays ?? 45)
       : status === 'draft' ? null
       : daysFromNow(15);
     const paidAt = status === 'paid' ? daysAgo(5) : null;
@@ -240,7 +247,14 @@ async function seed() {
   type ApptSpec = {
     key: string;
     patientIdx: number;
-    when: Date;
+    // (dayOffset, Manila wall-clock hour:min) snapped to working hours by
+    // workingSlotISO. Negative day = past (rolls back); >=0 = today/future (rolls
+    // forward to the next open day). These rows are direct-inserted (no validator),
+    // but snapping keeps the demo coherent: no appointments on closed days / after
+    // hours, and stable regardless of the host timezone.
+    day: number;
+    hour: number;
+    min?: number;
     durationMinutes: number;
     serviceType: string;
     status: 'scheduled' | 'checked_in' | 'completed' | 'cancelled' | 'no_show';
@@ -250,47 +264,49 @@ async function seed() {
 
   const apptSpecs: ApptSpec[] = [
     // Today
-    { key: 'APT-S001', patientIdx: 0, when: atToday(9),       durationMinutes: 30, serviceType: 'Routine cleaning',      status: 'scheduled' },
-    { key: 'APT-S002', patientIdx: 1, when: atToday(10, 30),  durationMinutes: 45, serviceType: 'Filling follow-up',     status: 'checked_in' },
-    { key: 'APT-S003', patientIdx: 8, when: atToday(11, 30),  durationMinutes: 30, serviceType: 'Walk-in — toothache',   status: 'scheduled', walkIn: true },
-    { key: 'APT-S004', patientIdx: 2, when: atToday(14),      durationMinutes: 60, serviceType: 'Crown cementation',     status: 'scheduled' },
+    { key: 'APT-S001', patientIdx: 0, day: 0,   hour: 9,           durationMinutes: 30, serviceType: 'Routine cleaning',      status: 'scheduled' },
+    { key: 'APT-S002', patientIdx: 1, day: 0,   hour: 10, min: 30, durationMinutes: 45, serviceType: 'Filling follow-up',     status: 'checked_in' },
+    { key: 'APT-S003', patientIdx: 8, day: 0,   hour: 11, min: 30, durationMinutes: 30, serviceType: 'Walk-in — toothache',   status: 'scheduled', walkIn: true },
+    { key: 'APT-S004', patientIdx: 2, day: 0,   hour: 14,          durationMinutes: 60, serviceType: 'Crown cementation',     status: 'scheduled' },
     // Tomorrow
-    { key: 'APT-S005', patientIdx: 3, when: daysFromNow(1, 9),     durationMinutes: 60, serviceType: 'Surgical extraction',  status: 'scheduled' },
-    { key: 'APT-S006', patientIdx: 4, when: daysFromNow(1, 11),    durationMinutes: 45, serviceType: 'Implant consultation', status: 'scheduled' },
-    { key: 'APT-S007', patientIdx: 6, when: daysFromNow(2, 10),    durationMinutes: 30, serviceType: 'Ortho review',         status: 'scheduled' },
-    { key: 'APT-S008', patientIdx: 5, when: daysFromNow(3, 15),    durationMinutes: 90, serviceType: 'Root canal',           status: 'scheduled' },
+    { key: 'APT-S005', patientIdx: 3, day: 1,   hour: 9,           durationMinutes: 60, serviceType: 'Surgical extraction',  status: 'scheduled' },
+    { key: 'APT-S006', patientIdx: 4, day: 1,   hour: 11,          durationMinutes: 45, serviceType: 'Implant consultation', status: 'scheduled' },
+    { key: 'APT-S007', patientIdx: 6, day: 2,   hour: 10,          durationMinutes: 30, serviceType: 'Ortho review',         status: 'scheduled' },
+    { key: 'APT-S008', patientIdx: 5, day: 3,   hour: 15,          durationMinutes: 90, serviceType: 'Root canal',           status: 'scheduled' },
     // Past — completed
-    { key: 'APT-S009', patientIdx: 0, when: daysAgo(10, 9),   durationMinutes: 30, serviceType: 'Periodic exam',         status: 'completed' },
-    { key: 'APT-S010', patientIdx: 2, when: daysAgo(20, 10),  durationMinutes: 60, serviceType: 'Crown prep',            status: 'completed' },
-    { key: 'APT-S011', patientIdx: 7, when: daysAgo(7, 14),   durationMinutes: 45, serviceType: 'Perio SRP',             status: 'completed' },
+    { key: 'APT-S009', patientIdx: 0, day: -10, hour: 9,           durationMinutes: 30, serviceType: 'Periodic exam',         status: 'completed' },
+    { key: 'APT-S010', patientIdx: 2, day: -20, hour: 10,          durationMinutes: 60, serviceType: 'Crown prep',            status: 'completed' },
+    { key: 'APT-S011', patientIdx: 7, day: -7,  hour: 14,          durationMinutes: 45, serviceType: 'Perio SRP',             status: 'completed' },
     // Past — cancelled / no_show
-    { key: 'APT-S012', patientIdx: 9, when: daysAgo(5, 11),   durationMinutes: 30, serviceType: 'Cleaning',              status: 'cancelled', notes: 'Patient rescheduled.' },
-    { key: 'APT-S013', patientIdx: 3, when: daysAgo(3, 13),   durationMinutes: 60, serviceType: 'Extraction',            status: 'no_show' },
-    { key: 'APT-S014', patientIdx: 1, when: daysAgo(2, 16),   durationMinutes: 30, serviceType: 'Sensitivity follow-up', status: 'no_show' },
+    { key: 'APT-S012', patientIdx: 9, day: -5,  hour: 11,          durationMinutes: 30, serviceType: 'Cleaning',              status: 'cancelled', notes: 'Patient rescheduled.' },
+    { key: 'APT-S013', patientIdx: 3, day: -3,  hour: 13,          durationMinutes: 60, serviceType: 'Extraction',            status: 'no_show' },
+    { key: 'APT-S014', patientIdx: 1, day: -2,  hour: 16,          durationMinutes: 30, serviceType: 'Sensitivity follow-up', status: 'no_show' },
   ];
 
   let apptCount = 0;
   const apptTally: Record<string, number> = {};
 
+  const now = new Date();
   for (const spec of apptSpecs) {
     const patient = allPatients[spec.patientIdx % allPatients.length];
     if (!patient) continue;
 
+    const when = new Date(workingSlotISO(now, spec.day, spec.hour, spec.min ?? 0, spec.durationMinutes));
     const row: NewDentalAppointment = {
       id: detUuid(`appt:${spec.key}`),
       patientId: patient.id,
       dentistMemberId: owner.id,
       branchId: branch.id,
-      scheduledAt: spec.when,
+      scheduledAt: when,
       durationMinutes: spec.durationMinutes,
       serviceType: spec.serviceType,
       walkIn: spec.walkIn ?? false,
       status: spec.status,
-      checkInTime: spec.status === 'checked_in' || spec.status === 'completed' ? spec.when : null,
+      checkInTime: spec.status === 'checked_in' || spec.status === 'completed' ? when : null,
       notes: spec.notes ?? null,
-      cancelledAt: spec.status === 'cancelled' ? spec.when : null,
+      cancelledAt: spec.status === 'cancelled' ? when : null,
       cancellationReason: spec.status === 'cancelled' ? (spec.notes ?? 'Cancelled') : null,
-      noShowAt: spec.status === 'no_show' ? spec.when : null,
+      noShowAt: spec.status === 'no_show' ? when : null,
       createdBy: owner.personId ?? null,
       updatedBy: owner.personId ?? null,
     };
@@ -951,14 +967,231 @@ async function seed() {
       }
     }
     log(`\n  Σ Longitudinal: ${totalVisitsInserted} visits across ${arcs.length} patients`);
+
+    // ── Perio multi-exam history (demoable longitudinal comparison) ──────────
+    // Claudia Bautista's perio arc gets two FINALIZED perio charts — an initial
+    // exam (deeper pockets, high BOP) and a maintenance exam ~20 months later
+    // (mostly improved, with one relapsed site #35) — so the perio "History"
+    // comparison view has a real improving trend to render out of the box.
+    const claudiaId = longPatientMap.get('Claudia Bautista');
+    if (claudiaId) {
+      const PERIO_TEETH = [16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 36, 46, 35, 45];
+      const isMolar = (t: number) => [6, 7, 8].includes(t % 10);
+      const siteDepths = (tooth: number, profile: 'initial' | 'stable'): number[] => {
+        if (profile === 'initial') return isMolar(tooth) ? [5, 4, 6, 4, 5, 5] : [3, 3, 4, 3, 3, 3];
+        if (tooth === 35) return [3, 4, 5, 3, 3, 3]; // relapsed site → "worse" (red) in the grid
+        return isMolar(tooth) ? [3, 3, 4, 3, 3, 3] : [2, 2, 3, 2, 2, 2];
+      };
+      const DEEP = 5; // ≥5mm = deep pocket (matches completePerioChart threshold)
+
+      // Each finalized perio chart belongs to its own visit (one-chart-per-visit
+      // unique constraint): the initial exam → v1, the maintenance exam → v4.
+      const perioExams: { key: string; visitKey: string; daysAgoN: number; status: 'completed' | 'locked'; profile: 'initial' | 'stable' }[] = [
+        { key: 'long-p11-perio-initial', visitKey: 'long-p11-v1', daysAgoN: 719, status: 'locked', profile: 'initial' },
+        { key: 'long-p11-perio-maint', visitKey: 'long-p11-v4', daysAgoN: 119, status: 'completed', profile: 'stable' },
+      ];
+
+      for (const ex of perioExams) {
+        const chartId = detUuid(`perio-chart:${ex.key}`);
+        const completedAt = daysAgo(ex.daysAgoN);
+        // Generate readings + roll up the summary stats the chart row stores.
+        let depthSum = 0, depthCount = 0, deepCount = 0, bopTrue = 0, bopTotal = 0;
+        const sites = ['BM', 'BC', 'BD', 'LM', 'LC', 'LD'] as const;
+        const readingRows = PERIO_TEETH.map((tooth) => {
+          const d = siteDepths(tooth, ex.profile);
+          // No explicit id — defaultRandom() PK + the (chartId,toothNumber)
+          // unique index keep re-runs idempotent (detUuid collides on these
+          // tooth-numbered seeds, which silently dropped rows).
+          const row: Record<string, unknown> = {
+            chartId, toothNumber: tooth,
+            createdBy: owner.personId ?? null, updatedBy: owner.personId ?? null,
+          };
+          sites.forEach((s, i) => {
+            const depth = d[i]!;
+            row[`depth${s}`] = depth;
+            const bleeds = depth >= (ex.profile === 'initial' ? 4 : DEEP);
+            row[`bop${s}`] = bleeds;
+            depthSum += depth; depthCount += 1;
+            if (depth >= DEEP) deepCount += 1;
+            bopTotal += 1; if (bleeds) bopTrue += 1;
+          });
+          return row;
+        });
+        const meanDepth = depthCount > 0 ? depthSum / depthCount : 0;
+        const bopPercent = bopTotal > 0 ? (bopTrue / bopTotal) * 100 : 0;
+
+        await db.insert(dentalPerioCharts).values({
+          id: chartId,
+          // one chart per visit (unique); the chart's completedAt drives ordering.
+          visitId: detUuid(`visit:${ex.visitKey}`),
+          patientId: claudiaId,
+          branchId: branch.id,
+          examinerMemberId: owner.id,
+          status: ex.status,
+          completedAt,
+          summaryBopPercent: bopPercent.toFixed(2),
+          summaryMeanDepth: meanDepth.toFixed(2),
+          summaryDeepPocketCount: deepCount,
+          createdBy: owner.personId ?? null,
+          updatedBy: owner.personId ?? null,
+        }).onConflictDoNothing();
+        await db.insert(dentalPerioToothReadings).values(readingRows as any).onConflictDoNothing();
+      }
+      log(`  ✓ Perio history: 2 exams for Claudia Bautista (improving trend, 1 relapsed site)`);
+    }
   }
+
+  // ── Case-presentation treatment plans (case-presentation G2) ───────────────
+  // The base seed creates ZERO plan-level treatment plans, so the case-presentation
+  // module was UI-unreachable ("Present to patient" never renders) and its accept
+  // workflow undemoable. Seed plans across the FSM (draft / presented / accepted /
+  // rejected) with LINKED treatment items + an alternate option group, plus a
+  // case-presentation row for the patient-facing ones, so the whole present→accept/
+  // decline journey is demoable and E2E-reachable out of the box.
+  section('Case-presentation plans (treatment plans + presentations)');
+
+  const providerPersonId = owner.personId ?? owner.id;
+
+  /** Ensure the patient has a visit to hang treatment items off; create one if absent. */
+  async function ensureVisit(patientId: string, key: string): Promise<string> {
+    const existing = visitByPatient.get(patientId);
+    if (existing) return existing;
+    const visitId = detUuid(`cp-visit:${key}`);
+    await db.insert(dentalVisits).values({
+      id: visitId, patientId, branchId: branch.id, dentistMemberId: owner.id,
+      status: 'completed', activatedAt: daysAgo(14), completedAt: daysAgo(14),
+      chiefComplaint: 'Comprehensive treatment planning', createdBy: providerPersonId, updatedBy: providerPersonId,
+    }).onConflictDoNothing();
+    visitByPatient.set(patientId, visitId);
+    return visitId;
+  }
+
+  // cpPlanSpecs is defined at module scope (exported for testing) — see top of file.
+  //
+  // DETERMINISTIC patient binding by displayName (durable fix for the §15 note in
+  // cpPlanSpecs / J19 and the J08 break): the original `allPatients[patientIdx]`
+  // bound each cp plan to a patient by NON-deterministic physical-row order, which
+  // landed the TERMINAL `rejected` plan on Ana Reyes. J08 (informed refusal) needs
+  // Ana to hold a DECLINABLE non-terminal plan, so it broke. Bind by name instead:
+  // Ana → `presented` (declinable; J08 declines an item before J19 runs), and the
+  // terminal `rejected`/`approved` plans → other demo patients. J19 still finds a
+  // `presented` + `draft` plan by status, so its accept/reject legs are unaffected.
+  // Map name → patient using ONLY the persons that are actually patients. The
+  // persons table carries many non-patient rows (staff, plus duplicate-name
+  // persons across reseeds), so a global name→person map collides and resolves a
+  // name to a non-patient person. Scope it to patient persons so the lookup is exact.
+  const patientPersonIds = allPatients.map((p) => p.person).filter((id): id is string => !!id);
+  const patientPersonRows = patientPersonIds.length
+    ? await db.select({ id: persons.id, firstName: persons.firstName, lastName: persons.lastName })
+        .from(persons).where(inArray(persons.id, patientPersonIds))
+    : [];
+  const nameByPersonId = new Map(patientPersonRows.map((p) => [p.id, `${p.firstName} ${p.lastName ?? ''}`.trim()]));
+  // Bind each cp plan to a SPECIFIC demo patient by name. Ana Reyes is deliberately
+  // EXCLUDED: J08 (informed refusal) declines her FIRST pending treatment, and a cp
+  // plan's items live on a COMPLETED visit — declining a treatment on a completed
+  // visit is blocked (createDentalTreatment.ts visit-status guard), so any cp plan on
+  // Ana shadows her active-visit declinable treatments and breaks J08. Diego Ramos
+  // (no Set-A journey depends on him) carries the `presented` plan instead; J19
+  // discovers presented/draft plans by STATUS, so its accept/reject legs still work.
+  const cpPatientNameByKey: Record<string, string> = {
+    'cp-presented': 'Diego Ramos',
+    'cp-accepted': 'Carlos Mendoza',
+    'cp-rejected': 'Miguel Torres',
+    'cp-draft': 'Maria Santos',
+  };
+  const cpPatientByName = (name: string | undefined) =>
+    name ? allPatients.find((p) => p.person != null && nameByPersonId.get(p.person) === name) : undefined;
+
+  let cpPlans = 0, cpPresentations = 0;
+  for (const spec of cpPlanSpecs) {
+    // Prefer the deterministic name binding; fall back to the legacy index so the
+    // seed still works on a patient set that lacks the named demo patients.
+    const patient = cpPatientByName(cpPatientNameByKey[spec.key]) ?? allPatients[spec.patientIdx % allPatients.length];
+    if (!patient) continue;
+    const visitId = await ensureVisit(patient.id, spec.key);
+    const planId = detUuid(`cp-plan:${spec.key}`);
+    const presentedAt = spec.status === 'draft' ? null : daysAgo(7);
+    const approvedAt = spec.status === 'approved' ? daysAgo(3) : null;
+    const total = spec.items.reduce((s, i) => s + i.priceCents, 0);
+
+    const planRow: NewDentalTreatmentPlan = {
+      id: planId, patientId: patient.id, providerId: providerPersonId, status: spec.status,
+      totalEstimateCents: total, presentedAt, approvedAt,
+      createdBy: providerPersonId, updatedBy: providerPersonId,
+    };
+    await db.insert(dentalTreatmentPlans).values(planRow).onConflictDoNothing();
+
+    // LINKED treatment items (treatmentPlanId set) — the link the present-path now performs.
+    // No explicit id: detUuid() collides across near-identical seed strings (the
+    // documented tooth-numbered-seed gotcha) and silently drops items via
+    // onConflictDoNothing. defaultRandom() PK + the full reset-db before each
+    // reseed keep this idempotent.
+    for (const it of spec.items) {
+      await db.insert(dentalTreatments).values({
+        visitId, patientId: patient.id, treatmentPlanId: planId,
+        toothNumber: it.tooth, cdtCode: it.cdt, description: it.desc, priceCents: it.priceCents,
+        phase: (it.phase ?? null) as any, status: it.status,
+        optionGroupId: it.optionGroupId ?? null, recommended: it.recommended ?? false,
+        createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+
+    // Status-history rows for the transitions the FSM would have recorded.
+    if (spec.status !== 'draft') {
+      await db.insert(dentalTreatmentPlanStatusHistory).values({
+        treatmentPlanId: planId, fromStatus: 'draft', toStatus: 'presented',
+        changedByPersonId: providerPersonId, createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+    if (spec.status === 'approved') {
+      await db.insert(dentalTreatmentPlanStatusHistory).values({
+        treatmentPlanId: planId, fromStatus: 'presented', toStatus: 'approved',
+        changedByPersonId: providerPersonId, createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+      // Approval record (parity with both approval paths — case-presentation G3).
+      await db.insert(dentalTreatmentPlanApprovals).values({
+        id: detUuid(`cp-approval:${spec.key}`),
+        treatmentPlanId: planId, approvedByPersonId: patient.person, method: 'signature',
+        createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+    if (spec.status === 'rejected') {
+      await db.insert(dentalTreatmentPlanStatusHistory).values({
+        treatmentPlanId: planId, fromStatus: 'presented', toStatus: 'rejected',
+        changedByPersonId: providerPersonId, createdBy: providerPersonId, updatedBy: providerPersonId,
+      }).onConflictDoNothing();
+    }
+    cpPlans++;
+
+    if (spec.withPresentation) {
+      const cpStatus = spec.decision === 'accepted' ? 'accepted' : spec.decision === 'rejected' ? 'rejected' : 'draft';
+      const cpRow: NewDentalCasePresentation = {
+        id: detUuid(`cp-presentation:${spec.key}`),
+        patientId: patient.id, treatmentPlanId: planId, status: cpStatus as any,
+        decision: spec.decision ?? null,
+        decisionAt: spec.decision ? daysAgo(3) : null,
+        signerName: spec.decision === 'accepted' ? 'Patient (demo e-sign)' : null,
+        signatureData: spec.decision === 'accepted' ? 'data:image/png;base64,iVBORw0KGgo=' : null,
+        rejectionReason: spec.rejectionReason ?? null,
+        createdBy: providerPersonId, updatedBy: providerPersonId,
+      };
+      await db.insert(dentalCasePresentations).values(cpRow).onConflictDoNothing();
+      cpPresentations++;
+    }
+    log(`  ✓ ${spec.key} — plan ${spec.status}${spec.withPresentation ? ' + presentation' : ''} (₱${(total / 100).toLocaleString()})`);
+  }
+  log(`  Σ Case-presentation: ${cpPlans} plans, ${cpPresentations} presentations`);
 
   console.log('\n✓ Supplement seed complete.\n');
 }
 
-seed()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('\n✗ Supplement seed failed:', err);
-    process.exit(1);
-  });
+// Only run the seed when executed directly (`bun scripts/seed-supplement.ts`),
+// not when imported by a test that consumes the exported cpPlanSpecs.
+if (import.meta.main) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('\n✗ Supplement seed failed:', err);
+      process.exit(1);
+    });
+}

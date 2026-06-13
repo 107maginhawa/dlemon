@@ -8,22 +8,26 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
 import { MedicalHistorySheet } from '@/features/workspace/components/medical-history-sheet';
+import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { PreCompletionChecklist } from '@/features/workspace/components/pre-completion-checklist';
 import { RxSheet } from '@/features/workspace/components/rx-sheet';
 import { ConsentSheet } from '@/features/workspace/components/consent-sheet';
 import { LabOrdersSheet } from '@/features/workspace/components/lab-orders-sheet';
 import { AttachmentsSheet } from '@/features/workspace/components/attachments-sheet';
 import { WorkspacePaymentModal } from '@/features/workspace/components/workspace-payment-modal';
+import { PaymentSummaryBar } from '@/features/workspace/components/payment-summary-bar';
 import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
 import { TreatmentTable } from '@/features/workspace/components/treatment-table';
+import { ApplyTemplateButton } from '@/features/workspace/components/apply-template-button';
+import { CarryOverPrompt } from '@/features/workspace/components/carry-over-prompt';
 import { WorkspaceImagingOverlay } from '@/features/workspace/components/workspace-imaging-overlay';
 import { PerioChartOverlay } from '@/features/workspace/components/perio/perio-chart-overlay';
 import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-bar';
@@ -33,17 +37,27 @@ import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-quer
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
+import { usePreviousVisitDeferred } from '@/features/workspace/hooks/use-previous-visit-deferred';
+import { useConsentTemplates } from '@/features/settings/hooks/use-consent-templates';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
+import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
+import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
+import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
+import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatment-done';
 import { usePMD } from '@/features/workspace/hooks/use-pmd';
-import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@/lib/rbac';
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
+import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
+import { useChartConflicts } from '@/features/workspace/hooks/use-chart-conflicts';
+import { ChartExportOverlay } from '@/features/workspace/components/chart-export-overlay';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
@@ -51,6 +65,15 @@ export const Route = createFileRoute('/_workspace/$patientId')({
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
+
+  // case-presentation G1: this workspace route is the layout PARENT of the
+  // nested `/case-presentation/$presentationId` route (TanStack flat routing).
+  // Without an Outlet, navigating to a child route changed the URL but rendered
+  // nothing — the patient-facing case-presentation view was unreachable, so the
+  // accept workflow could never complete from the UI. When a child route is
+  // active, render it full-screen in place of the workspace chart.
+  const childMatches = useChildMatches();
+  const hasChildRoute = childMatches.length > 0;
 
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
   const [pmdShared, setPmdShared] = useState(false);
@@ -72,11 +95,15 @@ function WorkspacePage() {
   const [recallsOpen, setRecallsOpen] = useState(false);
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
+  const [chartExportOpen, setChartExportOpen] = useState(false);
+  // FIX-002: carry-over prompt shown at the new-visit entry point (returning patient).
+  const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
 
   // prescriberMemberId for RxSheet (WBAR-02) — reactive selector
   const prescriberMemberId = useOrgContextStore(s => s.memberId) ?? '';
+  const orgRole = useOrgContextStore(s => s.role);
 
   // branchId for treatment plan (TXPL-01) + visits — reactive selector
   const branchId = useOrgContextStore(s => s.branchId);
@@ -88,6 +115,19 @@ function WorkspacePage() {
     useDentalChart({ visitId: currentVisitId });
   const { treatments } = useTreatments({ visitId: currentVisitId });
   const { data: treatmentPlan } = useTreatmentPlan({ patientId, branchId });
+  // FR8.4b: branch-configured consent templates feed the ConsentSheet picker so
+  // clinicians present this clinic's own consent text, not a hardcoded list.
+  const { templates: consentTemplates } = useConsentTemplates(branchId ?? '');
+  // GAP-5 / FR1.12: the patient's active allergies (same safety-floor cache the top
+  // bar reads — react-query dedupes the key) feed the RxSheet's pre-submit allergy
+  // block. Sourced here so the sheet stays prop-pure.
+  const { entries: medicalHistoryEntries } = useMedicalHistory(patientId);
+  const patientAllergies = medicalHistoryEntries
+    .filter((e) => e.active && e.entryType === 'allergy')
+    .map((e) => e.displayName);
+
+  // P0-A: open offline chart conflicts (rejected stale writes) for this patient.
+  const { conflictedTeeth } = useChartConflicts(patientId);
   const { data: currentPMD } = usePMD(currentVisitId);
 
   // Auto-select active or most recent visit once visits load
@@ -99,9 +139,18 @@ function WorkspacePage() {
   }, [visits, currentVisitId]);
 
   const currentVisit = visits.find((v) => v.id === currentVisitId);
+  // The patient's open (active/draft) visit, computed from the FULL list — never
+  // the year-filtered list, or an active visit hidden by the filter would falsely
+  // re-enable "New Visit". Gates the New Visit affordance (one-active-visit rule).
+  const openVisit = findOpenVisit(visits);
   const isReadOnly =
     currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
   const carriedOverItems = treatmentPlan?.treatments.filter((t) => t.carriedOver) ?? [];
+  // FIX-002: deferred (dismissed) treatments from the previous visit, restorable into a
+  // freshly-started visit. The completion gate means a completed prior visit never retains
+  // diagnosed/planned work, so the carry-over path is restore-dismissed (FR1.11). Gates the
+  // prompt so a patient with nothing deferred is never prompted.
+  const { deferredIds: carryOverDeferredIds } = usePreviousVisitDeferred({ visits, currentVisitId });
 
   // ── Year filter ───────────────────────────────────────────────────────────
   const years = [
@@ -122,6 +171,7 @@ function WorkspacePage() {
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVisitMutation = useCreateVisit(patientId);
+  const discardVisitMutation = useDiscardVisit(patientId);
   const sharePMDMutation = useSharePMD();
   const { saveToothData } = useSaveToothFlow({
     visitId: currentVisitId,
@@ -144,23 +194,58 @@ function WorkspacePage() {
   }
 
   function handleNewVisit() {
-    const { branchId: localBranchId, memberId: dentistMemberId } = useOrgContextStore.getState();
+    // Defense-in-depth: the one-active-visit rule means a new visit can't be created
+    // while one is open. The button is disabled in that state, but guard here too —
+    // resume the open visit instead of firing a guaranteed-fail POST.
+    if (openVisit) {
+      setCurrentVisitId(openVisit.id);
+      return;
+    }
+    const { branchId: localBranchId, memberId: dentistMemberId, role } = useOrgContextStore.getState();
     if (!localBranchId || !dentistMemberId) {
       // CR-01: surface the failure instead of silently returning.
       toast.error('Branch context unavailable — re-select your branch to start a visit.');
       return;
     }
+    // E3: choose a visitType the caller is actually authorized to create so the
+    // affordance is honest. A hygienist (who lacks general-create authority) starts
+    // a HYGIENE visit — the only visit type they may own. Dentists create GENERAL
+    // visits exactly as before. (Roles that can create neither are a pre-existing
+    // concern handled by the hook-level error toast — not expanded here.)
+    const dentalRole = role as DentalRole | null;
+    const visitType: 'general' | 'hygiene' =
+      dentalRole && !canCreateGeneralVisit(dentalRole) && canCreateHygieneVisit(dentalRole)
+        ? 'hygiene'
+        : 'general';
     createVisitMutation.mutate(
-      { patientId, branchId: localBranchId, dentistMemberId },
+      { patientId, branchId: localBranchId, dentistMemberId, visitType },
       {
         // Navigation-only callback; error feedback is handled hook-level in
         // useCreateVisit (V-FE-ERR-001) — a call-site onError here would
         // double-toast on failure.
         onSuccess: (visit) => {
           setCurrentVisitId(visit.id);
+          // FIX-002: at the new-visit entry point, offer to carry the patient's prior
+          // pending treatments into this visit. The prompt self-hides when there are none.
+          setCarryOverPromptOpen(true);
         },
       },
     );
+  }
+
+  function handleDiscardVisit() {
+    if (!openVisit) return;
+    const reason = window.prompt(
+      'Discard this visit? Its pending treatments will be dismissed. This cannot be undone.\n\nReason (required, min 5 chars):',
+    );
+    if (reason == null) return; // cancelled
+    if (reason.trim().length < 5) {
+      toast.error('A reason of at least 5 characters is required to discard a visit.');
+      return;
+    }
+    discardVisitMutation.discard(openVisit.id, reason.trim()).then(() => {
+      setCurrentVisitId(null); // let the auto-select effect pick the next visit
+    }).catch(() => { /* error surfaced by the hook */ });
   }
 
   function handleSharePMD() {
@@ -177,7 +262,7 @@ function WorkspacePage() {
               setPmdShared(true);
             }).catch((err) => {
               if (err?.name !== 'AbortError') {
-                console.error('Share failed:', err);
+                logger.error('patient-share', 'share failed', err);
               }
             });
           } else {
@@ -189,6 +274,12 @@ function WorkspacePage() {
   }
 
 
+  // A nested route (e.g. case-presentation) is active → hand the screen to it.
+  // Placed after all hooks to respect the rules of hooks.
+  if (hasChildRoute) {
+    return <Outlet />;
+  }
+
   // ── Loading state ─────────────────────────────────────────────────────────
   if (visitsLoading) {
     return (
@@ -199,16 +290,31 @@ function WorkspacePage() {
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const totalAmount = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
-  const pendingCount = treatments.filter(
-    (t) => t.status === 'diagnosed' || t.status === 'planned',
-  ).length;
-  // Teeth with completed (performed/verified) treatments — drives the chart's 'completed' layer (CR-03).
-  const completedToothNumbers = new Set<number>(
-    treatments
-      .filter((t) => (t.status === 'performed' || t.status === 'verified') && t.toothNumber != null)
-      .map((t) => t.toothNumber as number),
-  );
+  // CHART-XV: the chart is a cumulative living document. Its Completed / Proposed /
+  // Declined layers come from the patient's treatments across ALL visits (the
+  // treatment-plan aggregate), not the current visit alone — so prior-visit
+  // performed work shows done, and prior-visit pending work shows carried over.
+  const chartLayers = deriveChartLayerSets(treatmentPlan);
+
+  // P0-D: explain why the selected tooth shows its odontogram layer/color. Derived
+  // from the SAME resolveToothLayer the chart renders with (via explainToothLayer),
+  // so the words shown in the slideout can't disagree with the rendered color.
+  const selectedToothLayerExplanation = selectedTooth != null
+    ? explainToothLayer(
+        selectedTooth,
+        teeth.find((t) => t.toothNumber === selectedTooth)?.entryClassification,
+        chartLayers,
+      )
+    : undefined;
+
+  // FIX-007: the original record an amendment references. For the read-only tooth
+  // review this is the selected tooth's treatment record on the current visit. The
+  // amendment validator requires a real UUID, so the slideout only offers
+  // "Add Amendment" when this resolves (see ToothSlideout `canAmend`).
+  const selectedToothRecordId =
+    selectedTooth != null
+      ? treatments.find((t) => t.toothNumber === selectedTooth)?.id
+      : undefined;
 
   const currentVisitDate = currentVisit
     ? new Date(currentVisit.createdAt).toLocaleDateString('en-PH', {
@@ -284,6 +390,18 @@ function WorkspacePage() {
           Plans
         </button>
 
+        {/* P0-B: structured chart export (print-ready) for the current visit */}
+        {currentVisitId && (
+          <button
+            type="button"
+            data-testid="chart-export-btn"
+            onClick={() => setChartExportOpen(true)}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          >
+            Export
+          </button>
+        )}
+
         {/* B5: Sync status badge */}
         <SyncStatusBadge branchId={branchId ?? null} />
 
@@ -319,16 +437,44 @@ function WorkspacePage() {
           data-testid="workspace-carousel-zone"
           className="shrink-0 border-b bg-background/80 backdrop-blur overflow-visible"
         >
+          {/* P0-A: data-integrity banner — rejected offline edits accumulate
+              invisibly without this. Surfaces + resolves them. */}
+          <ChartConflictBanner patientId={patientId} />
+          {openVisit && (
+            <div
+              data-testid="visit-in-progress-indicator"
+              className="flex items-center gap-2 px-4 pt-2 text-xs font-medium text-green-700"
+            >
+              <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden />
+              Visit in progress — finish or discard it to start a new one.
+              {orgRole === 'dentist_owner' && (
+                <button
+                  type="button"
+                  data-testid="discard-visit-btn"
+                  onClick={handleDiscardVisit}
+                  disabled={discardVisitMutation.isPending}
+                  className="ml-2 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                >
+                  Discard visit
+                </button>
+              )}
+            </div>
+          )}
           <TimelineCarousel
             visits={filteredVisits}
             patientId={patientId}
             currentVisitId={currentVisitId ?? undefined}
             onSelectVisit={handleSelectVisit}
             onNewVisit={handleNewVisit}
+            newVisitDisabledHint={openVisit ? NEW_VISIT_DISABLED_HINT : undefined}
             onSelectTooth={selectTooth}
             panelOpen={false}
             patientDateOfBirth={patientProfile?.dateOfBirth}
-            completedToothNumbers={completedToothNumbers}
+            completedToothNumbers={chartLayers.completed}
+            proposedToothNumbers={chartLayers.proposed}
+            declinedToothNumbers={chartLayers.declined}
+            carriedOverToothNumbers={chartLayers.carriedOver}
+            conflictedToothNumbers={conflictedTeeth}
           />
         </div>
 
@@ -337,11 +483,21 @@ function WorkspacePage() {
           data-testid="workspace-table-zone"
           className="flex-1 min-w-0 bg-background overflow-auto"
         >
+          {/* #13: apply a treatment template to populate the visit (reachable even
+              when the table is empty — the primary apply case). Owner/associate-gated
+              inside the component; only shown for an active, editable visit. */}
+          {currentVisitId && !isReadOnly && (
+            <div className="px-4 pt-3">
+              <ApplyTemplateButton visitId={currentVisitId} patientId={patientId} />
+            </div>
+          )}
           <TreatmentTable
             visitId={currentVisitId ?? undefined}
             treatments={treatments}
             carriedOverItems={carriedOverItems}
             visits={visits}
+            selectedTooth={selectedTooth}
+            onClearToothFilter={clearSelection}
             onMarkDone={(treatmentId, visitId, currentStatus) =>
               markDone(treatmentId, visitId, currentStatus as Parameters<typeof markDone>[2])
             }
@@ -359,32 +515,16 @@ function WorkspacePage() {
         onSaveAndNext={handleSaveAndNext}
         readOnly={isReadOnly}
         visitId={currentVisitId ?? undefined}
+        originalRecordId={selectedToothRecordId}
+        layerExplanation={selectedToothLayerExplanation}
       />
 
       {/* Footer */}
-      <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
-        <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
-          {pendingCount === 0
-            ? 'No pending treatments'
-            : `${pendingCount} pending · `}
-          {pendingCount > 0 && (
-            <span className="font-semibold text-foreground">
-              {CURRENCY_SYMBOL}{totalAmount.toLocaleString(APP_LOCALE)}
-            </span>
-          )}
-        </span>
-
-        {/* PAY-01/PAY-02: open payment modal inline */}
-        <button
-          type="button"
-          disabled={treatments.length === 0 && !isReadOnly}
-          onClick={() => setPaymentModalOpen(true)}
-          className="rounded-lg bg-lemon px-5 py-2 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover min-h-[44px] disabled:opacity-50"
-          data-testid="continue-to-payment-btn"
-        >
-          {isReadOnly ? 'View Invoice' : `Continue to Payment (${pendingCount})`}
-        </button>
-      </footer>
+      <PaymentSummaryBar
+        treatments={treatments}
+        isReadOnly={isReadOnly}
+        onContinue={() => setPaymentModalOpen(true)}
+      />
 
       {/* ── Sheet overlays ──────────────────────────────────────────────────── */}
 
@@ -392,6 +532,7 @@ function WorkspacePage() {
       {currentVisitId && (
         <SoapNotesSheet
           visitId={currentVisitId}
+          visitType={currentVisit?.visitType === 'hygiene' ? 'hygiene' : 'general'}
           open={notesSheetOpen}
           onClose={() => setNotesSheetOpen(false)}
           onOpenMedicalHistory={() => {
@@ -439,6 +580,8 @@ function WorkspacePage() {
           visitId={currentVisitId}
           patientId={patientId}
           prescriberMemberId={prescriberMemberId}
+          canManage={orgRole === 'dentist_owner' || orgRole === 'dentist_associate'}
+          patientAllergies={patientAllergies}
           open={rxSheetOpen}
           onClose={() => setRxSheetOpen(false)}
         />
@@ -450,6 +593,8 @@ function WorkspacePage() {
           visitId={currentVisitId}
           patientId={patientId}
           currentMemberId={prescriberMemberId}
+          templates={consentTemplates.map((t) => ({ id: t.id, name: t.name, body: t.body }))}
+          canRevoke={orgRole === 'dentist_owner' || orgRole === 'dentist_associate'}
           open={consentSheetOpen}
           onClose={() => setConsentSheetOpen(false)}
         />
@@ -518,6 +663,15 @@ function WorkspacePage() {
         onClose={() => setTreatmentPlansOpen(false)}
       />
 
+      {/* P0-B: structured chart export overlay (print-ready) */}
+      {currentVisitId && (
+        <ChartExportOverlay
+          visitId={currentVisitId}
+          open={chartExportOpen}
+          onClose={() => setChartExportOpen(false)}
+        />
+      )}
+
       {/* VISIT-02: PreCompletionChecklist */}
       {currentVisitId && (
         <PreCompletionChecklist
@@ -542,6 +696,16 @@ function WorkspacePage() {
         }))}
         open={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
+      />
+
+      {/* FIX-002: carry-over affordance at the new-visit entry point (returning patient) */}
+      <CarryOverPrompt
+        open={carryOverPromptOpen}
+        visitId={currentVisitId}
+        patientId={patientId}
+        branchId={branchId}
+        deferredIds={carryOverDeferredIds}
+        onClose={() => setCarryOverPromptOpen(false)}
       />
     </div>
   );

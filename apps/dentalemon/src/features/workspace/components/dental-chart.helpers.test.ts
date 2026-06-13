@@ -462,16 +462,57 @@ describe('getToothLayer (CR-03)', () => {
     expect(getToothLayer('existing_other')).toBe('baseline');
   });
 
-  test('treatment_plan → proposed', () => {
-    expect(getToothLayer('treatment_plan')).toBe('proposed');
+  // CHART-XV: treatment_plan is NO LONGER a chart-native proposed source. Whether
+  // a tooth is proposed lives on the treatment record (status diagnosed/planned),
+  // fed cumulatively into the chart. Deriving proposed from the frozen chart
+  // classification resurrected stale red when the treatment was later dismissed.
+  // Only `condition` (a finding with no treatment record yet) stays chart-native.
+  test('treatment_plan → baseline (proposed-ness now lives on the treatment record)', () => {
+    expect(getToothLayer('treatment_plan')).toBe('baseline');
   });
 
-  test('condition → proposed', () => {
+  test('condition → proposed (finding charted without a treatment record)', () => {
     expect(getToothLayer('condition')).toBe('proposed');
   });
 
   test('undefined (unclassified/legacy) → baseline', () => {
     expect(getToothLayer(undefined)).toBe('baseline');
+  });
+});
+
+// ─── resolveToothLayer (CHART-XV: cumulative status precedence) ────────────
+
+import { resolveToothLayer } from './dental-chart.helpers';
+
+describe('resolveToothLayer (CHART-XV)', () => {
+  const sets = (over: Partial<Record<'completed' | 'proposed' | 'declined', number[]>> = {}) => ({
+    completed: new Set(over.completed ?? []),
+    proposed: new Set(over.proposed ?? []),
+    declined: new Set(over.declined ?? []),
+  });
+
+  test('completed set wins over everything', () => {
+    expect(
+      resolveToothLayer(26, 'treatment_plan', sets({ completed: [26], proposed: [26], declined: [26] })),
+    ).toBe('completed');
+  });
+
+  test('proposed set beats declined and entryClassification', () => {
+    expect(resolveToothLayer(11, 'existing', sets({ proposed: [11], declined: [11] }))).toBe('proposed');
+  });
+
+  test('declined set beats entryClassification', () => {
+    expect(resolveToothLayer(21, 'existing', sets({ declined: [21] }))).toBe('declined');
+  });
+
+  test('falls back to entryClassification when no set matches', () => {
+    expect(resolveToothLayer(31, 'condition', sets())).toBe('proposed'); // finding
+    expect(resolveToothLayer(16, 'treatment_plan', sets())).toBe('baseline'); // no record → baseline
+    expect(resolveToothLayer(46, 'existing', sets())).toBe('baseline');
+  });
+
+  test('undefined sets are treated as empty', () => {
+    expect(resolveToothLayer(41, 'existing', undefined)).toBe('baseline');
   });
 });
 
@@ -540,15 +581,16 @@ describe('isToothVisible (P1-15 combinable layers)', () => {
 
 import { DEFAULT_VISIBLE_LAYERS } from './dental-chart.helpers';
 
-describe('DEFAULT_VISIBLE_LAYERS (P1-15)', () => {
-  test('includes all three layers by default', () => {
+describe('DEFAULT_VISIBLE_LAYERS (P1-15 / CHART-XV)', () => {
+  test('includes baseline, proposed, completed, declined by default', () => {
     expect(DEFAULT_VISIBLE_LAYERS.has('baseline')).toBe(true);
     expect(DEFAULT_VISIBLE_LAYERS.has('proposed')).toBe(true);
     expect(DEFAULT_VISIBLE_LAYERS.has('completed')).toBe(true);
+    expect(DEFAULT_VISIBLE_LAYERS.has('declined')).toBe(true);
   });
 
-  test('has exactly 3 members', () => {
-    expect(DEFAULT_VISIBLE_LAYERS.size).toBe(3);
+  test('has exactly 4 members', () => {
+    expect(DEFAULT_VISIBLE_LAYERS.size).toBe(4);
   });
 });
 

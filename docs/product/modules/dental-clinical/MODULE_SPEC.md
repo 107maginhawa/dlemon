@@ -82,8 +82,16 @@ Spec Version: 1.0 | Last Updated: 2026-05-24
 ### WF-039 — File Attachment Upload
 1. Dentist or Staff Full opens visit → "Attachments" panel → drag-drop or file picker.
 2. Smart Attachment tagging: file-category image type (`xray`, `photo`, `scan`, `document`, `other`) + optional tooth numbers. This is a coarse file bucket; the clinical radiograph **modality** taxonomy (periapical/bitewing/panoramic/cephalometric/cbct/…) is owned by the dental-imaging module (`ModalityEnum`), which is the system-of-record for true radiograph studies. Legacy attachments tagged `xray`/`photo`/`scan` surface in the imaging workspace via `clinical-imaging.facade` (`source: 'legacy'`).
-3. File stored in S3/MinIO via `storage` module. Metadata record linked to `dental_visit_id`.
-4. Max file size: 50 MB per file. Accepted types: JPEG, PNG, TIFF, DICOM, PDF.
+3. File stored in S3/MinIO via `storage` module (presigned-URL upload). The `dental-clinical`
+   attachment record is **metadata-only** (`file_path` = the storage key); it does not move bytes.
+4. **Size enforcement is layered (FIX-010 — reconciled to code truth):** the clinic UI guards
+   uploads at **50 MB** per file (the product-documented user-facing limit, decision Q5). The
+   actual byte ceiling is enforced by the **storage** module on the presigned-upload step
+   (`maxUploadSizeForMime`): **100 MB** for images/PDF, **2 GB** for DICOM, 8 GB absolute, all
+   env-configurable. The dental-clinical attachment endpoint itself enforces **no** size cap and
+   **no** MIME allow-list (it records client-reported `file_size_bytes`/`mime_type`). Accepted UI
+   types: JPEG, PNG, PDF (file picker `image/*,.pdf`). DICOM/CBCT studies are owned by the
+   **dental-imaging** module, not this attachment sheet.
 5. Attachment list updates optimistically; S3 upload confirmed before persisting DB record.
 
 ---
@@ -146,7 +154,11 @@ LabOrder:     ordered → in_fabrication → delivered → fitted
 ---
 
 ## 10. API Expectations
-POST /dental/visits/:id/prescriptions (BR-017), GET /dental/visits/:id/prescriptions, POST /dental/visits/:id/lab-orders (BR-018), PATCH /dental/visits/:id/lab-orders/:lid (status progression), POST /dental/visits/:id/consent-forms (BR-014), PATCH /dental/visits/:id/consent-forms/:cid/sign, PATCH /dental/visits/:id/consent-forms/:cid/revoke, POST /dental/patients/:id/medical-history (append-only), POST /dental/visits/:id/attachments, POST /dental/visits/:id/amendments
+POST /dental/visits/:visitId/prescriptions (BR-017), GET /dental/visits/:visitId/prescriptions, PATCH /dental/visits/:visitId/prescriptions/:prescriptionId (status FSM), POST /dental/visits/:visitId/lab-orders (BR-018), PATCH /dental/visits/:visitId/lab-orders/:orderId (status progression), POST /dental/visits/:visitId/consents (BR-014 — route is `/consents`, not `/consent-forms`), POST /dental/visits/:visitId/consents/:consentId/sign (POST, not PATCH), PATCH /dental/visits/:visitId/consents/:cid/revoke, POST /dental/clinical/medical-history (append-only; patientId in body, not path), POST /dental/visits/:visitId/attachments, POST /dental/visits/:visitId/amendments
+
+**Spec-behind-impl note (2026-06-08 audit):** this v1.0 spec documents only the original six entity types. The shipped module additionally implements **inventory** (`/dental/branches/:branchId/inventory…`), **occlusion screenings** (`/dental/patients/:patientId/occlusion-screenings`), **post-op instruction templates** (`/dental/branches/:branchId/postop-templates`), **consent refusals** (`/dental/visits/:visitId/consent-refusals`), **medical-history review** (`/dental/clinical/medical-history-review`), and advisory **drug-interaction / allergy cross-checks** on prescription create (non-blocking warnings). These have handlers + tests but are not yet folded into §3–§13 above.
+
+**Parked-dormant note (product decision #12, 2026-06-12) — DO NOT OVERBUILD:** of the surfaces above, **inventory** (`createInventoryItem`/`updateInventoryItem`/`createInventoryAdjustment`/`listInventoryItems`/`listInventoryAdjustments`), **occlusion screenings** (`createOcclusionScreening`/`listOcclusionScreenings`), and **post-op instruction templates** (`createPostopTemplate`/`updatePostopTemplate`/`listPostopTemplates`) are **V1-dormant**: ~10 tested backend ops with **no PRD anchor and zero FE consumers** (verified `grep apps/dentalemon` returns no matches for `inventory`/`occlusion`/`postop`). They are intentionally **parked as Phase-2 candidates** — keep the handlers/tests for forward-compatibility, but **do not wire FE affordances** for them in V1 (wiring without a PRD anchor would be speculative scope). Consent refusals + drug/allergy cross-checks are NOT in this dormant set (both are V1-live: refusals are wired into the consent flow, allergy cross-checks gate prescription create per GAP-5).
 
 ---
 
@@ -163,7 +175,7 @@ Per ADR-006 (domain-events-descope), domain events here are audit-log-only seman
 **AC-CLI-002:** Prescription by non-dentist → 422 (assertBranchRole).
 **AC-CLI-003:** Sign consent form → status = signed, immutable (BR-014).
 **AC-CLI-004:** Lab order: in_fabrication → ordered (reversal) → 422 (BR-018).
-**AC-CLI-005:** Medical history entry → no PATCH/DELETE endpoints available (append-only).
+**AC-CLI-005:** Medical history entry is append-only. The `PATCH /dental/clinical/medical-history/:entryId` route exists but always returns `405 MEDICAL_HISTORY_IMMUTABLE`; no DELETE route is registered. Corrections flow through the amendment path (WF-038).
 **AC-CLI-006:** Write to clinical record on completed visit → 422 (BR-003).
 
 ---
@@ -225,6 +237,6 @@ CLI-S1: Prescription (BR-017) | CLI-S2: Consent form (BR-014, sign/revoke) | CLI
 ## 20. AI Instructions
 1. G-003: Replace `VisitRepository` import with a service interface call — this is Wave G1 priority.
 2. assertBranchRole(dentist) required for prescriptions — check before any Rx write.
-3. Medical history: no PATCH/DELETE routes — append-only enforced at router level.
-4. Consent form signed → all future PATCH attempts on that form must return 422.
+3. Medical history: append-only. The PATCH route is registered but hard-returns 405 MEDICAL_HISTORY_IMMUTABLE; no DELETE route exists. Corrections go through amendments.
+4. Consent form: signed and revoked are mutually-exclusive terminal states. A signed form cannot be revoked (422 CONSENT_ALREADY_SIGNED) and a revoked form cannot be signed (422 CONSENT_FORM_REVOKED, V-CLN-010). The treatment/billing consent gate (hasSignedConsentForVisit) counts a form only when signed=true AND revoked=false.
 5. Follow ARCHITECTURE.md, CONTRIBUTING.md, VERTICAL_TDD.md.

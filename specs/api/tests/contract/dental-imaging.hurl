@@ -107,16 +107,100 @@ jsonpath "$.uploadUrl" isString
 jsonpath "$.uploadMethod" == "PUT"
 
 
-# 2. Calibrate image (pixelSpacingMm=0.2) — required for calibrated measurements
+# 2. Calibrate image — required for calibrated measurements.
+# G6: send the 2-point ruler (20 mm over 100 px) → server DERIVES pixelSpacingMm=0.2
+# and persists a first-class versioned calibration record.
 PATCH {{api}}/dental/imaging/images/{{image_id}}/calibration
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
-  "pixelSpacingMm": 0.2
+  "pixelSpacingMm": 0.2,
+  "pointA": { "x": 0, "y": 0 },
+  "pointB": { "x": 100, "y": 0 },
+  "knownDistanceMm": 20
 }
 HTTP 200
 [Asserts]
 jsonpath "$.pixelSpacingMm" == 0.2
+
+
+# 2b. G5 library metadata — flag a retake + tag the image, then verify it persists.
+PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "isDiagnostic": false,
+  "qualityStatus": "retake",
+  "retakeReason": "overexposed",
+  "tags": ["ortho", "ortho", "  review "]
+}
+HTTP 200
+[Asserts]
+jsonpath "$.isDiagnostic" == false
+jsonpath "$.qualityStatus" == "retake"
+jsonpath "$.retakeReason" == "overexposed"
+# tags normalized: de-duped + trimmed
+jsonpath "$.tags" count == 2
+jsonpath "$.tags" contains "ortho"
+jsonpath "$.tags" contains "review"
+
+# 2c. Reset to a clean diagnostic state so later ceph steps are unaffected.
+PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "isDiagnostic": true,
+  "qualityStatus": "ok",
+  "retakeReason": null,
+  "tags": []
+}
+HTTP 200
+[Asserts]
+jsonpath "$.qualityStatus" == "ok"
+
+
+# 2d. G5b context links — link the image to a treatment plan, list, then delete.
+POST {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "linkType": "treatment_plan",
+  "targetId": "11111111-2222-4333-8444-555555555555"
+}
+HTTP 201
+[Captures]
+link_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.imageId" == "{{image_id}}"
+jsonpath "$.linkType" == "treatment_plan"
+jsonpath "$.targetId" == "11111111-2222-4333-8444-555555555555"
+
+# 2e. Re-linking the same target is idempotent — list still has exactly one.
+POST {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "linkType": "treatment_plan",
+  "targetId": "11111111-2222-4333-8444-555555555555"
+}
+HTTP 201
+
+GET {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count == 1
+
+# 2f. Delete the link → 204, then the list is empty.
+DELETE {{api}}/dental/imaging/links/{{link_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 204
+
+GET {{api}}/dental/imaging/images/{{image_id}}/links
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.items" count == 0
 
 
 # ============================================================
@@ -287,6 +371,8 @@ jsonpath "$.code" == "LANDMARK_LOCKED"
 # Route: POST /dental/imaging/images/{imageId}/ceph/reports
 POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
 Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
 HTTP 422
 [Asserts]
 jsonpath "$.code" == "REPORT_GATE_UNCONFIRMED"
@@ -337,8 +423,11 @@ HTTP 200
 # ============================================================
 
 # 14. Create ceph report — A,B,Go,Po now confirmed → should succeed (201)
+# Body omits analysisType/normPopulation → defaults to steiner_hybrid_sn / default.
 POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
 Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
 HTTP 201
 [Captures]
 report_id: jsonpath "$.id"
@@ -353,6 +442,22 @@ jsonpath "$.snapshot.branch_name" == "Main Branch"
 jsonpath "$.snapshot.calibration.method" == "manual_ruler"
 jsonpath "$.snapshot.software_version" isString
 jsonpath "$.snapshot.landmarks" count >= 6
+# G2: reproducibility version-pinning — snapshot records the analysis actually
+# used + the norm/formula/calibration versions it can be reproduced against.
+jsonpath "$.snapshot.analysis_type" == "steiner_hybrid_sn"
+jsonpath "$.snapshot.norm_population" == "default"
+jsonpath "$.snapshot.norm_version" isString
+jsonpath "$.snapshot.formula_version" isString
+jsonpath "$.snapshot.calibration.version" isInteger
+# G6: the report pins the EXACT versioned calibration record it was traced against
+# (the 2 ruler points + known distance + monotonic record version).
+jsonpath "$.snapshot.calibration.record_version" == 1
+jsonpath "$.snapshot.calibration.known_distance_mm" == 20
+jsonpath "$.snapshot.calibration.point_a.x" == 0
+jsonpath "$.snapshot.calibration.point_b.x" == 100
+# G1-B: v1 has no prior version → revision lineage is null.
+jsonpath "$.revisionOf" == null
+jsonpath "$.revisionReason" == null
 
 
 # 15. GET report (latest version) — snapshot must match what was returned on create
@@ -363,6 +468,7 @@ HTTP 200
 jsonpath "$.version" == 1
 jsonpath "$.id" == "{{report_id}}"
 jsonpath "$.snapshot.analysis_label" == "steiner_hybrid_sn"
+jsonpath "$.revisionOf" == null
 
 
 # ============================================================
@@ -387,6 +493,34 @@ jsonpath "$.version" == 1
 jsonpath "$.id" == "{{report_id}}"
 jsonpath "$.snapshot.analysis_label" == "{{snapshot_analysis_label}}"
 jsonpath "$.snapshot.branch_name" == "{{snapshot_branch_name}}"
+
+
+# ============================================================
+# CEPH REPORT — G1-B REVISION LINEAGE (re-finalize → v2)
+# ============================================================
+
+# 17b. Re-finalize → v2 with a revision reason. revisionOf links to v1's id;
+# the linear version chain is now explicit + reasoned (no trace-session FSM).
+POST {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "revisionReason": "Re-traced Gonion after calibration review"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.version" == 2
+jsonpath "$.revisionOf" == "{{report_id}}"
+jsonpath "$.revisionReason" == "Re-traced Gonion after calibration review"
+
+# 17c. GET latest → v2 carries the lineage on read
+GET {{api}}/dental/imaging/images/{{image_id}}/ceph/reports
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.version" == 2
+jsonpath "$.revisionOf" == "{{report_id}}"
+jsonpath "$.revisionReason" == "Re-traced Gonion after calibration review"
 
 
 # ============================================================
@@ -529,12 +663,38 @@ jsonpath "$.toothNumber" == 36
 jsonpath "$.status" == "draft"
 
 
-# 21. List findings for image
+# 20b. Create imaging finding the way the imaging-workspace UI does — body carries ONLY
+# {type,status,note}, NO visitId/patientId/branchId. The handler derives those from the
+# parent study (createFinding.ts), so this MUST succeed (201). Regression pin for
+# BUG-IMG-001: CreateFindingBody used to require those three fields, so the generated
+# validator rejected the real UI request with 400 before the handler ran (WF-040 broken
+# from the UI). The raw-handler integration test could not catch it (it skips the
+# generated validator); this request goes through the real validator.
+POST {{api}}/dental/imaging/images/{{image_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "type": "bone_loss",
+  "status": "draft",
+  "note": "UI-shaped body — visit/patient/branch derived from study"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.type" == "bone_loss"
+jsonpath "$.status" == "draft"
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.branchId" == "{{branch_id}}"
+
+
+# 21. List findings for image — response is { items } per ImagingFindingListResponse
+# (BUG-IMG-002: handler used to return { data, pagination }, which the FE hook
+# could not read → "Failed to load findings").
 GET {{api}}/dental/imaging/images/{{image_id}}/findings
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.items" isCollection
+jsonpath "$.items" count >= 2
 
 
 # 22. Update imaging finding
@@ -626,7 +786,7 @@ jsonpath "$.modality" == "panoramic"
 # 30. Delete imaging image
 DELETE {{api}}/dental/imaging/images/{{image_id}}
 Cookie: better-auth.session_token={{session_token}}
-HTTP 200
+HTTP 204
 
 
 # 31. Findings auth check → 401 (invalid bearer overrides hurl's stored cookie)

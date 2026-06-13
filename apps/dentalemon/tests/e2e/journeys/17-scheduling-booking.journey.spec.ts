@@ -46,6 +46,12 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const marker = `E2E Booking ${Date.now()}`
     const bookDate = new Date()
     bookDate.setDate(bookDate.getDate() + 7)
+    // Land on a weekday: seeded branch hours close Sunday and shorten Saturday, so a
+    // weekend 10:00 slot can 422 OUTSIDE_WORKING_HOURS depending on the calendar date
+    // CI runs on — which leaves the modal open and flakes the close assertion below.
+    while (bookDate.getDay() === 0 || bookDate.getDay() === 6) {
+      bookDate.setDate(bookDate.getDate() + 1)
+    }
     const bookYmd = ymd(bookDate)
 
     // ── DOM-only journey ──────────────────────────────────────────────────
@@ -80,8 +86,10 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     await page.getByRole('button', { name: /save appointment/i }).click()
 
-    // Modal closes on success.
-    await expect(modal, 'modal should close after a successful save').toBeHidden({ timeout: 10_000 })
+    // Modal closes on success. 15s (not 10s): it only closes after the create POST
+    // resolves, and under CI load that round-trip + re-render can exceed a 10s budget
+    // (same flake class as the J10 hardening).
+    await expect(modal, 'modal should close after a successful save').toBeHidden({ timeout: 15_000 })
 
     // ── Independent read: the appointment must have persisted ──────────────
     const from = ymd(new Date())

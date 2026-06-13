@@ -2,7 +2,7 @@
  * PerioChartRepository — data access for periodontal charts.
  */
 
-import { eq, and, ne } from 'drizzle-orm';
+import { eq, and, ne, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DatabaseRepository } from '@/core/database.repo';
 import { dentalPerioCharts, type DentalPerioChart, type NewDentalPerioChart } from './perio-chart.schema';
@@ -38,9 +38,36 @@ export class PerioChartRepository extends DatabaseRepository<DentalPerioChart, N
     return row ?? null;
   }
 
+  /**
+   * Multi-exam comparison: a patient's finalized perio charts (completed or
+   * locked), most recent first by completion time. Drafts are excluded — only
+   * finalized exams are comparable. Bounded by `limit` (default 12).
+   */
+  async findFinalizedByPatient(patientId: string, limit = 12): Promise<DentalPerioChart[]> {
+    return this.db
+      .select()
+      .from(dentalPerioCharts)
+      .where(and(
+        eq(dentalPerioCharts.patientId, patientId),
+        inArray(dentalPerioCharts.status, ['completed', 'locked']),
+      ))
+      .orderBy(desc(dentalPerioCharts.completedAt))
+      .limit(limit);
+  }
+
   async complete(
     id: string,
-    summary: { bopPercent: number; meanDepth: number; deepPocketCount: number },
+    summary: {
+      bopPercent: number;
+      meanDepth: number;
+      deepPocketCount: number;
+      // FIX-001/002: persist the 2017 AAP/EFP diagnosis of record (frozen at
+      // completion) and the grading evidence that produced the grade.
+      stage?: string | null;
+      grade?: string | null;
+      extent?: string | null;
+      riskFactors?: Record<string, unknown> | null;
+    },
   ): Promise<DentalPerioChart | null> {
     const [updated] = await this.db
       .update(dentalPerioCharts)
@@ -50,6 +77,10 @@ export class PerioChartRepository extends DatabaseRepository<DentalPerioChart, N
         summaryBopPercent: summary.bopPercent.toFixed(2),
         summaryMeanDepth: summary.meanDepth.toFixed(2),
         summaryDeepPocketCount: summary.deepPocketCount,
+        stage: summary.stage ?? null,
+        grade: summary.grade ?? null,
+        extent: summary.extent ?? null,
+        riskFactors: summary.riskFactors ?? null,
         updatedAt: new Date(),
       })
       .where(eq(dentalPerioCharts.id, id))

@@ -2,19 +2,25 @@
  * ImagingRepository — data access for dental imaging module
  */
 
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
+import { createSnapshotVersion } from '@/core/database.schema';
 import {
   imagingStudies,
   imagingStudyImages,
   imagingStudyTeeth,
   imagingAnnotations,
+  imagingCalibrations,
+  imagingLinks,
   type ImagingStudy,
   type NewImagingStudy,
   type ImagingStudyImage,
   type NewImagingStudyImage,
   type ImagingAnnotation,
   type NewImagingAnnotation,
+  type ImagingCalibration,
+  type ImagingLink,
+  type ImagingLinkType,
   type ImagingModality,
 } from './imaging.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
@@ -96,6 +102,11 @@ export class ImagingRepository {
         frameCount: imagingStudyImages.frameCount,
         seriesInstanceUid: imagingStudyImages.seriesInstanceUid,
         studyInstanceUid: imagingStudyImages.studyInstanceUid,
+        // G5 library metadata
+        isDiagnostic: imagingStudyImages.isDiagnostic,
+        qualityStatus: imagingStudyImages.qualityStatus,
+        retakeReason: imagingStudyImages.retakeReason,
+        tags: imagingStudyImages.tags,
         createdAt: imagingStudyImages.createdAt,
         updatedAt: imagingStudyImages.updatedAt,
         version: imagingStudyImages.version,
@@ -176,6 +187,90 @@ export class ImagingRepository {
     return updated;
   }
 
+  /**
+   * G5: partial update of library metadata. Only keys present in `patch` are
+   * written (a caller-validated subset of isDiagnostic/qualityStatus/retakeReason/tags).
+   */
+  async updateImageMetadata(
+    id: string,
+    patch: {
+      isDiagnostic?: boolean;
+      qualityStatus?: 'ok' | 'retake';
+      retakeReason?: string | null;
+      tags?: string[];
+    },
+  ): Promise<ImagingStudyImage> {
+    const set: Partial<NewImagingStudyImage> = { updatedAt: new Date() };
+    if (patch.isDiagnostic !== undefined) set.isDiagnostic = patch.isDiagnostic;
+    if (patch.qualityStatus !== undefined) set.qualityStatus = patch.qualityStatus;
+    if (patch.retakeReason !== undefined) set.retakeReason = patch.retakeReason;
+    if (patch.tags !== undefined) set.tags = patch.tags;
+    const [updated] = await this.db
+      .update(imagingStudyImages)
+      .set(set)
+      .where(eq(imagingStudyImages.id, id))
+      .returning();
+    if (!updated) throw new Error(`Image ${id} not found`);
+    return updated;
+  }
+
+  // -------------------------------------------------------------------------
+  // G5b: context links (treatment plan / ortho case / report)
+  // -------------------------------------------------------------------------
+
+  /** Idempotent: linking the same (image, type, target) twice returns the same row. */
+  async createImageLink(
+    imageId: string,
+    data: { linkType: ImagingLinkType; targetId: string; createdBy?: string | null },
+  ): Promise<ImagingLink> {
+    const [row] = await this.db
+      .insert(imagingLinks)
+      .values({ imageId, linkType: data.linkType, targetId: data.targetId, createdBy: data.createdBy ?? null })
+      .onConflictDoUpdate({
+        target: [imagingLinks.imageId, imagingLinks.linkType, imagingLinks.targetId],
+        set: { targetId: data.targetId },
+      })
+      .returning();
+    if (!row) throw new Error('Failed to create image link');
+    return row;
+  }
+
+  async listLinksByImage(imageId: string): Promise<ImagingLink[]> {
+    return await this.db
+      .select()
+      .from(imagingLinks)
+      .where(eq(imagingLinks.imageId, imageId));
+  }
+
+  async getLinkById(linkId: string): Promise<ImagingLink | null> {
+    const [row] = await this.db
+      .select()
+      .from(imagingLinks)
+      .where(eq(imagingLinks.id, linkId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async deleteLink(linkId: string): Promise<void> {
+    await this.db.delete(imagingLinks).where(eq(imagingLinks.id, linkId));
+  }
+
+  /** Batch-fetch links for many images → map keyed by imageId (list enrichment). */
+  async getLinksByImageIds(imageIds: string[]): Promise<Map<string, ImagingLink[]>> {
+    const map = new Map<string, ImagingLink[]>();
+    if (imageIds.length === 0) return map;
+    const rows = await this.db
+      .select()
+      .from(imagingLinks)
+      .where(inArray(imagingLinks.imageId, imageIds));
+    for (const row of rows) {
+      const list = map.get(row.imageId) ?? [];
+      list.push(row);
+      map.set(row.imageId, list);
+    }
+    return map;
+  }
+
   // -------------------------------------------------------------------------
   // Teeth (join table)
   // -------------------------------------------------------------------------
@@ -212,6 +307,53 @@ export class ImagingRepository {
       .returning();
     if (!updated) throw new Error(`Image ${id} not found`);
     return updated;
+  }
+
+  /**
+   * G6: persist a first-class VERSIONED calibration record (append-only, monotonic
+   * `version` per image). `pixelSpacingMm` is derived authoritatively by the caller
+   * (knownDistanceMm / pixelDistance) — never trusted from the client.
+   */
+  async createCalibrationVersion(
+    imageId: string,
+    data: {
+      pointA: { x: number; y: number };
+      pointB: { x: number; y: number };
+      knownDistanceMm: number;
+      pixelDistance: number;
+      pixelSpacingMm: number;
+      method?: string;
+      createdBy?: string | null;
+    },
+  ): Promise<ImagingCalibration> {
+    return createSnapshotVersion(
+      this.db,
+      imagingCalibrations,
+      imagingCalibrations.imageId,
+      imagingCalibrations.version,
+      imageId,
+      {
+        imageId,
+        pointA: data.pointA,
+        pointB: data.pointB,
+        knownDistanceMm: data.knownDistanceMm,
+        pixelDistance: data.pixelDistance,
+        pixelSpacingMm: data.pixelSpacingMm,
+        method: data.method ?? 'manual_ruler',
+        createdBy: data.createdBy ?? null,
+      },
+    ).then((row) => row as ImagingCalibration);
+  }
+
+  /** G6: latest calibration version for an image (null if never ruler-calibrated). */
+  async getLatestCalibration(imageId: string): Promise<ImagingCalibration | null> {
+    const [row] = await this.db
+      .select()
+      .from(imagingCalibrations)
+      .where(eq(imagingCalibrations.imageId, imageId))
+      .orderBy(desc(imagingCalibrations.version))
+      .limit(1);
+    return row ?? null;
   }
 
   // -------------------------------------------------------------------------

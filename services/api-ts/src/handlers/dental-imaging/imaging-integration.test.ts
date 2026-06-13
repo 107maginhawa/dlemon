@@ -20,28 +20,12 @@
  * REQUIRES: DATABASE_URL pointing at a monobase_test* database.
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeEach, beforeAll } from 'bun:test';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
-import { ZodError } from 'zod';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 
-import { createImagingStudy } from './createImagingStudy';
-import { getImagingStudy } from './getImagingStudy';
-import { listPatientImages } from './listPatientImages';
-import { createFinding } from './createFinding';
-import { updateFinding } from './updateFinding';
-import { listFindings } from './listFindings';
-import { deleteFinding } from './deleteFinding';
-import { createMeasurement } from './createMeasurement';
-import { listMeasurements } from './listMeasurements';
-import { deleteMeasurement } from './deleteMeasurement';
-import { deleteImage } from './deleteImage';
-import { updateImageCalibration } from './updateImageCalibration';
-import { updateImageModality } from './updateImageModality';
-import { finalizeCbctStudy } from './finalizeCbctStudy';
-import { getCbctViewerLink } from './getCbctViewerLink';
 import { buildSyntheticDicom } from './repos/dicom-fixture';
 
 const db = createDatabase({
@@ -63,6 +47,11 @@ const DENTIST = { id: 'a1a00000-0000-4000-8000-0000000000d1', email: 'dentist@im
 const ASSOCIATE = { id: 'a1a00000-0000-4000-8000-0000000000a2', email: 'assoc@imgint.test' };
 const HYGIENIST = { id: 'a1a00000-0000-4000-8000-0000000000c3', email: 'hyg@imgint.test' };
 const OUTSIDER = { id: 'a1a00000-0000-4000-8000-0000000000e4', email: 'outsider@imgint.test' };
+// A dentist whose ONLY membership is in OTHER_BRANCH (same org as BRANCH_ID).
+// Used to prove cross-branch PHI isolation: a same-org member of a *different*
+// branch is denied a radiograph in BRANCH_ID — branchId is derived from the
+// resource, never the caller (V-IMG-002, the V-PAT-002 → V-VIS-011 carry-forward).
+const OTHER_BRANCH_DENTIST = { id: 'a1a00000-0000-4000-8000-0000000000b5', email: 'otherbranch@imgint.test' };
 
 const PATIENT_ID = 'd1a00000-0000-4000-8000-0000000000f5';
 
@@ -84,55 +73,14 @@ const storage = {
 } as any;
 
 // ---------------------------------------------------------------------------
-// App builder — wires real db + the requested handler
+// App builder — delegates to the shared validator-mounting harness so requests
+// traverse the real authMiddleware → generated zValidator → handler → error
+// envelope chain. `storage` is injected via opts.services because
+// createImagingStudy / getCbctViewerLink / listPatientImages read ctx.get('storage').
 // ---------------------------------------------------------------------------
 
 function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  // Mirror the production error contract (src/core/errors.ts): AppError uses its
-  // own statusCode/code; a raw ZodError (from handler-level .parse()) → 400.
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    if (err instanceof ZodError || (err as Error).name === 'ZodError') {
-      return c.json({ error: 'Validation failed', code: 'VALIDATION_ERROR' }, 400);
-    }
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('storage', storage);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-
-  app.post('/dental/imaging/studies', createImagingStudy as any);
-  app.get('/dental/imaging/studies/:studyId', getImagingStudy as any);
-  app.get('/dental/patients/:patientId/images', listPatientImages as any);
-
-  app.post('/dental/imaging/images/:imageId/findings', createFinding as any);
-  app.get('/dental/imaging/images/:imageId/findings', listFindings as any);
-  app.patch('/dental/imaging/findings/:findingId', updateFinding as any);
-  app.delete('/dental/imaging/findings/:findingId', deleteFinding as any);
-
-  app.post('/dental/imaging/images/:imageId/measurements', createMeasurement as any);
-  app.get('/dental/imaging/images/:imageId/measurements', listMeasurements as any);
-  app.delete('/dental/imaging/measurements/:measurementId', deleteMeasurement as any);
-
-  app.delete('/dental/imaging/images/:imageId', deleteImage as any);
-  app.patch('/dental/imaging/images/:imageId/calibration', updateImageCalibration as any);
-  app.patch('/dental/imaging/images/:imageId/modality', updateImageModality as any);
-
-  // P2-7 CBCT
-  app.post('/dental/imaging/studies/:studyId/cbct/finalize', finalizeCbctStudy as any);
-  app.get('/dental/imaging/studies/:studyId/cbct/viewer-link', getCbctViewerLink as any);
-
-  return app;
+  return buildHarnessApp({ db, user: user ?? null, services: { storage } });
 }
 
 const json = (body: unknown) => ({
@@ -206,6 +154,14 @@ async function seedOrgsAndMembers() {
       displayName: 'Owner Dentist', role: 'dentist_owner', status: 'active',
       pinFailedAttempts: 0, createdBy: DENTIST.id, updatedBy: DENTIST.id,
     },
+    // A dentist whose only membership is OTHER_BRANCH (same org, different branch).
+    // Has a full clinical role — so any denial is purely cross-branch isolation,
+    // not a role gate.
+    {
+      id: 'aaee0000-0000-4000-8000-0000000000b5', branchId: OTHER_BRANCH_ID, personId: OTHER_BRANCH_DENTIST.id,
+      displayName: 'Other-Branch Dentist', role: 'dentist_owner', status: 'active',
+      pinFailedAttempts: 0, createdBy: DENTIST.id, updatedBy: DENTIST.id,
+    },
   ]).onConflictDoNothing();
 }
 
@@ -275,13 +231,15 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Wipe imaging rows between tests (FK order: annotations/findings/teeth → images → studies).
-  const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations } =
+  // Wipe imaging rows between tests (FK order: annotations/findings/teeth/calibrations/links → images → studies).
+  const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations, imagingLinks } =
     await import('./repos/imaging.schema');
   const { imagingFindings } = await import('./repos/imaging_finding.schema');
   await db.delete(imagingFindings);
   await db.delete(imagingAnnotations);
   await db.delete(imagingStudyTeeth);
+  await db.delete(imagingCalibrations);
+  await db.delete(imagingLinks);
   await db.delete(imagingStudyImages);
   await db.delete(imagingStudies);
 });
@@ -340,13 +298,17 @@ describe('createImagingStudy', () => {
     expect(body.code).toBe('UNSUPPORTED_MIME_TYPE');
   });
 
-  test('403 when caller is a hygienist (not in CLINICAL_WRITE roles)', async () => {
+  // E2 / doc-vs-code reconciliation: imaging CAPTURE is allowed for hygienist and
+  // dental_assistant (under dentist supervision), matching the handler doc-comment.
+  // (CBCT *finalize* and image management — delete/calibration/modality — stay
+  // dentist-only and keep their hygienist-403 tests below.)
+  test('201 when caller is a hygienist (imaging capture is clinical-write)', async () => {
     const app = buildTestApp(HYGIENIST);
     const res = await app.request('/dental/imaging/studies', {
       method: 'POST',
       ...json({ patientId: PATIENT_ID, branchId: BRANCH_ID, filename: 'f.png', mimeType: 'image/png', size: 1 }),
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(201);
   });
 
   test('403 when caller has no membership in the branch', async () => {
@@ -470,6 +432,45 @@ describe('listPatientImages', () => {
 });
 
 // =============================================================================
+// Cross-branch PHI isolation (V-IMG-002).
+// A clinician whose membership is in a *different* branch of the SAME org must
+// NOT be able to read another branch's radiographs. branchId is derived from the
+// resource (study.branchId), never the caller — so OTHER_BRANCH_DENTIST (a full
+// dentist_owner, but only in OTHER_BRANCH) is denied. This pins the resource-
+// scoped-branch invariant beyond the no-membership-anywhere OUTSIDER case.
+// =============================================================================
+
+describe('cross-branch PHI isolation', () => {
+  test('getImagingStudy: same-org member of a different branch is denied (403)', async () => {
+    const { studyId } = await seedStudyWithImage(); // study lives in BRANCH_ID
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    const res = await app.request(`/dental/imaging/studies/${studyId}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('listPatientImages: caller cannot read images of a branch they do not belong to', async () => {
+    await seedStudyWithImage(); // image in BRANCH_ID
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    // The caller passes the branch the radiographs actually live in; membership
+    // check fails because they belong only to OTHER_BRANCH.
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${BRANCH_ID}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('listPatientImages: passing the caller\'s OWN branch returns no other-branch radiographs (no leak)', async () => {
+    await seedStudyWithImage(); // image in BRANCH_ID only
+    const app = buildTestApp(OTHER_BRANCH_DENTIST);
+    // Caller scopes to their own branch (OTHER_BRANCH) — they are a member, so
+    // 200, but the result must NOT include the BRANCH_ID radiograph.
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${OTHER_BRANCH_ID}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    // The seeded image is in BRANCH_ID; OTHER_BRANCH has none → empty imaging set.
+    expect(body.items.filter((i: any) => i.source === 'imaging')).toHaveLength(0);
+  });
+});
+
+// =============================================================================
 // createFinding — POST /dental/imaging/images/:imageId/findings
 // =============================================================================
 
@@ -541,7 +542,11 @@ describe('createFinding', () => {
 // =============================================================================
 
 describe('listFindings', () => {
-  test('happy path: returns findings for an image with pagination meta', async () => {
+  // BUG-IMG-002: the list response must be { items } per the TypeSpec
+  // ImagingFindingListResponse contract (matching the FE hook + sibling list
+  // endpoints). The handler previously returned { data, pagination }, which the
+  // FE could not read ("Failed to load findings").
+  test('happy path: returns findings for an image as { items }', async () => {
     const { imageId } = await seedStudyWithImage();
     await seedFinding(imageId, 'draft');
     await seedFinding(imageId, 'confirmed');
@@ -551,11 +556,9 @@ describe('listFindings', () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data).toHaveLength(2);
-    expect(body.pagination.totalCount).toBe(2);
-    expect(body.pagination.count).toBe(2);
-    expect(body.data.every((f: any) => f.imageId === imageId)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items).toHaveLength(2);
+    expect(body.items.every((f: any) => f.imageId === imageId)).toBe(true);
   });
 
   test('404 when image does not exist', async () => {
@@ -645,7 +648,7 @@ describe('deleteFinding', () => {
 
     const listRes = await app.request(`/dental/imaging/images/${imageId}/findings`);
     const listBody = (await listRes.json()) as any;
-    expect(listBody.data).toHaveLength(0);
+    expect(listBody.items).toHaveLength(0);
   });
 
   test('404 when finding does not exist', async () => {
@@ -817,14 +820,12 @@ describe('deleteMeasurement', () => {
 // =============================================================================
 
 describe('deleteImage', () => {
-  test('happy path: dentist soft-deletes any image, returns 200 success', async () => {
+  test('happy path: dentist soft-deletes any image, returns 204', async () => {
     const { studyId, imageId } = await seedStudyWithImage();
     const app = buildTestApp(DENTIST);
     const res = await app.request(`/dental/imaging/images/${imageId}`, { method: 'DELETE' });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
-    expect(body.success).toBe(true);
+    expect(res.status).toBe(204);
 
     // archived → no longer returned by listImagesByStudy (status='active' filter)
     const getRes = await app.request(`/dental/imaging/studies/${studyId}`);
@@ -844,9 +845,7 @@ describe('deleteImage', () => {
     const { imageId } = await seedStudyWithImage({ acquiredBy: ASSOCIATE.id });
     const app = buildTestApp(ASSOCIATE);
     const res = await app.request(`/dental/imaging/images/${imageId}`, { method: 'DELETE' });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
-    expect(body.success).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   test('403 hygienist forbidden (BR-026)', async () => {

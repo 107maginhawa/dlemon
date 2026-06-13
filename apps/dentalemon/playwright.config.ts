@@ -28,7 +28,16 @@ export default defineConfig({
   
   use: {
     baseURL: 'http://localhost:3003',
-    
+
+    // Pin the browser to the clinic's timezone (the seed onboards branches as
+    // 'Asia/Manila'). Without this, time-of-day the test types into the UI is
+    // interpreted in the RUNNER's local tz: on a UTC CI runner "10:00" becomes
+    // 10:00Z = 18:00 Manila, which the working-hours validator (createAppointment
+    // checks startAt against branch.timezone) rejects as OUTSIDE_WORKING_HOURS —
+    // a 422 that left J17's appointment modal open. Pinning makes the wall-clock
+    // the test types match the clinic hours in CI and locally alike.
+    timezoneId: 'Asia/Manila',
+
     // Smart artifact capture - only on failure for debugging
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

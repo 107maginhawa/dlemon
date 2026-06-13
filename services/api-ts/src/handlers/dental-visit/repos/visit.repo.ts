@@ -59,6 +59,20 @@ export class VisitRepository extends DatabaseRepository<DentalVisit, NewDentalVi
   }
 
   /**
+   * SL-01 / F-G02: offline-replay idempotency. Find a prior create by its
+   * client-generated localId, scoped to the branch (defence-in-depth against
+   * cross-tenant echo — localIds are UUID-unique, but the scope keeps a replay
+   * from ever returning another branch's row).
+   */
+  async findByLocalId(branchId: string, localId: string): Promise<DentalVisit | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalVisits)
+      .where(and(eq(dentalVisits.branchId, branchId), eq(dentalVisits.localId, localId)));
+    return row ?? null;
+  }
+
+  /**
    * EC7: Find any in-progress visit (draft or active) for a patient.
    * Used by checkInAppointment to enforce max-1-active-visit rule.
    */

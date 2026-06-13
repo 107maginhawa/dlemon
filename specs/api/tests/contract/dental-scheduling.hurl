@@ -76,6 +76,11 @@ jsonpath "$.walkIn" == false
 jsonpath "$.visitType" == "checkup"
 jsonpath "$.startAt" exists
 jsonpath "$.endAt" exists
+# SCH-DRIFT-001: the wire body must carry the contract-REQUIRED `version`
+# (optimistic-lock counter) — it was previously dropped by toWire, so SDK
+# consumers typed against DentalAppointment read undefined.
+jsonpath "$.version" exists
+jsonpath "$.version" >= 1
 
 
 # 2. Get appointment
@@ -192,6 +197,37 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$" isCollection
+
+
+# NEW SCH-DRIFT-001: no-show transition stamps `noShowAt` (camelCase wire name).
+# Pins the field-name fix — the contract field was the lone snake_case `no_showAt`
+# while the handler emits (and the SDK transformer now revives) `noShowAt`.
+POST {{api}}/dental/appointments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "providerId": "{{dentist_member_id}}",
+  "branchId": "{{branch_id}}",
+  "startAt": "2025-08-01T09:00:00.000Z",
+  "endAt": "2025-08-01T09:30:00.000Z",
+  "visitType": "checkup"
+}
+HTTP 201
+[Captures]
+noshow_appt_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/appointments/{{noshow_appt_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "no_show"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "no_show"
+jsonpath "$.noShowAt" exists
+jsonpath "$.version" exists
 
 
 # ── P1-24: confirmation lifecycle ────────────────────────────────────────────

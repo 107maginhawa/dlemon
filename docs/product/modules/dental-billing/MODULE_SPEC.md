@@ -128,12 +128,14 @@ Invoice owns LineItem, Payment, PaymentPlan, Installments. References Treatment 
 ---
 
 ## 8. State Transitions
-See DOMAIN_MODEL.md §6 SM-INVOICE (source of truth).
+See DOMAIN_MODEL.md §6 SM-INVOICE (source of truth). Terminal state value is `voided` (the `DentalInvoiceStatus` enum); the legacy `sent` term was retired in favor of `issued` (V-BIL-015).
 ```
-draft → issued → paid / partial / overdue / void
+draft → issued → paid / partial / overdue / voided
 partial → paid (plan complete)
-issued → void (BR-011: no active plan, owner only)
+issued → voided (BR-011: no active plan, owner only)
+issued / partial / overdue → uncollectible (BR-013 write-off, owner-only, terminal)
 ```
+> Payments are valid only on `issued`/`partial`/`overdue`. A payment on `draft` → 422 INVALID_STATUS_TRANSITION; on `paid`/`voided` → 422 INVOICE_IMMUTABLE.
 > **Deferred/Future:** A "Reopen" action (unvoiding an invoice) appears in screens.md but is **not implemented** in the current state machine. Voided invoices are terminal. Reopen is deferred to a future wave.
 
 ---
@@ -144,7 +146,23 @@ issued → void (BR-011: no active plan, owner only)
 ---
 
 ## 10. API Expectations
-POST /dental/invoices (BR-009), GET /dental/invoices, GET /dental/invoices/:id, PATCH /dental/invoices/:id/issue, POST /dental/invoices/:id/payments (BR-012), POST /dental/invoices/:id/void (BR-011), POST /dental/invoices/:id/payment-plans, GET /dental/patients/:id/statement
+
+> Canonical routes (per dental-billing.tsp / generated routes — all under the `/dental/billing` prefix). Reconciled 2026-06-08: prior list cited `/payment-plans` and a non-existent `GET /dental/patients/:id/statement`.
+
+**Invoice lifecycle:** `POST /dental/billing/invoices` (BR-009/BR-014), `GET /dental/billing/invoices` (branchId required → 400 otherwise, EM-BIL-001), `GET /dental/billing/invoices/:invoiceId`, `PATCH /dental/billing/invoices/:invoiceId/issue`, `POST /dental/billing/invoices/:invoiceId/void` (BR-011), `POST /dental/billing/invoices/:invoiceId/uncollectible` (BR-013, owner-only).
+**Payments:** `POST /dental/billing/invoices/:invoiceId/payments` (BR-012), `GET …/payments`, `POST …/payments/:paymentId/void`, `GET …/payments/:paymentId/receipt`.
+**Discount / plan:** `POST /dental/billing/invoices/:invoiceId/discount` (BR-015), `POST /dental/billing/invoices/:invoiceId/plan`, `GET …/plan`.
+**Reports (branchId OPTIONAL — scoped to caller's branches when omitted, EM-BIL-002):** `GET /dental/billing/patients/:patientId/balance`, `GET /dental/billing/collections/summary`, `GET /dental/billing/collections/aging`, `POST /dental/billing/statements/batch`.
+**Revenue cycle (HMO claims) — ⚠ Phase-2 PARKED (decision #3, 2026-06-12):** `POST /dental/billing/claims`, `GET /dental/billing/claims` (worklist), `GET /dental/billing/claims/aging`, `GET /dental/billing/claims/:claimId`, `PATCH …/status`, `POST …/lines`, `PATCH …/lines/:lineId`, `POST …/remittance`, `POST /dental/billing/estimate`.
+
+> **Claims are parked Phase-2.** The claims/insurance backend is ~100% built but the vertical is deferred: there is **no FE create-path** in V1 (the claims worklist surfaces read + the submit/remittance LIFECYCLE only — there is intentionally no "Create Claim" affordance; pinned by `claims-worklist.test.tsx`). Billing owns the single source of truth for claims; the patient module must **not** wire claims independently (the `dental-patient/insurance/createClaimDraft` backend op is Phase-2-dormant). Schema order-8 (claim_number unique + FKs) stays deferred until the claims UI lands.
+
+> **AHA dental-billing Batch D notes (FIX-009/010/011/012, 2026-06-12):**
+> - **FIX-012 — `GET /dental/billing/collections/summary` is BACKEND-ONLY by choice** `[DO NOT OVERBUILD]`. The dashboard derives collected totals from the invoice list (`use-dashboard-summary.ts`), so `getCollectionsSummary` is intentionally a 0-consumer endpoint kept for API completeness — do NOT wire a new dashboard KPI surface for it.
+> - **FIX-009 (pin)** — every omitted-`branchId` report scopes to the caller's branches; a caller with **zero** branch memberships gets EMPTY results (not 500, not whole-DB). Pinned in `dental-billing.cross-tenant-reports.test.ts`.
+> - **FIX-010 (pin)** — `getPatientBalance.outstandingBalanceCents` equals Σ non-voided per-invoice `balanceCents` (the FE's source), voided excluded on both sides. Pinned in `dental-billing.patient-balance-coherence.test.ts`. **Roadmap flag:** the `PatientBalanceResponse` TypeSpec model (`{ balanceCents, overdueInvoices }`) drifts from the handler's richer shape (`{ outstandingBalanceCents, totalBilledCents, totalPaidCents, overdueAmountCents, invoiceCount, … }`) — harmless today (0-consumer orphan), a separate §15 reconcile when the endpoint is wired.
+> - **FIX-011 (seed)** — the demo (`seed-supplement.ts`) ages overdue receivables across the AR-aging buckets (45d→days30, 78d→days60, 120d→days90Plus) so `collections/aging` demos non-empty buckets. The aging logic itself is covered by `utils/aging.test.ts` + `dental-billing.ar-aging-statements.test.ts`.
+> - **Deferred (Track 4 platform):** the billing-list "overdue" filter E2E (Batch A "during" item) needs a test-only cron-trigger hook to flip an issued invoice to `overdue` in a fresh E2E org (the demo seed's aged data is invisible to the E2E's `signUpOnboardAndUnlock` org) — deferred per the Batch A report §9.
 
 ---
 

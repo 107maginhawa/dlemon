@@ -23,6 +23,7 @@ import type { User } from '@/types/auth';
 import { findDuplicateDentalPatients, createPatientForRegistration } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { createPersonForDentalPatient } from '@/handlers/person/repos/person-dental-patient.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { assertOrgLive } from '@/handlers/shared/assert-org-live';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { CreateDentalPatientBody } from '@/generated/openapi/validators';
 
@@ -46,6 +47,8 @@ export async function createDentalPatient(
   // updateDentalPatient. API_CONTRACTS: owner/associate/staff_full.
   if (!body.branchId) throw new ValidationError('branchId is required');
   await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  // C-1: provisional clinics cannot accumulate PHI until activated (production-only).
+  await assertOrgLive(db, body.branchId);
 
   // Split displayName into firstName + lastName
   const parts = body.displayName.trim().split(/\s+/);

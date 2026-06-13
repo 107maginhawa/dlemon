@@ -19,10 +19,12 @@ export async function createSyncLog(ctx: HandlerContext): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
-  // EF-PAT-004: branch-level authorization when branchId is provided
-  if (body.branchId) {
-    await assertBranchAccess(db, user.id, body.branchId);
+  // G1 (P0): branchId is REQUIRED — a branchless sync log bypassed authorization
+  // entirely. Reject it, then authorize unconditionally against the caller's branch.
+  if (!body.branchId) {
+    return ctx.json({ error: 'branchId is required' }, 400);
   }
+  await assertBranchAccess(db, user.id, body.branchId);
 
   const repo = new SyncLogRepository(db, logger);
   const log = await repo.create({

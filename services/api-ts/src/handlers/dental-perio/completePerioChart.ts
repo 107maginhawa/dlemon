@@ -129,6 +129,15 @@ export async function completePerioChart(
     bopPercent,
     meanDepth,
     deepPocketCount,
+    // FIX-001/002: persist the diagnosis of record + its grading evidence so the
+    // read paths (GET / visit-GET / history) and the longitudinal comparison can
+    // surface the staging trajectory — frozen at completion (Q2 default).
+    stage: classification.stage,
+    grade: classification.grade,
+    extent: classification.extent,
+    // PerioRiskFactors is a closed interface (no index signature); it is structurally
+    // a plain JSONB object for persistence.
+    riskFactors: riskFactors as Record<string, unknown>,
   });
 
   if (!updated) throw new NotFoundError('Perio chart');
@@ -180,10 +189,11 @@ export async function completePerioChart(
     summaryBopPercent: Number(updated.summaryBopPercent ?? 0),
     summaryMeanDepth: Number(updated.summaryMeanDepth ?? 0),
     summaryDeepPocketCount: updated.summaryDeepPocketCount ?? 0,
-    // P1-6: 2017 AAP/EFP staging/grading on the completion summary (read-only,
-    // derived). Surfacing in the clinical UI requires the deferred perio-frontend.
-    stage: classification.stage,
-    grade: classification.grade,
-    extent: classification.extent,
+    // FIX-001: return the PERSISTED diagnosis (from the write's RETURNING row), not
+    // the in-memory `classification`, so the completion response confirms what was
+    // actually stored — the read paths and the response can never silently diverge.
+    stage: (updated.stage ?? null) as typeof classification.stage,
+    grade: (updated.grade ?? null) as typeof classification.grade,
+    extent: (updated.extent ?? null) as typeof classification.extent,
   });
 }

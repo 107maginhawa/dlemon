@@ -19,9 +19,9 @@ import {
   buildToothMap,
   getToothFillColor,
   getToothInfo,
-  getToothLayer,
   getToothDisplayLabel,
   isToothVisible,
+  resolveToothLayer,
   DEFAULT_VISIBLE_LAYERS,
   getMixedDentitionTeeth,
 } from './dental-chart.helpers';
@@ -42,8 +42,18 @@ export interface DentalChartProps {
   dentitionType?: DentitionType;
   /** Show the baseline/proposed/completed layer toggle. Default: true (gate to active card in carousels). */
   showLayerToggle?: boolean;
-  /** FDI numbers of teeth with a completed (performed) treatment — drives the 'completed' layer. */
+  /** CHART-XV cumulative cross-visit sets (from the patient treatment-plan aggregate). */
+  /** FDI numbers with a performed/verified treatment — drives the 'completed' layer (cumulative). */
   completedToothNumbers?: Set<number>;
+  /** FDI numbers with a live planned treatment (diagnosed/planned) — drives the 'proposed' layer. */
+  proposedToothNumbers?: Set<number>;
+  /** FDI numbers whose recommended treatment the patient declined — drives the 'declined' layer. */
+  declinedToothNumbers?: Set<number>;
+  /** Subset of proposed teeth first proposed in a PRIOR visit — surfaced with a carried-over marker. */
+  carriedOverToothNumbers?: Set<number>;
+  /** P0-A: FDI numbers with an open offline sync conflict — marked so the clinician
+   *  knows a rejected edit needs resolving (resolve via the conflict banner). */
+  conflictedToothNumbers?: Set<number>;
 }
 
 /** Layer chip config with color coding for multi-select (P1-15). */
@@ -65,6 +75,14 @@ const CHART_LAYERS: { layer: ChartLayer; label: string; activeClass: string; dot
     label: 'Completed',
     activeClass: 'bg-green-100 text-green-700 border-green-300',
     dotClass: 'bg-green-400',
+  },
+  {
+    // CHART-XV: declined = refused recommendation. Desaturated gray (not a 4th
+    // saturated fill); teeth render with a diagonal hatch (a stroke/pattern).
+    layer: 'declined',
+    label: 'Declined',
+    activeClass: 'bg-gray-200 text-gray-600 border-gray-300',
+    dotClass: 'bg-gray-400',
   },
 ];
 
@@ -92,6 +110,10 @@ export function DentalChart({
   dentitionType = 'permanent',
   showLayerToggle = true,
   completedToothNumbers,
+  proposedToothNumbers,
+  declinedToothNumbers,
+  carriedOverToothNumbers,
+  conflictedToothNumbers,
 }: DentalChartProps) {
   // ── Notation preference (QW-5) ───────────────────────────────────────────
   // Read from branch settings so the chart respects the locale/notation toggle
@@ -128,10 +150,16 @@ export function DentalChart({
     });
   }
 
-  /** Effective layer for a tooth: completed (from treatments) wins, else by entryClassification. */
+  /**
+   * Effective layer for a tooth, from CUMULATIVE cross-visit treatment status
+   * (CHART-XV). Precedence completed > proposed > declined > entryClassification.
+   */
   function toothLayerFor(toothNumber: number): ChartLayer {
-    if (completedToothNumbers?.has(toothNumber)) return 'completed';
-    return getToothLayer(toothByNumber.get(toothNumber)?.entryClassification);
+    return resolveToothLayer(toothNumber, toothByNumber.get(toothNumber)?.entryClassification, {
+      completed: completedToothNumbers,
+      proposed: proposedToothNumbers,
+      declined: declinedToothNumbers,
+    });
   }
 
   function toggleFilter(state: ToothState) {
@@ -214,6 +242,22 @@ export function DentalChart({
     const isDimmed = isFilterDimmed || isLayerHidden;
     // Proposed work stays visually distinct (dashed outline) when its layer is visible — CHART-BR-006.
     const isProposedOnLayer = toothLayer === 'proposed' && !isLayerHidden;
+    // CHART-XV: a proposed tooth first proposed in a PRIOR visit — surface it with
+    // an amber dashed ring so aging pending work stands out from today's proposals.
+    const isCarriedOver = isProposedOnLayer && !!carriedOverToothNumbers?.has(toothNumber);
+    // CHART-XV: declined = refused recommendation — desaturated gray diagonal hatch
+    // (a stroke/pattern, never a 4th saturated fill; the double-slash stays reserved
+    // for extraction). Encodes state on a non-color channel for grayscale legibility.
+    const isDeclinedOnLayer = toothLayer === 'declined' && !isLayerHidden;
+    const outlineFor = isCarriedOver
+      ? '2px dashed #B8860A' // amber — carried over from a prior visit
+      : isProposedOnLayer
+        ? '1.5px dashed var(--primary, #007AFF)'
+        : isDeclinedOnLayer
+          ? '1.5px solid #9CA3AF' // gray — declined
+          : undefined;
+    // P0-A: this tooth has an open offline conflict (a rejected stale write).
+    const isConflicted = !!conflictedToothNumbers?.has(toothNumber);
     // Display label for the current notation preference (QW-5).
     const displayLabel = getToothDisplayLabel(toothNumber, notation);
     // Primary teeth in mixed dentition rendered at smaller size for visual distinction
@@ -228,19 +272,25 @@ export function DentalChart({
         data-tooth-layer={toothLayer}
         data-tooth-label={displayLabel}
         data-tooth-primary={isPrimaryTooth ? '1' : undefined}
+        data-carried-over={isCarriedOver ? '1' : undefined}
+        data-conflicted={isConflicted ? '1' : undefined}
         onClick={() => onSelectTooth?.(toothNumber)}
-        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer})`}
+        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer}${isCarriedOver ? ', carried over from a prior visit' : ''}${isConflicted ? ' — unsynced edit needs review' : ''})`}
         style={{
           flex: '1 1 0',
           minWidth: 0,
           overflow: 'hidden',
           opacity: isDimmed ? 0.2 : 1,
           transition: 'opacity 200ms',
-          outline: isProposedOnLayer ? '1.5px dashed var(--primary, #007AFF)' : undefined,
+          outline: outlineFor,
           outlineOffset: '-2px',
+          // Declined: diagonal hatch texture (non-color channel), gray.
+          backgroundImage: isDeclinedOnLayer
+            ? 'repeating-linear-gradient(45deg, rgba(156,163,175,0.35) 0, rgba(156,163,175,0.35) 2px, transparent 2px, transparent 5px)'
+            : undefined,
         }}
         className={[
-          'flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
+          'relative flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
           !isLastInQuadrant ? 'border-r border-border/20' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
@@ -256,6 +306,15 @@ export function DentalChart({
           showLabel={true}
         />
         {showLayerDots && !isDimmed && <LayerDot layer={toothLayer} />}
+        {isConflicted && (
+          <span
+            data-testid={`tooth-conflict-${toothNumber}`}
+            aria-label="Unsynced edit needs review"
+            className="absolute top-0 right-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-amber-500 text-[7px] font-bold text-white"
+          >
+            !
+          </span>
+        )}
       </button>
     );
   }
@@ -274,7 +333,11 @@ export function DentalChart({
           aria-label="Chart layers — toggle to show or hide"
           className="flex gap-1.5 px-2 py-1.5 border-b border-border/30 bg-background/60"
         >
-          {CHART_LAYERS.map(({ layer, label, activeClass }) => {
+          {CHART_LAYERS
+            // CHART-XV: only surface the Declined chip when refused work exists —
+            // it's an uncommon state, so it stays out of the way until relevant.
+            .filter(({ layer }) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0)
+            .map(({ layer, label, activeClass }) => {
             const isActive = visibleLayers.has(layer);
             return (
               <button

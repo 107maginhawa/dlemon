@@ -9,6 +9,8 @@ Companion to `docs/prd/v3-dentalemon.md`. Formalizes implicit business rules ext
 - **Source** — where the rule is implemented or implied
 - **Status** — `implemented`, `partial`, or `not-implemented`
 
+> **Scope note (2026-06-12):** this catalog holds the cross-cutting **`BR-NNN`** (numeric) rules; `scripts/audit-traceability.ts` parses them (regex `BR-\d{3}`) into `docs/testing/TRACEABILITY_MATRIX_AUTO.md`. **Module-scoped business rules with letter-prefixed IDs (e.g. dental-perio `BR-P01`–`BR-P07`) are tracked in the per-module registry `specs/api/docs/standards/br-registry.json`** (the `/br-extract` artifact), each with its implementation + test source. They are intentionally **not** in this numeric catalog and are not expected in the auto traceability matrix — the registry is their authoritative home (verified complete for perio, 2026-06-12).
+
 ---
 
 ## Business Rules

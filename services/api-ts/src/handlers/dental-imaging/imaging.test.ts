@@ -899,7 +899,7 @@ describe('BR-026 delete roles - hygienist forbidden', () => {
     });
     const app = buildApp(deleteImage as any, { user: DENTIST_USER, db, method: 'DELETE', path: '/:imageId' });
     const res = await app.request(`/${IMAGE_ID}`, { method: 'DELETE' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
     expect(capturedSetArg).not.toBeNull();
     expect(capturedSetArg.status).toBe('archived');
   });
@@ -932,7 +932,7 @@ describe('BR-027 delete own-only associate', () => {
 
     const res = await app.request(`/${IMAGE_ID}`, { method: 'DELETE' });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 
   test("associate deletes other's image - 403", async () => {
@@ -1945,7 +1945,7 @@ describe('imaging findings', () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('updateFinding returns 200', async () => {

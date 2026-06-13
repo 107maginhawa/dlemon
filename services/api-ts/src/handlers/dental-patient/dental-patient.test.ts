@@ -56,6 +56,7 @@ import { getDentalPatientStatement } from './identity/getDentalPatientStatement'
 import { PatientRepository } from '../patient/repos/patient.repo';
 import { patients } from '../patient/repos/patient.schema';
 import { medicalHistoryEntries } from '../dental-clinical/repos/medical-history.schema';
+import { MedicalHistoryRepository } from '../dental-clinical/repos/medical-history.repo';
 import { dentalInvoices } from '../dental-billing/repos/dental-invoice.schema';
 import { dentalPayments } from '../dental-billing/repos/dental-payment.schema';
 import { DentalAuditRepository } from '@/db/audit.repo';
@@ -231,6 +232,31 @@ describe('FR2.2: patient search via ?q= param', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data.length).toBe(0);
+  });
+
+  // FR2.2 regression: a clinic user naturally types a patient's FULL name into
+  // the search box ("Maria Santos"). The match must span first+last name, not
+  // just each field in isolation — otherwise every full-name query returns 0.
+  test('finds patient by full name spanning first + last', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Maria Santos');
+    await createPatient(app, 'Roberto Lim');
+
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=${encodeURIComponent('Maria Santos')}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.some((p: any) => p.displayName === 'Maria Santos')).toBe(true);
+  });
+
+  // Full-name match must remain branch-scoped and not over-match unrelated rows.
+  test('full-name search excludes non-matching patients', async () => {
+    const app = buildTestApp(authedUser);
+    await createPatient(app, 'Maria Santos');
+    await createPatient(app, 'Roberto Lim');
+
+    const res = await app.request(`/dental/patients?branchId=${BRANCH_ID}&q=${encodeURIComponent('Maria Santos')}`);
+    const body = await res.json() as any;
+    expect(body.data.some((p: any) => p.displayName === 'Roberto Lim')).toBe(false);
   });
 });
 
@@ -426,9 +452,16 @@ describe('FR2.8: export dental patients', () => {
     const res = await app.request(`/dental/patients/export?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(Array.isArray(body.data)).toBe(true);
+    // BUG-PAT-EXPORT: the JSON export response key must be `patients` to match the
+    // ExportDentalPatientsResponse contract (.tsp + SDK type + FE useExportPatients,
+    // which reads `data.patients`). The handler previously returned `{ data }`, so
+    // the FE CSV export was always empty.
+    expect(Array.isArray(body.patients)).toBe(true);
+    expect(body.patients.length).toBe(1);
+    expect(body.patients[0].displayName).toBe('Export Test Patient');
     expect(typeof body.exportedAt).toBe('string');
     expect(typeof body.total).toBe('number');
+    expect(body.total).toBe(1);
   });
 
   test('exports as CSV with correct Content-Type', async () => {
@@ -757,6 +790,63 @@ describe('FR2.15: patient safety floor', () => {
     const res = await app.request(`/dental/patients/${NONEXISTENT_ID}/safety-floor`);
     expect(res.status).toBe(404);
   });
+
+  // FIX-004 (GAP-8): equality pin — the safety-floor endpoint and the FE alert
+  // floor (derived from listMedicalHistory) MUST agree. The endpoint filters
+  // active=true then splits by entryType; listMedicalHistory returns ALL entries
+  // (active + inactive) and the FE filters active itself. This pin proves the two
+  // alert sources cannot silently diverge — specifically that BOTH honour the
+  // active filter and the entryType split. Decision-neutral (GAP-6/Q3): it does
+  // not choose a source of truth, only locks the two candidates to equality.
+  // Non-vacuous: an INACTIVE allergy is seeded and must be excluded by BOTH sides.
+  test('FIX-004: safety-floor == active-filtered listMedicalHistory derivation', async () => {
+    const app = buildTestApp(authedUser);
+    const p = await createPatient(app, 'Floor Equality Patient');
+
+    const seed = [
+      { entryType: 'allergy', displayName: 'Penicillin', active: true },
+      { entryType: 'medication', displayName: 'Warfarin', active: true },
+      { entryType: 'condition', displayName: 'Hypertension', active: true },
+      // The trap: an inactive allergy that BOTH sources must drop.
+      { entryType: 'allergy', displayName: 'Latex (resolved)', active: false },
+    ] as const;
+    for (const e of seed) {
+      await db.insert(medicalHistoryEntries).values({
+        id: crypto.randomUUID(),
+        patientId: p.id,
+        entryType: e.entryType,
+        displayName: e.displayName,
+        active: e.active,
+        createdBy: STAFF_USER_ID,
+        updatedBy: STAFF_USER_ID,
+      });
+    }
+
+    // SOURCE 1: the safety-floor endpoint (active-filtered + entryType-split).
+    const res = await app.request(`/dental/patients/${p.id}/safety-floor`);
+    expect(res.status).toBe(200);
+    const floor = await res.json() as {
+      hasAlerts: boolean;
+      allergies: Array<{ displayName: string }>;
+      medications: Array<{ displayName: string }>;
+      conditions: Array<{ displayName: string }>;
+    };
+
+    // SOURCE 2: the FE path — listMedicalHistory returns ALL rows; the FE derives
+    // the floor by filtering active===true then splitting on entryType.
+    const all = await new MedicalHistoryRepository(db).findMany({ patientId: p.id });
+    const fe = (type: string) =>
+      all.filter((e) => e.active && e.entryType === type).map((e) => e.displayName).sort();
+
+    expect(floor.allergies.map((a) => a.displayName).sort()).toEqual(fe('allergy'));
+    expect(floor.medications.map((m) => m.displayName).sort()).toEqual(fe('medication'));
+    expect(floor.conditions.map((c) => c.displayName).sort()).toEqual(fe('condition'));
+
+    // Concrete, non-vacuous expectations (would fail if either side dropped the filter).
+    expect(floor.allergies.map((a) => a.displayName)).toEqual(['Penicillin']);
+    expect(floor.allergies.map((a) => a.displayName)).not.toContain('Latex (resolved)');
+    expect(floor.hasAlerts).toBe(true); // active allergies > 0
+  });
 });
 
 // =============================================================================
@@ -987,6 +1077,271 @@ describe('V-PAT-002/CONF-DP-001: createDentalPatient requires a create-capable r
       body: JSON.stringify({ displayName: 'Allowed Patient', consentGiven: true, branchId: BRANCH_ID }),
     });
     expect(res.status).toBe(201);
+  });
+});
+
+// =============================================================================
+// V-PAT-002: updateDentalPatient (PATCH demographics) requires an edit-capable
+// role. Allowed: dentist_owner, dentist_associate, hygienist, staff_full.
+// DENIED (403): billing_staff, staff_scheduling — both are active branch members,
+// so a pure membership check would wrongly allow them. (Access-matrix RBAC negatives
+// from the workflow-verification brief: "billing_staff ❌ update demographics".)
+// =============================================================================
+
+describe('V-PAT-002: PATCH demographics requires an edit-capable role', () => {
+  afterEach(truncate);
+
+  async function seedMember(personId: string, membershipId: string, role: string) {
+    const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+    await db.insert(dentalMemberships).values({
+      id: membershipId,
+      branchId: BRANCH_ID,
+      personId,
+      displayName: role,
+      role: role as any,
+      status: 'active',
+      pinFailedAttempts: 0,
+      createdBy: STAFF_USER_ID,
+      updatedBy: STAFF_USER_ID,
+    }).onConflictDoUpdate({ target: dentalMemberships.id, set: { role: role as any } });
+  }
+
+  test('billing_staff (matrix-DENIED) gets 403 on PATCH /dental/patients/:id', async () => {
+    // Owner creates the patient first.
+    const ownerApp = buildTestApp(authedUser);
+    const patient = await createPatient(ownerApp, 'Demographics Edit Target');
+
+    const BILLING_ID = 'c1000000-0000-1000-8000-0000000000b1';
+    await seedMember(BILLING_ID, 'eedd0000-0000-1000-8000-0000000000b1', 'billing_staff');
+
+    const app = buildTestApp({ id: BILLING_ID, email: 'billing-edit@clinic.com' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ needsFollowUp: true }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_scheduling (matrix-DENIED) gets 403 on PATCH /dental/patients/:id', async () => {
+    const ownerApp = buildTestApp(authedUser);
+    const patient = await createPatient(ownerApp, 'Demographics Edit Target 2');
+
+    const SCHED_ID = 'c1000000-0000-1000-8000-0000000000b2';
+    await seedMember(SCHED_ID, 'eedd0000-0000-1000-8000-0000000000b2', 'staff_scheduling');
+
+    const app = buildTestApp({ id: SCHED_ID, email: 'sched-edit@clinic.com' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dentalHistorySummary: 'should be denied' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('staff_full (matrix-ALLOWED) gets 200 on PATCH /dental/patients/:id', async () => {
+    const ownerApp = buildTestApp(authedUser);
+    const patient = await createPatient(ownerApp, 'Demographics Edit Target 3');
+
+    const SF_ID = 'c1000000-0000-1000-8000-0000000000b3';
+    await seedMember(SF_ID, 'eedd0000-0000-1000-8000-0000000000b3', 'staff_full');
+
+    const app = buildTestApp({ id: SF_ID, email: 'sf-edit@clinic.com' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ needsFollowUp: true }),
+    });
+    expect(res.status).toBe(200);
+  });
+});
+
+// =============================================================================
+// FR2.4: updateDentalPatient demographics edit (name/DOB/gender)
+//
+// Registration-typo correction. Demographics live on the linked PERSON record,
+// not dental_patient — these fields update the person via the dental handler's
+// branch-role + archived guards. Contact info (phone/email) is now exposed on
+// the profile (DentalPatientPerson.contactInfo) and editable + audited per
+// decision #14 (V-PAT-014). Other person PII (primaryAddress, …) stays excluded.
+// =============================================================================
+
+describe('FR2.4: updateDentalPatient demographics edit', () => {
+  afterEach(truncate);
+
+  test('PATCH firstName/lastName/dateOfBirth/gender updates linked person and persists', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Maria Santos', { dateOfBirth: '1990-04-22', gender: 'female' });
+
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: 'Mariana', lastName: 'Reyes', dateOfBirth: '1991-05-01', gender: 'male' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.firstName).toBe('Mariana');
+    expect(body.person.lastName).toBe('Reyes');
+    expect(body.person.dateOfBirth).toBe('1991-05-01');
+    expect(body.person.gender).toBe('male');
+    expect(body.displayName).toBe('Mariana Reyes');
+
+    // V-PAT-014: the PATCH response is the declared subset. contactInfo is now
+    // exposed (#14) but is absent here because this patient has none set; other
+    // person PII (primaryAddress) and raw DB-row internals (actor UUIDs, version)
+    // stay excluded. Mirrors getDentalPatient's hand-crafted shape.
+    expect(body.person.contactInfo).toBeUndefined();
+    expect(body.person.primaryAddress).toBeUndefined();
+    expect(body.version).toBeUndefined();
+    expect(body.createdBy).toBeUndefined();
+    expect(body.updatedBy).toBeUndefined();
+
+    // Persisted across a fresh read (edit-save-reload core journey).
+    const getRes = await app.request(`/dental/patients/${patient.id}`);
+    const got = await getRes.json() as any;
+    expect(got.person.firstName).toBe('Mariana');
+    expect(got.person.lastName).toBe('Reyes');
+    expect(got.dateOfBirth).toBe('1991-05-01');
+    expect(got.gender).toBe('male');
+    expect(got.displayName).toBe('Mariana Reyes');
+  });
+
+  // #14 (V-PAT-014): contact info (phone/email) edit + audited write.
+  test('PATCH contactInfo persists and is returned on the profile (read+write round-trip)', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Maria Santos');
+
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { email: 'maria@clinic.test', phone: '+639170000001' } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.contactInfo.email).toBe('maria@clinic.test');
+    expect(body.person.contactInfo.phone).toBe('+639170000001');
+
+    // Persisted across a fresh read.
+    const getRes = await app.request(`/dental/patients/${patient.id}`);
+    const got = await getRes.json() as any;
+    expect(got.person.contactInfo.email).toBe('maria@clinic.test');
+    expect(got.person.contactInfo.phone).toBe('+639170000001');
+  });
+
+  test('PATCH contactInfo is partial — an omitted sub-field is left unchanged', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Juan Cruz');
+    await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { email: 'juan@clinic.test', phone: '+639170000002' } }),
+    });
+
+    // Update only the phone — the email must survive.
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { phone: '+639170000099' } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.contactInfo.phone).toBe('+639170000099');
+    expect(body.person.contactInfo.email).toBe('juan@clinic.test');
+  });
+
+  test('PATCH contactInfo writes a patient.contact.update audit event', async () => {
+    const { dentalAuditLog } = await import('@/handlers/dental-audit/repos/audit-log.schema');
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Ana Lopez');
+
+    await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { email: 'ana@clinic.test' } }),
+    });
+
+    const rows = await db.select().from(dentalAuditLog)
+      .where(eq(dentalAuditLog.targetId, patient.id));
+    const contactAudit = rows.filter((r: any) => r.action === 'patient.contact.update');
+    expect(contactAudit.length).toBe(1);
+    expect(contactAudit[0]!.actorId).toBe(authedUser.id);
+    // PHI-safe: the audit row must never carry the email/phone values.
+    expect(JSON.stringify(contactAudit[0])).not.toContain('ana@clinic.test');
+  });
+
+  test('PATCH with only dental fields leaves person demographics unchanged', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Juan Cruz', { dateOfBirth: '1985-01-01' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ needsFollowUp: true }),
+    });
+    expect(res.status).toBe(200);
+    const getRes = await app.request(`/dental/patients/${patient.id}`);
+    const got = await getRes.json() as any;
+    expect(got.person.firstName).toBe('Juan');
+    expect(got.person.lastName).toBe('Cruz');
+    expect(got.needsFollowUp).toBe(true);
+  });
+
+  test('PATCH lastName to empty string clears the last name', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Cher Mononym');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastName: '' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.person.lastName).toBeNull();
+    expect(body.displayName).toBe('Cher');
+  });
+
+  test('PATCH rejects an invalid gender with 400', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Test Gender');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gender: 'banana' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH rejects a future date of birth with 400', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Future DOB');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateOfBirth: '2999-01-01' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH rejects a blank firstName with 400', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Blank Name');
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: '   ' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('demographics edit on an archived patient returns 403', async () => {
+    const app = buildTestApp(authedUser);
+    const patient = await createPatient(app, 'Archived Demographics');
+    await app.request(`/dental/patients/${patient.id}/archive`, { method: 'POST' });
+    const res = await app.request(`/dental/patients/${patient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: 'ShouldFail' }),
+    });
+    expect(res.status).toBe(403);
   });
 });
 

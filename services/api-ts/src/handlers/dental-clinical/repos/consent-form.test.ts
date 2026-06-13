@@ -83,6 +83,20 @@ describe('ConsentFormRepository', () => {
       const result = await repo.sign('00000000-0000-4000-8000-000000000000', 'sig');
       expect(result).toBeNull();
     });
+
+    // V-CLN-010: a revoked consent must never become signed. The revoke path is
+    // symmetric to the signed→revoke guard (CONSENT_ALREADY_SIGNED): once a patient
+    // has refused/withdrawn (revoked=true), signing it would resurrect consent the
+    // patient declined and let a treatment proceed via the signed-only gate.
+    test('does not sign a revoked form — returns null (V-CLN-010)', async () => {
+      const form = await repo.createOne(baseForm);
+      await repo.revoke(form.id, '00000000-0000-4000-8000-00000000aaaa');
+      const signed = await repo.sign(form.id, 'sig-after-revoke');
+      expect(signed).toBeNull();
+      const found = await repo.findOneById(form.id);
+      expect(found!.signed).toBe(false);
+      expect(found!.revoked).toBe(true);
+    });
   });
 
   describe('findMany', () => {

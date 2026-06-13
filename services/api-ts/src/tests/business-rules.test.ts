@@ -5,14 +5,14 @@
  * Each describe block maps 1:1 to a rule ID.
  *
  * Rules tested: BR-001, BR-002, BR-003, BR-004, BR-006, BR-007, BR-009,
- *               BR-010, BR-011, BR-012, BR-014, BR-015, BR-016, BR-017, BR-018, BR-021, BR-022
+ *               BR-010, BR-011, BR-012, BR-013, BR-014, BR-015, BR-016, BR-017,
+ *               BR-018, BR-021, BR-022
  *
  * Rules skipped (not-implemented or frontend-only):
  *   BR-005 — auto-discard drafts (planned, not yet enforced)
  *   BR-008 — carried-over treatments (UI-only flag, no backend rule)
- *   BR-013 — markUncollectible incomplete (implementation gap, TODO in handler)
- *   BR-019 — treatment amendments require supervisor approval (not yet implemented)
- *   BR-020 — patient record merge (not implemented)
+ *   BR-019 — treatment amendments require supervisor approval (501 stub + feature flag)
+ *   BR-020 — patient record merge (501 stub, not implemented)
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
@@ -186,7 +186,8 @@ function makeApp(user?: typeof TEST_USER) {
     zValidator('json', RecordDentalPaymentBody, validationErrorHandler),
     recordDentalPayment as any,
   );
-  // BR-013 deferred — mirrors generated routes.ts:497; handler always returns 501.
+  // BR-013 — markUncollectible IMPLEMENTED (AC-BIL-005, promoted from deferred 2026-06-04):
+  // owner-only write-off; outstanding (issued/partial/overdue) → `uncollectible`, else 422.
   app.post('/dental/billing/invoices/:invoiceId/uncollectible', markUncollectible as any);
 
   // Consent
@@ -925,10 +926,10 @@ describe('BR-010: dental invoices always have taxCents === 0', () => { // [BR-01
 // ===========================================================================
 // BR-011: Active payment plan blocks invoice void
 //
-// NOTE: The current voidDentalInvoice handler does NOT check for active
-// payment plans before voiding. This is an implementation gap documented
-// in the business rules. This test documents both the gap and the intended
-// behavior.
+// ENFORCED: voidDentalInvoice rejects a void while an active payment plan
+// exists (409 ACTIVE_PAYMENT_PLAN — see voidDentalInvoice.ts). The first test
+// asserts the rejection (status >= 400); the second confirms a plan can be
+// created against an issued invoice.
 // ===========================================================================
 
 describe('BR-011: active payment plan blocks invoice void', () => {

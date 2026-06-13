@@ -35,10 +35,12 @@ import "./modules/dental-perio.tsp";
 import "./modules/dental-erasure.tsp";
 import "./modules/dental-audit.tsp";
 import "./modules/dental-legal-hold.tsp";
+import "./modules/dental-retention.tsp";
 import "./modules/dental-patient-engagement.tsp";
 import "./modules/dental-patient-finance.tsp";
 import "./modules/dental-clinical-ops.tsp";
 import "./modules/dental-ops-extras.tsp";
+import "./modules/dental-portal.tsp";
 
 // ============================================================================
 // HEALTHCARE MODULES (redesigned for universal healthcare)
@@ -316,6 +318,9 @@ using TypeSpec.OpenAPI;
 @tagMetadata("Dental:Perio", #{
   description: "Periodontal charting. Per-visit full perio chart with 6-site probing depths (FDI notation), bleeding on probing, recession, mobility, and furcation. One chart per visit; immutable after visit locked. Summary statistics (BOP%, mean depth, deep-pocket count) computed on completion."
 })
+@tagMetadata("Dental:Portal", #{
+  description: "Patient self-service portal (E4 Phase 1, read-only). Self-scoped reads for the authenticated patient (Better-Auth role `user`, no membership): their own appointments, invoices, and outstanding balance. Patient identity is derived server-side from the session — no client-supplied patientId — so a patient can only ever read their own data (IDOR-free by construction)."
+})
 namespace MonobaseAPI {
 
   // ========================================================================
@@ -353,6 +358,10 @@ namespace MonobaseAPI {
   @tag("Dental:Visit")
   @route("/dental/visits")
   interface DentalTreatmentMgmt extends DentalVisitModule.DentalTreatmentManagement {}
+
+  @tag("Dental:Visit")
+  @route("/dental/visits")
+  interface DentalFindingMgmt extends DentalVisitModule.DentalFindingManagement {}
 
   @tag("Dental:Visit")
   @route("/dental/visits")
@@ -500,6 +509,12 @@ namespace MonobaseAPI {
   @route("/dental/legal-holds")
   interface DentalLegalHoldMgmt extends DentalLegalHoldModule.LegalHoldManagement {}
 
+  // Dental Retention status read (FR8.14). Tag "Retention" → handlers/retention/
+  // (co-located with the retention engine + summarizeRetentionEnforcement logic).
+  @tag("Retention")
+  @route("/dental/retention-status")
+  interface DentalRetentionMgmt extends DentalRetentionModule.RetentionManagement {}
+
   // ── TR-DG-002 manual-route migration: patient engagement ─────────────────
   @tag("Dental:Patient")
   @route("/dental/patients")
@@ -609,6 +624,13 @@ namespace MonobaseAPI {
   @route("/dental/waitlist")
   interface WaitlistPromotionMgmt extends DentalWaitlistModule.WaitlistPromotion {}
 
+  // ── E4: patient self-service portal (read-only foundation) ───────────────
+  // Self-scoped reads for the authenticated patient. Identity is derived
+  // server-side from the session (NO patientId param) → IDOR-free by design.
+  @tag("Dental:Portal")
+  @route("/me")
+  interface DentalPortalSelfReads extends DentalPortalModule.PortalSelfReads {}
+
   // ========================================================================
   // PLATFORM INFRASTRUCTURE
   // ========================================================================
@@ -691,6 +713,10 @@ namespace MonobaseAPI {
   interface PatientManagement extends PatientModule.PatientManagement {}
 
   // Provider
+  @tag("Provider")
+  @route("/providers")
+  interface ProviderManagement extends ProviderModule.ProviderManagement {}
+
   @tag("Provider")
   @route("/providers")
   interface PractitionerManagement extends ProviderModule.PractitionerManagement {}

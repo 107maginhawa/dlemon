@@ -16,6 +16,9 @@ interface CephReportResponse {
   version: number
   imageId: string
   snapshot: CephReportSnapshot
+  // G1-B: explicit revision lineage
+  revisionOf: string | null
+  revisionReason: string | null
   createdAt: string
   createdBy: string | null
 }
@@ -38,6 +41,7 @@ function CephReportPage() {
   const { data, isLoading, isError, error } = useQuery<CephReportResponse>({
     queryKey: ['ceph-report', imageId, version ?? 'latest'],
     queryFn: async () => {
+      // eslint-disable-next-line no-restricted-syntax -- TODO(sdk): migrate to the GetCephReport SDK hook; raw fetch in this route's queryFn pending that migration
       const res = await fetch(url)
       if (!res.ok) throw new Error(await res.text())
       return res.json() as Promise<CephReportResponse>
@@ -67,6 +71,8 @@ function CephReportPage() {
     <CephReportView
       snapshot={data.snapshot}
       version={data.version}
+      revisionOf={data.revisionOf}
+      revisionReason={data.revisionReason}
     />
   )
 }

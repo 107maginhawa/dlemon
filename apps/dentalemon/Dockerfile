@@ -3,12 +3,25 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-# Copy workspace files
-COPY package.json bun.lockb ./
+# Copy EVERY workspace manifest before installing. `bun install --frozen-lockfile`
+# resolves the whole workspace graph against the committed bun.lock, so the full
+# set of workspaces the lockfile knows about must be present — a partial subset
+# makes bun recompute the lockfile and fail with either "Workspace dependency ...
+# not found" or "lockfile had changes, but lockfile is frozen". Keep this list in
+# sync with the `workspaces` globs in the root package.json.
+COPY package.json bun.lock ./
+COPY apps/account/package.json ./apps/account/
 COPY apps/dentalemon/package.json ./apps/dentalemon/
+COPY apps/sample-workspace/package.json ./apps/sample-workspace/
+COPY packages/ceph-math/package.json ./packages/ceph-math/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/sdk-ts/package.json ./packages/sdk-ts/
-COPY specs/api/package.json ./specs/api/
+COPY packages/shared-utils/package.json ./packages/shared-utils/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY packages/ui/package.json ./packages/ui/
+COPY services/api-ts/package.json ./services/api-ts/
+COPY services/api-ts-embedded/package.json ./services/api-ts-embedded/
+COPY specs/api/package.json ./specs/api/
 
 # Install dependencies
 RUN bun install --frozen-lockfile

@@ -94,3 +94,32 @@ describe('resolveConsentedChannels — consent gate', () => {
     expect(res.channels.sort()).toEqual(['email', 'in-app']);
   });
 });
+
+/**
+ * FIX-006 (settings-relabel coherence): the clinic-wide "Notification Settings"
+ * panel (apps/dentalemon notification-settings.tsx) stores DEFAULT preference
+ * toggles, but this resolver is the SINGLE enforced gate and reads only per-patient
+ * consent + branch policy. These pins make that honesty property regression-proof:
+ * the resolver's contract has no clinic-preferences input, so a clinic "enabling" a
+ * channel in the defaults panel can never override an unconsented patient.
+ */
+describe('resolveConsentedChannels — clinic defaults cannot override consent (FIX-006)', () => {
+  test('a channel in branch policy is still suppressed when the patient has not consented', () => {
+    // Branch policy "enables" email + sms (the clinic default posture), but the
+    // patient consented to neither → both suppressed, only in-app transmits.
+    const res = resolveConsentedChannels({
+      consent: consent({}),
+      policyChannels: ['email', 'sms', 'in-app'],
+    });
+    expect(res.channels).toEqual(['in-app']);
+    expect(res.suppressed.map((s) => s.channel).sort()).toEqual(['email', 'sms']);
+  });
+
+  test('consent is the gate: identical policy yields different channels per patient consent', () => {
+    const policyChannels: ReminderChannel[] = ['email', 'sms', 'in-app'];
+    const consented = resolveConsentedChannels({ consent: consent({ email: true }), policyChannels });
+    const notConsented = resolveConsentedChannels({ consent: consent({ email: false }), policyChannels });
+    expect(consented.channels).toContain('email');
+    expect(notConsented.channels).not.toContain('email');
+  });
+});

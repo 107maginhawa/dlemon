@@ -16,14 +16,21 @@ import {
   voidDentalInvoiceMutation,
   markUncollectibleMutation,
   recordDentalPaymentMutation,
+  applyDentalDiscountMutation,
+  voidDentalPaymentMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import {
   type InvoiceData,
   showIssueButton, showVoidButton, showRecordButton, showMarkUncollectibleButton,
-  validatePaymentForm, buildPaymentPayload,
+  showDiscountButton, canVoidPaymentRow, showCreatePlanButton,
+  validatePaymentForm, buildPaymentPayload, validateDiscountForm,
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { canApplyDiscount, canVoidPayment, type DentalRole } from '@/lib/rbac';
+import { PaymentReceipt } from './payment-receipt';
+import { PaymentPlanCreate } from './payment-plan-create';
 
 export type { LineItem, Payment, InvoiceData } from './invoice-detail.helpers';
 export {
@@ -61,13 +68,37 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [voidError, setVoidError] = useState<string | null>(null);
   const [showUncollectibleForm, setShowUncollectibleForm] = useState(false);
   const [uncollectibleError, setUncollectibleError] = useState<string | null>(null);
+  // FR4.6: payment whose printable receipt is currently open (null = none).
+  const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
+  // FIX-003: apply-discount form state (owner-only money write-down).
+  const [showDiscountForm, setShowDiscountForm] = useState(false);
+  const [discountRate, setDiscountRate] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
+  const [discountErrors, setDiscountErrors] = useState<string[]>([]);
+  // FIX-004: per-payment void state (which payment row is being voided + reason).
+  const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
+  const [paymentVoidReason, setPaymentVoidReason] = useState('');
+  const [paymentVoidError, setPaymentVoidError] = useState<string | null>(null);
+  // FIX-005: payment-plan create dialog open state.
+  const [showPlanCreate, setShowPlanCreate] = useState(false);
 
   const qc = useQueryClient();
+  // The recording staff member comes from the PIN-authenticated org context.
+  // Without it the POST sends an empty recordedByMemberId and the backend
+  // rejects it with 400 "Invalid UUID" (mirrors useWorkspacePayment / QA-008).
+  const recordedByMemberId = useOrgContextStore((s) => s.memberId);
+  // FIX-003/004: discount + payment-void are OWNER-ONLY (backend
+  // assertBranchRole(['dentist_owner'])) — STRICTER than the canWrite prop
+  // (owner||associate). Source role from the same org context as recordedByMemberId
+  // so the affordances hide for non-owners (the backend is still the hard 403 gate).
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null;
+  const canDiscount = role ? canApplyDiscount(role) : false;
+  const canVoidPmt = role ? canVoidPayment(role) : false;
 
   // ---------------------------------------------------------------------------
   // GET invoice — replaces the manual useEffect+setState fetch
-  // The SDK DentalInvoice type does not yet include lineItems/payments/patientName/
-  // visitDate (backend enrichments not in spec). We cast via `select` and convert
+  // The SDK DentalInvoice type carries patientName/visitDate (modeled 2026-06-13) but
+  // still not lineItems/payments (backend enrichments not in spec). We cast via `select` and convert
   // Date fields back to strings (the SDK transformer converts dueDate/issuedAt to
   // Date objects; InvoiceData consumers expect strings, per the pre-migration contract).
   // Same pattern as use-visits.ts.
@@ -168,11 +199,53 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     },
   });
 
+  // ---------------------------------------------------------------------------
+  // POST /discount (FIX-003)
+  // applyDentalDiscount returns the FULL updated invoice, but it lacks the
+  // backend enrichments the sheet renders (lineItems/payments). Invalidate +
+  // refetch the enriched GET so the totals re-render from coherent server truth.
+  // ---------------------------------------------------------------------------
+  const discountMutation = useMutation({
+    ...applyDentalDiscountMutation(),
+    onSuccess: () => {
+      setShowDiscountForm(false);
+      setDiscountRate('');
+      setDiscountReason('');
+      setDiscountErrors([]);
+      invalidateInvoice();
+      onUpdated?.();
+    },
+    onError: (err) => {
+      setDiscountErrors([err instanceof Error ? err.message : 'Failed']);
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /payments/{paymentId}/void (FIX-004)
+  // The void response carries only the payment row (no restored balance), so
+  // invalidate + refetch the invoice for the corrected balance/status.
+  // ---------------------------------------------------------------------------
+  const paymentVoidMutation = useMutation({
+    ...voidDentalPaymentMutation(),
+    onSuccess: () => {
+      setVoidingPaymentId(null);
+      setPaymentVoidReason('');
+      setPaymentVoidError(null);
+      invalidateInvoice();
+      onUpdated?.();
+    },
+    onError: (err) => {
+      setPaymentVoidError(err instanceof Error ? err.message : 'Failed');
+    },
+  });
+
   const saving =
     issueMutation.isPending ||
     voidMutation.isPending ||
     uncollectibleMutation.isPending ||
-    recordPaymentMutation.isPending;
+    recordPaymentMutation.isPending ||
+    discountMutation.isPending ||
+    paymentVoidMutation.isPending;
 
   if (!open) return null;
 
@@ -202,8 +275,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     const amountCents = Math.round(parseFloat(paymentAmount || '0') * 100);
     const errs = validatePaymentForm({ amountCents, method: paymentMethod, receiptNumber });
     if (errs.length > 0) { setPaymentErrors(errs); return; }
+    if (!recordedByMemberId) {
+      setPaymentErrors(['No active staff member context — please re-select your profile and try again.']);
+      return;
+    }
     setPaymentErrors([]);
-    const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId: '' });
+    const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId });
     recordPaymentMutation.mutate({
       path: { invoiceId },
       body: {
@@ -215,12 +292,41 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     });
   }
 
+  function handleApplyDiscount() {
+    if (!invoice) return;
+    const percentageRate = parseFloat(discountRate || '0');
+    const errs = validateDiscountForm({ percentageRate, reason: discountReason });
+    if (errs.length > 0) { setDiscountErrors(errs); return; }
+    setDiscountErrors([]);
+    // percentageRate is a 0–100 PERCENTAGE (not cents/fraction) — sent raw.
+    discountMutation.mutate({ path: { invoiceId }, body: { reason: discountReason.trim(), percentageRate } });
+  }
+
+  function handleVoidPayment() {
+    if (!invoice || !voidingPaymentId) return;
+    const reason = paymentVoidReason.trim();
+    if (reason.length < 5) {
+      setPaymentVoidError('Please enter a void reason (at least 5 characters).');
+      return;
+    }
+    setPaymentVoidError(null);
+    paymentVoidMutation.mutate({ path: { invoiceId, paymentId: voidingPaymentId }, body: { voidReason: reason } });
+  }
+
   function handleClose() {
     setShowPaymentForm(false);
     setPaymentErrors([]);
     setShowVoidForm(false);
     setVoidReason('');
     setVoidError(null);
+    setShowDiscountForm(false);
+    setDiscountRate('');
+    setDiscountReason('');
+    setDiscountErrors([]);
+    setVoidingPaymentId(null);
+    setPaymentVoidReason('');
+    setPaymentVoidError(null);
+    setShowPlanCreate(false);
     onClose();
   }
 
@@ -340,18 +446,49 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   <table className="w-full border-collapse">
                     <thead>
                       <tr>
-                        {['Receipt #', 'Date', 'Method', 'Amount'].map((h, i) => (
-                          <th key={h} className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 3 ? 'text-right' : 'text-left'}`}>{h}</th>
+                        {['Receipt #', 'Date', 'Method', 'Amount', ''].map((h, i) => (
+                          <th key={h || 'actions'} className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 3 ? 'text-right' : i === 4 ? 'text-right' : 'text-left'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {invoice.payments.map((pmt) => (
-                        <tr key={pmt.id}>
+                        <tr key={pmt.id} className={pmt.isVoid ? 'opacity-60' : undefined}>
                           <td className="px-3 py-2.5 text-xs font-semibold text-lemon-foreground">{pmt.receiptNumber}</td>
                           <td className="px-3 py-2.5 text-[13px] tabular-nums">{new Date(pmt.createdAt).toLocaleDateString()}</td>
                           <td className="px-3 py-2.5 text-[13px]">{METHOD_LABELS[pmt.method] ?? pmt.method}</td>
                           <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(pmt.amountCents)}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-2.5">
+                              {/* FIX-004: a voided payment stays in the list as a reversal row. */}
+                              {pmt.isVoid && (
+                                <span
+                                  className="text-[11px] font-semibold uppercase tracking-wide text-red-600"
+                                  title={pmt.voidReason ?? undefined}
+                                >
+                                  Voided
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setReceiptPaymentId(pmt.id)}
+                                className="text-xs text-foreground/70 hover:text-foreground transition-colors"
+                              >
+                                Receipt
+                              </button>
+                              {canVoidPaymentRow(canVoidPmt, pmt) && (
+                                <button
+                                  type="button"
+                                  data-testid={`void-payment-${pmt.id}`}
+                                  disabled={saving}
+                                  onClick={() => { setVoidingPaymentId(pmt.id); setPaymentVoidReason(''); setPaymentVoidError(null); }}
+                                  className="text-xs text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
+                                >
+                                  Void
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -438,6 +575,54 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   </div>
                 </div>
               )}
+
+              {/* FIX-003: apply-discount inline form — owner-only money write-down.
+                   percentageRate is a 0–100 PERCENTAGE; the backend recalculates
+                   totals and returns the updated invoice. */}
+              {showDiscountForm && (
+                <div className="rounded-xl border border-border p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold">Apply Discount</h4>
+                  {discountErrors.length > 0 && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                      {discountErrors.map((e) => <p key={e}>{e}</p>)}
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="discount-rate">Discount %</label>
+                    <input id="discount-rate" type="number" step="0.01" min="0" max="100" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} placeholder="e.g. 20" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="discount-reason">Discount reason *</label>
+                    <input id="discount-reason" type="text" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="e.g. Senior citizen discount" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setShowDiscountForm(false); setDiscountErrors([]); setDiscountRate(''); setDiscountReason(''); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" onClick={handleApplyDiscount} disabled={saving} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
+                      {saving ? 'Applying...' : 'Apply'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* FIX-004: per-payment void form — owner-only, reason-bearing soft-delete. */}
+              {voidingPaymentId && (
+                <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-red-600">Void Payment</h4>
+                  {paymentVoidError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{paymentVoidError}</div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="payment-void-reason">Void reason *</label>
+                    <input id="payment-void-reason" type="text" value={paymentVoidReason} onChange={(e) => setPaymentVoidReason(e.target.value)} placeholder="e.g. Posted in error" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setVoidingPaymentId(null); setPaymentVoidReason(''); setPaymentVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" data-testid="confirm-payment-void" onClick={handleVoidPayment} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
+                      {saving ? 'Voiding...' : 'Confirm Void'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -454,6 +639,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
             {onViewPlan && (
               <button type="button" onClick={onViewPlan} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">View Payment Plan</button>
             )}
+            {showCreatePlanButton(invoice.status, canWrite, invoice.balanceCents) && (
+              <button type="button" onClick={() => setShowPlanCreate(true)} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">Create Payment Plan</button>
+            )}
+            {showDiscountButton(invoice.status, canDiscount) && !showDiscountForm && (
+              <button type="button" onClick={() => { setShowDiscountForm(true); setDiscountErrors([]); }} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">Apply Discount</button>
+            )}
             {showVoidButton(invoice.status, canWrite) && !showVoidForm && (
               <button type="button" onClick={() => { setShowVoidForm(true); setVoidError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
             )}
@@ -465,6 +656,31 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           </div>
         )}
       </div>
+
+      {/* FIX-005: create payment plan dialog */}
+      {showPlanCreate && invoice && (
+        <PaymentPlanCreate
+          invoiceId={invoiceId}
+          patientId={invoice.patientId}
+          balanceCents={invoice.balanceCents}
+          open={showPlanCreate}
+          onClose={() => setShowPlanCreate(false)}
+          onCreated={() => { invalidateInvoice(); onUpdated?.(); }}
+        />
+      )}
+
+      {/* FR4.6: printable payment receipt overlay */}
+      {receiptPaymentId && invoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
+          <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setReceiptPaymentId(null)} />
+          <div className="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-background shadow-2xl p-5">
+            <div className="no-print flex justify-end mb-2">
+              <button type="button" onClick={() => setReceiptPaymentId(null)} aria-label="Close receipt" className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">X</button>
+            </div>
+            <PaymentReceipt invoiceId={invoice.id} paymentId={receiptPaymentId} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

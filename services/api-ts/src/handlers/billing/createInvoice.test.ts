@@ -5,79 +5,25 @@
  * Mocks database repos to avoid real DB.
  */
 
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
-import { Hono } from 'hono';
-import { createInvoice } from './createInvoice';
-import { AppError } from '@/core/errors';
+import { describe, test, expect } from 'bun:test';
+import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-// Mock person and invoice repos via module-level mocks
-const mockFindOneById = mock(() => Promise.resolve(null));
-const mockFindMany = mock(() => Promise.resolve([]));
-const mockCreateWithLineItems = mock(() =>
-  Promise.resolve({
-    id: 'inv-1',
-    invoiceNumber: 'INV-2026-000001',
-    customer: 'person-2',
-    merchant: 'person-1',
-    context: null,
-    status: 'draft',
-    subtotal: 5000,
-    tax: null,
-    total: 5000,
-    currency: 'USD',
-    paymentCaptureMethod: 'automatic',
-    paymentDueAt: null,
-    paymentStatus: 'pending',
-    paidAt: null,
-    paidBy: null,
-    voidedAt: null,
-    voidedBy: null,
-    voidThresholdMinutes: null,
-    authorizedAt: null,
-    authorizedBy: null,
-    merchantAccount: null,
-    lineItems: [{ description: 'Service', quantity: 1, unitPrice: 5000, amount: 5000, metadata: null }],
-    metadata: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    version: 1,
-  })
-);
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness: requests now traverse the real production chain (authMiddleware →
+// generated zValidator(CreateInvoiceBody) → handler → error envelope) at the
+// production path POST /billing/invoices, instead of a synthetic /invoices mount
+// with an empty stub database.
 
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: 'Internal error' }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    // Inject a mock database that our handler will use to create repos
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session', user: { id: user.id, email: user.email, role: 'user' } });
-    }
-    await next();
-  });
-
-  app.post('/invoices', createInvoice as any);
-
-  return app;
-}
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 describe('createInvoice handler', () => {
   const authedUser = { id: 'person-1', email: 'merchant@test.com' };
 
   test('returns 401 when user is not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
 
-    const res = await app.request('/invoices', {
+    const res = await app.request('/billing/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -92,9 +38,9 @@ describe('createInvoice handler', () => {
   });
 
   test('returns error when lineItems is empty', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
-    const res = await app.request('/invoices', {
+    const res = await app.request('/billing/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -109,9 +55,9 @@ describe('createInvoice handler', () => {
   });
 
   test('returns error when merchant does not match user', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
-    const res = await app.request('/invoices', {
+    const res = await app.request('/billing/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

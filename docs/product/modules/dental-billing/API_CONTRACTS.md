@@ -192,10 +192,10 @@ Create a payment plan for an invoice.
 
 | Field | Type | Nullable | Required | Constraints | Example |
 |-------|------|----------|----------|-------------|---------|
-| `installment_count` | integer | NO | YES | min:2, max:24 | `6` |
-| `frequency` | string | NO | YES | enum: `weekly`, `fortnightly`, `monthly` | `"monthly"` |
-| `first_payment_date` | string | NO | YES | date, future | `"2026-07-01"` |
-| `deposit_cents` | integer | YES | NO | min:0 | `5000` |
+<!-- V-BIL-016: canonical route is POST /dental/invoices/:id/plan (not /payment-plans); the create body is { patientId, numberOfInstallments (2–24), frequency, startDate } per CreateDentalPaymentPlanRequest. The deposit_cents / first_payment_date fields below are aspirational and NOT in the current request model. -->
+| `numberOfInstallments` | integer | NO | YES | min:2, max:24 | `6` |
+| `frequency` | string | NO | YES | enum: `weekly`, `biweekly`, `monthly` | `"monthly"` |
+| `startDate` | string | NO | YES | date-time | `"2026-07-01T00:00:00Z"` |
 
 **Response 201:** `{ data: PaymentPlan }`
 

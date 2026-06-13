@@ -39,19 +39,18 @@ export async function signVisitConsent(
   opts: { branchId: string; visitId: string; patientId: string },
 ): Promise<void> {
   const res = await page.evaluate(async ({ api, o }) => {
-    // 1. consent template — validator needs title+content, handler reads name+body.
+    // 1. consent template (request = name/body; create returns the bare object).
     const tplRes = await fetch(`${api}/dental/branches/${o.branchId}/consent-templates`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        title: 'General Treatment Consent', content: 'I consent to treatment.',
         name: 'General Treatment Consent', body: 'I consent to treatment.',
       }),
     });
     if (!tplRes.ok) return { ok: false, step: 'template', status: tplRes.status, body: await tplRes.text().catch(() => '') };
     const tpl = await tplRes.json();
-    const templateId = tpl?.template?.id ?? tpl?.id;
+    const templateId = tpl?.id;
     // 2. attach consent to the visit.
     const conRes = await fetch(`${api}/dental/visits/${o.visitId}/consents`, {
       method: 'POST',
@@ -170,6 +169,10 @@ export async function setupDentalOrg(page: Page) {
   }
   const onb = await onbRes.json();
   const ctx = { orgId: onb.organizationId as string, branchId: onb.branchId as string, memberId: onb.membershipId as string };
+
+  // C-1: activate the freshly-onboarded (provisional) org so journeys run against
+  // a live clinic (PHI writes allowed; no provisional-activation banner).
+  await page.request.post(`${API}/dental/organizations/${ctx.orgId}/activate`);
 
   // Set localStorage context
   await page.evaluate((ids) => {

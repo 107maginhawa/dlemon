@@ -101,13 +101,13 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Treatment` | Same as Visit | No | Same as Visit | — |
 | `Prescription` | 5 years (PH) / 2 years (EU) | No | Retain; anonymize patient link | [VERIFY per locale] |
 | `ImagingStudy` + S3 | 7 years clinical minimum | No | Delete S3 object + DB metadata on erasure | Must delete radiographs on GDPR erasure request |
-| `PMDDocument` | Permanent (signed export) | **NO — cannot delete** | Cannot delete signed PMD per compliance | PMD signing is non-repudiable |
+| `PMDDocument` | Permanent (immutable clinical export) | **NO — cannot delete** | Immutable once generated; supersede-on-amend only | Checksum-sealed (tamper-evident) clinical record; digital signing / non-repudiation is Phase-2 (FR12.4), not V1 |
 | `Invoice` / `LineItem` | 7 years (financial / tax) | No | Anonymize patient link; retain for tax audit | All locales: 7-year financial records |
 | `AuditEvent` | 7 years minimum | No | Append-only; no deletion ever | HIPAA audit trail requirement |
 | `ConsentForm` | Duration of care + 10 years | No | Retain; mark revoked | Must be available for litigation |
 | `MedicalHistoryEntry` | Same as Visit | No | Same as Visit | — |
 | `Appointment` | 1 year from date | Yes (after 1 year) | Soft-delete | Admin only |
-| `Authentication sessions` | Session expiry (ADR-007 — [UNSPECIFIED]) | Yes | Auto-expire | [RESOLVE: define session TTL] |
+| `Authentication sessions` | **PIN: 5 min idle (in-memory) / Cloud: 7 days absolute (ADR-003)** | Yes | PIN auto-lock on idle; cloud session DB-revoke → immediate 401 | Two-layer model per ADR-003: PIN re-auth at the shared workstation (HIPAA §164.312(a)(2)(iii) automatic logoff — 5 min is stricter than the common 10–15 min); cloud "stay signed in" trust = 7-day industry default |
 | `Person` PII fields | Linked to Patient retention | No | Anonymize on erasure (replace with pseudonym) | GDPR Art. 17 + BR-020 patient merge |
 
 ---
@@ -121,6 +121,7 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Visit` / `Treatment` | No | Anonymize patient reference | CDT codes, procedure codes retain for statistical/billing compliance | Yes |
 | `Prescription` | No | Anonymize patient reference | Drug name retains; patient identity gone | Yes |
 | `ImagingStudy` | Yes — S3 delete (implemented V-DG-002) | Delete S3 object (radiograph) + storage `file` row; retain anonymized metadata | CephAnalysis anonymized | Yes |
+| `DentalAttachment` | Yes — S3 delete (implemented V-DG-002) | Null `fileName`/`note` (PHI) + redact `filePath`; delete the S3 object + storage `file` row for **confirmed object-store keys**; retain `imageType`/`toothNumbers` clinical metadata; mark row deleted | None | Yes |
 | `PMDDocument` | **No** — legal hold | Cannot delete signed PMD | PMD remains; patient name may be anonymized in DB record | Yes |
 | `Invoice` | No | Anonymize patient name; retain for 7-year tax compliance | LineItems retain CDT codes; patient identity gone | Yes |
 | `AuditEvent` | **No** — never | Append-only; no deletion | None | N/A (is audit trail) |
@@ -135,8 +136,12 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > far: **Person** (name→`[ERASED]` pseudonym, all other identifiers nulled, row
 > kept), **Patient** (emergency contact / provider / pharmacy / history /
 > comms-prefs nulled), **ConsentForm** (signature + name snapshot redacted, state
-> kept), and **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
-> archived), all via boundary-compliant `*-erasure.facade.ts`. A real **LegalHold
+> kept), **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
+> archived), and **Attachment** (x-ray/photo `fileName`/`note` nulled, `filePath`
+> redacted, row marked deleted; only filePaths confirmed as object-store keys are
+> surfaced for physical S3 delete — legacy free-form `/uploads/…` paths have their
+> DB PHI erased but are never handed to the storage client as a bogus delete),
+> all via boundary-compliant `*-erasure.facade.ts`. A real **LegalHold
 > store** (`dental_legal_hold`) blocks erasure of held subjects (and is consulted
 > by retention). Visit/Treatment/Prescription/Invoice are verified NO-OP (they
 > only reference patientId → resolves to the anonymized Person; clinical/billing
@@ -145,14 +150,26 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > `POST /dental/erasure-requests`, `GET /dental/erasure-requests[/{id}]`,
 > `POST /dental/erasure-requests/{id}/approve|reject`, plus
 > `POST|GET /dental/legal-holds`, `POST /dental/legal-holds/{id}/release`.
-> **Physical S3 object deletion of imaging radiographs — implemented (V-DG-002, 2026-06-01).**
-> The imaging facade surfaces `fileIdsPendingS3Delete`; `approveErasureHandler` (handler scope,
-> `ctx.get('storage')`) now calls `physicalDeleteErasedFiles` to delete the S3 objects AND their
+> **Physical S3 object deletion of imaging radiographs + clinical attachments — implemented (V-DG-002,
+> imaging 2026-06-01; attachments 2026-06-12).**
+> The imaging and attachment facades surface `fileIdsPendingS3Delete`; `approveErasureHandler` (handler
+> scope, `ctx.get('storage')`) calls `physicalDeleteErasedFiles` to delete the S3 objects AND their
 > storage `file` rows, with an `erasure.s3_deleted` audit event. Fail-open: anonymization is already
 > committed before delete runs, so a storage error records the object as pending (idempotent — the
 > id set is recomputed each run) rather than failing the erasure. See
-> `services/api-ts/src/handlers/dental-erasure/erasure-storage.ts`. The remaining §3 entities are
-> covered above. (PHI at-rest encryption: resolved separately — AG-6/G-012, §1.1.)
+> `services/api-ts/src/handlers/dental-erasure/erasure-storage.ts`.
+> For **attachments**, `dental_attachment.filePath` is an unvalidated client string with no FK: the
+> facade nulls DB PHI (`fileName`/`note`) + redacts `filePath` for **every** row, but only surfaces
+> filePaths it can confirm as real object-store `stored_file` keys (`filterExistingStoredFileIds`) for
+> the S3 delete — so a legacy free-form `/uploads/…` path is never issued as a silently-succeeding
+> bogus `DeleteObject`. **Residual (roadmap):** a true legacy filesystem object whose real location is
+> not an object-store key cannot be physically located by this code (its DB PHI is still erased); the
+> durable fix is to validate `filePath` at write time / migrate legacy rows. (Two further erasure-wide
+> infra items remain open and shared with imaging: there is no operator-reachable retry path for an
+> S3-delete left pending after an outage, and `physicalDeleteErasedFiles` counts a non-throwing
+> `DeleteObject` as deleted without a `HeadObject` confirmation — both tracked for a future
+> erasure-hardening pass.) The remaining §3 entities are covered above. (PHI at-rest encryption:
+> resolved separately — AG-6/G-012, §1.1.)
 
 ---
 
@@ -223,7 +240,7 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 |---------|----------|------------|
 | AG-1 | Exact retention periods per locale | [VERIFY]: PH=10y, EU=varies by record type, US=7y minimum |
 | AG-2 | Audit log retention period | **7 years** — HIPAA minimum; append-only, never deleted |
-| AG-3 | PMD deletion policy for signed documents | **Cannot delete** — signed PMD is non-repudiable; anonymize DB record only |
+| AG-3 | PMD deletion policy | **Cannot delete** — PMD is an immutable, checksum-sealed (tamper-evident) clinical record; anonymize DB record only. Digital signing / non-repudiation is Phase-2 (FR12.4), not V1 — do not claim "signed/non-repudiable" until it ships. |
 | AG-4 | Data portability export format | **DEFERRED pending WFG-006 PRD decision** (V-IMG-EXP-001, see §4 note). PMD covers clinical per-visit; patient-list CSV exists; bulk/multi-entity Art. 20 bundle blocked on an undecided portability format — not a P1 gap until PRD resolves WFG-006. |
-| AG-5 | Session TTL (ADR-007) | [UNRESOLVED] — must define before compliance sign-off |
+| AG-5 | Session TTL (ADR-003) | **RESOLVED (decision C-3, 2026-06-12)** — PIN idle = **5 min** (`apps/dentalemon/src/lib/pin-session.ts` `INACTIVITY_TIMEOUT_MS`, in-memory, lost on reload); cloud session = **7 days** absolute (DB-stored, revoke → immediate 401). Documented in ADR-003 §Addendum. (Note: the session-expiry ADR is **ADR-003**; an earlier "ADR-007" citation here was a misnumber — ADR-007 is self-service onboarding.) |
 | AG-6 / G-012 | PHI at-rest encryption | **SATISFIED-by-infra.** Control is storage-layer (transparent disk/volume / managed-Postgres + S3 SSE) encryption, defined in §1.1 — NOT column-level. Verified by a non-regressable startup attestation: `DB_AT_REST_ENCRYPTION` (`enabled`/`verified`) parsed in `services/api-ts/src/core/config.ts` (`config.database.atRestEncryption`) and asserted in the production boot guard — the server refuses to start if unattested. Evidence: `services/api-ts/src/core/config.test.ts` (V-DG-001 cases, RED-without/GREEN-with) + operator-set env (`.env.example`). Column-level encryption deferred as future defense-in-depth for a named ultra-sensitive subset only (§1.2). |

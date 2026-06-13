@@ -8,13 +8,11 @@ import { useQuery } from '@tanstack/react-query';
 import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import { createDentalInvoice, type DentalInvoice } from '@monobase/sdk-ts/generated';
 
-// Cause-fix recipe (QA_ESCAPES §6): intersect the generated SDK type instead of
-// re-declaring an independent one + casting. tsc now checks every SDK-modeled field
-// (catches priceCents/balanceCents-style drift); the two genuine backend enrichments
-// (patientName, visitDate) are explicit here because they are NOT yet in the OpenAPI
-// spec/SDK. TODO(spec): add patientName + visitDate to the invoice-list response schema,
-// regenerate the SDK, then drop this intersection.
-export type Invoice = DentalInvoice & { patientName?: string; visitDate?: string };
+// patientName + visitDate are read-side enrichments populated by the list handler.
+// They are now modeled on DentalInvoice in TypeSpec (dental-billing.tsp), so the
+// generated SDK type carries them and no intersection is needed. `Invoice` is kept
+// as a local alias for call-site stability.
+export type Invoice = DentalInvoice;
 
 interface UseInvoicesOptions {
   branchId?: string;

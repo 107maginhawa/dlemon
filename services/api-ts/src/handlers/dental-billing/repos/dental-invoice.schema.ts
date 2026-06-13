@@ -6,6 +6,7 @@
  */
 
 import { pgTable, uuid, text, timestamp, integer, numeric, boolean, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields, syncableEntityFields } from '@/core/database.schema';
 import { dentalVisits } from '../../dental-visit/repos/visit.schema';
 import { dentalTreatments } from '../../dental-visit/repos/treatment.schema';
@@ -45,6 +46,12 @@ export const dentalInvoices = pgTable('dental_invoice', {
   patientIdx: index('dental_invoice_patient_id_idx').on(table.patientId),
   branchIdx: index('dental_invoice_branch_id_idx').on(table.branchId),
   statusIdx: index('dental_invoice_status_idx').on(table.status),
+  // SL-01 / E-NEW-05: offline-replay idempotency backstop — a (branch, localId)
+  // pair may exist at most once. The handler pre-check returns the existing invoice
+  // on replay; this index guards against a concurrent-retry race.
+  branchLocalIdUnique: uniqueIndex('dental_invoice_branch_local_id_unique')
+    .on(table.branchId, table.localId)
+    .where(sql`local_id is not null`),
 }));
 
 export const dentalInvoiceLineItems = pgTable('dental_invoice_line_item', {

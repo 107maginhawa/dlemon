@@ -14,8 +14,47 @@ import {
   archiveDentalPatientMutation,
   restoreDentalPatientMutation,
   bulkArchiveDentalPatientsMutation,
+  updateDentalPatientMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import { exportDentalPatients } from '@monobase/sdk-ts/generated';
+
+// ─── useUpdatePatient (FR2.4) ───────────────────────────────────────────────
+
+/** Demographics body the form can send (name / DOB / gender / contact — #14). */
+export interface UpdatePatientDemographics {
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  contactInfo?: { email?: string; phone?: string };
+}
+
+export function useUpdatePatient(patientId: string) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    ...updateDentalPatientMutation(),
+    onSuccess: () => {
+      // Refresh the single profile (getDentalPatient) and the list so the edit
+      // is reflected on reload (edit-save-reload journey).
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const id = (q.queryKey[0] as { _id?: string })?._id;
+          return id === 'getDentalPatient' || id === 'listDentalPatients';
+        },
+      });
+    },
+  });
+
+  const update = (demographics: UpdatePatientDemographics) =>
+    mutation.mutateAsync({ path: { id: patientId }, body: demographics });
+
+  return {
+    update,
+    isPending: mutation.isPending,
+    error: mutation.error as Error | null,
+  };
+}
 
 // ─── useArchivePatient ──────────────────────────────────────────────────
 
@@ -94,13 +133,19 @@ export function useBulkArchive() {
 
 // ─── useExportPatients ──────────────────────────────────────────────────
 
-export function useExportPatients() {
+export function useExportPatients(branchId?: string) {
   const [isExporting, setIsExporting] = useState(false);
 
   const exportPatients = useCallback(async () => {
     setIsExporting(true);
     try {
-      const { data } = await exportDentalPatients({ throwOnError: true });
+      // GET /dental/patients/export REQUIRES branchId (it 400s without it, to
+      // prevent cross-branch leaks). The export call previously omitted it, so
+      // the UI export button 400'd for every role. Pass the active branch.
+      const { data } = await exportDentalPatients({
+        query: { branchId: branchId ?? '' },
+        throwOnError: true,
+      });
       // Serialize to CSV (FR2.13)
       const headers = ['id', 'name', 'status', 'createdAt'];
       const rows = (data?.patients ?? []).map((p) => [
@@ -127,7 +172,7 @@ export function useExportPatients() {
     } finally {
       setIsExporting(false);
     }
-  }, []);
+  }, [branchId]);
 
   return {
     exportPatients,

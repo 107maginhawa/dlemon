@@ -121,9 +121,12 @@ export type ApplyDentalDiscountRequest = {
     percentageRate: number;
 };
 
+/**
+ * Real shape: the created treatment rows + their count (NOT { applied: int, visitId }).
+ */
 export type ApplyTemplateResponse = {
-    applied: number;
-    visitId: Uuid;
+    applied: Array<DentalTreatment>;
+    count: number;
 };
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'no_show';
@@ -1004,14 +1007,111 @@ export type CancelEmailRequest = {
 export type CaptureMethod = 'automatic' | 'manual';
 
 export type CarryOverTreatmentsRequest = {
-    sourceVisitId?: Uuid;
+    /**
+     * Source visit to copy unperformed treatments from; auto-discovers recent prior visits when omitted.
+     */
+    sourceVisitId?: string;
+    /**
+     * FR1.11: dismissed treatment ids to restore (as `planned`) into the current visit.
+     */
+    restoreDismissedIds?: Array<Uuid>;
 };
 
+/**
+ * Real shape: the carried + restored treatment rows + a human message (NOT { carried: int }).
+ */
 export type CarryOverTreatmentsResponse = {
-    carried: number;
+    carriedOver: Array<DentalTreatment>;
+    restoredDismissed: Array<DentalTreatment>;
+    message: string;
 };
+
+/**
+ * A durable record of one chart write rejected as a stale offline edit.
+ */
+export type ChartConflict = {
+    chartId: Uuid;
+    visitId: Uuid;
+    patientId: Uuid;
+    /**
+     * Machine reason the write was rejected (e.g. 'stale_clock_rejected').
+     */
+    reason: string;
+    /**
+     * The tooth states that lost the clock comparison and were not applied.
+     */
+    rejectedTeeth: Array<ToothChartState>;
+    /**
+     * When the conflict was recorded (chart updatedAt).
+     */
+    detectedAt: Date;
+};
+
+/**
+ * How a clinician resolves an open chart sync conflict.
+ */
+export type ChartConflictResolution = 'accept' | 'dismiss';
 
 export type ChartEntryClassification = 'existing' | 'existing_other' | 'treatment_plan' | 'condition';
+
+export type ChartExport = {
+    patientId: Uuid;
+    patientName: string;
+    patientDateOfBirth?: string;
+    visitId: Uuid;
+    visitDate: Date;
+    visitStatus: DentalVisitStatus;
+    providerMemberId?: Uuid;
+    providerName?: string;
+    branchId: Uuid;
+    branchName?: string;
+    /**
+     * Canonical tooth notation of the export — always FDI.
+     */
+    notation: string;
+    generatedAt: Date;
+    teeth: Array<ChartExportTooth>;
+    treatments: Array<ChartExportTreatment>;
+    summary: ChartExportSummary;
+    legend: Array<ChartExportLegendEntry>;
+};
+
+export type ChartExportLegendEntry = {
+    key: string;
+    label: string;
+};
+
+export type ChartExportSummary = {
+    proposedCount: number;
+    completedCount: number;
+    declinedCount: number;
+    /**
+     * Sum of priceCents of the proposed (diagnosed/planned) treatments.
+     */
+    totalProposedCents: number;
+};
+
+export type ChartExportTooth = {
+    toothNumber: number;
+    state: string;
+    /**
+     * Derived display layer: baseline | proposed | completed | declined | unset.
+     */
+    layer: string;
+    surfaces?: Array<string>;
+    conditionCode?: string;
+    entryClassification?: ChartEntryClassification;
+    note?: string;
+};
+
+export type ChartExportTreatment = {
+    toothNumber?: number;
+    cdtCode: string;
+    description: string;
+    surfaces?: Array<string>;
+    status: DentalTreatmentStatus;
+    priceCents: number;
+};
 
 /**
  * Immutable chat message with optional video call data
@@ -1184,7 +1284,7 @@ export type CollectionsSummaryResponse = {
 };
 
 /**
- * P1-6: optional 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted.
+ * P1-6: the completion request body — the grading risk factors (same shape persisted on the chart).
  */
 export type CompletePerioChartRequest = {
     /**
@@ -1241,7 +1341,7 @@ export type CompletePerioChartResponse = {
      */
     stage?: 'I' | 'II' | 'III' | 'IV';
     /**
-     * P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence).
+     * P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence). Nullable for contract symmetry with the read paths / persisted column (legacy charts).
      */
     grade?: 'A' | 'B' | 'C';
     /**
@@ -1249,6 +1349,11 @@ export type CompletePerioChartResponse = {
      */
     extent?: 'localized' | 'generalized' | 'molar_incisor';
 };
+
+/**
+ * Curated v1 clinical findings vocabulary. `other` requires a note.
+ */
+export type ConditionCode = 'caries' | 'abscess' | 'calculus' | 'gingival_recession' | 'impacted_unerupted' | 'retained_root' | 'sensitive_dentin' | 'fracture_crack' | 'wear_erosion' | 'developmental_anomaly' | 'other';
 
 /**
  * Resource conflict error
@@ -1344,6 +1449,20 @@ export type ConsentForm = {
     signedAt?: Date;
     signatureData?: string;
     signed: boolean;
+    /**
+     * DE-013 / EM-CLI-001 (WF-035): true once an unsigned consent form has been
+     * revoked. Returned by the handler/repo (full-row read) — declared here so the
+     * consent-history UI can distinguish a revoked form from a still-pending one.
+     */
+    revoked: boolean;
+    /**
+     * Timestamp the form was revoked, if revoked.
+     */
+    revokedAt?: Date;
+    /**
+     * Member/user who revoked the form, if revoked.
+     */
+    revokedBy?: string;
 };
 
 /**
@@ -1539,6 +1658,15 @@ export type ContactInfo = {
  * non-controlled ₱/PH prescribing flow.
  */
 export type ControlledSubstanceSchedule = 'none' | 'II' | 'III' | 'IV' | 'V';
+
+export type ConvertFindingToTreatmentRequest = {
+    cdtCode: string;
+    description: string;
+    /**
+     * Optional — defaults from the branch fee schedule when omitted.
+     */
+    priceCents?: number;
+};
 
 /**
  * Two-letter uppercase country code (ISO 3166-1 alpha-2)
@@ -1839,7 +1967,12 @@ export type CreateDentalTreatmentRequest = {
     cdtCode: string;
     description: string;
     conditionCode?: string;
-    priceCents: number;
+    /**
+     * Price in cents. Optional: when omitted, the server defaults it from the
+     * branch fee schedule (per-branch override, else catalog default) — closes
+     * AC-ORG-002 / dental-org G2. An explicit value always wins.
+     */
+    priceCents?: number;
     clinicalNotes?: string;
     /**
      * P1-18: clinical sequencing phase
@@ -1861,7 +1994,26 @@ export type CreateDentalVisitRequest = {
     dentistMemberId: Uuid;
     chiefComplaint?: string;
     /**
+     * E3: 'general' (default, dentist-led) or 'hygiene' (hygienist-led recall/prophy/perio).
+     * A hygienist may only create a 'hygiene'-typed visit; 'general' stays owner/associate-only.
+     */
+    visitType?: 'general' | 'hygiene';
+    /**
      * GAP-001: optional client-generated id for offline-first idempotent sync
+     */
+    localId?: string;
+};
+
+export type CreateFindingRequest = {
+    toothNumber: number;
+    surface?: ToothSurfaceCode;
+    conditionCode: ConditionCode;
+    /**
+     * Required when conditionCode = other (free-text diagnosis).
+     */
+    note?: string;
+    /**
+     * GAP-001: optional client-generated id for offline-first idempotent sync.
      */
     localId?: string;
 };
@@ -2177,6 +2329,10 @@ export type CreatePerioChartRequest = {
  */
 export type CreatePractitionerRequest = {
     /**
+     * The Provider (pre-FHIR organization/provider record) this practitioner belongs to
+     */
+    providerId: string;
+    /**
      * The name(s) associated with the practitioner (at least one required)
      */
     name: Array<HealthcareCoreHumanName>;
@@ -2226,6 +2382,10 @@ export type CreatePractitionerRequest = {
  * Request body for creating a new practitioner role assignment
  */
 export type CreatePractitionerRoleRequest = {
+    /**
+     * The Practitioner record this role belongs to
+     */
+    practitionerId: string;
     /**
      * Reference to the Practitioner
      */
@@ -2325,6 +2485,32 @@ export type CreatePrescriptionRequest = {
 };
 
 /**
+ * Request body for creating a provider profile for the authenticated user
+ */
+export type CreateProviderRequest = {
+    /**
+     * Provider type
+     */
+    providerType: 'dentist' | 'hygienist' | 'orthodontist' | 'endodontist' | 'periodontist' | 'oral_surgeon' | 'pediatric_dentist' | 'pharmacist' | 'other';
+    /**
+     * Years of experience
+     */
+    yearsOfExperience?: number;
+    /**
+     * Professional biography
+     */
+    biography?: string;
+    /**
+     * Minor ailments specialties
+     */
+    minorAilmentsSpecialties?: Array<string>;
+    /**
+     * Minor ailment practice locations
+     */
+    minorAilmentsPracticeLocations?: Array<string>;
+};
+
+/**
  * Request to create a review
  */
 export type CreateReviewRequest = {
@@ -2406,8 +2592,9 @@ export type CreateTemplateRequest = {
 
 export type CreateTreatmentTemplateRequest = {
     name: string;
+    branchId: Uuid;
     description?: string;
-    treatments: string;
+    items: Array<TemplateTreatmentItem>;
 };
 
 export type CreateVisitNoteAddendumRequest = {
@@ -2498,7 +2685,7 @@ export type DentalAppointment = {
     notes?: string;
     cancelledAt?: Date;
     cancellationReason?: string;
-    no_showAt?: Date;
+    noShowAt?: Date;
     warnings?: Array<string>;
 };
 
@@ -3161,8 +3348,30 @@ export type DentalFeeScheduleModuleUpdateFeeScheduleEntryRequest = {
     priceCents: number;
 };
 
+export type DentalFinding = {
+    id: Uuid;
+    createdAt: Date;
+    updatedAt: Date;
+    visitId: Uuid;
+    patientId: Uuid;
+    toothNumber: number;
+    surface?: ToothSurfaceCode;
+    conditionCode: ConditionCode;
+    note?: string;
+    status: FindingStatus;
+    /**
+     * Set when the finding has been converted to / linked with a treatment.
+     */
+    linkedTreatmentId?: string;
+};
+
 export type DentalImagingModuleBatchUpsertLandmarksBody = {
     landmarks: Array<DentalImagingModuleCephLandmarkInput>;
+};
+
+export type DentalImagingModuleCalibrationPoint = {
+    x: number;
+    y: number;
 };
 
 export type DentalImagingModuleCbctViewerLinkResponse = {
@@ -3268,6 +3477,8 @@ export type DentalImagingModuleCephReport = {
     snapshot: {
         [key: string]: unknown;
     };
+    revisionOf: string | null;
+    revisionReason: string | null;
     createdAt: Date;
 };
 
@@ -3308,6 +3519,12 @@ export type DentalImagingModuleCephSuperimpositionListResponse = {
 
 export type DentalImagingModuleCephSuperimpositionReference = 'cranial_base' | 'maxillary' | 'mandibular';
 
+export type DentalImagingModuleCreateCephReportBody = {
+    analysisType?: string;
+    normPopulation?: string;
+    revisionReason?: string;
+};
+
 export type DentalImagingModuleCreateFindingBody = {
     type: DentalImagingModuleImagingFindingType;
     status?: DentalImagingModuleImagingFindingStatus;
@@ -3316,10 +3533,15 @@ export type DentalImagingModuleCreateFindingBody = {
     note?: string;
     annotationId?: string;
     treatmentId?: string;
-    visitId: string;
-    patientId: string;
-    branchId: string;
+    visitId?: string;
+    patientId?: string;
+    branchId?: string;
     frameIndex?: number;
+};
+
+export type DentalImagingModuleCreateImagingLinkBody = {
+    linkType: 'treatment_plan' | 'ortho_case' | 'report';
+    targetId: string;
 };
 
 export type DentalImagingModuleCreateImagingStudyBody = {
@@ -3349,7 +3571,7 @@ export type DentalImagingModuleCreateImagingStudyResponse = {
 };
 
 export type DentalImagingModuleCreateMeasurementBody = {
-    type: 'distance' | 'angle' | 'area';
+    type: 'distance' | 'angle' | 'area' | 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth';
     geometry: {
         [key: string]: unknown;
     };
@@ -3407,6 +3629,18 @@ export type DentalImagingModuleImagingFindingStatus = 'draft' | 'confirmed' | 'r
 
 export type DentalImagingModuleImagingFindingType = 'caries' | 'secondary_caries' | 'bone_loss' | 'furcation_involvement' | 'periapical_lesion' | 'root_resorption' | 'calculus' | 'crown_fracture' | 'root_fracture' | 'impacted_tooth' | 'over_eruption' | 'open_contact' | 'overhang' | 'crown_needed' | 'implant_needed';
 
+export type DentalImagingModuleImagingLink = {
+    id: string;
+    imageId: string;
+    linkType: 'treatment_plan' | 'ortho_case' | 'report';
+    targetId: string;
+    createdAt: Date;
+};
+
+export type DentalImagingModuleImagingLinkListResponse = {
+    items: Array<DentalImagingModuleImagingLink>;
+};
+
 export type DentalImagingModuleImagingStudy = {
     id: string;
     patientId: string;
@@ -3437,6 +3671,10 @@ export type DentalImagingModuleImagingStudyImage = {
     seriesInstanceUid?: string | null;
     studyInstanceUid?: string | null;
     viewerKind?: 'image' | 'volume';
+    isDiagnostic?: boolean;
+    qualityStatus?: 'ok' | 'retake';
+    retakeReason?: string | null;
+    tags?: Array<string>;
 };
 
 export type DentalImagingModuleImagingStudyWithImages = {
@@ -3478,10 +3716,18 @@ export type DentalImagingModulePatientImageItem = {
     isVolume?: boolean;
     frameCount?: number | null;
     viewerKind?: 'image' | 'volume';
+    isDiagnostic?: boolean;
+    qualityStatus?: 'ok' | 'retake';
+    retakeReason?: string | null;
+    tags?: Array<string>;
+    links?: Array<DentalImagingModuleImagingLink>;
 };
 
 export type DentalImagingModuleUpdateCalibrationBody = {
     pixelSpacingMm: number;
+    pointA?: DentalImagingModuleCalibrationPoint;
+    pointB?: DentalImagingModuleCalibrationPoint;
+    knownDistanceMm?: number;
 };
 
 export type DentalImagingModuleUpdateFindingBody = {
@@ -3491,6 +3737,13 @@ export type DentalImagingModuleUpdateFindingBody = {
     surfaces?: Array<string>;
     note?: string;
     treatmentId?: string;
+};
+
+export type DentalImagingModuleUpdateImageMetadataBody = {
+    isDiagnostic?: boolean;
+    qualityStatus?: 'ok' | 'retake';
+    retakeReason?: string | null;
+    tags?: Array<string>;
 };
 
 export type DentalImagingModuleUpdateImageModalityBody = {
@@ -3522,6 +3775,15 @@ export type DentalInvoice = {
     issuedAt?: Date;
     paidAt?: Date;
     voidedAt?: Date;
+    /**
+     * Read-side enrichments populated by listDentalInvoices / getDentalInvoice
+     * (patient display name + the visit's calendar date). Optional because the
+     * create/void/issue responses do not join them. `visitDate` is a YYYY-MM-DD
+     * calendar string and is intentionally typed `string` (not utcDateTime) so the
+     * SDK date transformer leaves it verbatim.
+     */
+    patientName?: string;
+    visitDate?: string;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -3667,13 +3929,17 @@ export type DentalOrgModuleCreateBranchRequest = {
  */
 export type DentalOrgModuleCreateDentalConsentTemplateRequest = {
     /**
-     * Template title
+     * Template name / title
      */
-    title: string;
+    name: string;
     /**
-     * Template content
+     * Template body content
      */
-    content: string;
+    body: string;
+    /**
+     * Whether signing requires a witness signature
+     */
+    requiresWitnessSignature?: boolean;
 };
 
 /**
@@ -3687,7 +3953,7 @@ export type DentalOrgModuleCreateFlatMemberRequest = {
     /**
      * Staff role
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Person ID from Better-Auth (optional for PIN-only staff)
      */
@@ -3713,7 +3979,7 @@ export type DentalOrgModuleCreateMembershipRequest = {
     /**
      * Staff role
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Profile photo URL
      */
@@ -3739,13 +4005,87 @@ export type DentalOrgModuleCreateOrganizationRequest = {
 };
 
 /**
- * Dashboard summary metrics
+ * Pending lab-order rollup for the dashboard (FR0.8)
+ */
+export type DentalOrgModuleDashboardLabOrderSummary = {
+    /**
+     * Total pending lab orders (not yet delivered)
+     */
+    totalPending: number;
+    /**
+     * Pending orders still in 'ordered' status
+     */
+    ordered: number;
+    /**
+     * Pending orders in 'in_fabrication' status
+     */
+    inFabrication: number;
+    /**
+     * Pending orders past their expected delivery date
+     */
+    overdueDelivery: number;
+};
+
+/**
+ * Active payment-plan rollup for the dashboard (FR0.7)
+ */
+export type DentalOrgModuleDashboardPaymentPlanSummary = {
+    /**
+     * Number of active payment plans for the branch
+     */
+    count: number;
+    /**
+     * How many of those plans are flagged 'behind'
+     */
+    behindCount: number;
+    /**
+     * Total outstanding balance across active plans, in cents
+     */
+    totalOutstandingCents: number;
+};
+
+/**
+ * Dashboard summary metrics — active payment plans (FR0.7) + pending lab orders (FR0.8)
  */
 export type DentalOrgModuleDashboardSummaryResponse = {
-    todayVisits: number;
-    pendingInvoices: number;
-    totalPatients: number;
-    revenueThisMonthCents: number;
+    /**
+     * Active payment-plan rollup
+     */
+    activePaymentPlans: {
+        /**
+         * Number of active payment plans for the branch
+         */
+        count: number;
+        /**
+         * How many of those plans are flagged 'behind'
+         */
+        behindCount: number;
+        /**
+         * Total outstanding balance across active plans, in cents
+         */
+        totalOutstandingCents: number;
+    };
+    /**
+     * Pending lab-order rollup
+     */
+    labOrders: {
+        /**
+         * Total pending lab orders (not yet delivered)
+         */
+        totalPending: number;
+        /**
+         * Pending orders still in 'ordered' status
+         */
+        ordered: number;
+        /**
+         * Pending orders in 'in_fabrication' status
+         */
+        inFabrication: number;
+        /**
+         * Pending orders past their expected delivery date
+         */
+        overdueDelivery: number;
+    };
 };
 
 /**
@@ -3821,7 +4161,11 @@ export type DentalOrgModuleDentalBranch = {
 };
 
 /**
- * Branch operational settings
+ * Branch operational settings. The settings payload is a free-form key/value bag
+ * (`Record<unknown>`) — the GET/PUT handlers store and merge an open settings
+ * object on `dental_branch.settings` (clinic info, fee schedule, locale, currency,
+ * working hours, notification prefs, etc.), not a fixed column set. Both GET and PUT
+ * return the envelope `{ branchId, settings }`.
  */
 export type DentalOrgModuleDentalBranchSettings = {
     /**
@@ -3829,21 +4173,11 @@ export type DentalOrgModuleDentalBranchSettings = {
      */
     branchId: string;
     /**
-     * Default appointment duration in minutes
+     * Free-form settings bag merged on the branch (e.g. appointmentDurationMinutes, currency, taxRate, feeSchedule, locale, workingHours)
      */
-    appointmentDurationMinutes: number;
-    /**
-     * Currency code (ISO 4217)
-     */
-    currency: string;
-    /**
-     * Tax rate as a decimal (e.g. 0.12 for 12%)
-     */
-    taxRate: number;
-    /**
-     * Whether appointment reminders are enabled
-     */
-    appointmentReminderEnabled: boolean;
+    settings: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -3879,17 +4213,21 @@ export type DentalOrgModuleDentalConsentTemplate = {
      */
     branchId: string;
     /**
-     * Template title
+     * Template name / title
      */
-    title: string;
+    name: string;
     /**
-     * Template content (HTML or plain text)
+     * Template body content (HTML or plain text)
      */
-    content: string;
+    body: string;
     /**
-     * Whether this template is active
+     * Whether signing this template requires a witness signature
      */
-    isActive: boolean;
+    requiresWitnessSignature: boolean;
+    /**
+     * Whether this template is active (soft-delete flag)
+     */
+    active: boolean;
 };
 
 /**
@@ -3935,7 +4273,7 @@ export type DentalOrgModuleDentalMembership = {
     /**
      * Role within this branch
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * PIN hash (bcrypt) — null if PIN not yet set
      */
@@ -4022,6 +4360,10 @@ export type DentalOrgModuleDentalOrganization = {
      * Whether the organization is active
      */
     active: boolean;
+    /**
+     * Lifecycle status — PHI go-live gate (C-1 / ADR-007)
+     */
+    status: 'provisional' | 'live' | 'suspended';
 };
 
 /**
@@ -4038,21 +4380,43 @@ export type DentalOrgModuleDentalWorkingHours = {
 };
 
 /**
- * Working hours for a single day
+ * Working hours for a single day (canonical enforced shape — G1-shape)
  */
 export type DentalOrgModuleDentalWorkingHoursDay = {
     /**
-     * Opening time (HH:mm)
-     */
-    open: string;
-    /**
-     * Closing time (HH:mm)
-     */
-    close: string;
-    /**
      * Whether the branch is open on this day
      */
-    isOpen: boolean;
+    enabled: boolean;
+    /**
+     * Opening time (HH:mm) — omitted/ignored when not enabled
+     */
+    open?: string;
+    /**
+     * Closing time (HH:mm) — omitted/ignored when not enabled
+     */
+    close?: string;
+};
+
+/**
+ * GET/PUT working-hours response envelope (matches the handler).
+ */
+export type DentalOrgModuleDentalWorkingHoursResponse = {
+    /**
+     * Branch ID
+     */
+    branchId: string;
+    /**
+     * Weekly working hours in the enforced {enabled,open,close} shape
+     */
+    workingHours: {
+        monday?: DentalOrgModuleDentalWorkingHoursDay;
+        tuesday?: DentalOrgModuleDentalWorkingHoursDay;
+        wednesday?: DentalOrgModuleDentalWorkingHoursDay;
+        thursday?: DentalOrgModuleDentalWorkingHoursDay;
+        friday?: DentalOrgModuleDentalWorkingHoursDay;
+        saturday?: DentalOrgModuleDentalWorkingHoursDay;
+        sunday?: DentalOrgModuleDentalWorkingHoursDay;
+    } | null;
 };
 
 /**
@@ -4063,7 +4427,7 @@ export type DentalOrgModuleImagingTier = 'free' | 'basic' | 'addon';
 /**
  * Staff role within a branch — drives RBAC
  */
-export type DentalOrgModuleMemberRole = 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+export type DentalOrgModuleMemberRole = 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
 
 /**
  * Membership status
@@ -4131,17 +4495,135 @@ export type DentalOrgModuleOnboardingResponse = {
 };
 
 /**
- * Org context for the authenticated user
+ * Resolved branch in the org-context response
  */
-export type DentalOrgModuleOrgContextResponse = {
-    organizationId: Uuid;
-    branchId: Uuid;
-    memberId: Uuid;
-    role: DentalOrgModuleMemberRole;
-    orgName: string;
-    branchName: string;
+export type DentalOrgModuleOrgContextBranch = {
+    /**
+     * Branch ID
+     */
+    id: string;
+    /**
+     * Branch name
+     */
+    name: string;
+    /**
+     * Branch IANA timezone
+     */
     timezone: string;
 };
+
+/**
+ * Resolved membership in the org-context response
+ */
+export type DentalOrgModuleOrgContextMember = {
+    /**
+     * Membership ID
+     */
+    id: string;
+    /**
+     * Member role at the resolved branch
+     */
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
+    /**
+     * Member display name
+     */
+    displayName: string;
+};
+
+/**
+ * Resolved organization in the org-context response
+ */
+export type DentalOrgModuleOrgContextOrg = {
+    /**
+     * Organization ID
+     */
+    id: string;
+    /**
+     * Organization (practice) name
+     */
+    name: string;
+    /**
+     * Subscription tier
+     */
+    tier: string;
+    /**
+     * Lifecycle status — 'provisional' clinics must be activated before PHI writes (C-1)
+     */
+    status: 'provisional' | 'live' | 'suspended';
+};
+
+/**
+ * Org context for the authenticated user — the resolved org, the caller's active
+ * branch, and their membership. Returned as a nested `{ org, branch, member }`
+ * envelope; `branch` and `member` are null when only an org could be resolved, and
+ * all three are null when the caller has no org yet (pre-onboarding).
+ */
+export type DentalOrgModuleOrgContextResponse = {
+    /**
+     * Resolved organization (null when the caller has no org yet)
+     */
+    org: {
+        /**
+         * Organization ID
+         */
+        id: string;
+        /**
+         * Organization (practice) name
+         */
+        name: string;
+        /**
+         * Subscription tier
+         */
+        tier: string;
+        /**
+         * Lifecycle status — 'provisional' clinics must be activated before PHI writes (C-1)
+         */
+        status: 'provisional' | 'live' | 'suspended';
+    } | null;
+    /**
+     * Caller's active branch (null when no branch resolved)
+     */
+    branch: {
+        /**
+         * Branch ID
+         */
+        id: string;
+        /**
+         * Branch name
+         */
+        name: string;
+        /**
+         * Branch IANA timezone
+         */
+        timezone: string;
+    } | null;
+    /**
+     * Caller's membership at the resolved branch (null when none)
+     */
+    member: {
+        /**
+         * Membership ID
+         */
+        id: string;
+        /**
+         * Member role at the resolved branch
+         */
+        role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
+        /**
+         * Member display name
+         */
+        displayName: string;
+    } | null;
+};
+
+/**
+ * Organization lifecycle status (PHI go-live gate, C-1 / ADR-007).
+ * - `provisional` — self-service onboarded; in PRODUCTION, patient/visit PHI writes
+ * are blocked until the owner activates the clinic.
+ * - `live` — admin/seed provisioned, or activated by the owner accepting terms/BAA.
+ * - `suspended` — reserved for future ops use.
+ */
+export type DentalOrgModuleOrgStatus = 'provisional' | 'live' | 'suspended';
 
 /**
  * Subscription tier controlling feature access and device limits
@@ -4177,7 +4659,7 @@ export type DentalOrgModulePermissionGridCell = {
     /**
      * Role this cell applies to
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Feature key this cell applies to
      */
@@ -4217,7 +4699,7 @@ export type DentalOrgModulePermissionOverrideInput = {
     /**
      * Role to override
      */
-    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
      * Feature key to override
      */
@@ -4291,25 +4773,13 @@ export type DentalOrgModuleSetSecurityQuestionRequest = {
 };
 
 /**
- * Update branch settings request
+ * Update branch settings request — a free-form key/value bag of settings to merge.
+ * Top-level keys are shallow-merged onto the existing branch settings (owner-only).
+ * Callers may send the keys directly (e.g. `{ "currency": "PHP" }`) or wrap them
+ * under a `settings` object; both are accepted by the handler.
  */
 export type DentalOrgModuleUpdateDentalBranchSettingsRequest = {
-    /**
-     * Default appointment duration in minutes
-     */
-    appointmentDurationMinutes?: number;
-    /**
-     * Currency code (ISO 4217)
-     */
-    currency?: string;
-    /**
-     * Tax rate as a decimal
-     */
-    taxRate?: number;
-    /**
-     * Whether appointment reminders are enabled
-     */
-    appointmentReminderEnabled?: boolean;
+    [key: string]: unknown;
 };
 
 /**
@@ -4317,17 +4787,17 @@ export type DentalOrgModuleUpdateDentalBranchSettingsRequest = {
  */
 export type DentalOrgModuleUpdateDentalConsentTemplateRequest = {
     /**
-     * New title
+     * New name / title
      */
-    title?: string;
+    name?: string;
     /**
-     * New content
+     * New body content
      */
-    content?: string;
+    body?: string;
     /**
-     * Active status
+     * Whether signing requires a witness signature
      */
-    isActive?: boolean;
+    requiresWitnessSignature?: boolean;
 };
 
 /**
@@ -4341,27 +4811,27 @@ export type DentalOrgModuleUpdateMemberRequest = {
     /**
      * New role (dentist_owner only)
      */
-    role?: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'read_only';
+    role?: 'dentist_owner' | 'dentist_associate' | 'hygienist' | 'staff_full' | 'staff_scheduling' | 'dental_assistant' | 'front_desk' | 'billing_staff' | 'treatment_coordinator' | 'read_only';
     /**
-     * Profile photo URL
+     * Profile photo URL (null to clear)
      */
-    avatarUrl?: string;
+    avatarUrl?: string | null;
     /**
-     * Provider license number
+     * Provider license number (null to clear)
      */
-    licenseNumber?: string;
+    licenseNumber?: string | null;
     /**
-     * National Provider Identifier (NPI) — 10 digits
+     * National Provider Identifier (NPI) — 10 digits (null to clear)
      */
-    npi?: string;
+    npi?: string | null;
     /**
-     * Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'
+     * Credential / license type label, e.g. 'DDS', 'DMD', 'RDH' (null to clear)
      */
-    credentialType?: string;
+    credentialType?: string | null;
     /**
-     * License expiry date (ISO 8601 date)
+     * License expiry date (ISO 8601 date, null to clear)
      */
-    licenseExpiry?: Date;
+    licenseExpiry?: Date | null;
 };
 
 /**
@@ -4394,6 +4864,13 @@ export type DentalOrgModuleUpdatePermissionsRequest = {
      * Override decisions to upsert
      */
     overrides: Array<DentalOrgModulePermissionOverrideInput>;
+};
+
+/**
+ * PUT working-hours request body (wrapped in `workingHours`).
+ */
+export type DentalOrgModuleUpdateWorkingHoursRequest = {
+    workingHours: DentalOrgModuleDentalWorkingHours;
 };
 
 /**
@@ -7149,6 +7626,20 @@ export type DentalPatientModuleDentalPatient = {
 };
 
 /**
+ * Patient contact info (phone/email). PII — exposed on the profile and editable per decision #14 (V-PAT-014)
+ */
+export type DentalPatientModuleDentalPatientContactInfo = {
+    /**
+     * Primary email address
+     */
+    email?: string;
+    /**
+     * Primary phone number
+     */
+    phone?: string;
+};
+
+/**
  * Embedded person details on a dental patient response
  */
 export type DentalPatientModuleDentalPatientPerson = {
@@ -7157,6 +7648,19 @@ export type DentalPatientModuleDentalPatientPerson = {
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+    /**
+     * Contact info (phone/email). PII, surfaced for staff editing per decision #14 (V-PAT-014)
+     */
+    contactInfo?: {
+        /**
+         * Primary email address
+         */
+        email?: string;
+        /**
+         * Primary phone number
+         */
+        phone?: string;
+    };
 };
 
 /**
@@ -7279,10 +7783,17 @@ export type DentalPatientModuleImportPatientRow = {
 };
 
 /**
- * Import patients request — JSON array of patient rows
+ * Import patients request — provide either `patients` (JSON rows) or `csv` (raw CSV text). Exactly one is expected.
  */
 export type DentalPatientModuleImportPatientsRequest = {
-    patients: Array<DentalPatientModuleImportPatientRow>;
+    /**
+     * Patient rows as JSON. Provide this OR `csv`.
+     */
+    patients?: Array<DentalPatientModuleImportPatientRow>;
+    /**
+     * Raw CSV text: a header row (firstName,lastName,dateOfBirth,branchId,...) followed by data rows. Provide this OR `patients`.
+     */
+    csv?: string;
 };
 
 /**
@@ -7482,6 +7993,35 @@ export type DentalPatientModuleUpdateDentalPatientRequest = {
     };
     recallDate?: string;
     recallNote?: string;
+    /**
+     * Patient first name (updates linked person)
+     */
+    firstName?: string;
+    /**
+     * Patient last name (updates linked person; empty string clears)
+     */
+    lastName?: string;
+    /**
+     * Patient date of birth, ISO date (updates linked person)
+     */
+    dateOfBirth?: string;
+    /**
+     * Patient gender (updates linked person)
+     */
+    gender?: string;
+    /**
+     * Patient contact info (phone/email; updates linked person, audited). Partial: omitted sub-fields unchanged
+     */
+    contactInfo?: {
+        /**
+         * Primary email address
+         */
+        email?: string;
+        /**
+         * Primary phone number
+         */
+        phone?: string;
+    };
 };
 
 export type DentalPayment = {
@@ -7497,6 +8037,7 @@ export type DentalPayment = {
     isVoid: boolean;
     voidedAt?: Date;
     voidReason?: string;
+    voidedByMemberId?: Uuid;
     createdAt: Date;
 };
 
@@ -7512,15 +8053,149 @@ export type DentalPaymentPlan = {
     status: PaymentPlanStatus;
     createdAt: Date;
     updatedAt: Date;
+    installments: Array<DentalPaymentPlanInstallment>;
+};
+
+export type DentalPaymentPlanInstallment = {
+    id: Uuid;
+    planId: Uuid;
+    installmentNumber: number;
+    dueDate: Date;
+    amountCents: number;
+    paidCents: number;
+    paidDate?: Date;
+    status: InstallmentStatus;
+};
+
+export type DentalPaymentReceiptInvoice = {
+    id: Uuid;
+    invoiceNumber: string;
+    totalCents: number;
+    paidCents: number;
+    balanceCents: number;
+    status: string;
+};
+
+export type DentalPaymentReceiptPatient = {
+    id: Uuid;
+    name: string;
+};
+
+export type DentalPaymentReceiptPayment = {
+    id: Uuid;
+    amountCents: number;
+    method: PaymentMethod;
+    recordedAt: Date;
+    notes: string | null;
 };
 
 export type DentalPaymentReceiptResponse = {
     receiptNumber: string;
-    amountCents: number;
-    method: PaymentMethod;
-    paidAt: Date;
-    invoiceId: Uuid;
-    patientId: Uuid;
+    isVoid: boolean;
+    voidedAt: Date | null;
+    voidReason: string | null;
+    payment: DentalPaymentReceiptPayment;
+    invoice: DentalPaymentReceiptInvoice;
+    patient: DentalPaymentReceiptPatient;
+    generatedAt: Date;
+};
+
+/**
+ * A patient-appropriate projection of one of the patient's own appointments
+ */
+export type DentalPortalModuleMyAppointment = {
+    /**
+     * Appointment id
+     */
+    id: string;
+    /**
+     * Branch the appointment is at
+     */
+    branchId: string;
+    /**
+     * Appointment start (ISO 8601 UTC)
+     */
+    startAt: Date;
+    /**
+     * Appointment end (ISO 8601 UTC)
+     */
+    endAt: Date;
+    /**
+     * Visit type (checkup / treatment / emergency / recall / hygiene)
+     */
+    visitType: string;
+    /**
+     * Lifecycle status (scheduled / confirmed / checked_in / completed / cancelled / no_show)
+     */
+    status: string;
+    /**
+     * When the appointment was confirmed, if it has been (ISO 8601 UTC)
+     */
+    confirmedAt: Date | null;
+};
+
+/**
+ * The authenticated patient's outstanding-balance summary
+ */
+export type DentalPortalModuleMyBalance = {
+    /**
+     * Sum of all non-voided invoice totals in cents
+     */
+    totalBilledCents: number;
+    /**
+     * Sum of all non-voided invoice payments in cents
+     */
+    totalPaidCents: number;
+    /**
+     * Sum of all non-voided invoice balances in cents
+     */
+    outstandingBalanceCents: number;
+    /**
+     * Sum of overdue invoice balances in cents
+     */
+    overdueAmountCents: number;
+    /**
+     * Count of non-voided invoices
+     */
+    invoiceCount: number;
+};
+
+/**
+ * A patient-appropriate projection of one of the patient's own invoices
+ */
+export type DentalPortalModuleMyInvoice = {
+    /**
+     * Invoice id
+     */
+    id: string;
+    /**
+     * Human-readable invoice number
+     */
+    invoiceNumber: string;
+    /**
+     * Lifecycle status (draft / issued / partial / paid / overdue / voided)
+     */
+    status: string;
+    /**
+     * Invoice total in cents
+     */
+    totalCents: number;
+    /**
+     * Amount paid so far in cents
+     */
+    paidCents: number;
+    /**
+     * Outstanding balance in cents
+     */
+    balanceCents: number;
+    /**
+     * Due date, if set (ISO 8601 UTC)
+     */
+    dueDate: Date | null;
+    /**
+     * When the invoice was issued, if it has been (ISO 8601 UTC)
+     */
+    issuedAt: Date | null;
 };
 
 /**
@@ -7614,6 +8289,41 @@ export type DentalQueueModuleUpdateQueueItemStatusRequest = {
     notes?: string;
 };
 
+/**
+ * Mode of the most recent retention run
+ */
+export type DentalRetentionModuleRetentionRunMode = 'enforced' | 'dry-run';
+
+/**
+ * Operator-visible retention enforcement status (FR8.14)
+ */
+export type DentalRetentionModuleRetentionStatus = {
+    /**
+     * Whether the cron runs LIVE (archives) or dry-run only
+     */
+    enforcementEnabled: boolean;
+    /**
+     * ISO 8601 UTC timestamp of the most recent retention run, or null if never run
+     */
+    lastRunAt: Date | null;
+    /**
+     * Mode of the most recent run, or null if never run
+     */
+    lastRunMode: 'enforced' | 'dry-run';
+    /**
+     * Count of run-outcome events observed (dry_run + enforced)
+     */
+    runsObserved: number;
+    /**
+     * `actionedCount` recorded on the most recent run event
+     */
+    lastActionedCount: number;
+    /**
+     * `eligibleCount` recorded on the most recent run event
+     */
+    lastEligibleCount: number;
+};
+
 export type DentalTreatment = {
     id: Uuid;
     createdAt: Date;
@@ -7666,13 +8376,29 @@ export type DentalVisit = {
     branchId: Uuid;
     dentistMemberId: Uuid;
     status: DentalVisitStatus;
+    /**
+     * E3: 'general' (dentist-led, default) or 'hygiene' (hygienist-led).
+     */
+    visitType: 'general' | 'hygiene';
     activatedAt?: Date;
     completedAt?: Date;
     lockedAt?: Date;
     chiefComplaint?: string;
 };
 
-export type DentalVisitStatus = 'draft' | 'active' | 'completed' | 'locked';
+/**
+ * Body to discard (abandon) an open visit. Reason required (5–500 chars); audited.
+ */
+export type DentalVisitModuleDiscardVisitRequest = {
+    /**
+     * Why the visit is being abandoned (e.g. 'patient left', 'created in error').
+     */
+    reason: string;
+};
+
+export type DentalVisitStatus = 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
+
+export type DentalVisitType = 'general' | 'hygiene';
 
 /**
  * Body to add a patient to the waitlist
@@ -8408,6 +9134,8 @@ export type FileUploadResponse = {
      */
     expiresAt: Date;
 };
+
+export type FindingStatus = 'active' | 'resolved';
 
 /**
  * Follow-up instructions with structured timeframe
@@ -56805,6 +57533,8 @@ export type InformedRefusal = {
     refusedAt: Date;
 };
 
+export type InstallmentStatus = 'pending' | 'paid' | 'overdue' | 'waived';
+
 /**
  * An invoice-anchored, multi-line HMO claim (the submittable unit)
  */
@@ -57179,6 +57909,10 @@ export type LeaveVideoCallResponse = {
     remainingParticipants: number;
 };
 
+export type ListTreatmentTemplatesResponse = {
+    templates: Array<TreatmentTemplate>;
+};
+
 /**
  * FHIR R4-aligned location record representing details and position information for a physical place where services are provided and resources and participants may be stored, found, contained, or accommodated
  */
@@ -57524,6 +58258,26 @@ export type MerchantAccount = {
 };
 
 /**
+ * Result of merging an imported PMD's safety-floor items into the patient's
+ * living medical history (FIX-003 / decision #20). The imported PMD itself is
+ * never mutated (BR-022); its safety-critical items are surfaced as NEW,
+ * append-only medical-history entries that then appear in the clinical Safety
+ * Floor. The merge is idempotent — a second merge of the same imported PMD → 409.
+ */
+export type MergeImportedPmdSafetyFloorResult = {
+    importedPmdId: Uuid;
+    /**
+     * True once the merge has been applied (idempotency marker).
+     */
+    safetyFloorMerged: boolean;
+    /**
+     * Number of new medical-history entries created by this merge.
+     */
+    mergedEntryCount: number;
+    mergedAt: Date;
+};
+
+/**
  * Message type enumeration
  */
 export type MessageType = 'text' | 'system' | 'video_call';
@@ -57745,10 +58499,6 @@ export type Notification = {
      * Sent timestamp
      */
     sentAt?: Date;
-    /**
-     * Delivered timestamp
-     */
-    deliveredAt?: Date;
     /**
      * Read timestamp
      */
@@ -58076,13 +58826,19 @@ export type PmdDocument = {
     branchId: Uuid;
     status: PmdDocumentStatus;
     /**
-     * JSON snapshot of visit data: ICD-10/CDT/RxNorm coded
+     * JSON snapshot of the completed visit (V1 narrowed set, decision #6): narrowed
+     * demographics (name/DOB/sex) + safety floor (allergies/medications/conditions) +
+     * CDT-coded treatments + RxNorm-coded prescriptions. Structured ICD-10 diagnoses and
+     * free-text clinical notes are Phase-2 (not present in V1).
      */
     content: string;
     /**
-     * Base64-encoded digital signature
+     * Phase-2 (FR12.4): reserved for the facility digital signature; NOT populated in V1.
      */
     signature?: string;
+    /**
+     * Phase-2 (FR12.4): reserved signing timestamp; NOT populated in V1.
+     */
     signedAt?: Date;
     /**
      * If this document supersedes an older one
@@ -58824,9 +59580,73 @@ export type PerioChart = {
     summaryBopPercent?: number;
     summaryMeanDepth?: number;
     summaryDeepPocketCount?: number;
+    /**
+     * FIX-001: persisted 2017 AAP/EFP stage of record (frozen at completion). null for legacy charts completed before persistence and when there is no CAL evidence to stage.
+     */
+    stage?: 'I' | 'II' | 'III' | 'IV';
+    /**
+     * FIX-001: persisted 2017 AAP/EFP grade of record. null only for legacy pre-persistence charts.
+     */
+    grade?: 'A' | 'B' | 'C';
+    /**
+     * FIX-001: persisted extent descriptor of record. null when unclassifiable or for legacy charts.
+     */
+    extent?: 'localized' | 'generalized' | 'molar_incisor';
+    /**
+     * FIX-002: the grading risk-factor evidence submitted at completion, so the grade is reproducible/auditable. null/absent for legacy charts.
+     */
+    riskFactors?: {
+        /**
+         * Teeth lost due to periodontitis (staging complexity).
+         */
+        toothLossCount?: number;
+        /**
+         * Remaining teeth in the mouth; <20 is a Stage-IV factor. Defaults to charted-tooth count.
+         */
+        remainingTeeth?: number;
+        /**
+         * Masticatory dysfunction / bite collapse (Stage-IV factor).
+         */
+        biteCollapse?: boolean;
+        /**
+         * Radiographic %bone-loss at worst site (0-100), for the indirect grading ratio.
+         */
+        bonelossPercent?: number;
+        /**
+         * Patient age in years (denominator of the %bone-loss÷age grading ratio).
+         */
+        ageYears?: number;
+        /**
+         * Direct 5-yr RBL/CAL progression (mm). When present, overrides the indirect ratio.
+         */
+        fiveYearProgressionMm?: number;
+        /**
+         * Cigarettes per day (grading modifier): <10 → ≥B, ≥10 → C.
+         */
+        cigarettesPerDay?: number;
+        /**
+         * Whether the patient has diabetes (grading modifier).
+         */
+        hasDiabetes?: boolean;
+        /**
+         * Most recent HbA1c % (grading modifier): <7.0 → ≥B, ≥7.0 → C.
+         */
+        hba1cPercent?: number;
+        /**
+         * Whether involvement follows a molar/incisor pattern (extent descriptor).
+         */
+        molarIncisorPattern?: boolean;
+    } | null;
     readings: Array<PerioToothReading>;
     createdAt: Date;
     updatedAt: Date;
+};
+
+/**
+ * Longitudinal history: a patient's completed/locked perio charts (most recent first), each with full readings, for multi-exam comparison.
+ */
+export type PerioChartHistory = {
+    data: Array<PerioChart>;
 };
 
 export type PerioChartStatus = 'draft' | 'completed' | 'locked';
@@ -58840,6 +59660,52 @@ export type PerioExtent = 'localized' | 'generalized' | 'molar_incisor';
  * 2017 AAP/EFP grade (progression rate).
  */
 export type PerioGrade = 'A' | 'B' | 'C';
+
+/**
+ * P1-6: 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted. Persisted at completion (FIX-002) so the grade is reproducible/auditable.
+ */
+export type PerioRiskFactors = {
+    /**
+     * Teeth lost due to periodontitis (staging complexity).
+     */
+    toothLossCount?: number;
+    /**
+     * Remaining teeth in the mouth; <20 is a Stage-IV factor. Defaults to charted-tooth count.
+     */
+    remainingTeeth?: number;
+    /**
+     * Masticatory dysfunction / bite collapse (Stage-IV factor).
+     */
+    biteCollapse?: boolean;
+    /**
+     * Radiographic %bone-loss at worst site (0-100), for the indirect grading ratio.
+     */
+    bonelossPercent?: number;
+    /**
+     * Patient age in years (denominator of the %bone-loss÷age grading ratio).
+     */
+    ageYears?: number;
+    /**
+     * Direct 5-yr RBL/CAL progression (mm). When present, overrides the indirect ratio.
+     */
+    fiveYearProgressionMm?: number;
+    /**
+     * Cigarettes per day (grading modifier): <10 → ≥B, ≥10 → C.
+     */
+    cigarettesPerDay?: number;
+    /**
+     * Whether the patient has diabetes (grading modifier).
+     */
+    hasDiabetes?: boolean;
+    /**
+     * Most recent HbA1c % (grading modifier): <7.0 → ≥B, ≥7.0 → C.
+     */
+    hba1cPercent?: number;
+    /**
+     * Whether involvement follows a molar/incisor pattern (extent descriptor).
+     */
+    molarIncisorPattern?: boolean;
+};
 
 /**
  * 2017 AAP/EFP stage (severity/complexity).
@@ -59587,6 +60453,13 @@ export type Prescription = {
     instructions?: string;
     dispenseAsWritten: boolean;
     /**
+     * Lifecycle status (EM-CLI-012). Always present on every response; the row
+     * defaults to `pending` and transitions to `dispensed`/`cancelled` via PATCH.
+     * Read-only on this response model — clients change it through
+     * `UpdatePrescriptionRequest.status`.
+     */
+    status: 'pending' | 'dispensed' | 'cancelled';
+    /**
      * P2-13: US-context legal Rx fields (record-only; EPCS/Surescripts
      * transmission is out of scope). All optional + additive so the ₱/PH
      * non-controlled flow is unaffected.
@@ -59600,6 +60473,24 @@ export type Prescription = {
      * Prescriber National Provider Identifier (10-digit NPI).
      */
     prescriberNpi?: string;
+    /**
+     * QW-1 / P1-2: post-create safety warnings — allergy conflicts (drug name vs
+     * the patient's recorded active allergies) and curated drug-drug interactions
+     * against active medications. Populated only on the createPrescription
+     * response; absent on list/get/update. The clinician must acknowledge these
+     * before dismissing the prescription sheet (rx-sheet.tsx).
+     */
+    warnings?: {
+        /**
+         * Active-allergy display names that match the prescribed drug.
+         */
+        allergyConflicts?: Array<string>;
+        drugInteractions?: Array<{
+            interactingDrug: string;
+            severity: 'major' | 'moderate' | 'minor';
+            description: string;
+        }>;
+    };
 };
 
 /**
@@ -59639,6 +60530,15 @@ export type PrescriptionData = {
      */
     notes?: string;
 };
+
+/**
+ * Prescription lifecycle status (EM-CLI-012).
+ * FSM: `pending` → `dispensed` | `cancelled` (both terminal). New
+ * prescriptions default to `pending`; the transition is externally driven
+ * (pharmacy dispense/cancel) so it stays allowed even on a locked/completed
+ * visit — the same carve-out as lab orders (§13).
+ */
+export type PrescriptionStatus = 'pending' | 'dispensed' | 'cancelled';
 
 /**
  * Lightweight free-form description of a pharmacy.
@@ -59971,6 +60871,15 @@ export type RefundResponse = {
     metadata?: {
         [key: string]: unknown;
     };
+};
+
+export type ResolveChartConflictRequest = {
+    resolution: ChartConflictResolution;
+    /**
+     * Required when resolution = dismiss (5–500 chars): why the offline edit was
+     * discarded. Ignored for 'accept'.
+     */
+    reason?: string;
 };
 
 /**
@@ -60355,6 +61264,17 @@ export type SymptomsData = {
 export type TemplateStatus = 'draft' | 'active' | 'archived';
 
 /**
+ * A single treatment item inside a treatment template (FR1.8).
+ */
+export type TemplateTreatmentItem = {
+    cdtCode: string;
+    description: string;
+    priceCents: number;
+    toothNumber?: number;
+    surfaces?: Array<string>;
+};
+
+/**
  * Variable definition for email templates
  */
 export type TemplateVariable = {
@@ -60655,6 +61575,12 @@ export type ToothChartState = {
         [key: string]: string;
     };
     entryClassification?: ChartEntryClassification;
+    /**
+     * SL-02 / F-G03: monotonic per-tooth logical clock for offline-first
+     * last-write-wins merge. Higher clock wins; a lower incoming clock is a stale
+     * offline write and is rejected by the server merge. Omit for online writes.
+     */
+    clock?: number;
 };
 
 export type ToothHistoryEntry = {
@@ -60674,11 +61600,54 @@ export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown'
 
 export type ToothSurfaceCode = 'mesial' | 'distal' | 'buccal' | 'lingual' | 'occlusal' | 'incisal' | 'cervical';
 
+/**
+ * One pending (diagnosed/planned/declined) treatment in the patient treatment-plan aggregate.
+ */
+export type TreatmentPlanItem = {
+    id: Uuid;
+    toothNumber?: number;
+    cdtCode: string;
+    description: string;
+    surfaces?: Array<ToothSurfaceCode>;
+    priceCents: number;
+    status: DentalTreatmentStatus;
+    conditionCode?: string;
+    visitId: Uuid;
+    /**
+     * Optional: present on the flat `treatments[]` projection; the `byTooth`
+     * grouping omits it (and `toothNumber`), so it is optional on the shared item.
+     */
+    carriedOver?: boolean;
+    phase?: DentalTreatmentPhase;
+    priority: number;
+    reason?: string;
+};
+
+/**
+ * Patient treatment-plan aggregate across all visits (getTreatmentPlan).
+ */
 export type TreatmentPlanResponse = {
     patientId: Uuid;
-    visits: string;
-    treatments: string;
-    acceptedPlanVersionId?: Uuid;
+    version: number;
+    totalEstimateCents: number;
+    /**
+     * Count of pending treatments; omitted on the empty-plan response.
+     */
+    treatmentCount?: number;
+    toothCount: number;
+    /**
+     * Pending treatments grouped by FDI tooth number (and "general"); omitted on the empty-plan response.
+     */
+    byTooth?: {
+        [key: string]: Array<TreatmentPlanItem>;
+    };
+    treatments: Array<TreatmentPlanItem>;
+    /**
+     * CHART-XV: FDI tooth numbers with a performed/verified treatment across ALL
+     * the patient's visits. Drives the odontogram's cumulative Completed layer
+     * (living document) rather than a per-visit completed view.
+     */
+    completedToothNumbers?: Array<number>;
 };
 
 export type TreatmentPlanVersion = {
@@ -60696,9 +61665,14 @@ export type TreatmentTemplate = {
     id: Uuid;
     createdAt: Date;
     updatedAt: Date;
+    branchId: Uuid;
     name: string;
     description?: string;
-    treatments: string;
+    /**
+     * Reusable treatment items applied to a visit in one action.
+     */
+    items: Array<TemplateTreatmentItem>;
+    active: boolean;
 };
 
 /**
@@ -60860,6 +61834,13 @@ export type UpdateDentalTreatmentRequest = {
 export type UpdateDentalVisitRequest = {
     status?: DentalVisitStatus;
     chiefComplaint?: string;
+};
+
+export type UpdateFindingRequest = {
+    conditionCode?: ConditionCode;
+    surface?: ToothSurfaceCode;
+    note?: string;
+    status?: FindingStatus;
 };
 
 /**
@@ -61182,6 +62163,13 @@ export type UpdatePrescriptionRequest = {
     duration?: string;
     quantity?: string;
     instructions?: string;
+    /**
+     * Lifecycle transition (EM-CLI-012). When present, the handler routes to the
+     * FSM guard (`pending` → `dispensed` | `cancelled`); an invalid transition
+     * returns 422 `INVALID_PRESCRIPTION_TRANSITION`. Status progression is the one
+     * field permitted on a locked/completed visit (external pharmacy dispense).
+     */
+    status?: 'pending' | 'dispensed' | 'cancelled';
     controlledSubstanceSchedule?: ControlledSubstanceSchedule;
     prescriberDea?: string;
     prescriberNpi?: string;
@@ -61256,7 +62244,11 @@ export type UpdateToothRequest = {
 export type UpdateTreatmentTemplateRequest = {
     name?: string;
     description?: string;
-    treatments?: string;
+    items?: Array<TemplateTreatmentItem>;
+    /**
+     * Activate/deactivate the template (handler accepts it; DELETE only sets false).
+     */
+    active?: boolean;
 };
 
 export type UpsertToothReadingRequest = {
@@ -61480,7 +62472,7 @@ export type VisitNotes = {
     lockedAt?: Date;
 };
 
-export type VisitType = 'checkup' | 'treatment' | 'emergency' | 'recall';
+export type VisitType = 'checkup' | 'treatment' | 'emergency' | 'recall' | 'hygiene';
 
 /**
  * Vital signs measurements with standardized units
@@ -65206,7 +66198,49 @@ export type ListInventoryItemsResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModuleInventoryItem> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModuleInventoryItem>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListInventoryItemsResponse = ListInventoryItemsResponses[keyof ListInventoryItemsResponses];
@@ -65325,7 +66359,49 @@ export type ListInventoryAdjustmentsResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModuleInventoryAdjustment> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModuleInventoryAdjustment>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListInventoryAdjustmentsResponse = ListInventoryAdjustmentsResponses[keyof ListInventoryAdjustmentsResponses];
@@ -65406,7 +66482,49 @@ export type ListPostopTemplatesResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModulePostopTemplate> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModulePostopTemplate>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListPostopTemplatesResponse = ListPostopTemplatesResponses[keyof ListPostopTemplatesResponses];
@@ -65701,13 +66819,13 @@ export type GetWorkingHoursResponses = {
     /**
      * Success response with data
      */
-    200: DentalOrgModuleDentalWorkingHours;
+    200: DentalOrgModuleDentalWorkingHoursResponse;
 };
 
 export type GetWorkingHoursResponse = GetWorkingHoursResponses[keyof GetWorkingHoursResponses];
 
 export type UpdateWorkingHoursData = {
-    body: DentalOrgModuleDentalWorkingHours;
+    body: DentalOrgModuleUpdateWorkingHoursRequest;
     path: {
         branchId: Uuid;
     };
@@ -65736,7 +66854,7 @@ export type UpdateWorkingHoursResponses = {
     /**
      * Success response with data
      */
-    200: DentalOrgModuleDentalWorkingHours;
+    200: DentalOrgModuleDentalWorkingHoursResponse;
 };
 
 export type UpdateWorkingHoursResponse = UpdateWorkingHoursResponses[keyof UpdateWorkingHoursResponses];
@@ -66689,7 +67807,7 @@ export type CephMgmtGetCephReportResponses = {
 export type CephMgmtGetCephReportResponse = CephMgmtGetCephReportResponses[keyof CephMgmtGetCephReportResponses];
 
 export type CephMgmtCreateCephReportData = {
-    body?: never;
+    body: DentalImagingModuleCreateCephReportBody;
     path: {
         imageId: string;
     };
@@ -66742,6 +67860,42 @@ export type ImagingFindingsMgmtCreateFindingResponses = {
 
 export type ImagingFindingsMgmtCreateFindingResponse = ImagingFindingsMgmtCreateFindingResponses[keyof ImagingFindingsMgmtCreateFindingResponses];
 
+export type ImagingMgmtListImageLinksData = {
+    body?: never;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/links';
+};
+
+export type ImagingMgmtListImageLinksResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingLinkListResponse | ErrorResponse;
+};
+
+export type ImagingMgmtListImageLinksResponse = ImagingMgmtListImageLinksResponses[keyof ImagingMgmtListImageLinksResponses];
+
+export type ImagingMgmtCreateImageLinkData = {
+    body: DentalImagingModuleCreateImagingLinkBody;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/links';
+};
+
+export type ImagingMgmtCreateImageLinkResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingLink | ErrorResponse;
+};
+
+export type ImagingMgmtCreateImageLinkResponse = ImagingMgmtCreateImageLinkResponses[keyof ImagingMgmtCreateImageLinkResponses];
+
 export type ImagingMgmtListMeasurementsData = {
     body?: never;
     path: {
@@ -66778,6 +67932,24 @@ export type ImagingMgmtCreateMeasurementResponses = {
 
 export type ImagingMgmtCreateMeasurementResponse = ImagingMgmtCreateMeasurementResponses[keyof ImagingMgmtCreateMeasurementResponses];
 
+export type ImagingMgmtUpdateImageMetadataData = {
+    body: DentalImagingModuleUpdateImageMetadataBody;
+    path: {
+        imageId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/images/{imageId}/metadata';
+};
+
+export type ImagingMgmtUpdateImageMetadataResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingStudyImage | ErrorResponse;
+};
+
+export type ImagingMgmtUpdateImageMetadataResponse = ImagingMgmtUpdateImageMetadataResponses[keyof ImagingMgmtUpdateImageMetadataResponses];
+
 export type ImagingMgmtUpdateImageModalityData = {
     body: DentalImagingModuleUpdateImageModalityBody;
     path: {
@@ -66795,6 +67967,28 @@ export type ImagingMgmtUpdateImageModalityResponses = {
 };
 
 export type ImagingMgmtUpdateImageModalityResponse = ImagingMgmtUpdateImageModalityResponses[keyof ImagingMgmtUpdateImageModalityResponses];
+
+export type ImagingMgmtDeleteImageLinkData = {
+    body?: never;
+    path: {
+        linkId: string;
+    };
+    query?: never;
+    url: '/dental/imaging/links/{linkId}';
+};
+
+export type ImagingMgmtDeleteImageLinkResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: ErrorResponse;
+    /**
+     * There is no content to send for this request, but the headers may be useful.
+     */
+    204: void;
+};
+
+export type ImagingMgmtDeleteImageLinkResponse = ImagingMgmtDeleteImageLinkResponses[keyof ImagingMgmtDeleteImageLinkResponses];
 
 export type ImagingMgmtDeleteMeasurementData = {
     body?: never;
@@ -67502,6 +68696,37 @@ export type DentalOrganizationManagementUpdateResponses = {
 };
 
 export type DentalOrganizationManagementUpdateResponse = DentalOrganizationManagementUpdateResponses[keyof DentalOrganizationManagementUpdateResponses];
+
+export type ActivateOrganizationData = {
+    body?: never;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/organizations/{id}/activate';
+};
+
+export type ActivateOrganizationErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ActivateOrganizationError = ActivateOrganizationErrors[keyof ActivateOrganizationErrors];
+
+export type ActivateOrganizationResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalOrgModuleDentalOrganization | NotFoundError | ErrorResponse;
+};
+
+export type ActivateOrganizationResponse = ActivateOrganizationResponses[keyof ActivateOrganizationResponses];
 
 export type DentalBranchManagementListData = {
     body?: never;
@@ -69127,6 +70352,11 @@ export type PatientImageMgmtListPatientImagesData = {
     };
     query: {
         branchId: string;
+        isDiagnostic?: boolean;
+        qualityStatus?: 'ok' | 'retake';
+        tag?: string;
+        linkTargetId?: string;
+        linkType?: 'treatment_plan' | 'ortho_case' | 'report';
     };
     url: '/dental/patients/{patientId}/images';
 };
@@ -69288,7 +70518,49 @@ export type ListOcclusionScreeningsResponses = {
     /**
      * Success response with data
      */
-    200: Array<DentalClinicalOpsModuleOcclusionScreening> | ErrorResponse;
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalClinicalOpsModuleOcclusionScreening>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    } | ErrorResponse;
 };
 
 export type ListOcclusionScreeningsResponse = ListOcclusionScreeningsResponses[keyof ListOcclusionScreeningsResponses];
@@ -69653,7 +70925,12 @@ export type GetTreatmentPlanData = {
     path: {
         patientId: Uuid;
     };
-    query?: never;
+    query: {
+        /**
+         * Branch context — required by the handler (contract field; auth is via patient-branch access).
+         */
+        branchId: Uuid;
+    };
     url: '/dental/patients/{patientId}/treatment-plan';
 };
 
@@ -69684,7 +70961,12 @@ export type AcceptTreatmentPlanData = {
     path: {
         patientId: Uuid;
     };
-    query?: never;
+    query: {
+        /**
+         * Branch context — required by the handler (contract field; auth is via patient-branch access).
+         */
+        branchId: Uuid;
+    };
     url: '/dental/patients/{patientId}/treatment-plan/accept';
 };
 
@@ -70162,6 +71444,37 @@ export type ListPatientVisitsResponses = {
 
 export type ListPatientVisitsResponse = ListPatientVisitsResponses[keyof ListPatientVisitsResponses];
 
+export type ListPerioChartsForPatientData = {
+    body?: never;
+    path?: never;
+    query: {
+        patientId: Uuid;
+    };
+    url: '/dental/perio-charts';
+};
+
+export type ListPerioChartsForPatientErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ListPerioChartsForPatientError = ListPerioChartsForPatientErrors[keyof ListPerioChartsForPatientErrors];
+
+export type ListPerioChartsForPatientResponses = {
+    /**
+     * Success response with data
+     */
+    200: PerioChartHistory;
+};
+
+export type ListPerioChartsForPatientResponse = ListPerioChartsForPatientResponses[keyof ListPerioChartsForPatientResponses];
+
 export type CreatePerioChartData = {
     body: CreatePerioChartRequest;
     path?: never;
@@ -70427,6 +71740,45 @@ export type GetImportedPmdResponses = {
 };
 
 export type GetImportedPmdResponse = GetImportedPmdResponses[keyof GetImportedPmdResponses];
+
+export type MergeImportedPmdSafetyFloorData = {
+    body?: never;
+    path: {
+        id: Uuid;
+    };
+    query?: never;
+    url: '/dental/pmd/imported/{id}/merge-safety-floor';
+};
+
+export type MergeImportedPmdSafetyFloorErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type MergeImportedPmdSafetyFloorError = MergeImportedPmdSafetyFloorErrors[keyof MergeImportedPmdSafetyFloorErrors];
+
+export type MergeImportedPmdSafetyFloorResponses = {
+    /**
+     * Success response with data
+     */
+    200: MergeImportedPmdSafetyFloorResult;
+};
+
+export type MergeImportedPmdSafetyFloorResponse = MergeImportedPmdSafetyFloorResponses[keyof MergeImportedPmdSafetyFloorResponses];
 
 export type ExportPatientCareRecordData = {
     body?: never;
@@ -70753,6 +72105,37 @@ export type ListDueRecallsResponses = {
 
 export type ListDueRecallsResponse = ListDueRecallsResponses[keyof ListDueRecallsResponses];
 
+export type GetRetentionStatusData = {
+    body?: never;
+    path?: never;
+    query?: {
+        tenantId?: Uuid;
+    };
+    url: '/dental/retention-status';
+};
+
+export type GetRetentionStatusErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type GetRetentionStatusError = GetRetentionStatusErrors[keyof GetRetentionStatusErrors];
+
+export type GetRetentionStatusResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalRetentionModuleRetentionStatus | ErrorResponse;
+};
+
+export type GetRetentionStatusResponse = GetRetentionStatusResponses[keyof GetRetentionStatusResponses];
+
 export type ListSyncLogsData = {
     body?: never;
     path?: never;
@@ -70865,11 +72248,17 @@ export type UpdateSyncLogResponse = UpdateSyncLogResponses[keyof UpdateSyncLogRe
 export type ListTreatmentTemplatesData = {
     body?: never;
     path?: never;
-    query?: never;
+    query: {
+        branchId: Uuid;
+    };
     url: '/dental/treatment-templates';
 };
 
 export type ListTreatmentTemplatesErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
     /**
      * Unauthorized access response
      */
@@ -70882,10 +72271,10 @@ export type ListTreatmentTemplatesResponses = {
     /**
      * Success response with data
      */
-    200: Array<TreatmentTemplate>;
+    200: ListTreatmentTemplatesResponse;
 };
 
-export type ListTreatmentTemplatesResponse = ListTreatmentTemplatesResponses[keyof ListTreatmentTemplatesResponses];
+export type ListTreatmentTemplatesResponse2 = ListTreatmentTemplatesResponses[keyof ListTreatmentTemplatesResponses];
 
 export type CreateTreatmentTemplateData = {
     body: CreateTreatmentTemplateRequest;
@@ -71107,6 +72496,37 @@ export type CreateDentalVisitResponses = {
 };
 
 export type CreateDentalVisitResponse = CreateDentalVisitResponses[keyof CreateDentalVisitResponses];
+
+export type ListChartConflictsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/chart-conflicts/{patientId}';
+};
+
+export type ListChartConflictsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListChartConflictsError = ListChartConflictsErrors[keyof ListChartConflictsErrors];
+
+export type ListChartConflictsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<ChartConflict>;
+};
+
+export type ListChartConflictsResponse = ListChartConflictsResponses[keyof ListChartConflictsResponses];
 
 export type GetToothHistoryData = {
     body?: never;
@@ -71482,9 +72902,9 @@ export type ApplyTemplateError = ApplyTemplateErrors[keyof ApplyTemplateErrors];
 
 export type ApplyTemplateResponses = {
     /**
-     * Success response with data
+     * Resource created response
      */
-    200: ApplyTemplateResponse;
+    201: ApplyTemplateResponse;
 };
 
 export type ApplyTemplateResponse2 = ApplyTemplateResponses[keyof ApplyTemplateResponses];
@@ -71717,6 +73137,72 @@ export type UpsertDentalChartResponses = {
 };
 
 export type UpsertDentalChartResponse = UpsertDentalChartResponses[keyof UpsertDentalChartResponses];
+
+export type ExportDentalChartData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/chart/export';
+};
+
+export type ExportDentalChartErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ExportDentalChartError = ExportDentalChartErrors[keyof ExportDentalChartErrors];
+
+export type ExportDentalChartResponses = {
+    /**
+     * Success response with data
+     */
+    200: ChartExport;
+};
+
+export type ExportDentalChartResponse = ExportDentalChartResponses[keyof ExportDentalChartResponses];
+
+export type ResolveChartConflictData = {
+    body: ResolveChartConflictRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/chart/resolve-conflict';
+};
+
+export type ResolveChartConflictErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ResolveChartConflictError = ResolveChartConflictErrors[keyof ResolveChartConflictErrors];
+
+export type ResolveChartConflictResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalChart;
+};
+
+export type ResolveChartConflictResponse = ResolveChartConflictResponses[keyof ResolveChartConflictResponses];
 
 export type UpdateToothData = {
     body: UpdateToothRequest;
@@ -72025,6 +73511,221 @@ export type SignConsentFormResponses = {
 };
 
 export type SignConsentFormResponse = SignConsentFormResponses[keyof SignConsentFormResponses];
+
+export type DiscardVisitData = {
+    body: DentalVisitModuleDiscardVisitRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/discard';
+};
+
+export type DiscardVisitErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type DiscardVisitError = DiscardVisitErrors[keyof DiscardVisitErrors];
+
+export type DiscardVisitResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalVisit;
+};
+
+export type DiscardVisitResponse = DiscardVisitResponses[keyof DiscardVisitResponses];
+
+export type ListDentalFindingsData = {
+    body?: never;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings';
+};
+
+export type ListDentalFindingsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ListDentalFindingsError = ListDentalFindingsErrors[keyof ListDentalFindingsErrors];
+
+export type ListDentalFindingsResponses = {
+    /**
+     * Offset-based paginated response with page navigation
+     */
+    200: {
+        /**
+         * Response data items
+         */
+        data: Array<DentalFinding>;
+        /**
+         * Pagination metadata
+         */
+        pagination: {
+            /**
+             * Current offset
+             */
+            offset: number;
+            /**
+             * Items per page
+             */
+            limit: number;
+            /**
+             * Number of items in current page
+             */
+            count: number;
+            /**
+             * Total number of items
+             */
+            totalCount: number;
+            /**
+             * Total number of pages
+             */
+            totalPages: number;
+            /**
+             * Current page number (1-based)
+             */
+            currentPage: number;
+            /**
+             * Whether there are more pages
+             */
+            hasNextPage: boolean;
+            /**
+             * Whether there are previous pages
+             */
+            hasPreviousPage: boolean;
+        };
+    };
+};
+
+export type ListDentalFindingsResponse = ListDentalFindingsResponses[keyof ListDentalFindingsResponses];
+
+export type CreateDentalFindingData = {
+    body: CreateFindingRequest;
+    path: {
+        visitId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings';
+};
+
+export type CreateDentalFindingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateDentalFindingError = CreateDentalFindingErrors[keyof CreateDentalFindingErrors];
+
+export type CreateDentalFindingResponses = {
+    /**
+     * Resource created response
+     */
+    201: DentalFinding;
+};
+
+export type CreateDentalFindingResponse = CreateDentalFindingResponses[keyof CreateDentalFindingResponses];
+
+export type UpdateDentalFindingData = {
+    body: UpdateFindingRequest;
+    path: {
+        visitId: Uuid;
+        findingId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings/{findingId}';
+};
+
+export type UpdateDentalFindingErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type UpdateDentalFindingError = UpdateDentalFindingErrors[keyof UpdateDentalFindingErrors];
+
+export type UpdateDentalFindingResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalFinding;
+};
+
+export type UpdateDentalFindingResponse = UpdateDentalFindingResponses[keyof UpdateDentalFindingResponses];
+
+export type ConvertFindingToTreatmentData = {
+    body: ConvertFindingToTreatmentRequest;
+    path: {
+        visitId: Uuid;
+        findingId: Uuid;
+    };
+    query?: never;
+    url: '/dental/visits/{visitId}/findings/{findingId}/treatment';
+};
+
+export type ConvertFindingToTreatmentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ConvertFindingToTreatmentError = ConvertFindingToTreatmentErrors[keyof ConvertFindingToTreatmentErrors];
+
+export type ConvertFindingToTreatmentResponses = {
+    /**
+     * Resource created response
+     */
+    201: DentalTreatment;
+};
+
+export type ConvertFindingToTreatmentResponse = ConvertFindingToTreatmentResponses[keyof ConvertFindingToTreatmentResponses];
 
 export type ListLabOrdersData = {
     body?: never;
@@ -73613,6 +75314,93 @@ export type ListEmrPatientsResponses = {
 
 export type ListEmrPatientsResponse = ListEmrPatientsResponses[keyof ListEmrPatientsResponses];
 
+export type ListMyAppointmentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/appointments';
+};
+
+export type ListMyAppointmentsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListMyAppointmentsError = ListMyAppointmentsErrors[keyof ListMyAppointmentsErrors];
+
+export type ListMyAppointmentsResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPortalModuleMyAppointment>;
+};
+
+export type ListMyAppointmentsResponse = ListMyAppointmentsResponses[keyof ListMyAppointmentsResponses];
+
+export type GetMyBalanceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/balance';
+};
+
+export type GetMyBalanceErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type GetMyBalanceError = GetMyBalanceErrors[keyof GetMyBalanceErrors];
+
+export type GetMyBalanceResponses = {
+    /**
+     * Success response with data
+     */
+    200: DentalPortalModuleMyBalance;
+};
+
+export type GetMyBalanceResponse = GetMyBalanceResponses[keyof GetMyBalanceResponses];
+
+export type ListMyInvoicesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me/invoices';
+};
+
+export type ListMyInvoicesErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+};
+
+export type ListMyInvoicesError = ListMyInvoicesErrors[keyof ListMyInvoicesErrors];
+
+export type ListMyInvoicesResponses = {
+    /**
+     * Success response with data
+     */
+    200: Array<DentalPortalModuleMyInvoice>;
+};
+
+export type ListMyInvoicesResponse = ListMyInvoicesResponses[keyof ListMyInvoicesResponses];
+
 export type ListNotificationsData = {
     body?: never;
     path?: never;
@@ -74396,6 +76184,43 @@ export type UpdatePersonResponses = {
 };
 
 export type UpdatePersonResponse = UpdatePersonResponses[keyof UpdatePersonResponses];
+
+export type CreateProviderData = {
+    body: CreateProviderRequest;
+    path?: never;
+    query?: never;
+    url: '/providers';
+};
+
+export type CreateProviderErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type CreateProviderError = CreateProviderErrors[keyof CreateProviderErrors];
+
+export type CreateProviderResponses = {
+    /**
+     * Resource created response
+     */
+    201: Provider;
+};
+
+export type CreateProviderResponse = CreateProviderResponses[keyof CreateProviderResponses];
 
 export type ListPractitionerRolesData = {
     body?: never;

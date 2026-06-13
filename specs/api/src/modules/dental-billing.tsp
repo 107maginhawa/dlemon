@@ -104,6 +104,17 @@ model DentalInvoice {
   issuedAt?: utcDateTime;
   paidAt?: utcDateTime;
   voidedAt?: utcDateTime;
+
+  /**
+   * Read-side enrichments populated by listDentalInvoices / getDentalInvoice
+   * (patient display name + the visit's calendar date). Optional because the
+   * create/void/issue responses do not join them. `visitDate` is a YYYY-MM-DD
+   * calendar string and is intentionally typed `string` (not utcDateTime) so the
+   * SDK date transformer leaves it verbatim.
+   */
+  patientName?: string;
+  visitDate?: string;
+
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
 }
@@ -147,6 +158,12 @@ model DentalPayment {
   isVoid: boolean;
   voidedAt?: utcDateTime;
   voidReason?: string;
+  // AHA FIX-004 §15 reconcile: the void soft-delete records WHO voided the
+  // payment (dental_payment.voided_by_member_id). The handler returns the full
+  // row via .returning(), so the wire already carries this on a voided payment;
+  // the contract previously omitted it (same drift class as the clinical-B
+  // consent revokedBy reconcile). Optional — null until the payment is voided.
+  voidedByMemberId?: UUID;
   createdAt: utcDateTime;
 }
 
@@ -162,6 +179,14 @@ model DentalPaymentPlan {
   status: PaymentPlanStatus;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
+
+  // AHA FIX-005 §15 reconcile: both createPaymentPlan (201) and getPaymentPlan (200)
+  // return the plan WITH its installment schedule (`ctx.json({ ...plan, installments })`)
+  // and the Hurl contract already pins `$.installments` — but the model omitted the
+  // field, forcing the FE to cast `data as unknown`. Declared now so the SDK type
+  // carries it and the FE renders the schedule from typed truth (the
+  // DentalPaymentPlanInstallment model below already existed, just unreferenced).
+  installments: DentalPaymentPlanInstallment[];
 }
 
 model DentalPaymentPlanInstallment {
@@ -212,6 +237,18 @@ model RecordDentalPaymentRequest {
   notes?: string;
 }
 
+// AHA FIX-004 §15 ROADMAP FLAG (deliberate deferral, not an omission): unlike the
+// sibling VoidDentalInvoiceRequest below (@minLength(5)/@maxLength(500)), voidReason
+// carries NO length bound — and voidDentalPayment.ts does not trim/empty-guard it
+// either — so a direct API caller can void a payment (a financial reversal) with an
+// empty reason and write an empty-reason audit row. The FE wired in Batch B
+// (invoice-detail.tsx handleVoidPayment) imposes a 5-char floor, but the contract +
+// handler stay lenient, so the two now diverge on the validation floor. This is a
+// server-validation/behavior change (RED-first 422 test + handler guard), out of
+// scope for the FE-wiring batch; tracked in dental-billing-fix-report.md Batch B
+// roadmap flags. [V2: add @minLength(5)/@maxLength(500) + a handler trim/empty guard,
+// mirroring the invoice void; consider the same bound for ApplyDentalDiscountRequest
+// .percentageRate (also contract-unbounded, handler-only INVALID_DISCOUNT_RATE).]
 model VoidDentalPaymentRequest {
   voidReason: string;
 }
@@ -261,13 +298,40 @@ model CollectionsSummaryResponse {
   invoiceCount: int32;
 }
 
-model DentalPaymentReceiptResponse {
-  receiptNumber: string;
+// AHA dental-billing FIX-007: reconciled to the implemented (tested) handler
+// shape. The receipt is a rich nested document — void info (EC5 watermark),
+// patient name, and invoice context — not the never-implemented flat projection.
+model DentalPaymentReceiptPayment {
+  id: UUID;
   amountCents: int32;
   method: PaymentMethod;
-  paidAt: utcDateTime;
-  invoiceId: UUID;
-  patientId: UUID;
+  recordedAt: utcDateTime;
+  notes: string | null;
+}
+
+model DentalPaymentReceiptInvoice {
+  id: UUID;
+  invoiceNumber: string;
+  totalCents: int32;
+  paidCents: int32;
+  balanceCents: int32;
+  status: string;
+}
+
+model DentalPaymentReceiptPatient {
+  id: UUID;
+  name: string;
+}
+
+model DentalPaymentReceiptResponse {
+  receiptNumber: string;
+  isVoid: boolean;
+  voidedAt: utcDateTime | null;
+  voidReason: string | null;
+  payment: DentalPaymentReceiptPayment;
+  invoice: DentalPaymentReceiptInvoice;
+  patient: DentalPaymentReceiptPatient;
+  generatedAt: utcDateTime;
 }
 
 // ---------------------------------------------------------------------------

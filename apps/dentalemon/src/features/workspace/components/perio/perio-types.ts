@@ -148,6 +148,55 @@ export function countOverThreshold(
   return count;
 }
 
+/**
+ * Deep-pocket clinical constant for the summary count. MUST stay in sync with
+ * `DEEP_POCKET_THRESHOLD_MM` in services/api-ts/.../completePerioChart.ts. This is a
+ * fixed clinical cutoff, distinct from the user-adjustable red-line threshold.
+ */
+export const DEEP_POCKET_THRESHOLD_MM = 5;
+
+export interface PerioLiveSummary {
+  bopPercent: number | null;
+  meanDepth: number | null;
+  deepPocketCount: number | null;
+}
+
+/**
+ * Live draft preview of the perio summary, computed from the SAME readings and SAME
+ * formula the backend applies at completion (completePerioChart.ts §"Summary
+ * computation"), so the draft numbers equal the eventual finalized ones — no drift.
+ * Returns nulls until there is data, so the summary bar shows "–" on an empty chart.
+ */
+export function computeLivePerioSummary(
+  readings: readonly PerioToothReading[],
+): PerioLiveSummary {
+  let depthSum = 0;
+  let depthCount = 0;
+  let deepPocketCount = 0;
+  let bopTrue = 0;
+  let bopTotal = 0;
+  for (const reading of readings) {
+    for (const site of PERIO_SITES) {
+      const depth = reading[depthField(site)];
+      if (typeof depth === 'number') {
+        depthSum += depth;
+        depthCount += 1;
+        if (depth >= DEEP_POCKET_THRESHOLD_MM) deepPocketCount += 1;
+      }
+      const bop = reading[bopField(site)];
+      if (typeof bop === 'boolean') {
+        bopTotal += 1;
+        if (bop) bopTrue += 1;
+      }
+    }
+  }
+  return {
+    bopPercent: bopTotal > 0 ? (bopTrue / bopTotal) * 100 : null,
+    meanDepth: depthCount > 0 ? depthSum / depthCount : null,
+    deepPocketCount: depthCount > 0 ? deepPocketCount : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Auto-advance entry sequence (the core UX bet — test #1).
 // A flat, ordered list of {tooth, site} steps: for each tooth in the dentition

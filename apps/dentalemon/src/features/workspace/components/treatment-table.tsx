@@ -31,6 +31,11 @@ interface TreatmentTableProps {
   selectedTreatmentId?: string | null;
   onMarkDone?: (treatmentId: string, visitId: string, currentStatus: string) => void; // kept for API compat; component now uses useMarkTreatmentDone directly
   readOnly?: boolean;
+  /** P0-D: when set, the table is scoped to this FDI tooth (body + counts + totals
+   *  all reflect only that tooth — keeps the summary coherent with the rows). */
+  selectedTooth?: number | null;
+  /** P0-D: clear the tooth scope (show all teeth again). */
+  onClearToothFilter?: () => void;
 }
 
 function formatDate(iso: string) {
@@ -67,14 +72,32 @@ function StatusBadge({ status }: { status: Treatment['status'] }) {
 
 export function TreatmentTable({
   visitId = '',
-  treatments,
-  carriedOverItems = [],
+  treatments: treatmentsProp,
+  carriedOverItems: carriedOverItemsProp = [],
   visits = [],
   onSelectTreatment,
   selectedTreatmentId,
   onMarkDone: _onMarkDone,
   readOnly: readOnlyProp = false,
+  selectedTooth = null,
+  onClearToothFilter,
 }: TreatmentTableProps) {
+  // P0-D: scope the whole table to the selected tooth. Every downstream
+  // computation (body rows, completed count, subtotals, grand total) reads these
+  // scoped arrays, so the summary a user sees always matches the rendered rows
+  // (guards the "summary computed from a different source than the body" bug class).
+  const treatments = selectedTooth == null
+    ? treatmentsProp
+    : treatmentsProp.filter((t) => t.toothNumber === selectedTooth);
+  const carriedOverItems = selectedTooth == null
+    ? carriedOverItemsProp
+    : carriedOverItemsProp.filter((i) => i.toothNumber === selectedTooth);
+  // FIX-002 coherence: once carry-over actually runs, the copied rows live in the
+  // CURRENT visit (so they arrive in `treatments` with carriedOver=true) AND surface in
+  // the plan-derived `carriedOverItems`. Drive the main "This Visit" list + subtotal from
+  // the NON-carried rows only, so each carried row is displayed and totalled exactly once
+  // (in the Carried-Over section) — never double-counted in the Grand Total.
+  const nativeTreatments = treatments.filter((t) => !t.carriedOver);
   // WR-01: with no active visit, visitId is '' → inline mutations would hit
   // PATCH /dental/visits//treatments/:id (invalid). Force read-only so no edit,
   // dismiss, price, notes, or mark-done control can fire against an empty visitId.
@@ -115,38 +138,105 @@ export function TreatmentTable({
     }
   }, [isMarkDoneError]);
 
-  const hasRows = treatments.length > 0 || carriedOverItems.length > 0;
-  const completedCount = treatments.filter(
+  // Reset the completed-toggle when switching visits. The component is reused (not
+  // remounted) as the carousel changes visitId, so without this a "Hide/Show" choice
+  // would leak from one visit to the next.
+  useEffect(() => {
+    setShowCompleted(false);
+  }, [visitId]);
+
+  const hasRows = nativeTreatments.length > 0 || carriedOverItems.length > 0;
+  const completedCount = nativeTreatments.filter(
     (t) => t.status === 'performed' || t.status === 'verified',
   ).length;
+  // A visit is "pending" if it has any not-yet-done work. When nothing is pending
+  // (e.g. a finished/locked historical visit), there are no rows to focus on, so the
+  // hide-completed default would leave the table empty under a real money total.
+  const hasPending = nativeTreatments.some(
+    (t) => t.status !== 'performed' && t.status !== 'verified',
+  );
 
   // TXTBL-01: subtotal computations
   // price contract: priceCents (API) ÷ 100 → dollars (display); t.priceAmount already in dollars
-  const thisVisitTotal = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
+  // NOTE: this sums ALL native (this-visit, non-carried) treatments, including
+  // dismissed/declined-priced ones. Those rows also render (the filter below only hides
+  // performed/verified), so visible rows still match this total. Carried-over rows are
+  // summed separately below so the Grand Total never counts a carried row twice.
+  const thisVisitTotal = nativeTreatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
   const carriedOverTotal = carriedOverItems.reduce(
     (sum, i) => sum + (i.priceCents / 100), // price contract: priceCents (API) ÷ 100 → dollars (display)
     0,
   );
   const grandTotal = thisVisitTotal + carriedOverTotal;
 
-  // TXTBL-05: filter displayed treatments
-  const displayedTreatments = showCompleted
-    ? treatments
-    : treatments.filter((t) => t.status !== 'performed' && t.status !== 'verified');
+  // TXTBL-05: filter displayed treatments.
+  // Force-show completed rows when nothing is pending, so an all-completed visit never
+  // renders an empty body beneath a non-zero Grand Total.
+  const effectiveShowCompleted = showCompleted || !hasPending;
+  const displayedTreatments = effectiveShowCompleted
+    ? nativeTreatments
+    : nativeTreatments.filter((t) => t.status !== 'performed' && t.status !== 'verified');
 
   if (!hasRows) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[80px] text-sm text-muted-foreground">
-        No treatments recorded for this visit.
+      <div className="flex flex-col items-center justify-center h-full min-h-[80px] gap-2 text-sm text-muted-foreground">
+        {selectedTooth != null ? (
+          <>
+            <span data-testid="tooth-filter-empty">No treatments for tooth #{selectedTooth}.</span>
+            {onClearToothFilter && (
+              <button
+                type="button"
+                data-testid="tooth-filter-clear"
+                onClick={onClearToothFilter}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Show all teeth
+              </button>
+            )}
+          </>
+        ) : (
+          'No treatments recorded for this visit.'
+        )}
       </div>
     );
   }
 
+  // P0-D: rows actually rendered for the active scope (main breakdown + carried).
+  // The chip count is derived from this so it can never disagree with the body.
+  const visibleRowCount = displayedTreatments.length + carriedOverItems.length;
+
   return (
     <div className="border border-border/50 rounded-lg overflow-hidden bg-card mx-4 my-3">
       <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border/50">
-        <span className="text-sm font-semibold">Treatment Breakdown</span>
-        {completedCount > 0 && (
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          Treatment Breakdown
+          {selectedTooth != null && (
+            <span
+              data-testid="tooth-filter-chip"
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+            >
+              Tooth #{selectedTooth}
+              <span data-testid="tooth-filter-count" className="tabular-nums">({visibleRowCount})</span>
+              {onClearToothFilter && (
+                <button
+                  type="button"
+                  data-testid="tooth-filter-clear"
+                  onClick={onClearToothFilter}
+                  aria-label="Show all teeth"
+                  className="ml-0.5 rounded-full px-1 text-primary/70 hover:text-primary"
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          )}
+        </span>
+        {/* Only show the toggle when it has a job: there is completed work to hide AND
+            pending work to fall back to. On an all-completed visit the rows are always
+            shown (effectiveShowCompleted), so a no-op toggle is hidden. Edge: if the last
+            pending item is marked done mid-session the toggle disappears and completed
+            rows stay visible — acceptable, the table is never left empty. */}
+        {hasPending && completedCount > 0 && (
           <button
             type="button"
             data-testid="view-completed-btn"
@@ -442,7 +532,7 @@ export function TreatmentTable({
           {/* TXTBL-01: dual subtotal rows above grand total */}
           {/* thisVisitTotal is always the grand total of ALL visit treatments (financial total), */}
           {/* regardless of the showCompleted filter — this is intentional for complete billing visibility */}
-          {treatments.length > 0 && (
+          {nativeTreatments.length > 0 && (
             <tr data-testid="subtotal-this-visit-row" className="border-t border-border/40">
               <td colSpan={7} className="px-4 py-1.5 text-right text-xs text-muted-foreground">
                 This Visit (all)
@@ -466,7 +556,7 @@ export function TreatmentTable({
           )}
 
           {/* Grand Total row */}
-          {(treatments.length > 0 || carriedOverItems.length > 0) && (
+          {(nativeTreatments.length > 0 || carriedOverItems.length > 0) && (
             <tr data-testid="grand-total-row" className="border-t-2 border-border font-semibold">
               <td colSpan={7} className="px-4 py-2 text-right text-sm">
                 Grand Total

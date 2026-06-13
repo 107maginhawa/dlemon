@@ -56,9 +56,23 @@ export async function createDentalPaymentPlan(
 
   const planRepo = new DentalPaymentPlanRepository(db);
 
-  // Check for existing plan
+  // Check for existing plan (one plan per invoice).
   const existing = await planRepo.findByInvoice(invoiceId);
   if (existing) {
+    // SL-04 / F-G16: offline-replay idempotency. A plan has no localId column, so
+    // the natural key is the request content: an identical re-create (same invoice
+    // + same plan shape) is a replay of the original (dropped ACK) — return the
+    // EXISTING plan (200) instead of erroring. A DIFFERENT shape is a genuine
+    // attempt to create a second/different plan → PLAN_EXISTS (one per invoice).
+    const sameShape =
+      existing.numberOfInstallments === body.numberOfInstallments &&
+      existing.frequency === body.frequency &&
+      existing.totalCents === invoice.balanceCents &&
+      existing.startDate.getTime() === new Date(body.startDate).getTime();
+    if (sameShape) {
+      const installments = await planRepo.findInstallmentsByPlan(existing.id);
+      return ctx.json({ ...existing, installments }, 200);
+    }
     throw new BusinessLogicError('Invoice already has a payment plan', 'PLAN_EXISTS');
   }
 

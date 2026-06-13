@@ -4,7 +4,7 @@
  * AC-003 / LF-BR-003 / LF-BR-004: Transition sync status. 'synced' is terminal.
  */
 
-import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { SyncLogRepository } from '../repos/sync-log.repo';
 import { SYNC_FSM, type SyncStatus, type DentalSyncLog } from '../repos/sync-log.schema';
@@ -25,10 +25,12 @@ export async function updateSyncLog(ctx: HandlerContext): Promise<Response> {
   const existing = await repo.findOneById(logId);
   if (!existing) throw new NotFoundError('Sync log not found');
 
-  // EF-PAT-004: branch-level authorization when branchId is present
-  if (existing.branchId) {
-    await assertBranchAccess(db, user.id, existing.branchId);
+  // G1 (P0): authorize unconditionally against the row's branch. A branchless
+  // row (legacy) has no tenant anchor and must not be mutable by anyone.
+  if (!existing.branchId) {
+    throw new ForbiddenError('Sync log has no branch and cannot be modified', 'BRANCH_ACCESS_DENIED');
   }
+  await assertBranchAccess(db, user.id, existing.branchId);
 
   // LF-BR-004: stale-write conflict detection
   if (body.version !== undefined && body.version !== existing.version) {

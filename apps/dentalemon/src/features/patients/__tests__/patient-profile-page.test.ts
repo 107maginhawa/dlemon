@@ -8,7 +8,14 @@ import { describe, test, expect, afterEach, beforeEach, mock } from 'bun:test';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
+import {
+  freshClient,
+  makeWrapper,
+  jsonResponse,
+  parseMoney,
+  assertTotalExplainedByRows,
+  assertCountMatchesItems,
+} from '@/test-utils';
 import { PatientProfilePage } from '../components/patient-profile-page';
 import type { Invoice } from '../hooks/use-patient-billing';
 import type { Visit } from '@/features/workspace/hooks/use-visits';
@@ -42,6 +49,7 @@ const VISITS: Visit[] = [
     id: 'v1',
     patientId: 'p1',
     status: 'completed',
+    visitType: 'general',
     chiefComplaint: 'Tooth pain',
     createdAt: '2026-03-05T08:00:00Z',
     completedAt: '2026-03-05T10:00:00Z',
@@ -50,6 +58,7 @@ const VISITS: Visit[] = [
     id: 'v2',
     patientId: 'p1',
     status: 'completed',
+    visitType: 'hygiene',
     chiefComplaint: 'Routine cleaning',
     createdAt: '2026-01-10T08:00:00Z',
     completedAt: '2026-01-10T09:00:00Z',
@@ -190,5 +199,193 @@ describe('PatientProfilePage', () => {
     installFetch({ profileError: true });
     renderPage();
     await waitFor(() => expect(screen.getByTestId('profile-error')).not.toBeNull());
+  });
+
+  // ── FR2.4: demographics edit flow ─────────────────────────────────────────
+
+  test('FR2.4: Edit button opens the form prefilled; form is absent until opened', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    // Conditionally rendered — no edit fields in the DOM until opened.
+    expect(screen.queryByLabelText(/first name/i)).toBeNull();
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    expect(firstName.value).toBe('Russel');
+  });
+
+  test('FR2.4: cancel after editing then reopen shows original values (no stale state)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName1 = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    await user.clear(firstName1);
+    await user.type(firstName1, 'Garbage');
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    // Reopen — must reflect the original 'Russel', not the discarded 'Garbage'.
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName2 = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    expect(firstName2.value).toBe('Russel');
+  });
+
+  test('FR2.4: saving the edit PATCHes /dental/patients/:id with the demographics body', async () => {
+    const user = userEvent.setup();
+    let patchMethod = '';
+    let patchBody: { firstName?: string; lastName?: string; contactInfo?: { email?: string; phone?: string } } | null = null;
+
+    global.fetch = mock(async (url: string | Request) => {
+      const req = url instanceof Request ? url : null;
+      const urlStr = req ? req.url : (url as string);
+      const method = req ? req.method : 'GET';
+      if (urlStr.includes('follow-up-notes')) return jsonResponse({ notes: [], total: 0 });
+      if (urlStr.includes('/visits')) return jsonResponse({ data: [], pagination: EMPTY_PAGINATION });
+      if (urlStr.includes('dental/invoices') || urlStr.includes('billing/invoices')) {
+        return jsonResponse({ data: [], total: 0 });
+      }
+      if (urlStr.includes('dental/patients')) {
+        if (method === 'PATCH' && req) {
+          patchMethod = method;
+          patchBody = (await req.clone().json()) as typeof patchBody;
+          return jsonResponse({
+            ...RAW_PROFILE,
+            displayName: 'Mariana Herrera',
+            person: { ...RAW_PROFILE.person, firstName: 'Mariana' },
+          });
+        }
+        return jsonResponse(RAW_PROFILE);
+      }
+      return jsonResponse({});
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const firstName = (await screen.findByLabelText(/first name/i)) as HTMLInputElement;
+    await user.clear(firstName);
+    await user.type(firstName, 'Mariana');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(patchMethod).toBe('PATCH'));
+    expect(patchBody?.firstName).toBe('Mariana');
+    // #14: a demographics-only edit must NOT send contactInfo (no no-op audit).
+    expect(patchBody?.contactInfo).toBeUndefined();
+  });
+
+  test('#14: editing the email PATCHes a contactInfo body', async () => {
+    const user = userEvent.setup();
+    let patchBody: { contactInfo?: { email?: string; phone?: string } } | null = null;
+
+    global.fetch = mock(async (url: string | Request) => {
+      const req = url instanceof Request ? url : null;
+      const urlStr = req ? req.url : (url as string);
+      const method = req ? req.method : 'GET';
+      if (urlStr.includes('follow-up-notes')) return jsonResponse({ notes: [], total: 0 });
+      if (urlStr.includes('/visits')) return jsonResponse({ data: [], pagination: EMPTY_PAGINATION });
+      if (urlStr.includes('dental/invoices') || urlStr.includes('billing/invoices')) {
+        return jsonResponse({ data: [], total: 0 });
+      }
+      if (urlStr.includes('dental/patients')) {
+        if (method === 'PATCH' && req) {
+          patchBody = (await req.clone().json()) as typeof patchBody;
+          return jsonResponse(RAW_PROFILE);
+        }
+        return jsonResponse(RAW_PROFILE);
+      }
+      return jsonResponse({});
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const email = (await screen.findByLabelText(/email/i)) as HTMLInputElement;
+    await user.clear(email);
+    await user.type(email, 'updated@email.com');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(patchBody?.contactInfo).toBeDefined());
+    expect(patchBody?.contactInfo?.email).toBe('updated@email.com');
+    // Unchanged phone is not resent (partial body).
+    expect(patchBody?.contactInfo?.phone).toBeUndefined();
+  });
+
+  // ── Coherence oracle (workflow-verification backfill) ─────────────────────
+  // Pins the summary-vs-body invariants the brief's COHERENCE ORACLE requires:
+  // a displayed total/count must be explained by the rows actually rendered,
+  // and expected is derived from the live DOM — not the fixture.
+
+  test('COHERENCE: Payment "Outstanding Balance" equals the sum of rendered row balances', async () => {
+    const user = userEvent.setup();
+    // Multiple invoices with non-zero balances → the summary must reconcile.
+    const OUTSTANDING: Invoice[] = [
+      {
+        id: 'inv-a', invoiceNumber: 'INV-A', patientId: 'p1', visitDate: '2026-02-01',
+        totalCents: 500000, paidCents: 200000, balanceCents: 300000, status: 'partial',
+        createdAt: '2026-02-01T10:00:00Z',
+      },
+      {
+        id: 'inv-b', invoiceNumber: 'INV-B', patientId: 'p1', visitDate: '2026-03-01',
+        totalCents: 150000, paidCents: 0, balanceCents: 150000, status: 'issued',
+        createdAt: '2026-03-01T10:00:00Z',
+      },
+      {
+        id: 'inv-c', invoiceNumber: 'INV-C', patientId: 'p1', visitDate: '2026-01-01',
+        totalCents: 80000, paidCents: 80000, balanceCents: 0, status: 'paid',
+        createdAt: '2026-01-01T10:00:00Z',
+      },
+    ];
+    installFetch({ invoices: OUTSTANDING });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('tab-payment')).not.toBeNull());
+    await user.click(screen.getByTestId('tab-payment'));
+    await waitFor(() => expect(screen.getByText('INV-A')).not.toBeNull());
+
+    // Derive the per-row Balance amounts from the rendered DOM. Each invoice row
+    // is a <li> grid: [Date, Invoice, Amount, Balance, Status]. The Balance cell
+    // is the 4th <span> (index 3); Amount (index 2) is excluded so the oracle
+    // can't be coincidentally satisfied by the wrong column.
+    const rows = Array.from(document.querySelectorAll('li')).filter((li) =>
+      /INV-[ABC]/.test(li.textContent ?? ''),
+    );
+    expect(rows.length).toBe(3);
+    const rowBalances = rows.map((li) => {
+      const cells = Array.from(li.querySelectorAll('span'));
+      return parseMoney(cells[3]?.textContent);
+    });
+
+    // Read the "Outstanding Balance" summary value the user sees.
+    const summaryLabel = screen.getByText('Outstanding Balance');
+    const summaryValue = parseMoney(summaryLabel.parentElement?.querySelector('span:last-child')?.textContent);
+
+    // The displayed total must equal the sum of the rendered row balances.
+    assertTotalExplainedByRows({
+      total: summaryValue,
+      rowAmounts: rowBalances,
+      label: 'Outstanding Balance',
+    });
+    // 3000 + 1500 + 0 = 4500 (₱), sanity floor.
+    expect(summaryValue).toBe(4500);
+  });
+
+  test('COHERENCE: "Recent Visits" header count matches the rendered visit rows', async () => {
+    installFetch({ visits: VISITS });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('visit-history-section')).not.toBeNull());
+    await waitFor(() => expect(screen.getByText('Tooth pain')).not.toBeNull());
+
+    const section = screen.getByTestId('visit-history-section');
+    // Header reads "{N} total" — extract N from the live DOM.
+    const headerCount = parseMoney(
+      (section.textContent?.match(/(\d+)\s+total/) ?? [])[1],
+    );
+    // Count the rendered visit <li> rows.
+    const renderedRows = section.querySelectorAll('ul > li').length;
+
+    assertCountMatchesItems({
+      count: headerCount,
+      itemCount: renderedRows,
+      label: 'Recent Visits header',
+    });
+    expect(renderedRows).toBe(VISITS.length);
   });
 });

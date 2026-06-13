@@ -249,9 +249,27 @@ model PerioChart {
   summaryBopPercent?: float64;
   summaryMeanDepth?: float64;
   summaryDeepPocketCount?: int32;
+
+  @doc("FIX-001: persisted 2017 AAP/EFP stage of record (frozen at completion). null for legacy charts completed before persistence and when there is no CAL evidence to stage.")
+  stage?: PerioStage | null;
+
+  @doc("FIX-001: persisted 2017 AAP/EFP grade of record. null only for legacy pre-persistence charts.")
+  grade?: PerioGrade | null;
+
+  @doc("FIX-001: persisted extent descriptor of record. null when unclassifiable or for legacy charts.")
+  extent?: PerioExtent | null;
+
+  @doc("FIX-002: the grading risk-factor evidence submitted at completion, so the grade is reproducible/auditable. null/absent for legacy charts.")
+  riskFactors?: PerioRiskFactors | null;
+
   readings: PerioToothReading[];
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
+}
+
+@doc("Longitudinal history: a patient's completed/locked perio charts (most recent first), each with full readings, for multi-exam comparison.")
+model PerioChartHistory {
+  data: PerioChart[];
 }
 
 model CreatePerioChartRequest {
@@ -260,8 +278,8 @@ model CreatePerioChartRequest {
   notes?: string;
 }
 
-@doc("P1-6: optional 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted.")
-model CompletePerioChartRequest {
+@doc("P1-6: 2017 AAP/EFP grading risk factors + staging context that the chart itself does not capture (sourced from medical history). All optional; clinical defaults apply when omitted. Persisted at completion (FIX-002) so the grade is reproducible/auditable.")
+model PerioRiskFactors {
   @doc("Teeth lost due to periodontitis (staging complexity).")
   toothLossCount?: int32;
 
@@ -291,6 +309,11 @@ model CompletePerioChartRequest {
 
   @doc("Whether involvement follows a molar/incisor pattern (extent descriptor).")
   molarIncisorPattern?: boolean;
+}
+
+@doc("P1-6: the completion request body — the grading risk factors (same shape persisted on the chart).")
+model CompletePerioChartRequest {
+  ...PerioRiskFactors;
 }
 
 @doc("2017 AAP/EFP stage (severity/complexity).")
@@ -326,8 +349,8 @@ model CompletePerioChartResponse {
   @doc("P1-6: computed 2017 AAP/EFP stage. null when there is no CAL evidence to stage.")
   stage?: PerioStage | null;
 
-  @doc("P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence).")
-  grade?: PerioGrade;
+  @doc("P1-6: computed 2017 AAP/EFP grade (defaults to B without risk evidence). Nullable for contract symmetry with the read paths / persisted column (legacy charts).")
+  grade?: PerioGrade | null;
 
   @doc("P1-6: computed extent descriptor. null when no teeth were examined.")
   extent?: PerioExtent | null;
@@ -346,6 +369,17 @@ namespace DentalPerioModule {
     create(
       @body body: CreatePerioChartRequest
     ): ApiCreatedResponse<PerioChart>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    @get
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("listPerioChartsForPatient")
+    @doc("Multi-exam comparison: list a patient's completed/locked perio charts (most recent first), each with readings.")
+    listForPatient(
+      @query patientId: UUID
+    ): ApiOkResponse<PerioChartHistory>
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 

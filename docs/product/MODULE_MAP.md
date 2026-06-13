@@ -10,6 +10,8 @@ source: docs/prd/v3-dentalemon.md, DOMAIN_MODEL.md, handler directories
 
 > **Layout & Bucketing**: Handler sub-domain folder structure and handler-count thresholds are defined in
 > [`docs/development/MODULE_TEMPLATE.md`](../development/MODULE_TEMPLATE.md).
+> **Handler-dir naming and spec→dir mapping**: Handler directories are named from the OpenAPI tag, not the spec filename; some spec files intentionally distribute handlers across multiple bounded-context dirs — see
+> [`docs/development/MODULE_TEMPLATE.md` § Handler-Dir Naming + Spec-File → Handler-Dir Mapping](../development/MODULE_TEMPLATE.md#handler-dir-naming-tag-derived-not-spec-filename-derived).
 > Import boundary rules (what may cross module lines and what may not) are enforced via ESLint and documented in
 > [`docs/development/MODULE_BOUNDARIES.md`](../development/MODULE_BOUNDARIES.md).
 

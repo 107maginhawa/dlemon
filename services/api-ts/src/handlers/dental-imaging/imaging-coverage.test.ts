@@ -573,7 +573,7 @@ describe('ImagingMgmt_getImagingStudy wrapper', () => {
 // ---------------------------------------------------------------------------
 
 describe('ImagingMgmt_deleteImage wrapper', () => {
-  test('delegates to deleteImage — dentist can delete, returns 200', async () => {
+  test('delegates to deleteImage — dentist can delete, returns 204', async () => {
     const { ImagingMgmt_deleteImage } = await import('./ImagingMgmt_deleteImage');
     const app = buildApp(ImagingMgmt_deleteImage as any, {
       user: DENTIST_USER,
@@ -582,7 +582,7 @@ describe('ImagingMgmt_deleteImage wrapper', () => {
       path: '/:imageId',
     });
     const res = await app.request(`/${IMAGE_ID}`, { method: 'DELETE' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 
   test('returns 401 when unauthenticated', async () => {
@@ -849,7 +849,7 @@ describe('ImagingFindingsMgmt_createFinding wrapper', () => {
 // ---------------------------------------------------------------------------
 
 describe('ImagingFindingsMgmt_listFindings wrapper', () => {
-  test('delegates to listFindings — returns 200 with data array', async () => {
+  test('delegates to listFindings — returns 200 with items array', async () => {
     const { ImagingFindingsMgmt_listFindings } = await import('./ImagingFindingsMgmt_listFindings');
     const app = buildApp(ImagingFindingsMgmt_listFindings as any, {
       user:   DENTIST_USER,
@@ -860,7 +860,7 @@ describe('ImagingFindingsMgmt_listFindings wrapper', () => {
     const res = await app.request(`/${IMAGE_ID}/findings`, { method: 'GET' });
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('returns 404 when image missing', async () => {
@@ -1105,6 +1105,8 @@ function makeCephCoverageDb(opts: {
     const hasLandmarkCode = tableRef?.landmarkCode !== undefined;
     const hasAnalysisType = tableRef?.analysisType !== undefined;
     const hasSnapshot     = tableRef?.snapshot    !== undefined;
+    // G6: imaging_calibration — getLatestCalibration does .where().orderBy().limit(1).
+    const hasKnownDistance = tableRef?.knownDistanceMm !== undefined;
     const isMaxVersionQuery = hasSnapshot && fields != null && 'maxVersion' in fields;
     const hasBranchNameField = fields != null && 'branchName' in fields;
 
@@ -1136,6 +1138,14 @@ function makeCephCoverageDb(opts: {
         return Object.assign(rows, {
           limit: (_n: number) => rows,
           orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+        });
+      }
+      if (hasKnownDistance) {
+        // G6: no versioned calibration record by default → getLatestCalibration null.
+        const rows = Promise.resolve([]);
+        return Object.assign(rows, {
+          orderBy: (_col: any) => Object.assign(rows, { limit: (_n: number) => rows }),
+          limit: (_n: number) => rows,
         });
       }
       if (hasStudyId) {

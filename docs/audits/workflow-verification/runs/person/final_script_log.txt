@@ -1,0 +1,7 @@
+step 0 action: params: base_url=http://localhost:3003 api_url=http://localhost:7213 email=person_smoke_1780924589@example.com first_name=Smoke last_name=Person1780924589 dob_year=1990
+step 1 action: signup->verify(200)->onboarding url=http://localhost:3003/onboarding step1_visible=True
+step 2 action: step1 filled + DOB=1990-06-15 -> Next -> step2_visible=True
+step 3 action: skip address -> POST /persons status=201 left_onboarding=True url=http://localhost:3003/dental-onboarding
+step 4 action: GET /persons/me status=200 readable=True
+step 5 action: re-navigate /onboarding -> url=http://localhost:3003/dental-onboarding blocked=True
+FINAL DATUM: 5/5 CP pass (email=person_smoke_1780924589@example.com): CP1_reaches_onboarding=PASS, CP2_advances_to_step2=PASS, CP3_create_201=PASS, CP4_me_readable=PASS, CP5_owner_guard_blocks_reentry=PASS

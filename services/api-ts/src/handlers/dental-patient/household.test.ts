@@ -191,4 +191,29 @@ describe('P1-27 — household / guarantor', () => {
     const res = await app.request(`/dental/patients/${OUTSIDER_PT}/household`);
     expect(res.status).toBe(204);
   });
+
+  // EF-PAT-001 symmetry: addHouseholdMember already blocks archived patients;
+  // removeHouseholdMember must too (you don't restructure an archived patient's
+  // household). 403 PATIENT_ARCHIVED.
+  test('EF-PAT-001: removing an archived member returns 403 PATIENT_ARCHIVED', async () => {
+    const { patients } = await import('@/handlers/patient/repos/patient.schema');
+    const app = buildApp();
+    const created = (await (await makeHousehold(app)).json()) as any;
+    const hid = created.household.id;
+    await app.request(`/dental/households/${hid}/members`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: CHILD_PT, relationship: 'child' }),
+    });
+
+    await db.update(patients).set({ status: 'archived', archivedAt: new Date() }).where(eq(patients.id, CHILD_PT));
+    try {
+      const res = await app.request(`/dental/households/${hid}/members/${CHILD_PT}`, { method: 'DELETE' });
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as any;
+      expect(body.code).toBe('PATIENT_ARCHIVED');
+    } finally {
+      // patients aren't cleaned in afterEach — restore so other tests see an active CHILD_PT
+      await db.update(patients).set({ status: 'active', archivedAt: null }).where(eq(patients.id, CHILD_PT));
+    }
+  });
 });

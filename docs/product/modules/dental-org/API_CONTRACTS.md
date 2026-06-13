@@ -114,7 +114,7 @@ Invite staff to a branch.
 | `branch_id` | string (uuid) | NO | |
 | `person_id` | string (uuid) | NO | |
 | `role` | string | NO | |
-| `status` | string | NO | `active`, `invited`, `revoked` |
+| `status` | string | NO | `active`, `invited`, `inactive` (implemented lifecycle — `revoked` is a legacy enum value not emitted) |
 | `created_at` | string (date-time) | NO | |
 
 **Errors:** `VALIDATION_ERROR(400)`, `MEMBERSHIP_CONFLICT(409)`, `FORBIDDEN(403)`
@@ -134,12 +134,17 @@ Update membership role or status.
 | Field | Type | Nullable | Required | Enum | Example |
 |-------|------|----------|----------|------|---------|
 | `role` | string | YES | NO | `staff_scheduling`, `staff_full`, `dentist_associate`, `dentist_owner` | `"dentist_associate"` |
-| `status` | string | YES | NO | `active`, `revoked` | `"revoked"` |
+| `status` | string | YES | NO | `active`, `inactive` | `"inactive"` |
 
 **Response 200:** `{ data: Membership }`
 
+> **Implementation note:** deactivation is performed via `DELETE /dental/org/members/:memberId`
+> (returns 204), which sets `status = inactive` through the membership lifecycle state machine
+> (`invited → active → inactive`, see MODULE_SPEC §8). The `revoked` enum value is legacy and
+> unused by the lifecycle.
+
 **Errors:** `NOT_FOUND(404)`, `FORBIDDEN(403)`, `VALIDATION_ERROR(422)`
-**Events emitted:** DE-023 MembershipRevoked (when status → revoked)
+**Events emitted:** DE-023 MembershipRevoked (when status → inactive)
 
 ---
 

@@ -8,12 +8,12 @@
  *      POST /dental/patients/:patientId/treatment-plan/accept?branchId=...
  *      PATCH /dental/visits/:visitId/treatments/:treatmentId?branchId=...
  *
- * NOTE: The generated SDK types for getTreatmentPlan, acceptTreatmentPlan, and
- * updateDentalTreatment declare `query?: never` (branchId is not in the TypeSpec
- * query schema). The backend does require branchId. We inject it via Object.assign
- * so the underlying hey-api client serializes it as a URL query parameter.
- * This is a spec-drift TODO — once TypeSpec is updated and the SDK is regenerated,
- * the Object.assign override can be removed and `query: { branchId }` used directly.
+ * NOTE: getTreatmentPlan and acceptTreatmentPlan model `branchId` as a required
+ * @query param, so they pass a typed `query: { branchId }` directly.
+ * updateDentalTreatment does NOT model branchId — its handler derives the branch
+ * from the visit (visitId path param) — so the decline/assign-phase mutations send
+ * branchId via `withBranchQuery` (a defensive, handler-ignored query param) rather
+ * than a typed query.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -21,52 +21,48 @@ import {
   acceptTreatmentPlan,
   updateDentalTreatment,
 } from '@monobase/sdk-ts/generated';
-import type { UpdateDentalTreatmentRequest } from '@monobase/sdk-ts/generated';
+import type {
+  UpdateDentalTreatmentRequest,
+  TreatmentPlanResponse,
+  TreatmentPlanItem as SdkTreatmentPlanItem,
+  DentalTreatmentPhase,
+} from '@monobase/sdk-ts/generated';
 
 /**
- * Build extra SDK options for branchId query param injection.
- * branchId is absent from the TypeSpec schema (spec drift) so the generated
- * types say `query?: never`. We use Object.assign to smuggle it through without
- * a double-cast that would trip the no-restricted-syntax GAP-D lint rule.
+ * Build extra SDK options for branchId query injection — used ONLY by
+ * updateDentalTreatment (decline / assign-phase). That operation does not model
+ * branchId in TypeSpec (its handler derives the branch from the visit), so the
+ * generated type says `query?: never`; Object.assign smuggles a defensive branchId
+ * through without a double-cast that would trip the no-restricted-syntax GAP-D rule.
  */
 function withBranchQuery(branchId: string | null): Record<string, unknown> {
   return branchId ? { query: { branchId } } : {};
 }
 
-/** P1-18: clinical sequencing phase (industry-standard 5-phase model). */
-export type TreatmentPhase =
-  | 'systemic'
-  | 'disease_control'
-  | 're_evaluation'
-  | 'definitive'
-  | 'maintenance';
+/**
+ * P1-18: clinical sequencing phase (industry-standard 5-phase model). Aliased to
+ * the generated SDK contract type so the FE consumes the single source of type
+ * truth rather than a hand-maintained duplicate that can drift from the wire.
+ */
+export type TreatmentPhase = DentalTreatmentPhase;
 
-export interface TreatmentPlanItem {
-  id: string;
-  toothNumber: number | null;
-  cdtCode: string;
-  description: string;
-  surfaces: string[] | null;
-  priceCents: number;
-  status: 'diagnosed' | 'planned' | 'declined';
-  conditionCode: string | null;
-  visitId: string;
-  carriedOver: boolean;
-  /** P1-18: clinical phase (null = unphased) */
-  phase?: TreatmentPhase | null;
-  /** P1-18: intra-phase ordering */
-  priority?: number;
-  reason?: string;
-}
+/**
+ * A treatment-plan line item — the generated contract type. `toothNumber` and
+ * `carriedOver` are optional because the `byTooth` grouping omits them (only the
+ * flat `treatments[]` projection carries them), and `status` is the full
+ * DentalTreatmentStatus (a plan surfaces diagnosed/planned/declined, but
+ * consumers like treatment-table also render performed/verified/dismissed rows).
+ */
+export type TreatmentPlanItem = SdkTreatmentPlanItem;
 
-export interface TreatmentPlanData {
-  patientId: string;
-  totalEstimateCents: number;
-  treatmentCount: number;
-  toothCount: number;
-  byTooth: Record<string | number, TreatmentPlanItem[]>;
-  treatments: TreatmentPlanItem[];
-}
+/**
+ * Patient treatment-plan aggregate (getTreatmentPlan) — the generated contract
+ * type. `treatmentCount`/`byTooth` are OPTIONAL: the backend omits them on the
+ * empty-plan response (a patient with no visits), so consumers must guard them
+ * (e.g. `data.treatmentCount ?? 0`). `completedToothNumbers` (CHART-XV) drives
+ * the chart's cumulative Completed layer.
+ */
+export type TreatmentPlanData = TreatmentPlanResponse;
 
 interface UseTreatmentPlanOptions {
   patientId: string | null;
@@ -81,43 +77,34 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
   const query = useQuery({
     queryKey,
     queryFn: async (): Promise<TreatmentPlanData> => {
-      if (!patientId) throw new Error('patientId is required');
-      // branchId is a real required backend query param but is absent from the
-      // TypeSpec schema (spec drift). Inject it via Object.assign on the options
-      // object so hey-api serializes it as a URL query parameter.
-      const opts = Object.assign(
-        { path: { patientId } },
-        withBranchQuery(branchId),
-      );
-      const result = await getTreatmentPlan(opts as Parameters<typeof getTreatmentPlan>[0]);
+      if (!patientId || !branchId) throw new Error('patientId and branchId are required');
+      const result = await getTreatmentPlan({ path: { patientId }, query: { branchId } });
       // Normalize SDK errors into standard Error objects so consumers and tests
       // can rely on .message containing the status code regardless of whether
       // the error interceptor (installed by ApiProvider) is present.
-      if (!result.response?.ok) {
+      if (!result.response?.ok || !result.data) {
         const status = result.response?.status ?? 0;
         // `result.error` exists on the error branch of the SDK union type.
         // Use type-narrowing via a field-presence check to access it safely.
         const errBody = ('error' in result ? result.error : undefined) as { message?: string } | undefined;
         throw new Error(errBody?.message ?? `Failed to fetch treatment plan (${status})`);
       }
-      // The SDK's TreatmentPlanResponse type is stale (TypeSpec spec drift);
-      // the actual backend returns the enriched TreatmentPlanData shape.
-      // The `response.ok` guard above ensures data is present; the JSON-level
-      // shape is always TreatmentPlanData (spec-drift documented in file header).
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      return result.data as any as TreatmentPlanData;
+      // result.data is the generated TreatmentPlanResponse (= TreatmentPlanData);
+      // the `!result.data` guard above narrows away `undefined`, so no cast is needed.
+      return result.data;
     },
     enabled: !!patientId && !!branchId,
   });
 
   const acceptMutation = useMutation({
     mutationFn: async (consentFormId?: string) => {
-      if (!patientId) throw new Error('patientId required');
-      const opts = Object.assign(
-        { path: { patientId }, body: { consentFormId }, throwOnError: true as const },
-        withBranchQuery(branchId),
-      );
-      const { data } = await acceptTreatmentPlan(opts as Parameters<typeof acceptTreatmentPlan>[0]);
+      if (!patientId || !branchId) throw new Error('patientId and branchId are required');
+      const { data } = await acceptTreatmentPlan({
+        path: { patientId },
+        query: { branchId },
+        body: { consentFormId },
+        throwOnError: true,
+      });
       return data;
     },
     onSuccess: () => {

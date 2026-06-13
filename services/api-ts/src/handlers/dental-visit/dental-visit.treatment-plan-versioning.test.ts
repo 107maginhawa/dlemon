@@ -8,19 +8,11 @@
  * throw "Not implemented". Tests pass after GREEN impl below.
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { Hono } from 'hono';
-import { z } from 'zod';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import {
-  AcceptTreatmentPlanBody,
-  AcceptTreatmentPlanParams,
-  GetTreatmentPlanVersionParams,
-} from '@/generated/openapi/validators';
-import { acceptTreatmentPlan } from './treatments/acceptTreatmentPlan';
-import { getTreatmentPlanVersion } from './treatment-plans/getTreatmentPlanVersion';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -91,57 +83,6 @@ beforeAll(async () => {
   }).onConflictDoNothing();
 });
 
-// ─── Error handler ─────────────────────────────────────────────────────────────
-
-const ve = (result: any, c: any) => {
-  if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
-};
-
-// ─── App builder ───────────────────────────────────────────────────────────────
-
-function buildTestApp(user?: typeof TEST_USER) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    if (err instanceof z.ZodError) {
-      return c.json({ error: err.issues.map((i: any) => i.message).join('; ') }, 400);
-    }
-    console.error('Unhandled test error:', err);
-    return c.json({ error: 'Internal server error' }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('user', user ?? TEST_USER);
-    ctx.set('database', db);
-    ctx.set('logger', null);
-    await next();
-  });
-
-  app.post(
-    '/dental/patients/:patientId/treatment-plan/accept',
-    (c, next) => {
-      const result = AcceptTreatmentPlanBody.safeParse(c.req.param());
-      return ve(result, c) ?? next();
-    },
-    (c) => acceptTreatmentPlan(c as any),
-  );
-
-  app.get(
-    '/dental/patients/:patientId/treatment-plan/versions/:versionId',
-    (c, next) => {
-      const result = GetTreatmentPlanVersionParams.safeParse(c.req.param());
-      return ve(result, c) ?? next();
-    },
-    (c) => getTreatmentPlanVersion(c as any),
-  );
-
-  return app;
-}
-
 // ─── Teardown ──────────────────────────────────────────────────────────────────
 
 afterEach(async () => {
@@ -158,7 +99,7 @@ afterEach(async () => {
 
 describe('acceptTreatmentPlan', () => {
   test('creates version 1 snapshot for patient with no prior versions', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
@@ -172,7 +113,7 @@ describe('acceptTreatmentPlan', () => {
   });
 
   test('creates version 2 on second accept (new version, old preserved)', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const first = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
@@ -192,7 +133,7 @@ describe('acceptTreatmentPlan', () => {
   });
 
   test('snapshot contains live plan fields', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
@@ -204,23 +145,8 @@ describe('acceptTreatmentPlan', () => {
   });
 
   test('returns 401 without auth', async () => {
-    const app = buildTestApp(undefined);
-    // Manually override user to null
-    const noAuthApp = new Hono();
-    noAuthApp.onError((err, c) => {
-      if (err instanceof AppError) return c.json({ error: err.message }, err.statusCode as any);
-      return c.json({ error: 'Internal server error' }, 500);
-    });
-    noAuthApp.use('*', async (c, next) => {
-      (c as any).set('user', null);
-      (c as any).set('database', db);
-      (c as any).set('logger', null);
-      await next();
-    });
-    noAuthApp.post('/dental/patients/:patientId/treatment-plan/accept', (c) =>
-      acceptTreatmentPlan(c as any),
-    );
-    const res = await noAuthApp.request(
+    const app = buildTestApp({ db });
+    const res = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
     );
@@ -228,7 +154,7 @@ describe('acceptTreatmentPlan', () => {
   });
 
   test('returns 400 without branchId query param', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/accept`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
@@ -237,7 +163,7 @@ describe('acceptTreatmentPlan', () => {
   });
 
   test('returns 422 PATIENT_ARCHIVED when patient is archived and writes no snapshot', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const { treatmentPlanVersions } = await import('./repos/treatment-plan-version.schema');
 
     const res = await app.request(
@@ -259,7 +185,7 @@ describe('acceptTreatmentPlan', () => {
 
 describe('getTreatmentPlanVersion', () => {
   test('returns the created snapshot by id', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const acceptRes = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
@@ -278,7 +204,7 @@ describe('getTreatmentPlanVersion', () => {
   });
 
   test('returns 404 for unknown versionId', async () => {
-    const app = buildTestApp();
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(
       `/dental/patients/${PATIENT_ID}/treatment-plan/versions/00000000-0000-0000-0000-000000000000?branchId=${BRANCH_ID}`,
     );

@@ -396,6 +396,13 @@ import {
   computeJarabakAnalysis,
 } from './analyses'
 
+/**
+ * Version of the measurement engine (geometry + per-analysis formulas). Bump
+ * whenever a computed metric's formula changes so a finalized report can pin the
+ * exact engine it was generated with (reproducibility — guide §12/§16/§31.6).
+ */
+export const FORMULA_VERSION = '1.0.0'
+
 /** Supported cephalometric analysis protocols (keys for compute + norms). */
 export const ANALYSIS_TYPES = [
   'steiner_hybrid_sn',

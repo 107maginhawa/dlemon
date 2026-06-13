@@ -94,6 +94,8 @@ prescription_id: jsonpath "$.id"
 jsonpath "$.drugName" == "Amoxicillin"
 jsonpath "$.dosage" == "500mg"
 jsonpath "$.dispenseAsWritten" == false
+# EM-CLI-012: new prescriptions default to `pending` (status now on the contract).
+jsonpath "$.status" == "pending"
 
 
 # 3. List prescriptions for visit
@@ -102,6 +104,7 @@ Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" count >= 1
+jsonpath "$.data[0].status" exists
 
 
 # 4. Update prescription
@@ -117,6 +120,75 @@ HTTP 200
 jsonpath "$.dosage" == "250mg"
 jsonpath "$.instructions" == "Take with food"
 jsonpath "$.drugName" == "Amoxicillin"
+# Field edit leaves the lifecycle status untouched.
+jsonpath "$.status" == "pending"
+
+
+# 4a. No-op self-transition (pending → pending) is not a legal edge → 422
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "pending"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "INVALID_PRESCRIPTION_TRANSITION"
+
+
+# 4b. Dispense the prescription (FSM: pending → dispensed) — EM-CLI-012 / WF-016
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "dispensed"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "dispensed"
+
+
+# 4c. Invalid transition from a terminal state (dispensed → cancelled) → 422
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "cancelled"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "INVALID_PRESCRIPTION_TRANSITION"
+
+
+# 4d. Create a second prescription to pin the cancel happy-path
+POST {{api}}/dental/visits/{{visit_id}}/prescriptions
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "prescriberMemberId": "{{dentist_member_id}}",
+  "drugName": "Ibuprofen",
+  "dosage": "400mg",
+  "frequency": "BID"
+}
+HTTP 201
+[Captures]
+prescription_id_2: jsonpath "$.id"
+[Asserts]
+jsonpath "$.status" == "pending"
+
+
+# 4e. Cancel the second prescription (FSM: pending → cancelled) → 200
+PATCH {{api}}/dental/visits/{{visit_id}}/prescriptions/{{prescription_id_2}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "cancelled"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "cancelled"
 
 
 # ============================================================
@@ -172,6 +244,90 @@ Content-Type: application/json
   "signatureData": "new-sig-data"
 }
 HTTP 422
+[Asserts]
+jsonpath "$.code" == "CONSENT_FORM_SIGNED"
+
+
+# ============================================================
+# CONSENT REVOCATION + REFUSALS (WF-035) — FIX-005 (Batch B)
+# ============================================================
+
+# 8b. Create a second, UNSIGNED consent form to exercise the revoke flow.
+# (Step 5's form is signed at step 7, so a fresh unsigned form is required.)
+POST {{api}}/dental/visits/{{visit_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "templateId": "tpl-revocable-consent",
+  "templateName": "Revocable Consent"
+}
+HTTP 201
+[Captures]
+revocable_consent_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.signed" == false
+jsonpath "$.revoked" == false
+
+
+# 8c. Revoke the unsigned consent form (WF-035). NOTE: revoke is PATCH (sign is
+# POST). The handler returns the full row, so `revoked` flips true and `signed`
+# stays false — now schema-backed after the ConsentForm model gained `revoked`.
+PATCH {{api}}/dental/visits/{{visit_id}}/consents/{{revocable_consent_id}}/revoke
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.revoked" == true
+jsonpath "$.signed" == false
+
+
+# 8d. Signing a revoked consent form is rejected (V-CLN-010 mutual exclusion):
+# 422 CONSENT_FORM_REVOKED (distinct from the signed→re-sign 422 above).
+POST {{api}}/dental/visits/{{visit_id}}/consents/{{revocable_consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "CONSENT_FORM_REVOKED"
+
+
+# 8e. Re-revoking an already-revoked form conflicts (409).
+PATCH {{api}}/dental/visits/{{visit_id}}/consents/{{revocable_consent_id}}/revoke
+Cookie: better-auth.session_token={{session_token}}
+HTTP 409
+
+
+# 8f. Record an informed refusal (precondition for the refusals-list pin).
+POST {{api}}/dental/visits/{{visit_id}}/consent-refusals
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "refusingMemberId": "{{dentist_member_id}}",
+  "procedureDescription": "Extraction of tooth #48",
+  "refusalReason": "Patient prefers conservative care",
+  "patientAcknowledgement": "I understand the risks of declining treatment."
+}
+HTTP 201
+[Asserts]
+jsonpath "$.procedureDescription" == "Extraction of tooth #48"
+jsonpath "$.refusingMemberId" == "{{dentist_member_id}}"
+
+
+# 8g. List informed refusals (WF-035 history surface). The handler emits a
+# non-canonical pagination object {totalCount,page,pageSize}; assert only the
+# array + totalCount to stay green against the actual shape.
+GET {{api}}/dental/visits/{{visit_id}}/consent-refusals
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" count >= 1
+jsonpath "$.pagination.totalCount" >= 1
 
 
 # ============================================================
@@ -378,11 +534,19 @@ jsonpath "$.originalRecordType" == "treatment"
 
 
 # 23. List amendments for visit
+# FIX-007 (FR1.16): the read-only amendments list reads reason / originalRecordType /
+# content off each row, so pin those fields on the list shape (not just the envelope).
+# §15: list returns the offset envelope {data,pagination}, NOT a bare array.
 GET {{api}}/dental/visits/{{visit_id}}/amendments
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" count >= 1
+jsonpath "$.data[0].reason" == "Documentation error"
+jsonpath "$.data[0].originalRecordType" == "treatment"
+jsonpath "$.data[0].content" exists
+jsonpath "$.data[0].id" exists
+jsonpath "$.pagination.totalCount" >= 1
 
 
 # ============================================================

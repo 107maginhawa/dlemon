@@ -5,29 +5,44 @@
 
 # Error Taxonomy — Dentalemon
 
-> All error responses follow the envelope defined in API_CONVENTIONS.md §2.4.
-> Error codes are SCREAMING_SNAKE_CASE strings. HTTP status drives client behavior; code drives display/logging.
+> All error responses use the **FLAT** envelope serialized by `core/errors.ts`
+> (`createBaseErrorFields`) and declared by TypeSpec `ErrorDetail`
+> (`specs/api/src/common/errors.tsp`). Error codes are SCREAMING_SNAKE_CASE strings.
+> HTTP status drives client behavior; code drives display/logging.
+>
+> ⚠️ **History:** this section previously documented a *nested* `{ error: { code,
+> message }, meta }` envelope. That shape was never emitted by the server, and the
+> frontend error parser was written to it — causing every error toast to show a
+> generic fallback instead of the real message (the "Failed to create visit. Please
+> try again." bug, 2026-06-09). The shape below is the real one.
 
 ---
 
 ## 1. Standard Error Response Shape
 
+The server returns a **flat** object (no `error:` wrapper, no `meta:` wrapper):
+
 ```typescript
 interface ErrorResponse {
-  error: {
-    code: string;           // SCREAMING_SNAKE_CASE from catalog below
-    message: string;        // Human-readable, safe to display
-    details?: {
-      fields?: Record<string, string[]>;   // Field-level validation errors
-      [key: string]: unknown;              // Error-type-specific extras
-    };
-  };
-  meta: {
-    request_id: string;
-    timestamp: string;      // ISO 8601
-  };
+  code: string;           // SCREAMING_SNAKE_CASE from catalog below
+  message: string;        // Human-readable, safe to display
+  statusCode: number;     // mirrors the HTTP status
+  requestId: string;
+  timestamp: string;      // ISO 8601
+  path?: string;          // omitted in production unless debug logging
+  method?: string;        // omitted in production unless debug logging
+  // Validation (400) adds field-level detail at the top level:
+  fieldErrors?: { field: string; message: string }[];
+  globalErrors?: string[];
 }
 ```
+
+**Frontend reception.** The TS SDK's error interceptor
+(`packages/sdk-ts/src/client.ts` → installed in `react/provider.tsx`) wraps every
+non-2xx into an **`SdkError`** (an `Error` subclass): `err.message` = the human
+message, `err.body` = the flat envelope above, `err.status` = HTTP status. Parse it
+via `apps/dentalemon/src/lib/error-toast.ts` (`extractApiError` / `getErrorMessage`)
+— never read `err.error` (that nested path does not exist).
 
 ---
 
@@ -237,20 +252,21 @@ interface ErrorResponse {
 
 ## 6. Validation Error Detail Format
 
-For 400 validation errors, `details.fields` maps field path to array of messages:
+For 400 validation errors, the flat envelope adds `fieldErrors` (and optional
+`globalErrors`) at the top level — per TypeSpec `ValidationError`/`FieldError`:
 
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Validation failed",
-    "details": {
-      "fields": {
-        "branch_id": ["Required"],
-        "start_at": ["Must be a valid ISO 8601 datetime", "Must be in the future"]
-      }
-    }
-  }
+  "code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "statusCode": 400,
+  "requestId": "…",
+  "timestamp": "…",
+  "fieldErrors": [
+    { "field": "branchId", "code": "required", "message": "Required" },
+    { "field": "startAt", "code": "invalid_datetime", "message": "Must be a valid ISO 8601 datetime" }
+  ],
+  "globalErrors": []
 }
 ```
 

@@ -9,12 +9,21 @@ Thank you for your interest in contributing! This file covers the getting-starte
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd monobase
+cd dentalemon
 
 # Install dependencies
 bun install
 
-# Set up PostgreSQL database
+# Generate the API contract (OpenAPI + TS types) — specs/api/dist is gitignored and
+# the API imports the generated openapi.json at runtime, so this must run once before
+# starting any server (otherwise the API fails to boot with
+# "Cannot find module '@monobase/api-spec/openapi.json'").
+cd specs/api && bun run build && cd ../..
+
+# Bring up Postgres + MinIO via Docker (the API's /readyz needs both)
+bun run infra:up
+
+# Set up PostgreSQL database (skip if it already exists)
 createdb monobase
 ```
 
@@ -32,7 +41,7 @@ AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 ```
 
-**Account App** (`apps/account/.env`):
+**Dentalemon App** (`apps/dentalemon/.env`):
 ```bash
 VITE_API_URL=http://localhost:7213
 ```
@@ -47,15 +56,19 @@ bun run db:generate  # Generate initial schema
 ### 4. Verify Setup
 
 ```bash
-# Start API service
+# Start API service (port 7213)
 cd services/api-ts && bun dev
 
-# In another terminal, start account app
-cd apps/account && bun dev
+# In another terminal, start the Dentalemon app (port 3003)
+cd apps/dentalemon && bun dev
 
-# Verify API is running
-curl http://localhost:7213/health
+# Verify API liveness (/livez is the liveness probe; /readyz also checks DB + MinIO)
+curl http://localhost:7213/livez
 ```
+
+> **Seeding demo data**: `bun run db:reseed` drives the API over HTTP, so the
+> API must already be running on port 7213 (with MinIO up via `bun run infra:up`)
+> before you reseed.
 
 ## Documentation Index
 

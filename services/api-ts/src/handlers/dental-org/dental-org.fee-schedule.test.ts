@@ -12,21 +12,20 @@
  * Two layers of coverage:
  *  1. Real-app registration smoke (createApp) — proves the routes are wired in
  *     app.ts, not just locally (handler-only tests miss route-registration bugs).
- *  2. Behavioral tests via a local Hono app mirroring app.ts registration.
+ *  2. Behavioral tests via the shared `buildTestApp` harness, which assembles
+ *     the app from the exact generated route table (real validator chain).
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, afterAll, afterEach } from 'bun:test';
 import { sql, eq } from 'drizzle-orm';
-import { ZodError } from 'zod';
-import { Hono } from 'hono';
-import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { createApp, parseConfig } from '@/index';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { dentalProcedureCodes } from '@/handlers/dental-visit/repos/procedure-code.schema';
-import { getFeeSchedule, updateFeeScheduleEntry } from './feeSchedule';
 
 const DB_URL = process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test';
 const db = createDatabase({ url: DB_URL });
@@ -51,24 +50,6 @@ const CDT_B = 'D9991';
 const CDT_B_DESC = 'Fee-test periodic eval';
 const CDT_B_DEFAULT = 50000;
 const CDT_UNKNOWN = 'D0000-not-a-code';
-
-function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof ZodError) return c.json({ error: err.issues.map(i => i.message).join('; '), code: 'VALIDATION_ERROR' }, 400);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.get('/dental/fee-schedule', getFeeSchedule as any);
-  app.patch('/dental/fee-schedule/:cdt', updateFeeScheduleEntry as any);
-  return app;
-}
 
 async function seedBase() {
   await db.insert(dentalOrganizations).values({
@@ -143,27 +124,27 @@ describe('GET /dental/fee-schedule', () => {
   afterEach(resetBranchSettings);
 
   test('401 without auth', async () => {
-    const res = await buildApp().request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
+    const res = await buildTestApp({ db }).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(401);
   });
 
   test('400 when branchId query param missing', async () => {
-    const res = await buildApp(USER_OWNER).request('/dental/fee-schedule');
+    const res = await buildTestApp({ db, user: USER_OWNER }).request('/dental/fee-schedule');
     expect(res.status).toBe(400);
   });
 
   test('403 for a user with no membership in the branch', async () => {
-    const res = await buildApp(USER_NOMEM).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
+    const res = await buildTestApp({ db, user: USER_NOMEM }).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(403);
   });
 
   test('403 for staff_full (role not permitted to read fee schedule)', async () => {
-    const res = await buildApp(USER_STAFF).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
+    const res = await buildTestApp({ db, user: USER_STAFF }).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(403);
   });
 
   test('owner gets the active CDT catalog with default prices and branch currency', async () => {
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     const entryA = body.data.find((e: any) => e.cdtCode === CDT_A);
@@ -174,7 +155,7 @@ describe('GET /dental/fee-schedule', () => {
   });
 
   test('dentist_associate is allowed to read the fee schedule', async () => {
-    const res = await buildApp(USER_ASSOC).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
+    const res = await buildTestApp({ db, user: USER_ASSOC }).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
   });
 
@@ -182,7 +163,7 @@ describe('GET /dental/fee-schedule', () => {
     await db.update(dentalBranches)
       .set({ settings: { currency: 'PHP', feeSchedule: { [CDT_A]: 12345 } } })
       .where(eq(dentalBranches.id, BRANCH_ID));
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule?branchId=${BRANCH_ID}`);
     const body = await res.json() as any;
     const entryA = body.data.find((e: any) => e.cdtCode === CDT_A);
     expect(entryA.priceCents).toBe(12345); // override wins
@@ -199,7 +180,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   afterEach(resetBranchSettings);
 
   test('401 without auth', async () => {
-    const res = await buildApp().request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 1000 }),
     });
@@ -207,7 +188,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('400 when priceCents is missing', async () => {
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID }),
     });
@@ -215,7 +196,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('400 when priceCents is negative', async () => {
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: -1 }),
     });
@@ -223,7 +204,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('400 when priceCents exceeds max (999999)', async () => {
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 1000000 }),
     });
@@ -231,7 +212,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('403 for staff_full (PATCH is dentist_owner only)', async () => {
-    const res = await buildApp(USER_STAFF).request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db, user: USER_STAFF }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 20000 }),
     });
@@ -239,7 +220,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('403 for dentist_associate (PATCH is dentist_owner only)', async () => {
-    const res = await buildApp(USER_ASSOC).request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db, user: USER_ASSOC }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 20000 }),
     });
@@ -247,7 +228,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('422 INVALID_CDT_CODE for an unknown CDT code', async () => {
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule/${CDT_UNKNOWN}`, {
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule/${CDT_UNKNOWN}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 20000 }),
     });
@@ -257,7 +238,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
   });
 
   test('owner sets a price; response echoes the updated entry and it persists', async () => {
-    const res = await buildApp(USER_OWNER).request(`/dental/fee-schedule/${CDT_A}`, {
+    const res = await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 77777 }),
     });
@@ -277,7 +258,7 @@ describe('PATCH /dental/fee-schedule/:cdt', () => {
     await db.update(dentalBranches)
       .set({ settings: { currency: 'PHP', clinicName: 'Keep Me', feeSchedule: { [CDT_B]: 9999 } } })
       .where(eq(dentalBranches.id, BRANCH_ID));
-    await buildApp(USER_OWNER).request(`/dental/fee-schedule/${CDT_A}`, {
+    await buildTestApp({ db, user: USER_OWNER }).request(`/dental/fee-schedule/${CDT_A}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ branchId: BRANCH_ID, priceCents: 55555 }),
     });

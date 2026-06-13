@@ -97,4 +97,87 @@ describe('createLogger — PHI redaction (HIPAA)', () => {
     expect(rec.status).toBe('performed');
     expect(rec.toothNumber).toBe(14);
   });
+
+  // Load-bearing for #14 contactInfo (PII JSONB: { email, phone }). The patient
+  // profile + update paths can carry contactInfo nested two-plus levels below the
+  // log root (e.g. { action, patient: { contactInfo: { email, phone } } }). Pino's
+  // path-glob redaction only descends one level (`*.email`), so a recursive
+  // walking redactor is required before contactInfo gains a read/write surface.
+  test('redacts PHI nested arbitrarily deep (contactInfo JSONB blob)', () => {
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    logger.info(
+      { action: 'updateDentalPatient', patient: { contactInfo: { email: 'pii@clinic.com', phone: '+639170000000' } } },
+      'contact-edit',
+    );
+    const rec = JSON.parse(lines[0]!);
+    expect(rec.patient.contactInfo.email).toBe('[REDACTED]');
+    expect(rec.patient.contactInfo.phone).toBe('[REDACTED]');
+    expect(rec.action).toBe('updateDentalPatient');
+  });
+
+  test('redacts PHI three levels deep, preserving non-PHI siblings', () => {
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    logger.info(
+      { audit: { subject: { person: { firstName: 'Jane', ssn: '123-45-6789', id: 'p-1' } } } },
+      'deep',
+    );
+    const rec = JSON.parse(lines[0]!);
+    expect(rec.audit.subject.person.firstName).toBe('[REDACTED]');
+    expect(rec.audit.subject.person.ssn).toBe('[REDACTED]');
+    expect(rec.audit.subject.person.id).toBe('p-1');
+  });
+
+  test('redacts PHI inside arrays of objects (emergency contacts list)', () => {
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    logger.info(
+      { contacts: [{ name: 'A', phone: '+15550000001' }, { name: 'B', email: 'b@y.com' }] },
+      'contacts',
+    );
+    const rec = JSON.parse(lines[0]!);
+    expect(rec.contacts[0].phone).toBe('[REDACTED]');
+    expect(rec.contacts[1].email).toBe('[REDACTED]');
+  });
+
+  // The recursive walker must NOT descend into non-plain objects: a Date has no
+  // own enumerable keys, so walking it would clobber it to `{}` and destroy the
+  // audit value of logged createdAt/updatedAt timestamps.
+  test('preserves Date values (serialized, not clobbered to {})', () => {
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    logger.info({ createdAt: new Date('2024-01-01T00:00:00Z'), tag: 'audit' }, 'date');
+    const rec = JSON.parse(lines[0]!);
+    expect(typeof rec.createdAt).toBe('string');
+    expect(rec.createdAt).toContain('2024-01-01');
+  });
+
+  // A shared (non-cyclic) reference appearing in two fields is a DAG, not a
+  // cycle — both occurrences must be redacted independently, never collapsed to
+  // '[Circular]' (which only protects against true ancestor cycles).
+  test('redacts a shared reference in every field (no false [Circular])', () => {
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    const shared = { email: 's@y.com', id: 'p-1' };
+    logger.info({ a: shared, b: shared }, 'shared');
+    const rec = JSON.parse(lines[0]!);
+    expect(rec.a.email).toBe('[REDACTED]');
+    expect(rec.a.id).toBe('p-1');
+    expect(rec.b.email).toBe('[REDACTED]');
+    expect(rec.b.id).toBe('p-1');
+  });
+
+  // A genuine cycle must terminate (no stack overflow) while still redacting the
+  // PHI it carries.
+  test('terminates on a true cycle and still redacts PHI', () => {
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    const cyc: Record<string, unknown> = { email: 'c@y.com' };
+    cyc['self'] = cyc;
+    logger.info({ cyc }, 'cycle');
+    const rec = JSON.parse(lines[0]!);
+    expect(rec.cyc.email).toBe('[REDACTED]');
+    expect(rec.cyc.self).toBe('[Circular]');
+  });
 });

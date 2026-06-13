@@ -3,14 +3,12 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User, Session } from '@/types/auth';
 import type { AuthInstance } from '@/utils/auth';
 import {
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  BusinessLogicError
+  BusinessLogicError,
+  ConflictError
 } from '@/core/errors';
 import { ProviderRepository } from './repos/provider.repo';
 import { ensurePersonForUser } from '../person/repos/person-provisioning.facade';
-import { type ProviderCreateRequest, type ProviderWithPerson } from './repos/provider.schema';
+import { type ProviderCreateRequest } from './repos/provider.schema';
 import { addUserRole } from '@/utils/auth';
 
 /**
@@ -18,13 +16,14 @@ import { addUserRole } from '@/utils/auth';
  * 
  * Path: POST /providers
  * OperationId: createProvider
- * Security: bearerAuth with role ["owner"]
+ * Security: bearerAuth with role ["user"] — any authenticated user may create
+ * their OWN provider profile; the person is derived from the session user.
  */
 export async function createProvider(ctx: HandlerContext) {
   // Get authenticated user (guaranteed by middleware)
   const user = ctx.get('user') as User;
-  
-  // Owner role - user can only create provider profile for themselves
+
+  // Self-service: user can only create a provider profile for themselves
   if (!user.id) {
     throw new BusinessLogicError('User must have a person profile before creating provider profile', 'MISSING_PERSON_PROFILE');
   }
@@ -39,8 +38,10 @@ export async function createProvider(ctx: HandlerContext) {
   // Instantiate repositories
   const providerRepo = new ProviderRepository(db, logger);
 
-  // Ensure person exists for the user (create if needed)
-  const person = await ensurePersonForUser(db, user, body.person, logger);
+  // Ensure person exists for the AUTHENTICATED user (create if needed).
+  // Demographics are not accepted in the create body — the provider profile is
+  // always created for the session user, so the person is derived from `user`.
+  const person = await ensurePersonForUser(db, user, undefined, logger);
 
   logger?.info({
     userId: user.id,
@@ -52,7 +53,8 @@ export async function createProvider(ctx: HandlerContext) {
   // Check if provider profile already exists for this person
   const existingProvider = await providerRepo.findByPersonId(person.id);
   if (existingProvider) {
-    throw new BusinessLogicError('Provider profile already exists for this person', 'PROVIDER_EXISTS');
+    // 409 Conflict — matches the ApiConflictResponse declared in TypeSpec.
+    throw new ConflictError('Provider profile already exists for this person', 'PROVIDER_EXISTS');
   }
 
   // Create provider record

@@ -1,0 +1,170 @@
+# Workflow Verification Tracker
+
+**What this is:** the worklist AND durable progress log for the live-frontend workflow
+verification sweep. The orchestrator in [`PROMPT.md`](./PROMPT.md) walks this table top-to-bottom,
+dispatching one fresh subagent per non-DONE module to drive the live UI, find gaps, autofix
+confirmed contract/behavior bugs (TDD), and write the result back here.
+
+**This is a runtime ledger, not the static audit.** The 15-round static traceability audit lives
+in [`../MODULE_AUDIT_TRACKER.md`](../MODULE_AUDIT_TRACKER.md). This sweep is the *runtime*
+counterpart: it proves workflows actually work in a browser, not just that handlers are wired.
+
+**Resume contract:** the orchestrator resumes from the first row whose Status ≠ `DONE`. Never
+edit a row's Status to `DONE` without the evidence path + commit shas filled in.
+
+---
+
+## Rollup (filled at end of run)
+
+- **Run branch:** `chore/workflow-verification-sweep` (off `feat/module-workflow-alignment` @ `2680f4ec`)
+- **Started / finished:** started 2026-06-08 (Docker down → local Postgres :5432 fallback; MinIO down → `/readyz` storage=fail tolerated except imaging)
+- **DONE:** 0/18 · **NEEDS-REVIEW:** 0 · **REOPENED:** 0 · **BLOCKED:** 0
+- **Modules needing human follow-up:** _(list NEEDS-REVIEW / REOPENED / BLOCKED here)_
+- **Deferred gaps reported (not fixed):** _(aggregate the Type-C report-only items here)_
+
+> **Pre-loop dry-run gate: 🟢 PASSED (2026-06-08).** dental-visit driven report-only via `/browse`
+> as the owner persona — §23 workspace journey green (auto-select, tooth panel Overview→Treatment→
+> Review, coherence ₱800+₱3,500=₱4,300, affordances reachable, prior-visit historical snapshot
+> distinct from active edits). No bugs found. See `runs/dental-visit/DRY-RUN-REPORT.md`. Full sweep
+> authorized. The 3 harness fixes the dry run surfaced are now folded into PROMPT.md: Docker-down →
+> local Postgres + tolerate readyz storage=fail for non-imaging; screenshot to /tmp then copy;
+> **staff PINs wired (Ana Santos staff_full = 654321, owner = 123456, free-tier = 111111)** so RBAC
+> negatives are driven, not skipped. PROMPT.md now also backfills a test per verified workflow and
+> runs a cross-module §4 E2E phase after the module loop.
+
+---
+
+## Environment baseline (Docker down — read before reading any contract result)
+
+Docker is unavailable this run, so **MinIO (S3 :9000)** and **Mailpit (:8025)** are down.
+`GET /readyz` returns 503 with storage=fail (livez=200, db+jobs=pass). The full
+`bun run test:contract` suite therefore has a **standing 8-file infra-failure baseline**
+that is NOT a regression and does NOT block any non-storage module:
+
+| Failing .hurl | Root cause |
+|---|---|
+| storage.hurl, storage-edge.hurl | MinIO down — `/storage/files/upload` → ECONNREFUSED (bucket check, `core/storage.ts:270`) |
+| dental-imaging.hurl, dental-imaging-cbct.hurl, dental-assistant.hurl | image/study create → storage upload → 500 |
+| billing-lifecycle.hurl | invoice/merchant flow hits a storage upload → 500 |
+| auth-verification.hurl, auth-password-reset.hurl | Mailpit :8025 down — mail-search step unreachable |
+
+So "38/46 contract files pass" is the green baseline. A module is contract-green iff
+**its own `.hurl` Succeeds** and it adds no NEW failures outside this set. dental-imaging
+(#8) and the storage side of billing (#9) genuinely need MinIO → hard-require it there.
+
+> **RBAC-negative driving caveat (found in module 3).** The demo PIN-select switches the
+> FE *profile* but does NOT re-scope the *backend identity* to the selected non-owner
+> profile (e.g. Ana Santos staff_full has a NULL `membership.person_id` in the seed). So:
+> **FE-level** RBAC negatives (hidden controls, route-guard redirects) ARE drivable via PIN
+> and should be driven; **backend-authorization** RBAC negatives (API 403) must be pinned at
+> the backend-unit / contract layer, not asserted through the demo UI. Don't block DONE on a
+> backend-403 that the demo PIN can't actually exercise — pin it at the unit layer + report.
+
+## Status legend
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | not yet processed |
+| `IN-PROGRESS` | a module subagent is running |
+| `DONE` | gate green, evidence + commit shas recorded |
+| `NEEDS-REVIEW` | a circuit breaker tripped (max-fixes / repeated-gate-fail / no citation) — human eyes needed |
+| `REOPENED` | was DONE, then a later module's regen broke its gate |
+| `BLOCKED` | gate could not go green; details in Notes |
+
+**V1 readiness rating** (IDEAL §11.1): 🟢 Green · 🟡 Yellow · 🟠 Orange · 🔴 Red
+**Gap priority** (IDEAL §11.2): P0 blocks safe V1 · P1 fix before prod · P2 recommended · P3 deferred
+
+---
+
+## Module sequence (dependency-first)
+
+Order reconciled against `docs/product/MODULE_MAP.md`, `services/api-ts/src/handlers/`, and
+`docs/product/modules/`. FE-surface = has a `NAVIGATION_MAP.md` route AND ≥1 `contract-spine.json`
+consumer file under `apps/dentalemon/src/` (see PROMPT.md STEP 0). Spec-light = no
+`docs/product/modules/{M}/MODULE_SPEC.md` (falls back to IDEAL §3 + `.tsp`) → reduced confidence.
+
+| # | Module | FE? | Spec-light? | Status | Rating | Gaps fixed (P#) | Tests added | Deferred-reported | Evidence | Commits |
+|---|--------|-----|-------------|--------|--------|-----------------|-------------|-------------------|----------|---------|
+| 1 | dental-org | yes | no | DONE | 🟢 | 1 (P1 shape-diff) | FE-unit + contract pins + smoke | none | runs/dental-org/ | bf88596a, 9cc7dadd |
+| 2 | person / profile + settings | yes | yes | DONE | 🟢 | 0 (no bugs) | contract pins + smoke | 3 (Type-C) | runs/person/ | eee6c6d8, d3f8f772 |
+| 3 | dental-patient | yes | no | DONE | 🟢 | 2 (P1 export×2) | contract + FE coherence pins + smoke | 3 (Type-C) | runs/dental-patient/ | 73034d6f, b74b1fe3, dc40d6cd, f27951b6, 6cd6727f |
+| 4 | dental-scheduling | yes | no | IN-PROGRESS | — | — | — | — | — | — |
+| 5 | dental-visit | yes | no | DRY-RUN ✅ | 🟢 | 0 (no bugs) | n/a (dry run) | none | runs/dental-visit/ | none (report-only) |
+| 6 | dental-clinical | yes | no | PENDING | — | — | — | — | — | — |
+| 7 | dental-perio | yes | no | PENDING | — | — | — | — | — | — |
+| 8 | dental-imaging | yes | no | PENDING | — | — | — | — | — | — |
+| 9 | dental-billing | yes | no | PENDING | — | — | — | — | — | — |
+| 10 | dental-pmd | yes | no | PENDING | — | — | — | — | — | — |
+| 11 | case-presentation | yes | yes | PENDING | — | — | — | — | — | — |
+| 12 | dental-portal | yes | yes | PENDING | — | — | — | — | — | — |
+| 13 | provider | partial | yes | PENDING | — | — | — | — | — | — |
+| 14 | emr-consultation | partial | no | PENDING | — | — | — | — | — | — |
+| 15 | external-records-import | partial | no | PENDING | — | — | — | — | — | — |
+| 16 | notifications | yes | yes | PENDING | — | — | — | — | — | — |
+| 17 | dental-audit | light | no | PENDING | — | — | — | — | — | — |
+| 18 | dental-erasure / legal-hold / retention | none/light | no | PENDING | — | — | — | — | — | — |
+
+### Cross-module journeys (IDEAL §4 — run after the module loop, end-to-end)
+
+| ID | Journey (§4.x) | Status | Key seam asserted | Gaps fixed | Smoke | Evidence | Commits |
+|----|----------------|--------|-------------------|-----------|-------|----------|---------|
+| X1 | §4.1 new-patient → visit → baseline-chart → plan | PENDING | diagnoses → proposed plan items (coherent total) | — | xmod_new_patient_smoke.py | — | — |
+| X2 | §4.2 same-day-treatment → billing → recall | PENDING | performed treatment → invoice line; completed visit → billing unlocked | — | xmod_treatment_billing_smoke.py | — | — |
+| X3 | §4.3 emergency walk-in → work → billing → follow-up | PENDING | walk-in needs no appt; direct work auditable | — | xmod_walkin_smoke.py | — | — |
+| X4 | §4.4 plan-approval → partial-completion | PENDING | one item completes; rest pending; plan → partially-completed | — | xmod_plan_partial_smoke.py | — | — |
+| X5 | §4.5 imaging attachment (needs MinIO) | PENDING | attachment reachable from linked clinical context | — | xmod_imaging_attach_smoke.py | — | — |
+| X6 | §4.6 offline-ready clinical | PENDING | sync status shown; refs preserved on reload | — | xmod_offline_sync_smoke.py | — | — |
+
+---
+
+## Per-module detail log
+
+> The orchestrator appends one block per module here as it completes. Template:
+
+```
+### {N}. {module} — {STATUS} {RATING}
+- Persona(s) driven: ...
+- Workflows verified (happy / error / RBAC-neg / coherence / affordance / cross-workflow): ...
+- IDEAL §4 seam(s) checked: ...
+- Gaps fixed (Type A, with BR/AC citation + commit sha): ...
+- Doc fixes (Type B): ...
+- Deferred-reported (Type C, with reason / do-not-fix source): ...
+- Circuit breakers tripped: none | max-fixes | repeated-gate-fail
+- Evidence: docs/audits/workflow-verification/runs/{module}/
+- Gate: typecheck ✓/✗ · backend ✓/✗ · contract ✓/✗ · FE unit ✓/✗ · lint/boundaries ✓/✗ · smoke ✓/✗
+```
+
+### 1. dental-org — DONE 🟢
+- Persona(s) driven: Alex/owner (Dr. Maria Reyes, dentist_owner, PIN 123456); Sam/front-desk (Ana Santos, staff_full, PIN 654321, RBAC-negative).
+- Workflows verified (happy 3 / error 1 / RBAC-neg 1 / coherence 2 / affordance ✓ / cross-workflow 1): owner dashboard summary; branch-settings save→reload round-trip; staff list + last-owner guard; staff_full denied owner-only admin (sidebar hidden + direct-URL redirect to /patients).
+- IDEAL §4 seam(s) checked: org-context resolution feeds every downstream module's branch scoping; dashboard summary reads billing (payment plans) + lab orders.
+- Gaps fixed (Type A): **shape-diff (P1)** — dental-org TypeSpec drifted from handler reality across `GET /dental/org/context` (flat→nested {org,branch,member}), `GET /dental/dashboard/summary` (visits/invoices→{activePaymentPlans,labOrders}), `GET/PUT /dental/branches/:id/settings` ({branchId,settings} envelope). FE branch-settings hook read the response flat → blank settings panels on read (real user-visible bug, CP2). Fixed at true source (tsp→regen→FE unwrap). Commits bf88596a (fix) + 9cc7dadd (smoke/evidence).
+- Doc fixes (Type B): none.
+- Deferred-reported (Type C): none.
+- Circuit breakers tripped: none.
+- Ran regen: YES (org-context, dashboard-summary, branch-settings GET/PUT). Orchestrator blast-radius re-gate: full typecheck clean; full contract suite — dental-org.hurl Success, no new failures beyond the 8-file infra baseline.
+- Evidence: docs/audits/workflow-verification/runs/dental-org/ (REPORT.md + 8 screenshots + drive-log.txt)
+- Gate: typecheck ✓ · backend ✓ (329/0) · contract ✓ (dental-org.hurl 31 req) · FE unit ✓ (12/0) · lint/boundaries ✓ (0 err / clean) · smoke ✓ (4/4 CP)
+
+### 2. person / profile + settings — DONE 🟢
+- Persona(s) driven: authenticated user / owner (own-profile signup→onboarding, run-unique); RBAC-negative (cross-user 403 PII-safeguard + already-onboarded owner-guard re-entry block).
+- Workflows verified (happy 1 / error 0 / RBAC-neg 2 / coherence 1 / affordance 1 / cross 1): signup → email-verify (dev) → 2-step onboarding wizard → createPerson 201 → getPerson('me') 200 → re-onboard guard redirect. (Module's only FE surface.)
+- IDEAL §4 seam(s) checked: signup→session (better-auth auto sign-in); session→person (getPerson 'me' null→onboarding entry); person-created→dental-org (membership-less user forwarded to /dental-onboarding downstream).
+- Gaps fixed (Type A): **none** — STEP 3a static diff found zero drift across createPerson/getPerson/updatePerson/listPersons (tsp↔validator↔handler↔SDK↔FE byte-consistent); consent (marketing/data_sharing/sms/email) correctly absent from all person layers (legacy 4-flag model removed; live single-consent model is dental-patient's V-PAT-004).
+- Doc fixes (Type B): none.
+- Deferred-reported (Type C): getPerson .tsp roles broader than handler (handler owner-only = more restrictive, never leaks; no FE reads others); legacy 4-flag consent absent (correct); updatePerson/listPersons + preferences/contact-info forms half-wired base-template primitives, no FE consumer / no citation.
+- Circuit breakers tripped: none. Ran regen: NO.
+- Evidence: docs/audits/workflow-verification/runs/person/ (REPORT.md + 4 screenshots + log)
+- Gate: typecheck ✓ · backend ✓ (38/0) · contract ✓ (person-lifecycle + person-validation Succeed) · FE unit ✓ (62/0) · lint/boundaries ✓ · smoke ✓ (5/5 CP). Env note: `requireEmailVerified` onboarding guard is ACTIVE (stale repo note saying it's disabled is wrong) — smoke uses dev `POST /dev/verify-email`.
+
+### 3. dental-patient — DONE 🟢 (most productive module — 2 real bugs)
+- Persona(s) driven: Sam (staff_full front-desk, PIN 654321); Dr. Maria Reyes (owner, PIN 123456). Two background subagent instances divided the work without conflict (see runs/dental-patient/REPORT.md reconciliation note).
+- Workflows verified (happy 4 / error 2 / RBAC-neg 2 / coherence 2 / affordance 1 / cross 1): register single-consent patient (V-PAT-004) → POST201 (smoke CP1 live-pass); full-name search; profile/demographics; CSV export; profile coherence oracles.
+- IDEAL §4 seam(s) checked: X1 register → search → open timeline (patient side).
+- Gaps fixed (Type A): **export `{data}`→`{patients}` shape drift (P1, 73034d6f)** — CSV export was always empty + rows lacked displayName (V-PAT-014 declared-PII shaping); **export sent no branchId → 400 for every role (P1, b74b1fe3)** — now sources branchId from org-context, verified live (owner 200/20 patients). Both RED→GREEN, found via STEP 3a + the live drive.
+- Tests added: dc40d6cd (BR-015 consent-422 + BR-015b archived-write-403 contract pins + V-PAT-002 demographics-edit RBAC-403 backend pins), f27951b6 (2 FE profile coherence oracles), smoke 6cd6727f.
+- Deferred-reported (Type C): patient-merge BR-020 (Phase-2, handlers 501); patient-portal Phase-2 reads + online payments; profile enrichment fields (visitCount/lastVisit/outstandingBalanceCents) absent from declared TypeSpec but FE-intersected + rendered — no BR/AC requires them in-contract.
+- Circuit breakers tripped: none. Ran regen: NO.
+- Evidence: docs/audits/workflow-verification/runs/dental-patient/ (REPORT.md + screenshots)
+- Gate: typecheck ✓ · backend ✓ (per-file clone isolation; 72/72 on export suite) · contract ✓ (dental-patient.hurl 43 req) · FE unit ✓ (132/132 incl 2 coherence pins) · lint/boundaries ✓ · smoke ⚠️ **CP1 live-pass; CP2+ register-btn selector-hardening TODO (P3)**.
+- ⚠️ Surfaced the **RBAC-PIN backend-identity caveat** now recorded in the Environment baseline above.

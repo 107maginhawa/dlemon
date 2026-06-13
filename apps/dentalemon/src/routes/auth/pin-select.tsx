@@ -159,6 +159,7 @@ function PinSelectRoute() {
     }
     setIsLoading(true);
     setIsError(false);
+    // eslint-disable-next-line no-restricted-syntax -- bootstrap auth phase: PIN device-auth runs before a session/SDK client exists
     fetch(`${API}/dental/org/members?branchId=${encodeURIComponent(branchId)}`, {
       credentials: 'include',
     })

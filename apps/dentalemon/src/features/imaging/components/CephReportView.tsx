@@ -6,6 +6,7 @@
  * re-editing landmarks after export produces a new version.
  */
 import { useState } from 'react'
+import { getPopulationLabel } from '@monobase/ceph-math'
 
 // Tracing lines drawn over the radiograph when both endpoints are placed.
 // Reference overlay only — D-N: not to scale, no scale bar.
@@ -48,11 +49,24 @@ export interface CephReportSnapshot {
   landmarks: Record<string, CephReportSnapshotLandmark>
   measurements: Record<string, number | null>
   analysis_label: string
+  // G2: reproducibility provenance — analysis actually used + pinned versions.
+  analysis_type?: string
+  norm_population?: string
+  norm_version?: string
+  formula_version?: string
   calibration: {
     value: number | null
     method: string
-    at: string | null
-    by: string | null
+    at?: string | null
+    by?: string | null
+    // G2: px/mm + snapshot-schema version.
+    pixels_per_mm?: number | null
+    version?: number
+    // G6: the pinned versioned calibration record (2 ruler points + known distance).
+    point_a?: { x: number; y: number } | null
+    point_b?: { x: number; y: number } | null
+    known_distance_mm?: number | null
+    record_version?: number | null
   }
   software_version: string
   operator: string
@@ -69,6 +83,10 @@ export interface CephReportViewProps {
   snapshot: CephReportSnapshot
   version: number
   imageUrl?: string
+  // G1-B: explicit revision lineage. `revisionOf` is the prior report version's
+  // id (null for v1); `revisionReason` records why this trace was re-finalized.
+  revisionOf?: string | null
+  revisionReason?: string | null
 }
 
 function valueText(
@@ -87,7 +105,7 @@ function valueText(
   return '—'
 }
 
-export function CephReportView({ snapshot, version, imageUrl }: CephReportViewProps) {
+export function CephReportView({ snapshot, version, imageUrl, revisionOf, revisionReason }: CephReportViewProps) {
   const missing = snapshot.missing ?? []
   const uncalibrated = snapshot.uncalibrated ?? false
   const placedCodes = Object.keys(snapshot.landmarks)
@@ -117,6 +135,33 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
             {' · '}
             Software: <span className="font-medium text-zinc-900">{snapshot.software_version}</span>
           </p>
+          {/* G1-B: revision lineage — version chain is linear, so a report with a
+              prior version (revisionOf set) revises v{version-1}. */}
+          {revisionOf && (
+            <p className="text-sm text-amber-700 mt-1" data-testid="ceph-report-revision">
+              Revises v{version - 1}
+              {revisionReason && (
+                <>
+                  {' · '}
+                  Reason: <span className="font-medium">{revisionReason}</span>
+                </>
+              )}
+            </p>
+          )}
+          {/* G2: reproducibility provenance — what the report can be reproduced against.
+              Provenance only (not a normative comparison; D-H still holds). */}
+          {(snapshot.norm_population || snapshot.norm_version || snapshot.formula_version) && (
+            <p className="text-xs text-zinc-500 mt-1" data-testid="ceph-report-provenance">
+              {snapshot.norm_population && (
+                <>
+                  Reference norms:{' '}
+                  <span className="font-medium text-zinc-700">{getPopulationLabel(snapshot.norm_population)}</span>
+                </>
+              )}
+              {snapshot.norm_version && <> · Norms v{snapshot.norm_version}</>}
+              {snapshot.formula_version && <> · Engine v{snapshot.formula_version}</>}
+            </p>
+          )}
         </div>
         {/* D-G: analysis label badge */}
         <span
@@ -266,6 +311,15 @@ export function CephReportView({ snapshot, version, imageUrl }: CephReportViewPr
             Calibration: {snapshot.calibration.value.toFixed(3)} mm/px via{' '}
             {snapshot.calibration.method}
             {snapshot.calibration.at ? ` on ${new Date(snapshot.calibration.at).toLocaleDateString()}` : ''}.
+            {/* G6: when a versioned ruler record is pinned, the report is exactly
+                reproducible against it — surface the known distance + record version. */}
+            {snapshot.calibration.record_version != null &&
+              snapshot.calibration.known_distance_mm != null && (
+                <>
+                  {' '}2-point ruler: {snapshot.calibration.known_distance_mm} mm (calibration v
+                  {snapshot.calibration.record_version}).
+                </>
+              )}
           </p>
         )}
       </div>

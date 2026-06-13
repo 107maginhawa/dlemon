@@ -36,6 +36,24 @@ namespace DentalOrgModule {
     enterprise: "enterprise",
   }
 
+  @doc("""
+    Organization lifecycle status (PHI go-live gate, C-1 / ADR-007).
+    - `provisional` — self-service onboarded; in PRODUCTION, patient/visit PHI writes
+      are blocked until the owner activates the clinic.
+    - `live` — admin/seed provisioned, or activated by the owner accepting terms/BAA.
+    - `suspended` — reserved for future ops use.
+    """)
+  enum OrgStatus {
+    @doc("Self-service onboarded; PHI writes gated until activated")
+    provisional: "provisional",
+
+    @doc("Activated / admin-provisioned — full access")
+    live: "live",
+
+    @doc("Reserved for future ops use")
+    suspended: "suspended",
+  }
+
   @doc("Imaging feature tier (null treated as free)")
   enum ImagingTier {
     @doc("No imaging features")
@@ -74,6 +92,9 @@ namespace DentalOrgModule {
     @doc("Billing-only staff")
     billingStaff: "billing_staff",
 
+    @doc("Treatment coordinator — presents treatment plans + financials to patients")
+    treatmentCoordinator: "treatment_coordinator",
+
     @doc("Read-only access")
     readOnly: "read_only",
   }
@@ -101,6 +122,7 @@ namespace DentalOrgModule {
     ownerPersonId: "p1a2b3c4-0000-4000-8000-000000000001",
     countryCode: "PH",
     active: true,
+    status: OrgStatus.live,
   }, #{ title: "Sunrise Dental Clinic — clinic tier" })
   @doc("Dental practice organization — top-level tenant boundary")
   model DentalOrganization extends BaseEntity {
@@ -121,6 +143,9 @@ namespace DentalOrgModule {
 
     @doc("Whether the organization is active")
     active: boolean;
+
+    @doc("Lifecycle status — PHI go-live gate (C-1 / ADR-007)")
+    status: OrgStatus;
   }
 
   @example(#{
@@ -405,23 +430,96 @@ namespace DentalOrgModule {
   }
 
 
-  @doc("Org context for the authenticated user")
-  model OrgContextResponse {
-    organizationId: UUID;
-    branchId: UUID;
-    memberId: UUID;
-    role: MemberRole;
-    orgName: string;
-    branchName: string;
+  @doc("Resolved organization in the org-context response")
+  model OrgContextOrg {
+    @doc("Organization ID")
+    id: UUID;
+
+    @doc("Organization (practice) name")
+    name: string;
+
+    @doc("Subscription tier")
+    tier: string;
+
+    @doc("Lifecycle status — 'provisional' clinics must be activated before PHI writes (C-1)")
+    status: OrgStatus;
+  }
+
+  @doc("Resolved branch in the org-context response")
+  model OrgContextBranch {
+    @doc("Branch ID")
+    id: UUID;
+
+    @doc("Branch name")
+    name: string;
+
+    @doc("Branch IANA timezone")
     timezone: string;
   }
 
-  @doc("Dashboard summary metrics")
+  @doc("Resolved membership in the org-context response")
+  model OrgContextMember {
+    @doc("Membership ID")
+    id: UUID;
+
+    @doc("Member role at the resolved branch")
+    role: MemberRole;
+
+    @doc("Member display name")
+    displayName: string;
+  }
+
+  @doc("""
+    Org context for the authenticated user — the resolved org, the caller's active
+    branch, and their membership. Returned as a nested `{ org, branch, member }`
+    envelope; `branch` and `member` are null when only an org could be resolved, and
+    all three are null when the caller has no org yet (pre-onboarding).
+    """)
+  model OrgContextResponse {
+    @doc("Resolved organization (null when the caller has no org yet)")
+    org: OrgContextOrg | null;
+
+    @doc("Caller's active branch (null when no branch resolved)")
+    branch: OrgContextBranch | null;
+
+    @doc("Caller's membership at the resolved branch (null when none)")
+    member: OrgContextMember | null;
+  }
+
+  @doc("Active payment-plan rollup for the dashboard (FR0.7)")
+  model DashboardPaymentPlanSummary {
+    @doc("Number of active payment plans for the branch")
+    count: int32;
+
+    @doc("How many of those plans are flagged 'behind'")
+    behindCount: int32;
+
+    @doc("Total outstanding balance across active plans, in cents")
+    totalOutstandingCents: int32;
+  }
+
+  @doc("Pending lab-order rollup for the dashboard (FR0.8)")
+  model DashboardLabOrderSummary {
+    @doc("Total pending lab orders (not yet delivered)")
+    totalPending: int32;
+
+    @doc("Pending orders still in 'ordered' status")
+    ordered: int32;
+
+    @doc("Pending orders in 'in_fabrication' status")
+    inFabrication: int32;
+
+    @doc("Pending orders past their expected delivery date")
+    overdueDelivery: int32;
+  }
+
+  @doc("Dashboard summary metrics — active payment plans (FR0.7) + pending lab orders (FR0.8)")
   model DashboardSummaryResponse {
-    todayVisits: int32;
-    pendingInvoices: int32;
-    totalPatients: int32;
-    revenueThisMonthCents: int32;
+    @doc("Active payment-plan rollup")
+    activePaymentPlans: DashboardPaymentPlanSummary;
+
+    @doc("Pending lab-order rollup")
+    labOrders: DashboardLabOrderSummary;
   }
 
   @doc("Create a flat member (org/branch resolved from auth context)")
@@ -449,23 +547,28 @@ namespace DentalOrgModule {
     @doc("New role (dentist_owner only)")
     role?: MemberRole;
 
-    @doc("Profile photo URL")
-    avatarUrl?: string;
+    // avatarUrl + the provider-credential fields are nullable so a clinic can
+    // CLEAR them (send null). The handler schema (updateMember.ts) is
+    // .optional().nullable() for exactly this reason; the contract must allow
+    // null too or the generated validator rejects the clear with a 400 before
+    // the handler ever runs.
+    @doc("Profile photo URL (null to clear)")
+    avatarUrl?: string | null;
 
-    @doc("Provider license number")
+    @doc("Provider license number (null to clear)")
     @maxLength(64)
-    licenseNumber?: string;
+    licenseNumber?: string | null;
 
-    @doc("National Provider Identifier (NPI) — 10 digits")
+    @doc("National Provider Identifier (NPI) — 10 digits (null to clear)")
     @pattern("^\\d{10}$")
-    npi?: string;
+    npi?: string | null;
 
-    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH'")
+    @doc("Credential / license type label, e.g. 'DDS', 'DMD', 'RDH' (null to clear)")
     @maxLength(32)
-    credentialType?: string;
+    credentialType?: string | null;
 
-    @doc("License expiry date (ISO 8601 date)")
-    licenseExpiry?: utcDateTime;
+    @doc("License expiry date (ISO 8601 date, null to clear)")
+    licenseExpiry?: utcDateTime | null;
   }
 
   @doc("Reset a member's PIN")
@@ -504,16 +607,16 @@ namespace DentalOrgModule {
     temporaryPin?: string;
   }
 
-  @doc("Working hours for a single day")
+  @doc("Working hours for a single day (canonical enforced shape — G1-shape)")
   model DentalWorkingHoursDay {
-    @doc("Opening time (HH:mm)")
-    open: string;
-
-    @doc("Closing time (HH:mm)")
-    close: string;
-
     @doc("Whether the branch is open on this day")
-    isOpen: boolean;
+    enabled: boolean;
+
+    @doc("Opening time (HH:mm) — omitted/ignored when not enabled")
+    open?: string;
+
+    @doc("Closing time (HH:mm) — omitted/ignored when not enabled")
+    close?: string;
   }
 
   @doc("Weekly working hours configuration for a branch")
@@ -527,38 +630,42 @@ namespace DentalOrgModule {
     sunday?: DentalWorkingHoursDay;
   }
 
-  @doc("Branch operational settings")
+  @doc("GET/PUT working-hours response envelope (matches the handler).")
+  model DentalWorkingHoursResponse {
+    @doc("Branch ID")
+    branchId: UUID;
+
+    @doc("Weekly working hours in the enforced {enabled,open,close} shape")
+    workingHours: DentalWorkingHours | null;
+  }
+
+  @doc("PUT working-hours request body (wrapped in `workingHours`).")
+  model UpdateWorkingHoursRequest {
+    workingHours: DentalWorkingHours;
+  }
+
+  @doc("""
+    Branch operational settings. The settings payload is a free-form key/value bag
+    (`Record<unknown>`) — the GET/PUT handlers store and merge an open settings
+    object on `dental_branch.settings` (clinic info, fee schedule, locale, currency,
+    working hours, notification prefs, etc.), not a fixed column set. Both GET and PUT
+    return the envelope `{ branchId, settings }`.
+    """)
   model DentalBranchSettings {
     @doc("Branch ID")
     branchId: UUID;
 
-    @doc("Default appointment duration in minutes")
-    appointmentDurationMinutes: int32;
-
-    @doc("Currency code (ISO 4217)")
-    currency: string;
-
-    @doc("Tax rate as a decimal (e.g. 0.12 for 12%)")
-    taxRate: float32;
-
-    @doc("Whether appointment reminders are enabled")
-    appointmentReminderEnabled: boolean;
+    @doc("Free-form settings bag merged on the branch (e.g. appointmentDurationMinutes, currency, taxRate, feeSchedule, locale, workingHours)")
+    settings: Record<unknown>;
   }
 
-  @doc("Update branch settings request")
-  model UpdateDentalBranchSettingsRequest {
-    @doc("Default appointment duration in minutes")
-    appointmentDurationMinutes?: int32;
-
-    @doc("Currency code (ISO 4217)")
-    currency?: string;
-
-    @doc("Tax rate as a decimal")
-    taxRate?: float32;
-
-    @doc("Whether appointment reminders are enabled")
-    appointmentReminderEnabled?: boolean;
-  }
+  @doc("""
+    Update branch settings request — a free-form key/value bag of settings to merge.
+    Top-level keys are shallow-merged onto the existing branch settings (owner-only).
+    Callers may send the keys directly (e.g. `{ "currency": "PHP" }`) or wrap them
+    under a `settings` object; both are accepted by the handler.
+    """)
+  model UpdateDentalBranchSettingsRequest is Record<unknown>;
 
   @example(#{
     id: "ct-1a2b3c4d-0000-4000-8000-000000000001",
@@ -566,44 +673,51 @@ namespace DentalOrgModule {
     updatedAt: utcDateTime.fromISO("2025-03-01T08:00:00Z"),
     version: 1,
     branchId: "br-1a2b3c4d-0000-4000-8000-000000000001",
-    title: "General Tooth Extraction Consent",
-    content: "<p>I, the undersigned patient, hereby consent to the extraction of the tooth/teeth indicated by my dentist...</p>",
-    isActive: true,
+    name: "General Tooth Extraction Consent",
+    body: "<p>I, the undersigned patient, hereby consent to the extraction of the tooth/teeth indicated by my dentist...</p>",
+    requiresWitnessSignature: false,
+    active: true,
   }, #{ title: "Extraction consent template — active" })
   @doc("Consent form template for a branch")
   model DentalConsentTemplate extends BaseEntity {
     @doc("Branch this template belongs to")
     branchId: UUID;
 
-    @doc("Template title")
-    title: string;
+    @doc("Template name / title")
+    name: string;
 
-    @doc("Template content (HTML or plain text)")
-    content: string;
+    @doc("Template body content (HTML or plain text)")
+    body: string;
 
-    @doc("Whether this template is active")
-    isActive: boolean;
+    @doc("Whether signing this template requires a witness signature")
+    requiresWitnessSignature: boolean;
+
+    @doc("Whether this template is active (soft-delete flag)")
+    active: boolean;
   }
 
   @doc("Create a consent template")
   model CreateDentalConsentTemplateRequest {
-    @doc("Template title")
-    title: string;
+    @doc("Template name / title")
+    name: string;
 
-    @doc("Template content")
-    content: string;
+    @doc("Template body content")
+    body: string;
+
+    @doc("Whether signing requires a witness signature")
+    requiresWitnessSignature?: boolean;
   }
 
   @doc("Update a consent template")
   model UpdateDentalConsentTemplateRequest {
-    @doc("New title")
-    title?: string;
+    @doc("New name / title")
+    name?: string;
 
-    @doc("New content")
-    content?: string;
+    @doc("New body content")
+    body?: string;
 
-    @doc("Active status")
-    isActive?: boolean;
+    @doc("Whether signing requires a witness signature")
+    requiresWitnessSignature?: boolean;
   }
 
   // ==========================================================================
@@ -698,6 +812,18 @@ namespace DentalOrgModule {
       @path id: UUID,
       @body body: UpdateOrganizationRequest,
     ): DentalOrganization | NotFoundError | ApiUnauthorizedResponse | ErrorResponse;
+
+    @doc("Activate a provisional clinic (owner accepts terms/BAA → status 'live', unlocking PHI writes per C-1/ADR-007). Owner-only; idempotent (already-live returns 200).")
+    @useAuth(bearerAuth)
+    @operationId("activateOrganization")
+    @post
+    @route("/{id}/activate")
+    activate(@path id: UUID):
+      DentalOrganization
+      | NotFoundError
+      | ApiForbiddenResponse
+      | ApiUnauthorizedResponse
+      | ErrorResponse;
   }
 
   @doc("Self-service clinic onboarding — provisions org + default branch + owner membership in one call")
@@ -943,7 +1069,7 @@ namespace DentalOrgModule {
     @operationId("getWorkingHours")
     getWorkingHours(
       @path branchId: UUID
-    ): ApiOkResponse<DentalWorkingHours>
+    ): ApiOkResponse<DentalWorkingHoursResponse>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
@@ -954,8 +1080,8 @@ namespace DentalOrgModule {
     @operationId("updateWorkingHours")
     updateWorkingHours(
       @path branchId: UUID,
-      @body body: DentalWorkingHours
-    ): ApiOkResponse<DentalWorkingHours>
+      @body body: UpdateWorkingHoursRequest
+    ): ApiOkResponse<DentalWorkingHoursResponse>
       | ApiNotFoundResponse
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;

@@ -29,6 +29,8 @@ export type OnlineBookingConfig = z.infer<typeof OnlineBookingConfigSchema>;
 export const VISIT_TYPE_DURATION_MINUTES: Record<VisitType, number> = {
   checkup: 30,
   recall: 30,
+  // E3: hygiene (recall/prophy/perio) defaults to a 45-min hygienist slot.
+  hygiene: 45,
   treatment: 60,
   emergency: 60,
 };

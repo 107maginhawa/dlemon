@@ -5,7 +5,9 @@
  *
  * Creates an imaging study and returns a presigned upload URL for the image file.
  * Validates MIME type against the allowed list (BR-034).
- * Role-gated: dentist, associate, hygienist may upload.
+ * Role-gated: dentist_owner, dentist_associate, hygienist, and dental_assistant
+ * may capture/upload imaging (assistant works under dentist supervision).
+ * NOTE: CBCT *finalize* (finalizeCbctStudy) remains dentist-only.
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -63,8 +65,16 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
   const db = ctx.get('database') as DatabaseInstance;
   const repo = new ImagingRepository(db);
 
-  // Branch-level authorization + role gate (CLINICAL_WRITE)
-  await assertBranchRole(db, user.id, body.branchId, ['dentist_owner', 'dentist_associate']);
+  // Branch-level authorization + role gate (CLINICAL_WRITE).
+  // E2: hygienist + dental_assistant may capture imaging under dentist supervision.
+  // (Reconciles the prior doc-vs-code drift: doc said hygienist could upload but
+  // the code denied it.) CBCT *finalize* stays dentist-only — see finalizeCbctStudy.
+  await assertBranchRole(db, user.id, body.branchId, [
+    'dentist_owner',
+    'dentist_associate',
+    'hygienist',
+    'dental_assistant',
+  ]);
 
   const requestedModality = (body.modality ?? 'other') as string;
   const isDicom = body.mimeType === DICOM_MIME_TYPE;

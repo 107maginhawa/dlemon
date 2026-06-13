@@ -60,6 +60,20 @@ export class TreatmentRepository {
       .where(eq(dentalTreatments.visitId, visitId));
   }
 
+  /**
+   * SL-01: offline-replay idempotency. Find a prior create by its client-generated
+   * localId, scoped to the parent visit (a treatment localId is unique within its
+   * visit). The handler returns the existing row on replay; a partial unique index
+   * on (visit_id, local_id) backstops a concurrent-retry race.
+   */
+  async findByLocalId(visitId: string, localId: string): Promise<DentalTreatment | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalTreatments)
+      .where(and(eq(dentalTreatments.visitId, visitId), eq(dentalTreatments.localId, localId)));
+    return row ?? null;
+  }
+
   async updateStatus(id: string, status: DentalTreatment['status']): Promise<DentalTreatment | null> {
     const [updated] = await this.db
       .update(dentalTreatments)

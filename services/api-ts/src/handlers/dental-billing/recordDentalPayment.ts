@@ -133,11 +133,13 @@ export async function recordDentalPayment(
     personId: session.userId,
     tenantId,
     branchId: invoice.branchId,
+    eventType: 'data-modification',
     action: 'payment.record',
     resourceType: 'dental_payment',
     resourceId: payment.id,
     metadata: { invoiceId, amountCents: body.amountCents, method: body.method },
-  });
+    // P1-C: a recorded payment must never silently commit without its audit row.
+  }, { failClosed: true });
 
   // V-BIL-011 / DE-008 InvoicePaid: per ADR-006 there is NO event bus — the
   // semantic marker is satisfied by an audit-log row. Fire ONLY on the

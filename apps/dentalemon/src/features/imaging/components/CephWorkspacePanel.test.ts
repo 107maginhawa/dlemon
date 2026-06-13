@@ -1,8 +1,9 @@
-import { describe, test, expect, afterEach, mock } from 'bun:test'
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { CephWorkspacePanel } from './CephWorkspacePanel'
+import { useOrgContextStore } from '@/stores/org-context.store'
 import {
   freshClientWithMutations,
   makeWrapper,
@@ -14,9 +15,15 @@ import type { CephAnalysis } from '../hooks/use-ceph-analysis'
 // Restore the real fetch between tests so a per-test mock never leaks into a
 // sibling file when the whole suite runs (defense against cross-test pollution).
 const realFetch = globalThis.fetch
+// G4-B: default to a finalizing (dentist) role so existing finalize-control
+// assertions hold; individual tests override the role as needed.
+beforeEach(() => {
+  useOrgContextStore.setState({ role: 'dentist_owner' })
+})
 afterEach(() => {
   cleanup()
   globalThis.fetch = realFetch
+  useOrgContextStore.setState({ role: null })
 })
 
 function mkAnalysis(): CephAnalysis {
@@ -111,6 +118,26 @@ describe('CephWorkspacePanel', () => {
     expect(container.textContent).toContain('steiner_hybrid_sn')
   })
 
+  test('controlled analysisType prop drives the analysis query (keeps canvas arcs and table in sync)', async () => {
+    // The bug: the measurements panel and the on-canvas angle arcs each ran their
+    // own useCephAnalysis with independent analysisType, so switching protocol
+    // updated the table but not the arcs. The workspace must be able to own a single
+    // analysisType and feed it to both. This asserts the panel honors a controlled value.
+    const urls: string[] = []
+    global.fetch = mock((req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req)
+      urls.push(url)
+      if (url.includes('/ceph/analysis')) return jsonResponse({ items: [], analysis: mkAnalysis() })
+      return jsonResponse(okLandmarks([]))
+    }) as unknown as typeof fetch
+    renderPanel({ analysisType: 'ricketts', onAnalysisTypeChange: mock(() => {}) })
+    await waitFor(() =>
+      expect(
+        urls.some((u) => u.includes('/ceph/analysis') && u.includes('analysisType=ricketts')),
+      ).toBe(true),
+    )
+  })
+
   test('shows close button with aria-label', async () => {
     setFetch(
       () => jsonResponse(okLandmarks([])),
@@ -190,6 +217,20 @@ describe('CephWorkspacePanel', () => {
       })) as HTMLButtonElement
       expect(btn.disabled).toBe(false)
     })
+  })
+
+  test('G4-B: dental_assistant sees a draft-only notice, not the finalize controls', async () => {
+    useOrgContextStore.setState({ role: 'dental_assistant' })
+    setFetch(
+      () => jsonResponse(okLandmarks([mk('A'), mk('B'), mk('Go'), mk('Po')])),
+      () => jsonResponse({ items: [], analysis: mkAnalysis() }),
+    )
+    const { container } = renderPanel()
+    await waitFor(() => expect(container.textContent).toContain('Cephalometric'))
+    // Even with the gate passed, an assistant gets no Generate Report / Lock control.
+    expect(screen.queryByRole('button', { name: /Generate Report/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Lock all confirmed/i })).toBeNull()
+    expect(screen.getByTestId('ceph-draft-only-notice')).not.toBeNull()
   })
 
   test('controlled selection: clicking a palette item calls onSelectCode (lifted state)', async () => {
@@ -383,5 +424,7 @@ describe('CephWorkspacePanel — Auto-detect (P1-10)', () => {
         ),
       { timeout: 4000 },
     )
+    // CLINICAL INTEGRITY: with the kill-switch on, NO AI landmark may reach the chart.
+    expect(container.querySelector('[data-ai-unconfirmed]')).toBeNull()
   })
 })

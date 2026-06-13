@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "dental_treatment_visit_local_id_unique" ON "dental_treatment" USING btree ("visit_id","local_id") WHERE local_id is not null;

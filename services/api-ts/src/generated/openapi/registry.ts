@@ -105,6 +105,7 @@ import { DentalMembershipManagement_verifyPin } from '../../handlers/dental-org/
 import { DentalOrganizationManagement_create } from '../../handlers/dental-org/DentalOrganizationManagement_create';
 import { DentalOrganizationManagement_get } from '../../handlers/dental-org/DentalOrganizationManagement_get';
 import { DentalOrganizationManagement_update } from '../../handlers/dental-org/DentalOrganizationManagement_update';
+import { activateOrganization } from '../../handlers/dental-org/activateOrganization';
 import { createConsentTemplate } from '../../handlers/dental-org/createConsentTemplate';
 import { createMember } from '../../handlers/dental-org/createMember';
 import { createOnboarding } from '../../handlers/dental-org/createOnboarding';
@@ -252,15 +253,19 @@ import { ImagingFindingsMgmt_createFinding } from '../../handlers/dental-imaging
 import { ImagingFindingsMgmt_deleteFinding } from '../../handlers/dental-imaging/ImagingFindingsMgmt_deleteFinding';
 import { ImagingFindingsMgmt_listFindings } from '../../handlers/dental-imaging/ImagingFindingsMgmt_listFindings';
 import { ImagingFindingsMgmt_updateFinding } from '../../handlers/dental-imaging/ImagingFindingsMgmt_updateFinding';
+import { ImagingMgmt_createImageLink } from '../../handlers/dental-imaging/ImagingMgmt_createImageLink';
 import { ImagingMgmt_createImagingStudy } from '../../handlers/dental-imaging/ImagingMgmt_createImagingStudy';
 import { ImagingMgmt_createMeasurement } from '../../handlers/dental-imaging/ImagingMgmt_createMeasurement';
 import { ImagingMgmt_deleteImage } from '../../handlers/dental-imaging/ImagingMgmt_deleteImage';
+import { ImagingMgmt_deleteImageLink } from '../../handlers/dental-imaging/ImagingMgmt_deleteImageLink';
 import { ImagingMgmt_deleteMeasurement } from '../../handlers/dental-imaging/ImagingMgmt_deleteMeasurement';
 import { ImagingMgmt_finalizeCbctStudy } from '../../handlers/dental-imaging/ImagingMgmt_finalizeCbctStudy';
 import { ImagingMgmt_getCbctViewerLink } from '../../handlers/dental-imaging/ImagingMgmt_getCbctViewerLink';
 import { ImagingMgmt_getImagingStudy } from '../../handlers/dental-imaging/ImagingMgmt_getImagingStudy';
+import { ImagingMgmt_listImageLinks } from '../../handlers/dental-imaging/ImagingMgmt_listImageLinks';
 import { ImagingMgmt_listMeasurements } from '../../handlers/dental-imaging/ImagingMgmt_listMeasurements';
 import { ImagingMgmt_updateImageCalibration } from '../../handlers/dental-imaging/ImagingMgmt_updateImageCalibration';
+import { ImagingMgmt_updateImageMetadata } from '../../handlers/dental-imaging/ImagingMgmt_updateImageMetadata';
 import { ImagingMgmt_updateImageModality } from '../../handlers/dental-imaging/ImagingMgmt_updateImageModality';
 import { PatientImageMgmt_listPatientImages } from '../../handlers/dental-imaging/PatientImageMgmt_listPatientImages';
 import { listLegalHolds } from '../../handlers/dental-legalhold/listLegalHolds';
@@ -270,6 +275,7 @@ import { completePerioChart } from '../../handlers/dental-perio/completePerioCha
 import { createPerioChart } from '../../handlers/dental-perio/createPerioChart';
 import { getPerioChart } from '../../handlers/dental-perio/getPerioChart';
 import { getVisitPerioChart } from '../../handlers/dental-perio/getVisitPerioChart';
+import { listPerioChartsForPatient } from '../../handlers/dental-perio/listPerioChartsForPatient';
 import { upsertToothReading } from '../../handlers/dental-perio/upsertToothReading';
 import { exportPMD } from '../../handlers/dental-pmd/exportPMD';
 import { exportPatientCareRecord } from '../../handlers/dental-pmd/exportPatientCareRecord';
@@ -279,22 +285,32 @@ import { getPMDForVisit } from '../../handlers/dental-pmd/getPMDForVisit';
 import { importPMD } from '../../handlers/dental-pmd/importPMD';
 import { listImportedPMDs } from '../../handlers/dental-pmd/listImportedPMDs';
 import { listPMDs } from '../../handlers/dental-pmd/listPMDs';
+import { mergeImportedPMDSafetyFloor } from '../../handlers/dental-pmd/mergeImportedPMDSafetyFloor';
+import { getRetentionStatus } from '../../handlers/retention/getRetentionStatus';
 import { applyTemplate } from '../../handlers/dental-visit/templates/applyTemplate';
 import { carryOverTreatments } from '../../handlers/dental-visit/treatments/carryOverTreatments';
+import { convertFindingToTreatment } from '../../handlers/dental-visit/convertFindingToTreatment';
+import { createDentalFinding } from '../../handlers/dental-visit/createDentalFinding';
 import { createDentalTreatment } from '../../handlers/dental-visit/treatments/createDentalTreatment';
 import { createDentalVisit } from '../../handlers/dental-visit/visits/createDentalVisit';
 import { createTreatmentTemplate } from '../../handlers/dental-visit/templates/createTreatmentTemplate';
 import { createVisitNoteAddendum } from '../../handlers/dental-visit/notes/createVisitNoteAddendum';
 import { deleteTreatmentTemplate } from '../../handlers/dental-visit/templates/deleteTreatmentTemplate';
+import { discardVisit } from '../../handlers/dental-visit/visits/discardVisit';
+import { exportDentalChart } from '../../handlers/dental-visit/exportDentalChart';
 import { getDentalChart } from '../../handlers/dental-visit/chart/getDentalChart';
 import { getDentalVisit } from '../../handlers/dental-visit/visits/getDentalVisit';
 import { getToothHistory } from '../../handlers/dental-visit/chart/getToothHistory';
 import { getVisitNoteHistory } from '../../handlers/dental-visit/notes/getVisitNoteHistory';
 import { getVisitNotes } from '../../handlers/dental-visit/notes/getVisitNotes';
+import { listChartConflicts } from '../../handlers/dental-visit/listChartConflicts';
+import { listDentalFindings } from '../../handlers/dental-visit/listDentalFindings';
 import { listDentalTreatments } from '../../handlers/dental-visit/treatments/listDentalTreatments';
 import { listDentalVisits } from '../../handlers/dental-visit/visits/listDentalVisits';
 import { listTreatmentTemplates } from '../../handlers/dental-visit/templates/listTreatmentTemplates';
+import { resolveChartConflict } from '../../handlers/dental-visit/resolveChartConflict';
 import { signVisitNotes } from '../../handlers/dental-visit/notes/signVisitNotes';
+import { updateDentalFinding } from '../../handlers/dental-visit/updateDentalFinding';
 import { updateDentalTreatment } from '../../handlers/dental-visit/treatments/updateDentalTreatment';
 import { updateDentalVisit } from '../../handlers/dental-visit/visits/updateDentalVisit';
 import { updateTooth } from '../../handlers/dental-visit/chart/updateTooth';
@@ -316,6 +332,9 @@ import { getConsultation } from '../../handlers/emr/getConsultation';
 import { listConsultations } from '../../handlers/emr/listConsultations';
 import { listEMRPatients } from '../../handlers/emr/listEMRPatients';
 import { updateConsultation } from '../../handlers/emr/updateConsultation';
+import { getMyBalance } from '../../handlers/dental-portal/getMyBalance';
+import { listMyAppointments } from '../../handlers/dental-portal/listMyAppointments';
+import { listMyInvoices } from '../../handlers/dental-portal/listMyInvoices';
 import { getNotification } from '../../handlers/notifs/getNotification';
 import { listNotifications } from '../../handlers/notifs/listNotifications';
 import { markAllNotificationsAsRead } from '../../handlers/notifs/markAllNotificationsAsRead';
@@ -333,6 +352,7 @@ import { listPersons } from '../../handlers/person/listPersons';
 import { updatePerson } from '../../handlers/person/updatePerson';
 import { createPractitioner } from '../../handlers/provider/createPractitioner';
 import { createPractitionerRole } from '../../handlers/provider/createPractitionerRole';
+import { createProvider } from '../../handlers/provider/createProvider';
 import { deactivatePractitioner } from '../../handlers/provider/deactivatePractitioner';
 import { deactivatePractitionerRole } from '../../handlers/provider/deactivatePractitionerRole';
 import { getPractitioner } from '../../handlers/provider/getPractitioner';
@@ -474,6 +494,7 @@ export const registry = {
   DentalOrganizationManagement_create,
   DentalOrganizationManagement_get,
   DentalOrganizationManagement_update,
+  activateOrganization,
   createConsentTemplate,
   createMember,
   createOnboarding,
@@ -629,15 +650,19 @@ export const registry = {
   ImagingFindingsMgmt_deleteFinding,
   ImagingFindingsMgmt_listFindings,
   ImagingFindingsMgmt_updateFinding,
+  ImagingMgmt_createImageLink,
   ImagingMgmt_createImagingStudy,
   ImagingMgmt_createMeasurement,
   ImagingMgmt_deleteImage,
+  ImagingMgmt_deleteImageLink,
   ImagingMgmt_deleteMeasurement,
   ImagingMgmt_finalizeCbctStudy,
   ImagingMgmt_getCbctViewerLink,
   ImagingMgmt_getImagingStudy,
+  ImagingMgmt_listImageLinks,
   ImagingMgmt_listMeasurements,
   ImagingMgmt_updateImageCalibration,
+  ImagingMgmt_updateImageMetadata,
   ImagingMgmt_updateImageModality,
   PatientImageMgmt_listPatientImages,
 
@@ -651,6 +676,7 @@ export const registry = {
   createPerioChart,
   getPerioChart,
   getVisitPerioChart,
+  listPerioChartsForPatient,
   upsertToothReading,
 
   // Dental-pmd handlers
@@ -662,24 +688,36 @@ export const registry = {
   importPMD,
   listImportedPMDs,
   listPMDs,
+  mergeImportedPMDSafetyFloor,
+
+  // Retention handlers
+  getRetentionStatus,
 
   // Dental-visit handlers
   applyTemplate,
   carryOverTreatments,
+  convertFindingToTreatment,
+  createDentalFinding,
   createDentalTreatment,
   createDentalVisit,
   createTreatmentTemplate,
   createVisitNoteAddendum,
   deleteTreatmentTemplate,
+  discardVisit,
+  exportDentalChart,
   getDentalChart,
   getDentalVisit,
   getToothHistory,
   getVisitNoteHistory,
   getVisitNotes,
+  listChartConflicts,
+  listDentalFindings,
   listDentalTreatments,
   listDentalVisits,
   listTreatmentTemplates,
+  resolveChartConflict,
   signVisitNotes,
+  updateDentalFinding,
   updateDentalTreatment,
   updateDentalVisit,
   updateTooth,
@@ -706,6 +744,11 @@ export const registry = {
   listEMRPatients,
   updateConsultation,
 
+  // Dental-portal handlers
+  getMyBalance,
+  listMyAppointments,
+  listMyInvoices,
+
   // Notifs handlers
   getNotification,
   listNotifications,
@@ -730,6 +773,7 @@ export const registry = {
   // Provider handlers
   createPractitioner,
   createPractitionerRole,
+  createProvider,
   deactivatePractitioner,
   deactivatePractitionerRole,
   getPractitioner,

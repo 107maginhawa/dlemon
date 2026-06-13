@@ -5,7 +5,7 @@
  * Isolated here so dental-scheduling handlers never import cross-module schemas directly.
  */
 
-import { eq, and, type SQL } from 'drizzle-orm';
+import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalAppointments } from './dental-appointment.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
@@ -44,7 +44,9 @@ export async function getAppointmentWithPatientName(
     .from(dentalAppointments)
     .leftJoin(patients, eq(patients.id, dentalAppointments.patientId))
     .leftJoin(persons, eq(persons.id, patients.person))
-    .where(eq(dentalAppointments.id, id));
+    // Soft-archived appointments (V-DG-003 retention stamps deletedAt) are not
+    // retrievable by staff reads — NULL = live. (SCHEMA-FIX-3)
+    .where(and(eq(dentalAppointments.id, id), isNull(dentalAppointments.deletedAt)));
   if (!row) return null;
   const { firstName, lastName, ...appt } = row;
   return { ...appt, patientName: firstName ? [firstName, lastName].filter(Boolean).join(' ') : undefined } as AppointmentWithPatientName;
@@ -56,7 +58,10 @@ export async function listAppointmentsWithPatientName(
   limit: number,
   offset: number,
 ): Promise<AppointmentWithPatientName[]> {
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  // Always exclude soft-archived appointments (V-DG-003 retention stamps
+  // deletedAt; NULL = live) so they never leak into the staff calendar list,
+  // regardless of caller-supplied conditions. (SCHEMA-FIX-3)
+  const where = and(isNull(dentalAppointments.deletedAt), ...conditions);
   const rows = await db
     .select({
       id: dentalAppointments.id,

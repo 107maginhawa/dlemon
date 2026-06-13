@@ -180,6 +180,53 @@ jsonpath "$.cdtCode" == "D2391"
 jsonpath "$.priceCents" == 15000
 
 
+# 8a. Fee schedule DRIVES treatment pricing (dental-org G2 / AC-ORG-002).
+# Set a per-branch override for a catalog CDT via the dedicated endpoint, then
+# create a treatment with NO priceCents — the handler must default it from the
+# fee schedule. D1110 is in the global procedure catalog (seeded on boot).
+PATCH {{api}}/dental/fee-schedule/D1110
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "branchId": "{{branch_id}}",
+  "priceCents": 33300
+}
+HTTP 200
+[Asserts]
+jsonpath "$.data.cdtCode" == "D1110"
+jsonpath "$.data.priceCents" == 33300
+
+# 8b. Create a treatment WITHOUT priceCents → defaults to the configured fee.
+POST {{api}}/dental/visits/{{visit_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "cdtCode": "D1110",
+  "description": "Adult prophylaxis"
+}
+HTTP 201
+[Captures]
+fee_default_treatment_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.cdtCode" == "D1110"
+jsonpath "$.priceCents" == 33300
+
+# 8c. Dismiss the fee-default treatment so it does not block visit completion
+# below (this scenario only exists to prove fee-driven pricing).
+PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{fee_default_treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "dismissed",
+  "dismissReason": "fee-default contract probe"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "dismissed"
+
+
 # 9. List treatments for visit
 GET {{api}}/dental/visits/{{visit_id}}/treatments
 Cookie: better-auth.session_token={{session_token}}
@@ -331,6 +378,19 @@ HTTP 200
 jsonpath "$.status" == "active"
 
 
+# SL-03 / B-G1 — per-tooth PATCH merges into the patient baseline (living document).
+# The second visit has no chart row of its own, so GET chart carries the baseline
+# forward. Step 7 PATCHed tooth 26 to "filled"; the earlier upsert (step 5) had it
+# as "caries". The carried-over state must be "filled" — proving the PATCH path
+# (not just the full upsert) merged into the baseline. Before the fix this returned
+# the stale "caries" because updateTooth skipped the baseline merge.
+GET {{api}}/dental/visits/{{visit2_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.teeth[?(@.toothNumber == 26)].state" == "filled"
+
+
 # NEW: G2-S4 — upsert notes (first time) on second visit
 POST {{api}}/dental/visits/{{visit2_id}}/notes
 Cookie: better-auth.session_token={{session_token}}
@@ -388,3 +448,475 @@ HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
 jsonpath "$.pagination" isCollection
+
+
+# ============================================================
+# E3 — hygienist-led HYGIENE visits (visitType scoping)
+# ============================================================
+# The contract suite runs as the org owner (dentist_owner); PIN-only context
+# roles (hygienist) have no cloud session, so the hygienist DENY paths are
+# covered by the backend unit suite (hygienist.hygiene-visit.test.ts). Here we
+# pin the wire contract: a hygiene-typed visit can be created, round-trips its
+# visitType, and its notes can be signed.
+
+# E3-0 — fresh patient for the hygiene flow (the original patient already has an
+# active visit; the active-visit guard would 409 a second create).
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Hygiene Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+hygiene_patient_id: jsonpath "$.id"
+
+
+# E3-1 — create a HYGIENE-typed visit (visitType persists)
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{hygiene_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "visitType": "hygiene",
+  "chiefComplaint": "6-month recall + prophy"
+}
+HTTP 201
+[Captures]
+hygiene_visit_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.visitType" == "hygiene"
+jsonpath "$.status" == "draft"
+
+
+# E3-1a — default visitType is 'general' when omitted (back-compat). Uses a fresh
+# patient so the active-visit guard doesn't interfere with the assertion.
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Default Type Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+default_type_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{default_type_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Default visit type check"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.visitType" == "general"
+
+
+# E3-2 — GET round-trips the hygiene visitType
+GET {{api}}/dental/visits/{{hygiene_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{hygiene_visit_id}}"
+jsonpath "$.visitType" == "hygiene"
+
+
+# E3-3 — activate the hygiene visit (fresh patient → no active-visit conflict)
+PATCH {{api}}/dental/visits/{{hygiene_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "active"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "active"
+jsonpath "$.visitType" == "hygiene"
+
+
+# E3-4 — draft notes on the hygiene visit
+POST {{api}}/dental/visits/{{hygiene_visit_id}}/notes
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{hygiene_visit_id}}",
+  "subjective": "Recall — no complaints",
+  "objective": "BOP 8%, light calculus lower anteriors",
+  "assessment": "Localised gingivitis",
+  "plan": "Prophy completed; 6-month recall",
+  "notes": "OHI reinforced"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.visitId" == "{{hygiene_visit_id}}"
+
+
+# E3-5 — sign the hygiene visit's notes (happy path)
+POST {{api}}/dental/visits/{{hygiene_visit_id}}/notes/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 200
+[Asserts]
+jsonpath "$.signed" == true
+jsonpath "$.signedAt" isString
+
+
+# ============================================================
+# P0-A — offline chart conflict visibility & resolution
+# A stale offline write (lower clock) is rejected by the baseline merge and
+# persisted as a conflict; these ops surface and resolve it.
+# ============================================================
+
+# P0A-0 — fresh patient + active visit for the conflict flow
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Conflict Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+conflict_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{conflict_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Offline sync conflict probe"
+}
+HTTP 201
+[Captures]
+conflict_visit_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{conflict_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+
+# P0A-1 — seed the baseline: tooth #18 = crown at clock 10 (the newer edit)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{conflict_visit_id}}",
+  "patientId": "{{conflict_patient_id}}",
+  "teeth": [ {"toothNumber": 18, "state": "crown", "clock": 10} ]
+}
+HTTP 201
+[Asserts]
+jsonpath "$.syncStatus" == "synced"
+
+
+# P0A-2 — a STALE offline write (#18 caries @clock3) loses the merge → conflict
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{conflict_visit_id}}",
+  "patientId": "{{conflict_patient_id}}",
+  "teeth": [ {"toothNumber": 18, "state": "caries", "clock": 3} ]
+}
+HTTP 201
+[Asserts]
+jsonpath "$.syncStatus" == "conflict"
+
+
+# P0A-3 — list open conflicts for the patient
+GET {{api}}/dental/visits/chart-conflicts/{{conflict_patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 1
+jsonpath "$[0].visitId" == "{{conflict_visit_id}}"
+jsonpath "$[0].reason" == "stale_clock_rejected"
+jsonpath "$[0].rejectedTeeth[?(@.toothNumber == 18)].state" == "caries"
+
+
+# P0A-4 — dismiss WITHOUT a reason is rejected (400)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart/resolve-conflict
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "resolution": "dismiss" }
+HTTP 400
+
+
+# P0A-5 — dismiss WITH a reason clears the conflict (keeps current crown)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart/resolve-conflict
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "resolution": "dismiss", "reason": "Duplicate offline edit; crown is correct." }
+HTTP 200
+[Asserts]
+jsonpath "$.syncStatus" == "synced"
+
+
+# P0A-6 — the conflict is gone from the list
+GET {{api}}/dental/visits/chart-conflicts/{{conflict_patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 0
+
+
+# P0A-7 — seed a second conflict, then ACCEPT it (rejected write becomes truth)
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{conflict_visit_id}}",
+  "patientId": "{{conflict_patient_id}}",
+  "teeth": [ {"toothNumber": 18, "state": "fractured", "clock": 2} ]
+}
+HTTP 201
+[Asserts]
+jsonpath "$.syncStatus" == "conflict"
+
+POST {{api}}/dental/visits/{{conflict_visit_id}}/chart/resolve-conflict
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "resolution": "accept" }
+HTTP 200
+[Asserts]
+jsonpath "$.syncStatus" == "synced"
+
+
+# P0A-8 — conflicts cleared after accept
+GET {{api}}/dental/visits/chart-conflicts/{{conflict_patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 0
+
+
+# ============================================================
+# P0-B — structured chart export
+# The original visit (visit_id) has a 3-tooth chart (#11/#26/#36) and tooth #26
+# was taken to 'performed' above → it lands on the Completed layer in the export.
+# ============================================================
+GET {{api}}/dental/visits/{{visit_id}}/chart/export
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.visitId" == "{{visit_id}}"
+jsonpath "$.notation" == "FDI"
+jsonpath "$.generatedAt" isString
+jsonpath "$.patientName" isString
+jsonpath "$.teeth" count == 3
+jsonpath "$.legend" count == 4
+jsonpath "$.summary.completedCount" >= 1
+jsonpath "$.teeth[?(@.toothNumber == 26)].layer" == "completed"
+
+
+# ============================================================
+# P0-C — condition-vocabulary findings + finding → treatment
+# ============================================================
+
+# P0C-0 — fresh patient + active visit
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "displayName": "Finding Test Patient {{suffix}}", "consentGiven": true, "branchId": "{{branch_id}}" }
+HTTP 201
+[Captures]
+finding_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "patientId": "{{finding_patient_id}}", "branchId": "{{branch_id}}", "dentistMemberId": "{{dentist_member_id}}", "chiefComplaint": "Findings probe" }
+HTTP 201
+[Captures]
+finding_visit_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{finding_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+
+# P0C-1 — record a structured tooth/surface finding from the curated vocabulary
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "toothNumber": 16, "surface": "occlusal", "conditionCode": "caries" }
+HTTP 201
+[Asserts]
+jsonpath "$.conditionCode" == "caries"
+jsonpath "$.toothNumber" == 16
+jsonpath "$.status" == "active"
+
+
+# P0C-2 — 'other' without a note is rejected
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "toothNumber": 21, "conditionCode": "other" }
+HTTP 400
+
+
+# P0C-3 — 'other' with a note is accepted
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "toothNumber": 21, "conditionCode": "other", "note": "Enamel pearl, distolingual" }
+HTTP 201
+[Captures]
+finding_other_id: jsonpath "$.id"
+
+
+# P0C-4 — list findings (both)
+GET {{api}}/dental/visits/{{finding_visit_id}}/findings
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" count == 2
+
+
+# P0C-5 — resolve a finding (stops rendering as active)
+PATCH {{api}}/dental/visits/{{finding_visit_id}}/findings/{{finding_other_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "resolved" }
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "resolved"
+
+
+# P0C-6 — convert a finding into a treatment (carries tooth + links them)
+POST {{api}}/dental/visits/{{finding_visit_id}}/findings/{{finding_other_id}}/treatment
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "cdtCode": "D2391", "description": "Resin composite — one surface", "priceCents": 15000 }
+HTTP 201
+[Asserts]
+jsonpath "$.toothNumber" == 21
+jsonpath "$.cdtCode" == "D2391"
+jsonpath "$.status" == "diagnosed"
+
+
+# ============================================================
+# FIX-001 (GAP-6) — contract pins for the reconciled shapes.
+# Handlers are ground truth; these lock the REAL wire shapes so the
+# TypeSpec reconcile + SDK regen cannot silently drift (0 FE consumers
+# today, so the regen window is safe). They MUST pass both before the
+# reconcile (against the real handlers) and after regen.
+# ============================================================
+
+# FIX-001-A — create a treatment template. Handler self-validates
+# { name, branchId, items[] }; the real TreatmentTemplate carries `items`
+# (TemplateTreatmentItem[]) + branchId + active — NOT the stringly-typed
+# `treatments: string` the TypeSpec used to declare.
+POST {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "name": "Composite + Cleaning {{suffix}}",
+  "branchId": "{{branch_id}}",
+  "description": "Contract pin template",
+  "items": [
+    { "cdtCode": "D2391", "description": "Resin composite, one surface", "priceCents": 15000, "toothNumber": 14 },
+    { "cdtCode": "D1110", "description": "Adult prophylaxis", "priceCents": 33300 }
+  ]
+}
+HTTP 201
+[Captures]
+template_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.items" isCollection
+jsonpath "$.items" count == 2
+jsonpath "$.items[0].cdtCode" == "D2391"
+jsonpath "$.name" isString
+jsonpath "$.branchId" == "{{branch_id}}"
+
+
+# FIX-001-A1 — list templates returns the { templates: [...] } envelope (NOT a bare
+# array — the op declaration used to claim a bare array).
+GET {{api}}/dental/treatment-templates?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.templates" isCollection
+jsonpath "$.templates" count >= 1
+jsonpath "$.templates[0].items" isCollection
+
+
+# FIX-001-A1b — branchId is REQUIRED on listTreatmentTemplates. The handler reads
+# `?branchId=` and the op now declares it as a required @query param, so a request
+# that omits it is rejected by the generated query validator (400) — NOT a bare
+# `throw new Error` 500 (the pre-reconcile behaviour, when the SDK could not even
+# send the param). Pins the FIX-001-completion drift fix (#13 prereq).
+GET {{api}}/dental/treatment-templates
+Cookie: better-auth.session_token={{session_token}}
+HTTP 400
+
+
+# FIX-001-A2 — apply the template to the active second visit. Real
+# ApplyTemplateResponse is { applied: Treatment[], count } (NOT { applied: int, visitId }).
+POST {{api}}/dental/visits/{{visit2_id}}/apply-template/{{template_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 201
+[Asserts]
+jsonpath "$.applied" isCollection
+jsonpath "$.applied" count == 2
+jsonpath "$.count" == 2
+jsonpath "$.applied[0].status" == "planned"
+
+
+# FIX-001-B — carry over from the locked first visit into the active second visit
+# AND restore a previously-dismissed treatment. Real CarryOverTreatmentsResponse is
+# { carriedOver[], restoredDismissed[], message }; restoreDismissedIds must be
+# accepted + applied (the request field used to be missing from TypeSpec).
+POST {{api}}/dental/visits/{{visit2_id}}/carry-over
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "sourceVisitId": "{{visit_id}}",
+  "restoreDismissedIds": ["{{fee_default_treatment_id}}"]
+}
+HTTP 200
+[Asserts]
+jsonpath "$.carriedOver" isCollection
+jsonpath "$.restoredDismissed" isCollection
+jsonpath "$.restoredDismissed" count >= 1
+jsonpath "$.message" isString
+
+
+# FIX-001-C — patient treatment-plan aggregate. Real TreatmentPlanResponse is
+# { patientId, version, totalEstimateCents, treatmentCount, toothCount, byTooth,
+#   treatments[], completedToothNumbers } — NOT the stringly-typed visits/treatments
+# placeholder. Non-empty here (apply-template + carry-over above added planned items).
+GET {{api}}/dental/patients/{{patient_id}}/treatment-plan?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.version" isInteger
+jsonpath "$.totalEstimateCents" isInteger
+jsonpath "$.toothCount" isInteger
+jsonpath "$.treatmentCount" isInteger
+jsonpath "$.byTooth" exists
+jsonpath "$.treatments" isCollection
+jsonpath "$.treatments" count >= 1
+jsonpath "$.treatments[0].cdtCode" isString
+jsonpath "$.completedToothNumbers" isCollection

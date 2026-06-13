@@ -13,7 +13,6 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { getVisitOrThrow } from '@/handlers/dental-visit/utils/visit.service';
 import { PrescriptionRepository } from '../repos/prescription.repo';
-import { VALID_PRESCRIPTION_STATUSES, type PrescriptionStatus } from '../repos/prescription.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import type { User } from '@/types/auth';
 import type { UpdatePrescriptionBody, UpdatePrescriptionParams } from '@/generated/openapi/validators';
@@ -37,26 +36,29 @@ export async function updatePrescription(
   const visit = await getVisitOrThrow(db, existing.visitId);
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
-  // EM-CLI-012: parse `status` from raw JSON body.
-  // The generated UpdatePrescriptionBody schema does not include `status` (Zod strips it).
-  // We call ctx.req.json() which returns the full parsed JSON from Hono's cached body.
-  const rawJson = await ctx.req.json() as Record<string, unknown>;
-  const statusRaw = rawJson['status'];
+  // EM-CLI-012: route on `status` when present. `status` is part of the validated
+  // UpdatePrescriptionBody (added to UpdatePrescriptionRequest so the contract
+  // describes the dispense/cancel transition the FE drives); the generated Zod enum
+  // already rejects unknown values (400), so we read the validated field and route
+  // straight to the FSM guard — which enforces the legal transitions.
+  const statusRaw = body.status;
 
   if (statusRaw !== undefined) {
-    // Validate it is a known enum value before passing to FSM
-    if (!VALID_PRESCRIPTION_STATUSES.includes(statusRaw as PrescriptionStatus)) {
-      throw new BusinessLogicError(
-        `Invalid prescription status '${String(statusRaw)}'. Must be one of: ${VALID_PRESCRIPTION_STATUSES.join(', ')}`,
-        'INVALID_PRESCRIPTION_STATUS',
-      );
-    }
-
-    const { prescription, error } = await repo.updateStatus(prescriptionId, statusRaw as PrescriptionStatus);
+    const { prescription, error } = await repo.updateStatus(prescriptionId, statusRaw);
     if (error) {
       throw new BusinessLogicError(error, 'INVALID_PRESCRIPTION_TRANSITION');
     }
     return ctx.json(prescription);
+  }
+
+  // BR-003: field edits are blocked once the visit is locked/completed (parity with all
+  // five clinical create handlers). Status PROGRESSION above is intentionally exempt —
+  // pending→dispensed/cancelled happens externally (pharmacy), like the lab-order §13 carve-out.
+  if (visit.status === 'locked' || visit.status === 'completed') {
+    throw new BusinessLogicError(
+      'Cannot edit prescriptions on a locked or completed visit',
+      'VISIT_IMMUTABLE',
+    );
   }
 
   // Non-status field update (existing behaviour unchanged)

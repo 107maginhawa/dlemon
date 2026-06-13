@@ -19,6 +19,7 @@ import {
   pgEnum,
   timestamp,
   index,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
 
@@ -41,6 +42,19 @@ export const modalityEnum = pgEnum('imaging_modality', [
 ]);
 
 export const imagingStatusEnum = pgEnum('imaging_status', ['active', 'archived']);
+
+// G5: per-image acquisition quality. 'ok' = usable; 'retake' = flagged for re-acquisition
+// (with an optional retakeReason). Additive, non-default-changing.
+export const imagingQualityStatusEnum = pgEnum('imaging_quality_status', ['ok', 'retake']);
+
+// G5b: context-link target kinds. An image can be linked to a treatment plan, an
+// ortho case, or a cephalometric report (loose-coupled — targetId references the
+// other module's row id with NO DB-level FK, mirroring the existing cross-module pattern).
+export const imagingLinkTypeEnum = pgEnum('imaging_link_type', [
+  'treatment_plan',
+  'ortho_case',
+  'report',
+]);
 
 export const imagingAnnotationTypeEnum = pgEnum('imaging_annotation_type', [
   'line',
@@ -95,7 +109,91 @@ export const imagingStudyImages = pgTable('imaging_study_image', {
   // dedupe + viewer deep-link (Phase 2). No DB-level uniqueness in v1.
   seriesInstanceUid: text('series_instance_uid'),
   studyInstanceUid: text('study_instance_uid'),
+  // G5 library metadata (all additive / non-breaking — §4 organization & filtering):
+  // isDiagnostic defaults true (most images are diagnostic); qualityStatus flags retakes;
+  // retakeReason explains a flagged retake; tags are free-text organizational labels.
+  isDiagnostic: boolean('is_diagnostic').notNull().default(true),
+  qualityStatus: imagingQualityStatusEnum('quality_status').notNull().default('ok'),
+  retakeReason: text('retake_reason'),
+  tags: jsonb('tags').notNull().$type<string[]>().default([]),
 });
+
+/**
+ * G6: first-class VERSIONED calibration record (guide §6).
+ *
+ * The image carries the latest derived `pixelSpacingMm` (mirrored for all the
+ * measurement/math consumers that read it directly), but that single scalar
+ * cannot be reproduced or explained. This append-only table persists the actual
+ * 2-point ruler calibration — the two image-space points + the known real-world
+ * distance — once per calibration event, with a monotonic `version` per image.
+ * A finalized ceph report pins the LATEST version so the calibration it was
+ * traced against is exactly reproducible (couples with G2 report version-pinning).
+ *
+ * Append-only: a re-calibration mints a new version row, never mutates a prior one.
+ * `version` here is a monotonic snapshot revision (1, 2, 3…) set via
+ * createSnapshotVersion — NOT baseEntityFields' optimistic-lock counter.
+ */
+export const imagingCalibrations = pgTable(
+  'imaging_calibration',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdBy: uuid('created_by'),
+    version: integer('version').notNull(),
+    imageId: uuid('image_id')
+      .notNull()
+      .references(() => imagingStudyImages.id),
+    // Two ruler points in image-space pixels (D-C convention).
+    pointA: jsonb('point_a').notNull().$type<{ x: number; y: number }>(),
+    pointB: jsonb('point_b').notNull().$type<{ x: number; y: number }>(),
+    // The real-world length the operator entered for that ruler line.
+    knownDistanceMm: real('known_distance_mm').notNull(),
+    // Euclidean pixel length of A→B — retained so pixelSpacingMm is reproducible.
+    pixelDistance: real('pixel_distance').notNull(),
+    // Derived authoritatively server-side: knownDistanceMm / pixelDistance (mm per px).
+    pixelSpacingMm: real('pixel_spacing_mm').notNull(),
+    // Provenance; v1 only ever 'manual_ruler' (the 2-point ruler flow).
+    method: text('method').notNull().default('manual_ruler'),
+  },
+  (table) => ({
+    uniqueImageVersion: unique('imaging_calibration_image_version_uniq').on(
+      table.imageId,
+      table.version,
+    ),
+    imageIdx: index('imaging_calibration_image_idx').on(table.imageId),
+  }),
+);
+
+/**
+ * G5b: context links (guide §4) — an image's relationships to a treatment plan,
+ * ortho case, or cephalometric report. Loose-coupled: targetId references another
+ * module's row id with NO DB-level FK (matches the cross-module convention used by
+ * imaging_study.patientId/visitId). One row per (image, type, target); re-linking
+ * the same pair is idempotent.
+ */
+export const imagingLinks = pgTable(
+  'imaging_link',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdBy: uuid('created_by'),
+    imageId: uuid('image_id')
+      .notNull()
+      .references(() => imagingStudyImages.id),
+    linkType: imagingLinkTypeEnum('link_type').notNull(),
+    // loose-coupling: references treatment-plan / ortho-case / ceph-report id (cross-module — no DB FK)
+    targetId: uuid('target_id').notNull(),
+  },
+  (table) => ({
+    uniqueLink: unique('imaging_link_image_type_target_uniq').on(
+      table.imageId,
+      table.linkType,
+      table.targetId,
+    ),
+    imageIdx: index('imaging_link_image_idx').on(table.imageId),
+    targetIdx: index('imaging_link_target_idx').on(table.targetId),
+  }),
+);
 
 /** JOIN TABLE: one image → many tooth numbers */
 export const imagingStudyTeeth = pgTable('imaging_study_tooth', {
@@ -205,3 +303,8 @@ export type ImagingStudyTooth = typeof imagingStudyTeeth.$inferSelect;
 export type NewImagingStudyTooth = typeof imagingStudyTeeth.$inferInsert;
 export type ImagingAnnotation = typeof imagingAnnotations.$inferSelect;
 export type NewImagingAnnotation = typeof imagingAnnotations.$inferInsert;
+export type ImagingCalibration = typeof imagingCalibrations.$inferSelect;
+export type NewImagingCalibration = typeof imagingCalibrations.$inferInsert;
+export type ImagingLink = typeof imagingLinks.$inferSelect;
+export type NewImagingLink = typeof imagingLinks.$inferInsert;
+export type ImagingLinkType = (typeof imagingLinkTypeEnum.enumValues)[number];

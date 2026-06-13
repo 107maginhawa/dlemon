@@ -17,22 +17,14 @@
  * - 401 without auth
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { ZodError } from 'zod';
-import { Hono } from 'hono';
-import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
-import { getBranchSettings, updateBranchSettings } from './branchSettings';
-import {
-  listConsentTemplates,
-  createConsentTemplate,
-  updateConsentTemplate,
-  deleteConsentTemplate,
-} from './consentTemplates';
 import { dentalConsentTemplates } from './repos/consent-template.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -43,29 +35,6 @@ const ORG_ID = 'eeeeeeee-0000-1000-8000-000000000044';
 const BRANCH_ID = 'bbbbbbbb-0000-1000-8000-000000000044';
 const OWNER_MEMBER_ID = 'dddddddd-0000-1000-8000-000000000044';
 const STAFF_MEMBER_ID = 'dddddddd-0000-1000-8000-000000000045';
-
-function buildTestApp(user?: typeof TEST_USER | typeof OTHER_USER) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof ZodError) return c.json({ error: err.issues.map(i => i.message).join('; ') }, 400);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.get('/dental/branches/:branchId/settings', getBranchSettings);
-  app.put('/dental/branches/:branchId/settings', updateBranchSettings);
-  // FR8.4b: Consent form templates
-  app.get('/dental/branches/:branchId/consent-templates', listConsentTemplates);
-  app.post('/dental/branches/:branchId/consent-templates', createConsentTemplate);
-  app.patch('/dental/branches/:branchId/consent-templates/:id', updateConsentTemplate);
-  app.delete('/dental/branches/:branchId/consent-templates/:id', deleteConsentTemplate);
-  return app;
-}
 
 async function seedData() {
   await db.insert(dentalOrganizations).values({
@@ -107,7 +76,7 @@ afterEach(async () => {
 describe('GET /dental/branches/:branchId/settings', () => {
   test('returns empty object when no settings configured', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -115,7 +84,7 @@ describe('GET /dental/branches/:branchId/settings', () => {
   });
 
   test('403 for unknown branch (no membership → access denied)', async () => {
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request('/dental/branches/ffffffff-ffff-1000-8000-ffffffffffff/settings');
     // assertBranchAccess runs before existence check — 403 is correct (no info leak)
     expect(res.status).toBe(403);
@@ -123,7 +92,7 @@ describe('GET /dental/branches/:branchId/settings', () => {
 
   test('401 without auth', async () => {
     await seedData();
-    const app = buildTestApp();
+    const app = buildTestApp({ db });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`);
     expect(res.status).toBe(401);
   });
@@ -136,7 +105,7 @@ describe('GET /dental/branches/:branchId/settings', () => {
 describe('PUT /dental/branches/:branchId/settings', () => {
   test('FR8.1: saves clinic configuration', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -152,7 +121,7 @@ describe('PUT /dental/branches/:branchId/settings', () => {
 
   test('FR8.2: saves dentist profile', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -167,7 +136,7 @@ describe('PUT /dental/branches/:branchId/settings', () => {
 
   test('FR8.3: saves treatment fee schedule', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -182,7 +151,7 @@ describe('PUT /dental/branches/:branchId/settings', () => {
 
   test('FR8.7: saves visit notes format toggle', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -195,7 +164,7 @@ describe('PUT /dental/branches/:branchId/settings', () => {
 
   test('FR8.8: saves locale settings', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -211,7 +180,7 @@ describe('PUT /dental/branches/:branchId/settings', () => {
 
   test('merges with existing settings (does not overwrite)', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     // First save
     await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
@@ -237,7 +206,7 @@ describe('PUT /dental/branches/:branchId/settings', () => {
 describe('FR8.13: Access Control — dentist_owner only for settings updates', () => {
   test('owner can update settings', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER); // dentist_owner
+    const app = buildTestApp({ db, user: TEST_USER }); // dentist_owner
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -248,7 +217,7 @@ describe('FR8.13: Access Control — dentist_owner only for settings updates', (
 
   test('non-owner staff cannot update settings (403)', async () => {
     await seedData();
-    const app = buildTestApp(OTHER_USER); // staff_full
+    const app = buildTestApp({ db, user: OTHER_USER }); // staff_full
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -260,7 +229,7 @@ describe('FR8.13: Access Control — dentist_owner only for settings updates', (
   test('user without membership is blocked (403)', async () => {
     await seedData();
     const unknownUser = { id: '00000000-0000-0000-0000-000000000099', email: 'unknown@test.com' };
-    const app = buildTestApp(unknownUser as any); // no membership
+    const app = buildTestApp({ db, user: unknownUser }); // no membership
     const res = await app.request(`/dental/branches/${BRANCH_ID}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -292,7 +261,7 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
 
   test('owner can create a consent template', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
 
     const res = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`, {
       method: 'POST',
@@ -305,15 +274,16 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
     });
 
     expect(res.status).toBe(201);
+    // Contract: ApiCreatedResponse<DentalConsentTemplate> = bare created object.
     const body = await res.json() as any;
-    expect(body.template.name).toBe('Tooth Extraction Consent');
-    expect(body.template.branchId).toBe(BRANCH_ID);
-    expect(body.template.active).toBe(true);
+    expect(body.name).toBe('Tooth Extraction Consent');
+    expect(body.branchId).toBe(BRANCH_ID);
+    expect(body.active).toBe(true);
   });
 
   test('lists active consent templates for a branch', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     // Create two templates
     await db.insert(dentalConsentTemplates).values([
       { branchId: BRANCH_ID, name: 'Template A', body: 'Body A', active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
@@ -322,13 +292,14 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
 
     const res = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`);
     expect(res.status).toBe(200);
+    // Contract: ApiOkResponse<DentalConsentTemplate[]> = bare array body.
     const body = await res.json() as any;
-    expect(body.templates.length).toBeGreaterThanOrEqual(2);
+    expect(body.length).toBeGreaterThanOrEqual(2);
   });
 
   test('owner can update a consent template', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const [template] = await db.insert(dentalConsentTemplates).values({
       branchId: BRANCH_ID, name: 'Old Name', body: 'Old body',
       active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
@@ -341,14 +312,15 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
     });
 
     expect(res.status).toBe(200);
+    // Contract: ApiOkResponse<DentalConsentTemplate> = bare updated object.
     const body = await res.json() as any;
-    expect(body.template.name).toBe('New Name');
-    expect(body.template.body).toBe('Old body'); // unchanged
+    expect(body.name).toBe('New Name');
+    expect(body.body).toBe('Old body'); // unchanged
   });
 
   test('owner can soft-delete a consent template', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
     const [template] = await db.insert(dentalConsentTemplates).values({
       branchId: BRANCH_ID, name: 'To Delete', body: 'Body',
       active: true, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
@@ -359,16 +331,16 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
     });
 
     expect(res.status).toBe(200);
-    // Should not appear in list after deletion
+    // Should not appear in list after deletion (bare array body).
     const listRes = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`);
     const listBody = await listRes.json() as any;
-    const found = listBody.templates.find((t: any) => t.id === template!.id);
+    const found = (listBody as any[]).find((t: any) => t.id === template!.id);
     expect(found).toBeUndefined();
   });
 
   test('non-owner cannot create consent template (403)', async () => {
     await seedData();
-    const app = buildTestApp(OTHER_USER);
+    const app = buildTestApp({ db, user: OTHER_USER });
 
     const res = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`, {
       method: 'POST',
@@ -381,7 +353,7 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
 
   test('returns 400 when name is missing', async () => {
     await seedData();
-    const app = buildTestApp(TEST_USER);
+    const app = buildTestApp({ db, user: TEST_USER });
 
     const res = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`, {
       method: 'POST',
@@ -393,7 +365,7 @@ describe('FR8.4b — Consent Form Templates Editor', () => {
   });
 
   test('returns 401 without auth', async () => {
-    const app = buildTestApp(); // no user
+    const app = buildTestApp({ db }); // no user
     const res = await app.request(`/dental/branches/${BRANCH_ID}/consent-templates`);
     expect(res.status).toBe(401);
   });

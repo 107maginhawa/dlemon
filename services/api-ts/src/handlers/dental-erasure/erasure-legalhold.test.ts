@@ -7,6 +7,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { openTestTx } from '@/core/test-tx';
 import { persons } from '../person/repos/person.schema';
+import { patients } from '../patient/repos/patient.schema';
 import { ERASED_MARKER } from '../person/repos/person-erasure.facade';
 import { requestErasure, approveErasure } from './erasure-service';
 import { placeLegalHold, releaseLegalHold } from '../dental-legalhold/legal-hold-service';
@@ -26,6 +27,9 @@ describe('erasure respects the legal-hold store', () => {
     db = t.db;
     teardown = t.rollback;
     await db.insert(persons).values({ id: PID, firstName: 'Jane', lastName: 'Doe' });
+    // C-4 (patients-only V1): the subject must have a patient anchor or
+    // requestErasure rejects it. No branch → tenancy keeps the supplied TENANT.
+    await db.insert(patients).values({ person: PID, createdBy: ACTOR, updatedBy: ACTOR });
   });
 
   afterEach(() => teardown());

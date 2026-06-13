@@ -56,9 +56,13 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const carousel = page.getByTestId('workspace-carousel-zone')
     await expect(carousel).toBeVisible()
 
-    // Step 2: open a new recall visit via the carousel.
+    // Step 2: open a recall visit via the carousel. The New-Visit button is gated
+    // DISABLED when the patient already has an open visit ("Finish or discard the
+    // open visit to start a new one"); that open visit already satisfies the
+    // active-visit precondition for the steps below, so only click when enabled —
+    // clicking a disabled button just hangs until timeout.
     const newVisitBtn = page.getByTestId('new-visit-btn')
-    if (await newVisitBtn.count()) {
+    if ((await newVisitBtn.count()) && (await newVisitBtn.first().isEnabled())) {
       await newVisitBtn.first().click()
       await page.waitForLoadState('networkidle')
     }

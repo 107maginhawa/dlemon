@@ -3,9 +3,14 @@
  *
  * POST /dental/patients/import
  *
- * Accepts:
- *   - application/json: JSON array of patient rows [ { firstName, lastName?, ... } ]
- *   - text/csv: CSV with headers firstName,lastName,dateOfBirth,branchId,...
+ * Contract body (ImportPatientsRequest) — provide exactly one:
+ *   - { patients: [ { firstName, branchId, lastName?, ... } ] } — JSON rows
+ *   - { csv: "<header row + data rows>" }                        — raw CSV in a JSON field
+ *
+ * NOTE: a raw `text/csv` request body and a bare top-level JSON array are also
+ * parsed if they reach the handler directly, but the generated route's
+ * zValidator only admits the JSON-object contract above — those two are
+ * legacy/internal-only paths, not part of the wire contract.
  *
  * Validates all rows up front — returns 422 with errors if any fail.
  * Batch-commits all patients in a transaction (all-or-nothing).
@@ -54,14 +59,51 @@ function validateRow(row: Record<string, string | undefined>, index: number): { 
   };
 }
 
+/**
+ * G3: RFC-4180-aware CSV tokenizer. A naive `line.split(',')` mis-splits quoted
+ * fields containing commas (e.g. `"dela Cruz, Jr."`), silently corrupting the
+ * field and shifting every column after it. This scans character-by-character,
+ * honouring quoted fields, escaped double-quotes (`""` → `"`), and embedded
+ * commas/newlines inside quotes.
+ */
+function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let field = '';
+  let row: string[] = [];
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } // escaped quote
+        else inQuotes = false;
+      } else {
+        field += ch;
+      }
+      continue;
+    }
+    if (ch === '"') { inQuotes = true; }
+    else if (ch === ',') { row.push(field); field = ''; }
+    else if (ch === '\r') { /* ignore — CRLF handled by the \n branch */ }
+    else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else { field += ch; }
+  }
+  // Flush the final field/row when the text has no trailing newline.
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
 function parseCSV(csvText: string): Record<string, string>[] {
-  const lines = csvText.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const headers = lines[0]!.split(',').map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const values = line.split(',').map(v => v.trim());
+  // Drop rows that are entirely empty (trailing newlines / blank lines).
+  const rows = parseCsvRows(csvText).filter(
+    (r) => !(r.length === 1 && r[0]!.trim() === ''),
+  );
+  if (rows.length < 2) return [];
+  const headers = rows[0]!.map(h => h.trim());
+  return rows.slice(1).map(values => {
     const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h] = values[i] ?? ''; });
+    headers.forEach((h, i) => { row[h] = (values[i] ?? '').trim(); });
     return row;
   });
 }
@@ -82,7 +124,8 @@ export async function importPatients(ctx: Context): Promise<Response> {
       return ctx.json({ success: false, errors: ['CSV has no data rows'], imported: 0, total: 0 }, 422);
     }
   } else {
-    // JSON — accept array directly or wrapped { patients: [...] }
+    // JSON — contract: { csv: "<raw csv>" } | { patients: [...] }; plus a legacy
+    // bare top-level array (handler-internal only — the route validator rejects it).
     let parsed: unknown;
     try {
       parsed = await ctx.req.json();
@@ -90,12 +133,18 @@ export async function importPatients(ctx: Context): Promise<Response> {
       return ctx.json({ success: false, errors: ['Invalid JSON body'], imported: 0, total: 0 }, 400);
     }
 
-    if (Array.isArray(parsed)) {
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && typeof (parsed as { csv?: unknown }).csv === 'string') {
+      // Contract CSV path: raw CSV delivered as the `csv` JSON field.
+      rawRows = parseCSV((parsed as { csv: string }).csv);
+      if (rawRows.length === 0) {
+        return ctx.json({ success: false, errors: ['CSV has no data rows'], imported: 0, total: 0 }, 422);
+      }
+    } else if (Array.isArray(parsed)) {
       rawRows = parsed;
     } else if (parsed && typeof parsed === 'object' && 'patients' in parsed && Array.isArray((parsed as { patients: unknown }).patients)) {
       rawRows = (parsed as { patients: Record<string, string | undefined>[] }).patients;
     } else {
-      return ctx.json({ success: false, errors: ['Body must be a JSON array or { patients: [...] }'], imported: 0, total: 0 }, 400);
+      return ctx.json({ success: false, errors: ['Body must be { patients: [...] } or { csv: "..." }'], imported: 0, total: 0 }, 400);
     }
 
     if (rawRows.length === 0) {

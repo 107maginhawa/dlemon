@@ -64,6 +64,19 @@ enum ControlledSubstanceSchedule {
   v: "V",
 }
 
+/**
+ * Prescription lifecycle status (EM-CLI-012).
+ * FSM: `pending` → `dispensed` | `cancelled` (both terminal). New
+ * prescriptions default to `pending`; the transition is externally driven
+ * (pharmacy dispense/cancel) so it stays allowed even on a locked/completed
+ * visit — the same carve-out as lab orders (§13).
+ */
+enum PrescriptionStatus {
+  pending,
+  dispensed,
+  cancelled,
+}
+
 // ---------------------------------------------------------------------------
 // Models — Prescription
 // ---------------------------------------------------------------------------
@@ -84,6 +97,7 @@ enum ControlledSubstanceSchedule {
   quantity: "21 capsules",
   instructions: "Take with food. Complete the full course.",
   dispenseAsWritten: true,
+  status: PrescriptionStatus.pending,
   controlledSubstanceSchedule: ControlledSubstanceSchedule.none,
 }, #{ title: "Amoxicillin prescription post-extraction" })
 model Prescription {
@@ -104,6 +118,14 @@ model Prescription {
   dispenseAsWritten: boolean;
 
   /**
+   * Lifecycle status (EM-CLI-012). Always present on every response; the row
+   * defaults to `pending` and transitions to `dispensed`/`cancelled` via PATCH.
+   * Read-only on this response model — clients change it through
+   * `UpdatePrescriptionRequest.status`.
+   */
+  status: PrescriptionStatus;
+
+  /**
    * P2-13: US-context legal Rx fields (record-only; EPCS/Surescripts
    * transmission is out of scope). All optional + additive so the ₱/PH
    * non-controlled flow is unaffected.
@@ -113,6 +135,23 @@ model Prescription {
   prescriberDea?: string;
   /** Prescriber National Provider Identifier (10-digit NPI). */
   prescriberNpi?: string;
+
+  /**
+   * QW-1 / P1-2: post-create safety warnings — allergy conflicts (drug name vs
+   * the patient's recorded active allergies) and curated drug-drug interactions
+   * against active medications. Populated only on the createPrescription
+   * response; absent on list/get/update. The clinician must acknowledge these
+   * before dismissing the prescription sheet (rx-sheet.tsx).
+   */
+  warnings?: {
+    /** Active-allergy display names that match the prescribed drug. */
+    allergyConflicts?: string[];
+    drugInteractions?: {
+      interactingDrug: string;
+      severity: "major" | "moderate" | "minor";
+      description: string;
+    }[];
+  };
 }
 
 model CreatePrescriptionRequest {
@@ -143,6 +182,14 @@ model UpdatePrescriptionRequest {
   quantity?: string;
   instructions?: string;
 
+  /**
+   * Lifecycle transition (EM-CLI-012). When present, the handler routes to the
+   * FSM guard (`pending` → `dispensed` | `cancelled`); an invalid transition
+   * returns 422 `INVALID_PRESCRIPTION_TRANSITION`. Status progression is the one
+   * field permitted on a locked/completed visit (external pharmacy dispense).
+   */
+  status?: PrescriptionStatus;
+
   // P2-13 legal fields (optional, US-context)
   controlledSubstanceSchedule?: ControlledSubstanceSchedule;
   prescriberDea?: string;
@@ -165,6 +212,7 @@ model UpdatePrescriptionRequest {
   signedAt: utcDateTime.fromISO("2026-03-15T08:52:00Z"),
   signatureData: "data:image/png;base64,iVBORw0KGgoAAAANS...",
   signed: true,
+  revoked: false,
 }, #{ title: "Signed extraction consent form" })
 model ConsentForm {
   id: UUID;
@@ -188,6 +236,16 @@ model ConsentForm {
   signedAt?: utcDateTime;
   signatureData?: string;
   signed: boolean;
+  /**
+   * DE-013 / EM-CLI-001 (WF-035): true once an unsigned consent form has been
+   * revoked. Returned by the handler/repo (full-row read) — declared here so the
+   * consent-history UI can distinguish a revoked form from a still-pending one.
+   */
+  revoked: boolean;
+  /** Timestamp the form was revoked, if revoked. */
+  revokedAt?: utcDateTime;
+  /** Member/user who revoked the form, if revoked. */
+  revokedBy?: UUID;
 }
 
 model CreateConsentFormRequest {

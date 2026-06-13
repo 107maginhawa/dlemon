@@ -814,28 +814,28 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // requestErasure
   app.post('/dental/erasure-requests',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('json', validators.RequestErasureBody, validationErrorHandler),
     registry.requestErasure as unknown as Handler
   );
 
   // listErasureRequests
   app.get('/dental/erasure-requests',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('query', validators.ListErasureRequestsQuery, validationErrorHandler),
     registry.listErasureRequests as unknown as Handler
   );
 
   // getErasureRequest
   app.get('/dental/erasure-requests/:id',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.GetErasureRequestParams, validationErrorHandler),
     registry.getErasureRequest as unknown as Handler
   );
 
   // approveErasure
   app.post('/dental/erasure-requests/:id/approve',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.ApproveErasureParams, validationErrorHandler),
     zValidator('json', validators.ApproveErasureBody, validationErrorHandler),
     registry.approveErasure as unknown as Handler
@@ -843,7 +843,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // rejectErasure
   app.post('/dental/erasure-requests/:id/reject',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.RejectErasureParams, validationErrorHandler),
     zValidator('json', validators.RejectErasureBody, validationErrorHandler),
     registry.rejectErasure as unknown as Handler
@@ -1008,6 +1008,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/imaging/images/:imageId/ceph/reports',
     authMiddleware(),
     zValidator('param', validators.CephMgmt_createCephReportParams, validationErrorHandler),
+    zValidator('json', validators.CephMgmt_createCephReportBody, validationErrorHandler),
     registry.CephMgmt_createCephReport as unknown as Handler
   );
 
@@ -1034,6 +1035,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingFindingsMgmt_listFindings as unknown as Handler
   );
 
+  // ImagingMgmt_createImageLink
+  app.post('/dental/imaging/images/:imageId/links',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_createImageLinkParams, validationErrorHandler),
+    zValidator('json', validators.ImagingMgmt_createImageLinkBody, validationErrorHandler),
+    registry.ImagingMgmt_createImageLink as unknown as Handler
+  );
+
+  // ImagingMgmt_listImageLinks
+  app.get('/dental/imaging/images/:imageId/links',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_listImageLinksParams, validationErrorHandler),
+    registry.ImagingMgmt_listImageLinks as unknown as Handler
+  );
+
   // ImagingMgmt_createMeasurement
   app.post('/dental/imaging/images/:imageId/measurements',
     authMiddleware(),
@@ -1049,12 +1065,27 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingMgmt_listMeasurements as unknown as Handler
   );
 
+  // ImagingMgmt_updateImageMetadata
+  app.patch('/dental/imaging/images/:imageId/metadata',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_updateImageMetadataParams, validationErrorHandler),
+    zValidator('json', validators.ImagingMgmt_updateImageMetadataBody, validationErrorHandler),
+    registry.ImagingMgmt_updateImageMetadata as unknown as Handler
+  );
+
   // ImagingMgmt_updateImageModality
   app.patch('/dental/imaging/images/:imageId/modality',
     authMiddleware(),
     zValidator('param', validators.ImagingMgmt_updateImageModalityParams, validationErrorHandler),
     zValidator('json', validators.ImagingMgmt_updateImageModalityBody, validationErrorHandler),
     registry.ImagingMgmt_updateImageModality as unknown as Handler
+  );
+
+  // ImagingMgmt_deleteImageLink
+  app.delete('/dental/imaging/links/:linkId',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_deleteImageLinkParams, validationErrorHandler),
+    registry.ImagingMgmt_deleteImageLink as unknown as Handler
   );
 
   // ImagingMgmt_deleteMeasurement
@@ -1102,21 +1133,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // placeLegalHold
   app.post('/dental/legal-holds',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('json', validators.PlaceLegalHoldBody, validationErrorHandler),
     registry.placeLegalHold as unknown as Handler
   );
 
   // listLegalHolds
   app.get('/dental/legal-holds',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('query', validators.ListLegalHoldsQuery, validationErrorHandler),
     registry.listLegalHolds as unknown as Handler
   );
 
   // releaseLegalHold
   app.post('/dental/legal-holds/:id/release',
-    authMiddleware({ roles: ["user"] }),
+    authMiddleware({ roles: ["admin"] }),
     zValidator('param', validators.ReleaseLegalHoldParams, validationErrorHandler),
     registry.releaseLegalHold as unknown as Handler
   );
@@ -1222,6 +1253,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.DentalOrganizationManagement_updateParams, validationErrorHandler),
     zValidator('json', validators.DentalOrganizationManagement_updateBody, validationErrorHandler),
     registry.DentalOrganizationManagement_update as unknown as Handler
+  );
+
+  // activateOrganization
+  app.post('/dental/organizations/:id/activate',
+    authMiddleware(),
+    zValidator('param', validators.ActivateOrganizationParams, validationErrorHandler),
+    registry.activateOrganization as unknown as Handler
   );
 
   // DentalBranchManagement_create
@@ -1670,6 +1708,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.get('/dental/patients/:patientId/treatment-plan',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetTreatmentPlanParams, validationErrorHandler),
+    zValidator('query', validators.GetTreatmentPlanQuery, validationErrorHandler),
     registry.getTreatmentPlan as unknown as Handler
   );
 
@@ -1677,6 +1716,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/patients/:patientId/treatment-plan/accept',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.AcceptTreatmentPlanParams, validationErrorHandler),
+    zValidator('query', validators.AcceptTreatmentPlanQuery, validationErrorHandler),
     zValidator('json', validators.AcceptTreatmentPlanBody, validationErrorHandler),
     registry.acceptTreatmentPlan as unknown as Handler
   );
@@ -1764,6 +1804,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.createPerioChart as unknown as Handler
   );
 
+  // listPerioChartsForPatient
+  app.get('/dental/perio-charts',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListPerioChartsForPatientQuery, validationErrorHandler),
+    registry.listPerioChartsForPatient as unknown as Handler
+  );
+
   // getPerioChart
   app.get('/dental/perio-charts/:chartId',
     authMiddleware({ roles: ["user"] }),
@@ -1806,6 +1853,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetImportedPMDParams, validationErrorHandler),
     registry.getImportedPMD as unknown as Handler
+  );
+
+  // mergeImportedPMDSafetyFloor
+  app.post('/dental/pmd/imported/:id/merge-safety-floor',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.MergeImportedPMDSafetyFloorParams, validationErrorHandler),
+    registry.mergeImportedPMDSafetyFloor as unknown as Handler
   );
 
   // exportPatientCareRecord
@@ -1869,6 +1923,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listDueRecalls as unknown as Handler
   );
 
+  // getRetentionStatus
+  app.get('/dental/retention-status',
+    authMiddleware({ roles: ["admin"] }),
+    zValidator('query', validators.GetRetentionStatusQuery, validationErrorHandler),
+    registry.getRetentionStatus as unknown as Handler
+  );
+
   // createSyncLog
   app.post('/dental/sync-logs',
     authMiddleware({ roles: ["user"] }),
@@ -1893,6 +1954,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   // listTreatmentTemplates
   app.get('/dental/treatment-templates',
     authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.ListTreatmentTemplatesQuery, validationErrorHandler),
     registry.listTreatmentTemplates as unknown as Handler
   );
 
@@ -1930,6 +1992,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('query', validators.ListDentalVisitsQuery, validationErrorHandler),
     registry.listDentalVisits as unknown as Handler
+  );
+
+  // listChartConflicts
+  app.get('/dental/visits/chart-conflicts/:patientId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListChartConflictsParams, validationErrorHandler),
+    registry.listChartConflicts as unknown as Handler
   );
 
   // getToothHistory
@@ -2035,6 +2104,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getDentalChart as unknown as Handler
   );
 
+  // exportDentalChart
+  app.get('/dental/visits/:visitId/chart/export',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ExportDentalChartParams, validationErrorHandler),
+    registry.exportDentalChart as unknown as Handler
+  );
+
+  // resolveChartConflict
+  app.post('/dental/visits/:visitId/chart/resolve-conflict',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ResolveChartConflictParams, validationErrorHandler),
+    zValidator('json', validators.ResolveChartConflictBody, validationErrorHandler),
+    registry.resolveChartConflict as unknown as Handler
+  );
+
   // updateTooth
   app.patch('/dental/visits/:visitId/chart/teeth/:toothNumber',
     authMiddleware({ roles: ["user"] }),
@@ -2086,6 +2170,45 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     zValidator('param', validators.SignConsentFormParams, validationErrorHandler),
     zValidator('json', validators.SignConsentFormBody, validationErrorHandler),
     registry.signConsentForm as unknown as Handler
+  );
+
+  // discardVisit
+  app.post('/dental/visits/:visitId/discard',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.DiscardVisitParams, validationErrorHandler),
+    zValidator('json', validators.DiscardVisitBody, validationErrorHandler),
+    registry.discardVisit as unknown as Handler
+  );
+
+  // createDentalFinding
+  app.post('/dental/visits/:visitId/findings',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.CreateDentalFindingParams, validationErrorHandler),
+    zValidator('json', validators.CreateDentalFindingBody, validationErrorHandler),
+    registry.createDentalFinding as unknown as Handler
+  );
+
+  // listDentalFindings
+  app.get('/dental/visits/:visitId/findings',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ListDentalFindingsParams, validationErrorHandler),
+    registry.listDentalFindings as unknown as Handler
+  );
+
+  // updateDentalFinding
+  app.patch('/dental/visits/:visitId/findings/:findingId',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.UpdateDentalFindingParams, validationErrorHandler),
+    zValidator('json', validators.UpdateDentalFindingBody, validationErrorHandler),
+    registry.updateDentalFinding as unknown as Handler
+  );
+
+  // convertFindingToTreatment
+  app.post('/dental/visits/:visitId/findings/:findingId/treatment',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ConvertFindingToTreatmentParams, validationErrorHandler),
+    zValidator('json', validators.ConvertFindingToTreatmentBody, validationErrorHandler),
+    registry.convertFindingToTreatment as unknown as Handler
   );
 
   // createLabOrder
@@ -2341,6 +2464,24 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listEMRPatients as unknown as Handler
   );
 
+  // listMyAppointments
+  app.get('/me/appointments',
+    authMiddleware({ roles: ["user"] }),
+    registry.listMyAppointments as unknown as Handler
+  );
+
+  // getMyBalance
+  app.get('/me/balance',
+    authMiddleware({ roles: ["user"] }),
+    registry.getMyBalance as unknown as Handler
+  );
+
+  // listMyInvoices
+  app.get('/me/invoices',
+    authMiddleware({ roles: ["user"] }),
+    registry.listMyInvoices as unknown as Handler
+  );
+
   // listNotifications
   app.get('/notifs',
     authMiddleware({ roles: ["user", "admin"] }),
@@ -2448,6 +2589,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.updatePerson as unknown as Handler
   );
 
+  // createProvider
+  app.post('/providers',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreateProviderBody, validationErrorHandler),
+    createExpandMiddleware("Provider"),
+    registry.createProvider as unknown as Handler
+  );
+
   // createPractitionerRole
   app.post('/providers/practitioner-roles',
     authMiddleware({ roles: ["admin", "credentialing"] }),
@@ -2464,14 +2613,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // getPractitionerRole
   app.get('/providers/practitioner-roles/:id',
-    authMiddleware({ roles: ["admin", "clinician", "support", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "clinician", "support"] }),
     zValidator('param', validators.GetPractitionerRoleParams, validationErrorHandler),
     registry.getPractitionerRole as unknown as Handler
   );
 
   // updatePractitionerRole
   app.patch('/providers/practitioner-roles/:id',
-    authMiddleware({ roles: ["admin", "credentialing", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "credentialing"] }),
     zValidator('param', validators.UpdatePractitionerRoleParams, validationErrorHandler),
     zValidator('json', validators.UpdatePractitionerRoleBody, validationErrorHandler),
     registry.updatePractitionerRole as unknown as Handler
@@ -2500,14 +2649,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // getPractitioner
   app.get('/providers/practitioners/:id',
-    authMiddleware({ roles: ["admin", "clinician", "support", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "clinician", "support"] }),
     zValidator('param', validators.GetPractitionerParams, validationErrorHandler),
     registry.getPractitioner as unknown as Handler
   );
 
   // updatePractitioner
   app.patch('/providers/practitioners/:id',
-    authMiddleware({ roles: ["admin", "credentialing", "practitioner:owner"] }),
+    authMiddleware({ roles: ["admin", "credentialing"] }),
     zValidator('param', validators.UpdatePractitionerParams, validationErrorHandler),
     zValidator('json', validators.UpdatePractitionerBody, validationErrorHandler),
     registry.updatePractitioner as unknown as Handler

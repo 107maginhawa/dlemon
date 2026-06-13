@@ -296,6 +296,37 @@ describe('listPatientConditions', () => {
 });
 
 // =============================================================================
+// V-PAT-002 cross-tenant guard (TRACEABILITY 2026-06-08):
+// The `branchId` query is OPTIONAL, and the old guard only ran when it was
+// supplied (`if (branchId) assertBranchAccess`). That left an omit-branchId
+// bypass: ANY authenticated principal could read another org's patient visit
+// charts / condition entries (PHI). The guard must derive the branch from the
+// patient record and ALWAYS assert membership.
+// =============================================================================
+describe('listPatientVisits / listPatientConditions — cross-tenant guard (V-PAT-002)', () => {
+  // Authenticated, but NOT a member of the patient's branch (different org).
+  const OUTSIDER = { id: 'e7000000-0000-1000-8000-0000000000ff', email: 'outsider7@other.com' };
+
+  test('visits: authenticated non-member is denied (403), even without branchId', async () => {
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/visits`);
+    expect(res.status).toBe(403);
+  });
+
+  test('treatments: authenticated non-member is denied (403), even without branchId', async () => {
+    const app = buildTestApp(OUTSIDER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/treatments`);
+    expect(res.status).toBe(403);
+  });
+
+  test('visits: 404 for an unknown patient', async () => {
+    const app = buildTestApp();
+    const res = await app.request(`/dental/patients/f7000000-0000-1000-8000-0000000000aa/visits`);
+    expect(res.status).toBe(404);
+  });
+});
+
+// =============================================================================
 // V-PAT-011 / AC-PAT-003: safety-floor counts (2 allergies + 1 medication)
 // =============================================================================
 
@@ -358,7 +389,8 @@ describe('AC-PAT-003: safety floor aggregation counts', () => {
     expect(body.safetyFloor.allergyCount).toBe(2);
     expect(body.safetyFloor.medicationCount).toBe(1);
     expect(body.safetyFloor.hasAlerts).toBe(true);
-    // V-PAT-014: person is a declared subset (no contactInfo / primaryAddress PII).
+    // V-PAT-014: person is a declared subset. contactInfo is exposed per #14 but
+    // absent here (this patient has none set); primaryAddress PII stays excluded.
     expect(body.person.contactInfo).toBeUndefined();
     expect(body.person.primaryAddress).toBeUndefined();
     // V-PAT-007: follow-up notes present on the profile.

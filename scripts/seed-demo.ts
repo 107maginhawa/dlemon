@@ -8,6 +8,7 @@
  */
 
 import { S3Client } from 'bun'
+import { workingSlotISO } from '../services/api-ts/scripts/lib/seed-clock'
 
 const API = 'http://localhost:7213'
 
@@ -31,6 +32,7 @@ async function req(
 const post  = (p: string, b: unknown, c: string) => req('POST',  p, b, c)
 const get   = (p: string, c: string)              => req('GET',   p, null, c)
 const patch = (p: string, b: unknown, c: string) => req('PATCH', p, b, c)
+const put   = (p: string, b: unknown, c: string) => req('PUT',   p, b, c)
 
 function must<T>(r: { ok: boolean; status: number; data: T }, label: string): T {
   if (!r.ok) throw new Error(`${label} → ${r.status}: ${JSON.stringify(r.data).slice(0, 300)}`)
@@ -68,10 +70,10 @@ async function uploadDemoImage(fileId: string, mimeType: string): Promise<void> 
 // CEPH_EXPECTED in _journey-helpers → B02/B04). U1A/L1A apices are left unplaced
 // (not visible without expert annotation) so the panel shows them as "missing".
 // Throws on failure.
-async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string): Promise<string> {
+async function seedCephChain(patientId: string, branchId: string, visitId: string | null, cookie: string, filename = 'torres-miguel-ceph-lateral.jpg'): Promise<string> {
   const studyR = await post('/dental/imaging/studies', {
     patientId, ...(visitId ? { visitId } : {}), branchId,
-    modality: 'cephalometric', filename: 'torres-miguel-ceph-lateral.jpg',
+    modality: 'cephalometric', filename,
     mimeType: 'image/jpeg', size: 2048000,
   }, cookie)
   if (!studyR.ok) throw new Error(`ceph study POST → ${studyR.status}: ${JSON.stringify(studyR.data).slice(0, 160)}`)
@@ -147,9 +149,8 @@ const daysAgo = (n: number, h = 9) => {
 const daysFromNow = (n: number, h = 10) => {
   const d = new Date(); d.setDate(d.getDate() + n); d.setHours(h, 0, 0, 0); return d.toISOString()
 }
-const atToday = (h: number, m = 0) => {
-  const d = new Date(); d.setHours(h, m, 0, 0); return d.toISOString()
-}
+// Appointment slot times come from workingSlotISO (timezone- + working-hours-aware);
+// daysAgo/daysFromNow remain for non-validated date fields (visit/due/recall dates).
 
 let _receiptSeq = 0
 const receipt = () => `OR-2026-${String(++_receiptSeq).padStart(4, '0')}`
@@ -548,6 +549,36 @@ async function seed() {
     log(`✓ Onboarded: ${org.name} / ${branch.name} (owner membership ${ownerMember.id})`)
   }
 
+  // C-1: ensure the demo clinic is activated (owner terms/BAA acceptance → 'live').
+  // Idempotent + UNCONDITIONAL: reset-db preserves the demo org across reseeds, so
+  // the onboarding branch above is skipped on re-runs — without this the clinic would
+  // stay 'provisional' (PHI gate / dashboard activation banner). Owner-only; the seed
+  // cookie is the org owner.
+  if (org?.id) {
+    await post(`/dental/organizations/${org.id}/activate`, {}, cookie)
+    log(`✓ Clinic activated (status: live)`)
+  }
+
+  // ── Working hours (G1) ───────────────────────────────────────────────────
+  // Populate the ENFORCED `dental_branch.working_hours` column in the canonical
+  // {enabled,open,close} shape so the scheduler actually gates booking against
+  // it (Mon–Fri 09:00–17:00, Sat 09:00–13:00, Sun closed). Without this the
+  // column is null and every booking time is treated as in-hours.
+  if (branch?.id) {
+    must(await put(`/dental/branches/${branch.id}/working-hours`, {
+      workingHours: {
+        monday:    { enabled: true,  open: '09:00', close: '17:00' },
+        tuesday:   { enabled: true,  open: '09:00', close: '17:00' },
+        wednesday: { enabled: true,  open: '09:00', close: '17:00' },
+        thursday:  { enabled: true,  open: '09:00', close: '17:00' },
+        friday:    { enabled: true,  open: '09:00', close: '17:00' },
+        saturday:  { enabled: true,  open: '09:00', close: '13:00' },
+        sunday:    { enabled: false },
+      },
+    }, cookie), 'seed working hours')
+    log(`✓ Working hours set (Mon–Fri 09–17, Sat 09–13, Sun closed)`)
+  }
+
   // ── 4. Staff ─────────────────────────────────────────────────────────────
   section('4. Staff')
   if (!ownerMember) {
@@ -586,18 +617,19 @@ async function seed() {
   const tierR = await patch(`/dental/organizations/${org.id}`, { imagingTier: 'addon' }, cookie)
   log(tierR.ok ? '✓ imagingTier: addon (ceph unlocked)' : `⚠ imagingTier (${tierR.status})`)
 
-  // Note: generated validator requires `treatments:string`; handler reads raw body with `items:array`.
-  // Pass both so the middleware passes and the handler gets the real shape.
+  // FIX-001 reconciled the create-template contract to the real `{ name, branchId,
+  // items[] }` shape, so the generated validator now accepts `items` directly (the
+  // old stringly-typed `treatments` stub is no longer needed).
   const tplDefs = [
-    { name: 'New Patient Exam', treatments: 'stub', branchId: branch.id, description: 'Standard comprehensive exam', items: [
+    { name: 'New Patient Exam', branchId: branch.id, description: 'Standard comprehensive exam', items: [
       { cdtCode: 'D0150', description: 'Comprehensive oral evaluation', priceCents: 150000 },
       { cdtCode: 'D0210', description: 'Full-mouth X-ray series', priceCents: 250000 },
     ]},
-    { name: 'Adult Prophylaxis + Fluoride', treatments: 'stub', branchId: branch.id, description: 'Routine cleaning', items: [
+    { name: 'Adult Prophylaxis + Fluoride', branchId: branch.id, description: 'Routine cleaning', items: [
       { cdtCode: 'D1110', description: 'Adult prophylaxis', priceCents: 250000 },
       { cdtCode: 'D1206', description: 'Fluoride varnish', priceCents: 80000 },
     ]},
-    { name: 'Crown Workflow', treatments: 'stub', branchId: branch.id, description: 'RCT + crown (lab)', items: [
+    { name: 'Crown Workflow', branchId: branch.id, description: 'RCT + crown (lab)', items: [
       { cdtCode: 'D3330', description: 'Root canal — molar', priceCents: 1200000 },
       { cdtCode: 'D2740', description: 'Crown — porcelain/ceramic', priceCents: 1800000 },
     ]},
@@ -617,16 +649,15 @@ async function seed() {
   ]
   const consentTemplateIds: string[] = []
   for (let i = 0; i < consentNames.length; i++) {
-    // Generated validator requires `title`+`content`; handler reads raw body using `name`+`body`.
+    // Contract (reconciled, AHA FIX-004): request = { name, body,
+    // requiresWitnessSignature? }; create returns the bare created object.
     const r = await post(`/dental/branches/${branch.id}/consent-templates`, {
-      title: consentNames[i], content: consentBodies[i],
       name: consentNames[i], body: consentBodies[i],
     }, cookie)
-    // Create returns { template: { id, … } } — NOT a bare { id }. Reading r.data.id
-    // (undefined) silently left every consent template unusable, so generalConsentTplId
-    // fell back to 'general', no consent was ever signed, and every visit completion
-    // 422'd (VISIT_CONSENT_REQUIRED) → visits stuck active → timeline collapse.
-    const tplId = r.data?.template?.id ?? r.data?.id
+    // A correct template id here is load-bearing: if it is missing, generalConsentTplId
+    // falls back to 'general', no consent is ever signed, and every visit completion
+    // 422's (VISIT_CONSENT_REQUIRED) → visits stuck active → timeline collapse.
+    const tplId = r.data?.id
     if (r.ok && tplId) { consentTemplateIds.push(tplId); log(`✓ Consent template: ${consentNames[i]}`) }
     else log(`⚠ Consent template (${r.status}): ${consentNames[i]} ${r.ok ? '(no id in response)' : ''}`)
   }
@@ -738,6 +769,10 @@ async function seed() {
       patientId: P[9].id,
       sourceFacility: 'Metro Manila General Hospital Dental Dept',
       sourceReference: 'MMGH-2018-04-12',
+      // sourceDescription (originating software system) is REQUIRED by ImportPMDRequest
+      // (dental-pmd.tsp:116, V-PMD-010 ≤200 chars). Without it the import 400s and
+      // Isabel's PMD record is silently dropped from the demo data.
+      sourceDescription: 'Open Dental v21.1',
       content: 'External dental records from 2018. Multiple extractions performed. Patient reported penicillin allergy. No post-operative complications noted.',
     }, cookie)
     log(pmdR.ok ? '✓ PMD import: Isabel' : `⚠ PMD import (${pmdR.status})`)
@@ -792,6 +827,9 @@ async function seed() {
   if (P[1]) {
     log(`\n── ${P[1].displayName}`)
     const p1 = P[1]
+    // Captured in V3, restored into the active V4 below so the living-document
+    // chart shows a carried-over (amber-ring) pending treatment.
+    let mariaDeferredId: string | null = null
 
     for (const [daysBack, tpl] of [
       [180, TEMPLATES.checkup(24)],
@@ -812,6 +850,16 @@ async function seed() {
     if (v3id) {
       await addChart(v3id, p1.id, v3tpl.teeth, cookie)
       await addTreatments(v3id, p1.id, v3tpl.treatments, cookie, 'mixed')
+      // A recommendation the patient deferred → dismissed, so it can be CARRIED
+      // OVER into the active V4 below (exercises the chart's carried-over marker).
+      const deferR = await post(`/dental/visits/${v3id}/treatments`, {
+        visitId: v3id, patientId: p1.id,
+        cdtCode: 'D2391', description: 'Resin composite #14 — early caries', priceCents: 400000, toothNumber: 14,
+      }, cookie)
+      if (deferR.ok) {
+        mariaDeferredId = deferR.data.id
+        await patch(`/dental/visits/${v3id}/treatments/${deferR.data.id}`, { status: 'dismissed', dismissReason: 'Patient deferred — revisit next appointment' }, cookie)
+      }
       await addNotes(v3id, v3tpl.soap, cookie)
       await completeVisit(v3id, p1.id, cookie)
       completedCount++
@@ -848,11 +896,28 @@ async function seed() {
           log(`  ⚠ Consent create (${consentR.status})`)
         }
       }
+      // Carry over the deferred composite #14 from V3 → planned + carriedOver, so
+      // the active "Current — all visits" chart shows the amber carried-over ring.
+      if (mariaDeferredId) {
+        const coR = await post(`/dental/visits/${v4id}/carry-over`, { restoreDismissedIds: [mariaDeferredId] }, cookie)
+        if (coR.ok) log(`  ↪ Carried over #14 (deferred composite) → carried-over marker`)
+        else log(`  ⚠ Carry-over (${coR.status})`)
+      }
+      // Recommend a crown #46 the patient DECLINES → declined chart layer (gray
+      // hatch) + the conditional "Declined" toggle chip.
+      const declR = await post(`/dental/visits/${v4id}/treatments`, {
+        visitId: v4id, patientId: p1.id,
+        cdtCode: 'D2740', description: 'Crown #46 — recommended (post-RCT protection)', priceCents: 1800000, toothNumber: 46,
+      }, cookie)
+      if (declR.ok) {
+        await patch(`/dental/visits/${v4id}/treatments/${declR.data.id}`, { status: 'declined', refusalReason: 'Patient declined — cost; will reconsider next year' }, cookie)
+        log(`  ✗ Declined crown #46 → declined layer`)
+      }
       await addNotes(v4id, { subjective: 'Follow-up sensitivity #24. Sensitive toothpaste not helping.', objective: 'Cervical erosion progressing. Cold test positive, 3s.' }, cookie)
       activeCount++
       log(`  ◎ Active visit: ${P[1].displayName}`)
     }
-    log(`  ✓ 3 completed + 1 active + partial invoice`)
+    log(`  ✓ 3 completed + 1 active + partial invoice + declined/carried-over chart layers`)
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1522,6 +1587,21 @@ async function seed() {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // FIX-005 (AHA imaging Batch B): a SECOND ceph-viewable patient.
+  // Until now Miguel Torres (P6) was the only patient with a cephalometric
+  // chain, leaving the comparison / multi-patient ceph flows (B0x journeys)
+  // data-starved. Angela Reyes (P19) was always intended as the second ceph
+  // patient (see patientDefs comment) but never got the chain. Visit-independent
+  // (visitId null) so the completion cascade can't block it; non-fatal if storage
+  // is down (the study/landmark/report rows still seed; only the image bytes,
+  // which need MinIO, are skipped). Additive — touches no existing patient.
+  if (P[19]) {
+    log(`\n── ${P[19].displayName}`)
+    try { await seedCephChain(P[19].id, branch.id, null, cookie, 'reyes-angela-ceph-lateral.jpg') }
+    catch (e: any) { log(`  ⚠ P19 ceph skipped: ${String(e?.message).slice(0, 140)}`) }
+  }
+
   // 8.6 Longitudinal multi-visit patients: seeded in seed-supplement.ts (Section 4)
 
   // ── 8.7 Free-tier clinic (B01 ceph free-tier gate) ──────────────────────────
@@ -1547,6 +1627,8 @@ async function seed() {
       fOrgId = onb.organizationId; fBranchId = onb.branchId; fMemberId = onb.membershipId
       log('✓ Onboarded free clinic: Budget Dental Clinic')
     }
+    // C-1: activate the free clinic too (idempotent) so it can write PHI / no banner.
+    await post(`/dental/organizations/${fOrgId}/activate`, {}, free.cookie)
     await post(`/dental/organizations/${fOrgId}/branches/${fBranchId}/members/${fMemberId}/set-pin`, { pin: '111111' }, free.cookie)
     const fPatient = must(await post('/dental/patients', {
       displayName: 'Free Patient', dateOfBirth: '1990-01-01', gender: 'male',
@@ -1590,22 +1672,29 @@ async function seed() {
     return 'treatment'
   }
 
-  const apptDefs: Array<{ pidx: number; at: string; dur: number; service: string; status?: string; reason?: string }> = [
+  // Slots are expressed as (day offset, Manila wall-clock hour:min, duration) and
+  // snapped to the clinic's Asia/Manila working hours by workingSlotISO — so the
+  // seed never 422s with OUTSIDE_WORKING_HOURS on a weekend run or a non-Manila
+  // host (the working-hours validator interprets startAt in the branch timezone).
+  // Negative `day` (past) rolls backward; today/future rolls forward to the next
+  // open day. Keep durations ≤ the shortest window (Sat 09–13 = 240m).
+  const now = new Date()
+  const apptDefs: Array<{ pidx: number; day: number; hour: number; min?: number; dur: number; service: string; status?: string; reason?: string }> = [
     // Today
-    { pidx: 0, at: atToday(9),    dur: 60,  service: 'Annual Checkup + X-rays' },
-    { pidx: 1, at: atToday(10, 30), dur: 30, service: 'Follow-up: Dental Sensitivity' },
-    { pidx: 8, at: atToday(14),   dur: 45,  service: 'Emergency: Acute Toothache' }, // → check-in
+    { pidx: 0, day: 0,   hour: 9,           dur: 60, service: 'Annual Checkup + X-rays' },
+    { pidx: 1, day: 0,   hour: 10, min: 30, dur: 30, service: 'Follow-up: Dental Sensitivity' },
+    { pidx: 8, day: 0,   hour: 14,          dur: 45, service: 'Emergency: Acute Toothache' }, // → check-in
     // Tomorrow
-    { pidx: 3, at: daysFromNow(1, 9),  dur: 45, service: 'Pediatric Cleaning' },
-    { pidx: 4, at: daysFromNow(1, 11), dur: 60, service: 'Implant Consultation Follow-up' },
+    { pidx: 3, day: 1,   hour: 9,           dur: 45, service: 'Pediatric Cleaning' },
+    { pidx: 4, day: 1,   hour: 11,          dur: 60, service: 'Implant Consultation Follow-up' },
     // Future
-    { pidx: 6, at: daysFromNow(7, 10), dur: 30, service: 'Orthodontic Adjustment #1' },
+    { pidx: 6, day: 7,   hour: 10,          dur: 30, service: 'Orthodontic Adjustment #1' },
     // Past completed — P0
-    { pidx: 0, at: daysAgo(30, 9), dur: 60, service: 'Periodic Exam + Cleaning', status: 'completed' },
+    { pidx: 0, day: -30, hour: 9,           dur: 60, service: 'Periodic Exam + Cleaning', status: 'completed' },
     // Cancelled — P7
-    { pidx: 7, at: daysFromNow(2, 13), dur: 30, service: 'Crown Check', status: 'cancelled', reason: 'Patient requested reschedule' },
+    { pidx: 7, day: 2,   hour: 13,          dur: 30, service: 'Crown Check', status: 'cancelled', reason: 'Patient requested reschedule' },
     // No-show — P9
-    { pidx: 9, at: daysAgo(10, 10), dur: 60, service: 'Perio Review', status: 'no_show' },
+    { pidx: 9, day: -10, hour: 10,          dur: 60, service: 'Perio Review', status: 'no_show' },
   ]
 
   const apptIds: Record<number, string[]> = {}
@@ -1613,10 +1702,11 @@ async function seed() {
     const p = P[a.pidx]; if (!p) continue
     // CreateAppointmentRequestSchema: providerId/startAt/endAt/visitType (+ notes),
     // NOT the legacy dentistMemberId/scheduledAt/durationMinutes/serviceType.
-    const endAt = new Date(new Date(a.at).getTime() + a.dur * 60_000).toISOString()
+    const startAt = workingSlotISO(now, a.day, a.hour, a.min ?? 0, a.dur)
+    const endAt = new Date(new Date(startAt).getTime() + a.dur * 60_000).toISOString()
     const r = await post('/dental/appointments', {
       patientId: p.id, providerId: ownerMember.id, branchId: branch.id,
-      startAt: a.at, endAt, visitType: apptVisitType(a.service), notes: a.service,
+      startAt, endAt, visitType: apptVisitType(a.service), notes: a.service,
     }, cookie)
     if (!r.ok) { log(`⚠ Appt ${p.displayName} (${r.status})`); continue }
     const apptId = r.data.id

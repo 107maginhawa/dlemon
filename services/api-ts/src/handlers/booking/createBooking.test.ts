@@ -6,41 +6,19 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { Hono } from 'hono';
-import { createBooking } from './createBooking';
-import { AppError } from '@/core/errors';
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.post('/booking/bookings', createBooking as any);
-
-  return app;
-}
+// Empty-mock db (matches the original bespoke helper): the generated validator
+// chain rejects every case here before any repo query runs, which is exactly what
+// these loose status-code assertions intentionally exercise.
+const db = {} as any;
 
 describe('createBooking handler', () => {
   const authedUser = { id: 'user-1', email: 'client@test.com' };
 
   test('returns error when user is not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
 
     const res = await app.request('/booking/bookings', {
       method: 'POST',
@@ -53,7 +31,7 @@ describe('createBooking handler', () => {
   });
 
   test('handler requires slot in body', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request('/booking/bookings', {
       method: 'POST',
@@ -66,7 +44,7 @@ describe('createBooking handler', () => {
   });
 
   test('handler accepts valid body shape', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request('/booking/bookings', {
       method: 'POST',

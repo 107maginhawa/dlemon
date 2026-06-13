@@ -45,6 +45,17 @@ jsonpath "$.id" == "{{person_id}}"
 jsonpath "$.firstName" == "Ada"
 
 
+# 3b. Read it back via the "me" alias — the path the frontend uses to load the
+# current user's own profile (app.tsx / __root.tsx / onboarding.tsx call
+# getPerson({ path: { person: 'me' } })). Must resolve to the caller's record.
+GET {{api}}/persons/me
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{person_id}}"
+jsonpath "$.firstName" == "Ada"
+
+
 # 4. Patch it
 PATCH {{api}}/persons/{{person_id}}
 Cookie: better-auth.session_token={{session_token}}
@@ -56,3 +67,22 @@ HTTP 200
 [Asserts]
 jsonpath "$.firstName" == "Augusta"
 jsonpath "$.lastName" == "Lovelace"
+
+
+# 5. PII safeguard (RBAC negative): a second user must NOT be able to read the
+# first user's person record. Person is the central PII safeguard — owner-only.
+POST {{api}}/auth/sign-up/email
+Content-Type: application/json
+Origin: {{api}}
+{
+  "email": "person-other-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest",
+  "name": "Other Tester"
+}
+HTTP 200
+[Captures]
+other_session_token: cookie "better-auth.session_token"
+
+GET {{api}}/persons/{{person_id}}
+Cookie: better-auth.session_token={{other_session_token}}
+HTTP 403

@@ -1,8 +1,11 @@
 /**
  * Dental audit shim — writes to Pino, dental_audit_log (spec), AND dental_audit (legacy).
+ * Writes are inline/synchronous (ADR-005) — there is no async/pg-boss pipeline.
  *
- * Use in any handler that touches PHI. Never throws — audit failure
- * must never break the main request.
+ * Use in any handler that touches PHI. By default fire-and-forget: a write failure
+ * is logged but never breaks the main request. EXCEPTION (fail-closed): security-class
+ * events (eventType === 'security') and calls passing `{ failClosed: true }` RETHROW
+ * when the authoritative `dental_audit_log` write fails (see logAuditEvent below).
  */
 
 import type { DatabaseInstance } from './database';
@@ -62,9 +65,9 @@ async function withConnectionRetry<T>(fn: () => Promise<T>): Promise<T> {
  * never deleted, so any PHI written into `metadata` OR the before/after row snapshots is
  * unremediable (AC-AUD-004 / "No PHI in log body" / HIPAA breach). The recursive
  * sanitizer now lives in `core/audit-phi-sanitizer.ts` so it is shared across EVERY
- * write path — including the pg-boss consumer, which writes via
- * `AuditLogRepository.insert` (the single choke point) without going through this
- * function.
+ * write path that goes through `AuditLogRepository.insert` (the single choke point) —
+ * it sanitizes there too, without going through this function. (Audit writes are
+ * inline/synchronous per ADR-005; there is no async/pg-boss consumer.)
  *
  * `logAuditEvent` still sanitizes here for two reasons: (1) to emit the best-effort
  * warn log when PHI is stripped, and (2) because the legacy `dental_audit` table write
@@ -118,10 +121,25 @@ function safeAuditLogFields(event: AuditEvent) {
   };
 }
 
+/**
+ * Per-call options for {@link logAuditEvent}.
+ *
+ * `failClosed` (dental-audit P1-C): escalate THIS call to the same fail-closed
+ * guarantee as security events — rethrow when the authoritative `dental_audit_log`
+ * write fails — WITHOUT changing the default fire-and-forget behaviour for the
+ * ~70 other producer handlers (no global flip). Set it on financial/clinical
+ * mutations (void / discount / payment / visit-complete / role-change) so a
+ * money/clinical mutation can never silently report success with no audit row.
+ */
+export interface LogAuditEventOptions {
+  failClosed?: boolean;
+}
+
 export async function logAuditEvent(
   db: DatabaseInstance,
   logger: Logger | null | undefined,
   event: AuditEvent,
+  opts?: LogAuditEventOptions,
 ): Promise<void> {
   // Pino log — safe identifiers only (T-001: never the PHI-bearing snapshots/metadata).
   logger?.info({ audit: safeAuditLogFields(event) }, `dental.audit: ${event.action}`);
@@ -141,7 +159,10 @@ export async function logAuditEvent(
   // access) is a compliance hole. For these events we RETHROW on the authoritative
   // dental_audit_log write so the failure surfaces to the caller. Non-security events
   // keep the existing fire-and-forget behaviour.
+  // P1-C: security events are always fail-closed; opts.failClosed escalates a
+  // single non-security financial/clinical call to the same guarantee.
   const isSecurityEvent = event.eventType === 'security';
+  const mustFailClosed = isSecurityEvent || opts?.failClosed === true;
 
   // Write to dental_audit_log FIRST — this is the spec-compliant table the dental
   // audit VIEWER (getAuditEvents) reads, so it is the authoritative sink and must
@@ -168,8 +189,9 @@ export async function logAuditEvent(
     );
   } catch (err) {
     logger?.error({ err, audit: safeAuditLogFields(event) }, 'dental.audit: failed to write to dental_audit_log');
-    if (isSecurityEvent) {
-      // Fail-closed (ADR-005): surface security audit failures rather than swallow them.
+    if (mustFailClosed) {
+      // Fail-closed (ADR-005 / P1-C): surface security AND opt-in financial/clinical
+      // audit failures rather than swallow them.
       throw err;
     }
   }

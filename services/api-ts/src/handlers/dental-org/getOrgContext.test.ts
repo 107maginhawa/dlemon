@@ -8,45 +8,21 @@
 
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { Hono } from 'hono';
-import { getOrgContext } from './getOrgContext';
-import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
+
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness (Track 4): requests now traverse the real generated route table
+// (authMiddleware → zValidator → handler), the same chain production runs.
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 const orgRepo = new OrganizationRepository(db);
 const branchRepo = new BranchRepository(db);
 const memberRepo = new MembershipRepository(db);
-
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: 'Internal error' }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.get('/dental/org/context', getOrgContext);
-
-  return app;
-}
 
 const OWNER_ID = '00000000-0000-0000-0000-000000000001';
 const OTHER_USER_ID = '00000000-0000-0000-0000-000000000002';
@@ -62,7 +38,7 @@ describe('getOrgContext handler', () => {
   // --------------------------------------------------------------------------
 
   test('returns 401 when unauthenticated', async () => {
-    const app = buildTestApp(); // no user
+    const app = buildTestApp({ db }); // no user
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(401);
   });
@@ -72,7 +48,7 @@ describe('getOrgContext handler', () => {
   // --------------------------------------------------------------------------
 
   test('returns all-null when user owns no org', async () => {
-    const app = buildTestApp(ownerUser);
+    const app = buildTestApp({ db, user: ownerUser });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -109,7 +85,7 @@ describe('getOrgContext handler', () => {
       pinFailedAttempts: 0,
     });
 
-    const app = buildTestApp(ownerUser);
+    const app = buildTestApp({ db, user: ownerUser });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -149,7 +125,7 @@ describe('getOrgContext handler', () => {
       pinFailedAttempts: 0,
     });
 
-    const app = buildTestApp(ownerUser);
+    const app = buildTestApp({ db, user: ownerUser });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -184,7 +160,7 @@ describe('getOrgContext handler', () => {
       pinFailedAttempts: 0,
     });
 
-    const app = buildTestApp(ownerUser);
+    const app = buildTestApp({ db, user: ownerUser });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -233,7 +209,7 @@ describe('getOrgContext handler', () => {
       pinFailedAttempts: 0,
     });
 
-    const app = buildTestApp(ownerUser);
+    const app = buildTestApp({ db, user: ownerUser });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -251,7 +227,7 @@ describe('getOrgContext handler', () => {
       active: true,
     });
 
-    const app = buildTestApp(ownerUser);
+    const app = buildTestApp({ db, user: ownerUser });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -294,7 +270,7 @@ describe('getOrgContext handler', () => {
     });
 
     // Call AS the non-owner staff member — NOT the owner.
-    const app = buildTestApp({ id: OTHER_USER_ID, email: 'staff@clinic.com' });
+    const app = buildTestApp({ db, user: { id: OTHER_USER_ID, email: 'staff@clinic.com' } });
     const res = await app.request('/dental/org/context');
     expect(res.status).toBe(200);
     const body = await res.json() as any;

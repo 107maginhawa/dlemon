@@ -18,6 +18,8 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError, ForbiddenError } 
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
+import { logAuditEvent } from '@/core/audit-logger';
+import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -83,7 +85,26 @@ export async function approveTreatmentPlan(ctx: HandlerContext): Promise<Respons
   }
 
   // Derive completion (covers the rare case where linked items are already done).
-  const finalPlan = await repo.recomputeStatus(planId, patientId);
+  await repo.recomputeStatus(planId, patientId);
+  // TP-BR-006: keep the denormalized total in lock-step with the linked items.
+  const finalPlan = await repo.recomputeTotal(planId, patientId);
+
+  // dental-audit P1-B / dental-patient G5: plan approval is a sensitive clinical
+  // sign-off — write an audit row with before/after status (fail-closed so the
+  // approval can't silently commit without its trail).
+  const auditBranchId = patient.preferredBranchId ?? undefined;
+  const branchForAudit = auditBranchId ? await getBranchOrgId(db, auditBranchId) : null;
+  await logAuditEvent(db, logger, {
+    personId: user.id,
+    tenantId: branchForAudit?.organizationId ?? auditBranchId ?? patientId,
+    branchId: auditBranchId,
+    eventType: 'data-modification',
+    action: 'treatment_plan.approved',
+    resourceType: 'dental_treatment_plan',
+    resourceId: planId,
+    before: { status: plan.status },
+    after: { status: finalPlan?.status ?? 'approved', approvalMethod: approval.method },
+  }, { failClosed: true });
 
   logger?.info(
     { action: 'approveTreatmentPlan', patientId, planId, approvalId: approval.id, method: approval.method },

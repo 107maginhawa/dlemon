@@ -77,6 +77,23 @@ describe('ClaimsWorklist', () => {
     await waitFor(() => expect(screen.getByTestId('claims-empty')).not.toBeNull());
   });
 
+  test('renders NO create-claim affordance — claims create is parked Phase-2 (decision #3, billing-owned SoT)', async () => {
+    renderWorklist();
+    await waitFor(() => expect(screen.getByTestId('claims-worklist')).not.toBeNull());
+    // The HMO-claims CREATE path is intentionally absent in V1: claims are parked
+    // Phase-2 and billing owns the single source of truth. This pin keeps the create
+    // affordance absent — wiring a "Create/New/Add Claim" button (or a create-claim
+    // testid) would flip it RED. The submit/remit LIFECYCLE actions (post-creation,
+    // billing-owned) are deliberately NOT matched here and remain present.
+    expect(
+      screen.queryByRole('button', { name: /create claim|new claim|add claim|create insurance claim|new insurance claim/i }),
+    ).toBeNull();
+    expect(screen.queryByTestId('create-claim-btn')).toBeNull();
+    expect(screen.queryByTestId('new-claim-btn')).toBeNull();
+    // Non-vacuous: the worklist itself rendered (read path works) + a row is present.
+    await waitFor(() => expect(screen.getByText('CLM-2026-AAA')).not.toBeNull());
+  });
+
   test('surfaces the error state when the claims query fails', async () => {
     global.fetch = mock((input: any) => {
       const url = typeof input === 'string' ? input : input.url;

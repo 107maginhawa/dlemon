@@ -8,9 +8,9 @@
  * draft/sent → viewed).
  */
 
-import { UnauthorizedError, NotFoundError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
-import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { CasePresentationRepository } from '../repos/case-presentation.repo';
 import { getPatientFirstName } from '../repos/patient-name.facade';
 import { TreatmentPlanRepository } from '../repos/treatment-plan.repo';
@@ -30,7 +30,13 @@ export async function getCasePresentation(ctx: HandlerContext): Promise<Response
 
   const patient = await getPatientForDentalPatient(db, patientId);
   if (!patient) throw new NotFoundError('Patient not found');
-  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
+  // E1: reads stay broad — see listCasePresentations. Schedule-only / read-only-
+  // observer roles are excluded.
+  if (!patient.preferredBranchId) throw new ForbiddenError('Patient has no assigned branch');
+  await assertBranchRole(db, user.id, patient.preferredBranchId, [
+    'dentist_owner', 'dentist_associate', 'hygienist', 'treatment_coordinator',
+    'staff_full', 'front_desk', 'dental_assistant', 'billing_staff',
+  ]);
 
   const repo = new CasePresentationRepository(db, logger);
   const presentation = await repo.findOneById(presentationId, patientId);

@@ -8,6 +8,33 @@
 import { eq, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalMemberships } from './membership.schema';
+import { dentalBranches } from './branch.schema';
+
+/**
+ * P0-B: resolve human-readable branch + provider names for a chart export header.
+ * Both are best-effort (null when absent) — the export still renders with ids.
+ */
+export async function getBranchAndProviderNames(
+  db: DatabaseInstance,
+  branchId: string,
+  membershipId: string | null | undefined,
+): Promise<{ branchName: string | null; providerName: string | null }> {
+  const [branch] = await db
+    .select({ name: dentalBranches.name })
+    .from(dentalBranches)
+    .where(eq(dentalBranches.id, branchId))
+    .limit(1);
+  let providerName: string | null = null;
+  if (membershipId) {
+    const [member] = await db
+      .select({ displayName: dentalMemberships.displayName })
+      .from(dentalMemberships)
+      .where(eq(dentalMemberships.id, membershipId))
+      .limit(1);
+    providerName = member?.displayName ?? null;
+  }
+  return { branchName: branch?.name ?? null, providerName };
+}
 
 /**
  * Resolve the active membership id for a person at a branch.

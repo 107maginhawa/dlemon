@@ -13,6 +13,7 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as DentalOnboardingRouteImport } from './routes/dental-onboarding'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
+import { Route as PortalRouteImport } from './routes/_portal'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ImagingCephReportImageIdRouteImport } from './routes/imaging-ceph-report.$imageId'
@@ -28,7 +29,10 @@ import { Route as DashboardPatientsRouteImport } from './routes/_dashboard/patie
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCalendarRouteImport } from './routes/_dashboard/calendar'
 import { Route as DashboardBillingRouteImport } from './routes/_dashboard/billing'
+import { Route as PortalPortalIndexRouteImport } from './routes/_portal/portal.index'
 import { Route as AuthPinEntryMemberIdRouteImport } from './routes/auth/pin-entry.$memberId'
+import { Route as PortalPortalBillsRouteImport } from './routes/_portal/portal.bills'
+import { Route as PortalPortalAppointmentsRouteImport } from './routes/_portal/portal.appointments'
 import { Route as DashboardPatientsPatientIdRouteImport } from './routes/_dashboard/patients_/$patientId'
 import { Route as WorkspacePatientIdCasePresentationPresentationIdRouteImport } from './routes/_workspace/$patientId.case-presentation.$presentationId'
 
@@ -49,6 +53,10 @@ const DentalOnboardingRoute = DentalOnboardingRouteImport.update({
 } as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
   id: '/_workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/_portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -126,11 +134,27 @@ const DashboardBillingRoute = DashboardBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => DashboardRoute,
 } as any)
+const PortalPortalIndexRoute = PortalPortalIndexRouteImport.update({
+  id: '/portal/',
+  path: '/portal/',
+  getParentRoute: () => PortalRoute,
+} as any)
 const AuthPinEntryMemberIdRoute = AuthPinEntryMemberIdRouteImport.update({
   id: '/auth/pin-entry/$memberId',
   path: '/auth/pin-entry/$memberId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalPortalBillsRoute = PortalPortalBillsRouteImport.update({
+  id: '/portal/bills',
+  path: '/portal/bills',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalPortalAppointmentsRoute =
+  PortalPortalAppointmentsRouteImport.update({
+    id: '/portal/appointments',
+    path: '/portal/appointments',
+    getParentRoute: () => PortalRoute,
+  } as any)
 const DashboardPatientsPatientIdRoute =
   DashboardPatientsPatientIdRouteImport.update({
     id: '/patients_/$patientId',
@@ -163,7 +187,10 @@ export interface FileRoutesByFullPath {
   '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
+  '/portal/appointments': typeof PortalPortalAppointmentsRoute
+  '/portal/bills': typeof PortalPortalBillsRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
+  '/portal/': typeof PortalPortalIndexRoute
   '/$patientId/case-presentation/$presentationId': typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
 export interface FileRoutesByTo {
@@ -185,13 +212,17 @@ export interface FileRoutesByTo {
   '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/patients/$patientId': typeof DashboardPatientsPatientIdRoute
+  '/portal/appointments': typeof PortalPortalAppointmentsRoute
+  '/portal/bills': typeof PortalPortalBillsRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
+  '/portal': typeof PortalPortalIndexRoute
   '/$patientId/case-presentation/$presentationId': typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_dashboard': typeof DashboardRouteWithChildren
+  '/_portal': typeof PortalRouteWithChildren
   '/_workspace': typeof WorkspaceRouteWithChildren
   '/dental-onboarding': typeof DentalOnboardingRoute
   '/onboarding': typeof OnboardingRoute
@@ -210,7 +241,10 @@ export interface FileRoutesById {
   '/book/$branchId': typeof BookBranchIdRoute
   '/imaging-ceph-report/$imageId': typeof ImagingCephReportImageIdRoute
   '/_dashboard/patients_/$patientId': typeof DashboardPatientsPatientIdRoute
+  '/_portal/portal/appointments': typeof PortalPortalAppointmentsRoute
+  '/_portal/portal/bills': typeof PortalPortalBillsRoute
   '/auth/pin-entry/$memberId': typeof AuthPinEntryMemberIdRoute
+  '/_portal/portal/': typeof PortalPortalIndexRoute
   '/_workspace/$patientId/case-presentation/$presentationId': typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
 export interface FileRouteTypes {
@@ -234,7 +268,10 @@ export interface FileRouteTypes {
     | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
+    | '/portal/appointments'
+    | '/portal/bills'
     | '/auth/pin-entry/$memberId'
+    | '/portal/'
     | '/$patientId/case-presentation/$presentationId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -256,12 +293,16 @@ export interface FileRouteTypes {
     | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/patients/$patientId'
+    | '/portal/appointments'
+    | '/portal/bills'
     | '/auth/pin-entry/$memberId'
+    | '/portal'
     | '/$patientId/case-presentation/$presentationId'
   id:
     | '__root__'
     | '/'
     | '/_dashboard'
+    | '/_portal'
     | '/_workspace'
     | '/dental-onboarding'
     | '/onboarding'
@@ -280,13 +321,17 @@ export interface FileRouteTypes {
     | '/book/$branchId'
     | '/imaging-ceph-report/$imageId'
     | '/_dashboard/patients_/$patientId'
+    | '/_portal/portal/appointments'
+    | '/_portal/portal/bills'
     | '/auth/pin-entry/$memberId'
+    | '/_portal/portal/'
     | '/_workspace/$patientId/case-presentation/$presentationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  PortalRoute: typeof PortalRouteWithChildren
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
   DentalOnboardingRoute: typeof DentalOnboardingRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -326,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_portal': {
+      id: '/_portal'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PortalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard': {
@@ -433,12 +485,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardBillingRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_portal/portal/': {
+      id: '/_portal/portal/'
+      path: '/portal'
+      fullPath: '/portal/'
+      preLoaderRoute: typeof PortalPortalIndexRouteImport
+      parentRoute: typeof PortalRoute
+    }
     '/auth/pin-entry/$memberId': {
       id: '/auth/pin-entry/$memberId'
       path: '/auth/pin-entry/$memberId'
       fullPath: '/auth/pin-entry/$memberId'
       preLoaderRoute: typeof AuthPinEntryMemberIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_portal/portal/bills': {
+      id: '/_portal/portal/bills'
+      path: '/portal/bills'
+      fullPath: '/portal/bills'
+      preLoaderRoute: typeof PortalPortalBillsRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/_portal/portal/appointments': {
+      id: '/_portal/portal/appointments'
+      path: '/portal/appointments'
+      fullPath: '/portal/appointments'
+      preLoaderRoute: typeof PortalPortalAppointmentsRouteImport
+      parentRoute: typeof PortalRoute
     }
     '/_dashboard/patients_/$patientId': {
       id: '/_dashboard/patients_/$patientId'
@@ -483,6 +556,21 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface PortalRouteChildren {
+  PortalPortalAppointmentsRoute: typeof PortalPortalAppointmentsRoute
+  PortalPortalBillsRoute: typeof PortalPortalBillsRoute
+  PortalPortalIndexRoute: typeof PortalPortalIndexRoute
+}
+
+const PortalRouteChildren: PortalRouteChildren = {
+  PortalPortalAppointmentsRoute: PortalPortalAppointmentsRoute,
+  PortalPortalBillsRoute: PortalPortalBillsRoute,
+  PortalPortalIndexRoute: PortalPortalIndexRoute,
+}
+
+const PortalRouteWithChildren =
+  PortalRoute._addFileChildren(PortalRouteChildren)
+
 interface WorkspacePatientIdRouteChildren {
   WorkspacePatientIdCasePresentationPresentationIdRoute: typeof WorkspacePatientIdCasePresentationPresentationIdRoute
 }
@@ -512,6 +600,7 @@ const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  PortalRoute: PortalRouteWithChildren,
   WorkspaceRoute: WorkspaceRouteWithChildren,
   DentalOnboardingRoute: DentalOnboardingRoute,
   OnboardingRoute: OnboardingRoute,

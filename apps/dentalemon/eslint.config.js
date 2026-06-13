@@ -31,6 +31,22 @@ const NO_RAW_FETCH_RULES = [
 export default [
   ...config,
   {
+    // Diagnostic logging goes through the single `@/lib/logger` seam, never raw
+    // `console.*` — the base config's `allow: ['warn','error','info']` is exactly how
+    // 30+ scattered console calls accumulated. Banning ALL console is awkward in flat
+    // config: a severity-only override (`'error'` OR `['error']`) RETAINS the base's
+    // allow-list, and `{ allow: [] }` is schema-rejected (allow requires >=1 item). So
+    // we pass a sentinel allow-entry that matches no real console method — it bans
+    // every actual console.* call AND the violation message surfaces the fix
+    // ("Only these console methods are allowed: __use_logger_instead__"). The logger
+    // module is the sanctioned seam (inline eslint-disable on its 2 calls); tests excl.
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx', 'src/test-setup.ts', 'src/test-utils.ts'],
+    rules: {
+      'no-console': ['error', { allow: ['__use_logger_instead__'] }],
+    },
+  },
+  {
     // SDK-only data access across the whole feature surface (hooks + components).
     // Ordered BEFORE the hooks block so the more-specific hooks block below can
     // layer GAP-D on top without dropping this rule (flat-config: last matching
@@ -53,6 +69,17 @@ export default [
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-syntax': ['error', GAP_D_RULE, ...NO_RAW_FETCH_RULES],
+    },
+  },
+  {
+    // SDK-only data access is also enforced in routes/ and lib/ (not just
+    // features/). The existing bootstrap (PIN/auth, org-context), static-asset
+    // (/config.json), and legacy fetches each carry an inline eslint-disable with
+    // a reason; this block stops NEW raw fetches from landing in these dirs.
+    files: ['src/routes/**/*.ts', 'src/routes/**/*.tsx', 'src/lib/**/*.ts', 'src/lib/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', ...NO_RAW_FETCH_RULES],
     },
   },
 ];

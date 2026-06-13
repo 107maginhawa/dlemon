@@ -37,6 +37,15 @@ namespace DentalPatientModule {
   // Models
   // ==========================================================================
 
+  @doc("Patient contact info (phone/email). PII — exposed on the profile and editable per decision #14 (V-PAT-014)")
+  model DentalPatientContactInfo {
+    @doc("Primary email address")
+    email?: Email;
+
+    @doc("Primary phone number")
+    phone?: PhoneNumber;
+  }
+
   @doc("Embedded person details on a dental patient response")
   model DentalPatientPerson {
     id: UUID;
@@ -44,6 +53,9 @@ namespace DentalPatientModule {
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+
+    @doc("Contact info (phone/email). PII, surfaced for staff editing per decision #14 (V-PAT-014)")
+    contactInfo?: DentalPatientContactInfo;
   }
 
   @doc("Dental patient record")
@@ -229,6 +241,26 @@ namespace DentalPatientModule {
     communicationPreferences?: Record<unknown>;
     recallDate?: string;
     recallNote?: string;
+
+    // FR2.4: staff demographics correction (registration-typo fix). These update
+    // the patient's linked PERSON record, not the dental_patient row. Branch-role
+    // and archived guards are enforced by the handler. Contact info (phone/email)
+    // is now editable here per decision #14 (V-PAT-014): it is surfaced on the
+    // profile (DentalPatientPerson.contactInfo) and edits are audited on write.
+    @doc("Patient first name (updates linked person)")
+    firstName?: string;
+
+    @doc("Patient last name (updates linked person; empty string clears)")
+    lastName?: string;
+
+    @doc("Patient date of birth, ISO date (updates linked person)")
+    dateOfBirth?: string;
+
+    @doc("Patient gender (updates linked person)")
+    gender?: string;
+
+    @doc("Patient contact info (phone/email; updates linked person, audited). Partial: omitted sub-fields unchanged")
+    contactInfo?: DentalPatientContactInfo;
   }
 
 
@@ -358,9 +390,13 @@ namespace DentalPatientModule {
     branchId: string;
   }
 
-  @doc("Import patients request — JSON array of patient rows")
+  @doc("Import patients request — provide either `patients` (JSON rows) or `csv` (raw CSV text). Exactly one is expected.")
   model ImportPatientsRequest {
-    patients: ImportPatientRow[];
+    @doc("Patient rows as JSON. Provide this OR `csv`.")
+    patients?: ImportPatientRow[];
+
+    @doc("Raw CSV text: a header row (firstName,lastName,dateOfBirth,branchId,...) followed by data rows. Provide this OR `patients`.")
+    csv?: string;
   }
 
   @doc("Import patients response")

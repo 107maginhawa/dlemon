@@ -15,7 +15,10 @@
  *   @AC-PERIO-08 locked-visit→422   @AC-PERIO-09 staff_scheduling→403   @AC-PERIO-10 read readings
  *
  * All fixture IDs use `ee` UUID prefix to avoid collisions with other suites.
- * Routes registered inline — not yet wired in app.ts.
+ * Routes are wired in the generated registry/routes (generated/openapi/routes.ts
+ * — `/dental/perio-charts` + `/dental/visits/:visitId/perio-chart`); these
+ * handler tests register them inline on a bare Hono app to exercise the handlers
+ * in isolation with controlled auth context.
  */
 
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
@@ -45,6 +48,7 @@ import { upsertToothReading } from './upsertToothReading';
 import { completePerioChart } from './completePerioChart';
 import { getVisitPerioChart } from './getVisitPerioChart';
 import { getPerioChart } from './getPerioChart';
+import { classifyChart } from './utils/perio-classify-chart';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -218,6 +222,20 @@ describe('createPerioChart', () => {
 
   test('returns 403 when user has no membership', async () => {
     const app = buildApp({ id: 'ffffffff-0000-1000-8000-000000000000', email: 'ghost@test.com' });
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: VISIT_ID, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  // BR-P05 (AC-P09): chart creation requires a *clinical* role. A branch member
+  // with a non-clinical role (staff_scheduling here) is on the branch but must
+  // still be denied — assertBranchRole filters role, not mere membership. The
+  // pre-existing 403 test only covers a non-member; this pins the wrong-role case.
+  test('returns 403 for a non-clinical branch member (staff_scheduling) creating a chart', async () => {
+    const app = buildApp(NON_DENTIST);
     const res = await app.request('/dental/perio-charts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -688,6 +706,85 @@ describe('completePerioChart — 2017 staging/grading (P1-6)', () => {
   });
 });
 
+// FIX-001/002: the 2017 diagnosis (stage/grade/extent) and its grading risk-factor
+// evidence must be PERSISTED on the chart row — not just returned in the completion
+// response — so the read paths (GET / visit-GET / history) and the longitudinal
+// comparison can show the diagnosis of record. Frozen-at-completion semantics.
+describe('completePerioChart — diagnosis persistence (FIX-001/002)', () => {
+  const PERSIST_VISIT = 'ee000000-0000-1000-8000-0000000000a1';
+  const PERSIST_CHART = 'ee000000-0000-1000-8000-0000000000a2';
+  const NOBODY_VISIT = 'ee000000-0000-1000-8000-0000000000a3';
+  const NOBODY_CHART = 'ee000000-0000-1000-8000-0000000000a4';
+  const RISK = { bonelossPercent: 40, ageYears: 30, cigarettesPerDay: 12, remainingTeeth: 28 };
+
+  beforeAll(async () => {
+    await db.insert(dentalVisits).values([
+      { id: PERSIST_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { id: NOBODY_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]).onConflictDoNothing();
+    await db.insert(dentalPerioCharts).values([
+      { id: PERSIST_CHART, visitId: PERSIST_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { id: NOBODY_CHART, visitId: NOBODY_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]).onConflictDoNothing();
+  });
+
+  async function seedStageIII(chartId: string) {
+    const app = buildApp(TEST_USER);
+    await app.request(`/dental/perio-charts/${chartId}/readings/16`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depthBM: 6, gmBM: 2, furcation: 2 }),
+    });
+    for (const tooth of [12, 13, 14, 15, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 11]) {
+      await app.request(`/dental/perio-charts/${chartId}/readings/${tooth}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depthBM: 5, gmBM: 0 }),
+      });
+    }
+  }
+
+  test('persists stage/grade/extent + riskFactors and returns them on a FRESH read', async () => {
+    const app = buildApp(TEST_USER);
+    await seedStageIII(PERSIST_CHART);
+    const completeRes = await app.request(`/dental/perio-charts/${PERSIST_CHART}/complete`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(RISK),
+    });
+    expect(completeRes.status).toBe(200);
+    // The completion response must report the PERSISTED diagnosis (from the write's
+    // RETURNING row) — not a computed value that could diverge from what was stored.
+    const completeBody = await completeRes.json() as any;
+    expect(completeBody.stage).toBe('III');
+    expect(completeBody.grade).toBe('C');
+    expect(completeBody.extent).toBe('generalized');
+
+    // Fresh GET (independent of the completion response) must carry the diagnosis.
+    const getRes = await app.request(`/dental/perio-charts/${PERSIST_CHART}`);
+    expect(getRes.status).toBe(200);
+    const body = await getRes.json() as any;
+    expect(body.stage).toBe('III');
+    expect(body.grade).toBe('C');
+    expect(body.extent).toBe('generalized');
+    // The grading evidence is recorded so the grade is auditable / reproducible.
+    expect(body.riskFactors).toMatchObject(RISK);
+    // Reproducibility: re-classifying from the stored evidence yields the same grade.
+    expect(classifyChart(body.readings, body.riskFactors).grade).toBe(body.grade);
+  });
+
+  test('tolerates a no-body completion — riskFactors persisted as empty, diagnosis still computed', async () => {
+    const app = buildApp(TEST_USER);
+    await seedStageIII(NOBODY_CHART);
+    const completeRes = await app.request(`/dental/perio-charts/${NOBODY_CHART}/complete`, { method: 'POST' });
+    expect(completeRes.status).toBe(200);
+
+    const body = await (await app.request(`/dental/perio-charts/${NOBODY_CHART}`)).json() as any;
+    // Stage is computed from the readings even with no risk-factor body.
+    expect(body.stage).toBe('III');
+    // No risk factors submitted → grade defaults to B; evidence is an empty object (not absent/erroring).
+    expect(body.grade).toBe('B');
+    expect(body.riskFactors ?? {}).toEqual({});
+  });
+});
+
 // N-PER-02: primary-dentition charts (FDI 51–85, 20 teeth) complete at min 8/20,
 // while adult charts keep the 16 minimum. Dentition is inferred from the charted
 // tooth numbers since the schema has no dentition-type column.
@@ -769,6 +866,19 @@ describe('getVisitPerioChart', () => {
     expect(body.readings.length).toBeGreaterThan(0);
   });
 
+  // P2-1: the completed chart's numeric summary must be returned as JSON numbers
+  // (Drizzle returns `numeric` columns as strings). The declared contract is
+  // float64; getVisitPerioChart must coerce like listPerioChartsForPatient does.
+  test('returns numeric summaryBopPercent/summaryMeanDepth for a completed chart (P2-1)', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${VISIT_ID}/perio-chart`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('completed');
+    expect(typeof body.summaryBopPercent).toBe('number');
+    expect(typeof body.summaryMeanDepth).toBe('number');
+  });
+
   test('returns 204 when no chart exists for the visit', async () => {
     const emptyVisitId = 'ee000000-0000-1000-8000-000000000051';
     // Insert a visit with no chart
@@ -807,6 +917,19 @@ describe('getPerioChart', () => {
     const body = await res.json() as any;
     expect(body.id).toBe(chartId);
     expect(Array.isArray(body.readings)).toBe(true);
+  });
+
+  // P2-1: completed-chart numeric summary must be returned as JSON numbers, not
+  // Drizzle numeric strings (mirror listPerioChartsForPatient's coercion).
+  test('returns numeric summaryBopPercent/summaryMeanDepth for a completed chart (P2-1)', async () => {
+    const chartId = await getChartId();
+    const app = buildApp(TEST_USER);
+    const res = await app.request(`/dental/perio-charts/${chartId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('completed');
+    expect(typeof body.summaryBopPercent).toBe('number');
+    expect(typeof body.summaryMeanDepth).toBe('number');
   });
 
   // EF-PER-002: staff_scheduling must not read perio data via direct chart endpoint

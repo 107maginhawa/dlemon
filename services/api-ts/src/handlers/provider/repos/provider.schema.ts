@@ -5,7 +5,7 @@
 
 import { pgTable, uuid, jsonb, varchar, integer, text, index, unique, boolean } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
-import { persons, type PersonCreateRequest, type Person } from '../../person/repos/person.schema';
+import { persons, type Person } from '../../person/repos/person.schema';
 
 // Providers table - matches TypeSpec Provider model
 export const providers = pgTable('provider', {
@@ -52,9 +52,10 @@ export type ProviderType =
 // Expanded person data for responses - from Person table
 export type PersonData = Person;
 
-// Request types - matches TypeSpec
+// Request types — mirrors the TypeSpec CreateProviderRequest.
+// The provider profile is always created for the authenticated user, so the
+// person is derived from the session (not accepted in the request body).
 export interface ProviderCreateRequest {
-  person?: PersonCreateRequest; // Person demographic information
   providerType: ProviderType;
   yearsOfExperience?: number;
   biography?: string;

@@ -16,6 +16,7 @@ import {
   expect,
   type JourneyMeta,
   recordJourneyError,
+  recordJourneyPass,
   readOrgContext,
   readPatientIdByName,
   API,
@@ -33,6 +34,14 @@ test.setTimeout(60_000)
 
 test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
   try {
+    // ── Step 0: org context ─────────────────────────────────────────────────────
+    // branchId is REQUIRED by the sync-log authorization gate (createSyncLog G1/P0:
+    // a branchless sync log bypassed branch authorization entirely, so the handler
+    // now 400s without it). Resolve the caller's branch up front and stamp every
+    // write with it. This spec is Set B (infra-gated) and was previously skipped
+    // when MinIO was down, which masked the missing-branchId staleness.
+    const ctx = await readOrgContext(apiReader)
+
     // ── Step 1: Create a sync log entry (simulating an offline-created record) ──
 
     const createResp = await apiReader.post(`${API}/dental/sync-logs`, {
@@ -40,6 +49,7 @@ test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
         localId: 'offline-e2e-001',
         entityType: 'dental_visit',
         entityId: 'offline-visit-001',
+        branchId: ctx.branchId,
       },
     })
     if (!createResp.ok()) {
@@ -57,7 +67,8 @@ test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
 
     // ── Step 2: Verify the sync log is retrievable with status "pending" ─────────
 
-    const listResp = await apiReader.get(`${API}/dental/sync-logs`)
+    // listSyncLogs is branch-scoped (G1/P0) — it 400s without ?branchId.
+    const listResp = await apiReader.get(`${API}/dental/sync-logs?branchId=${ctx.branchId}`)
     if (!listResp.ok()) {
       throw new Error(
         `GET /dental/sync-logs failed (${listResp.status()}): ${(await listResp.text()).slice(0, 300)}`,
@@ -115,7 +126,6 @@ test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
     // echoing localId on the visit. We therefore do not assert a stored localId
     // here; doing so would test a non-existent feature.
 
-    const ctx = await readOrgContext(apiReader)
     // readPatientIdByName signature is (api, branchId, displayName) — args were swapped.
     // The demo seed leaves every P0–P9 patient with an OPEN active visit, so creating
     // a new visit for them 409s (ACTIVE_VISIT_EXISTS). Use a P10+ patient (no seeded
@@ -136,6 +146,10 @@ test(`${META.id} — ${META.name}`, async ({ apiReader }) => {
     }
     const visitBody = await visitResp.json()
     expect(visitBody.syncStatus, 'server-created visit syncStatus defaults to synced').toBe('synced')
+
+    // Emit the per-journey PASS record so the harness can gate this journey
+    // (J15 previously ran but never recorded a verdict, so it could not be gated).
+    recordJourneyPass(META)
   } catch (err) {
     recordJourneyError(META, err)
     throw err

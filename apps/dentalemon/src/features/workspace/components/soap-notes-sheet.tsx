@@ -14,12 +14,20 @@ import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { Button, Input, Textarea } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
 import { APP_LOCALE } from '@/constants/brand';
+import { useOrgContextStore } from '@/stores/org-context.store';
+import { canSignNotesForVisitType, type DentalRole, type VisitTypeCapability } from '@/lib/rbac';
 
 export interface SoapNotesSheetProps {
   visitId: string;
   open: boolean;
   onClose: () => void;
   onOpenMedicalHistory?: () => void;
+  /**
+   * E3: the visit's type. 'general' (default) keeps signing dentist-only;
+   * 'hygiene' also lets a hygienist sign. Defaults to 'general' so an unknown
+   * type never widens authority.
+   */
+  visitType?: VisitTypeCapability;
 }
 
 interface SoapForm {
@@ -50,12 +58,21 @@ export function SoapNotesSheet({
   open,
   onClose,
   onOpenMedicalHistory,
+  visitType = 'general',
 }: SoapNotesSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
   const { notes, isLoading, save, isSaving, sign, isSigning, addendum, isAddingAddendum, history } =
     useVisitNotes(visitId);
+
+  // E2/E3: dental_assistant may DRAFT (Save) but must NOT SIGN. Sign authority is
+  // scoped by visit type: GENERAL visits stay dentist-only; on a HYGIENE visit the
+  // hygienist may also sign. Hide the Sign & Lock affordance for roles without the
+  // sign capability for THIS visit type (the backend signVisitNotes gate is the hard
+  // guarantee; this keeps the UI honest).
+  const role = useOrgContextStore((s) => s.role) as DentalRole | null;
+  const allowSign = role ? canSignNotesForVisitType(role, visitType) : false;
 
   const [form, setForm] = useState<SoapForm>(EMPTY_FORM);
   const [showAddendum, setShowAddendum] = useState(false);
@@ -478,17 +495,19 @@ export function SoapNotesSheet({
               >
                 {isSaving ? 'Saving…' : 'Save'}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleSignAndLock}
-                disabled={isSaving || isSigning || isLoading}
-                data-testid="sign-lock-btn"
-                aria-label="Sign and lock SOAP notes"
-                className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
-              >
-                {isSigning || isSaving ? 'Signing…' : 'Sign & Lock'}
-              </Button>
+              {allowSign && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleSignAndLock}
+                  disabled={isSaving || isSigning || isLoading}
+                  data-testid="sign-lock-btn"
+                  aria-label="Sign and lock SOAP notes"
+                  className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+                >
+                  {isSigning || isSaving ? 'Signing…' : 'Sign & Lock'}
+                </Button>
+              )}
             </>
           )}
         </div>

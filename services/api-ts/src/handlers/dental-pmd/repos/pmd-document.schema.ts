@@ -1,15 +1,20 @@
 /**
  * Drizzle schema for PMD documents (Portable Medical Document)
  *
- * PMDs are immutable: generated once from a completed visit, signed, never updated.
- * A new PMD supersedes the previous one via supersedesId.
+ * PMDs are immutable: generated once from a completed visit, never updated.
+ * A new PMD supersedes the previous one via supersedesId. Content integrity is
+ * sealed with a SHA-256 checksum; digital signing (FR12.4) is Phase-2 — the
+ * signature/signed_at columns and the 'signed' status are reserved but not used in V1.
  */
 
-import { pgTable, uuid, text, timestamp, pgEnum, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, uniqueIndex, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { baseEntityFields } from '@/core/database.schema';
 
 export const pmdDocumentStatusEnum = pgEnum('pmd_document_status', [
   'generated',
+  // Phase-2 (FR12.4) reserved: digital signing is not implemented in V1, so no PMD
+  // reaches 'signed'. Retained for forward compatibility (no enum migration).
   'signed',
   'superseded',
 ]);
@@ -28,14 +33,24 @@ export const pmdDocuments = pgTable('pmd_document', {
   status: pmdDocumentStatusEnum('status').notNull().default('generated'),
   /** JSON snapshot of the visit at generation time */
   content: text('content').notNull(),
-  /** Base64 digital signature */
+  /** Phase-2 (FR12.4): reserved for the facility digital signature; NULL in V1. */
   signature: text('signature'),
+  /** Phase-2 (FR12.4): reserved signing timestamp; NULL in V1. */
   signedAt: timestamp('signed_at'),
   /** ID of the older PMD this supersedes */
   supersedesId: uuid('supersedes_id').references((): AnyPgColumn => pmdDocuments.id, { onDelete: 'set null' }),
   /** SHA-256 checksum of content */
   checksum: text('checksum').notNull(),
-});
+}, (table) => ({
+  // schema-fix #4: at most one LIVE (generated) PMD per visit. Supersession
+  // marks the prior row 'superseded', so a visit has exactly one 'generated'
+  // row. This partial unique index makes that a DB invariant and the race
+  // backstop for concurrent visit-completion (generatePmdForVisit catches the
+  // violation and resolves idempotently). Mirrors dental_visit_active_patient_unique.
+  visitGeneratedUnique: uniqueIndex('pmd_document_visit_generated_unique')
+    .on(table.visitId, table.status)
+    .where(sql`status = 'generated'`),
+}));
 
 // V-PMD-002 (§7.2 item 1): imported PMD rows store patient_id as a plain UUID with
 // NO DB foreign key. An external record from a defunct facility must be importable
@@ -62,10 +77,42 @@ export const importedPmds = pgTable('imported_pmd', {
   safetyFloorMerged: text('safety_floor_merged').notNull().default('false'),
 });
 
+/**
+ * EF-PMD-003 (mig 0063): append-only "Safety Floor merge" event log for imported PMDs.
+ * 0063 created this table as raw SQL with NO Drizzle model, leaving it orphaned (absent
+ * from the Drizzle snapshot). This model brings it under the ORM so db:generate tracks it;
+ * the reconcile migration syncs the snapshot idempotently against the table 0063 already
+ * created on every environment.
+ *
+ * Batch C2-b (decision #20): the merge is now LIVE — mergeImportedPMDSafetyFloor inserts
+ * one append-only event here (the unique index on imported_pmd_id makes merge-once a DB
+ * invariant → 409 on a second merge) and surfaces the imported safety items into the
+ * patient's medical history (the FIX-003 clinical consumer). See
+ * ImportedPMDRepository.recordSafetyFloorMergeEvent.
+ *
+ * Shape mirrors 0063 exactly: no baseEntityFields (only id/imported_pmd_id/merged_at/
+ * merged_by), explicit FK name so the generated constraint matches the 0063 one.
+ */
+export const importedPmdSafetyFloorEvents = pgTable('imported_pmd_safety_floor_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  importedPmdId: uuid('imported_pmd_id').notNull(),
+  mergedAt: timestamp('merged_at').notNull().defaultNow(),
+  mergedBy: uuid('merged_by'),
+}, (table) => ({
+  importedPmdFk: foreignKey({
+    columns: [table.importedPmdId],
+    foreignColumns: [importedPmds.id],
+    name: 'imported_pmd_safety_floor_events_imported_pmd_id_fk',
+  }).onDelete('cascade'),
+  pmdUniq: uniqueIndex('imported_pmd_safety_floor_events_pmd_uniq').on(table.importedPmdId),
+}));
+
 export type PMDDocument = typeof pmdDocuments.$inferSelect;
 export type NewPMDDocument = typeof pmdDocuments.$inferInsert;
 export type ImportedPMD = typeof importedPmds.$inferSelect;
 export type NewImportedPMD = typeof importedPmds.$inferInsert;
+export type ImportedPMDSafetyFloorEvent = typeof importedPmdSafetyFloorEvents.$inferSelect;
+export type NewImportedPMDSafetyFloorEvent = typeof importedPmdSafetyFloorEvents.$inferInsert;
 
 export const VALID_PMD_STATUSES = ['generated', 'signed', 'superseded'] as const;
 export type PMDDocumentStatus = typeof VALID_PMD_STATUSES[number];

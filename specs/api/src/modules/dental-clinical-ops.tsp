@@ -118,7 +118,7 @@ namespace DentalClinicalOpsModule {
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     listOcclusionScreenings(@path patientId: UUID):
-      | ApiOkResponse<OcclusionScreening[]>
+      | ApiOkResponse<PaginatedResponse<OcclusionScreening>>
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse
@@ -213,7 +213,7 @@ namespace DentalClinicalOpsModule {
       @path branchId: UUID,
       @query category?: PostopCategory,
     ):
-      | ApiOkResponse<PostopTemplate[]>
+      | ApiOkResponse<PaginatedResponse<PostopTemplate>>
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse
@@ -384,7 +384,7 @@ namespace DentalClinicalOpsModule {
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     listInventoryItems(@path branchId: UUID):
-      | ApiOkResponse<InventoryItem[]>
+      | ApiOkResponse<PaginatedResponse<InventoryItem>>
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse
@@ -433,7 +433,7 @@ namespace DentalClinicalOpsModule {
     @useAuth(bearerAuth)
     @extension("x-security-required-roles", #["user"])
     listInventoryAdjustments(@path branchId: UUID, @path itemId: UUID):
-      | ApiOkResponse<InventoryAdjustment[]>
+      | ApiOkResponse<PaginatedResponse<InventoryAdjustment>>
       | ApiUnauthorizedResponse
       | ApiForbiddenResponse
       | ApiNotFoundResponse

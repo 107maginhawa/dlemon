@@ -16,6 +16,7 @@ export type DentalRole =
   | 'dental_assistant'
   | 'front_desk'
   | 'billing_staff'
+  | 'treatment_coordinator'
   | 'read_only';
 export type DentalModule = 'dashboard' | 'workspace' | 'patients' | 'calendar' | 'billing' | 'reports' | 'staff' | 'settings';
 
@@ -103,6 +104,20 @@ const ACCESS_MATRIX: Record<DentalRole, Record<DentalModule, boolean>> = {
     workspace: false,
     patients: true,
     calendar: false,
+    billing: true,
+    reports: false,
+    staff: false,
+    settings: false,
+  },
+  // treatment_coordinator: presents treatment plans + financials to patients.
+  // Needs the workspace (treatment plans / case presentation), patients,
+  // calendar (to schedule accepted plans), and billing (to present cost +
+  // payment options). No staff/reports/settings admin surface.
+  treatment_coordinator: {
+    dashboard: true,
+    workspace: true,
+    patients: true,
+    calendar: true,
     billing: true,
     reports: false,
     staff: false,
@@ -199,6 +214,195 @@ export function canViewFinancials(role: DentalRole): boolean {
  * staff_full has "Record payment ✅" in the matrix.
  */
 export function canWriteBilling(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Apply a discount to an invoice (applyDentalDiscount). OWNER-ONLY — mirrors the
+ * backend `assertBranchRole(db, userId, branchId, ['dentist_owner'])` gate. This
+ * is STRICTER than canWriteBilling (which also allows associates): a discount is
+ * a money write-down only the practice owner may authorize. The backend is the
+ * hard gate (403); this hides the affordance so associates never see a button
+ * that would 403.
+ */
+export function canApplyDiscount(role: DentalRole): boolean {
+  return role === 'dentist_owner';
+}
+
+/**
+ * Void a recorded payment (voidDentalPayment). OWNER-ONLY — mirrors the backend
+ * `assertBranchRole(db, userId, branchId, ['dentist_owner'])` gate. A payment
+ * reversal is an owner-authorized money correction; same stricter gate as
+ * {@link canApplyDiscount}. Distinct from the whole-invoice void footer action
+ * (canWriteBilling) — this voids a single payment row.
+ */
+export function canVoidPayment(role: DentalRole): boolean {
+  return role === 'dentist_owner';
+}
+
+/**
+ * Check if a role can PRESENT a treatment plan / case presentation to a patient
+ * (the treatment-presentation surface). Mirrors the backend gate on
+ * createCasePresentation + the plan "presented" transition: clinicians plus the
+ * treatment coordinator. (E1)
+ */
+export function canPresentCase(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'treatment_coordinator'
+  );
+}
+
+// ─── Clinical-write capability helpers (E2: dental_assistant scope) ──────────
+//
+// These mirror the backend assertBranchRole gates so the workspace only shows
+// affordances a role can actually exercise. The dental_assistant works UNDER
+// dentist supervision: it may CAPTURE imaging, DRAFT notes, and EDIT chart
+// conditions — but it may NOT SIGN notes, ADD treatments, or PRESCRIBE.
+
+/**
+ * Capture/upload imaging (createImagingStudy). Clinicians, hygienist, and
+ * dental_assistant under dentist supervision. (CBCT *finalize* stays
+ * dentist-only on the backend and has no separate affordance here.)
+ */
+export function canCaptureImaging(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist' ||
+    role === 'dental_assistant'
+  );
+}
+
+/**
+ * DRAFT visit notes (upsertVisitNotes). Clinicians + dental_assistant.
+ * Signing is a separate, stricter capability — see canSignNotes.
+ */
+export function canDraftNotes(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'dental_assistant'
+  );
+}
+
+/**
+ * Write tooth/surface CHART CONDITIONS. Clinicians, hygienist (partial), and
+ * dental_assistant. This is condition charting only — adding/finalizing
+ * TREATMENTS is canAddTreatment.
+ *
+ * NOTE — backend asymmetry (E2): this helper returns true for hygienist,
+ * matching `upsertDentalChart` (full-chart bulk write). However, the hygienist
+ * is NOT in the `updateTooth` or `initializeDentition` gates — those two
+ * endpoints are owner/associate/dental_assistant only. If you need to gate a
+ * single-tooth or dentition-init affordance specifically, check for hygienist
+ * explicitly: `canEditChart(role) && role !== 'hygienist'`.
+ */
+export function canEditChart(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist' ||
+    role === 'dental_assistant'
+  );
+}
+
+/**
+ * SIGN/lock visit notes (signVisitNotes) on a GENERAL (dentist-led) visit.
+ * Dentists only — dental_assistant may draft but must NEVER sign.
+ *
+ * For hygiene-typed visits the hygienist may also sign — use
+ * {@link canSignNotesForVisitType} when the visit type is known.
+ */
+export function canSignNotes(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+// ─── E3: hygienist hygiene-led visit capability helpers ─────────────────────
+//
+// A hygienist gains create/sign authority ONLY on a HYGIENE-typed visit. These
+// helpers take the visit type so the workspace can surface hygiene affordances
+// without ever loosening the GENERAL-visit gates. They mirror the backend
+// conditional assertBranchRole logic exactly.
+
+export type VisitTypeCapability = 'general' | 'hygiene';
+
+/**
+ * Create/own a HYGIENE-typed visit (createDentalVisit with visitType=hygiene,
+ * or check-in of a hygiene appointment). Dentists OR hygienist. A general visit
+ * is still owner/associate-only — see {@link canCreateGeneralVisit}.
+ */
+export function canCreateHygieneVisit(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist'
+  );
+}
+
+/**
+ * Create a GENERAL (dentist-led) visit. Dentists only — unchanged gate.
+ */
+export function canCreateGeneralVisit(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * SIGN a HYGIENE-typed visit's notes. Dentists OR hygienist. General visits
+ * stay dentist-only. The hygienist is granted sign authority ONLY when the
+ * visit is hygiene-typed.
+ */
+export function canSignHygieneNotes(role: DentalRole): boolean {
+  return (
+    role === 'dentist_owner' ||
+    role === 'dentist_associate' ||
+    role === 'hygienist'
+  );
+}
+
+/**
+ * Resolve sign capability for a known visit type:
+ *   general → canSignNotes (owner/associate)
+ *   hygiene → canSignHygieneNotes (owner/associate/hygienist)
+ * This is the single helper the workspace should use when the visit type is known.
+ */
+export function canSignNotesForVisitType(role: DentalRole, visitType: VisitTypeCapability): boolean {
+  return visitType === 'hygiene' ? canSignHygieneNotes(role) : canSignNotes(role);
+}
+
+/**
+ * Resolve DRAFT capability for a known visit type:
+ *   general → canDraftNotes (owner/associate/dental_assistant)
+ *   hygiene → the above PLUS hygienist
+ */
+export function canDraftNotesForVisitType(role: DentalRole, visitType: VisitTypeCapability): boolean {
+  if (visitType === 'hygiene' && role === 'hygienist') return true;
+  return canDraftNotes(role);
+}
+
+/**
+ * Add / finalize a treatment (createDentalTreatment). Dentists only —
+ * dental_assistant must NOT add or finalize treatments.
+ */
+export function canAddTreatment(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Prescribe medication (Rx). Dentists only — dental_assistant must NOT
+ * prescribe.
+ */
+export function canPrescribe(role: DentalRole): boolean {
+  return role === 'dentist_owner' || role === 'dentist_associate';
+}
+
+/**
+ * Capture (create) a consent form for a visit. Dentists only — mirrors the
+ * backend createConsentForm gate (['dentist_owner','dentist_associate']).
+ * dental_assistant must NOT capture consent.
+ */
+export function canCaptureConsent(role: DentalRole): boolean {
   return role === 'dentist_owner' || role === 'dentist_associate';
 }
 

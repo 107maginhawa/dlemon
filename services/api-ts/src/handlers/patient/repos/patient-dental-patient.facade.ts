@@ -16,13 +16,31 @@ import { PatientRepository, type PatientFilters, type ArchiveResult } from './pa
  *  importing the patient schema directly (Phase 10 boundary lint). */
 export type { FollowUpNote, PatientWithPerson, Patient, EmergencyContact, CommunicationPreferences } from './patient.schema';
 
-/** Lookup patient for branch authorization. Returns { id, preferredBranchId, status } or null. */
+/**
+ * AHA FIX-006: write the patients.hasActivePaymentPlan flag — the cross-module seam
+ * the dental-billing payment-plan lifecycle uses to keep the EC1 archive guard
+ * (patient.repo.ts archivePatient) honest. Billing recomputes the boolean from its
+ * own plans and calls this to persist it; the facade is the sanctioned write path
+ * (a billing repo must not touch the patients table directly — boundary lint).
+ */
+export async function setPatientActivePaymentPlanFlag(
+  db: DatabaseInstance,
+  patientId: string,
+  hasActivePlan: boolean,
+): Promise<void> {
+  await db
+    .update(patients)
+    .set({ hasActivePaymentPlan: hasActivePlan, updatedAt: new Date() })
+    .where(eq(patients.id, patientId));
+}
+
+/** Lookup patient for branch authorization. Returns { id, personId, preferredBranchId, status } or null. */
 export async function getPatientForDentalPatient(
   db: DatabaseInstance,
   patientId: string,
-): Promise<{ id: string; preferredBranchId: string | null; status: string } | null> {
+): Promise<{ id: string; personId: string; preferredBranchId: string | null; status: string } | null> {
   const [row] = await db
-    .select({ id: patients.id, preferredBranchId: patients.preferredBranchId, status: patients.status })
+    .select({ id: patients.id, personId: patients.person, preferredBranchId: patients.preferredBranchId, status: patients.status })
     .from(patients)
     .where(eq(patients.id, patientId))
     .limit(1);

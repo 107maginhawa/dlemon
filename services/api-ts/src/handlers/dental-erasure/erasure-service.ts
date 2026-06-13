@@ -19,6 +19,8 @@ import { ErasureRequestRepository } from './repos/erasure-request.repo';
 import type { DentalErasureRequest } from './repos/erasure-request.schema';
 import { anonymizeSubject } from './erasure-engine';
 import { isPersonUnderLegalHold } from '@/handlers/dental-legalhold/legal-hold.facade';
+import { getErasureSubjectPatient } from '@/handlers/patient/repos/patient-erasure.facade';
+import { getBranchOrganizationId } from '@/handlers/dental-org/repos/org-erasure.facade';
 
 export interface RequestErasureInput {
   subjectPersonId: string;
@@ -54,12 +56,58 @@ export async function requestErasure(
   input: RequestErasureInput,
   opts: ServiceOpts = {},
 ): Promise<DentalErasureRequest> {
+  // FIX-001 (GAP-2): derive tenancy from the SUBJECT, do not trust the caller.
+  // Resolve branch→organization from the subject's patient row and reject a
+  // forged/mismatched tenantId/branchId. EM-BIL-002 class — server owns tenancy.
+  let tenantId = input.tenantId;
+  let branchId = input.branchId ?? null;
+  const subjectPatient = await getErasureSubjectPatient(db, {
+    personId: input.subjectPersonId,
+    patientId: input.subjectPatientId,
+  });
+  // A supplied subjectPatientId that resolves to no patient is a forged/garbage
+  // claim — reject it rather than silently degrading to the body-tenant fallback
+  // (which would let a fake patientId bypass subject→tenant resolution).
+  if (input.subjectPatientId && !subjectPatient) {
+    throw new ValidationError('subjectPatientId does not reference an existing patient');
+  }
+  // C-4 (patients-only V1): a subject with no patient anchor has no authoritative
+  // tenant source, so it would keep the caller-supplied tenantId — the exact
+  // cross-tenant leak (a forged tenant attribution on a bare person the server
+  // cannot validate). V1 erasure is patients-only: reject person-only subjects.
+  if (!subjectPatient) {
+    throw new ValidationError(
+      'Erasure subject must reference a patient; person-only subjects are out of V1 erasure scope',
+    );
+  }
+  // A forged subject claim (patient not owned by the named person) is always
+  // invalid, regardless of branch resolvability.
+  if (input.subjectPatientId && subjectPatient.personId !== input.subjectPersonId) {
+    throw new ValidationError('subjectPatientId does not belong to subjectPersonId');
+  }
+  const resolvedBranchId = subjectPatient.preferredBranchId;
+  const resolvedTenantId = resolvedBranchId ? await getBranchOrganizationId(db, resolvedBranchId) : null;
+  if (resolvedBranchId && resolvedTenantId) {
+    // Fully resolvable → the server owns tenancy; a forged/mismatched
+    // caller-supplied tenantId or branchId is rejected.
+    if (input.tenantId && input.tenantId !== resolvedTenantId) {
+      throw new ValidationError("tenantId does not match the subject's organization");
+    }
+    if (input.branchId && input.branchId !== resolvedBranchId) {
+      throw new ValidationError("branchId does not match the subject's branch");
+    }
+    tenantId = resolvedTenantId;
+    branchId = resolvedBranchId;
+  }
+  // Unresolvable (patient has no branch, or an orphan branch) → keep the
+  // supplied values; there is no authoritative source to validate against.
+
   const repo = new ErasureRequestRepository(db, logger);
   const req = await repo.createOne({
     subjectPersonId: input.subjectPersonId,
     subjectPatientId: input.subjectPatientId ?? null,
-    tenantId: input.tenantId,
-    branchId: input.branchId ?? null,
+    tenantId,
+    branchId,
     reason: input.reason,
     requestedBy: input.requestedBy,
     status: 'requested',
@@ -69,8 +117,8 @@ export async function requestErasure(
 
   await (opts.audit ?? logAuditEvent)(db, logger, {
     personId: input.requestedBy,
-    tenantId: input.tenantId,
-    branchId: input.branchId ?? undefined,
+    tenantId,
+    branchId: branchId ?? undefined,
     action: 'erasure.requested',
     resourceType: 'erasure_request',
     resourceId: req.id,

@@ -17,6 +17,7 @@ import {
 import {
   linkPendingTreatmentsToPlan,
   getTreatmentStatusesByPlan,
+  getTreatmentPriceCentsByPlan,
   setTreatmentAppointment,
   getTreatmentPlanRef,
   getOptionGroupTreatments,
@@ -94,6 +95,26 @@ export class TreatmentPlanRepository {
   }
 
   /**
+   * TP-BR-006 (FIX-006): recompute a plan's denormalized `totalEstimateCents` from
+   * its linked item prices — the single source of truth for case money (the same
+   * item set the case-presentation `grandTotalCents` and billing subtotal sum).
+   * Mirrors `recomputeStatus`. No-op when the plan has no linked items (the draft
+   * ballpark estimate is preserved) or when the derived sum already matches.
+   * Returns the current plan either way.
+   */
+  async recomputeTotal(planId: string, patientId: string): Promise<DentalTreatmentPlan | null> {
+    const plan = await this.findOneById(planId, patientId);
+    if (!plan) return null;
+
+    const items = await getTreatmentPriceCentsByPlan(this.db, planId, patientId);
+    if (items.length === 0) return plan; // itemless: preserve the manual estimate
+
+    const sum = items.reduce((acc, i) => acc + i.priceCents, 0);
+    if (sum === plan.totalEstimateCents) return plan;
+    return this.update(planId, patientId, { totalEstimateCents: sum });
+  }
+
+  /**
    * P1-21: attach a planned treatment item to a scheduled appointment (loose ref).
    * Scoped by patientId so a caller can only schedule that patient's own items.
    * Returns null if the treatment doesn't exist for the patient.
@@ -117,7 +138,11 @@ export class TreatmentPlanRepository {
   /** Recompute the plan a given treatment belongs to (if any). Used by the treatment-update trigger. */
   async recomputeForTreatment(treatmentId: string): Promise<void> {
     const t = await getTreatmentPlanRef(this.db, treatmentId);
-    if (t?.planId) await this.recomputeStatus(t.planId, t.patientId);
+    if (t?.planId) {
+      await this.recomputeStatus(t.planId, t.patientId);
+      // TP-BR-006: keep the denormalized total in lock-step with item prices.
+      await this.recomputeTotal(t.planId, t.patientId);
+    }
   }
 
   /** CR-05: append a treatment-plan approval record. */

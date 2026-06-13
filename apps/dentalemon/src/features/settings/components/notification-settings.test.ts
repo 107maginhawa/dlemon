@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'bun:test';
+import { NOTIFICATION_CONSENT_NOTICE } from './notification-settings';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -167,5 +168,18 @@ describe('Notification Settings — push notifications (FR8.6)', () => {
   test('NOTIFICATION_LABELS has push notifications entry', () => {
     expect(NOTIFICATION_LABELS.pushNotifications).not.toBeUndefined();
     expect(NOTIFICATION_LABELS.pushNotifications.label).toBe('Push Notifications');
+  });
+});
+
+/*
+ * FIX-006 (settings-relabel honesty): the panel stores clinic-wide DEFAULTS; the
+ * real gate is per-patient communication consent enforced by the reminder resolver
+ * (see resolve-reminder-channels.test.ts FIX-006 block). Pin the consent notice so
+ * the panel can never silently revert to reading as enforced switches.
+ */
+describe('Notification Settings — consent honesty notice (FIX-006)', () => {
+  test('the consent notice names per-patient consent as the real gate, and these as defaults', () => {
+    expect(NOTIFICATION_CONSENT_NOTICE.toLowerCase()).toContain('consent');
+    expect(NOTIFICATION_CONSENT_NOTICE.toLowerCase()).toContain('default');
   });
 });

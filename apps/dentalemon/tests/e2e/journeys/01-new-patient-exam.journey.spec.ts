@@ -44,8 +44,12 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await openWorkspace(page, patientId)
 
     // Step 2: ensure an active visit (new visit via carousel if needed).
+    // The New-Visit button is gated DISABLED when the patient already has an
+    // open visit (title: "Finish or discard the open visit to start a new one").
+    // In that case the active-visit precondition is already satisfied, so only
+    // click when the button is enabled — clicking a disabled button just hangs.
     const newVisitBtn = page.getByTestId('new-visit-btn')
-    if (await newVisitBtn.count()) {
+    if ((await newVisitBtn.count()) && (await newVisitBtn.first().isEnabled())) {
       await newVisitBtn.first().click()
       await page.waitForLoadState('networkidle')
     }

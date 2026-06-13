@@ -31,6 +31,7 @@ import {
   getActiveProcedureCode,
 } from '@/handlers/dental-visit/repos/visit-org.facade';
 import { logAuditEvent } from '@/core/audit-logger';
+import { resolveFeeCents } from './fee-resolution';
 
 const DEFAULT_CURRENCY = 'PHP';
 
@@ -73,7 +74,7 @@ export async function getFeeSchedule(ctx: BaseContext) {
   const data: FeeScheduleEntry[] = codes.map((code) => ({
     cdtCode: code.cdtCode,
     description: code.description,
-    priceCents: overrides[code.cdtCode] ?? code.defaultFeePhp,
+    priceCents: resolveFeeCents(overrides, code.cdtCode, code.defaultFeePhp),
     currency,
   }));
 

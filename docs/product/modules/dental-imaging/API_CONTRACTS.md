@@ -110,9 +110,24 @@ Patient-scoped union of imaging images and legacy clinical attachments surfaced 
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| DELETE | /api/v1/dental/imaging/images/:imageId | Delete an image |
-| PATCH | /api/v1/dental/imaging/images/:imageId/calibration | Set pixels-per-mm calibration |
+| DELETE | /api/v1/dental/imaging/images/:imageId | Delete an image (soft-delete → `status='archived'`) |
+| PATCH | /api/v1/dental/imaging/images/:imageId/calibration | Set calibration — scalar `pixelSpacingMm`, **or** the 2-point ruler (`pointA`,`pointB`,`knownDistanceMm`) → server derives mm/px + persists a versioned `imaging_calibration` record (G6) |
+| PATCH | /api/v1/dental/imaging/images/:imageId/metadata | **G5a** — partial update of library metadata: `isDiagnostic`, `qualityStatus`(ok\|retake), `retakeReason`, `tags[]` (trim/dedupe/clamp50/cap30) |
 | PATCH | /api/v1/dental/imaging/images/:imageId/modality | Set/correct the image modality |
+
+**Calibration body (G6):** the 2-point ruler is all-or-nothing — supplying any of `pointA`/`pointB`/`knownDistanceMm` requires all three and a positive, non-coincident distance (else `VALIDATION_ERROR(400)`). `pixelSpacingMm` is derived server-side (`knownDistanceMm / hypot(pointA,pointB)`); a client-supplied scalar is honored only on the no-ruler legacy path.
+
+### Library metadata & context links (G5)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | /api/v1/dental/imaging/images/:imageId/links | **G5b** — link an image to a `treatment_plan`/`ortho_case`/`report` (`linkType` + `targetId` uuid). Idempotent on (image, type, target) |
+| GET | /api/v1/dental/imaging/images/:imageId/links | List an image's context links |
+| DELETE | /api/v1/dental/imaging/links/:linkId | Remove a context link (204) |
+
+`targetId` is **loose-coupled** — a uuid referencing another module's row with no DB-level FK. `listPatientImages` batch-loads links (no N+1) and accepts `isDiagnostic`/`qualityStatus`/`tag`/`linkType`/`linkTargetId` filters.
+
+**Errors:** `VALIDATION_ERROR(400)`, `IMAGE_NOT_FOUND(404)`, `LINK_NOT_FOUND(404)`, `FORBIDDEN(403)`. Metadata + link writes are gated to `dentist_owner`/`dentist_associate`.
 
 ### Findings (image-centric)
 

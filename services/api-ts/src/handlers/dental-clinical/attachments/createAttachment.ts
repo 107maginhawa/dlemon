@@ -26,7 +26,8 @@ export async function createAttachment(
 
   // Branch-level authorization via parent visit
   const visit = await getVisitOrThrow(db, visitId);
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full']);
+  // E2: dental_assistant may upload attachments under dentist supervision.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'staff_full', 'dental_assistant']);
 
   // BR-003: writes to locked or completed visits are blocked
   if (visit.status === 'locked' || visit.status === 'completed') {

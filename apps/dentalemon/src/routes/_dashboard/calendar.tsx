@@ -14,9 +14,10 @@ import { CalendarWeek } from '../../features/scheduling/components/calendar-week
 import { CalendarMonth } from '../../features/scheduling/components/calendar-month';
 import { AppointmentModal } from '../../features/scheduling/components/appointment-modal';
 import type { Appointment } from '../../features/scheduling/components/appointment-card';
+import { CancelAppointmentDialog } from '../../features/scheduling/components/cancel-appointment-dialog';
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { ListErrorState } from '@/components/list-error-state';
-import { checkInAppointment, updateAppointment, confirmAppointment } from '@monobase/sdk-ts/generated';
+import { checkInAppointment, updateAppointment, confirmAppointment, cancelAppointment } from '@monobase/sdk-ts/generated';
 import { APP_LOCALE } from '@/constants/brand';
 import { RecallDueList } from '../../features/scheduling/components/recall-due-list';
 import type { RecallDueItem } from '../../features/scheduling/hooks/use-recall-due-list';
@@ -82,6 +83,13 @@ function CalendarPage() {
   const [editAppointmentId, setEditAppointmentId] = useState<string | undefined>();
   const [showRecare, setShowRecare] = useState(false);
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
+  const role = useOrgContextStore((s) => s.role);
+  // FR3.4 / EM-SCH-001: cancellation is owner/staff_full only (backend enforces;
+  // the FE hides the affordance for other roles to avoid a button that 403s).
+  const canCancel = role === 'dentist_owner' || role === 'staff_full';
+  const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSaving, setCancelSaving] = useState(false);
 
   const weekStart = getMondayOfWeek(selectedDate);
 
@@ -154,6 +162,27 @@ function CalendarPage() {
       invalidateAppointments();
     } catch {
       // Network error — ignore silently
+    }
+  }
+
+  function handleRequestCancel(appointment: Appointment) {
+    setCancelError(null);
+    setCancelTarget(appointment);
+  }
+
+  async function handleConfirmCancel(reason: string) {
+    if (!cancelTarget) return;
+    setCancelSaving(true);
+    setCancelError(null);
+    try {
+      // FR3.4: canonical reason-gated cancel — DELETE with reason query param.
+      await cancelAppointment({ path: { appointmentId: cancelTarget.id }, query: { reason }, throwOnError: true });
+      setCancelTarget(null);
+      invalidateAppointments();
+    } catch {
+      setCancelError('Could not cancel the appointment. Please try again.');
+    } finally {
+      setCancelSaving(false);
     }
   }
 
@@ -325,6 +354,7 @@ function CalendarPage() {
           onSlotClick={handleSlotClick}
           onCheckIn={handleCheckIn}
           onConfirm={handleConfirm}
+          onCancel={canCancel ? handleRequestCancel : undefined}
           onReschedule={handleReschedule}
         />
       ) : view === 'week' ? (
@@ -359,6 +389,16 @@ function CalendarPage() {
         onSaved={handleSaved}
         initialDate={modalInitialDate}
         appointmentId={editAppointmentId}
+      />
+
+      {/* FR3.4: reason-gated cancellation dialog */}
+      <CancelAppointmentDialog
+        open={!!cancelTarget}
+        patientLabel={cancelTarget?.patientName}
+        error={cancelError}
+        saving={cancelSaving}
+        onClose={() => { setCancelTarget(null); setCancelError(null); }}
+        onConfirm={handleConfirmCancel}
       />
     </div>
   );

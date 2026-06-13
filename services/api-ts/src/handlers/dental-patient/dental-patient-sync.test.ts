@@ -153,6 +153,7 @@ describe('POST /dental/sync-logs (AC-001, AC-006, AC-007, BR-001)', () => {
         localId: 'local-def-456',
         entityType: 'dental_treatment_plan',
         entityId: 'd0000000-0000-1000-8000-000000000002',
+        branchId: BRANCH_ID,
       }),
     });
 
@@ -172,6 +173,7 @@ describe('POST /dental/sync-logs (AC-001, AC-006, AC-007, BR-001)', () => {
         entityType: 'dental_patient_contact',
         entityId: 'd0000000-0000-1000-8000-000000000003',
         serverId: 'd0000000-0000-1000-8000-000000000003',
+        branchId: BRANCH_ID,
       }),
     });
 
@@ -190,7 +192,7 @@ describe('POST /dental/sync-logs (AC-001, AC-006, AC-007, BR-001)', () => {
 describe('GET /dental/sync-logs (AC-002)', () => {
   test('AC-002: returns empty array when no logs', async () => {
     const app = buildTestApp(TEST_USER);
-    const res = await app.request('/dental/sync-logs');
+    const res = await app.request(`/dental/sync-logs?branchId=${BRANCH_ID}`);
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -203,15 +205,15 @@ describe('GET /dental/sync-logs (AC-002)', () => {
     await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'l1', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001' }),
+      body: JSON.stringify({ localId: 'l1', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001', branchId: BRANCH_ID }),
     });
     await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'l2', entityType: 'dental_treatment_plan', entityId: 'd0000000-0000-1000-8000-000000000002' }),
+      body: JSON.stringify({ localId: 'l2', entityType: 'dental_treatment_plan', entityId: 'd0000000-0000-1000-8000-000000000002', branchId: BRANCH_ID }),
     });
 
-    const res = await app.request('/dental/sync-logs');
+    const res = await app.request(`/dental/sync-logs?branchId=${BRANCH_ID}`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.length).toBeGreaterThanOrEqual(2);
@@ -229,7 +231,7 @@ describe('PATCH /dental/sync-logs/:logId (AC-003, BR-002, BR-003)', () => {
     const createRes = await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'l-patch-1', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001' }),
+      body: JSON.stringify({ localId: 'l-patch-1', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001', branchId: BRANCH_ID }),
     });
     const created = await createRes.json() as any;
 
@@ -250,7 +252,7 @@ describe('PATCH /dental/sync-logs/:logId (AC-003, BR-002, BR-003)', () => {
     const createRes = await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'l-patch-2', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001' }),
+      body: JSON.stringify({ localId: 'l-patch-2', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001', branchId: BRANCH_ID }),
     });
     const created = await createRes.json() as any;
 
@@ -278,7 +280,7 @@ describe('PATCH /dental/sync-logs/:logId (AC-003, BR-002, BR-003)', () => {
     const createRes = await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'l-patch-3', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001' }),
+      body: JSON.stringify({ localId: 'l-patch-3', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001', branchId: BRANCH_ID }),
     });
     const created = await createRes.json() as any;
 
@@ -300,7 +302,7 @@ describe('PATCH /dental/sync-logs/:logId (AC-003, BR-002, BR-003)', () => {
     const createRes = await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'l-patch-4', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001' }),
+      body: JSON.stringify({ localId: 'l-patch-4', entityType: 'dental_recall', entityId: 'd0000000-0000-1000-8000-000000000001', branchId: BRANCH_ID }),
     });
     const created = await createRes.json() as any;
 
@@ -392,7 +394,7 @@ describe('GAP-006: LF-BR-004 — stale-write conflict returns 409', () => {
     const createRes = await app.request('/dental/sync-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ localId: 'conflict-test-001', entityType: 'dental_visit', entityId: 'visit-001' }),
+      body: JSON.stringify({ localId: 'conflict-test-001', entityType: 'dental_visit', entityId: 'visit-001', branchId: BRANCH_ID }),
     });
     expect(createRes.status).toBe(201);
     const created = await createRes.json() as any;
