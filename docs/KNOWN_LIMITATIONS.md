@@ -14,13 +14,20 @@ are tracked here so a new developer is not surprised. Last reviewed: 2026-06-13.
 | `services/api-ts/src/handlers/comms/joinVideoCall.ts:210` | WebRTC join currently reuses the session token; a short-lived WebRTC-scoped JWT is planned. (comms is latent in the dentalemon product.) |
 | `services/api-ts/src/utils/expand.ts:358` | Batch expand endpoint is a perf nice-to-have, not built. |
 
-## Frontend spec-drift TODOs (2 remaining)
+## Frontend spec-drift TODOs (1 remaining)
 
-Three of the four FE workarounds were removed 2026-06-13 by modeling the fields the
-handlers already return (commit *"fix(api): model invoice/prescription/treatment-plan
-fields…"*): prescription `warnings` (rx-sheet), invoice-list `patientName`/`visitDate`
-(use-invoices), and the `acceptTreatmentPlan` `branchId` query (use-treatment-plan).
-Two items remain, each deferred for a concrete reason:
+Four of the five original FE workarounds have been removed by modeling/aligning the
+fields the handlers already return: prescription `warnings` (rx-sheet), invoice-list
+`patientName`/`visitDate` (use-invoices), the `acceptTreatmentPlan` `branchId` query,
+and — 2026-06-13 — the `getTreatmentPlan` response shape.
+
+The treatment-plan fix aliased the FE types to the generated SDK contract
+(`TreatmentPlanData = TreatmentPlanResponse`, `TreatmentPlanItem` = the generated item,
+`TreatmentPhase = DentalTreatmentPhase`) and dropped the `as any as` cast: the generated
+types were accurate all along (`treatmentCount`/`byTooth` optional = omitted on the
+empty-plan response; `toothNumber`/`carriedOver` optional = omitted by the `byTooth`
+grouping; full `DentalTreatmentStatus`), and the hand-rolled FE duplicates were the
+inaccurate side. One item remains, deferred for a concrete reason:
 
 - `apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts` —
   `outstandingCents`/`lineItems`/`payments` on the invoice **detail** response.
@@ -29,15 +36,8 @@ Two items remain, each deferred for a concrete reason:
   a real `string`→`Date` runtime shift for the detail sheet — and the dental `method`
   union is wider than the generated `PaymentMethod`; `outstandingCents` aliases
   `balanceCents` (V-BIL-012). Needs a slice that also updates the detail-sheet rendering.
-  The FE keeps a single narrowing `as` (no `as unknown as`).
-- `apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts` — `getTreatmentPlan`'s
-  generated `TreatmentPlanResponse` and the FE `TreatmentPlanData` interface now carry the
-  same fields (`byTooth`, `completedToothNumbers`, phase/priority) but disagree on **shape**:
-  the SDK marks `byTooth`/`treatmentCount` optional and requires a `version` the FE omits,
-  while the FE marks some fields required that the SDK leaves optional. The queryFn keeps an
-  `as any as TreatmentPlanData` cast (eslint-disabled) until the FE interface and the spec
-  are reconciled — a separate slice. (Note: that `as any as` cast is NOT caught by the GAP-D
-  ESLint rule, which targets `as unknown as` only.)
+  The FE keeps a typed intersection (`DentalInvoice & {…}`) plus one documented `as any`
+  in the `select` transform — no `as unknown as`.
 
 ## Performance
 
