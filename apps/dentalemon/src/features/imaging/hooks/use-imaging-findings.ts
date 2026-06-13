@@ -18,6 +18,7 @@ import {
   type DentalImagingModuleImagingFindingType,
   type DentalImagingModuleImagingFindingStatus,
 } from '@monobase/sdk-ts/generated'
+import { logger } from '@/lib/logger'
 
 // Re-export SDK types so consumers keep the same import path.
 export type ImagingFindingType = DentalImagingModuleImagingFindingType
@@ -129,7 +130,7 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
       if (!data || 'error' in data) throw new Error('Unexpected error response from createFinding')
       return toViewModel(data)
     },
-    onError: (e) => console.error('[imaging-findings]', e),
+    onError: (e) => logger.error('imaging-findings', 'mutation failed', e),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey })
     },
@@ -158,7 +159,7 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
       if (!data || 'error' in data) throw new Error('Unexpected error response from updateFinding')
       return toViewModel(data)
     },
-    onError: (e) => console.error('[imaging-findings]', e),
+    onError: (e) => logger.error('imaging-findings', 'mutation failed', e),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey })
     },
@@ -171,7 +172,7 @@ export function useImagingFindings(imageId: string, opts?: { enabled?: boolean }
         throwOnError: true,
       })
     },
-    onError: (e) => console.error('[imaging-findings]', e),
+    onError: (e) => logger.error('imaging-findings', 'mutation failed', e),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey })
     },

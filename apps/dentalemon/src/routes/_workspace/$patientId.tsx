@@ -45,6 +45,7 @@ import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
 import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
 import { useSaveToothFlow } from '@/features/workspace/hooks/use-save-tooth-flow';
 import { useMarkTreatmentDone } from '@/features/workspace/hooks/use-mark-treatment-done';
@@ -261,7 +262,7 @@ function WorkspacePage() {
               setPmdShared(true);
             }).catch((err) => {
               if (err?.name !== 'AbortError') {
-                console.error('Share failed:', err);
+                logger.error('patient-share', 'share failed', err);
               }
             });
           } else {

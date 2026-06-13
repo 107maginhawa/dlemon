@@ -20,6 +20,7 @@ import { CdtCodeBrowser } from './cdt-code-browser';
 import type { CdtCodeSelection } from './cdt-code-browser';
 import { AmendmentForm } from './amendment-form';
 import { AmendmentsList } from './amendments-list';
+import { logger } from '@/lib/logger';
 import { FindingsPanel } from './findings-panel';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
@@ -220,7 +221,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
       onClose();
     } catch (err) {
       // Surface error — do NOT close so user can retry without losing data
-      console.error('Save failed', err);
+      logger.error('tooth-slideout', 'save failed', err);
     } finally {
       setSaving(false);
     }
@@ -235,7 +236,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
       // Notify parent to clear tooth selection but keep panel open
       onSaveAndNext?.();
     } catch (err) {
-      console.error('Save failed', err);
+      logger.error('tooth-slideout', 'save failed', err);
     } finally {
       setSaving(false);
     }

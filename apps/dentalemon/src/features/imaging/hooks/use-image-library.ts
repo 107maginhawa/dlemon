@@ -24,6 +24,7 @@ import {
   type DentalImagingModuleModalityEnum,
   type DentalImagingModuleImagingLink,
 } from '@monobase/sdk-ts/generated'
+import { logger } from '@/lib/logger'
 
 export type ImageLinkType = DentalImagingModuleImagingLink['linkType']
 export type ImageModality = DentalImagingModuleModalityEnum
@@ -91,7 +92,7 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
       if (!data || 'error' in data) throw new Error('Unexpected error response from updateImageMetadata')
       return data
     },
-    onError: (e) => console.error('[image-library] updateMetadata', e),
+    onError: (e) => logger.error('image-library', 'updateMetadata failed', e),
     onSettled: () => invalidateList(),
   })
 
@@ -105,7 +106,7 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
       if (!data || 'error' in data) throw new Error('Unexpected error response from updateImageModality')
       return data
     },
-    onError: (e) => console.error('[image-library] updateModality', e),
+    onError: (e) => logger.error('image-library', 'updateModality failed', e),
     onSettled: () => invalidateList(),
   })
 
@@ -115,7 +116,7 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
     mutationFn: async ({ imageId }: { imageId: string }): Promise<void> => {
       await imagingMgmtDeleteImage({ path: { imageId }, throwOnError: true })
     },
-    onError: (e) => console.error('[image-library] deleteImage', e),
+    onError: (e) => logger.error('image-library', 'deleteImage failed', e),
     onSettled: () => invalidateList(),
   })
 
@@ -129,7 +130,7 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
       if (!data || 'error' in data) throw new Error('Unexpected error response from createImageLink')
       return toLinkView(data)
     },
-    onError: (e) => console.error('[image-library] createLink', e),
+    onError: (e) => logger.error('image-library', 'createLink failed', e),
     onSettled: (_data, _err, vars) => {
       invalidateList()
       invalidateLinks(vars.imageId)
@@ -140,7 +141,7 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
     mutationFn: async ({ linkId }: { linkId: string; imageId?: string }): Promise<void> => {
       await imagingMgmtDeleteImageLink({ path: { linkId }, throwOnError: true })
     },
-    onError: (e) => console.error('[image-library] deleteLink', e),
+    onError: (e) => logger.error('image-library', 'deleteLink failed', e),
     onSettled: (_data, _err, vars) => {
       invalidateList()
       if (vars.imageId) invalidateLinks(vars.imageId)

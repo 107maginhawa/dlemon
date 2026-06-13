@@ -3,6 +3,8 @@
  * Allows changing API endpoints without rebuilding the application
  */
 
+import { logger } from '@/lib/logger'
+
 // Raw response from /config.json endpoint
 interface RawRuntimeConfig {
   api_url?: string
@@ -75,9 +77,9 @@ export async function fetchRuntimeConfig(timeout = 2000): Promise<RuntimeConfig>
   } catch (error) {
     // Log the error but don't throw - we want to fallback gracefully
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn('[RuntimeConfig] Fetch timeout after', timeout, 'ms, using fallback config')
+      logger.warn('runtime-config', `Fetch timeout after ${timeout}ms — using fallback config`)
     } else {
-      console.warn('[RuntimeConfig] Failed to fetch runtime config:', error, '- using fallback config')
+      logger.warn('runtime-config', 'Failed to fetch runtime config — using fallback config', error)
     }
 
     // Return empty config to trigger fallback behavior

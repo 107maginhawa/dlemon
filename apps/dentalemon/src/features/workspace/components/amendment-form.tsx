@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { createAmendment } from '@monobase/sdk-ts/generated';
+import { logger } from '@/lib/logger';
 
 const AMENDMENT_REASONS = [
   { value: 'correction', label: 'Correction' },
@@ -66,14 +67,14 @@ export function AmendmentForm({
       });
       if (apiError) {
         setError('Failed to save amendment. Please try again.');
-        console.error('Amendment save failed', apiError);
+        logger.error('amendment-form', 'save failed', apiError);
         return;
       }
       await Promise.resolve(onSaved?.());
       onClose();
     } catch (err) {
       setError('Failed to save amendment. Please try again.');
-      console.error('Amendment save failed', err);
+      logger.error('amendment-form', 'save failed', err);
     } finally {
       setSaving(false);
     }

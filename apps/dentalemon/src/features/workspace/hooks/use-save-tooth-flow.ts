@@ -13,6 +13,7 @@ import { isValidFdiNumber } from '@/features/workspace/components/dental-chart.h
 import type { ToothSlideoutData } from '@/features/workspace/components/tooth-slideout';
 import { useSaveChart } from './use-save-chart';
 import { useSaveTreatment } from './use-save-treatment';
+import { logger } from '@/lib/logger';
 
 interface UseSaveToothFlowOptions {
   visitId: string | null;
@@ -38,7 +39,7 @@ export function useSaveToothFlow({
     const toothNumber = selectedTooth;
     if (!visitId || !toothNumber) return;
     if (!isValidFdiNumber(toothNumber)) {
-      console.error(`Invalid FDI tooth number: ${toothNumber}`);
+      logger.error('save-tooth-flow', 'Invalid FDI tooth number', { toothNumber });
       return;
     }
 
@@ -59,7 +60,7 @@ export function useSaveToothFlow({
     if (data.cdtCode && data.description && data.priceInput !== undefined && data.priceInput !== '') {
       const raw = parseFloat(data.priceInput);
       if (isNaN(raw)) {
-        console.error('Invalid price input — treatment not saved');
+        logger.error('save-tooth-flow', 'Invalid price input — treatment not saved');
         return;
       }
       priceAmount = raw;
@@ -96,7 +97,7 @@ export function useSaveToothFlow({
                 // useSaveTreatment already surfaces a toast. Deliberately do NOT call
                 // onSuccess here: keep the slideout open so the clinician can retry
                 // without losing context (chart is saved; treatment is not).
-                console.error('Treatment save failed — chart saved, treatment not recorded', err);
+                logger.error('save-tooth-flow', 'Treatment save failed — chart saved, treatment not recorded', err);
               },
             },
           );

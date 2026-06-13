@@ -10,6 +10,7 @@
  */
 
 import OneSignal from 'react-onesignal';
+import { logger } from '@/lib/logger';
 
 /**
  * OneSignal configuration
@@ -54,7 +55,7 @@ export async function initializeOneSignal(): Promise<void> {
   const appId = getOneSignalAppId();
 
   if (!appId) {
-    console.warn('OneSignal App ID not configured. Push notifications will not be available.');
+    logger.warn('onesignal', 'App ID not configured — push notifications unavailable');
     return;
   }
 
@@ -77,11 +78,11 @@ export async function initializeOneSignal(): Promise<void> {
       try {
         await OneSignal.User.addTag('app', appTag);
       } catch (tagError) {
-        console.error('Failed to set OneSignal app tag:', tagError);
+        logger.error('onesignal', 'Failed to set app tag', tagError);
       }
     }
   } catch (error) {
-    console.error('Failed to initialize OneSignal:', error);
+    logger.error('onesignal', 'Failed to initialize', error);
   }
 }
 
@@ -95,7 +96,7 @@ export async function setOneSignalUserId(userId: string): Promise<void> {
   try {
     await OneSignal.login(userId);
   } catch (error) {
-    console.error('Failed to set OneSignal user ID:', error);
+    logger.error('onesignal', 'Failed to set user ID', error);
   }
 }
 
@@ -109,7 +110,7 @@ export async function clearOneSignalUserId(): Promise<void> {
   try {
     await OneSignal.logout();
   } catch (error) {
-    console.error('Failed to clear OneSignal user ID:', error);
+    logger.error('onesignal', 'Failed to clear user ID', error);
   }
 }
 
@@ -124,7 +125,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
     const permission = await OneSignal.Notifications.requestPermission();
     return permission;
   } catch (error) {
-    console.error('Failed to request notification permission:', error);
+    logger.error('onesignal', 'Failed to request notification permission', error);
     return false;
   }
 }
@@ -139,7 +140,7 @@ export async function hasNotificationPermission(): Promise<boolean> {
     const permission = await OneSignal.Notifications.permission;
     return permission;
   } catch (error) {
-    console.error('Failed to check notification permission:', error);
+    logger.error('onesignal', 'Failed to check notification permission', error);
     return false;
   }
 }
@@ -153,7 +154,7 @@ export async function optInToNotifications(): Promise<void> {
   try {
     await OneSignal.User.PushSubscription.optIn();
   } catch (error) {
-    console.error('Failed to opt in to notifications:', error);
+    logger.error('onesignal', 'Failed to opt in to notifications', error);
   }
 }
 
@@ -166,7 +167,7 @@ export async function optOutOfNotifications(): Promise<void> {
   try {
     await OneSignal.User.PushSubscription.optOut();
   } catch (error) {
-    console.error('Failed to opt out of notifications:', error);
+    logger.error('onesignal', 'Failed to opt out of notifications', error);
   }
 }
 
@@ -180,7 +181,7 @@ export async function isSubscribedToNotifications(): Promise<boolean> {
     const id = await OneSignal.User.PushSubscription.id;
     return !!id;
   } catch (error) {
-    console.error('Failed to check notification subscription:', error);
+    logger.error('onesignal', 'Failed to check notification subscription', error);
     return false;
   }
 }

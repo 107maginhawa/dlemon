@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@monobase/ui'
 import { Slider } from '@monobase/ui'
 import { Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface ImageCropperDialogProps {
   open: boolean
@@ -122,7 +123,7 @@ export function ImageCropperDialog({
       onCropComplete(croppedFile)
       onClose()
     } catch (error) {
-      console.error('Failed to crop image:', error)
+      logger.error('image-cropper', 'crop failed', error)
     } finally {
       setIsProcessing(false)
     }

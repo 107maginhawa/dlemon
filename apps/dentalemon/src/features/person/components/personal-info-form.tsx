@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@monobase/ui'
 import { Separator } from '@monobase/ui'
 import { cn } from '@/lib/utils'
 import { personalInfoSchema, type PersonalInfo } from '../schemas'
+import { logger } from '@/lib/logger'
 import { ImageCropperDialog } from '@/components/image-cropper-dialog'
 
 interface PersonalInfoFormProps {
@@ -168,7 +169,7 @@ export function PersonalInfoForm({
         const avatarData = await onAvatarUpload(selectedFile)
         finalData.avatar = avatarData
       } catch (error) {
-        console.error('Avatar upload failed:', error)
+        logger.error('personal-info-form', 'avatar upload failed', error)
         // Continue with form submission even if avatar upload fails
       } finally {
         setIsUploadingAvatar(false)
