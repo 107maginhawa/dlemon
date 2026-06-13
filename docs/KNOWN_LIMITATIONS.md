@@ -52,18 +52,19 @@ falls back to base fields until the contract is extended and the SDK regenerated
   (`docs/aha/prompts/08-qa-uat-workflow-guide.md.md`) has a `.md.md` typo — left
   untouched (untracked, not in scope).
 
-## Architectural decisions in flight
+## Architectural decisions (resolved 2026-06-13)
 
-These are under review (do not assume the current state is final):
+Previously-open standards questions, now decided:
 
-- **DB row-level security (RLS)**: not implemented; tenant isolation is enforced at
-  the application/repository layer. `docs/decisions/ADR-007-self-service-onboarding.md`
-  flags RLS as recommended before GA.
-- **Form library**: 4 person forms use `react-hook-form`; the documented stack
-  standard is TanStack Form. Either migrate or record a project override.
-- **`no-raw-fetch` coverage**: the ESLint rule globs only `apps/dentalemon/src/features/**`;
-  `routes/` and `lib/` are unguarded and contain a few direct `fetch` calls (some
-  bootstrap-justified, e.g. PIN entry; one — `routes/imaging-ceph-report.$imageId.tsx`
-  — has an SDK equivalent).
-- **Lint warning ceiling**: ~549 lint warnings (mostly `no-unused-vars` in api-ts and
-  `no-explicit-any` at `warn` in the frontend) are advisory; no `--max-warnings` gate.
+- **Form library** → `docs/decisions/ADR-009-frontend-form-library.md`: dentalemon
+  standardizes on `react-hook-form` + Zod (accepted override of the template's
+  TanStack Form mandate); the four person forms are not migrated.
+- **DB row-level security (RLS)** → `docs/decisions/ADR-010-tenant-isolation-rls-pre-ga.md`:
+  application-level tenant isolation remains the current control; RLS is an explicit,
+  tracked **pre-GA gate** (top-PHI tables + a per-request tenant session variable).
+- **`no-raw-fetch` coverage**: the ESLint rule now also enforces in `src/routes/` and
+  `src/lib/`. Existing bootstrap / static-asset / legacy fetches carry inline
+  disables-with-reason; two (`_dashboard/patients.tsx` POST and the
+  `imaging-ceph-report` fetch) are flagged `TODO(sdk)` migration candidates.
+- **Lint warning ceiling**: a `--max-warnings` ratchet is pinned (dentalemon 200,
+  api-ts 349) so warnings can't grow. Still ~549 advisory warnings to burn down.
