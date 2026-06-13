@@ -46,6 +46,7 @@ import {
 } from '@/handlers/dental-patient/repos/case-presentation.schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { detUuid, cpPlanSpecs } from './seed-shared';
+import { workingSlotISO } from './lib/seed-clock';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase';
 const db = createDatabase({ url: DATABASE_URL });
@@ -57,9 +58,8 @@ const daysAgo = (n: number, h = 9) => {
 const daysFromNow = (n: number, h = 10) => {
   const d = new Date(); d.setDate(d.getDate() + n); d.setHours(h, 0, 0, 0); return d;
 };
-const atToday = (h: number, m = 0) => {
-  const d = new Date(); d.setHours(h, m, 0, 0); return d;
-};
+// Appointment slots come from workingSlotISO (timezone- + working-hours-aware);
+// daysAgo/daysFromNow remain for non-appointment date fields (invoice issued/due/paid).
 
 function log(msg: string) { console.log(`  ${msg}`); }
 function section(title: string) { console.log(`\n▶ ${title}`); }
@@ -247,7 +247,14 @@ async function seed() {
   type ApptSpec = {
     key: string;
     patientIdx: number;
-    when: Date;
+    // (dayOffset, Manila wall-clock hour:min) snapped to working hours by
+    // workingSlotISO. Negative day = past (rolls back); >=0 = today/future (rolls
+    // forward to the next open day). These rows are direct-inserted (no validator),
+    // but snapping keeps the demo coherent: no appointments on closed days / after
+    // hours, and stable regardless of the host timezone.
+    day: number;
+    hour: number;
+    min?: number;
     durationMinutes: number;
     serviceType: string;
     status: 'scheduled' | 'checked_in' | 'completed' | 'cancelled' | 'no_show';
@@ -257,47 +264,49 @@ async function seed() {
 
   const apptSpecs: ApptSpec[] = [
     // Today
-    { key: 'APT-S001', patientIdx: 0, when: atToday(9),       durationMinutes: 30, serviceType: 'Routine cleaning',      status: 'scheduled' },
-    { key: 'APT-S002', patientIdx: 1, when: atToday(10, 30),  durationMinutes: 45, serviceType: 'Filling follow-up',     status: 'checked_in' },
-    { key: 'APT-S003', patientIdx: 8, when: atToday(11, 30),  durationMinutes: 30, serviceType: 'Walk-in — toothache',   status: 'scheduled', walkIn: true },
-    { key: 'APT-S004', patientIdx: 2, when: atToday(14),      durationMinutes: 60, serviceType: 'Crown cementation',     status: 'scheduled' },
+    { key: 'APT-S001', patientIdx: 0, day: 0,   hour: 9,           durationMinutes: 30, serviceType: 'Routine cleaning',      status: 'scheduled' },
+    { key: 'APT-S002', patientIdx: 1, day: 0,   hour: 10, min: 30, durationMinutes: 45, serviceType: 'Filling follow-up',     status: 'checked_in' },
+    { key: 'APT-S003', patientIdx: 8, day: 0,   hour: 11, min: 30, durationMinutes: 30, serviceType: 'Walk-in — toothache',   status: 'scheduled', walkIn: true },
+    { key: 'APT-S004', patientIdx: 2, day: 0,   hour: 14,          durationMinutes: 60, serviceType: 'Crown cementation',     status: 'scheduled' },
     // Tomorrow
-    { key: 'APT-S005', patientIdx: 3, when: daysFromNow(1, 9),     durationMinutes: 60, serviceType: 'Surgical extraction',  status: 'scheduled' },
-    { key: 'APT-S006', patientIdx: 4, when: daysFromNow(1, 11),    durationMinutes: 45, serviceType: 'Implant consultation', status: 'scheduled' },
-    { key: 'APT-S007', patientIdx: 6, when: daysFromNow(2, 10),    durationMinutes: 30, serviceType: 'Ortho review',         status: 'scheduled' },
-    { key: 'APT-S008', patientIdx: 5, when: daysFromNow(3, 15),    durationMinutes: 90, serviceType: 'Root canal',           status: 'scheduled' },
+    { key: 'APT-S005', patientIdx: 3, day: 1,   hour: 9,           durationMinutes: 60, serviceType: 'Surgical extraction',  status: 'scheduled' },
+    { key: 'APT-S006', patientIdx: 4, day: 1,   hour: 11,          durationMinutes: 45, serviceType: 'Implant consultation', status: 'scheduled' },
+    { key: 'APT-S007', patientIdx: 6, day: 2,   hour: 10,          durationMinutes: 30, serviceType: 'Ortho review',         status: 'scheduled' },
+    { key: 'APT-S008', patientIdx: 5, day: 3,   hour: 15,          durationMinutes: 90, serviceType: 'Root canal',           status: 'scheduled' },
     // Past — completed
-    { key: 'APT-S009', patientIdx: 0, when: daysAgo(10, 9),   durationMinutes: 30, serviceType: 'Periodic exam',         status: 'completed' },
-    { key: 'APT-S010', patientIdx: 2, when: daysAgo(20, 10),  durationMinutes: 60, serviceType: 'Crown prep',            status: 'completed' },
-    { key: 'APT-S011', patientIdx: 7, when: daysAgo(7, 14),   durationMinutes: 45, serviceType: 'Perio SRP',             status: 'completed' },
+    { key: 'APT-S009', patientIdx: 0, day: -10, hour: 9,           durationMinutes: 30, serviceType: 'Periodic exam',         status: 'completed' },
+    { key: 'APT-S010', patientIdx: 2, day: -20, hour: 10,          durationMinutes: 60, serviceType: 'Crown prep',            status: 'completed' },
+    { key: 'APT-S011', patientIdx: 7, day: -7,  hour: 14,          durationMinutes: 45, serviceType: 'Perio SRP',             status: 'completed' },
     // Past — cancelled / no_show
-    { key: 'APT-S012', patientIdx: 9, when: daysAgo(5, 11),   durationMinutes: 30, serviceType: 'Cleaning',              status: 'cancelled', notes: 'Patient rescheduled.' },
-    { key: 'APT-S013', patientIdx: 3, when: daysAgo(3, 13),   durationMinutes: 60, serviceType: 'Extraction',            status: 'no_show' },
-    { key: 'APT-S014', patientIdx: 1, when: daysAgo(2, 16),   durationMinutes: 30, serviceType: 'Sensitivity follow-up', status: 'no_show' },
+    { key: 'APT-S012', patientIdx: 9, day: -5,  hour: 11,          durationMinutes: 30, serviceType: 'Cleaning',              status: 'cancelled', notes: 'Patient rescheduled.' },
+    { key: 'APT-S013', patientIdx: 3, day: -3,  hour: 13,          durationMinutes: 60, serviceType: 'Extraction',            status: 'no_show' },
+    { key: 'APT-S014', patientIdx: 1, day: -2,  hour: 16,          durationMinutes: 30, serviceType: 'Sensitivity follow-up', status: 'no_show' },
   ];
 
   let apptCount = 0;
   const apptTally: Record<string, number> = {};
 
+  const now = new Date();
   for (const spec of apptSpecs) {
     const patient = allPatients[spec.patientIdx % allPatients.length];
     if (!patient) continue;
 
+    const when = new Date(workingSlotISO(now, spec.day, spec.hour, spec.min ?? 0, spec.durationMinutes));
     const row: NewDentalAppointment = {
       id: detUuid(`appt:${spec.key}`),
       patientId: patient.id,
       dentistMemberId: owner.id,
       branchId: branch.id,
-      scheduledAt: spec.when,
+      scheduledAt: when,
       durationMinutes: spec.durationMinutes,
       serviceType: spec.serviceType,
       walkIn: spec.walkIn ?? false,
       status: spec.status,
-      checkInTime: spec.status === 'checked_in' || spec.status === 'completed' ? spec.when : null,
+      checkInTime: spec.status === 'checked_in' || spec.status === 'completed' ? when : null,
       notes: spec.notes ?? null,
-      cancelledAt: spec.status === 'cancelled' ? spec.when : null,
+      cancelledAt: spec.status === 'cancelled' ? when : null,
       cancellationReason: spec.status === 'cancelled' ? (spec.notes ?? 'Cancelled') : null,
-      noShowAt: spec.status === 'no_show' ? spec.when : null,
+      noShowAt: spec.status === 'no_show' ? when : null,
       createdBy: owner.personId ?? null,
       updatedBy: owner.personId ?? null,
     };

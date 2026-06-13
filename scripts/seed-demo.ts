@@ -8,6 +8,7 @@
  */
 
 import { S3Client } from 'bun'
+import { workingSlotISO } from '../services/api-ts/scripts/lib/seed-clock'
 
 const API = 'http://localhost:7213'
 
@@ -148,9 +149,8 @@ const daysAgo = (n: number, h = 9) => {
 const daysFromNow = (n: number, h = 10) => {
   const d = new Date(); d.setDate(d.getDate() + n); d.setHours(h, 0, 0, 0); return d.toISOString()
 }
-const atToday = (h: number, m = 0) => {
-  const d = new Date(); d.setHours(h, m, 0, 0); return d.toISOString()
-}
+// Appointment slot times come from workingSlotISO (timezone- + working-hours-aware);
+// daysAgo/daysFromNow remain for non-validated date fields (visit/due/recall dates).
 
 let _receiptSeq = 0
 const receipt = () => `OR-2026-${String(++_receiptSeq).padStart(4, '0')}`
@@ -1672,22 +1672,29 @@ async function seed() {
     return 'treatment'
   }
 
-  const apptDefs: Array<{ pidx: number; at: string; dur: number; service: string; status?: string; reason?: string }> = [
+  // Slots are expressed as (day offset, Manila wall-clock hour:min, duration) and
+  // snapped to the clinic's Asia/Manila working hours by workingSlotISO — so the
+  // seed never 422s with OUTSIDE_WORKING_HOURS on a weekend run or a non-Manila
+  // host (the working-hours validator interprets startAt in the branch timezone).
+  // Negative `day` (past) rolls backward; today/future rolls forward to the next
+  // open day. Keep durations ≤ the shortest window (Sat 09–13 = 240m).
+  const now = new Date()
+  const apptDefs: Array<{ pidx: number; day: number; hour: number; min?: number; dur: number; service: string; status?: string; reason?: string }> = [
     // Today
-    { pidx: 0, at: atToday(9),    dur: 60,  service: 'Annual Checkup + X-rays' },
-    { pidx: 1, at: atToday(10, 30), dur: 30, service: 'Follow-up: Dental Sensitivity' },
-    { pidx: 8, at: atToday(14),   dur: 45,  service: 'Emergency: Acute Toothache' }, // → check-in
+    { pidx: 0, day: 0,   hour: 9,           dur: 60, service: 'Annual Checkup + X-rays' },
+    { pidx: 1, day: 0,   hour: 10, min: 30, dur: 30, service: 'Follow-up: Dental Sensitivity' },
+    { pidx: 8, day: 0,   hour: 14,          dur: 45, service: 'Emergency: Acute Toothache' }, // → check-in
     // Tomorrow
-    { pidx: 3, at: daysFromNow(1, 9),  dur: 45, service: 'Pediatric Cleaning' },
-    { pidx: 4, at: daysFromNow(1, 11), dur: 60, service: 'Implant Consultation Follow-up' },
+    { pidx: 3, day: 1,   hour: 9,           dur: 45, service: 'Pediatric Cleaning' },
+    { pidx: 4, day: 1,   hour: 11,          dur: 60, service: 'Implant Consultation Follow-up' },
     // Future
-    { pidx: 6, at: daysFromNow(7, 10), dur: 30, service: 'Orthodontic Adjustment #1' },
+    { pidx: 6, day: 7,   hour: 10,          dur: 30, service: 'Orthodontic Adjustment #1' },
     // Past completed — P0
-    { pidx: 0, at: daysAgo(30, 9), dur: 60, service: 'Periodic Exam + Cleaning', status: 'completed' },
+    { pidx: 0, day: -30, hour: 9,           dur: 60, service: 'Periodic Exam + Cleaning', status: 'completed' },
     // Cancelled — P7
-    { pidx: 7, at: daysFromNow(2, 13), dur: 30, service: 'Crown Check', status: 'cancelled', reason: 'Patient requested reschedule' },
+    { pidx: 7, day: 2,   hour: 13,          dur: 30, service: 'Crown Check', status: 'cancelled', reason: 'Patient requested reschedule' },
     // No-show — P9
-    { pidx: 9, at: daysAgo(10, 10), dur: 60, service: 'Perio Review', status: 'no_show' },
+    { pidx: 9, day: -10, hour: 10,          dur: 60, service: 'Perio Review', status: 'no_show' },
   ]
 
   const apptIds: Record<number, string[]> = {}
@@ -1695,10 +1702,11 @@ async function seed() {
     const p = P[a.pidx]; if (!p) continue
     // CreateAppointmentRequestSchema: providerId/startAt/endAt/visitType (+ notes),
     // NOT the legacy dentistMemberId/scheduledAt/durationMinutes/serviceType.
-    const endAt = new Date(new Date(a.at).getTime() + a.dur * 60_000).toISOString()
+    const startAt = workingSlotISO(now, a.day, a.hour, a.min ?? 0, a.dur)
+    const endAt = new Date(new Date(startAt).getTime() + a.dur * 60_000).toISOString()
     const r = await post('/dental/appointments', {
       patientId: p.id, providerId: ownerMember.id, branchId: branch.id,
-      startAt: a.at, endAt, visitType: apptVisitType(a.service), notes: a.service,
+      startAt, endAt, visitType: apptVisitType(a.service), notes: a.service,
     }, cookie)
     if (!r.ok) { log(`⚠ Appt ${p.displayName} (${r.status})`); continue }
     const apptId = r.data.id
