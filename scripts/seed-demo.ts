@@ -769,6 +769,10 @@ async function seed() {
       patientId: P[9].id,
       sourceFacility: 'Metro Manila General Hospital Dental Dept',
       sourceReference: 'MMGH-2018-04-12',
+      // sourceDescription (originating software system) is REQUIRED by ImportPMDRequest
+      // (dental-pmd.tsp:116, V-PMD-010 ≤200 chars). Without it the import 400s and
+      // Isabel's PMD record is silently dropped from the demo data.
+      sourceDescription: 'Open Dental v21.1',
       content: 'External dental records from 2018. Multiple extractions performed. Patient reported penicillin allergy. No post-operative complications noted.',
     }, cookie)
     log(pmdR.ok ? '✓ PMD import: Isabel' : `⚠ PMD import (${pmdR.status})`)
