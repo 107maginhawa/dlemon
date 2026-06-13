@@ -153,7 +153,10 @@ function DashboardLayout() {
           </div>
         </header>
         <ClinicActivationBanner />
-        <main className="flex-1">
+        {/* min-w-0: let this flex child shrink below its content's intrinsic width
+            so a wide page (e.g. the calendar toolbar) scrolls/wraps internally
+            instead of forcing the whole layout past the viewport (iPad-portrait). */}
+        <main className="flex-1 min-w-0">
           <Outlet />
         </main>
       </SidebarInset>

@@ -229,9 +229,11 @@ function CalendarPage() {
       : formatMonthTitle(selectedDate);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Top bar */}
-      <div className="h-14 bg-background/70 backdrop-blur-xl border-b border-border flex items-center justify-between px-4 flex-shrink-0 z-10">
+    <div className="flex flex-col h-full min-w-0">
+      {/* Top bar — wraps to a second row on narrow (iPad-portrait) widths so the
+          10 controls never force horizontal page overflow. min-h preserves the
+          single-row height on desktop. */}
+      <div className="min-h-14 bg-background/70 backdrop-blur-xl border-b border-border flex flex-wrap items-center justify-between gap-y-2 px-4 py-2 flex-shrink-0 z-10">
         {/* Left: date nav */}
         <div className="flex items-center gap-1">
           <button
