@@ -13,6 +13,7 @@ import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
+import { dentalMemberships } from './repos/membership.schema';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 // Migrated off the bespoke raw-handler mount to the shared validator-mounting
@@ -151,6 +152,39 @@ describe('createMember handler', () => {
     expect(body.status).toBe('active');
     // PIN hash must not be returned
     expect(body.pinHash).toBeUndefined();
+  });
+
+  // --------------------------------------------------------------------------
+  // Security: create-time PIN must NOT be honored.
+  //
+  // The generated CreateMemberBody contract has NO `pin` field, and PIN-setting
+  // is owner-gated through the two-call create → resetMemberPin flow (decision
+  // #9 — see use-staff-members.ts:148). zValidator is non-strict (no .strict()
+  // anywhere in the generated validators), so a request that smuggles `pin` into
+  // the create body is NOT rejected — the validated copy just drops it. This
+  // pins that the HANDLER drops it too: a raw create-time `pin` must never set a
+  // PIN hash, otherwise it bypasses the audited owner-gated resetMemberPin path.
+  // --------------------------------------------------------------------------
+
+  test('does NOT honor a create-time pin (smuggled raw pin is ignored — PIN is set only via owner-gated reset)', async () => {
+    await seedOrgAndBranch();
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Staff Ana', role: 'staff_full', pin: '123456' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+
+    // The persisted membership must carry NO pin hash.
+    const rows = await db.select().from(dentalMemberships).where(eq(dentalMemberships.id, body.id));
+    expect(
+      rows[0]!.pinHash,
+      'create-time pin must NOT be honored — PIN is set only via the owner-gated resetMemberPin flow',
+    ).toBeNull();
   });
 
   // --------------------------------------------------------------------------
