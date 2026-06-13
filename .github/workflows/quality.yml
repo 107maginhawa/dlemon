@@ -155,7 +155,13 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 40m: the broad ~70-spec chromium sweep runs sequentially (workers:1, by
+    # design — the specs share one seeded DB and aren't parallel-safe), so at 25m
+    # it was being CANCELLED mid-suite. 40m lets it finish. Combined with
+    # --retries=0 below (this non-blocking sweep doesn't need the retry-stabilized
+    # signal — the Journey Harness provides that), which roughly halves the time
+    # otherwise spent re-running the infra-absent failures.
+    timeout-minutes: 40
     # The desktop (chromium) Playwright suite against a REAL backend (postgres +
     # api-ts + MinIO + demo seed), mirroring the journey/iPad jobs. Previously this
     # job had no DB, so the Playwright webServer (which boots api-ts) crashed and the
@@ -237,8 +243,11 @@ jobs:
 
       # Chromium only — the Playwright API webServer reuses the api-ts booted above
       # (reuseExistingServer:true) and boots Vite on :3003. iPad projects run separately.
+      # --retries=0: this non-blocking sweep doesn't need the retry-stabilized signal
+      # (the Journey Harness is the authoritative gate); skipping the retry roughly
+      # halves the time spent re-running specs that fail for absent infra (Stripe/Mailpit).
       - name: Run E2E tests (chromium)
-        run: cd apps/dentalemon && bunx playwright test --project=chromium
+        run: cd apps/dentalemon && bunx playwright test --project=chromium --retries=0
 
       - name: Upload E2E artifacts
         uses: actions/upload-artifact@v4

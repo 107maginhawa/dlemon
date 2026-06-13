@@ -1,31 +1,32 @@
 name: Contract Tests
 
-# Spec-first contract tests. Layers:
-#   1. Hurl core — Postgres-only scenarios (39 files) — BLOCKING.
-#   2. Hurl infra-gated — MinIO/Stripe scenarios (6 files) — non-blocking
-#      until a CI run confirms the infra wiring, then promote to blocking.
-#   3. Schemathesis schema fuzzing — shadow check (allowed to fail by design:
+# Spec-first contract tests. Layers (all BLOCKING unless noted):
+#   1. Hurl core — Postgres-only scenarios — BLOCKING.
+#   2. Hurl infra-gated MinIO (storage, dental-imaging, dental-assistant) — BLOCKING.
+#   3. Hurl auth email round-trip (auth-verification, auth-password-reset) via
+#      Mailpit — BLOCKING.
+#   4. Hurl Stripe (billing-lifecycle) via stripe-mock — NON-BLOCKING (mock 500s).
+#   5. Schemathesis schema fuzzing — shadow check (allowed to fail by design:
 #      it surfaces spec-precision nits, not impl bugs).
 #
 # All run against whichever HTTP implementation is booted on $API_URL,
 # so the same workflow can be retargeted at a Rust impl, a remote staging
 # environment, etc., by swapping the boot step.
 #
-# The core/infra split is by `CONTRACT_SKIP` / `CONTRACT_ONLY` (substring filters
-# in scripts/run-contract-tests.ts). The 8 infra-gated files were identified
-# empirically — each fails ONLY because its backing service is absent (storage
-# study/upload → MinIO 500; auth verify/reset → Mailpit; merchant-accounts →
-# Stripe). The other 39 pass on Postgres alone.
+# The split is by `CONTRACT_SKIP` / `CONTRACT_ONLY` (substring filters in
+# scripts/run-contract-tests.ts). The infra-gated files were identified
+# empirically — each needs a backing service (MinIO / Mailpit / Stripe); the
+# rest pass on Postgres alone.
 #
-# IMPORTANT — email verification is a SERVER-BOOT config, not per-request. The
-# core scenarios sign up a user and immediately reuse the returned session
-# cookie, which Better-Auth only issues when `requireEmailVerification` is FALSE
-# (auth.ts:81). The two Mailpit scenarios (auth-verification, auth-password-reset)
-# need the OPPOSITE (verification ON) so they can drive the email→token flow.
-# A single booted server cannot satisfy both, so the server boots verification-OFF
-# (matching the locally-verified-green core config) and the 2 verification-ON
-# scenarios are deferred to a dedicated verification-on boot (tracked follow-up) —
-# they are NOT in the infra-gated promote candidate below.
+# EMAIL ROUND-TRIP (auth-verification, auth-password-reset): these run against
+# the SAME verification-OFF server as the core scenarios — verified end-to-end.
+# A verification email is queued on EVERY sign-up (auth.ts sendOnSignUp:true,
+# independent of requireEmailVerification), and password-reset's final sign-in
+# needs a session, which Better-Auth only issues when verification is OFF — so
+# verification-OFF is in fact REQUIRED for these, not the opposite. They only
+# need Mailpit reachable + the email queue drained quickly
+# (EMAIL_PROCESSOR_INTERVAL_MS, set below). (An earlier note claimed they needed
+# a separate verification-ON boot; that was incorrect.)
 
 on:
   push:
@@ -68,11 +69,14 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: 1025
       MAILPIT_API: http://localhost:8025
+      # Drain the email queue fast so the auth round-trip scenarios resolve in
+      # ~1s instead of waiting on the 30s default processor interval (the hurl
+      # poll budget is 60s, so the default would work but be slow/flake-prone).
+      EMAIL_PROCESSOR_INTERVAL_MS: '1000'
       # Verification OFF so sign-up returns a session cookie immediately — the
-      # core scenarios (and the admin preflight) depend on it. This matches the
-      # local dev-server config the 39 core files were verified green against.
-      # The 2 Mailpit verification scenarios need this ON and are deferred to a
-      # separate verification-on boot (see header note).
+      # core scenarios, the admin preflight, AND the auth email round-trip
+      # scenarios (password-reset's final sign-in needs a session) all depend on
+      # it. Matches the local dev-server config the suite was verified green against.
       AUTH_REQUIRE_EMAIL_VERIFICATION: 'false'
       # Stripe → stripe-mock (billing-lifecycle merchant-accounts scenario).
       STRIPE_SECRET_KEY: sk_test_stripe_mock
@@ -190,6 +194,17 @@ jobs:
       - name: Hurl contract — infra-gated MinIO (blocking)
         env:
           CONTRACT_ONLY: storage,dental-imaging,dental-assistant
+        run: bun run test:contract
+
+      # Auth email round-trip (auth-verification, auth-password-reset) — BLOCKING.
+      # Runs against the SAME verification-OFF server booted above (Mailpit is
+      # provisioned, the email queue is drained every 1s). Drives signup→verify
+      # and request-reset→reset→sign-in through real emails caught by Mailpit.
+      # Verified end-to-end locally; see the header note for why verification-OFF
+      # is correct here (password-reset's final sign-in needs a session).
+      - name: Hurl contract — auth email round-trip (Mailpit, blocking)
+        env:
+          CONTRACT_ONLY: auth-verification,auth-password-reset
         run: bun run test:contract
 
       # Stripe (billing-lifecycle) — NON-BLOCKING. Exercises Stripe Connect merchant

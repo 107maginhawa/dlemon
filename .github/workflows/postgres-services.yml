@@ -6,6 +6,14 @@ name: API Unit Tests (Postgres)
 # itself (bun's shell can't expand `**`) and runs each file in its own database
 # cloned from the migrated `monobase_test` template, so files can't contaminate
 # each other. tests/quarantine/ lives outside src/ and is excluded.
+#
+# Two jobs:
+#   - api-unit-tests (name "API Unit Tests") — the BLOCKING gate. One full run.
+#   - api-coverage    (name "API Coverage")  — NON-BLOCKING coverage report,
+#     split out so the blocking gate no longer serializes a second full run
+#     (the suite is ~10x slower on CI than locally, so two runs needed a 45m
+#     timeout; one run fits comfortably in 30m and the coverage run goes wide
+#     in parallel). Not a required status check.
 
 on:
   push:
@@ -16,13 +24,12 @@ jobs:
   api-unit-tests:
     name: API Unit Tests
     runs-on: ubuntu-latest
-    # 45m: the 344-file suite clones a fresh DB per file (so files can't contaminate
-    # each other), which is ~10x slower on CI's dockerized postgres than locally
-    # (~80s local). The gate run alone is ~20m and the job also generates coverage
-    # (a second full run), so 15m was canceling mid-suite (run reached 234/344 with
-    # 0 failures, then timed out). 45m covers both runs with margin. (Follow-up: the
-    # duplicate coverage run could be split to its own parallel job to halve this.)
-    timeout-minutes: 45
+    # 30m: one gate run of the 344-file suite, which clones a fresh DB per file
+    # (so files can't contaminate each other) and is ~10x slower on CI's
+    # dockerized postgres than locally (~80s local; the gate run alone is ~20m on
+    # CI). The duplicate coverage run that used to follow here now lives in the
+    # parallel `api-coverage` job below, so this blocking gate is a single run.
+    timeout-minutes: 30
 
     services:
       postgres:
@@ -104,18 +111,6 @@ jobs:
           fi
           exit $EXIT_CODE
 
-      - name: Generate coverage report
-        run: cd services/api-ts && bun run test:coverage 2>&1 | tee coverage-report.txt
-        continue-on-error: true
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-report
-          path: services/api-ts/coverage-report.txt
-          retention-days: 30
-
       - name: Quarantine count guardrail
         # Fail if tests/quarantine/ has grown beyond the committed count.
         # Decrement .quarantine-count when removing a test from quarantine.
@@ -128,3 +123,68 @@ jobs:
             echo "ERROR: quarantine grew from $ALLOWED to $ACTUAL. Move new tests out or update .quarantine-count."
             exit 1
           fi
+
+  api-coverage:
+    name: API Coverage
+    runs-on: ubuntu-latest
+    # NON-BLOCKING coverage report, split from the gate so the blocking job is a
+    # single suite run. Runs in parallel with api-unit-tests. Not a required
+    # status check (see branch protection). The coverage run itself is allowed to
+    # fail (continue-on-error) so threshold/tooling noise never shows red here.
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: monobase_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monobase_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase_test
+      AUTH_SECRET: unit-test-secret-do-not-use-in-prod
+      STORAGE_PROVIDER: minio
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_BUCKET: monobase-files
+      STORAGE_ACCESS_KEY_ID: minioadmin
+      STORAGE_SECRET_ACCESS_KEY: minioadmin
+      BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
+      TEST_CONCURRENCY: '4'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
+
+      - name: Migrate test database
+        run: cd services/api-ts && bun run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase_test
+
+      - name: Generate coverage report
+        run: cd services/api-ts && bun run test:coverage 2>&1 | tee coverage-report.txt
+        continue-on-error: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: services/api-ts/coverage-report.txt
+          retention-days: 30
