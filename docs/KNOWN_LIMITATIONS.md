@@ -14,21 +14,33 @@ are tracked here so a new developer is not surprised. Last reviewed: 2026-06-13.
 | `services/api-ts/src/handlers/comms/joinVideoCall.ts:210` | WebRTC join currently reuses the session token; a short-lived WebRTC-scoped JWT is planned. (comms is latent in the dentalemon product.) |
 | `services/api-ts/src/utils/expand.ts:358` | Batch expand endpoint is a perf nice-to-have, not built. |
 
-## Frontend spec-drift TODOs (4)
+## Frontend spec-drift TODOs (2 remaining)
 
-These mark fields the UI wants but the TypeSpec/SDK does not yet expose; the UI
-falls back to base fields until the contract is extended and the SDK regenerated:
+Three of the original four were closed 2026-06-13 by modeling the fields the handlers
+already return (commit *"fix(api): model invoice/prescription/treatment-plan fields…"*):
+prescription `warnings` (rx-sheet), invoice-list `patientName`/`visitDate` (use-invoices),
+and the `acceptTreatmentPlan` `branchId` query (use-treatment-plan) — each FE workaround
+was dropped. Two remain, each deferred for a concrete reason:
 
-- `apps/dentalemon/src/features/workspace/components/rx-sheet.tsx:78` — prescription `warnings`
-- `apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts:15`
-- `apps/dentalemon/src/features/billing/hooks/use-invoices.ts:15` — `patientName` + `visitDate` on invoice list
-- `apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts:47` — `outstandingCents`/`patientName`/`visitDate`/`lineItems`/`payments`
+- `apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts:47` —
+  `lineItems`/`payments` on the invoice **detail** response. (`patientName`/`visitDate`/
+  `outstandingCents` are now inherited from `DentalInvoice`.) Modeling `lineItems`/`payments`
+  would pull `payments.createdAt` under the SDK date transformer — a real `string`→`Date`
+  runtime shift for the detail sheet — and the dental `method` union is wider than the
+  generated `PaymentMethod`. Needs a slice that also updates the detail-sheet rendering.
+  The FE keeps a single narrowing `as` (no `as unknown as`).
+- `apps/dentalemon/src/features/workspace/hooks/use-treatment-plan.ts` — `getTreatmentPlan`
+  is modeled as `TreatmentPlanResponse`, but the handler returns the richer
+  `TreatmentPlanData` (a `byTooth` map, `completedToothNumbers`, phase/priority), so the
+  queryFn keeps an `as … TreatmentPlanData` cast. Modeling that enriched read-aggregate
+  (incl. a `Record`-shaped `byTooth`) is a separate slice.
 
 ## Logging hygiene
 
-- **Frontend**: ~30 `console.*` calls remain in `apps/dentalemon/src` (hotspots:
-  `features/imaging/hooks/use-image-library.ts`, `features/notifications/onesignal.ts`,
-  workspace tooth-save flows). These should migrate to a shared logger/error hook.
+- **Frontend**: 0 raw `console.*` in `apps/dentalemon/src` — all diagnostic logging
+  routes through the `@/lib/logger` seam (env-gated, scope-prefixed, telemetry-sink
+  ready; user-facing errors stay on `error-toast.ts`). A `no-console: error` ESLint
+  rule (logger seam + test infra excepted) keeps it that way. (Migrated 2026-06-13.)
 - **Backend**: 4 `console.*` calls in `services/api-ts/src` — all intentional
   boot-time diagnostics emitted before/around config + the structured logger
   (`core/config.ts` AUTH_SECRET/INTERNAL_SERVICE_TOKEN warnings, `core/database.ts`
@@ -48,9 +60,8 @@ falls back to base fields until the contract is extended and the SDK regenerated
   whether to gate.
 - **`docs/aha/` AI-process files**: ~81 generation-process artifacts live under
   `docs/aha/` (with a `project-structure/examples/` mirror). They are first-class in
-  `docs/` and could move to `docs/_ai-process/` or `.claude/`. One untracked file
-  (`docs/aha/prompts/08-qa-uat-workflow-guide.md.md`) has a `.md.md` typo — left
-  untouched (untracked, not in scope).
+  `docs/` and could move to `docs/_ai-process/` or `.claude/`. (The `.md.md`-typo prompt
+  was renamed to `docs/aha/prompts/08-qa-uat-workflow-guide.md` and tracked, 2026-06-13.)
 
 ## Architectural decisions (resolved 2026-06-13)
 
