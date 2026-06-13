@@ -2086,6 +2086,8 @@ export const DentalInvoiceSchema = z.object({
   issuedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   paidAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   voidedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  patientName: z.string().optional(),
+  visitDate: z.string().optional(),
   createdAt: z.string().datetime().transform((str) => new Date(str)),
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
@@ -18880,7 +18882,15 @@ export const PrescriptionSchema = z.object({
   status: z.enum(["pending", "dispensed", "cancelled"]),
   controlledSubstanceSchedule: z.enum(["none", "II", "III", "IV", "V"]).optional(),
   prescriberDea: z.string().optional(),
-  prescriberNpi: z.string().optional()
+  prescriberNpi: z.string().optional(),
+  warnings: z.object({
+  allergyConflicts: z.array(z.string()).optional(),
+  drugInteractions: z.array(z.object({
+  interactingDrug: z.string(),
+  severity: z.enum(["major", "moderate", "minor"]),
+  description: z.string()
+})).optional()
+}).optional()
 });
 
 export const PrescriptionStatusSchema = z.enum(["pending", "dispensed", "cancelled"]);
@@ -21805,6 +21815,11 @@ export const AcceptTreatmentPlanParams = z.object({
   patientId: UUIDSchema,
 });
 export type AcceptTreatmentPlanParams = z.infer<typeof AcceptTreatmentPlanParams>;
+
+export const AcceptTreatmentPlanQuery = z.object({
+  branchId: UUIDSchema,
+});
+export type AcceptTreatmentPlanQuery = z.infer<typeof AcceptTreatmentPlanQuery>;
 
 export const AcceptTreatmentPlanBody = AcceptTreatmentPlanRequestSchema;
 export type AcceptTreatmentPlanBody = z.infer<typeof AcceptTreatmentPlanBody>;

@@ -135,6 +135,23 @@ model Prescription {
   prescriberDea?: string;
   /** Prescriber National Provider Identifier (10-digit NPI). */
   prescriberNpi?: string;
+
+  /**
+   * QW-1 / P1-2: post-create safety warnings — allergy conflicts (drug name vs
+   * the patient's recorded active allergies) and curated drug-drug interactions
+   * against active medications. Populated only on the createPrescription
+   * response; absent on list/get/update. The clinician must acknowledge these
+   * before dismissing the prescription sheet (rx-sheet.tsx).
+   */
+  warnings?: {
+    /** Active-allergy display names that match the prescribed drug. */
+    allergyConflicts?: string[];
+    drugInteractions?: {
+      interactingDrug: string;
+      severity: "major" | "moderate" | "minor";
+      description: string;
+    }[];
+  };
 }
 
 model CreatePrescriptionRequest {

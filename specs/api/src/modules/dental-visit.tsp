@@ -1087,6 +1087,9 @@ namespace DentalVisitModule {
     @operationId("acceptTreatmentPlan")
     acceptTreatmentPlan(
       @path patientId: UUID,
+
+      @doc("Branch context — required by the handler (contract field; auth is via patient-branch access).")
+      @query branchId: UUID,
       @body body: AcceptTreatmentPlanRequest
     ): ApiCreatedResponse<TreatmentPlanVersion>
       | ApiBadRequestResponse

@@ -8,12 +8,12 @@
  *      POST /dental/patients/:patientId/treatment-plan/accept?branchId=...
  *      PATCH /dental/visits/:visitId/treatments/:treatmentId?branchId=...
  *
- * NOTE: The generated SDK types for getTreatmentPlan, acceptTreatmentPlan, and
- * updateDentalTreatment declare `query?: never` (branchId is not in the TypeSpec
- * query schema). The backend does require branchId. We inject it via Object.assign
- * so the underlying hey-api client serializes it as a URL query parameter.
- * This is a spec-drift TODO — once TypeSpec is updated and the SDK is regenerated,
- * the Object.assign override can be removed and `query: { branchId }` used directly.
+ * NOTE: getTreatmentPlan and acceptTreatmentPlan model `branchId` as a required
+ * @query param, so they pass a typed `query: { branchId }` directly.
+ * updateDentalTreatment does NOT model branchId — its handler derives the branch
+ * from the visit (visitId path param) — so the decline/assign-phase mutations send
+ * branchId via `withBranchQuery` (a defensive, handler-ignored query param) rather
+ * than a typed query.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,10 +24,11 @@ import {
 import type { UpdateDentalTreatmentRequest } from '@monobase/sdk-ts/generated';
 
 /**
- * Build extra SDK options for branchId query param injection.
- * branchId is absent from the TypeSpec schema (spec drift) so the generated
- * types say `query?: never`. We use Object.assign to smuggle it through without
- * a double-cast that would trip the no-restricted-syntax GAP-D lint rule.
+ * Build extra SDK options for branchId query injection — used ONLY by
+ * updateDentalTreatment (decline / assign-phase). That operation does not model
+ * branchId in TypeSpec (its handler derives the branch from the visit), so the
+ * generated type says `query?: never`; Object.assign smuggles a defensive branchId
+ * through without a double-cast that would trip the no-restricted-syntax GAP-D rule.
  */
 function withBranchQuery(branchId: string | null): Record<string, unknown> {
   return branchId ? { query: { branchId } } : {};
@@ -84,15 +85,8 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
   const query = useQuery({
     queryKey,
     queryFn: async (): Promise<TreatmentPlanData> => {
-      if (!patientId) throw new Error('patientId is required');
-      // branchId is a real required backend query param but is absent from the
-      // TypeSpec schema (spec drift). Inject it via Object.assign on the options
-      // object so hey-api serializes it as a URL query parameter.
-      const opts = Object.assign(
-        { path: { patientId } },
-        withBranchQuery(branchId),
-      );
-      const result = await getTreatmentPlan(opts as Parameters<typeof getTreatmentPlan>[0]);
+      if (!patientId || !branchId) throw new Error('patientId and branchId are required');
+      const result = await getTreatmentPlan({ path: { patientId }, query: { branchId } });
       // Normalize SDK errors into standard Error objects so consumers and tests
       // can rely on .message containing the status code regardless of whether
       // the error interceptor (installed by ApiProvider) is present.
@@ -115,12 +109,13 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
 
   const acceptMutation = useMutation({
     mutationFn: async (consentFormId?: string) => {
-      if (!patientId) throw new Error('patientId required');
-      const opts = Object.assign(
-        { path: { patientId }, body: { consentFormId }, throwOnError: true as const },
-        withBranchQuery(branchId),
-      );
-      const { data } = await acceptTreatmentPlan(opts as Parameters<typeof acceptTreatmentPlan>[0]);
+      if (!patientId || !branchId) throw new Error('patientId and branchId are required');
+      const { data } = await acceptTreatmentPlan({
+        path: { patientId },
+        query: { branchId },
+        body: { consentFormId },
+        throwOnError: true,
+      });
       return data;
     },
     onSuccess: () => {

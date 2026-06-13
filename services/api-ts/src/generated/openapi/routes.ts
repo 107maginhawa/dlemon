@@ -1716,6 +1716,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
   app.post('/dental/patients/:patientId/treatment-plan/accept',
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.AcceptTreatmentPlanParams, validationErrorHandler),
+    zValidator('query', validators.AcceptTreatmentPlanQuery, validationErrorHandler),
     zValidator('json', validators.AcceptTreatmentPlanBody, validationErrorHandler),
     registry.acceptTreatmentPlan as unknown as Handler
   );

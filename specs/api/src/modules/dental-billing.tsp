@@ -104,6 +104,17 @@ model DentalInvoice {
   issuedAt?: utcDateTime;
   paidAt?: utcDateTime;
   voidedAt?: utcDateTime;
+
+  /**
+   * Read-side enrichments populated by listDentalInvoices / getDentalInvoice
+   * (patient display name + the visit's calendar date). Optional because the
+   * create/void/issue responses do not join them. `visitDate` is a YYYY-MM-DD
+   * calendar string and is intentionally typed `string` (not utcDateTime) so the
+   * SDK date transformer leaves it verbatim.
+   */
+  patientName?: string;
+  visitDate?: string;
+
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
 }

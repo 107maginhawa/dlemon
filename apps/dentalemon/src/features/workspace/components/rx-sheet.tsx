@@ -63,26 +63,12 @@ export function matchAllergyConflicts(drugName: string, allergies: readonly stri
   });
 }
 
-/** Narrow local type for the subset of the response that carries warnings.
- *  The generated Prescription type omits `warnings` because it is not yet in
- *  the OpenAPI spec — we read it via an intersection cast so we do not touch
- *  any generated file. */
+/** Local alias for a single drug-drug interaction warning (matches the generated
+ *  Prescription.warnings.drugInteractions element shape); used by component state. */
 type DrugInteraction = {
   interactingDrug: string;
   severity: 'major' | 'moderate' | 'minor';
   description: string;
-};
-
-// Intersect the SDK Prescription with the `warnings` enrichment the spec omits
-// (oli QA_ESCAPES §6 — the documented stale-spec / enrichment pattern), so tsc
-// still checks the base prescription fields. TODO(spec): add `warnings` to the
-// create-prescription response schema, regenerate, then drop the intersection.
-type PrescriptionWithWarnings = Prescription & {
-  warnings?: {
-    allergyConflicts?: string[];
-    /** P1-2: drug-drug interactions against active medications */
-    drugInteractions?: DrugInteraction[];
-  };
 };
 
 export interface RxSheetProps {
@@ -258,10 +244,9 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
       });
 
       // QW-1/P1-1: surface drug-allergy conflicts returned by the server.
-      // P1-2: also surface drug-drug interaction warnings.
-      // The generated type omits `warnings`; a single narrowing `as` widens to the
-      // intersection above (no blind `as unknown as` — GAP-D).
-      const data = result.data as PrescriptionWithWarnings | undefined;
+      // P1-2: also surface drug-drug interaction warnings. `warnings` is now modeled
+      // on the generated Prescription type, so no cast is needed.
+      const data = result.data;
       const serverConflicts = data?.warnings?.allergyConflicts ?? [];
       // GAP-5: suppress ONLY the allergens the clinician explicitly acknowledged in
       // the pre-submit dialog (= what the matcher surfaced for this drug). Any server

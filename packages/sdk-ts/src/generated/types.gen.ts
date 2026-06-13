@@ -3775,6 +3775,15 @@ export type DentalInvoice = {
     issuedAt?: Date;
     paidAt?: Date;
     voidedAt?: Date;
+    /**
+     * Read-side enrichments populated by listDentalInvoices / getDentalInvoice
+     * (patient display name + the visit's calendar date). Optional because the
+     * create/void/issue responses do not join them. `visitDate` is a YYYY-MM-DD
+     * calendar string and is intentionally typed `string` (not utcDateTime) so the
+     * SDK date transformer leaves it verbatim.
+     */
+    patientName?: string;
+    visitDate?: string;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -60464,6 +60473,24 @@ export type Prescription = {
      * Prescriber National Provider Identifier (10-digit NPI).
      */
     prescriberNpi?: string;
+    /**
+     * QW-1 / P1-2: post-create safety warnings — allergy conflicts (drug name vs
+     * the patient's recorded active allergies) and curated drug-drug interactions
+     * against active medications. Populated only on the createPrescription
+     * response; absent on list/get/update. The clinician must acknowledge these
+     * before dismissing the prescription sheet (rx-sheet.tsx).
+     */
+    warnings?: {
+        /**
+         * Active-allergy display names that match the prescribed drug.
+         */
+        allergyConflicts?: Array<string>;
+        drugInteractions?: Array<{
+            interactingDrug: string;
+            severity: 'major' | 'moderate' | 'minor';
+            description: string;
+        }>;
+    };
 };
 
 /**
@@ -70934,7 +70961,12 @@ export type AcceptTreatmentPlanData = {
     path: {
         patientId: Uuid;
     };
-    query?: never;
+    query: {
+        /**
+         * Branch context — required by the handler (contract field; auth is via patient-branch access).
+         */
+        branchId: Uuid;
+    };
     url: '/dental/patients/{patientId}/treatment-plan/accept';
 };
 
