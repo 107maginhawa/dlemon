@@ -5,6 +5,13 @@ billing, scheduling, communications, storage, and notification primitives
 that any product domain can compose into its own workflows. Built on Bun for
 ~3× faster execution than Node.js.
 
+> **This repository is Dentalemon** — a dental-practice management product built
+> on the Monobase base. The primary product application is **`apps/dentalemon`**
+> (dev port **3003**); `apps/account` is the frozen upstream reference. Most of
+> this README documents the vertical-neutral Monobase base; see
+> [CLAUDE.md](./CLAUDE.md) and [CONTRIBUTING.md](./CONTRIBUTING.md) for the
+> Dentalemon-specific workflow.
+
 ## Overview
 
 Monobase gives you a production-shaped starting point — not a finished app.
@@ -45,8 +52,10 @@ for the playbook to add a new impl/SDK in any language.
 ```
 monobase/
 ├── apps/                      # Frontend applications
-│   └── account/              # Reference app (Vite + TanStack Router)
-│       └── src-tauri/        # Tauri 2 desktop/mobile wrapper (Rust + Boa + cadence)
+│   ├── dentalemon/           # Primary product app (Vite + TanStack Router, port 3003)
+│   ├── account/              # Frozen upstream reference app (Vite + TanStack Router)
+│   │   └── src-tauri/        # Tauri 2 desktop/mobile wrapper (Rust + QuickJS + cadence)
+│   └── website/              # Marketing site (Next.js, port 3004)
 ├── packages/                  # Shared libraries
 │   ├── eslint-config/        # Shared ESLint flat configs (base, react, next)
 │   ├── sdk-ts/               # Reference TypeScript SDK (generated from OpenAPI + hand-written client/flows)
@@ -58,7 +67,7 @@ monobase/
 │   └── api/                  # TypeSpec source + CONTRACT.md + IMPLEMENTING.md + tests/
 ├── scripts/                   # Repo-level scripts (contract test runner, etc.)
 ├── .github/workflows/         # CI (contract.yml runs Hurl + Schemathesis)
-├── .claude/skills/            # 16 Claude Code skills for end-to-end development
+├── .claude/skills/            # Claude Code dev-workflow skills (see .claude/skills/)
 ├── CLAUDE.md                 # AI assistant project guide
 └── package.json              # Monorepo workspace configuration
 ```
@@ -88,17 +97,20 @@ documented in `specs/api/IMPLEMENTING.md` but not yet scaffolded.
 
 ```bash
 git clone <repository-url>
-cd monobase
+cd dentalemon
 bun install
 ```
 
 ### 2. Database Setup
 
 ```bash
-# Create PostgreSQL database
+# Bring up Postgres + MinIO via Docker (the API needs both for /readyz)
+bun run infra:up
+
+# Create the application database (skip if it already exists)
 createdb monobase
 
-# Generate database schema
+# Generate the Drizzle schema/migrations (migrations auto-apply on server start)
 cd services/api-ts
 bun run db:generate
 ```
@@ -117,14 +129,17 @@ AUTH_SECRET=your-secret-key-here
 ### 4. Start Development Servers
 
 ```bash
-# Terminal 1 - API Service
+# Terminal 1 - API service (port 7213)
 cd services/api-ts
 bun dev
 
-# Terminal 2 - Account App
-cd apps/account
+# Terminal 2 - Dentalemon product app (port 3003)
+cd apps/dentalemon
 bun dev
 ```
+
+> `apps/account` (port 3002) is the frozen upstream reference app — run it
+> (`cd apps/account && bun dev`) only when pulling auth/account patterns.
 
 ## Development Workflow
 
@@ -199,12 +214,14 @@ bun run test:e2e               # Run Playwright E2E tests
 
 | App | Stack | Port | Purpose |
 |-----|-------|------|---------|
-| `apps/account` | Vite + TanStack Router | 3002 | Reference app: auth + profile + settings |
+| `apps/dentalemon` | Vite + TanStack Router | 3003 | **Primary product app** — all product features live here |
+| `apps/account` | Vite + TanStack Router | 3002 | Frozen upstream reference: auth + profile + settings patterns |
+| `apps/website` | Next.js | 3004 | Marketing site |
 
-The account app keeps its own components, hooks, and feature directories
-under `apps/account/src/`. To scaffold a new app, copy `apps/account/` and
-update `package.json` name and `vite.config.ts` port — each app owns its
-UI; nothing is shared between apps except the SDK.
+`apps/dentalemon` is where product features ship. `apps/account` is the
+frozen upstream reference (pull auth/account patterns from it; do not add
+product features). Each app owns its own components, hooks, and feature
+directories under `src/`; nothing is shared between apps except the SDK.
 
 **Development**: `cd apps/<name> && bun dev`
 
