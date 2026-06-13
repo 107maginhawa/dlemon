@@ -99,6 +99,12 @@ documented in `specs/api/IMPLEMENTING.md` but not yet scaffolded.
 git clone <repository-url>
 cd dentalemon
 bun install
+
+# Generate the API contract (OpenAPI + TS types) once before starting anything.
+# specs/api/dist is gitignored, and the API imports the generated openapi.json at
+# runtime while the SDK and apps consume the generated types — without this the API
+# fails to boot with "Cannot find module '@monobase/api-spec/openapi.json'".
+cd specs/api && bun run build && cd ../..
 ```
 
 ### 2. Database Setup

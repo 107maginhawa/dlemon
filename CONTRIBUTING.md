@@ -14,6 +14,12 @@ cd dentalemon
 # Install dependencies
 bun install
 
+# Generate the API contract (OpenAPI + TS types) — specs/api/dist is gitignored and
+# the API imports the generated openapi.json at runtime, so this must run once before
+# starting any server (otherwise the API fails to boot with
+# "Cannot find module '@monobase/api-spec/openapi.json'").
+cd specs/api && bun run build && cd ../..
+
 # Bring up Postgres + MinIO via Docker (the API's /readyz needs both)
 bun run infra:up
 
