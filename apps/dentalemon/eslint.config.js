@@ -32,16 +32,18 @@ export default [
   ...config,
   {
     // Diagnostic logging goes through the single `@/lib/logger` seam, never raw
-    // `console.*`. The shared base config allows console.warn/error/info — that is
-    // exactly how 30+ scattered console calls accumulated across the app. Tighten to
-    // `error` (no allow-list) for the whole app source so verbosity stays gated by
-    // environment and warn/error can be forwarded to a telemetry sink. The logger
-    // module itself is the sanctioned console seam (inline eslint-disable on its two
-    // call sites); test infra is excluded.
+    // `console.*` — the base config's `allow: ['warn','error','info']` is exactly how
+    // 30+ scattered console calls accumulated. Banning ALL console is awkward in flat
+    // config: a severity-only override (`'error'` OR `['error']`) RETAINS the base's
+    // allow-list, and `{ allow: [] }` is schema-rejected (allow requires >=1 item). So
+    // we pass a sentinel allow-entry that matches no real console method — it bans
+    // every actual console.* call AND the violation message surfaces the fix
+    // ("Only these console methods are allowed: __use_logger_instead__"). The logger
+    // module is the sanctioned seam (inline eslint-disable on its 2 calls); tests excl.
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['**/*.test.ts', '**/*.test.tsx', 'src/test-setup.ts', 'src/test-utils.ts'],
     rules: {
-      'no-console': 'error',
+      'no-console': ['error', { allow: ['__use_logger_instead__'] }],
     },
   },
   {
