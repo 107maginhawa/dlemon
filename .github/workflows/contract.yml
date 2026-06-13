@@ -36,7 +36,12 @@ on:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20m (was 15m): the job historically runs ~14m53s, leaving almost no
+    # headroom — the Schemathesis shadow tail (capped to its own
+    # timeout-minutes below) was eating the remaining budget and risking a
+    # job-level timeout, which would fail this branch-protected check on a
+    # NON-blocking step. 20m gives the blocking Hurl layers comfortable room.
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -221,8 +226,13 @@ jobs:
 
       # Shadow check by design: Schemathesis fuzzing surfaces spec-precision nits
       # (under-declared 401s, datetime query params), not impl bugs — kept advisory.
+      # Its own timeout-minutes caps the fuzz tail so it can never starve the
+      # blocking Hurl layers or blow the job budget; combined with
+      # continue-on-error, a slow/hung fuzz run is isolated and keeps the
+      # branch-protected `contract` check green.
       - name: Schemathesis fuzz (shadow)
         continue-on-error: true
+        timeout-minutes: 6
         run: bun run test:contract:fuzz
 
       - name: API logs (always)
