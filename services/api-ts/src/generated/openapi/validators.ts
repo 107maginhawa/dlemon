@@ -1926,7 +1926,7 @@ export const DentalImagingModuleCreateImagingStudyResponseSchema = z.object({
 });
 
 export const DentalImagingModuleCreateMeasurementBodySchema = z.object({
-  type: z.enum(["distance", "angle", "area"]),
+  type: z.enum(["distance", "angle", "area", "label", "arrow", "freehand", "shape", "tooth"]),
   geometry: z.record(z.string(), z.unknown()),
   measurementValue: z.number().optional(),
   measurementUnit: z.string().optional()

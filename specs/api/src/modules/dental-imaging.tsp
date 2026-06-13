@@ -256,7 +256,15 @@ namespace DentalImagingModule {
   }
 
   model CreateMeasurementBody {
-    type: "distance" | "angle" | "area";
+    // Measurement types (distance/angle/area) are tier-gated; annotation types
+    // (label/arrow/freehand/shape/tooth) are available to all tiers (D3). The
+    // handler (createMeasurement.ts) accepts all eight and validates `geometry`
+    // against a per-type discriminated union. The generated validator runs
+    // BEFORE the handler in production, so this enum MUST list every input type
+    // the handler supports — otherwise annotation creates 400 at the validator
+    // and never reach the handler (contract drift surfaced by the buildTestApp
+    // migration of imaging-integration.test.ts).
+    type: "distance" | "angle" | "area" | "label" | "arrow" | "freehand" | "shape" | "tooth";
     geometry: Record<unknown>;
     measurementValue?: float64;
     measurementUnit?: string;

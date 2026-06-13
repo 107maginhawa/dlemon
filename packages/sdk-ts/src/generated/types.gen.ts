@@ -3571,7 +3571,7 @@ export type DentalImagingModuleCreateImagingStudyResponse = {
 };
 
 export type DentalImagingModuleCreateMeasurementBody = {
-    type: 'distance' | 'angle' | 'area';
+    type: 'distance' | 'angle' | 'area' | 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth';
     geometry: {
         [key: string]: unknown;
     };
