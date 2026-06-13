@@ -272,11 +272,10 @@ jobs:
           done
           curl -fsS "$API_URL/livez" || { echo "api-ts never became ready"; tail -100 /tmp/api-journey.log; exit 1; }
 
-      - name: Seed demo data (mixed mode)
+      - name: Seed demo data
         run: bun run db:reseed
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
-          SEED_MODE: mixed
 
       - name: Run journey harness (14 specs, no-reseed — data already seeded)
         # Exit code: 0 = all PASS-expected journeys returned PASS and no specs crashed.
