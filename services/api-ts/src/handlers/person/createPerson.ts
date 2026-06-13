@@ -17,7 +17,7 @@ import { validatedDateOfBirth } from '@/utils/date';
  * 
  * Path: POST /persons
  * OperationId: createPerson
- * Security: bearerAuth with role ["owner"]
+ * Security: bearerAuth with role ["user"] (finer authorization enforced in-handler)
  */
 export async function createPerson(
   ctx: ValidatedContext<CreatePersonBody>
