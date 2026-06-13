@@ -20,10 +20,11 @@
  *        - patient-appropriate projection (no staff-only fields)
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll } from 'bun:test';
-import { Hono } from 'hono';
-import { AppError, ForbiddenError, NotFoundError } from '@/core/errors';
+import { ForbiddenError, NotFoundError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import {
@@ -31,9 +32,6 @@ import {
   resolveSelfPatientId,
   resolveSelfPatientIdOrThrow,
 } from '@/handlers/shared/assert-self-patient';
-import { listMyAppointments } from './listMyAppointments';
-import { listMyInvoices } from './listMyInvoices';
-import { getMyBalance } from './getMyBalance';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -141,26 +139,11 @@ beforeAll(async () => {
   ]).onConflictDoNothing();
 });
 
+// Build the app from the EXACT production generated route table (authMiddleware →
+// generated zValidator → handler → error envelope) via the shared harness, so the
+// same assertions below now run through the real validator chain.
 function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'sess', userId: user.id });
-    }
-    await next();
-  });
-  app.get('/me/appointments', listMyAppointments as any);
-  app.get('/me/invoices', listMyInvoices as any);
-  app.get('/me/balance', getMyBalance as any);
-  return app;
+  return buildTestApp({ db, user: user ?? null });
 }
 
 // ---------------------------------------------------------------------------

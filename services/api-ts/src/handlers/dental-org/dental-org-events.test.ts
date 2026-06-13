@@ -19,13 +19,11 @@
  * Consumer / idempotency tests are out of scope (no bus, per ADR-006).
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql, and, eq } from 'drizzle-orm';
-import { Hono } from 'hono';
-import { ZodError } from 'zod';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { createMember } from './createMember';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { OrganizationRepository } from './repos/organization.repo';
 import { BranchRepository } from './repos/branch.repo';
 import { MembershipRepository } from './repos/membership.repo';
@@ -39,25 +37,6 @@ const BRANCH_ID = 'b90e0000-0000-1000-8000-0000000be001';
 const PERSON_ID = 'c90e0000-0000-1000-8000-0000000be001';
 
 const owner = { id: PERSON_ID, email: 'owner-oev@clinic.com' };
-
-function buildTestApp(user?: typeof owner) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof ZodError) return c.json({ error: err.issues.map((i) => i.message).join('; ') }, 400);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) { ctx.set('user', user); ctx.set('session', { id: 'test-session' }); }
-    await next();
-  });
-  // createMember resolves branchId from the ?branchId query param (canonical endpoint).
-  app.post('/dental/org/members', createMember as any);
-  return app;
-}
 
 async function seedOrgAndBranch() {
   const orgRepo = new OrganizationRepository(db);
@@ -84,7 +63,7 @@ afterEach(async () => {
 describe('DE-022 MembershipAssigned — audit-row marker on member create', () => {
   test('writes a dental_audit_log row (membership.create) referencing the new membership', async () => {
     await seedOrgAndBranch();
-    const app = buildTestApp(owner);
+    const app = buildTestApp({ db, user: owner });
 
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
       method: 'POST',
@@ -109,7 +88,7 @@ describe('DE-022 MembershipAssigned — audit-row marker on member create', () =
     const STAFF_PERSON = 'c90e0000-0000-1000-8000-0000000be002';
     await membershipRepo.createOne({ branchId: BRANCH_ID, personId: STAFF_PERSON, displayName: 'Staff', role: 'staff_full', status: 'active', pinFailedAttempts: 0 });
 
-    const app = buildTestApp({ id: STAFF_PERSON, email: 'staff-oev@clinic.com' });
+    const app = buildTestApp({ db, user: { id: STAFF_PERSON, email: 'staff-oev@clinic.com' } });
     const res = await app.request(`/dental/org/members?branchId=${BRANCH_ID}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

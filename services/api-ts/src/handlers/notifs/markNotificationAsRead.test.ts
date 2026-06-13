@@ -5,43 +5,20 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { Hono } from 'hono';
-import { markNotificationAsRead } from './markNotificationAsRead';
-import { AppError } from '@/core/errors';
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', { id: user.id, email: user.email, role: 'user' });
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.post('/notifications/:notif/read', markNotificationAsRead as any);
-
-  return app;
-}
+// Empty-mock db (matches the original bespoke helper): the handler crashes at the
+// repo level, which is what these loose status-code assertions intentionally exercise.
+const db = {} as any;
 
 describe('markNotificationAsRead handler', () => {
   const authedUser = { id: 'user-1', email: 'user@test.com' };
 
   test('returns error when not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
 
-    const res = await app.request('/notifications/notif-1/read', {
+    const res = await app.request('/notifs/notif-1/read', {
       method: 'POST',
     });
 
@@ -49,9 +26,9 @@ describe('markNotificationAsRead handler', () => {
   });
 
   test('handler extracts notification ID from param', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
-    const res = await app.request('/notifications/notif-123/read', {
+    const res = await app.request('/notifs/notif-123/read', {
       method: 'POST',
     });
 
@@ -60,14 +37,17 @@ describe('markNotificationAsRead handler', () => {
   });
 
   test('handler processes POST method', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     // GET should not be supported
-    const res = await app.request('/notifications/notif-1/read', {
+    const res = await app.request('/notifs/notif-1/read', {
       method: 'GET',
     });
 
-    // POST route shouldn't match GET
-    expect(res.status).toBe(404);
+    // The path is registered for POST in the real route table, so a GET is
+    // Method-Not-Allowed (405), not Not-Found. The old raw mount only mounted
+    // POST on a bespoke app, so a GET fell through to 404 — an artifact of the
+    // mount, not production. The harness asserts the production response.
+    expect(res.status).toBe(405);
   });
 });

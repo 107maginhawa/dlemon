@@ -11,11 +11,11 @@
  *   EC5     Voided payment receipt reprint
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
 import { sql, eq } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
@@ -24,9 +24,6 @@ import { dentalPayments } from './repos/dental-payment.schema';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
-import { getPatientBalance } from './getPatientBalance';
-import { getCollectionsSummary } from './getCollectionsSummary';
-import { getDentalPaymentReceipt } from './getDentalPaymentReceipt';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -53,36 +50,6 @@ beforeAll(async () => {
   await db.insert(patients).values({ id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID, createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
   await db.insert(dentalVisits).values({ id: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', createdBy: STAFF_USER.id, updatedBy: STAFF_USER.id }).onConflictDoNothing();
 });
-
-// ─── App builder ─────────────────────────────────────────────────────────────
-
-function buildTestApp(user?: typeof STAFF_USER) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: String(err.message) }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.get('/dental/billing/patients/:patientId/balance', getPatientBalance as any);
-  app.get('/dental/billing/collections/summary', getCollectionsSummary as any);
-  app.get('/dental/billing/invoices/:invoiceId/payments/:paymentId/receipt', getDentalPaymentReceipt as any);
-
-  return app;
-}
 
 // ─── Seed helpers ─────────────────────────────────────────────────────────────
 
@@ -303,7 +270,7 @@ describe('FR4.4: getPatientBalance', () => {
   afterEach(truncate);
 
   test('returns zero balance for patient with no invoices', async () => {
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/billing/patients/${PATIENT_ID}/balance`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -317,7 +284,7 @@ describe('FR4.4: getPatientBalance', () => {
     await seedInvoice({ totalCents: 10000, paidCents: 3000, balanceCents: 7000 });
     await seedInvoice({ totalCents: 5000, paidCents: 5000, balanceCents: 0, status: 'paid' });
 
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/billing/patients/${PATIENT_ID}/balance`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -329,7 +296,7 @@ describe('FR4.4: getPatientBalance', () => {
   test('excludes voided invoices from balance', async () => {
     await seedInvoice({ totalCents: 10000, balanceCents: 10000, status: 'voided' });
 
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/billing/patients/${PATIENT_ID}/balance`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -338,7 +305,7 @@ describe('FR4.4: getPatientBalance', () => {
   });
 
   test('returns 401 when unauthenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
     const res = await app.request(`/dental/billing/patients/${PATIENT_ID}/balance`);
     expect(res.status).toBe(401);
   });
@@ -352,7 +319,7 @@ describe('FR4.5: getCollectionsSummary', () => {
   afterEach(truncate);
 
   test('returns summary with zero totals when no data', async () => {
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request('/dental/billing/collections/summary?period=today');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -366,7 +333,7 @@ describe('FR4.5: getCollectionsSummary', () => {
     const invoice = await seedInvoice({ totalCents: 20000, balanceCents: 20000 });
     await seedPayment(invoice.id, 10000);
 
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request('/dental/billing/collections/summary?period=today');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -378,7 +345,7 @@ describe('FR4.5: getCollectionsSummary', () => {
     const invoice = await seedInvoice({ totalCents: 20000, balanceCents: 20000 });
     await seedPayment(invoice.id, 5000);
 
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request('/dental/billing/collections/summary?period=today');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -387,7 +354,7 @@ describe('FR4.5: getCollectionsSummary', () => {
   });
 
   test('returns 401 when unauthenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
     const res = await app.request('/dental/billing/collections/summary');
     expect(res.status).toBe(401);
   });
@@ -404,7 +371,7 @@ describe('FR4.6 + EC5: getDentalPaymentReceipt', () => {
     const invoice = await seedInvoice({ totalCents: 10000, balanceCents: 10000 });
     const payment = await seedPayment(invoice.id, 5000);
 
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments/${payment.id}/receipt`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -425,7 +392,7 @@ describe('FR4.6 + EC5: getDentalPaymentReceipt', () => {
     // Void the payment
     await paymentRepo.voidPayment(payment.id, 'Entered wrong amount', MEMBER_ID);
 
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/billing/invoices/${invoice.id}/payments/${payment.id}/receipt`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -437,13 +404,13 @@ describe('FR4.6 + EC5: getDentalPaymentReceipt', () => {
   });
 
   test('returns 404 for non-existent invoice', async () => {
-    const app = buildTestApp(STAFF_USER);
+    const app = buildTestApp({ db, user: STAFF_USER });
     const res = await app.request(`/dental/billing/invoices/${NONEXISTENT_ID}/payments/${NONEXISTENT_ID}/receipt`);
     expect(res.status).toBe(404);
   });
 
   test('returns 401 when unauthenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
     const res = await app.request(`/dental/billing/invoices/${NONEXISTENT_ID}/payments/${NONEXISTENT_ID}/receipt`);
     expect(res.status).toBe(401);
   });

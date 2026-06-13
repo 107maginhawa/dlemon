@@ -17,14 +17,11 @@
  *   - assistant create-report → 403; dentist → 201 with prepared_by/finalized_by
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, beforeEach } from 'bun:test';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { batchUpsertCephLandmarks } from './batchUpsertCephLandmarks';
-import { updateCephLandmark } from './updateCephLandmark';
-import { createCephReport } from './createCephReport';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
 const db = createDatabase({
   url: process.env['DATABASE_URL'] ?? 'postgresql://postgres:password@localhost:5432/monobase_test',
@@ -39,24 +36,7 @@ const HYGIENIST = { id: 'a3c00000-0000-4000-8000-0000000000c3', email: 'hygienis
 const PATIENT_ID = 'd3c00000-0000-4000-8000-0000000000f5';
 
 function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.post('/dental/imaging/images/:imageId/ceph/landmarks', batchUpsertCephLandmarks as any);
-  app.patch('/dental/imaging/images/:imageId/ceph/landmarks/:landmarkCode', updateCephLandmark as any);
-  app.post('/dental/imaging/images/:imageId/ceph/reports', createCephReport as any);
-  return app;
+  return buildTestApp({ db, user });
 }
 
 const json = (body: unknown) => ({

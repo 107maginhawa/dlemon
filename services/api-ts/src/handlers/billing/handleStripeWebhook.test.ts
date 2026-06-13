@@ -6,23 +6,13 @@
  */
 
 import { describe, test, expect, mock } from 'bun:test';
-import { Hono } from 'hono';
-import { handleStripeWebhook } from './handleStripeWebhook';
-import { AppError } from '@/core/errors';
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 
 function buildTestApp(options: {
   verifyResult?: any;
   verifyThrows?: boolean;
 } = {}) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
   const mockBilling = {
     verifyWebhookSignature: mock(async (body: string, sig: string) => {
       if (options.verifyThrows) {
@@ -41,18 +31,14 @@ function buildTestApp(options: {
     createNotification: mock(async () => ({})),
   };
 
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {
-      select: () => ({ from: () => [] }),
-    });
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, child: () => ({}) });
-    ctx.set('billing', mockBilling);
-    ctx.set('notifs', mockNotifs);
-    await next();
-  });
+  const db = {
+    select: () => ({ from: () => [] }),
+  } as any;
 
-  app.post('/billing/stripe-webhook', handleStripeWebhook as any);
+  const app = buildHarnessApp({
+    db,
+    services: { billing: mockBilling as any, notifs: mockNotifs as any },
+  });
 
   return { app, mockBilling, mockNotifs };
 }
@@ -61,7 +47,7 @@ describe('handleStripeWebhook', () => {
   test('returns 400 when stripe-signature header is missing', async () => {
     const { app } = buildTestApp();
 
-    const res = await app.request('/billing/stripe-webhook', {
+    const res = await app.request('/billing/webhooks/stripe', {
       method: 'POST',
       body: '{}',
     });
@@ -74,7 +60,7 @@ describe('handleStripeWebhook', () => {
   test('returns 400 when signature verification fails', async () => {
     const { app } = buildTestApp({ verifyThrows: true });
 
-    const res = await app.request('/billing/stripe-webhook', {
+    const res = await app.request('/billing/webhooks/stripe', {
       method: 'POST',
       headers: { 'stripe-signature': 'sig_bad' },
       body: '{}',
@@ -95,7 +81,7 @@ describe('handleStripeWebhook', () => {
       },
     });
 
-    const res = await app.request('/billing/stripe-webhook', {
+    const res = await app.request('/billing/webhooks/stripe', {
       method: 'POST',
       headers: { 'stripe-signature': 'sig_valid' },
       body: '{}',
@@ -109,7 +95,7 @@ describe('handleStripeWebhook', () => {
   test('calls verifyWebhookSignature with raw body and signature', async () => {
     const { app, mockBilling } = buildTestApp();
 
-    await app.request('/billing/stripe-webhook', {
+    await app.request('/billing/webhooks/stripe', {
       method: 'POST',
       headers: { 'stripe-signature': 'sig_test123' },
       body: 'raw-webhook-body',
@@ -133,7 +119,7 @@ describe('handleStripeWebhook', () => {
       },
     });
 
-    const res = await app.request('/billing/stripe-webhook', {
+    const res = await app.request('/billing/webhooks/stripe', {
       method: 'POST',
       headers: { 'stripe-signature': 'sig_valid' },
       body: '{}',

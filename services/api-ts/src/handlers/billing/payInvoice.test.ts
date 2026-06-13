@@ -5,26 +5,16 @@
  * All external services (Stripe, DB) mocked.
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
+
 import { describe, test, expect, mock } from 'bun:test';
-import { Hono } from 'hono';
-import { payInvoice } from './payInvoice';
-import { AppError } from '@/core/errors';
+import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-function buildTestApp(
-  user?: { id: string; email: string },
-  invoiceData?: any,
-  merchantAccount?: any
-) {
-  const app = new Hono();
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
-  const mockBilling = {
+function makeMockBilling() {
+  return {
     createPaymentIntent: mock(async () => ({
       paymentIntentId: 'pi_test',
       clientSecret: 'secret_test',
@@ -32,31 +22,15 @@ function buildTestApp(
       checkoutUrl: 'https://checkout.stripe.com/test',
     })),
   };
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    ctx.set('billing', mockBilling);
-    if (user) {
-      ctx.set('user', user);
-      ctx.set('session', { id: 'test-session', user: { id: user.id, email: user.email, role: 'user' } });
-    }
-    await next();
-  });
-
-  app.post('/invoices/:invoice/pay', payInvoice as any);
-
-  return { app, mockBilling };
 }
 
 describe('payInvoice handler', () => {
   const customer = { id: 'customer-1', email: 'customer@test.com' };
 
   test('returns error when no session', async () => {
-    const { app } = buildTestApp(undefined);
+    const app = buildTestApp({ db, services: { billing: makeMockBilling() as any } });
 
-    const res = await app.request('/invoices/inv-1/pay', {
+    const res = await app.request('/billing/invoices/inv-1/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paymentMethod: 'pm_test' }),
@@ -66,9 +40,9 @@ describe('payInvoice handler', () => {
   });
 
   test('returns 400 for invalid payment method format', async () => {
-    const { app } = buildTestApp(customer);
+    const app = buildTestApp({ db, user: customer, services: { billing: makeMockBilling() as any } });
 
-    const res = await app.request('/invoices/inv-1/pay', {
+    const res = await app.request('/billing/invoices/inv-1/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paymentMethod: 'bad_format' }),
@@ -79,9 +53,9 @@ describe('payInvoice handler', () => {
   });
 
   test('validates payment method starts with pm_', async () => {
-    const { app } = buildTestApp(customer);
+    const app = buildTestApp({ db, user: customer, services: { billing: makeMockBilling() as any } });
 
-    const res = await app.request('/invoices/inv-1/pay', {
+    const res = await app.request('/billing/invoices/inv-1/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paymentMethod: 'tok_invalid' }),
@@ -91,9 +65,9 @@ describe('payInvoice handler', () => {
   });
 
   test('handles missing invoice gracefully', async () => {
-    const { app } = buildTestApp(customer);
+    const app = buildTestApp({ db, user: customer, services: { billing: makeMockBilling() as any } });
 
-    const res = await app.request('/invoices/nonexistent/pay', {
+    const res = await app.request('/billing/invoices/nonexistent/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paymentMethod: 'pm_test123' }),

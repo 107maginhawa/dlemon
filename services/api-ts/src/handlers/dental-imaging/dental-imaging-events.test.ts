@@ -16,17 +16,12 @@
  * Consumer / idempotency tests are out of scope (no bus, per ADR-006).
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, beforeEach } from 'bun:test';
 import { and, eq } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
-import { ZodError } from 'zod';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { createImagingStudy } from './createImagingStudy';
-import { createFinding } from './createFinding';
-import { updateFinding } from './updateFinding';
-import { recomputeCephAnalysis } from './recomputeCephAnalysis';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({
@@ -43,30 +38,6 @@ const storage = {
   generateUploadUrl: async (_fileId: string, _mime: string) =>
     'https://storage.example.com/presigned-upload-url',
 } as any;
-
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    if (err instanceof ZodError || (err as Error).name === 'ZodError') {
-      return c.json({ error: 'Validation failed', code: 'VALIDATION_ERROR' }, 400);
-    }
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('storage', storage);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.post('/dental/imaging/studies', createImagingStudy as any);
-  app.post('/dental/imaging/images/:imageId/findings', createFinding as any);
-  app.patch('/dental/imaging/findings/:findingId', updateFinding as any);
-  app.post('/dental/imaging/images/:imageId/ceph/analysis/recompute', recomputeCephAnalysis as any);
-  return app;
-}
 
 const json = (body: unknown) => ({
   headers: { 'Content-Type': 'application/json' },
@@ -175,7 +146,7 @@ beforeEach(async () => {
 
 describe('DE-018 ImagingStudyUploaded — audit-row marker on study create', () => {
   test('writes a dental_audit_log row (imaging_study.create) referencing the new study', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const res = await app.request('/dental/imaging/studies', {
       method: 'POST',
       ...json({
@@ -194,7 +165,7 @@ describe('DE-018 ImagingStudyUploaded — audit-row marker on study create', () 
   });
 
   test('does NOT write an imaging_study.create row when create fails (unsupported MIME)', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const res = await app.request('/dental/imaging/studies', {
       method: 'POST',
       ...json({
@@ -224,7 +195,7 @@ describe('DE-018 ImagingStudyUploaded — audit-row marker on study create', () 
 
 describe('createFinding — audit-row marker on finding create', () => {
   test('writes a dental_audit_log row (imaging_finding.create) referencing the new finding', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const { imageId } = await seedStudyWithImage();
 
     const res = await app.request(`/dental/imaging/images/${imageId}/findings`, {
@@ -242,7 +213,7 @@ describe('createFinding — audit-row marker on finding create', () => {
   });
 
   test('does NOT write an imaging_finding.create row when create fails (image missing)', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const missingImageId = uuidv4();
 
     const res = await app.request(`/dental/imaging/images/${missingImageId}/findings`, {
@@ -262,7 +233,7 @@ describe('createFinding — audit-row marker on finding create', () => {
 
 describe('DE-019 ImagingFindingConfirmed — audit-row marker only on draft→confirmed', () => {
   test('writes a dental_audit_log row (imaging_finding.confirmed) on a draft→confirmed transition', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const { imageId } = await seedStudyWithImage();
     const findingId = await seedFinding(imageId, 'draft');
 
@@ -279,7 +250,7 @@ describe('DE-019 ImagingFindingConfirmed — audit-row marker only on draft→co
   });
 
   test('writes imaging_finding.update (NOT .confirmed) for a non-confirm edit', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const { imageId } = await seedStudyWithImage();
     const findingId = await seedFinding(imageId, 'draft');
 
@@ -300,7 +271,7 @@ describe('DE-019 ImagingFindingConfirmed — audit-row marker only on draft→co
 
 describe('DE-020 CephAnalysisComputed — audit-row marker on ceph recompute', () => {
   test('writes a dental_audit_log row (imaging_ceph_analysis.computed) on a successful recompute', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     // Calibrated image + the two required reference landmarks (S, N).
     const { imageId } = await seedStudyWithImage({ modality: 'cephalometric', pixelSpacingMm: 0.1 });
     await seedLandmark(imageId, 'S', 100, 100);
@@ -319,7 +290,7 @@ describe('DE-020 CephAnalysisComputed — audit-row marker on ceph recompute', (
   });
 
   test('does NOT write the computed row when recompute fails (missing S/N landmarks)', async () => {
-    const app = buildTestApp(DENTIST);
+    const app = buildTestApp({ db, user: DENTIST, services: { storage } });
     const { imageId } = await seedStudyWithImage({ modality: 'cephalometric', pixelSpacingMm: 0.1 });
     // No landmarks placed → INSUFFICIENT_LANDMARKS (422)
 

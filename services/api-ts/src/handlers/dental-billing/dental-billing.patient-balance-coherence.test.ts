@@ -8,17 +8,16 @@
  * drift class without FE rework (the endpoint is otherwise a 0-consumer orphan).
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { eq } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { dentalVisits } from '@/handlers/dental-visit/repos/visit.schema';
-import { getPatientBalance } from './getPatientBalance';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -59,24 +58,6 @@ async function seedInvoice(status: string, total: number, paid: number, balance:
   });
 }
 
-function buildApp() {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
-    ctx.set('user', USER);
-    ctx.set('session', { id: 's', userId: USER.id });
-    await next();
-  });
-  app.get('/dental/billing/patients/:patientId/balance', getPatientBalance as any);
-  return app;
-}
-
 describe('FIX-010 — getPatientBalance equals Σ per-invoice balanceCents (non-voided)', () => {
   test('mixed paid/partial/issued/overdue sum to the endpoint balance; voided is excluded on both sides', async () => {
     // The FE sums these per-invoice balances; voided (9999) must NOT count.
@@ -94,7 +75,7 @@ describe('FIX-010 — getPatientBalance equals Σ per-invoice balanceCents (non-
       .reduce((sum, inv) => sum + inv.balanceCents, 0);
     expect(clientVisibleBalance).toBe(10000); // 0 + 3000 + 5000 + 2000
 
-    const res = await buildApp().request(`/dental/billing/patients/${PATIENT_ID}/balance`);
+    const res = await buildTestApp({ db, user: USER }).request(`/dental/billing/patients/${PATIENT_ID}/balance`);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
 

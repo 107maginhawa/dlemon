@@ -40,53 +40,42 @@ const SRC_DIR = join(API_TS_ROOT, 'src');
 
 /**
  * Grandfathered raw-mount test files (paths relative to services/api-ts).
- * These predate the shared harness. Shrink this list as files migrate to
- * `buildTestApp`; never add to it — new raw mounts must use the harness.
+ * Shrink this list as files migrate to `buildTestApp`; never add to it — new
+ * raw mounts must use the harness.
+ *
+ * The bulk of the original list has been migrated. The entries that REMAIN are
+ * the ones that CANNOT (or SHOULD NOT) go through `buildTestApp`, grouped by
+ * reason below. They are intentional, not "not yet done" — keep them raw.
+ *
+ * (Already migrated, removed from this list: activateOrganization, createMember,
+ * deactivateMember, updateMember, getBranchesByUser, getOrgContext, listMembers,
+ * permissions, org-member-role-active, then a 27-file sweep across billing,
+ * booking, comms, dental-billing, dental-imaging, dental-org, dental-portal,
+ * dental-visit, emr, notifs, person, reviews.)
  */
 const ALLOWLIST: ReadonlySet<string> = new Set([
-  'src/core/health.test.ts',
-  'src/handlers/billing/createInvoice.test.ts',
-  'src/handlers/billing/finalizeInvoice.notif.test.ts',
-  'src/handlers/billing/getInvoice.test.ts',
-  'src/handlers/billing/handleStripeWebhook.test.ts',
-  'src/handlers/billing/payInvoice.test.ts',
-  'src/handlers/booking/booking-coverage.test.ts',
-  'src/handlers/booking/confirmBooking.test.ts',
-  'src/handlers/booking/createBooking.test.ts',
-  'src/handlers/comms/joinVideoCall.test.ts',
-  'src/handlers/dental-audit/getAuditEvents.test.ts',
-  'src/handlers/dental-billing/dental-billing.invoice-lifecycle.test.ts',
-  'src/handlers/dental-billing/dental-billing.patient-balance-coherence.test.ts',
-  'src/handlers/dental-imaging/ceph-calibration-record.test.ts',
-  'src/handlers/dental-imaging/ceph-revision-lineage.test.ts',
-  'src/handlers/dental-imaging/ceph-signoff-split.test.ts',
-  'src/handlers/dental-imaging/dental-imaging-events.test.ts',
-  'src/handlers/dental-imaging/imaging-integration.test.ts',
-  'src/handlers/dental-imaging/imaging-links.test.ts',
-  'src/handlers/dental-imaging/imaging-metadata.test.ts',
-  // activateOrganization.test.ts + createMember.test.ts + deactivateMember.test.ts + updateMember.test.ts migrated to buildTestApp (ratchet tightened).
-  'src/handlers/dental-org/dental-org-events.test.ts',
-  'src/handlers/dental-org/dental-org.clinic-settings.test.ts',
-  'src/handlers/dental-org/dental-org.dashboard-summary-extended.test.ts',
-  'src/handlers/dental-org/dental-org.fee-schedule.test.ts',
-  'src/handlers/dental-org/dental-org.pin-recovery.test.ts',
-  // getBranchesByUser.test.ts + getOrgContext.test.ts + listMembers.test.ts + permissions.test.ts migrated to buildTestApp (ratchet tightened).
-  // org-member-role-active.test.ts migrated to buildTestApp (ratchet tightened).
-  'src/handlers/dental-org/resetMemberPin.test.ts',
-  'src/handlers/dental-patient/dental-patient.bulk-import.test.ts',
-  'src/handlers/dental-portal/dental-portal.test.ts',
-  'src/handlers/dental-visit/dental-visit.cross-tenant-rbac.test.ts',
-  'src/handlers/dental-visit/dental-visit.treatment-plan-versioning.test.ts',
-  'src/handlers/emr/getConsultation.expand.test.ts',
-  'src/handlers/notifs/markNotificationAsRead.test.ts',
-  'src/handlers/person/createPerson.test.ts',
-  'src/handlers/provider/getPractitioner.test.ts',
-  'src/handlers/reviews/createReview.test.ts',
-  'src/handlers/storage/storage-coverage.test.ts',
-  'src/handlers/storage/uploadFile.test.ts',
-  'src/middleware/auth.test.ts',
-  'src/middleware/security.test.ts',
-  'src/tests/error-envelope.error-classes.test.ts',
+  // ── Cross-cutting unit tests: mount SYNTHETIC routes, not real generated
+  //    endpoints, so the generated route table can't host them. ──
+  'src/core/health.test.ts',                          // synthetic /livez,/readyz + module-local registerRoutes
+  'src/middleware/auth.test.ts',                       // authMiddleware in isolation on a synthetic /protected/resource
+  'src/middleware/security.test.ts',                   // CSRF / CORS / security-header middleware (harness omits these guards)
+  'src/tests/error-envelope.error-classes.test.ts',    // synthetic /throw/* routes, one per error class
+
+  // ── Documented harness divergences (test-app.ts "KNOWN DIVERGENCES"): the
+  //    harness omits the hand-mount, so migrating would change behavior. ──
+  'src/handlers/dental-org/dental-org.pin-recovery.test.ts', // recover-pin: prod shadows with authMiddleware; generated route has none
+  'src/handlers/storage/uploadFile.test.ts',                 // harness injects parseConfig() → application/dicom gets the 2GB DICOM cap, not the test's flat 100MB
+
+  // ── Mock-DB / monkey-patched unit tests: no real Drizzle instance (or they
+  //    bypass the validator deliberately), so buildTestApp's real repos + real
+  //    validator chain can't run them without rewriting their assertions. ──
+  'src/handlers/billing/finalizeInvoice.notif.test.ts',      // mock.module repo stubs, database:{}, synthetic route
+  'src/handlers/billing/getInvoice.test.ts',                 // synthetic re-implementation route over in-test fake repos
+  'src/handlers/booking/booking-coverage.test.ts',           // monkey-patches ctx.req.valid() to inject invalid params; asserts raw 500s
+  'src/handlers/dental-audit/getAuditEvents.test.ts',        // fakes dental role as the Better-Auth SESSION role; real authMiddleware({roles:['user']}) would 403
+  'src/handlers/dental-patient/dental-patient.bulk-import.test.ts', // handler also accepts bare-array + text/csv bodies the generated {patients:[]} validator rejects
+  'src/handlers/provider/getPractitioner.test.ts',           // hand-rolled select-chain mock, no real DB; non-UUID ids would 400 at the param validator
+  'src/handlers/storage/storage-coverage.test.ts',           // asserts handler-internal 500 reachable only without authMiddleware (harness returns 401 first)
 ]);
 
 const ROUTE_MOUNT = /\bapp\.(get|post|put|patch|delete)\(/;

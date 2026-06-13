@@ -20,28 +20,12 @@
  * REQUIRES: DATABASE_URL pointing at a monobase_test* database.
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeEach, beforeAll } from 'bun:test';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
-import { ZodError } from 'zod';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 
-import { createImagingStudy } from './createImagingStudy';
-import { getImagingStudy } from './getImagingStudy';
-import { listPatientImages } from './listPatientImages';
-import { createFinding } from './createFinding';
-import { updateFinding } from './updateFinding';
-import { listFindings } from './listFindings';
-import { deleteFinding } from './deleteFinding';
-import { createMeasurement } from './createMeasurement';
-import { listMeasurements } from './listMeasurements';
-import { deleteMeasurement } from './deleteMeasurement';
-import { deleteImage } from './deleteImage';
-import { updateImageCalibration } from './updateImageCalibration';
-import { updateImageModality } from './updateImageModality';
-import { finalizeCbctStudy } from './finalizeCbctStudy';
-import { getCbctViewerLink } from './getCbctViewerLink';
 import { buildSyntheticDicom } from './repos/dicom-fixture';
 
 const db = createDatabase({
@@ -89,55 +73,14 @@ const storage = {
 } as any;
 
 // ---------------------------------------------------------------------------
-// App builder — wires real db + the requested handler
+// App builder — delegates to the shared validator-mounting harness so requests
+// traverse the real authMiddleware → generated zValidator → handler → error
+// envelope chain. `storage` is injected via opts.services because
+// createImagingStudy / getCbctViewerLink / listPatientImages read ctx.get('storage').
 // ---------------------------------------------------------------------------
 
 function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  // Mirror the production error contract (src/core/errors.ts): AppError uses its
-  // own statusCode/code; a raw ZodError (from handler-level .parse()) → 400.
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    if (err instanceof ZodError || (err as Error).name === 'ZodError') {
-      return c.json({ error: 'Validation failed', code: 'VALIDATION_ERROR' }, 400);
-    }
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('storage', storage);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-
-  app.post('/dental/imaging/studies', createImagingStudy as any);
-  app.get('/dental/imaging/studies/:studyId', getImagingStudy as any);
-  app.get('/dental/patients/:patientId/images', listPatientImages as any);
-
-  app.post('/dental/imaging/images/:imageId/findings', createFinding as any);
-  app.get('/dental/imaging/images/:imageId/findings', listFindings as any);
-  app.patch('/dental/imaging/findings/:findingId', updateFinding as any);
-  app.delete('/dental/imaging/findings/:findingId', deleteFinding as any);
-
-  app.post('/dental/imaging/images/:imageId/measurements', createMeasurement as any);
-  app.get('/dental/imaging/images/:imageId/measurements', listMeasurements as any);
-  app.delete('/dental/imaging/measurements/:measurementId', deleteMeasurement as any);
-
-  app.delete('/dental/imaging/images/:imageId', deleteImage as any);
-  app.patch('/dental/imaging/images/:imageId/calibration', updateImageCalibration as any);
-  app.patch('/dental/imaging/images/:imageId/modality', updateImageModality as any);
-
-  // P2-7 CBCT
-  app.post('/dental/imaging/studies/:studyId/cbct/finalize', finalizeCbctStudy as any);
-  app.get('/dental/imaging/studies/:studyId/cbct/viewer-link', getCbctViewerLink as any);
-
-  return app;
+  return buildHarnessApp({ db, user: user ?? null, services: { storage } });
 }
 
 const json = (body: unknown) => ({

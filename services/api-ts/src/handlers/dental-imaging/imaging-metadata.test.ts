@@ -12,14 +12,12 @@
  *   - applyImageLibraryFilters pure-function behaviour
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, beforeEach } from 'bun:test';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { updateImageMetadata } from './updateImageMetadata';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import {
-  listPatientImages,
   applyImageLibraryFilters,
   type PatientImageItem,
 } from './listPatientImages';
@@ -35,21 +33,7 @@ const DENTIST = { id: 'a4d00000-0000-4000-8000-0000000000d1', email: 'dentist@im
 const PATIENT_ID = 'd4d00000-0000-4000-8000-0000000000f5';
 
 function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.patch('/dental/imaging/images/:imageId/metadata', updateImageMetadata as any);
-  app.get('/dental/patients/:patientId/images', listPatientImages as any);
-  return app;
+  return buildTestApp({ db, user });
 }
 
 const json = (body: unknown) => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -96,9 +80,9 @@ async function seedImage(overrides: Record<string, unknown> = {}): Promise<strin
   return imageId;
 }
 
-const patchMeta = (app: Hono, imageId: string, body: unknown) =>
+const patchMeta = (app: ReturnType<typeof buildTestApp>, imageId: string, body: unknown) =>
   app.request(`/dental/imaging/images/${imageId}/metadata`, { method: 'PATCH', ...json(body) });
-const listImages = (app: Hono, query = '') =>
+const listImages = (app: ReturnType<typeof buildTestApp>, query = '') =>
   app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${BRANCH_ID}${query}`, { method: 'GET' });
 
 beforeAll(async () => {

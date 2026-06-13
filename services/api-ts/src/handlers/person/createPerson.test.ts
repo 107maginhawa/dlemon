@@ -5,42 +5,20 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { Hono } from 'hono';
-import { createPerson } from './createPerson';
-import { AppError } from '@/core/errors';
+import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-function buildTestApp(user?: { id: string; email: string; role?: string }) {
-  const app = new Hono();
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting
+// harness: requests now traverse the real authMiddleware → generated zValidator
+// → handler chain (POST /persons), not a direct handler call with a fake DB.
 
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    ctx.set('audit', null);
-    if (user) {
-      ctx.set('user', { id: user.id, email: user.email, role: user.role || 'user' });
-      ctx.set('session', { id: 'test-session' });
-    }
-    await next();
-  });
-
-  app.post('/persons', createPerson as any);
-
-  return app;
-}
+const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
 describe('createPerson handler', () => {
   const authedUser = { id: 'user-1', email: 'test@test.com' };
 
   test('returns error when not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
 
     const res = await app.request('/persons', {
       method: 'POST',
@@ -52,7 +30,7 @@ describe('createPerson handler', () => {
   });
 
   test('handler reads firstName from body', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request('/persons', {
       method: 'POST',
@@ -68,7 +46,7 @@ describe('createPerson handler', () => {
   });
 
   test('handler accepts optional fields', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
     const res = await app.request('/persons', {
       method: 'POST',

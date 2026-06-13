@@ -20,13 +20,11 @@
  *   - invalid ruler inputs (coincident points / non-positive distance / partial) → 400
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, beforeEach } from 'bun:test';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { updateImageCalibration } from './updateImageCalibration';
-import { createCephReport } from './createCephReport';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
 const db = createDatabase({
   url: process.env['DATABASE_URL'] ?? 'postgresql://postgres:password@localhost:5432/monobase_test',
@@ -39,23 +37,7 @@ const DENTIST = { id: 'a3c00000-0000-4000-8000-0000000000d1', email: 'dentist@ce
 const PATIENT_ID = 'd3c00000-0000-4000-8000-0000000000f5';
 
 function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.patch('/dental/imaging/images/:imageId/calibration', updateImageCalibration as any);
-  app.post('/dental/imaging/images/:imageId/ceph/reports', createCephReport as any);
-  return app;
+  return buildTestApp({ db, user });
 }
 
 const json = (body: unknown) => ({
@@ -125,9 +107,9 @@ async function seedGateLandmarks(imageId: string) {
   );
 }
 
-const patch = (app: Hono, imageId: string, body: unknown) =>
+const patch = (app: ReturnType<typeof buildApp>, imageId: string, body: unknown) =>
   app.request(`/dental/imaging/images/${imageId}/calibration`, { method: 'PATCH', ...json(body) });
-const report = (app: Hono, imageId: string, body: unknown = {}) =>
+const report = (app: ReturnType<typeof buildApp>, imageId: string, body: unknown = {}) =>
   app.request(`/dental/imaging/images/${imageId}/ceph/reports`, { method: 'POST', ...json(body) });
 
 beforeAll(async () => {

@@ -4,44 +4,22 @@
  * Tests review creation, validation, and duplicate prevention.
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect } from 'bun:test';
-import { Hono } from 'hono';
-import { createReview } from './createReview';
-import { AppError } from '@/core/errors';
+import { createDatabase } from '@/core/database';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-function buildTestApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: err.message }, 500);
-  });
-
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) {
-      ctx.set('user', { id: user.id, email: user.email, role: 'user' });
-      ctx.set('session', { id: 'test-session', user: { id: user.id, email: user.email, role: 'user' } });
-    }
-    await next();
-  });
-
-  app.post('/reviews', createReview as any);
-
-  return app;
-}
+const db = createDatabase({
+  url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test',
+});
 
 describe('createReview handler', () => {
   const authedUser = { id: 'user-1', email: 'reviewer@test.com' };
 
   test('returns 401 when not authenticated', async () => {
-    const app = buildTestApp(undefined);
+    const app = buildTestApp({ db });
 
-    const res = await app.request('/reviews', {
+    const res = await app.request('/reviews/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -59,9 +37,9 @@ describe('createReview handler', () => {
     // Without that middleware, the call throws. We verify the validation logic exists
     // by importing the handler and checking the source code behavior.
     // In a full integration test with middleware, self-review would return 400.
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
-    const res = await app.request('/reviews', {
+    const res = await app.request('/reviews/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -77,9 +55,9 @@ describe('createReview handler', () => {
   });
 
   test('handler accepts valid review body (fails at validation middleware level)', async () => {
-    const app = buildTestApp(authedUser);
+    const app = buildTestApp({ db, user: authedUser });
 
-    const res = await app.request('/reviews', {
+    const res = await app.request('/reviews/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

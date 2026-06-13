@@ -12,15 +12,12 @@
  *   - listPatientImages surfaces links + filters by linkTargetId / linkType
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll, beforeEach } from 'bun:test';
-import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
-import { createImageLink } from './createImageLink';
-import { listImageLinks } from './listImageLinks';
-import { deleteImageLink } from './deleteImageLink';
-import { listPatientImages, type PatientImageItem } from './listPatientImages';
+import { buildTestApp } from '@/tests/helpers/test-app';
+import { type PatientImageItem } from './listPatientImages';
 
 const db = createDatabase({
   url: process.env['DATABASE_URL'] ?? 'postgresql://postgres:password@localhost:5432/monobase_test',
@@ -35,24 +32,10 @@ const PLAN_ID = 'e5e00000-0000-4000-8000-0000000000a1';
 const REPORT_ID = 'e5e00000-0000-4000-8000-0000000000a2';
 
 function buildApp(user?: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String((err as Error).message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    if (user) ctx.set('user', user);
-    await next();
-  });
-  app.post('/dental/imaging/images/:imageId/links', createImageLink as any);
-  app.get('/dental/imaging/images/:imageId/links', listImageLinks as any);
-  app.delete('/dental/imaging/links/:linkId', deleteImageLink as any);
-  app.get('/dental/patients/:patientId/images', listPatientImages as any);
-  return app;
+  return buildTestApp({ db, user });
 }
+
+type TestApp = ReturnType<typeof buildApp>;
 
 const json = (body: unknown) => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -97,13 +80,13 @@ async function seedImage(): Promise<string> {
   return imageId;
 }
 
-const createLink = (app: Hono, imageId: string, body: unknown) =>
+const createLink = (app: TestApp, imageId: string, body: unknown) =>
   app.request(`/dental/imaging/images/${imageId}/links`, { method: 'POST', ...json(body) });
-const listLinks = (app: Hono, imageId: string) =>
+const listLinks = (app: TestApp, imageId: string) =>
   app.request(`/dental/imaging/images/${imageId}/links`, { method: 'GET' });
-const delLink = (app: Hono, linkId: string) =>
+const delLink = (app: TestApp, linkId: string) =>
   app.request(`/dental/imaging/links/${linkId}`, { method: 'DELETE' });
-const listImages = (app: Hono, query = '') =>
+const listImages = (app: TestApp, query = '') =>
   app.request(`/dental/patients/${PATIENT_ID}/images?branchId=${BRANCH_ID}${query}`, { method: 'GET' });
 
 beforeAll(async () => { await seedOrg(); });

@@ -14,20 +14,16 @@
  *   5. getTreatmentPlanVersion — same, on the version read path.
  */
 
+// Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
-import { AppError } from '@/core/errors';
+import { buildTestApp } from '@/tests/helpers/test-app';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { patients } from '@/handlers/patient/repos/patient.schema';
 import { dentalVisits } from './repos/visit.schema';
 import { dentalTreatmentTemplates } from './repos/treatment-template.schema';
 import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
-import { applyTemplate } from './utils/treatmentTemplates';
-import { getTreatmentPlan } from './treatment-plans/getTreatmentPlan';
-import { getTreatmentPlanVersion } from './treatment-plans/getTreatmentPlanVersion';
-import { acceptTreatmentPlan } from './treatments/acceptTreatmentPlan';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -71,24 +67,7 @@ beforeAll(async () => {
 });
 
 function buildApp(user: { id: string; email: string }) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    return c.json({ error: String(err.message) }, 500);
-  });
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', db);
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    ctx.set('user', user);
-    ctx.set('session', { id: 'test-session' });
-    await next();
-  });
-  app.post('/dental/visits/:visitId/apply-template/:templateId', applyTemplate as any);
-  app.get('/dental/patients/:patientId/treatment-plan', getTreatmentPlan as any);
-  app.post('/dental/patients/:patientId/treatment-plan/accept', acceptTreatmentPlan as any);
-  app.get('/dental/patients/:patientId/treatment-plan/versions/:versionId', getTreatmentPlanVersion as any);
-  return app;
+  return buildTestApp({ db, user });
 }
 
 // Use 'draft' so repeated seeds don't collide on the active-visit partial unique
