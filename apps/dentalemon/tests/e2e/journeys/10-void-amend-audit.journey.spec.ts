@@ -84,11 +84,19 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     // Step 3: a signed/locked note must expose an addendum/amend control (you
     // amend by appending an addendum, never by editing the signed entry).
+    // The locked-state footer (Close | Add Addendum) only renders once the
+    // sign mutation completes AND the notes query refetches with `signed: true`
+    // and React re-renders — that settles AFTER the sign POST response and can
+    // lag past networkidle. A one-shot count() races that re-render (J10 flake),
+    // so poll with an auto-retrying visibility wait instead. The crafted message
+    // is preserved so a genuine missing-control regression still fails loudly.
     const addendumCtl = notesSheet
       .getByTestId('add-addendum-btn')
       .or(notesSheet.getByRole('button', { name: /add addendum|addendum|amend/i }))
       .first()
-    if (!(await addendumCtl.count())) {
+    try {
+      await expect(addendumCtl).toBeVisible({ timeout: 15_000 })
+    } catch {
       throw new Error(
         `Signed note exposes no addendum/amend control — the void/amend audit model ` +
           `(Gap #3 hard-delete, Gap #5 editable signed notes) is unreachable through the UI.`,
