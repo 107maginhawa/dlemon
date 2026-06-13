@@ -390,9 +390,13 @@ namespace DentalPatientModule {
     branchId: string;
   }
 
-  @doc("Import patients request — JSON array of patient rows")
+  @doc("Import patients request — provide either `patients` (JSON rows) or `csv` (raw CSV text). Exactly one is expected.")
   model ImportPatientsRequest {
-    patients: ImportPatientRow[];
+    @doc("Patient rows as JSON. Provide this OR `csv`.")
+    patients?: ImportPatientRow[];
+
+    @doc("Raw CSV text: a header row (firstName,lastName,dateOfBirth,branchId,...) followed by data rows. Provide this OR `patients`.")
+    csv?: string;
   }
 
   @doc("Import patients response")

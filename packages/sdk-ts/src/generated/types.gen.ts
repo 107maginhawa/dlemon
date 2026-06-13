@@ -7774,10 +7774,17 @@ export type DentalPatientModuleImportPatientRow = {
 };
 
 /**
- * Import patients request — JSON array of patient rows
+ * Import patients request — provide either `patients` (JSON rows) or `csv` (raw CSV text). Exactly one is expected.
  */
 export type DentalPatientModuleImportPatientsRequest = {
-    patients: Array<DentalPatientModuleImportPatientRow>;
+    /**
+     * Patient rows as JSON. Provide this OR `csv`.
+     */
+    patients?: Array<DentalPatientModuleImportPatientRow>;
+    /**
+     * Raw CSV text: a header row (firstName,lastName,dateOfBirth,branchId,...) followed by data rows. Provide this OR `patients`.
+     */
+    csv?: string;
 };
 
 /**

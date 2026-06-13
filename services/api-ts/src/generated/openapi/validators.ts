@@ -3433,7 +3433,8 @@ export const DentalPatientModuleImportPatientRowSchema = z.object({
 });
 
 export const DentalPatientModuleImportPatientsRequestSchema = z.object({
-  patients: z.array(DentalPatientModuleImportPatientRowSchema)
+  patients: z.array(DentalPatientModuleImportPatientRowSchema).optional(),
+  csv: z.string().optional()
 });
 
 export const DentalPatientModuleImportedPatientRecordSchema = z.object({

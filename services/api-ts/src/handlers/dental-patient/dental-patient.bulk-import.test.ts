@@ -21,6 +21,7 @@ import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 import { importPatients } from './identity/importPatients';
 import { getOrgContext } from '@/handlers/dental-org/getOrgContext';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -236,6 +237,56 @@ describe('POST /dental/patients/import via CSV', () => {
     expect(byFirst['Maria'].lastName).toBe('dela Cruz, Jr.');
     // Escaped double-quote ("") collapses to a single quote per RFC-4180.
     expect(byFirst['Juan'].lastName).toBe('O"Brien, Sr.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR7.2: CSV import through the REAL generated route (contract path)
+//
+// The other tests in this file mount the RAW handler, so they exercise the
+// handler's own body parsing but BYPASS the generated zValidator. Through the
+// real route, only what the contract (ImportPatientsBody) accepts can reach the
+// handler. These tests use the validator-mounting harness (real
+// authMiddleware → generated zValidator → handler) to prove CSV import is
+// actually reachable in production via the `{ csv }` JSON field — previously the
+// handler could parse CSV but no contract shape could deliver it through the
+// route, so CSV import was effectively unreachable. (The legacy text/csv
+// content-type + bare-array branches remain handler-internal; they are still
+// covered by the raw-mount tests above and are not part of the wire contract.)
+// ---------------------------------------------------------------------------
+
+describe('POST /dental/patients/import — CSV via { csv } field through the real route', () => {
+  test('imports via the { csv } contract field (generated zValidator → handler)', async () => {
+    const csv = [
+      'firstName,lastName,dateOfBirth,branchId',
+      `Maria,Santos,1990-05-15,${BRANCH_ID}`,
+      `Juan,dela Cruz,1985-03-20,${BRANCH_ID}`,
+    ].join('\n');
+
+    const app = buildHarnessApp({ db, user: TEST_USER });
+    const res = await app.request('/dental/patients/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.success).toBe(true);
+    expect(body.imported).toBe(2);
+  });
+
+  test('imports via the { patients } contract field through the real route', async () => {
+    const app = buildHarnessApp({ db, user: TEST_USER });
+    const res = await app.request('/dental/patients/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patients: [{ firstName: 'Ana', branchId: BRANCH_ID }] }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.imported).toBe(1);
   });
 });
 

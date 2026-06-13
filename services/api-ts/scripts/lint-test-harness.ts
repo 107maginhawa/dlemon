@@ -73,7 +73,9 @@ const ALLOWLIST: ReadonlySet<string> = new Set([
   'src/handlers/billing/getInvoice.test.ts',                 // synthetic re-implementation route over in-test fake repos
   'src/handlers/booking/booking-coverage.test.ts',           // monkey-patches ctx.req.valid() to inject invalid params; asserts raw 500s
   'src/handlers/dental-audit/getAuditEvents.test.ts',        // fakes dental role as the Better-Auth SESSION role; real authMiddleware({roles:['user']}) would 403
-  'src/handlers/dental-patient/dental-patient.bulk-import.test.ts', // handler also accepts bare-array + text/csv bodies the generated {patients:[]} validator rejects
+  // (dental-patient.bulk-import.test.ts migrated: now drives the contract { patients }/{ csv }
+  //  paths through the shared harness; the bare-array + text/csv raw mounts it retains are
+  //  legacy/internal-only and no longer the file's sole coverage.)
   'src/handlers/provider/getPractitioner.test.ts',           // hand-rolled select-chain mock, no real DB; non-UUID ids would 400 at the param validator
   'src/handlers/storage/storage-coverage.test.ts',           // asserts handler-internal 500 reachable only without authMiddleware (harness returns 401 first)
 ]);

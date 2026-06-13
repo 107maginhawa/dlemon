@@ -3,9 +3,14 @@
  *
  * POST /dental/patients/import
  *
- * Accepts:
- *   - application/json: JSON array of patient rows [ { firstName, lastName?, ... } ]
- *   - text/csv: CSV with headers firstName,lastName,dateOfBirth,branchId,...
+ * Contract body (ImportPatientsRequest) — provide exactly one:
+ *   - { patients: [ { firstName, branchId, lastName?, ... } ] } — JSON rows
+ *   - { csv: "<header row + data rows>" }                        — raw CSV in a JSON field
+ *
+ * NOTE: a raw `text/csv` request body and a bare top-level JSON array are also
+ * parsed if they reach the handler directly, but the generated route's
+ * zValidator only admits the JSON-object contract above — those two are
+ * legacy/internal-only paths, not part of the wire contract.
  *
  * Validates all rows up front — returns 422 with errors if any fail.
  * Batch-commits all patients in a transaction (all-or-nothing).
@@ -119,7 +124,8 @@ export async function importPatients(ctx: Context): Promise<Response> {
       return ctx.json({ success: false, errors: ['CSV has no data rows'], imported: 0, total: 0 }, 422);
     }
   } else {
-    // JSON — accept array directly or wrapped { patients: [...] }
+    // JSON — contract: { csv: "<raw csv>" } | { patients: [...] }; plus a legacy
+    // bare top-level array (handler-internal only — the route validator rejects it).
     let parsed: unknown;
     try {
       parsed = await ctx.req.json();
@@ -127,12 +133,18 @@ export async function importPatients(ctx: Context): Promise<Response> {
       return ctx.json({ success: false, errors: ['Invalid JSON body'], imported: 0, total: 0 }, 400);
     }
 
-    if (Array.isArray(parsed)) {
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && typeof (parsed as { csv?: unknown }).csv === 'string') {
+      // Contract CSV path: raw CSV delivered as the `csv` JSON field.
+      rawRows = parseCSV((parsed as { csv: string }).csv);
+      if (rawRows.length === 0) {
+        return ctx.json({ success: false, errors: ['CSV has no data rows'], imported: 0, total: 0 }, 422);
+      }
+    } else if (Array.isArray(parsed)) {
       rawRows = parsed;
     } else if (parsed && typeof parsed === 'object' && 'patients' in parsed && Array.isArray((parsed as { patients: unknown }).patients)) {
       rawRows = (parsed as { patients: Record<string, string | undefined>[] }).patients;
     } else {
-      return ctx.json({ success: false, errors: ['Body must be a JSON array or { patients: [...] }'], imported: 0, total: 0 }, 400);
+      return ctx.json({ success: false, errors: ['Body must be { patients: [...] } or { csv: "..." }'], imported: 0, total: 0 }, 400);
     }
 
     if (rawRows.length === 0) {
