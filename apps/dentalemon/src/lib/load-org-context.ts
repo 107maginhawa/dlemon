@@ -21,6 +21,7 @@ import { pinSession } from '@/lib/pin-session'
 export async function loadOrgContext(): Promise<string | null> {
   try {
     const { apiUrl } = await getRuntimeConfig()
+    // eslint-disable-next-line no-restricted-syntax -- bootstrap: loads org context before the SDK query client / store are initialized
     const res = await fetch(`${apiUrl}/dental/org/context`, { credentials: 'include' })
     if (!res.ok) return null
     const ctx = await res.json() as any

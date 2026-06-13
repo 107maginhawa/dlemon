@@ -47,6 +47,7 @@ export async function fetchRuntimeConfig(timeout = 2000): Promise<RuntimeConfig>
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
 
+    // eslint-disable-next-line no-restricted-syntax -- static runtime config asset (/config.json), not an API call — sanctioned non-API transfer
     const response = await fetch('/config.json', {
       signal: controller.signal,
       headers: {

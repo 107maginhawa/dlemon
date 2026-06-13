@@ -55,4 +55,15 @@ export default [
       'no-restricted-syntax': ['error', GAP_D_RULE, ...NO_RAW_FETCH_RULES],
     },
   },
+  {
+    // SDK-only data access is also enforced in routes/ and lib/ (not just
+    // features/). The existing bootstrap (PIN/auth, org-context), static-asset
+    // (/config.json), and legacy fetches each carry an inline eslint-disable with
+    // a reason; this block stops NEW raw fetches from landing in these dirs.
+    files: ['src/routes/**/*.ts', 'src/routes/**/*.tsx', 'src/lib/**/*.ts', 'src/lib/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', ...NO_RAW_FETCH_RULES],
+    },
+  },
 ];

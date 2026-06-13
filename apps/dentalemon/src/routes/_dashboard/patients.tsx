@@ -64,6 +64,7 @@ function PatientsPage() {
     consentGiven: boolean;
     communicationConsent?: { sms: boolean; email: boolean; phone: boolean; marketing: boolean };
   }) {
+    // eslint-disable-next-line no-restricted-syntax -- TODO(sdk): migrate to the createPatient SDK hook; raw POST pending that migration
     const res = await fetch(`${API}/dental/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

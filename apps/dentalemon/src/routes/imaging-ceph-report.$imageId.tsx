@@ -41,6 +41,7 @@ function CephReportPage() {
   const { data, isLoading, isError, error } = useQuery<CephReportResponse>({
     queryKey: ['ceph-report', imageId, version ?? 'latest'],
     queryFn: async () => {
+      // eslint-disable-next-line no-restricted-syntax -- TODO(sdk): migrate to the GetCephReport SDK hook; raw fetch in this route's queryFn pending that migration
       const res = await fetch(url)
       if (!res.ok) throw new Error(await res.text())
       return res.json() as Promise<CephReportResponse>
