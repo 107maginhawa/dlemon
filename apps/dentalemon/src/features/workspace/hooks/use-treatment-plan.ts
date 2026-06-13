@@ -21,7 +21,12 @@ import {
   acceptTreatmentPlan,
   updateDentalTreatment,
 } from '@monobase/sdk-ts/generated';
-import type { UpdateDentalTreatmentRequest } from '@monobase/sdk-ts/generated';
+import type {
+  UpdateDentalTreatmentRequest,
+  TreatmentPlanResponse,
+  TreatmentPlanItem as SdkTreatmentPlanItem,
+  DentalTreatmentPhase,
+} from '@monobase/sdk-ts/generated';
 
 /**
  * Build extra SDK options for branchId query injection — used ONLY by
@@ -34,43 +39,30 @@ function withBranchQuery(branchId: string | null): Record<string, unknown> {
   return branchId ? { query: { branchId } } : {};
 }
 
-/** P1-18: clinical sequencing phase (industry-standard 5-phase model). */
-export type TreatmentPhase =
-  | 'systemic'
-  | 'disease_control'
-  | 're_evaluation'
-  | 'definitive'
-  | 'maintenance';
+/**
+ * P1-18: clinical sequencing phase (industry-standard 5-phase model). Aliased to
+ * the generated SDK contract type so the FE consumes the single source of type
+ * truth rather than a hand-maintained duplicate that can drift from the wire.
+ */
+export type TreatmentPhase = DentalTreatmentPhase;
 
-export interface TreatmentPlanItem {
-  id: string;
-  toothNumber: number | null;
-  cdtCode: string;
-  description: string;
-  surfaces: string[] | null;
-  priceCents: number;
-  status: 'diagnosed' | 'planned' | 'declined';
-  conditionCode: string | null;
-  visitId: string;
-  carriedOver: boolean;
-  /** P1-18: clinical phase (null = unphased) */
-  phase?: TreatmentPhase | null;
-  /** P1-18: intra-phase ordering */
-  priority?: number;
-  reason?: string;
-}
+/**
+ * A treatment-plan line item — the generated contract type. `toothNumber` and
+ * `carriedOver` are optional because the `byTooth` grouping omits them (only the
+ * flat `treatments[]` projection carries them), and `status` is the full
+ * DentalTreatmentStatus (a plan surfaces diagnosed/planned/declined, but
+ * consumers like treatment-table also render performed/verified/dismissed rows).
+ */
+export type TreatmentPlanItem = SdkTreatmentPlanItem;
 
-export interface TreatmentPlanData {
-  patientId: string;
-  totalEstimateCents: number;
-  treatmentCount: number;
-  toothCount: number;
-  byTooth: Record<string | number, TreatmentPlanItem[]>;
-  treatments: TreatmentPlanItem[];
-  /** CHART-XV: FDI tooth numbers with a performed/verified treatment across all
-   *  visits — drives the chart's cumulative Completed layer (living document). */
-  completedToothNumbers?: number[];
-}
+/**
+ * Patient treatment-plan aggregate (getTreatmentPlan) — the generated contract
+ * type. `treatmentCount`/`byTooth` are OPTIONAL: the backend omits them on the
+ * empty-plan response (a patient with no visits), so consumers must guard them
+ * (e.g. `data.treatmentCount ?? 0`). `completedToothNumbers` (CHART-XV) drives
+ * the chart's cumulative Completed layer.
+ */
+export type TreatmentPlanData = TreatmentPlanResponse;
 
 interface UseTreatmentPlanOptions {
   patientId: string | null;
@@ -90,19 +82,16 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
       // Normalize SDK errors into standard Error objects so consumers and tests
       // can rely on .message containing the status code regardless of whether
       // the error interceptor (installed by ApiProvider) is present.
-      if (!result.response?.ok) {
+      if (!result.response?.ok || !result.data) {
         const status = result.response?.status ?? 0;
         // `result.error` exists on the error branch of the SDK union type.
         // Use type-narrowing via a field-presence check to access it safely.
         const errBody = ('error' in result ? result.error : undefined) as { message?: string } | undefined;
         throw new Error(errBody?.message ?? `Failed to fetch treatment plan (${status})`);
       }
-      // The SDK's TreatmentPlanResponse type is stale (TypeSpec spec drift);
-      // the actual backend returns the enriched TreatmentPlanData shape.
-      // The `response.ok` guard above ensures data is present; the JSON-level
-      // shape is always TreatmentPlanData (spec-drift documented in file header).
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      return result.data as any as TreatmentPlanData;
+      // result.data is the generated TreatmentPlanResponse (= TreatmentPlanData);
+      // the `!result.data` guard above narrows away `undefined`, so no cast is needed.
+      return result.data;
     },
     enabled: !!patientId && !!branchId,
   });
