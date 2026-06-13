@@ -407,9 +407,11 @@ jobs:
     # actually execute in CI. The spec self-seeds via the sign-up UI, so no
     # `db:reseed` is needed.
     #
-    # continue-on-error until the first green run confirms webkit-on-ubuntu + the
-    # full-stack boot in CI; once confirmed, drop this line to make it a hard gate.
-    continue-on-error: true
+    # HARD GATE: confirmed green on webkit-on-ubuntu (runs 27474790132 / main push
+    # 27475408926) after fix(calendar) #6 removed the iPad-portrait horizontal
+    # overflow. `continue-on-error` dropped + this check is required in branch
+    # protection. (The earlier failure was a real /calendar overflow plus a render-
+    # timing flake on the un-waited scrollWidth measure; both resolved by #6.)
 
     services:
       postgres:
