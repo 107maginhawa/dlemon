@@ -23,7 +23,7 @@
     "test:unit": "bun run scripts/test-with-db.ts",
     "test:coverage": "bun run scripts/test-with-db.ts --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint src --max-warnings 349",
     "lint:migrations": "bun scripts/lint-migrations.ts",
     "lint:test-harness": "bun scripts/lint-test-harness.ts",
     "check:duplicate-ops": "bun scripts/check-duplicate-operation-ids.ts",
