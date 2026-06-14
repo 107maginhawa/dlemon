@@ -3,6 +3,12 @@
 > **Status tracker (committed on purpose).** This file is the durable, openable status of
 > the multi-PR effort to stop "app broken for users while CI is green." Update the checkboxes
 > as plans land. Pause → resume from the first unchecked box. Recorded 2026-06-14.
+>
+> **✅ COMPLETE (2026-06-15).** All plans shipped: Phase 0 → E → B (slices 1+2) → stability
+> budget **banked 20/20** → C (armed lock) → D (drift gate, now a required check) → F (de-mask).
+> The target class is now a loud, blocking failure. Re-dispatch *Journey Stability Budget*
+> (`gh workflow run journey-stability.yml -f runs=20`) to re-prove stability after large
+> journey changes.
 
 **Goal:** Convert "the app is broken for users while CI is green" from an undetectable class
 into a loud, blocking failure — by measuring reality, fixing what's red, then making a small,
@@ -39,11 +45,14 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
       all work. The live "can't add New Visit" was **environmental drift** (stale API process +
       DB behind), not a code bug.
 - [x] Wrote `docs/audits/REAL_STACK_AUDIT.md`.
-- [ ] Triage with user: confirm must-never-break set + P0s. **(Plan A is ~empty — no broken
-      critical flows. Effort shifts to Plan B/C/E.)**
+- [x] Triaged the must-never-break set with the user → the curated money/clinical core: New Visit,
+      record finding, create invoice, record payment, create appointment, check-in (hard-asserted
+      across the journey harness). **No P0s — `main` was healthy; the live breakage was
+      environmental drift.** Effort shifted to Plan B/C/D/E/F.
 
-### Plan A — Fix what Phase 0 found red (gated on the audit) — TDD per defect
-- [ ] (steps authored after Phase 0; no placeholders)
+### Plan A — Fix what Phase 0 found red (gated on the audit) — TDD per defect ✅ N/A
+- [x] **Nothing red to fix.** Phase 0 found no broken critical flow (the incident was environment
+      drift, not a code defect), so Plan A had no defects to author — by design, not omission.
 
 ### Plan B — Harden + de-flake the critical-path journeys (the heart)
 - [x] **Slice 1 — New Visit (the literal incident).** Killed J01's `if (count && isEnabled)`
@@ -129,6 +138,8 @@ armed the last gap in it:
       security policy", also 42501) is left UNTOUCHED — `describeRlsPermissionError` matches only the
       grant-drift message. Pure rules unit-tested (`schema-drift.test.ts`, 9 cases); RLS isolation
       suite unaffected.
+- [x] **Promoted to a required check.** `Code-DB Drift Gate` added to branch protection
+      (16 required, `strict` preserved) — it now BLOCKS merge, not just runs advisory.
 
 ### Plan E — Local dev doctor + hot-reload ✅ DONE (PR #25, merged)
 - [x] `bun run dev:doctor` (DB migration count == file count, app_rls grants, API up+ready,
