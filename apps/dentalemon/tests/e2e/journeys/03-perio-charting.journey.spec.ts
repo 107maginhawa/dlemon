@@ -64,18 +64,31 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await perioEntry.click()
     await expect(page.getByTestId('perio-overlay')).toBeVisible({ timeout: 10_000 })
 
-    // Step 2: a fresh visit has no perio exam yet — start it (POST /perio-charts).
+    // Step 2: the harness runs against a freshly-reseeded DB where Roberto's
+    // active visit has NO perio chart (seed-demo never creates one; only Claudia
+    // gets a seeded chart in seed-supplement). So "Start perio exam" MUST render
+    // and its POST MUST succeed — that is the @AC-PERIO-01 core behavior under
+    // test. The earlier `if (startBtn.count())` GATE let a leftover chart (e.g. a
+    // residue of a prior run on a non-reseeded DB) hide the start button and
+    // SILENTLY SKIP the start flow while still passing on the stale chart — the
+    // J01-class blind spot. Hard-assert the affordance and its POST instead.
     const startBtn = page.getByTestId('perio-start-btn')
-    if (await startBtn.count()) {
-      const startPost = page
-        .waitForResponse(
-          (r) => /\/dental\/perio-charts$/.test(r.url()) && r.request().method() === 'POST',
-          { timeout: 10_000 },
-        )
-        .catch(() => null)
-      await startBtn.click()
-      await startPost
-    }
+    await expect(
+      startBtn,
+      '"Start perio exam" must render for a fresh visit (run `bun run db:reseed` if this fails locally — a leftover chart hides it)',
+    ).toBeVisible({ timeout: 10_000 })
+    const startPost = page
+      .waitForResponse(
+        (r) => /\/dental\/perio-charts$/.test(r.url()) && r.request().method() === 'POST',
+        { timeout: 10_000 },
+      )
+      .catch(() => null)
+    await startBtn.click()
+    const startResp = await startPost
+    expect(
+      startResp?.ok(),
+      `Start perio exam must POST /dental/perio-charts → 2xx (got ${startResp?.status() ?? 'no response'})`,
+    ).toBe(true)
 
     // Step 3: the 6-site probing grid must render — the capture surface is usable.
     await expect(

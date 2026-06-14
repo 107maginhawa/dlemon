@@ -77,29 +77,33 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await page.getByTestId('imaging-tab-btn').click()
     await expect(page.getByTestId('imaging-overlay')).toBeVisible({ timeout: 10_000 })
 
-    // Filter specifically for li items showing 'cephalometric' modality text to
-    // avoid matching legacy attachments that share 'ceph'/'lateral' in their filename.
+    // Select the ceph image FOR VIEWING. Filter on the 'cephalometric' modality
+    // <p> (not the filename — legacy attachments share 'ceph'/'lateral'). The row's
+    // <li> also holds a comparison checkbox, and clicking the <li> centre can land
+    // off the view-select region (PatientImageList: `onSelectImage` is on the inner
+    // cursor-pointer div, NOT the <li>), leaving the viewer on "Select an image to
+    // view" and the ceph panel un-mounted — the B02 image-selection flake (green
+    // only on retry). Click the modality TEXT inside the row (same fix B01 already
+    // carries), then assert the toggle appears (auto-retrying) so the selection is
+    // PROVEN to have registered — not a one-shot count() that races the mount.
     const imageEntry = page
       .getByTestId('imaging-overlay')
       .locator('li')
       .filter({ has: page.locator('p', { hasText: 'cephalometric' }) })
       .first()
-    if (!(await imageEntry.count())) {
-      throw new Error(
-        'Ceph image not selectable in PatientImageList — cannot open the ceph workspace.',
-      )
-    }
-    await imageEntry.click()
-    await page.waitForLoadState('networkidle')
+    await expect(
+      imageEntry,
+      'seeded cephalometric image must appear in PatientImageList',
+    ).toBeVisible({ timeout: 10_000 })
+    await imageEntry.getByText(/cephalometric/i).first().click()
 
-    // Open the ceph panel (landmark palette).
-    const cephToggle = page.getByRole('button', { name: 'Toggle ceph panel' })
-    if (!(await cephToggle.count())) {
-      throw new Error(
-        'No "Toggle ceph panel" control — the cephalometric workspace did not ' +
-          'mount for the selected image. UI step 1 impossible.',
-      )
-    }
+    // Open the ceph panel (landmark palette). The toggle only renders once an image
+    // is loaded into the viewer — its appearance confirms the selection registered.
+    const cephToggle = page.getByRole('button', { name: /toggle ceph panel/i }).first()
+    await expect(
+      cephToggle,
+      'image must be selected (cephalometric workspace mounted) before opening the ceph panel',
+    ).toBeVisible({ timeout: 15_000 })
     await cephToggle.click()
 
     // The seed already placed + confirmed the golden landmarks for this image.

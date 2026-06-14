@@ -86,21 +86,29 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await openWorkspace(page, patientId)
     await page.getByTestId('imaging-tab-btn').click()
     await expect(page.getByTestId('imaging-overlay')).toBeVisible({ timeout: 10_000 })
-    // Filter specifically for li items showing 'cephalometric' modality text.
+    // Select the ceph image FOR VIEWING. Filter on the 'cephalometric' modality <p>
+    // (not the filename). Clicking the <li> centre can miss the inner onSelectImage
+    // div (PatientImageList), leaving the viewer empty and the ceph panel un-mounted
+    // — the same image-selection flake B01/B02 carry. Click the modality TEXT, then
+    // assert the toggle appears (auto-retrying) so the selection is PROVEN to have
+    // registered — not the prior `if (count) click` + one-shot count() that races
+    // the mount and could silently skip into the locked-landmark assertions.
     const imageEntry = page
       .getByTestId('imaging-overlay')
       .locator('li')
       .filter({ has: page.locator('p', { hasText: 'cephalometric' }) })
       .first()
-    if (await imageEntry.count()) await imageEntry.click()
-    await page.waitForLoadState('networkidle')
+    await expect(
+      imageEntry,
+      'seeded cephalometric image must appear in PatientImageList',
+    ).toBeVisible({ timeout: 10_000 })
+    await imageEntry.getByText(/cephalometric/i).first().click()
 
-    const cephToggle = page.getByRole('button', { name: 'Toggle ceph panel' })
-    if (!(await cephToggle.count())) {
-      throw new Error(
-        'Ceph workspace did not mount — cannot attempt locked-landmark edit.',
-      )
-    }
+    const cephToggle = page.getByRole('button', { name: /toggle ceph panel/i }).first()
+    await expect(
+      cephToggle,
+      'cephalometric workspace must mount (toggle present) before attempting the locked-landmark edit',
+    ).toBeVisible({ timeout: 15_000 })
     await cephToggle.click()
 
     // The palette button for a locked landmark must be visibly disabled

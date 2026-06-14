@@ -55,13 +55,30 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
       independent-read exactly 1 open visit**. Wired into the harness roster. Verified live: full
       harness 20/21 PASS (J21 green; the 1 ERROR was a pre-existing ceph flake B02, green on
       retry). This runs in the already-required **Journey Harness** check.
-- [ ] Slice 2 — sweep the remaining probe-and-skip guards across J02–J20 (revenue chain, perio,
-      charting, etc.) → hard asserts (present+enabled → act → assert user-visible result AND API 2xx).
-- [ ] Flakiness root-cause fixes (THE task): kill `networkidle` races → explicit waits;
-      de-flake the ceph journeys (B02 image-selection). **NOTE:** `playwright.config.ts:96`
-      `reuseExistingServer: true` for the API is INTENTIONAL — the journey CI job pre-boots+seeds
-      api-ts, so Playwright must reuse it (changing to `!CI` → second api-ts → port collision).
-      Determinism comes from the from-zero reseed in the job, not that flag. Leave it.
+- [x] **Slice 2 — sweep the remaining probe-and-skip guards across J02–J20.** Audited all 19.
+      Finding (evidence, not assumption): the suite was already in far better shape than feared —
+      J02–J20 overwhelmingly **throw on failure** (→ ERROR → harness exit 1) and terminate in a hard
+      `if (goalState) recordPass else throw`; the J01-class *silent-skip-and-still-pass* was essentially
+      unique to J01 (fixed in slice 1). The legitimately-optional guards (close a slideout, click New
+      Visit only when an open visit isn't already present, sign a note only if still editable) were left
+      intact — killing them would add flakiness, not catch bugs. **One genuine silent-skip-of-core
+      survived and is now closed: J03 (perio).** It started the perio exam only `if (startBtn.count())`;
+      proved live that a leftover chart on a non-reseeded DB hides the "Start perio exam" button → the
+      start flow (@AC-PERIO-01) was silently skipped while the journey passed on the stale chart.
+      Hardened to: **hard-assert "Start perio exam" renders → click → assert `POST /dental/perio-charts`
+      → 2xx**. Verified non-vacuous (it now fails loudly on a dirty DB; the old gate passed silently).
+- [x] **Flakiness root-cause fix — de-flake the ceph journeys (B02 + B03 image-selection).** Both
+      clicked the `<li>` centre (the `onSelectImage` handler is on an inner div, not the `<li>`, so the
+      click could miss → viewer empty → ceph panel never mounts) and then used a one-shot
+      `cephToggle.count()` that raced the mount — the green-on-retry flake. Fixed to mirror B01's already-
+      landed pattern: **click the modality text + `expect(cephToggle).toBeVisible()` (auto-retrying), so
+      the selection is proven to have registered.** Verified: B02+B03 ran **10/10** under `--repeat-each=5`,
+      and the full harness is now **21/21 with 0 flaky** (was 20/21, B02 flaking). `networkidle` waits left
+      as-is where present — they were not the flake source here, and churning them risks new races.
+      **NOTE:** `playwright.config.ts:96` `reuseExistingServer: true` for the API is INTENTIONAL — the
+      journey CI job pre-boots+seeds api-ts, so Playwright must reuse it (changing to `!CI` → second
+      api-ts → port collision). Determinism comes from the from-zero reseed in the job, not that flag.
+      Leave it.
 - [ ] Stability budget: curated smoke passes **20/20 consecutive CI runs** before arming (Plan C).
 - [x] Curated set = money/clinical core only (New Visit ✅, record finding, create invoice,
       record payment, create appointment, check-in). New Visit landed first.
