@@ -18,6 +18,7 @@ import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/utils/visit.service';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import type { NotificationService } from '@/core/notifs';
 import type { User } from '@/types/auth';
 import type { CheckInAppointmentParams } from '@/generated/openapi/validators';
@@ -70,8 +71,13 @@ export async function checkInAppointment(ctx: HandlerContext) {
     );
   }
 
-  // 2-4: Atomically: check in + create visit + link visit
-  const result = await db.transaction(async (tx) => {
+  // 2-4: Atomically: check in + create visit + link visit.
+  // RLS P1b activation: the commit tx is a withTenantTx scoped to the
+  // appointment's branch so the app_rls policies on dental_appointment +
+  // dental_visit enforce the scope (WITH CHECK validates the visit insert). The
+  // resolution fetch + authz + cross-patient in-progress-visit guard above stay
+  // on db; notifs below stay on db.
+  const result = await withTenantTx(db, { branchIds: [appointment.branchId] }, async (tx) => {
     const txAppointmentRepo = new DentalAppointmentRepository(tx);
 
     const checkedIn = await txAppointmentRepo.checkIn(appointmentId, user.id);

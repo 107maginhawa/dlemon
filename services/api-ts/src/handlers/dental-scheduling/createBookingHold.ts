@@ -20,6 +20,7 @@ import { parseOnlineBookingConfig, durationForVisitType, isOnlineBookable } from
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { AppointmentHoldRepository } from './repos/appointment-hold.repo';
 import { bookingWriteLimiter, clientIp } from './public-booking-ratelimit';
+import { withTenantTx } from '@/core/tenant-tx';
 
 const HOLD_TTL_MINUTES = 5;
 
@@ -71,24 +72,30 @@ export async function createBookingHold(
     throw new BusinessLogicError('Slot is outside configured working hours', 'OUTSIDE_WORKING_HOURS');
   }
 
-  const apptRepo = new DentalAppointmentRepository(db);
-  const holdRepo = new AppointmentHoldRepository(db);
-
-  const overlapping = await apptRepo.findOverlapping(body.providerId, branchId, startAt, durationMinutes);
-  if (overlapping.length > 0) throw new ConflictError('Slot is no longer available', 'SLOT_TAKEN');
-
-  const heldOverlaps = await holdRepo.findActiveOverlapping(body.providerId, branchId, startAt, durationMinutes, now);
-  if (heldOverlaps.length > 0) throw new ConflictError('Slot is currently held', 'SLOT_HELD');
-
+  // RLS P1b activation: the overlap re-checks (dental_appointment +
+  // dental_appointment_hold) and the hold write run inside one withTenantTx so
+  // app_rls scopes them to this branch (and WITH CHECK validates the insert).
+  // The branch-config read above stays on db.
   const sessionToken = crypto.randomUUID();
   const expiresAt = new Date(now.getTime() + HOLD_TTL_MINUTES * 60 * 1000);
-  const hold = await holdRepo.createOne({
-    branchId,
-    providerId: body.providerId,
-    startAt,
-    durationMinutes,
-    expiresAt,
-    sessionToken,
+  const hold = await withTenantTx(db, { branchIds: [branchId] }, async (tx) => {
+    const apptRepo = new DentalAppointmentRepository(tx);
+    const holdRepo = new AppointmentHoldRepository(tx);
+
+    const overlapping = await apptRepo.findOverlapping(body.providerId, branchId, startAt, durationMinutes);
+    if (overlapping.length > 0) throw new ConflictError('Slot is no longer available', 'SLOT_TAKEN');
+
+    const heldOverlaps = await holdRepo.findActiveOverlapping(body.providerId, branchId, startAt, durationMinutes, now);
+    if (heldOverlaps.length > 0) throw new ConflictError('Slot is currently held', 'SLOT_HELD');
+
+    return holdRepo.createOne({
+      branchId,
+      providerId: body.providerId,
+      startAt,
+      durationMinutes,
+      expiresAt,
+      sessionToken,
+    });
   });
 
   return ctx.json({

@@ -9,6 +9,7 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { QueueItemRepository } from './repos/queue-item.repo';
 import { QUEUE_ITEM_FSM } from './repos/queue-item.schema';
 import { assertBranchAccess } from './utils/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import type { DatabaseInstance } from '@/core/database';
 import type { DentalQueueItem, QueueItemStatus } from './repos/queue-item.schema';
 import type { HandlerContext } from '@/types/app';
@@ -43,11 +44,16 @@ export async function updateQueueItemStatus(ctx: HandlerContext): Promise<Respon
   if (body.status === 'in_progress') timestamps.startedAt = now;
   if (body.status === 'completed') timestamps.completedAt = now;
 
-  const updated = await queueRepo.update(itemId, {
-    status: body.status,
-    ...timestamps,
-    ...(body.notes !== undefined ? { notes: body.notes } : {}),
-  });
+  // RLS P1b activation: the status write goes through withTenantTx so the
+  // app_rls policy on dental_queue_item enforces the branch scope. The
+  // resolution fetch (queueRepo.findOneById) + authz above stay on db.
+  const updated = await withTenantTx(db, { branchIds: [item.branchId] }, (tx) =>
+    new QueueItemRepository(tx, logger).update(itemId, {
+      status: body.status,
+      ...timestamps,
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+    }),
+  );
 
   logger?.info({ action: 'updateQueueItemStatus', itemId, from: item.status, to: body.status }, 'Queue item status updated');
 

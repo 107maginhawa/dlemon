@@ -7,6 +7,7 @@
 import { UnauthorizedError } from '@/core/errors';
 import { QueueItemRepository } from './repos/queue-item.repo';
 import { assertBranchAccess } from './utils/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -20,8 +21,11 @@ export async function listQueueBoard(ctx: HandlerContext): Promise<Response> {
 
   await assertBranchAccess(db, user.id, branchId);
 
-  const queueRepo = new QueueItemRepository(db, logger);
-  const items = await queueRepo.findActiveByBranch(branchId);
+  // RLS P1b activation: the queue-board read goes through withTenantTx so the
+  // app_rls policy on dental_queue_item scopes it to the branch. Authz stays on db.
+  const items = await withTenantTx(db, { branchIds: [branchId] }, (tx) =>
+    new QueueItemRepository(tx, logger).findActiveByBranch(branchId),
+  );
 
   return ctx.json(items);
 }

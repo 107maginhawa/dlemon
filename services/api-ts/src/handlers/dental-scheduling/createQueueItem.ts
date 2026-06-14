@@ -8,6 +8,7 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { QueueItemRepository } from './repos/queue-item.repo';
 import { assertBranchAccess } from './utils/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import type { DatabaseInstance } from '@/core/database';
 import type { HandlerContext } from '@/types/app';
 
@@ -27,16 +28,20 @@ export async function createQueueItem(ctx: HandlerContext): Promise<Response> {
 
   await assertBranchAccess(db, user.id, appointment.branchId);
 
-  const queueRepo = new QueueItemRepository(db, logger);
-  const item = await queueRepo.createOne({
-    appointmentId,
-    patientId: appointment.patientId,
-    branchId: appointment.branchId,
-    status: 'waiting',
-    notes: body.notes ?? null,
-    createdBy: user.id,
-    updatedBy: user.id,
-  });
+  // RLS P1b activation: the queue-item write goes through withTenantTx so the
+  // app_rls policy on dental_queue_item enforces the branch scope (and WITH CHECK
+  // validates the insert). Resolution fetch + authz above stay on db.
+  const item = await withTenantTx(db, { branchIds: [appointment.branchId] }, (tx) =>
+    new QueueItemRepository(tx, logger).createOne({
+      appointmentId,
+      patientId: appointment.patientId,
+      branchId: appointment.branchId,
+      status: 'waiting',
+      notes: body.notes ?? null,
+      createdBy: user.id,
+      updatedBy: user.id,
+    }),
+  );
 
   logger?.info({ action: 'createQueueItem', appointmentId, itemId: item.id }, 'Queue item created');
 

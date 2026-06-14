@@ -17,6 +17,7 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError, ValidationError }
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { DentalWaitlistEntryRepository } from './repos/waitlist-entry.repo';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import { durationFromRange, isVisitType, toWire } from './appointment-wire';
 import type { User } from '@/types/auth';
@@ -67,17 +68,20 @@ export async function promoteWaitlistEntry(ctx: HandlerContext) {
   }
 
   const durationMinutes = durationFromRange(startAt, endAt);
-  const apptRepo = new DentalAppointmentRepository(db);
 
-  // Soft double-booking warning (parity with createAppointment FR3.7).
-  const overlapping = await apptRepo.findOverlapping(dentistMemberId, entry.branchId, startAt, durationMinutes);
+  // RLS P1b activation: atomically book the appointment and promote the entry
+  // inside ONE withTenantTx so the app_rls policies on dental_appointment +
+  // dental_waitlist_entry enforce the branch scope (WITH CHECK validates both
+  // writes). The soft double-booking overlap re-check (dental_appointment read)
+  // moves inside the tx too so it is scoped. Authz above + audit below stay on db.
   const warnings: string[] = [];
-  if (overlapping.length > 0) warnings.push('DOUBLE_BOOKING');
-
-  // Atomically book the appointment and promote the entry.
-  const result = await db.transaction(async (tx) => {
+  const result = await withTenantTx(db, { branchIds: [entry.branchId] }, async (tx) => {
     const txApptRepo = new DentalAppointmentRepository(tx);
     const txWaitlistRepo = new DentalWaitlistEntryRepository(tx, logger);
+
+    // Soft double-booking warning (parity with createAppointment FR3.7).
+    const overlapping = await txApptRepo.findOverlapping(dentistMemberId, entry.branchId, startAt, durationMinutes);
+    if (overlapping.length > 0) warnings.push('DOUBLE_BOOKING');
 
     const appt = await txApptRepo.createOne({
       patientId: entry.patientId,

@@ -23,6 +23,7 @@ import { matchOrCreatePatientForOnlineBooking } from '@/handlers/patient/repos/p
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { AppointmentHoldRepository } from './repos/appointment-hold.repo';
 import { bookingWriteLimiter, clientIp } from './public-booking-ratelimit';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { NotificationService } from '@/core/notifs';
 
@@ -107,9 +108,13 @@ export async function createOnlineBooking(
   // Transactional commit: final overlap re-check (appointments AND active holds)
   // then create the appointment. This closes the read-then-write race; the DB
   // exclusion constraint is the storage backstop if two tx interleave.
+  // RLS P1b activation: the commit tx is a withTenantTx scoped to this branch so
+  // the app_rls policies on dental_appointment + dental_appointment_hold enforce
+  // the scope (WITH CHECK validates the insert). The branch-config read and the
+  // pre-tx match-or-create-patient stay on db; audit/notifs below stay on db.
   let appointment;
   try {
-    appointment = await db.transaction(async (tx) => {
+    appointment = await withTenantTx(db, { branchIds: [branchId] }, async (tx) => {
       const apptRepo = new DentalAppointmentRepository(tx);
       const holdRepo = new AppointmentHoldRepository(tx);
 
