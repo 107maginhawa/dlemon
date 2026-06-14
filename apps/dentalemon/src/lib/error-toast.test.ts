@@ -10,7 +10,7 @@
  * the backend never sends, which is how the create-visit "try again" bug shipped.
  */
 import { describe, test, expect } from 'bun:test';
-import { extractApiError, getErrorMessage } from './error-toast';
+import { extractApiError, extractErrorRef, getErrorMessage } from './error-toast';
 import { makeSdkError } from '@/test-utils';
 
 const FALLBACK = 'Failed to do the thing. Please try again.';
@@ -105,3 +105,55 @@ class SdkErrorLike extends Error {
     this.name = 'SdkError';
   }
 }
+
+// Plan F — de-mask opaque errors: every error envelope carries a unique `requestId`
+// (the server logs the same value), but the toast dropped it, so two different 500s
+// read identically and could not be told apart or correlated to a log line.
+describe('extractErrorRef — the per-occurrence reference', () => {
+  test('reads requestId from SdkError.body', () => {
+    const err = makeSdkError(500, { code: 'INTERNAL_SERVER_ERROR', message: 'Internal server error', requestId: 'abcd1234-eeee-ffff' });
+    expect(extractErrorRef(err)).toBe('abcd1234-eeee-ffff');
+  });
+  test('falls back to trackingId (500 envelope) when requestId is absent', () => {
+    expect(extractErrorRef({ code: 'INTERNAL_SERVER_ERROR', trackingId: 'track-9999' })).toBe('track-9999');
+  });
+  test('returns undefined when there is no ref (e.g. a network error)', () => {
+    expect(extractErrorRef(new Error('Failed to fetch'))).toBeUndefined();
+    expect(extractErrorRef(null)).toBeUndefined();
+  });
+});
+
+describe('getErrorMessage — opaque errors carry a ref (Plan F)', () => {
+  const REQ = 'a1b2c3d4-0000-1111-2222-333344445555';
+
+  test('a generic 500 shows the contextual fallback PLUS a short ref (not "Internal server error")', () => {
+    const err = makeSdkError(500, { code: 'INTERNAL_SERVER_ERROR', message: 'Internal server error', requestId: REQ });
+    const msg = getErrorMessage(err, FALLBACK);
+    expect(msg).toContain(FALLBACK);
+    expect(msg).not.toContain('Internal server error');
+    expect(msg).toContain(REQ.slice(0, 8));
+    expect(msg).toMatch(/\(ref: /);
+  });
+
+  test('two different 500s produce DISTINGUISHABLE messages (the core gap)', () => {
+    const a = getErrorMessage(makeSdkError(500, { code: 'INTERNAL_SERVER_ERROR', requestId: 'aaaaaaaa-1111' }), FALLBACK);
+    const b = getErrorMessage(makeSdkError(500, { code: 'INTERNAL_SERVER_ERROR', requestId: 'bbbbbbbb-2222' }), FALLBACK);
+    expect(a).not.toBe(b);
+  });
+
+  test('an ACTIONABLE backend message is shown verbatim with NO ref noise', () => {
+    const err = makeSdkError(409, { code: 'ACTIVE_VISIT_EXISTS', message: 'Active visit already exists for this patient. Complete or discard it first.', requestId: REQ });
+    const msg = getErrorMessage(err, FALLBACK);
+    expect(msg).toBe('Active visit already exists for this patient. Complete or discard it first.');
+    expect(msg).not.toMatch(/ref:/);
+  });
+
+  test('a mapped code is shown friendly with NO ref noise', () => {
+    const err = makeSdkError(422, { code: 'VISIT_LOCKED', message: 'visit is locked', requestId: REQ });
+    expect(getErrorMessage(err, FALLBACK)).toBe('Visit is locked. Reopen the visit to make changes.');
+  });
+
+  test('a fallback WITHOUT a server ref (network error) stays a clean contextual string', () => {
+    expect(getErrorMessage(new Error('Failed to fetch'), FALLBACK)).toBe(FALLBACK);
+  });
+});

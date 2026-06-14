@@ -141,9 +141,19 @@ armed the last gap in it:
       108/108; the only output is the benign `CREATE TABLE IF NOT EXISTS` notice on the meta
       table), so a watch restart's `runMigrations` is non-destructive.
 
-### Plan F — De-mask errors (small)
-- [ ] Confirm the real gap (likely "always emit a parseable `code`" not a rewrite), then fix
-      `apps/dentalemon/src/lib/error-toast.ts`, `use-create-visit.ts`.
+### Plan F — De-mask errors (small) ✅ DONE
+- [x] **Confirmed the real gap** (not a rewrite): every backend error envelope already carries a
+      unique `requestId` (500s also `trackingId`) and the server logs the SAME value
+      (`middleware/request.ts`) — but the toast dropped it, so two different opaque failures read
+      identically ("Please try again") and couldn't be told apart or correlated to a log line. And a
+      generic 500 surfaced its opaque `"Internal server error"` message, worse than a contextual line.
+- [x] **Fix (`error-toast.ts`):** `extractErrorRef` pulls the ref; `getErrorMessage` now treats
+      GENERIC server codes/messages (`INTERNAL_SERVER_ERROR`, "Internal server error") as
+      non-actionable → routes to the contextual fallback, and appends `(ref: <8-char>)` whenever it
+      lands on the fallback AND a server ref exists. Actionable backend messages + mapped codes are
+      shown clean (no ref noise); network errors (no ref) stay a clean fallback. `use-create-visit.ts`
+      needs no change — its `toastError(..., 'Failed to create visit. Please try again.')` now
+      auto-carries the ref. TDD: error-toast suite 22/22 (6 new); tsc + create-visit hook green.
 
 ## Discipline change
 Verify "works for users" by running the real-stack smoke and citing its result — not by

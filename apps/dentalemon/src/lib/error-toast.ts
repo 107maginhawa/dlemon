@@ -41,6 +41,20 @@ const CODE_MESSAGES: Record<string, string> = {
 
 const KNOWN_CODES = Object.keys(CODE_MESSAGES);
 
+/**
+ * Codes / messages that carry NO actionable user information — the server's generic
+ * 500 surface. We must NOT show "Internal server error" to a user: it is worse than
+ * a contextual fallback and indistinguishable across failures. Instead we show the
+ * caller's fallback plus a per-occurrence ref (see getErrorMessage).
+ */
+const GENERIC_CODES = new Set([
+  'INTERNAL_SERVER_ERROR',
+  'INTERNAL_ERROR',
+  'UNKNOWN_ERROR',
+  'UNHANDLED',
+]);
+const GENERIC_MESSAGES = new Set(['internal server error', 'an unexpected error occurred']);
+
 /** Read `{ code, message }` off a candidate envelope object (string fields only). */
 function readEnvelope(o: Record<string, unknown>): { code?: string; message?: string } {
   return {
@@ -76,6 +90,33 @@ export function extractApiError(err: unknown): { code?: string; message?: string
   return {};
 }
 
+/** Read a per-occurrence reference (`requestId`, else `trackingId`) off an envelope. */
+function readRef(o: Record<string, unknown>): string | undefined {
+  const id = o.requestId ?? o.trackingId;
+  return typeof id === 'string' && id.trim() ? id : undefined;
+}
+
+/**
+ * Pull the server's per-occurrence reference from the error envelope. Every backend
+ * error response carries a `requestId` (500s also a `trackingId`) and the server
+ * logs the SAME value (see services/api-ts/src/middleware/request.ts), so surfacing
+ * it makes two otherwise-identical opaque failures distinguishable AND lets a user
+ * quote the exact id to correlate with the log line. Returns undefined for a network
+ * error (the request never reached the server, so there is no ref).
+ */
+export function extractErrorRef(err: unknown): string | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const e = err as Record<string, unknown>;
+  if (e.body && typeof e.body === 'object') {
+    const fromBody = readRef(e.body as Record<string, unknown>);
+    if (fromBody) return fromBody;
+  }
+  const top = readRef(e);
+  if (top) return top;
+  if (e.error && typeof e.error === 'object') return readRef(e.error as Record<string, unknown>);
+  return undefined;
+}
+
 /** Last-resort: scan a serialized error for a known code, returning its mapped copy. */
 function scanForKnownCodeMessage(err: unknown): string | undefined {
   try {
@@ -87,15 +128,33 @@ function scanForKnownCodeMessage(err: unknown): string | undefined {
   }
 }
 
-/** Resolve the best user-facing message for an error, falling back to `fallback`. */
+/**
+ * Resolve the best user-facing message for an error, falling back to `fallback`.
+ *
+ * Order: a mapped friendly code → an actionable backend message → a known-code scan
+ * → the contextual fallback. A GENERIC server message ("Internal server error") /
+ * code (INTERNAL_SERVER_ERROR) is treated as non-actionable and routed to the
+ * fallback so the user never sees the opaque server string. Whenever we land on the
+ * fallback AND the server gave us a per-occurrence ref, we append it — turning an
+ * indistinguishable "Please try again" into a quotable, log-correlatable one.
+ */
 export function getErrorMessage(err: unknown, fallback: string): string {
   const { code, message } = extractApiError(err);
   const mapped = code ? CODE_MESSAGES[code] : undefined;
   if (mapped) return mapped;
-  if (message && message.trim()) return message;
+
+  const isGeneric =
+    (!!code && GENERIC_CODES.has(code)) ||
+    (!!message && GENERIC_MESSAGES.has(message.trim().toLowerCase()));
+  if (message && message.trim() && !isGeneric) return message;
+
   const scanned = scanForKnownCodeMessage(err);
   if (scanned) return scanned;
-  return fallback;
+
+  // Opaque path: append the server ref (first 8 chars — enough to disambiguate and
+  // to grep the logs) when present. Network errors have no ref → clean fallback.
+  const ref = extractErrorRef(err);
+  return ref ? `${fallback} (ref: ${ref.slice(0, 8)})` : fallback;
 }
 
 /** Show an error toast with the taxonomy message when available, else `fallback`. */
