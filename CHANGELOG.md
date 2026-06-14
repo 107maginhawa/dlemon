@@ -4,12 +4,91 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-The tagged entries below track released versions. Substantial product work
-has landed since `0.2.0.0` (2026-05-18) on feature branches; it is recorded in
-the git history and merged PRs rather than per-commit here, and the next
-version bump will consolidate it. For interim changes see `git log
-v0.2.0.0..HEAD` and the PR list; for tracked debt see
-[docs/KNOWN_LIMITATIONS.md](./docs/KNOWN_LIMITATIONS.md).
+This section consolidates the dental practice-management build-out that has
+landed on top of the `0.2.0.0` template baseline (2026-05-18). It is a curated
+summary grouped by domain, not a per-commit log; the full history is in the git
+log and the merged PRs. For tracked debt see
+[docs/KNOWN_LIMITATIONS.md](./docs/KNOWN_LIMITATIONS.md); for architectural
+decisions see [docs/decisions/](./docs/decisions/). No version has been cut yet
+— the next release bump will tag this set.
+
+### Added
+
+- **Patient records & treatment planning**: patient contacts/guardians and
+  household (family file) with guarantor; per-channel communication consent;
+  duplicate-patient detection; CSV bulk import; treatment plans with a plan-level
+  FSM, status history, clinical phasing/priority sequencing, alternate cases, and
+  CDT versioning; recalls and tasks with their own FSMs.
+- **Clinical workflows**: structured informed consent (content, refusal,
+  revoke/history, per-clinic template bodies); prescriptions (Rx list and
+  dispense/cancel lifecycle, drug–drug interaction check, allergy
+  blocking-with-override, DEA/NPI/controlled-substance legal fields); ASA
+  classification with periodic re-confirmation; lab orders; occlusion screening
+  and post-op instruction templates; dental alerts; clinical-note amendments.
+- **Dental charting**: per-notation rendering (FDI/Universal/Palmer); mixed and
+  pediatric dentition; multi-select layers and a diff/compare overlay; a
+  cumulative cross-visit "living document" (Proposed/Completed/Declined layers,
+  baseline carry-over into new visits); condition-vocabulary findings that drive
+  treatments; selected-tooth context panel; structured chart export; an
+  append-only `dental_chart_version` audit table.
+- **Periodontal**: periodontal charting (MVP), read-only Clinical Attachment
+  Level per site, 2017 AAP/EFP staging/grading/extent assistance, multi-exam
+  comparison (History view), and voice/hands-free charting.
+- **Imaging & cephalometrics**: cephalometric analysis workspace with Downs,
+  Tweed, McNamara, Jarabak, and Ricketts analyses plus population norms;
+  superimposition registration engine with deltas; versioned 2-point calibration;
+  assistant-prepares/clinician-finalizes sign-off; explicit report revision
+  lineage and analysis/norm/formula provenance pinning; an AI/auto-landmarking
+  Phase-0 seam (detector + provenance + safety + UX); DICOM and CBCT ingest
+  (MIME allowlist, PixelSpacing calibration, viewer handoff); FMX anatomical mount
+  layout; image-library metadata (diagnostic/quality/tags + filters) and context
+  links to treatment plans/ortho/reports.
+- **Scheduling**: operatories with appointment FKs; online self-service patient
+  booking (backend + public UI); reminders + recall engine; drag-to-reschedule;
+  waitlist/ASAP fill; a confirmed-appointment status lifecycle; side-by-side
+  columns for overlapping appointments; a queue board.
+- **Billing & revenue cycle**: payment plans (create dialog, idempotent replay),
+  discounts, payment void, mark-invoice-uncollectible write-off (BR-013), AR aging
+  buckets with batch statements, and a PH insurance / revenue-cycle backend with a
+  claims worklist and coverage surfaces.
+- **Org, onboarding & access control**: self-service clinic onboarding with a
+  one-active-org invariant; provisional-org PHI write gate and owner activation;
+  fee-schedule GET/PATCH; a granular per-feature permission grid; provider
+  credentials on membership; HIPAA auto-logoff on PIN idle timeout; server-side
+  PIN session. New roles (hygienist, read_only, treatment_coordinator) with a
+  systematic `assertBranchRole` matrix across 37 write handlers and an
+  RBAC-filtered dashboard sidebar; a dental-assistant clinical-assist workflow.
+- **Compliance & data governance**: right-to-erasure workflow (subject queue,
+  physical S3 radiograph/attachment deletion, person-only rejection); real
+  LegalHold store wired into erasure and retention; policy-driven data-retention
+  enforcement with appointment auto-purge; a DB-level append-only trigger on
+  `dental_audit_log`, a queryable audit table, and an owner audit viewer.
+- **Offline-first sync**: `localId` idempotency on visit/treatment/invoice/chart
+  creates; clock-aware last-write-wins for baseline tooth merges; a monotonic
+  status-merge primitive; durable persistence of rejected stale writes as sync
+  conflicts (with FE visibility/resolution); sync-metadata foundation and sync
+  status badges.
+- **Patient portal & case presentation**: patient self-service reads
+  (`/me/appointments`, `/me/invoices` behind assert-self-patient) and a
+  patient-facing case-presentation surface.
+- **Platform & developer experience**: extracted `@monobase/ui` (35 shadcn
+  primitives), `@monobase/shared-utils`, and `@monobase/ceph-math` packages;
+  module-boundary lint and a no-duplicate-`operationId` generator gate; a
+  `no-raw-fetch` lint enforcing SDK-only data access; a cross-layer contract-spine
+  for AI extensibility; centralized error-taxonomy toasts; a Prometheus metrics
+  endpoint with a latency-histogram middleware; an autocannon performance ratchet;
+  a migration-safety lint; and OpenAPI drift CI. Numerous manual route groups were
+  migrated to TypeSpec codegen.
+
+### Changed
+
+- Imaging list hook (`use-imaging-studies`) requires `branchId` and disables the
+  query when missing, preventing spurious 400s (carried from 0.2.0.0 and extended
+  across patient/billing/scheduling lists, which now show explicit error states).
+- Tenant isolation is enforced at the application/repository layer (per-query
+  tenant filters, `assertBranchRole`, mandatory `branchId` on list/report
+  endpoints); DB row-level security is a tracked pre-GA gate
+  ([ADR-010](./docs/decisions/ADR-010-tenant-isolation-rls-pre-ga.md)).
 
 ## [0.2.0.0] - 2026-05-18
 
