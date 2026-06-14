@@ -89,15 +89,26 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
       clean**, so a green job IS the banked proof. One serial job amortizes setup → cheap on
       CI minutes (~40 min for 20). Verified locally **2/2 clean (21/21 each)** against the
       reseeded dev stack.
-- [ ] **Earn the bank:** dispatch `Journey Stability Budget` (runs=20) and confirm **20/20
-      green** before arming Plan C. (Ceph B01–B04 record SKIPPED in CI — no MinIO — which the
-      gate tolerates.)
+- [x] **Bank earned — 20/20.** Dispatched `Journey Stability Budget` (runs=20) on `main`
+      (run 27502176220, 47m): **`Runs: 20/20 clean | pass-rate 100.0% | ✅ BUDGET BANKED`**,
+      zero flaky journeys. The curated real-stack smoke is proven stable → Plan C cleared to arm.
 - [x] Curated set = money/clinical core only (New Visit ✅, record finding, create invoice,
       record payment, create appointment, check-in). New Visit landed first.
 
-### Plan C — Arm the gate (gated on B's 20/20 + A green) — THE LOCK
-- [ ] Make the curated smoke a required check; run against a from-zero-migrated DB. Zero
-      `continue-on-error`, zero skips.
+### Plan C — Arm the gate (gated on B's 20/20 + A green) — THE LOCK ✅ DONE
+The full 21-journey **Journey Harness** IS the lock (not a carved subset) — already a
+required, blocking check, with **no `continue-on-error`**, running against a **from-zero-
+migrated DB** (empty postgres service → auto-migrate on api-ts boot → seed). This plan
+armed the last gap in it:
+- [x] **Zero silent-skip tolerance for core flows.** The gate previously tolerated `SKIPPED`
+      for *any* journey — so a core money/clinical flow whose precondition vanished could SKIP
+      and still pass green (the exact class this effort kills). Now `SKIPPED` is tolerated
+      **only** for the explicitly skip-allowed ceph journeys (B01–B04, MinIO-gated); a SKIP on
+      any core journey is a regression that fails the gate (`computeExitCode` + the harness drift
+      report + the stability-budget offender map all enforce it). Proven by unit tests
+      (AC-005) and a real-stack run (21/21, exit 0, no regression).
+- [x] Confirmed required + blocking + zero `continue-on-error` + from-zero-migrated DB (the
+      broad ~70-spec E2E sweep stays intentionally non-blocking/advisory; the harness is the lock).
 
 ### Plan D — Code↔DB drift gate + visible drift
 - [ ] CI step: migrate a DB to N-1, boot, assert auto-migrate + a `withTenantTx` write succeeds.

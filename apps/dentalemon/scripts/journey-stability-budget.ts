@@ -17,6 +17,9 @@ export interface JourneyRunRecord {
   id: string
   expectedVerdict: 'PASS' | 'BROKEN'
   actualVerdict: 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'
+  // Plan C: only skip-allowed journeys (ceph, MinIO-gated) may SKIP cleanly. A
+  // core journey that SKIPs is a silent-skip offender.
+  skipAllowed?: boolean
 }
 
 export interface HarnessRun {
@@ -38,9 +41,17 @@ export interface StabilitySummary {
   flakyJourneys: Array<{ id: string; nonPassRuns: number; verdicts: string[] }>
 }
 
-/** A PASS-expected journey that did not PASS (and was not an honest SKIPPED). */
+/**
+ * A PASS-expected journey that did not PASS — and was not a tolerated SKIP. Only a
+ * skip-allowed journey (ceph, MinIO-gated) may SKIP cleanly; a core SKIP is an
+ * offender. Mirrors the harness exit contract (computeExitCode).
+ */
 function isOffender(j: JourneyRunRecord): boolean {
-  return j.expectedVerdict === 'PASS' && j.actualVerdict !== 'PASS' && j.actualVerdict !== 'SKIPPED'
+  return (
+    j.expectedVerdict === 'PASS' &&
+    j.actualVerdict !== 'PASS' &&
+    !(j.actualVerdict === 'SKIPPED' && j.skipAllowed === true)
+  )
 }
 
 export function summarizeBudget(runs: HarnessRun[]): StabilitySummary {

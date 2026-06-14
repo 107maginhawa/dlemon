@@ -36,20 +36,38 @@ describe('computeExitCode — journey harness exit gate', () => {
     expect(computeExitCode(journeys, 0)).toBe(0)
   })
 
-  // AC-004: SKIPPED is an honest environment skip (e.g. ceph journey in CI with no
-  // storage/MinIO → no seeded image). It is neither a pass nor a regression and must
-  // NOT fail CI, even for a PASS-expected journey.
-  test('AC-004: PASS-expected returning SKIPPED does not fail CI', () => {
+  // AC-004 (Plan C — armed lock): SKIPPED is an honest environment skip ONLY for
+  // journeys that declare a legitimate environment precondition (the ceph journeys
+  // need MinIO, absent in CI). For those, SKIPPED is tolerated.
+  test('AC-004: a skip-allowed (ceph) journey returning SKIPPED does not fail CI', () => {
     const journeys = [
       { expectedVerdict: 'PASS' as const, actualVerdict: 'PASS' as const },
-      { expectedVerdict: 'PASS' as const, actualVerdict: 'SKIPPED' as const },
+      { expectedVerdict: 'PASS' as const, actualVerdict: 'SKIPPED' as const, skipAllowed: true },
     ]
     expect(computeExitCode(journeys, 0)).toBe(0)
   })
 
-  test('AC-004: a real regression alongside a SKIPPED still fails CI', () => {
+  // AC-005 (Plan C): a CORE flow that silently SKIPs — the exact "broken for users
+  // while green" class this effort targets — must FAIL the gate. SKIPPED is only
+  // tolerated for journeys that opted in (skipAllowed); a core journey defaults off.
+  test('AC-005: a core (non-skip-allowed) journey returning SKIPPED fails CI', () => {
     const journeys = [
+      { expectedVerdict: 'PASS' as const, actualVerdict: 'PASS' as const },
       { expectedVerdict: 'PASS' as const, actualVerdict: 'SKIPPED' as const },
+    ]
+    expect(computeExitCode(journeys, 0)).toBe(1)
+  })
+
+  test('AC-005: skipAllowed:false is treated the same as a core flow (SKIP fails)', () => {
+    const journeys = [
+      { expectedVerdict: 'PASS' as const, actualVerdict: 'SKIPPED' as const, skipAllowed: false },
+    ]
+    expect(computeExitCode(journeys, 0)).toBe(1)
+  })
+
+  test('AC-004: a real regression alongside a tolerated ceph SKIP still fails CI', () => {
+    const journeys = [
+      { expectedVerdict: 'PASS' as const, actualVerdict: 'SKIPPED' as const, skipAllowed: true },
       { expectedVerdict: 'PASS' as const, actualVerdict: 'BROKEN' as const },
     ]
     expect(computeExitCode(journeys, 0)).toBe(1)

@@ -358,12 +358,17 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
 
-      - name: Run journey harness (20 gated journeys, no-reseed — data already seeded)
+      - name: Run journey harness (gated journeys, no-reseed — data already seeded)
+        # This is THE armed real-stack lock (Plan C). It runs against a from-zero-
+        # migrated DB: the empty postgres service above is auto-migrated on api-ts
+        # boot, then seeded once. No `continue-on-error` — a regression hard-fails.
         # Exit code: 0 = all PASS-expected journeys returned PASS and no specs crashed.
-        # Exit 1 = any PASS-expected journey returned BROKEN/ERROR (regression), OR any spec crashed.
-        # BROKEN-expected journeys returning BROKEN are always OK (no regression).
-        # BROKEN-expected journeys returning PASS (a fix!) are logged but do not block CI —
-        # flip expectedVerdict to PASS in the harness EXPECTED map when a journey is fixed.
+        # Exit 1 = any PASS-expected journey returned BROKEN/ERROR (regression), OR any
+        #   spec crashed, OR a CORE journey SKIPPED (a silent core-flow skip — the
+        #   "broken for users while green" class this gate exists to kill).
+        # SKIPPED is tolerated ONLY for the skip-allowed ceph journeys (B01–B04), which
+        #   need MinIO (absent here) for a seeded image. BROKEN-expected journeys
+        #   returning BROKEN are OK; returning PASS (a fix!) is logged, not blocking.
         run: bun apps/dentalemon/scripts/run-journey-harness.ts --no-reseed
 
       - name: Upload journey results

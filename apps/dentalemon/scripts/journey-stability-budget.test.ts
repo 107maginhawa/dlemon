@@ -3,14 +3,19 @@ import { summarizeBudget, type HarnessRun } from './journey-stability-budget'
 
 // Helper: build a run from a terse verdict map. exitCode is derived to mirror the
 // harness contract (computeExitCode) so the fixtures stay self-consistent.
-function run(n: number, verdicts: Record<string, ['PASS' | 'BROKEN', 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED']>): HarnessRun {
-  const journeys = Object.entries(verdicts).map(([id, [expectedVerdict, actualVerdict]]) => ({
+type Verdict = ['PASS' | 'BROKEN', 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED', boolean?]
+function run(n: number, verdicts: Record<string, Verdict>): HarnessRun {
+  const journeys = Object.entries(verdicts).map(([id, [expectedVerdict, actualVerdict, skipAllowed]]) => ({
     id,
     expectedVerdict,
     actualVerdict,
+    skipAllowed,
   }))
   const regressed = journeys.some(
-    (j) => j.expectedVerdict === 'PASS' && j.actualVerdict !== 'PASS' && j.actualVerdict !== 'SKIPPED',
+    (j) =>
+      j.expectedVerdict === 'PASS' &&
+      j.actualVerdict !== 'PASS' &&
+      !(j.actualVerdict === 'SKIPPED' && j.skipAllowed === true),
   )
   return { run: n, exitCode: regressed ? 1 : 0, journeys }
 }
@@ -43,13 +48,25 @@ describe('summarizeBudget — stability budget aggregation', () => {
     expect(s.flakyJourneys).toEqual([{ id: 'J03', nonPassRuns: 1, verdicts: ['BROKEN'] }])
   })
 
-  // AC-003: SKIPPED is an honest environment skip — it never dirties a run.
-  test('AC-003: a PASS-expected SKIPPED keeps the run clean', () => {
-    const runs = [run(1, { J01: ['PASS', 'PASS'], B02: ['PASS', 'SKIPPED'] })]
+  // AC-003: a skip-allowed (ceph) SKIPPED is an honest environment skip — it never
+  // dirties a run.
+  test('AC-003: a skip-allowed SKIPPED keeps the run clean', () => {
+    const runs = [run(1, { J01: ['PASS', 'PASS'], B02: ['PASS', 'SKIPPED', true] })]
     const s = summarizeBudget(runs)
     expect(s.cleanRuns).toBe(1)
     expect(s.banked).toBe(true)
     expect(s.flakyJourneys).toHaveLength(0)
+  })
+
+  // AC-003b (Plan C): a CORE journey that SKIPs is a silent-skip offender — it
+  // dirties the run and is pinpointed by id.
+  test('AC-003b: a core (non-skip-allowed) SKIPPED breaks the run and is pinpointed', () => {
+    const runs = [run(1, { J21: ['PASS', 'SKIPPED'] })]
+    const s = summarizeBudget(runs)
+    expect(s.cleanRuns).toBe(0)
+    expect(s.banked).toBe(false)
+    expect(s.failedRuns[0]?.offenders).toEqual(['J21'])
+    expect(s.flakyJourneys).toEqual([{ id: 'J21', nonPassRuns: 1, verdicts: ['SKIPPED'] }])
   })
 
   // AC-004: a spec that crashed (ERROR) on a PASS-expected journey is an offender.

@@ -46,6 +46,7 @@ function readJourneys(): JourneyRunRecord[] | null {
       id: r.id,
       expectedVerdict: r.expectedVerdict,
       actualVerdict: r.actualVerdict,
+      skipAllowed: r.skipAllowed === true,
     }))
   } catch {
     return null
@@ -79,7 +80,10 @@ function main() {
     }
     runs.push({ run: i, exitCode, journeys })
     const offenders = journeys.filter(
-      (j) => j.expectedVerdict === 'PASS' && j.actualVerdict !== 'PASS' && j.actualVerdict !== 'SKIPPED',
+      (j) =>
+        j.expectedVerdict === 'PASS' &&
+        j.actualVerdict !== 'PASS' &&
+        !(j.actualVerdict === 'SKIPPED' && j.skipAllowed === true),
     )
     console.log(
       offenders.length === 0 && exitCode === 0

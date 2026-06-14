@@ -47,9 +47,14 @@ const args = new Set(process.argv.slice(2))
 const noReseed = args.has('--no-reseed')
 
 // Full expected roster (contract §Journey → File Mapping).
+// `skipAllowed` (Plan C — armed lock): the ONLY journeys permitted to record
+// SKIPPED without failing the gate. Reserved for genuine environment-absence —
+// the ceph journeys (B01–B04) need a seeded ceph image, which requires MinIO,
+// not provisioned in the journey CI job. Every other (core) journey defaults to
+// skipAllowed:false, so a silent core-flow skip fails the build.
 const EXPECTED: Record<
   string,
-  { name: string; set: 'A' | 'B'; expected: 'PASS' | 'BROKEN'; rubricIds: string[] }
+  { name: string; set: 'A' | 'B'; expected: 'PASS' | 'BROKEN'; rubricIds: string[]; skipAllowed?: boolean }
 > = {
   J01: { name: 'New-patient comprehensive oral evaluation', set: 'A', expected: 'PASS', rubricIds: ['Q6', 'Q7', 'Q8', 'Q9', 'Q10'] },
   J02: { name: 'Periodic recall exam (D0120)', set: 'A', expected: 'PASS', rubricIds: ['Q9', 'Q10', 'Q25'] },
@@ -72,11 +77,11 @@ const EXPECTED: Record<
   J20: { name: 'Imported external PMD merges its safety floor into the patient record', set: 'A', expected: 'PASS', rubricIds: ['FR12.5', 'BR-022'] },
   // B01/B02 PASS where a ceph image is seeded (local, MinIO present). In CI there
   // is no MinIO → no seeded ceph image → these journeys record SKIPPED (honest
-  // environment skip, tolerated by the gate), not a fake BROKEN.
-  B01: { name: 'Free-tier ceph gate', set: 'B', expected: 'PASS', rubricIds: ['CIMG-001', 'CIMG-002', 'CIMG-007'] },
-  B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'PASS', rubricIds: ['CIMG-003'] },
-  B03: { name: 'Locked landmark immutability', set: 'B', expected: 'PASS', rubricIds: ['CIMG-004'] },
-  B04: { name: 'Report gate + immutable versioned snapshot', set: 'B', expected: 'PASS', rubricIds: ['CIMG-006', 'CIMG-008'] },
+  // environment skip, tolerated by the gate via skipAllowed), not a fake BROKEN.
+  B01: { name: 'Free-tier ceph gate', set: 'B', expected: 'PASS', rubricIds: ['CIMG-001', 'CIMG-002', 'CIMG-007'], skipAllowed: true },
+  B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'PASS', rubricIds: ['CIMG-003'], skipAllowed: true },
+  B03: { name: 'Locked landmark immutability', set: 'B', expected: 'PASS', rubricIds: ['CIMG-004'], skipAllowed: true },
+  B04: { name: 'Report gate + immutable versioned snapshot', set: 'B', expected: 'PASS', rubricIds: ['CIMG-006', 'CIMG-008'], skipAllowed: true },
   // J15 is Set B (sync-log lifecycle). It needs a seeded branch + a P10+ patient
   // but not MinIO; with the demo seed present it runs to PASS.
   J15: { name: 'Offline sync metadata — sync-log lifecycle + server-default syncStatus', set: 'B', expected: 'PASS', rubricIds: ['LF-BR-001', 'LF-BR-002', 'LF-BR-003', 'LF-BR-004'] },
@@ -92,6 +97,7 @@ interface JourneyResult {
   failedStep: string | null
   screenshotPath: string | null
   rubricIds: string[]
+  skipAllowed: boolean
 }
 
 function sh(cmd: string, cmdArgs: string[], cwd: string): number {
@@ -206,6 +212,7 @@ async function main() {
       failedStep,
       screenshotPath,
       rubricIds: meta.rubricIds,
+      skipAllowed: meta.skipAllowed === true,
     })
   }
 
@@ -261,11 +268,15 @@ async function main() {
   )
   console.log('═'.repeat(70))
 
-  // SKIPPED is an honest environment skip, not verdict drift — don't flag it.
+  // A SKIPPED is an honest environment skip ONLY for a skip-allowed journey (ceph
+  // needs MinIO). A SKIPPED on any other (core) journey is a silent core-flow skip
+  // and IS verdict drift — Plan C's armed lock fails on it.
   const drifts = journeys.filter(
-    (j) => j.expectedVerdict !== j.actualVerdict && j.actualVerdict !== 'SKIPPED',
+    (j) =>
+      j.expectedVerdict !== j.actualVerdict &&
+      !(j.actualVerdict === 'SKIPPED' && j.skipAllowed),
   )
-  const skips = journeys.filter((j) => j.actualVerdict === 'SKIPPED')
+  const skips = journeys.filter((j) => j.actualVerdict === 'SKIPPED' && j.skipAllowed)
   if (skips.length) {
     console.log('\nℹ Environment skips (precondition absent — not run here, not a failure):')
     for (const s of skips) console.log(`  ${s.id}: ${s.failedStep ?? ''}`)
