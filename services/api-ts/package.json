@@ -10,7 +10,8 @@
     "./core/database": "./src/core/database.ts"
   },
   "scripts": {
-    "dev": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "dev:doctor": "bun scripts/dev-doctor.ts",
     "dev:deps:up": "docker compose -f docker-compose.deps.yml up -d --wait",
     "dev:deps:down": "docker compose -f docker-compose.deps.yml down -v",
     "build": "bun build --compile --minify --sourcemap --external ajv --external ajv-draft-04 src/index.ts --outfile dist/server",

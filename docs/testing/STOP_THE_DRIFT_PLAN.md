@@ -64,10 +64,16 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
 - [ ] `/readyz` reports migration drift (applied vs journal) + app_rls-grant presence.
 - [ ] Design check: should `withTenantTx` fail-loud "DB behind on migrations" vs raw permission-denied?
 
-### Plan E — Local dev doctor + hot-reload
-- [ ] `bun run dev:doctor` (DB migration count == file count, app_rls grants, API on current
-      code, FE up → loud warning + fix command).
-- [ ] `services/api-ts` `dev` → `bun --watch` (design check: confirm no destructive re-migrate).
+### Plan E — Local dev doctor + hot-reload ✅ DONE (PR pending)
+- [x] `bun run dev:doctor` (DB migration count == file count, app_rls grants, API up+ready,
+      FE up → loud, specific warning + the ONE fix command; exit 1 on drift). Pure diagnosis
+      rules in `services/api-ts/src/core/dev-doctor.ts` (unit-tested, 10 cases); I/O orchestrator
+      in `services/api-ts/scripts/dev-doctor.ts`. Verified live: catches the exact incident — a
+      DB behind on migrations flags both migration drift AND `app_rls` permission-denied.
+- [x] `services/api-ts` `dev` → `bun --watch src/index.ts`. **Design check passed:** `migrate()`
+      is idempotent — re-running it against an already-current DB applies nothing (count stays
+      108/108; the only output is the benign `CREATE TABLE IF NOT EXISTS` notice on the meta
+      table), so a watch restart's `runMigrations` is non-destructive.
 
 ### Plan F — De-mask errors (small)
 - [ ] Confirm the real gap (likely "always emit a parseable `code`" not a rewrite), then fix
