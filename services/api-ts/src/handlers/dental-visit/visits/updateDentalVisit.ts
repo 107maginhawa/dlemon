@@ -9,6 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { AppError, UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { VisitRepository } from '../repos/visit.repo';
 import { VISIT_TRANSITIONS, type DentalVisitStatus } from '../repos/visit.schema';
 import { TreatmentRepository, VisitNotesRepository } from '../repos/treatment.repo';
@@ -69,6 +70,14 @@ export async function updateDentalVisit(
   const log = ctx.get('logger');
   const requestId = ctx.get('requestId');
 
+  // RLS P1b activation: run each terminal write under app_rls scoped to the
+  // visit's branch (resolved + authorized above on `db`). One scope covers the
+  // visit (Tier-1) and any visit-anchored Tier-2a child the write touches. The
+  // facade guard reads, the audit write, and the failure-isolated PMD generation
+  // deliberately stay on `db` (the bypassing connection) per ADR-010.
+  const runScoped = <T>(fn: (tx: DatabaseInstance) => Promise<T>): Promise<T> =>
+    withTenantTx(db, { branchIds: [visit.branchId] }, fn);
+
   // Apply lifecycle timestamps on status transitions
   if (patch.status === 'active') {
     // V-VIS-003 / BR-001: app-level guard — return 409 instead of a raw 500 from
@@ -80,10 +89,13 @@ export async function updateDentalVisit(
         'ACTIVE_VISIT_EXISTS',
       );
     }
-    const activated = await repo.activate(visitId);
-    if (!activated) throw new NotFoundError('Dental visit');
-    if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
-    const updated = patch.chiefComplaint ? await repo.findOneById(visitId) ?? activated : activated;
+    const updated = await runScoped(async (tx) => {
+      const r = new VisitRepository(tx);
+      const activated = await r.activate(visitId);
+      if (!activated) throw new NotFoundError('Dental visit');
+      if (patch.chiefComplaint) await r.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
+      return patch.chiefComplaint ? await r.findOneById(visitId) ?? activated : activated;
+    });
     log?.info({ requestId, action: 'dental_visit_activate', visitId, by: user.id }, 'Visit activated');
     // V-VIS-001 / DE-001 VisitCheckedIn: per ADR-006 this is an audit-log-only marker
     // (no event bus) — satisfy it by writing the dental_audit_log row synchronously.
@@ -124,10 +136,13 @@ export async function updateDentalVisit(
     const hasNoAttachments = attachmentCount === 0;
 
     if (autoDiscardEnabled && hasNoTreatments && hasNoNotes && hasNoAttachments) {
-      const discardedRaw = await repo.discard(visitId);
-      if (!discardedRaw) throw new NotFoundError('Dental visit');
-      if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
-      const discarded = patch.chiefComplaint ? await repo.findOneById(visitId) ?? discardedRaw : discardedRaw;
+      const discarded = await runScoped(async (tx) => {
+        const r = new VisitRepository(tx);
+        const discardedRaw = await r.discard(visitId);
+        if (!discardedRaw) throw new NotFoundError('Dental visit');
+        if (patch.chiefComplaint) await r.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
+        return patch.chiefComplaint ? await r.findOneById(visitId) ?? discardedRaw : discardedRaw;
+      });
       log?.info({ requestId, action: 'dental_visit_discard', visitId, by: user.id }, 'Empty visit auto-discarded (BR-005)');
       return ctx.json(discarded);
     }
@@ -145,10 +160,13 @@ export async function updateDentalVisit(
       throw new BusinessLogicError('Visit notes required before completing visit', 'VISIT_NOTES_REQUIRED');
     }
 
-    const completedRaw = await repo.complete(visitId);
-    if (!completedRaw) throw new NotFoundError('Dental visit');
-    if (patch.chiefComplaint) await repo.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
-    const updated = patch.chiefComplaint ? await repo.findOneById(visitId) ?? completedRaw : completedRaw;
+    const updated = await runScoped(async (tx) => {
+      const r = new VisitRepository(tx);
+      const completedRaw = await r.complete(visitId);
+      if (!completedRaw) throw new NotFoundError('Dental visit');
+      if (patch.chiefComplaint) await r.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
+      return patch.chiefComplaint ? await r.findOneById(visitId) ?? completedRaw : completedRaw;
+    });
     log?.info({ requestId, action: 'dental_visit_complete', visitId, by: user.id }, 'Visit completed');
     const branchForAudit = await getBranchOrgId(db, visit.branchId);
     // P1-C fail-closed + P2-A before/after (AUD-BR-004): completing a clinical visit
@@ -187,7 +205,7 @@ export async function updateDentalVisit(
   }
 
   if (patch.status === 'locked') {
-    const locked = await repo.lock(visitId);
+    const locked = await runScoped((tx) => new VisitRepository(tx).lock(visitId));
     if (!locked) throw new NotFoundError('Dental visit');
     log?.info({ requestId, action: 'dental_visit_lock', visitId, by: user.id }, 'Visit locked');
     // V-VIS-001 / DE-003 VisitLocked: per ADR-006 this is an audit-log-only marker
@@ -204,6 +222,6 @@ export async function updateDentalVisit(
     return ctx.json(locked);
   }
 
-  const updated = await repo.updateStatus(visitId, patch);
+  const updated = await runScoped((tx) => new VisitRepository(tx).updateStatus(visitId, patch));
   return ctx.json(updated);
 }

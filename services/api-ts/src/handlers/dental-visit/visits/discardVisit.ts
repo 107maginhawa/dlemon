@@ -15,6 +15,7 @@ import type { DiscardVisitBody, DiscardVisitParams } from '@/generated/openapi/v
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { countAttachmentsForVisit, hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/clinical-visit.facade';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -74,14 +75,21 @@ export async function discardVisit(
   }
 
   // Dismiss the open (diagnosed/planned) treatments, then discard the visit.
-  // (Sequential, mirroring voidDentalPayment — repos are constructed from `db`.)
+  // RLS P1b activation: the dismiss + discard WRITES run together under app_rls
+  // scoped to the visit's branch (resolved + authorized above on `db`). One scope
+  // covers dental_visit (Tier-1) and dental_treatment (Tier-2a, anchored to this
+  // same in-branch visit → its EXISTS policy passes). The guard reads above and
+  // the audit write below stay on `db` per ADR-010.
   const openTreatments = treatments.filter((t) => t.status === 'diagnosed' || t.status === 'planned');
-  for (const t of openTreatments) {
-    await treatmentRepo.dismiss(t.id, 'Visit discarded');
-  }
-
-  const discarded = await visitRepo.discard(visitId);
-  if (!discarded) throw new NotFoundError('Dental visit');
+  const discarded = await withTenantTx(db, { branchIds: [visit.branchId] }, async (tx) => {
+    const tRepo = new TreatmentRepository(tx);
+    for (const t of openTreatments) {
+      await tRepo.dismiss(t.id, 'Visit discarded');
+    }
+    const d = await new VisitRepository(tx).discard(visitId);
+    if (!d) throw new NotFoundError('Dental visit');
+    return d;
+  });
 
   // V-VIS-DISCARD: owner abandonment of a visit is a material clinical-record
   // action — fail-closed audit with reason + before/after (mirrors payment void).
