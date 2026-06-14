@@ -84,7 +84,11 @@ Previously-open standards questions, now decided:
   TanStack Form mandate); the four person forms are not migrated.
 - **DB row-level security (RLS)** → `docs/decisions/ADR-010-tenant-isolation-rls-pre-ga.md`:
   application-level tenant isolation remains the current control; RLS is an explicit,
-  tracked **pre-GA gate** (top-PHI tables + a per-request tenant session variable).
+  tracked **pre-GA gate** (top-PHI tables + a per-request tenant session variable). The
+  implementation scoping — tiered target tables, policy shape, `withTenantTx` plumbing,
+  migration/test strategy, a 6-PR rollout (~4–6 engineer-weeks), and open decisions
+  D1–D7 — is recorded in `docs/decisions/ADR-010-rls-implementation-plan.md` (build
+  deferred, not started).
 - **`no-raw-fetch` coverage**: the ESLint rule now also enforces in `src/routes/` and
   `src/lib/`. Existing bootstrap / static-asset / legacy fetches carry inline
   disables-with-reason; two (`_dashboard/patients.tsx` POST and the

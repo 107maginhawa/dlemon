@@ -11,7 +11,9 @@
 **Keep application-level tenant isolation as the current control, and make DB RLS an explicit, tracked pre-GA gate** (defense-in-depth) rather than implementing it now.
 
 - App-level isolation (per-query tenant filters + `assertBranchRole` + mandatory `branchId` on list/report endpoints) remains the load-bearing control through pre-GA.
-- **Pre-GA gate (must land before general availability):** enable RLS on the top-PHI tables — `patient`, `dental_visit`, `dental_chart`, `dental_treatment`, and prescription/clinical tables — with policies keyed off a per-request tenant context (a `SET LOCAL app.current_org`/`current_branch` session variable set in the request pipeline), plus exhaustive cross-tenant policy tests.
+- **Pre-GA gate (must land before general availability):** enable RLS on the top-PHI tables — `patient`, `dental_visit`, `dental_chart`, `dental_treatment`, and prescription/clinical tables — with policies keyed off a per-request tenant context (a `SET LOCAL` session variable set in the request pipeline), plus exhaustive cross-tenant policy tests.
+
+**Implementation scoping** — a concrete, evidence-cited plan for this gate (target table set in tiers, policy shape, session-var plumbing, migration + test strategy, a 6-PR rollout, and open design decisions) is recorded in [ADR-010-rls-implementation-plan.md](./ADR-010-rls-implementation-plan.md). Two refinements that scoping surfaced over the sketch above: (1) the dominant tenant column is `branch_id`, so the session var should be a **set-valued `app.current_branches`** (a scalar `current_org` would break legitimate multi-branch reads — the EM-BIL-002 reports); (2) the app connects as a superuser/table-owner today, so RLS additionally requires a **dedicated non-owner role + `FORCE ROW LEVEL SECURITY`**, or every policy silently bypasses. The build is **deferred** (recorded for pre-GA; not yet started).
 
 ---
 
@@ -36,6 +38,7 @@ RLS is genuine defense-in-depth (it protects against a missing app-level filter)
 
 ## References
 
+- [`docs/decisions/ADR-010-rls-implementation-plan.md`](./ADR-010-rls-implementation-plan.md) — the implementation scoping plan for this gate (tiered target tables, policy shape, `withTenantTx` plumbing, migration/test strategy, 6-PR rollout, open decisions D1–D7)
 - `docs/decisions/ADR-007-self-service-onboarding.md` — first flags "No DB RLS exists … recommended before GA"
 - `docs/product/THREAT_MODEL.md` — Information Disclosure / at-rest section (related defense-in-depth gaps)
 - `docs/KNOWN_LIMITATIONS.md` — "Architectural decisions in flight" (now resolved by this ADR)
