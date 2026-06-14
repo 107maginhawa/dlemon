@@ -15,6 +15,7 @@ import { REMINDER_NOTIFICATION_TYPES } from './utils/reminder-types';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import { emitAppointmentCancelled } from './domain-events';
 import type { JobScheduler } from '@/core/jobs';
@@ -49,6 +50,13 @@ export async function updateAppointment(ctx: HandlerContext) {
     'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
   ]);
 
+  // RLS P1b activation: every dental_appointment write below runs through this
+  // helper so the app_rls policy enforces the branch scope as a second wall.
+  // Entity fetch + authz + FSM/working-hours guards + audit/notifs/event stay on
+  // db (preserving the exact 403/404/409/422 behavior).
+  const runScoped = <T>(fn: (tx: DatabaseInstance) => Promise<T>): Promise<T> =>
+    withTenantTx(db, { branchIds: [existing.branchId] }, fn);
+
   // Handle status transitions via dedicated methods — validated against APPOINTMENT_TRANSITIONS
   if (body.status !== undefined) {
     const allowed = APPOINTMENT_TRANSITIONS[existing.status];
@@ -58,14 +66,14 @@ export async function updateAppointment(ctx: HandlerContext) {
   }
 
   if (body.status === 'confirmed') {
-    const result = await repo.confirm(appointmentId, user.id, 'staff');
+    const result = await runScoped((tx) => new DentalAppointmentRepository(tx).confirm(appointmentId, user.id, 'staff'));
     if (!result) throw new NotFoundError('Appointment');
     await expireReminders();
     return ctx.json(toWire(result));
   }
 
   if (body.status === 'no_show') {
-    const result = await repo.markNoShow(appointmentId, user.id);
+    const result = await runScoped((tx) => new DentalAppointmentRepository(tx).markNoShow(appointmentId, user.id));
     if (!result) throw new NotFoundError('Appointment');
     await expireReminders();
     return ctx.json(toWire(result));
@@ -76,7 +84,7 @@ export async function updateAppointment(ctx: HandlerContext) {
     if (existing.status !== 'no_show') {
       throw new ValidationError(`Cannot transition appointment from '${existing.status}' to 'completed' via PATCH — complete the visit via checkout`);
     }
-    const result = await repo.revertNoShow(appointmentId, user.id);
+    const result = await runScoped((tx) => new DentalAppointmentRepository(tx).revertNoShow(appointmentId, user.id));
     if (!result) throw new NotFoundError('Appointment');
     return ctx.json(toWire(result));
   }
@@ -95,7 +103,7 @@ export async function updateAppointment(ctx: HandlerContext) {
     if (cancellationReason.length < 5 || cancellationReason.length > 500) {
       throw new BusinessLogicError('reason is required (min 5, max 500 characters)', 'REASON_REQUIRED');
     }
-    const result = await repo.cancel(appointmentId, cancellationReason, user.id);
+    const result = await runScoped((tx) => new DentalAppointmentRepository(tx).cancel(appointmentId, cancellationReason, user.id));
     if (!result) throw new NotFoundError('Appointment');
     await expireReminders();
 
@@ -158,7 +166,7 @@ export async function updateAppointment(ctx: HandlerContext) {
   if (body.operatoryId !== undefined) patch['operatoryId'] = body.operatoryId;
   if (body.notes !== undefined) patch['notes'] = body.notes;
 
-  // Re-validate working hours and check overlap if the time window is being changed
+  // Re-validate working hours (config read stays on db) if the time window moves.
   if (newScheduledAt !== undefined) {
     const durationMinutes = durationFromRange(effectiveStart, effectiveEnd);
     const branch = await getBranchSchedulingConfig(db, existing.branchId);
@@ -168,24 +176,33 @@ export async function updateAppointment(ctx: HandlerContext) {
         throw new BusinessLogicError('Appointment is outside configured working hours', 'OUTSIDE_WORKING_HOURS');
       }
     }
-    const overlaps = await repo.findOverlapping(
-      body.providerId ?? existing.dentistMemberId,
-      existing.branchId,
-      newScheduledAt,
-      durationMinutes,
-      appointmentId, // exclude self
-    );
-    if (overlaps.length > 0) {
-      // V-SCH-001 / AC-SCH-002: reschedule hard-block uses the specific taxonomy code,
-      // not the generic CONFLICT. ERROR_TAXONOMY: RESCHEDULE_CONFLICT(409).
-      throw new ConflictError(
-        'Reschedule conflict: provider already has an appointment in the new time window',
-        'RESCHEDULE_CONFLICT',
-      );
-    }
   }
 
-  const updated = await repo.updateOneById(appointmentId, { ...patch, updatedBy: user.id });
+  // RLS P1b activation: route the overlap-check read + the field update through a
+  // single tenant tx (the overlap check is the reschedule hard-block; both touch
+  // the armed dental_appointment).
+  const updated = await runScoped(async (tx) => {
+    const txRepo = new DentalAppointmentRepository(tx);
+    if (newScheduledAt !== undefined) {
+      const durationMinutes = durationFromRange(effectiveStart, effectiveEnd);
+      const overlaps = await txRepo.findOverlapping(
+        body.providerId ?? existing.dentistMemberId,
+        existing.branchId,
+        newScheduledAt,
+        durationMinutes,
+        appointmentId, // exclude self
+      );
+      if (overlaps.length > 0) {
+        // V-SCH-001 / AC-SCH-002: reschedule hard-block uses the specific taxonomy code,
+        // not the generic CONFLICT. ERROR_TAXONOMY: RESCHEDULE_CONFLICT(409).
+        throw new ConflictError(
+          'Reschedule conflict: provider already has an appointment in the new time window',
+          'RESCHEDULE_CONFLICT',
+        );
+      }
+    }
+    return txRepo.updateOneById(appointmentId, { ...patch, updatedBy: user.id });
+  });
 
   // P1-24: on reschedule (the appointment time moved), expire the now-stale queued
   // reminders. The reminderArmer re-arms for the new time on its next run.

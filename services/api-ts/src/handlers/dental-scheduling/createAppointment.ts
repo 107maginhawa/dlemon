@@ -9,6 +9,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, BusinessLogicError, ValidationError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { withTenantTx } from '@/core/tenant-tx';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -34,7 +35,6 @@ export async function createAppointment(ctx: HandlerContext) {
   await assertBranchRole(db, user.id, body.branchId, [
     'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
   ]);
-  const repo = new DentalAppointmentRepository(db);
 
   // Canonical wire shape: providerId / startAt / endAt / visitType (V-SCH-006/007).
   const startAt = body.startAt instanceof Date ? body.startAt : new Date(String(body.startAt));
@@ -68,35 +68,43 @@ export async function createAppointment(ctx: HandlerContext) {
 
   const logger = ctx.get('logger');
 
-  // FR3.7: Check for overlapping appointments (non-blocking — returns warning in response)
-  const overlapping = await repo.findOverlapping(dentistMemberId, branchId, scheduledAt, durationMinutes);
+  // RLS P1b activation: route the overlap-check read + the insert through a
+  // single withTenantTx so the app_rls policy on dental_appointment enforces the
+  // branch scope as a second wall (and the WITH CHECK validates the insert).
+  // Authz + working-hours config above and audit/notifs/event below stay on db.
   const warnings: string[] = [];
-  if (overlapping.length > 0) {
-    warnings.push('DOUBLE_BOOKING');
-    // V-SCH-012 / §17: emit the dental-scheduling.double-booking WARN observable.
-    // No PII in log fields (only opaque ids + the warning marker).
-    logger?.warn?.({
-      event: 'dental-scheduling.double-booking',
-      branchId,
-      providerId: dentistMemberId,
-      startAt: scheduledAt.toISOString(),
-      durationMinutes,
-      overlapCount: overlapping.length,
-    }, 'Double-booking detected at appointment create (soft-warn)');
-  }
+  const appt = await withTenantTx(db, { branchIds: [branchId] }, async (tx) => {
+    const txRepo = new DentalAppointmentRepository(tx);
 
-  const appt = await repo.createOne({
-    patientId: body.patientId,
-    dentistMemberId,
-    branchId,
-    scheduledAt,
-    durationMinutes,
-    serviceType: body.visitType,
-    operatoryId: body.operatoryId,
-    walkIn: body.walkIn ?? false,
-    notes: body.notes,
-    createdBy: user.id,
-    updatedBy: user.id,
+    // FR3.7: Check for overlapping appointments (non-blocking — returns warning in response)
+    const overlapping = await txRepo.findOverlapping(dentistMemberId, branchId, scheduledAt, durationMinutes);
+    if (overlapping.length > 0) {
+      warnings.push('DOUBLE_BOOKING');
+      // V-SCH-012 / §17: emit the dental-scheduling.double-booking WARN observable.
+      // No PII in log fields (only opaque ids + the warning marker).
+      logger?.warn?.({
+        event: 'dental-scheduling.double-booking',
+        branchId,
+        providerId: dentistMemberId,
+        startAt: scheduledAt.toISOString(),
+        durationMinutes,
+        overlapCount: overlapping.length,
+      }, 'Double-booking detected at appointment create (soft-warn)');
+    }
+
+    return txRepo.createOne({
+      patientId: body.patientId,
+      dentistMemberId,
+      branchId,
+      scheduledAt,
+      durationMinutes,
+      serviceType: body.visitType,
+      operatoryId: body.operatoryId,
+      walkIn: body.walkIn ?? false,
+      notes: body.notes,
+      createdBy: user.id,
+      updatedBy: user.id,
+    });
   });
 
   // AL-009: appointment booking audit trail — persisted to dental_audit + dental_audit_log

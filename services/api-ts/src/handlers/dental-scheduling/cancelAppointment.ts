@@ -11,6 +11,7 @@ import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError }
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { User } from '@/types/auth';
 import type { CancelAppointmentParams } from '@/generated/openapi/validators';
@@ -49,7 +50,13 @@ export async function cancelAppointment(
     throw new BusinessLogicError('reason is required (min 5, max 500 characters)', 'REASON_REQUIRED');
   }
 
-  const result = await repo.cancel(appointmentId, cancellationReason, user.id);
+  // RLS P1b activation: route the dental_appointment write through withTenantTx
+  // so the app_rls policy enforces the branch scope as a second wall. Entity
+  // fetch + authz + the FSM/reason guards above stay on db (403/404/422), and
+  // the audit + reminder-expiry + event below stay on db.
+  const result = await withTenantTx(db, { branchIds: [existing.branchId] }, (tx) =>
+    new DentalAppointmentRepository(tx).cancel(appointmentId, cancellationReason, user.id),
+  );
   if (!result) throw new NotFoundError('Appointment');
 
   // AL-008: appointment cancellation audit trail — persisted to dental_audit + dental_audit_log

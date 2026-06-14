@@ -10,6 +10,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, ValidationError } from '@/core/errors';
 import { listAppointmentsWithPatientName } from './repos/appointment-patient.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import type { User } from '@/types/auth';
 import { eq, gte, lt, type SQL } from 'drizzle-orm';
 import { dentalAppointments } from './repos/dental-appointment.schema';
@@ -73,6 +74,11 @@ export async function listAppointments(ctx: HandlerContext) {
   if (status) conditions.push(eq(dentalAppointments.status, status as typeof dentalAppointments.status._.data));
   if (patientId) conditions.push(eq(dentalAppointments.patientId, patientId));
 
-  const appointments = await listAppointmentsWithPatientName(db, conditions, limit, offset);
+  // RLS P1b activation: route the list read through withTenantTx so the app_rls
+  // policy on dental_appointment enforces the branch scope as a second wall
+  // behind the app-level branchId filter. Authz above stays on db.
+  const appointments = await withTenantTx(db, { branchIds: [branchId] }, (tx) =>
+    listAppointmentsWithPatientName(tx, conditions, limit, offset),
+  );
   return ctx.json(appointments.map((a) => toWire(a)));
 }

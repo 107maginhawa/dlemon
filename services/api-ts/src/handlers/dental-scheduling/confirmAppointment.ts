@@ -16,6 +16,7 @@ import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { REMINDER_NOTIFICATION_TYPES } from './utils/reminder-types';
 import type { User } from '@/types/auth';
 import type { ConfirmAppointmentParams } from '@/generated/openapi/validators';
@@ -41,7 +42,12 @@ export async function confirmAppointment(ctx: HandlerContext) {
     throw new ValidationError(`Cannot transition appointment from '${existing.status}' to 'confirmed'`);
   }
 
-  const result = await repo.confirm(appointmentId, user.id, 'staff');
+  // RLS P1b activation: route the dental_appointment write through withTenantTx
+  // so the app_rls policy enforces the branch scope as a second wall. Entity
+  // fetch + authz above stay on db to preserve the exact 403/404.
+  const result = await withTenantTx(db, { branchIds: [existing.branchId] }, (tx) =>
+    new DentalAppointmentRepository(tx).confirm(appointmentId, user.id, 'staff'),
+  );
   if (!result) throw new NotFoundError('Appointment');
 
   // Synchronously expire queued reminders — confirmed needs no further nudges.
