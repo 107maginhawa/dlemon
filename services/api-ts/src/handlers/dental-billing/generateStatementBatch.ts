@@ -17,6 +17,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import { getStatementInvoices } from './repos/billing-report.facade';
 import { computePatientStatement, type AgingInvoice, type PatientStatement } from './utils/aging';
 import type { GenerateStatementBatchBody } from '@/generated/openapi/validators';
@@ -44,11 +45,18 @@ export async function generateStatementBatch(
   const asOf = body.asOf ? new Date(body.asOf) : new Date();
   const includeZeroBalance = body.includeZeroBalance ?? false;
 
-  const rows = await getStatementInvoices(db, {
-    branchId: body.branchId,
-    patientIds: body.patientIds,
-    allowedBranchIds,
-  });
+  // RLS P1b activation: route the read through withTenantTx so the app_rls
+  // policy on dental_invoice enforces the branch scope as a second wall. Scope =
+  // the asserted branch when supplied, else the caller's active-branch set
+  // (EM-BIL-002).
+  const scopeBranchIds = body.branchId ? [body.branchId] : (allowedBranchIds ?? []);
+  const rows = await withTenantTx(db, { branchIds: scopeBranchIds }, (tx) =>
+    getStatementInvoices(tx, {
+      branchId: body.branchId,
+      patientIds: body.patientIds,
+      allowedBranchIds,
+    }),
+  );
 
   const byPatient = new Map<string, { name: string; invoices: AgingInvoice[] }>();
   for (const r of rows) {

@@ -10,6 +10,7 @@ import { UnauthorizedError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import { getInsurerNamesForBilling } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { computePayerAging, type AgingClaim } from './utils/aging';
@@ -33,8 +34,15 @@ export async function getPayerArAging(ctx: HandlerContext): Promise<Response> {
 
   const asOf = query.asOf ? new Date(query.asOf) : new Date();
 
-  const repo = new DentalInsuranceClaimRepository(db);
-  const claims = await repo.findMany({ branchId: query.branchId, allowedBranchIds });
+  // RLS P1b activation: route the dental_insurance_claim read through
+  // withTenantTx so the app_rls policy enforces the branch scope as a second
+  // wall. Scope = the asserted branch when supplied, else the caller's
+  // active-branch set (EM-BIL-002). The downstream insurer-name lookup reads a
+  // patient-anchored table that is not yet RLS-armed (P3), so it stays on db.
+  const scopeBranchIds = query.branchId ? [query.branchId] : (allowedBranchIds ?? []);
+  const claims = await withTenantTx(db, { branchIds: scopeBranchIds }, (tx) =>
+    new DentalInsuranceClaimRepository(tx).findMany({ branchId: query.branchId, allowedBranchIds }),
+  );
 
   const agingClaims: AgingClaim[] = claims.map((c) => ({
     insuranceProfileId: c.insuranceProfileId,

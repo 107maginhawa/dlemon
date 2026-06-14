@@ -16,6 +16,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import { getOutstandingInvoicesForAging } from './repos/billing-report.facade';
 import {
   computePatientAging,
@@ -46,7 +47,15 @@ export async function getArAging(ctx: BaseContext) {
 
   // Pull all outstanding (non-voided, balance > 0) invoices joined to the
   // patient's display name. Branch filter applied when supplied.
-  const rows = await getOutstandingInvoicesForAging(db, q['branchId'], allowedBranchIds);
+  //
+  // RLS P1b activation: route the read through withTenantTx so the app_rls
+  // policy on dental_invoice enforces the branch scope as a second wall behind
+  // the app-level filter. Scope = the asserted branch when supplied, else the
+  // caller's active-branch set (EM-BIL-002).
+  const scopeBranchIds = q['branchId'] ? [q['branchId']] : (allowedBranchIds ?? []);
+  const rows = await withTenantTx(db, { branchIds: scopeBranchIds }, (tx) =>
+    getOutstandingInvoicesForAging(tx, q['branchId'], allowedBranchIds),
+  );
 
   // Group invoices by patient.
   const byPatient = new Map<string, { name: string; invoices: AgingInvoice[] }>();

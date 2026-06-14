@@ -15,6 +15,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
 import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { dentalPayments } from './repos/dental-payment.schema';
 import { and, eq, gte, lte, inArray, sql, type SQL } from 'drizzle-orm';
@@ -80,10 +81,18 @@ export async function getCollectionsSummary(ctx: BaseContext) {
     );
   }
 
-  const issuedInvoices = await db
-    .select()
-    .from(dentalInvoices)
-    .where(and(...invoiceConditions));
+  // RLS P1b activation: route the payload reads through withTenantTx so the
+  // app_rls policies on dental_invoice / dental_payment enforce the branch scope
+  // as a second wall behind the app-level filters above. Scope = the asserted
+  // branch when supplied, else the caller's active-branch set (EM-BIL-002).
+  const scopeBranchIds = q['branchId'] ? [q['branchId']] : (allowedBranchIds ?? []);
+
+  const issuedInvoices = await withTenantTx(db, { branchIds: scopeBranchIds }, (tx) =>
+    tx
+      .select()
+      .from(dentalInvoices)
+      .where(and(...invoiceConditions)),
+  );
 
   const paymentConditions: SQL<unknown>[] = [
     gte(dentalPayments.createdAt, from),
@@ -98,10 +107,12 @@ export async function getCollectionsSummary(ctx: BaseContext) {
     );
   }
 
-  const payments = await db
-    .select()
-    .from(dentalPayments)
-    .where(and(...paymentConditions));
+  const payments = await withTenantTx(db, { branchIds: scopeBranchIds }, (tx) =>
+    tx
+      .select()
+      .from(dentalPayments)
+      .where(and(...paymentConditions)),
+  );
 
   const totalCollectedCents = payments.reduce((sum, p) => sum + p.amountCents, 0);
   const totalBilledCents = issuedInvoices
