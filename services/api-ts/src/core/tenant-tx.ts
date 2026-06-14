@@ -26,6 +26,7 @@
 
 import { sql } from 'drizzle-orm';
 import type { DatabaseInstance } from './database';
+import { describeRlsPermissionError } from './schema-drift';
 
 export interface TenantScope {
   /**
@@ -73,15 +74,26 @@ export async function withTenantTx<T>(
     return fn(db);
   }
 
-  return db.transaction(async (tx) => {
-    // Publish the tenant context as the privileged connecting role, THEN drop to
-    // app_rls. set_config(..., is_local => true) == SET LOCAL — transaction-scoped.
-    const branchCsv = scope.branchIds.join(',');
-    await tx.execute(sql`SELECT set_config('app.current_branches', ${branchCsv}, true)`);
-    if (scope.orgIds !== undefined) {
-      await tx.execute(sql`SELECT set_config('app.current_orgs', ${scope.orgIds.join(',')}, true)`);
-    }
-    await tx.execute(sql`SET LOCAL ROLE app_rls`);
-    return fn(tx as unknown as DatabaseInstance);
-  });
+  try {
+    return await db.transaction(async (tx) => {
+      // Publish the tenant context as the privileged connecting role, THEN drop to
+      // app_rls. set_config(..., is_local => true) == SET LOCAL — transaction-scoped.
+      const branchCsv = scope.branchIds.join(',');
+      await tx.execute(sql`SELECT set_config('app.current_branches', ${branchCsv}, true)`);
+      if (scope.orgIds !== undefined) {
+        await tx.execute(sql`SELECT set_config('app.current_orgs', ${scope.orgIds.join(',')}, true)`);
+      }
+      await tx.execute(sql`SET LOCAL ROLE app_rls`);
+      return fn(tx as unknown as DatabaseInstance);
+    });
+  } catch (err) {
+    // Fail-loud (Plan D): a bare "permission denied for table …" means app_rls has
+    // no grant — the DB is behind on migrations (the live-incident cause). Rewrite
+    // it into an actionable hint. Error-path ONLY, so the happy path pays nothing.
+    // A real RLS-policy tenant-isolation block ("new row violates …") is left
+    // untouched and surfaces as before.
+    const hint = describeRlsPermissionError(err);
+    if (hint) throw new Error(hint, { cause: err });
+    throw err;
+  }
 }

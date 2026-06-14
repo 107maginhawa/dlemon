@@ -111,6 +111,97 @@ jobs:
       - name: Lint test-harness (no new raw-handler mounts)
         run: cd services/api-ts && bun run lint:test-harness
 
+  schema-drift-gate:
+    name: Code-DB Drift Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Plan D — lock the self-heal path the live incident exposed. RLS made
+    # code-ahead-of-DB FATAL: a DB missing the app_rls grant migration fails every
+    # withTenantTx write with "permission denied". This gate puts the DB one
+    # migration BEHIND, boots the current api-ts, and proves it (a) auto-migrates to
+    # current on boot, (b) reports the healed schema on /readyz, and (c) actually
+    # serves RLS writes — by reseeding through the activated handlers (the exact flow
+    # that broke). If auto-migrate-on-boot regresses or a grant migration is wrong,
+    # the reseed fails loudly here.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: monobase
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monobase"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
+      PORT: 7213
+      API_URL: http://localhost:7213
+      AUTH_SECRET: drift-gate-secret-do-not-use-in-prod
+      # No MinIO provisioned — storage is unhealthy so /readyz returns 503 overall,
+      # but the schema check in its body still reports independently (asserted below).
+      STORAGE_PROVIDER: minio
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_BUCKET: monobase-files
+      STORAGE_ACCESS_KEY_ID: minioadmin
+      STORAGE_SECRET_ACCESS_KEY: minioadmin
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - run: bun install --frozen-lockfile
+
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
+
+      # Put the DB one migration behind the code (withholds the last migration).
+      - name: Migrate DB to N-1 (simulate code ahead of DB)
+        run: cd services/api-ts && bun scripts/migrate-to-n-minus-1.ts
+
+      - name: Boot api-ts (must auto-migrate the withheld migration on start)
+        run: |
+          cd services/api-ts
+          bun dev > /tmp/api-drift.log 2>&1 &
+          echo $! > /tmp/api-drift.pid
+
+      - name: Wait for /livez
+        run: |
+          for i in {1..60}; do
+            curl -fsS "$API_URL/livez" && break || sleep 1
+          done
+          curl -fsS "$API_URL/livez" || { echo "api-ts never became ready"; tail -100 /tmp/api-drift.log; exit 1; }
+
+      - name: Assert /readyz reports the schema HEALED (drift self-resolved on boot)
+        run: |
+          body="$(curl -s "$API_URL/readyz?verbose")"
+          echo "readyz: $body"
+          schema="$(echo "$body" | jq -r '.checks.schema')"
+          if [ "$schema" != "pass" ]; then
+            echo "✗ expected checks.schema=pass after boot auto-migrate, got: $schema"
+            tail -100 /tmp/api-drift.log
+            exit 1
+          fi
+          echo "✓ schema healed to current on boot"
+
+      - name: Reseed through the activated handlers (proves withTenantTx writes serve)
+        run: bun run db:reseed
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
+
+      - name: api-ts logs (always)
+        if: always()
+        run: tail -200 /tmp/api-drift.log || true
+
+      - name: Stop api-ts
+        if: always()
+        run: kill "$(cat /tmp/api-drift.pid)" || true
+
   duplicate-op-check:
     name: No Duplicate OperationId
     runs-on: ubuntu-latest

@@ -110,10 +110,25 @@ armed the last gap in it:
 - [x] Confirmed required + blocking + zero `continue-on-error` + from-zero-migrated DB (the
       broad ~70-spec E2E sweep stays intentionally non-blocking/advisory; the harness is the lock).
 
-### Plan D — Code↔DB drift gate + visible drift
-- [ ] CI step: migrate a DB to N-1, boot, assert auto-migrate + a `withTenantTx` write succeeds.
-- [ ] `/readyz` reports migration drift (applied vs journal) + app_rls-grant presence.
-- [ ] Design check: should `withTenantTx` fail-loud "DB behind on migrations" vs raw permission-denied?
+### Plan D — Code↔DB drift gate + visible drift ✅ DONE
+- [x] **CI drift gate** (`Code-DB Drift Gate` in quality.yml): `migrate-to-n-minus-1.ts` puts the
+      DB one migration behind (withholds the last via a temp journal), boots current api-ts →
+      asserts it **auto-migrates on boot**, `/readyz` reports the schema **healed**, and a full
+      **`db:reseed` through the activated handlers succeeds** (proves `withTenantTx` writes serve
+      on the healed, RLS-granted DB — the exact flow the incident broke). Locally validated the
+      N-1 → 108 self-heal on a scratch DB (app_rls grants 104).
+- [x] **`/readyz` reports drift.** Verbose readiness now includes a `schema` check
+      (`evaluateSchemaDrift`: applied-vs-journal + app_rls grant presence). A definitive
+      `behind`/`rls-ungranted` verdict fails readiness (503) and surfaces `schemaDrift` detail;
+      an unknown (embedded SQLite / transient) never self-inflicts an outage. Reuses dev-doctor's
+      count queries.
+- [x] **Design decision — `withTenantTx` fails loud, error-path only.** Chosen over a per-tx
+      pre-check (zero happy-path cost): on a bare `permission denied for table …` (SQLSTATE 42501,
+      the missing-grant/behind-DB signature) it rethrows with a "DB likely behind on migrations —
+      run migrations" hint. A legitimate RLS **policy** violation ("new row violates row-level
+      security policy", also 42501) is left UNTOUCHED — `describeRlsPermissionError` matches only the
+      grant-drift message. Pure rules unit-tested (`schema-drift.test.ts`, 9 cases); RLS isolation
+      suite unaffected.
 
 ### Plan E — Local dev doctor + hot-reload ✅ DONE (PR #25, merged)
 - [x] `bun run dev:doctor` (DB migration count == file count, app_rls grants, API up+ready,
