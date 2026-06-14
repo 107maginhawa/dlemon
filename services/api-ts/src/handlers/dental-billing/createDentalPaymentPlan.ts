@@ -12,6 +12,7 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 
 export async function createDentalPaymentPlan(
   ctx: ValidatedContext<CreateDentalPaymentPlanBody, never, CreateDentalPaymentPlanParams>
@@ -54,40 +55,47 @@ export async function createDentalPaymentPlan(
     throw new BusinessLogicError('No balance remaining to create a payment plan', 'NO_BALANCE');
   }
 
-  const planRepo = new DentalPaymentPlanRepository(db);
+  // RLS P1b activation: route the idempotency check + plan/installment writes
+  // through a single withTenantTx so the create stays atomic and the tenant
+  // choke point is pre-routed for when the Tier-3 plan tables are armed in P4.
+  // Scope is resolved via the armed invoice (authz above stays on db).
+  const result = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
+    const planRepo = new DentalPaymentPlanRepository(tx);
 
-  // Check for existing plan (one plan per invoice).
-  const existing = await planRepo.findByInvoice(invoiceId);
-  if (existing) {
-    // SL-04 / F-G16: offline-replay idempotency. A plan has no localId column, so
-    // the natural key is the request content: an identical re-create (same invoice
-    // + same plan shape) is a replay of the original (dropped ACK) — return the
-    // EXISTING plan (200) instead of erroring. A DIFFERENT shape is a genuine
-    // attempt to create a second/different plan → PLAN_EXISTS (one per invoice).
-    const sameShape =
-      existing.numberOfInstallments === body.numberOfInstallments &&
-      existing.frequency === body.frequency &&
-      existing.totalCents === invoice.balanceCents &&
-      existing.startDate.getTime() === new Date(body.startDate).getTime();
-    if (sameShape) {
-      const installments = await planRepo.findInstallmentsByPlan(existing.id);
-      return ctx.json({ ...existing, installments }, 200);
+    // Check for existing plan (one plan per invoice).
+    const existing = await planRepo.findByInvoice(invoiceId);
+    if (existing) {
+      // SL-04 / F-G16: offline-replay idempotency. A plan has no localId column, so
+      // the natural key is the request content: an identical re-create (same invoice
+      // + same plan shape) is a replay of the original (dropped ACK) — return the
+      // EXISTING plan (200) instead of erroring. A DIFFERENT shape is a genuine
+      // attempt to create a second/different plan → PLAN_EXISTS (one per invoice).
+      const sameShape =
+        existing.numberOfInstallments === body.numberOfInstallments &&
+        existing.frequency === body.frequency &&
+        existing.totalCents === invoice.balanceCents &&
+        existing.startDate.getTime() === new Date(body.startDate).getTime();
+      if (sameShape) {
+        const installments = await planRepo.findInstallmentsByPlan(existing.id);
+        return { replay: true as const, plan: existing, installments };
+      }
+      throw new BusinessLogicError('Invoice already has a payment plan', 'PLAN_EXISTS');
     }
-    throw new BusinessLogicError('Invoice already has a payment plan', 'PLAN_EXISTS');
-  }
 
-  const totalCents = invoice.balanceCents;
-  const amountPerInstallmentCents = Math.floor(totalCents / body.numberOfInstallments);
+    const totalCents = invoice.balanceCents;
+    const amountPerInstallmentCents = Math.floor(totalCents / body.numberOfInstallments);
 
-  const { plan, installments } = await planRepo.createWithInstallments({
-    invoiceId,
-    patientId: body.patientId,
-    totalCents,
-    numberOfInstallments: body.numberOfInstallments,
-    frequency: body.frequency,
-    startDate: new Date(body.startDate),
-    amountPerInstallmentCents,
+    const created = await planRepo.createWithInstallments({
+      invoiceId,
+      patientId: body.patientId,
+      totalCents,
+      numberOfInstallments: body.numberOfInstallments,
+      frequency: body.frequency,
+      startDate: new Date(body.startDate),
+      amountPerInstallmentCents,
+    });
+    return { replay: false as const, plan: created.plan, installments: created.installments };
   });
 
-  return ctx.json({ ...plan, installments }, 201);
+  return ctx.json({ ...result.plan, installments: result.installments }, result.replay ? 200 : 201);
 }

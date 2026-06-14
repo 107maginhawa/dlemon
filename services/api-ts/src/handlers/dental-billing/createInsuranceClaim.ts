@@ -16,6 +16,7 @@ import {
   getCoverageAuthorizationForBilling,
 } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import { SUBMISSION_CHANNELS, type NewDentalInsuranceClaimLine, type SubmissionChannel } from './repos/dental-insurance-claim.schema';
@@ -67,9 +68,9 @@ export async function createInsuranceClaim(ctx: HandlerContext): Promise<Respons
   }
 
   const invoiceRepo = new DentalInvoiceRepository(db);
-  const claimRepo = new DentalInsuranceClaimRepository(db, logger);
 
-  // Derive lines from the invoice when none are supplied inline.
+  // Derive lines from the invoice when none are supplied inline. The invoice
+  // read stays on db (entity resolution + ownership guard).
   let lineInputs: ClaimLineInput[] = body.lines ?? [];
   if (body.invoiceId) {
     const found = await invoiceRepo.findWithLineItems(body.invoiceId);
@@ -94,36 +95,44 @@ export async function createInsuranceClaim(ctx: HandlerContext): Promise<Respons
 
   const billedAmountCents = lineInputs.reduce((s, l) => s + Math.max(0, l.billedAmountCents), 0);
 
-  const claim = await claimRepo.createOne({
-    patientId: body.patientId,
-    insuranceProfileId: body.insuranceProfileId,
-    branchId: patient.preferredBranchId!,
-    invoiceId: body.invoiceId ?? null,
-    visitId: body.visitId ?? null,
-    authorizationId: body.authorizationId ?? null,
-    claimNumber: claimRepo.generateClaimNumber(),
-    status: 'draft',
-    submissionChannel: (body.submissionChannel && SUBMISSION_CHANNELS.includes(body.submissionChannel as SubmissionChannel) ? body.submissionChannel as SubmissionChannel : null),
-    billedAmountCents,
-    paidByPayerCents: 0,
-    patientPortionCents: billedAmountCents,
-    createdBy: user.id,
-    updatedBy: user.id,
-  });
+  // RLS P1b activation: route the claim insert (+ its lines) through a single
+  // withTenantTx so the app_rls policy on the Tier-1 dental_insurance_claim
+  // enforces the branch scope as a second wall (WITH CHECK) and the writes stay
+  // atomic. Authz above stays on db to preserve the exact 403/404.
+  const { claim, lines } = await withTenantTx(db, { branchIds: [patient.preferredBranchId!] }, async (tx) => {
+    const txClaimRepo = new DentalInsuranceClaimRepository(tx, logger);
+    const createdClaim = await txClaimRepo.createOne({
+      patientId: body.patientId,
+      insuranceProfileId: body.insuranceProfileId,
+      branchId: patient.preferredBranchId!,
+      invoiceId: body.invoiceId ?? null,
+      visitId: body.visitId ?? null,
+      authorizationId: body.authorizationId ?? null,
+      claimNumber: txClaimRepo.generateClaimNumber(),
+      status: 'draft',
+      submissionChannel: (body.submissionChannel && SUBMISSION_CHANNELS.includes(body.submissionChannel as SubmissionChannel) ? body.submissionChannel as SubmissionChannel : null),
+      billedAmountCents,
+      paidByPayerCents: 0,
+      patientPortionCents: billedAmountCents,
+      createdBy: user.id,
+      updatedBy: user.id,
+    });
 
-  const lineRows: NewDentalInsuranceClaimLine[] = lineInputs.map((l) => ({
-    claimId: claim.id,
-    treatmentId: l.treatmentId ?? null,
-    invoiceLineItemId: l.invoiceLineItemId ?? null,
-    cdtCode: l.cdtCode,
-    description: l.description,
-    billedAmountCents: Math.max(0, l.billedAmountCents),
-    paidAmountCents: 0,
-    status: 'pending',
-    createdBy: user.id,
-    updatedBy: user.id,
-  }));
-  const lines = await claimRepo.createLines(lineRows);
+    const lineRows: NewDentalInsuranceClaimLine[] = lineInputs.map((l) => ({
+      claimId: createdClaim.id,
+      treatmentId: l.treatmentId ?? null,
+      invoiceLineItemId: l.invoiceLineItemId ?? null,
+      cdtCode: l.cdtCode,
+      description: l.description,
+      billedAmountCents: Math.max(0, l.billedAmountCents),
+      paidAmountCents: 0,
+      status: 'pending',
+      createdBy: user.id,
+      updatedBy: user.id,
+    }));
+    const createdLines = await txClaimRepo.createLines(lineRows);
+    return { claim: createdClaim, lines: createdLines };
+  });
 
   logger?.info({ action: 'createInsuranceClaim', patientId: body.patientId, claimId: claim.id, lines: lines.length }, 'Insurance claim created');
 

@@ -11,6 +11,8 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { getPatientBranchForBilling } from '../patient/repos/patient-billing.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 
 export async function getPatientBalance(ctx: BaseContext) {
   const user = ctx.get('user');
@@ -26,10 +28,21 @@ export async function getPatientBalance(ctx: BaseContext) {
     await assertBranchAccess(db, user.id, patient.preferredBranchId);
   }
 
-  const invoiceRepo = new DentalInvoiceRepository(db);
-  const planRepo = new DentalPaymentPlanRepository(db);
+  // RLS P1b activation: the balance aggregates the patient's invoices with no
+  // app-level branch filter (findMany by patientId). Route the reads through
+  // withTenantTx scoped to the caller's active branches so the app_rls policy on
+  // dental_invoice enforces tenancy as a second wall — a caller never sums
+  // invoices from branches they are not a member of. Authz above stays on db.
+  const scopeBranchIds = await getActiveBranchIdsForPerson(db, user.id);
 
-  const invoices = await invoiceRepo.findMany({ patientId });
+  const { invoices, plans } = await withTenantTx(db, { branchIds: scopeBranchIds }, async (tx) => {
+    const invoiceRepo = new DentalInvoiceRepository(tx);
+    const planRepo = new DentalPaymentPlanRepository(tx);
+    return {
+      invoices: await invoiceRepo.findMany({ patientId }),
+      plans: await planRepo.findByPatient(patientId),
+    };
+  });
   const activeInvoices = invoices.filter(inv => inv.status !== 'voided');
 
   const totalBilledCents = activeInvoices.reduce((sum, inv) => sum + inv.totalCents, 0);
@@ -40,7 +53,6 @@ export async function getPatientBalance(ctx: BaseContext) {
   const overdueAmountCents = overdueInvoices.reduce((sum, inv) => sum + inv.balanceCents, 0);
 
   // Active payment plans
-  const plans = await planRepo.findByPatient(patientId);
   const activePlans = plans.filter(p => p.status === 'on_track' || p.status === 'behind');
 
   logger?.info({ action: 'getPatientBalance', patientId, outstandingBalanceCents }, 'Patient balance retrieved');

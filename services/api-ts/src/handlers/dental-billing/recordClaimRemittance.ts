@@ -21,6 +21,7 @@ import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import { DentalPayerPaymentRepository } from './repos/dental-payer-payment.repo';
 import { PAYER_PAYMENT_METHODS, type PayerPaymentMethod } from './repos/dental-payer-payment.schema';
@@ -48,9 +49,10 @@ export async function recordClaimRemittance(ctx: HandlerContext): Promise<Respon
   const db = ctx.get('database') as DatabaseInstance;
   const logger = ctx.get('logger');
 
+  // These db-bound repos serve the pre-tx entity fetch + idempotency guard; the
+  // armed-table writes use tx-bound repos inside withTenantTx below.
   const claimRepo = new DentalInsuranceClaimRepository(db, logger);
   const payerRepo = new DentalPayerPaymentRepository(db, logger);
-  const invoiceRepo = new DentalInvoiceRepository(db);
 
   const claim = await claimRepo.findOneById(claimId);
   if (!claim) throw new NotFoundError('Insurance claim not found');
@@ -89,71 +91,86 @@ export async function recordClaimRemittance(ctx: HandlerContext): Promise<Respon
     );
   }
 
-  // 1. Record the payer payment.
-  const payerPayment = await payerRepo.createOne({
-    claimId,
-    insuranceProfileId: claim.insuranceProfileId,
-    branchId: claim.branchId,
-    invoiceId: claim.invoiceId ?? null,
-    amountCents: paid,
-    remittanceReference: body.remittanceReference ?? null,
-    remittedAt: body.remittedAt ?? null,
-    method: (PAYER_PAYMENT_METHODS.includes(body.method as PayerPaymentMethod) ? body.method as PayerPaymentMethod : 'bank_transfer'),
-    disallowanceCents: disallowed > 0 ? disallowed : null,
-    disallowanceReason: body.disallowanceReason ?? null,
-    createdBy: actorId,
-    updatedBy: actorId,
-  });
+  // RLS P1b activation: route the full money pipeline (payer payment + invoice
+  // write-off/payment + claim totals/FSM) through a SINGLE withTenantTx so the
+  // app_rls policies on dental_payer_payment / dental_invoice / dental_insurance_
+  // claim (all Tier-1) enforce the branch scope as a second wall — and so the
+  // multi-table remittance posts atomically (it was previously non-atomic).
+  // Entity fetch + authz + idempotency + over-post guards + audit stay on db.
+  const { payerPayment, finalClaim } = await withTenantTx(db, { branchIds: [claim.branchId] }, async (tx) => {
+    const txClaimRepo = new DentalInsuranceClaimRepository(tx, logger);
+    const txPayerRepo = new DentalPayerPaymentRepository(tx, logger);
+    const txInvoiceRepo = new DentalInvoiceRepository(tx);
 
-  // 2 + 3. Apply to the anchored invoice (payment + write-off) when present.
-  if (claim.invoiceId) {
-    const invoice = await invoiceRepo.findOneById(claim.invoiceId);
-    if (invoice && invoice.status !== 'voided') {
-      // Write off the disallowed delta first (cannot pay on a draft).
-      if (disallowed > 0 && invoice.status !== 'paid') {
-        const newDiscount = invoice.discountCents + disallowed;
-        await invoiceRepo.applyDiscount(
-          claim.invoiceId,
-          newDiscount,
-          Number(invoice.taxRate),
-          'hmo_disallowance',
-          actorId,
-        );
-      }
-      // Then post the payer payment against the (recomputed) balance.
-      if (paid > 0) {
-        const fresh = await invoiceRepo.findOneById(claim.invoiceId);
-        if (fresh && fresh.status !== 'paid' && fresh.status !== 'draft') {
-          const applied = Math.min(paid, fresh.balanceCents);
-          if (applied > 0) await invoiceRepo.addPayment(claim.invoiceId, applied);
+    // 1. Record the payer payment.
+    const txPayerPayment = await txPayerRepo.createOne({
+      claimId,
+      insuranceProfileId: claim.insuranceProfileId,
+      branchId: claim.branchId,
+      invoiceId: claim.invoiceId ?? null,
+      amountCents: paid,
+      remittanceReference: body.remittanceReference ?? null,
+      remittedAt: body.remittedAt ?? null,
+      method: (PAYER_PAYMENT_METHODS.includes(body.method as PayerPaymentMethod) ? body.method as PayerPaymentMethod : 'bank_transfer'),
+      disallowanceCents: disallowed > 0 ? disallowed : null,
+      disallowanceReason: body.disallowanceReason ?? null,
+      createdBy: actorId,
+      updatedBy: actorId,
+    });
+
+    // 2 + 3. Apply to the anchored invoice (payment + write-off) when present.
+    if (claim.invoiceId) {
+      const invoice = await txInvoiceRepo.findOneById(claim.invoiceId);
+      if (invoice && invoice.status !== 'voided') {
+        // Write off the disallowed delta first (cannot pay on a draft).
+        if (disallowed > 0 && invoice.status !== 'paid') {
+          const newDiscount = invoice.discountCents + disallowed;
+          await txInvoiceRepo.applyDiscount(
+            claim.invoiceId,
+            newDiscount,
+            Number(invoice.taxRate),
+            'hmo_disallowance',
+            actorId,
+          );
+        }
+        // Then post the payer payment against the (recomputed) balance.
+        if (paid > 0) {
+          const fresh = await txInvoiceRepo.findOneById(claim.invoiceId);
+          if (fresh && fresh.status !== 'paid' && fresh.status !== 'draft') {
+            const applied = Math.min(paid, fresh.balanceCents);
+            if (applied > 0) await txInvoiceRepo.addPayment(claim.invoiceId, applied);
+          }
         }
       }
     }
-  }
 
-  // 4. Update payer totals + advance the claim FSM.
-  await claimRepo.applyRemittance(claimId, paid, disallowed);
-  const refreshed = await claimRepo.findOneById(claimId);
-  let nextStatus: InsuranceClaimStatus | undefined;
-  if (refreshed) {
-    const settled = (refreshed.paidByPayerCents ?? 0) + (refreshed.disallowedCents ?? 0);
-    const fullySettled = settled >= refreshed.billedAmountCents;
-    if (fullySettled && refreshed.status !== 'paid') {
-      // approved/partially_paid → paid; otherwise leave (e.g. written-off route).
-      if (refreshed.status === 'approved' || refreshed.status === 'partially_paid' || refreshed.status === 'submitted' || refreshed.status === 'under_review') {
-        nextStatus = 'paid';
+    // 4. Update payer totals + advance the claim FSM.
+    await txClaimRepo.applyRemittance(claimId, paid, disallowed);
+    const refreshed = await txClaimRepo.findOneById(claimId);
+    let nextStatus: InsuranceClaimStatus | undefined;
+    if (refreshed) {
+      const settled = (refreshed.paidByPayerCents ?? 0) + (refreshed.disallowedCents ?? 0);
+      const fullySettled = settled >= refreshed.billedAmountCents;
+      if (fullySettled && refreshed.status !== 'paid') {
+        // approved/partially_paid → paid; otherwise leave (e.g. written-off route).
+        if (refreshed.status === 'approved' || refreshed.status === 'partially_paid' || refreshed.status === 'submitted' || refreshed.status === 'under_review') {
+          nextStatus = 'paid';
+        }
+      } else if (!fullySettled && (refreshed.status === 'approved' || refreshed.status === 'submitted' || refreshed.status === 'under_review')) {
+        nextStatus = 'partially_paid';
       }
-    } else if (!fullySettled && (refreshed.status === 'approved' || refreshed.status === 'submitted' || refreshed.status === 'under_review')) {
-      nextStatus = 'partially_paid';
     }
-  }
-  if (nextStatus) {
-    await claimRepo.update(claimId, {
-      status: nextStatus,
-      paidAt: nextStatus === 'paid' ? new Date() : undefined,
-      updatedBy: actorId,
-    });
-  }
+    if (nextStatus) {
+      await txClaimRepo.update(claimId, {
+        status: nextStatus,
+        paidAt: nextStatus === 'paid' ? new Date() : undefined,
+        updatedBy: actorId,
+      });
+    }
+
+    const txFinalClaim = await txClaimRepo.findOneById(claimId);
+    return { payerPayment: txPayerPayment, finalClaim: txFinalClaim };
+  });
 
   const branchForAudit = await getBranchOrgId(db, claim.branchId);
   await logAuditEvent(db, logger, {
@@ -166,6 +183,5 @@ export async function recordClaimRemittance(ctx: HandlerContext): Promise<Respon
     metadata: { claimId, amountCents: paid, disallowanceCents: disallowed },
   });
 
-  const finalClaim = await claimRepo.findOneById(claimId);
   return ctx.json({ payerPayment, claim: finalClaim }, 201);
 }

@@ -8,6 +8,7 @@ import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 
 export async function addInsuranceClaimLine(ctx: HandlerContext): Promise<Response> {
@@ -41,19 +42,27 @@ export async function addInsuranceClaimLine(ctx: HandlerContext): Promise<Respon
     throw new BusinessLogicError('Cannot add a line to a submitted claim', 'CLAIM_IMMUTABLE');
   }
 
-  const line = await repo.addLine({
-    claimId,
-    treatmentId: body.treatmentId ?? null,
-    invoiceLineItemId: body.invoiceLineItemId ?? null,
-    cdtCode: body.cdtCode,
-    description: body.description,
-    billedAmountCents: Math.max(0, body.billedAmountCents),
-    paidAmountCents: 0,
-    status: 'pending',
-    createdBy: user.id,
-    updatedBy: user.id,
+  // RLS P1b activation: route the line insert + claim-total recompute through a
+  // single withTenantTx (recalculateBilled UPDATEs the Tier-1 dental_insurance_
+  // claim) so the app_rls policy enforces the branch scope as a second wall and
+  // the two writes stay atomic. Entity fetch + authz above stay on db.
+  const line = await withTenantTx(db, { branchIds: [claim.branchId] }, async (tx) => {
+    const txRepo = new DentalInsuranceClaimRepository(tx, logger);
+    const created = await txRepo.addLine({
+      claimId,
+      treatmentId: body.treatmentId ?? null,
+      invoiceLineItemId: body.invoiceLineItemId ?? null,
+      cdtCode: body.cdtCode,
+      description: body.description,
+      billedAmountCents: Math.max(0, body.billedAmountCents),
+      paidAmountCents: 0,
+      status: 'pending',
+      createdBy: user.id,
+      updatedBy: user.id,
+    });
+    await txRepo.recalculateBilled(claimId);
+    return created;
   });
-  await repo.recalculateBilled(claimId);
 
   return ctx.json(line, 201);
 }

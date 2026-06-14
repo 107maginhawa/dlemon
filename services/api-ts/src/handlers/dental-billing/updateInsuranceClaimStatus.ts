@@ -11,6 +11,7 @@ import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import { getCoverageAuthorizationForBilling } from '@/handlers/dental-patient/repos/insurance-billing.facade';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import { INSURANCE_CLAIM_FSM, SUBMISSION_CHANNELS, type InsuranceClaimStatus, type SubmissionChannel } from './repos/dental-insurance-claim.schema';
@@ -83,7 +84,13 @@ export async function updateInsuranceClaimStatus(ctx: HandlerContext): Promise<R
     updateFields.paidAt = new Date();
   }
 
-  const updated = await repo.update(claimId, updateFields);
+  // RLS P1b activation: route the dental_insurance_claim write through
+  // withTenantTx so the app_rls policy enforces the branch scope as a second
+  // wall. Entity fetch + authz + the LOA warn-guard above stay on db to preserve
+  // the exact 404/422 behavior.
+  const updated = await withTenantTx(db, { branchIds: [claim.branchId] }, (tx) =>
+    new DentalInsuranceClaimRepository(tx, logger).update(claimId, updateFields),
+  );
   logger?.info(
     { action: 'updateInsuranceClaimStatus', claimId, from: current, to: body.status, warnings },
     'Insurance claim status updated',

@@ -9,6 +9,7 @@ import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { withTenantTx } from '@/core/tenant-tx';
 import { DentalInsuranceClaimRepository } from './repos/dental-insurance-claim.repo';
 import type { ClaimLineStatus } from './repos/dental-insurance-claim.schema';
 
@@ -38,15 +39,24 @@ export async function updateInsuranceClaimLine(ctx: HandlerContext): Promise<Res
     throw new NotFoundError('Insurance claim not found');
   }
 
-  const updated = await repo.updateLine(lineId, claimId, {
-    ...(body.approvedAmountCents !== undefined && { approvedAmountCents: body.approvedAmountCents }),
-    ...(body.paidAmountCents !== undefined && { paidAmountCents: body.paidAmountCents }),
-    ...(body.status !== undefined && { status: body.status }),
-    ...(body.description !== undefined && { description: body.description }),
-    ...(body.billedAmountCents !== undefined && { billedAmountCents: Math.max(0, body.billedAmountCents) }),
+  // RLS P1b activation: route the line update + claim-total recompute through a
+  // single withTenantTx (recalculateBilled UPDATEs the Tier-1 dental_insurance_
+  // claim) so the app_rls policy enforces the branch scope as a second wall and
+  // the two writes stay atomic. Entity fetch + authz above stay on db. The
+  // line-not-found 404 is preserved: recompute is skipped when updateLine misses.
+  const updated = await withTenantTx(db, { branchIds: [claim.branchId] }, async (tx) => {
+    const txRepo = new DentalInsuranceClaimRepository(tx, logger);
+    const u = await txRepo.updateLine(lineId, claimId, {
+      ...(body.approvedAmountCents !== undefined && { approvedAmountCents: body.approvedAmountCents }),
+      ...(body.paidAmountCents !== undefined && { paidAmountCents: body.paidAmountCents }),
+      ...(body.status !== undefined && { status: body.status }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.billedAmountCents !== undefined && { billedAmountCents: Math.max(0, body.billedAmountCents) }),
+    });
+    if (u) await txRepo.recalculateBilled(claimId);
+    return u;
   });
   if (!updated) throw new NotFoundError('Claim line not found');
 
-  await repo.recalculateBilled(claimId);
   return ctx.json(updated, 200);
 }
