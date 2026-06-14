@@ -14,6 +14,7 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 
 export async function recordDentalPayment(
@@ -109,21 +110,29 @@ export async function recordDentalPayment(
   // V-BIL-009: optional caller-supplied payment date (defaults to now()).
   const paymentDate = body.paymentDate ? new Date(body.paymentDate) : undefined;
 
-  // Create the payment
-  const payment = await paymentRepo.createOne({
-    invoiceId,
-    patientId: invoice.patientId,
-    branchId: invoice.branchId,
-    amountCents: body.amountCents,
-    method: body.method,
-    receiptNumber,
-    recordedByMemberId: body.recordedByMemberId,
-    notes: body.notes,
-    ...(paymentDate ? { createdAt: paymentDate } : {}),
+  // RLS P1b activation: route the two payload writes (the dental_payment insert
+  // + the dental_invoice balance update) through a SINGLE withTenantTx so the
+  // app_rls policies enforce the branch scope as a second wall — and so the two
+  // writes are atomic. Entity fetch + authz + the FSM/overpayment guards + the
+  // GLOBAL cross-invoice receipt-uniqueness check + the audit writes stay on db
+  // (the global receipt check must see ALL branches to detect cross-invoice
+  // reuse; wrapping it would hide a foreign collision and surface the global
+  // unique index as an opaque 500).
+  const { payment, updatedInvoice } = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
+    const txPayment = await new DentalPaymentRepository(tx).createOne({
+      invoiceId,
+      patientId: invoice.patientId,
+      branchId: invoice.branchId,
+      amountCents: body.amountCents,
+      method: body.method,
+      receiptNumber,
+      recordedByMemberId: body.recordedByMemberId,
+      notes: body.notes,
+      ...(paymentDate ? { createdAt: paymentDate } : {}),
+    });
+    const txInvoice = await new DentalInvoiceRepository(tx).addPayment(invoiceId, body.amountCents);
+    return { payment: txPayment, updatedInvoice: txInvoice };
   });
-
-  // Update invoice totals
-  const updatedInvoice = await invoiceRepo.addPayment(invoiceId, body.amountCents);
 
   // AL-010: payment.record audit trail (never throws — see audit-logger)
   const logger = ctx.get('logger');

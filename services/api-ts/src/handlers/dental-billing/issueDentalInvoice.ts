@@ -16,6 +16,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 
 export async function issueDentalInvoice(
   ctx: ValidatedContext<never, never, IssueDentalInvoiceParams>
@@ -37,7 +38,12 @@ export async function issueDentalInvoice(
     throw new BusinessLogicError('Only draft invoices can be issued', 'INVALID_STATUS');
   }
 
-  const issued = await repo.issue(invoiceId);
+  // RLS P1b activation: route the dental_invoice write through withTenantTx so
+  // the app_rls policy enforces the branch scope as a second wall. Entity
+  // fetch + authz above stay on db to preserve the exact 403/404 behavior.
+  const issued = await withTenantTx(db, { branchIds: [invoice.branchId] }, (tx) =>
+    new DentalInvoiceRepository(tx).issue(invoiceId),
+  );
 
   ctx.get('logger')?.info(
     { requestId: ctx.get('requestId'), action: 'dental_invoice_issue', invoiceId, branchId: invoice.branchId, by: session.userId },

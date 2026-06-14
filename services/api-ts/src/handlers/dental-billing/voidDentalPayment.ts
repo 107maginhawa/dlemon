@@ -13,6 +13,7 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getActiveMembershipId, getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 
 export async function voidDentalPayment(
@@ -46,12 +47,16 @@ export async function voidDentalPayment(
     throw new BusinessLogicError('No active membership found for current user in this branch', 'NO_ACTIVE_MEMBERSHIP');
   }
 
-  // Void the payment
-  const voided = await paymentRepo.voidPayment(paymentId, body.voidReason, membership.id);
-
-  // Reverse the amount on the invoice
-  const invoiceRepo = new DentalInvoiceRepository(db);
-  await invoiceRepo.removePayment(invoiceId, payment.amountCents);
+  // RLS P1b activation: route the two payload writes (the dental_payment void +
+  // the dental_invoice balance reversal) through a SINGLE withTenantTx so the
+  // app_rls policies enforce the branch scope as a second wall — and so the
+  // reversal is atomic. Entity fetch + authz + membership resolution + audit
+  // stay on db to preserve the exact 403/404/422 behavior.
+  const voided = await withTenantTx(db, { branchIds: [payment.branchId] }, async (tx) => {
+    const txVoided = await new DentalPaymentRepository(tx).voidPayment(paymentId, body.voidReason, membership.id);
+    await new DentalInvoiceRepository(tx).removePayment(invoiceId, payment.amountCents);
+    return txVoided;
+  });
 
   // V-BIL-013: financial reversal must leave an audit trail.
   // P1-C: fail-closed — a void must never silently commit without an audit row.

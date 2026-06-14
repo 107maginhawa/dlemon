@@ -15,6 +15,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 
@@ -52,7 +53,12 @@ export async function markUncollectible(
     );
   }
 
-  const updated = await repo.markUncollectible(invoiceId);
+  // RLS P1b activation: route the dental_invoice write through withTenantTx so
+  // the app_rls policy enforces the branch scope as a second wall. Entity
+  // fetch + authz above stay on db to preserve the exact 403/404 behavior.
+  const updated = await withTenantTx(db, { branchIds: [invoice.branchId] }, (tx) =>
+    new DentalInvoiceRepository(tx).markUncollectible(invoiceId),
+  );
 
   const logger = ctx.get('logger');
   logger?.info(
