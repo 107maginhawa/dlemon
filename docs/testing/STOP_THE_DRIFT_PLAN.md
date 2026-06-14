@@ -79,7 +79,19 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
       journey CI job pre-boots+seeds api-ts, so Playwright must reuse it (changing to `!CI` → second
       api-ts → port collision). Determinism comes from the from-zero reseed in the job, not that flag.
       Leave it.
-- [ ] Stability budget: curated smoke passes **20/20 consecutive CI runs** before arming (Plan C).
+- [x] **Stability-budget banking mechanism shipped.** Rather than waiting ~20 organic
+      merges to accumulate the signal, a manual `workflow_dispatch` job
+      (`.github/workflows/journey-stability.yml` → `Journey Stability Budget`) boots the
+      real stack once and loops the full harness N× (default 20), each against a freshly
+      reseeded DB. Pure aggregation (`apps/dentalemon/scripts/journey-stability-budget.ts`,
+      unit-tested, 7 cases) turns the per-run verdicts into a pass-rate + a per-journey
+      flake map; the orchestrator (`run-stability-budget.ts`) exits 0 **iff every run is
+      clean**, so a green job IS the banked proof. One serial job amortizes setup → cheap on
+      CI minutes (~40 min for 20). Verified locally **2/2 clean (21/21 each)** against the
+      reseeded dev stack.
+- [ ] **Earn the bank:** dispatch `Journey Stability Budget` (runs=20) and confirm **20/20
+      green** before arming Plan C. (Ceph B01–B04 record SKIPPED in CI — no MinIO — which the
+      gate tolerates.)
 - [x] Curated set = money/clinical core only (New Visit ✅, record finding, create invoice,
       record payment, create appointment, check-in). New Visit landed first.
 
