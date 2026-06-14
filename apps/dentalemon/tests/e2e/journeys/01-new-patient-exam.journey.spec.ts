@@ -43,16 +43,20 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await pinAuth(page, 'dentist')
     await openWorkspace(page, patientId)
 
-    // Step 2: ensure an active visit (new visit via carousel if needed).
-    // The New-Visit button is gated DISABLED when the patient already has an
-    // open visit (title: "Finish or discard the open visit to start a new one").
-    // In that case the active-visit precondition is already satisfied, so only
-    // click when the button is enabled — clicking a disabled button just hangs.
+    // Step 2: J01 charts on Juan's EXISTING open visit (the seed gives every
+    // demo patient except Diego an active visit). The New-Visit affordance must
+    // RENDER and be correctly gated DISABLED while that open visit exists —
+    // asserted hard, NOT the old probe-and-skip `if (count && isEnabled)` that
+    // silently passed when New Visit was broken (the exact blind spot behind the
+    // "can't add a New Visit" incident). The positive create path — clicking an
+    // ENABLED New Visit and proving POST /dental/visits → 201 — is covered
+    // end-to-end by J21 on the clean-state patient (Diego).
     const newVisitBtn = page.getByTestId('new-visit-btn')
-    if ((await newVisitBtn.count()) && (await newVisitBtn.first().isEnabled())) {
-      await newVisitBtn.first().click()
-      await page.waitForLoadState('networkidle')
-    }
+    await expect(newVisitBtn, 'New Visit affordance must render').toBeVisible({ timeout: 10_000 })
+    await expect(
+      newVisitBtn,
+      'New Visit must be gated DISABLED while Juan already has an open visit',
+    ).toBeDisabled()
 
     // Step 3-4: open a tooth, record a pre-existing restoration (Existing).
     const carousel = page.getByTestId('workspace-carousel-zone')

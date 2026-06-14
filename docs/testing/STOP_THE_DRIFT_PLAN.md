@@ -46,14 +46,25 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
 - [ ] (steps authored after Phase 0; no placeholders)
 
 ### Plan B — Harden + de-flake the critical-path journeys (the heart)
-- [ ] Convert `if (count && isEnabled)` probe-and-skip → hard asserts (present+enabled → click
-      → assert user-visible result AND API 2xx). Files: `apps/dentalemon/tests/e2e/journeys/`,
-      `_journey-helpers.ts`, `scripts/run-journey-harness.ts`. Sweep all 20 journeys.
+- [x] **Slice 1 — New Visit (the literal incident).** Killed J01's `if (count && isEnabled)`
+      silent-skip → hard invariant assert (New Visit renders + is correctly gated DISABLED while
+      Juan has an open visit). Added **J21** (`21-new-visit-create.journey.spec.ts`): registers a
+      throwaway patient (deterministic, seed-independent — the demo seed gives every patient an
+      open visit, and Diego's draft carries a non-discardable signed consent), then hard-asserts
+      New Visit **ENABLED → click → `POST /dental/visits` 201 → button flips DISABLED →
+      independent-read exactly 1 open visit**. Wired into the harness roster. Verified live: full
+      harness 20/21 PASS (J21 green; the 1 ERROR was a pre-existing ceph flake B02, green on
+      retry). This runs in the already-required **Journey Harness** check.
+- [ ] Slice 2 — sweep the remaining probe-and-skip guards across J02–J20 (revenue chain, perio,
+      charting, etc.) → hard asserts (present+enabled → act → assert user-visible result AND API 2xx).
 - [ ] Flakiness root-cause fixes (THE task): kill `networkidle` races → explicit waits;
-      deterministic seed for the curated set; fix `playwright.config.ts` `reuseExistingServer`.
-- [ ] Stability budget: curated smoke passes **20/20 consecutive CI runs** before arming.
-- [ ] Curated set = money/clinical core only (New Visit, record finding, create invoice,
-      record payment, create appointment, check-in).
+      de-flake the ceph journeys (B02 image-selection). **NOTE:** `playwright.config.ts:96`
+      `reuseExistingServer: true` for the API is INTENTIONAL — the journey CI job pre-boots+seeds
+      api-ts, so Playwright must reuse it (changing to `!CI` → second api-ts → port collision).
+      Determinism comes from the from-zero reseed in the job, not that flag. Leave it.
+- [ ] Stability budget: curated smoke passes **20/20 consecutive CI runs** before arming (Plan C).
+- [x] Curated set = money/clinical core only (New Visit ✅, record finding, create invoice,
+      record payment, create appointment, check-in). New Visit landed first.
 
 ### Plan C — Arm the gate (gated on B's 20/20 + A green) — THE LOCK
 - [ ] Make the curated smoke a required check; run against a from-zero-migrated DB. Zero
@@ -64,7 +75,7 @@ edge case, perf, security, or data-correctness bug. Coverage converges; it is ne
 - [ ] `/readyz` reports migration drift (applied vs journal) + app_rls-grant presence.
 - [ ] Design check: should `withTenantTx` fail-loud "DB behind on migrations" vs raw permission-denied?
 
-### Plan E — Local dev doctor + hot-reload ✅ DONE (PR pending)
+### Plan E — Local dev doctor + hot-reload ✅ DONE (PR #25, merged)
 - [x] `bun run dev:doctor` (DB migration count == file count, app_rls grants, API up+ready,
       FE up → loud, specific warning + the ONE fix command; exit 1 on drift). Pure diagnosis
       rules in `services/api-ts/src/core/dev-doctor.ts` (unit-tested, 10 cases); I/O orchestrator
