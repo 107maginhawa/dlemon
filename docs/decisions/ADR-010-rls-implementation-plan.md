@@ -1,6 +1,6 @@
 # RLS Implementation Scoping Plan — `services/api-ts` (ADR-010 Pre-GA Gate)
 
-> **Status: IN PROGRESS — P0 + P1a shipped.** Companion to
+> **Status: IN PROGRESS — P0 + P1a + P2 shipped.** Companion to
 > [ADR-010](./ADR-010-tenant-isolation-rls-pre-ga.md). Recorded **2026-06-14** as the
 > implementation scoping for the ADR-010 pre-GA Row-Level-Security gate; the build
 > started the same day. Evidence paths are cited inline.
@@ -13,6 +13,14 @@
 >   ENABLE+FORCE RLS + set-valued policies on the remaining Tier-1 direct-tenant-column
 >   tables, plus the `app_current_orgs()` helper, with a per-table isolation matrix. **DB
 >   posture only — zero runtime change** (the app still connects as postgres and bypasses).
+> - **P2 — DONE** (migration `0106_rls_p2_tier2a_visit_anchored`,
+>   `src/tests/rls/tier2a.rls-isolation.test.ts`): ENABLE+FORCE RLS + an EXISTS-via-
+>   `dental_visit` policy on the nine visit-anchored clinical tables (`dental_chart`,
+>   `dental_treatment`, `dental_finding`, `prescription`, `consent_form`,
+>   `consent_refusal`, `amendment`, `lab_order`, `dental_attachment`), with a per-table
+>   isolation matrix (63 assertions). This completes ADR-010's named clinical table set.
+>   **DB posture only — zero runtime change** (the app still connects as postgres and
+>   bypasses; activation rides along with the relevant handler routing).
 > - **P1b — next**: route the Tier-1 handlers' DB access through `withTenantTx` so the
 >   second wall becomes live on the request path.
 >
@@ -248,7 +256,7 @@ Each phase is an independently shippable, independently testable PR (compatible 
 | **P0 — Plumbing + pilot ✅ DONE** | `app_rls` `NOLOGIN` role + GRANTs migration, `app_current_branches()` helper, `withTenantTx` helper (SQLite-guarded). `ENABLE`+`FORCE` RLS + policy on the `dental_visit` pilot. | Helpers + Stage-0 validation on `dental_visit` (`0104`, `tenant-tx.ts`). | RLS armed on `dental_visit` only; app connects as `postgres` → bypasses. Zero runtime change. |
 | **P1a — Tier 1 posture ✅ DONE** | `ENABLE`+`FORCE` RLS + set-valued policies on the remaining ~20 direct-tenant-column Tier-1 tables (18 branch-scoped + `dental_feature_permission` org-scoped + `dental_audit_log`). `app_current_orgs()` helper. Per-table isolation matrix. **No handler routing.** | Tier-1 migration `0105` + `tier1.rls-isolation.test.ts` (140 assertions) + full-suite regression. | RLS armed on all Tier-1; app still `postgres` → bypasses. Zero runtime change. |
 | **P1b — Tier 1 activation** | Route the Tier-1 handlers' DB access through `withTenantTx` (`SET LOCAL ROLE app_rls`; connection stays `postgres`) with the correct branch scope ([resolved branch] single-branch; full active-branch set for the EM-BIL-002 multi-branch reports). | Module-by-module handler routing + full-suite regression. | RLS **enforced** on Tier 1 (second wall live on the request path). |
-| **P2 — Tier 2a (visit-anchored)** | EXISTS-via-`dental_visit` policies on `dental_chart`, `dental_treatment`, `prescription`, `consent_form`, `amendment`, `lab_order`, etc. (the ADR-010 clinical set). | Tier-2a migration + matrix. | Enforced on Tier 2a. **ADR-010's named table set is now fully covered.** |
+| **P2 — Tier 2a posture ✅ DONE** | `ENABLE`+`FORCE` RLS + EXISTS-via-`dental_visit` policies on the nine visit-anchored clinical tables (`dental_chart`, `dental_treatment`, `dental_finding`, `prescription`, `consent_form`, `consent_refusal`, `amendment`, `lab_order`, `dental_attachment` — the ADR-010 clinical set + siblings). Per-table isolation matrix. **No handler routing.** | Tier-2a migration `0106` + `tier2a.rls-isolation.test.ts` (63 assertions) + full-suite regression. | RLS armed on all Tier-2a; app still `postgres` → bypasses. Zero runtime change. **ADR-010's named table set is now fully armed.** Activation rides with the visit-anchored handler routing (P1b/P3/P4). |
 | **P3 — `patient` + Tier 2b** | Execute **Decision D2** (backfill `branch_id` on `patient`, or direct-`preferred_branch_id` policy), then policy `patient` + the ~13 `patient_id`-only tables. | Patient backfill migration (if D2-A) + Tier-2b migration + matrix. | Enforced on the patient subtree. |
 | **P4 — Tier 3 child/line + admin carve-outs** | Parent-join (or denormalized-`branch_id`) policies on child/line tables; finalize the BYPASSRLS admin handle for erasure/audit (D3). | Tier-3 migration + matrix + admin-path tests. | Full enforcement. |
 | **P5 — Drift gate** | CI assertion that every PHI table has `FORCE RLS` + a policy. | CI check. | Locks the posture. |

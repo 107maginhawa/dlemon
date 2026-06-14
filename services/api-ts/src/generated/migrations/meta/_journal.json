@@ -743,6 +743,13 @@
       "when": 1781402270027,
       "tag": "0105_rls_p1a_tier1",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1781405761665,
+      "tag": "0106_rls_p2_tier2a_visit_anchored",
+      "breakpoints": true
     }
   ]
 }
