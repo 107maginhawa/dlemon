@@ -70,10 +70,6 @@ inaccurate side. One item remains, deferred for a concrete reason:
   62/61/40. The api-ts coverage job runs in CI (`postgres-services.yml`) but is
   `continue-on-error: true` (non-blocking). Reconcile the thresholds and decide
   whether to gate.
-- **`docs/aha/` AI-process files**: ~81 generation-process artifacts live under
-  `docs/aha/` (with a `project-structure/examples/` mirror). They are first-class in
-  `docs/` and could move to `docs/_ai-process/` or `.claude/`. (The `.md.md`-typo prompt
-  was renamed to `docs/aha/prompts/08-qa-uat-workflow-guide.md` and tracked, 2026-06-13.)
 
 ## Architectural decisions (resolved 2026-06-13)
 
