@@ -1,13 +1,31 @@
 # RLS Implementation Scoping Plan — `services/api-ts` (ADR-010 Pre-GA Gate)
 
-> **Status: PLAN — build deferred.** Companion to
+> **Status: IN PROGRESS — P0 + P1a shipped.** Companion to
 > [ADR-010](./ADR-010-tenant-isolation-rls-pre-ga.md). Recorded **2026-06-14** as the
-> implementation scoping for the ADR-010 pre-GA Row-Level-Security gate. No code is
-> to be written until the open design decisions in §8 (D1–D7) are made. Produced
-> from a read-only codebase sweep; evidence paths are cited inline. A few table
-> rows are marked `(findings)` — sourced from the aggregate sweep, not a per-file
-> read — and must be field-verified before their policy is authored (see §8 open
-> questions).
+> implementation scoping for the ADR-010 pre-GA Row-Level-Security gate; the build
+> started the same day. Evidence paths are cited inline.
+>
+> **Build progress:**
+> - **P0 — DONE** (migration `0104_rls_p0_foundation`, `src/core/tenant-tx.ts`): the
+>   `app_rls` role, the `app_current_branches()` helper, the `withTenantTx` helper, and
+>   the `dental_visit` pilot policy + Stage-0 validation.
+> - **P1a — DONE** (migration `0105_rls_p1a_tier1`, `src/tests/rls/tier1.rls-isolation.test.ts`):
+>   ENABLE+FORCE RLS + set-valued policies on the remaining Tier-1 direct-tenant-column
+>   tables, plus the `app_current_orgs()` helper, with a per-table isolation matrix. **DB
+>   posture only — zero runtime change** (the app still connects as postgres and bypasses).
+> - **P1b — next**: route the Tier-1 handlers' DB access through `withTenantTx` so the
+>   second wall becomes live on the request path.
+>
+> **⚠️ LOCKED DESIGN — supersedes the connect-as-`app_rls` sketch below (§3/§4/§7-P1, D4).**
+> The app **keeps its `postgres` connection**; RLS is entered per-request via
+> **`SET LOCAL ROLE app_rls` inside `withTenantTx`** (transaction-local, reverts on commit),
+> *not* by switching the connection string. Consequences: no `app_rls` login credential to
+> manage (the role is `NOLOGIN`); the admin / deliberately-cross-tenant paths (erasure queue,
+> audit list) simply **do not call `withTenantTx`** and so keep the superuser bypass — no
+> separate `BYPASSRLS` handle is required for them. Where the older prose below says "switch
+> the app server connection to `app_rls`" or "`LOGIN` role", read "`SET LOCAL ROLE app_rls`
+> via `withTenantTx`". The tenant keys are **set-valued** (`app.current_branches`,
+> `app.current_orgs`; D1 resolved).
 
 ## 1. Objective & Non-Goals
 
@@ -227,8 +245,9 @@ Each phase is an independently shippable, independently testable PR (compatible 
 
 | Phase | Scope | Shippable artifact | Enforcement state |
 |---|---|---|---|
-| **P0 — Plumbing behind a flag** | `app_rls` role + GRANTs migration, `app_current_branches()` helper, `withTenantTx` helper (SQLite-guarded), `getRlsDb` test helper. **No `ENABLE RLS` yet.** | Helpers + Stage-0 validation on `dental_visit`. | RLS **off** everywhere. App still connects as `postgres`. Zero runtime behavior change. |
-| **P1 — Tier 1 tables** | `ENABLE`+`FORCE` RLS + policies on the ~21 direct-`branch_id` tables. Route their handlers through `withTenantTx`. Switch the app server connection to `app_rls`. | Tier-1 migration + Stage-1 matrix for Tier 1 + full-suite regression (Stage 3). | RLS **enforced** on Tier 1. |
+| **P0 — Plumbing + pilot ✅ DONE** | `app_rls` `NOLOGIN` role + GRANTs migration, `app_current_branches()` helper, `withTenantTx` helper (SQLite-guarded). `ENABLE`+`FORCE` RLS + policy on the `dental_visit` pilot. | Helpers + Stage-0 validation on `dental_visit` (`0104`, `tenant-tx.ts`). | RLS armed on `dental_visit` only; app connects as `postgres` → bypasses. Zero runtime change. |
+| **P1a — Tier 1 posture ✅ DONE** | `ENABLE`+`FORCE` RLS + set-valued policies on the remaining ~20 direct-tenant-column Tier-1 tables (18 branch-scoped + `dental_feature_permission` org-scoped + `dental_audit_log`). `app_current_orgs()` helper. Per-table isolation matrix. **No handler routing.** | Tier-1 migration `0105` + `tier1.rls-isolation.test.ts` (140 assertions) + full-suite regression. | RLS armed on all Tier-1; app still `postgres` → bypasses. Zero runtime change. |
+| **P1b — Tier 1 activation** | Route the Tier-1 handlers' DB access through `withTenantTx` (`SET LOCAL ROLE app_rls`; connection stays `postgres`) with the correct branch scope ([resolved branch] single-branch; full active-branch set for the EM-BIL-002 multi-branch reports). | Module-by-module handler routing + full-suite regression. | RLS **enforced** on Tier 1 (second wall live on the request path). |
 | **P2 — Tier 2a (visit-anchored)** | EXISTS-via-`dental_visit` policies on `dental_chart`, `dental_treatment`, `prescription`, `consent_form`, `amendment`, `lab_order`, etc. (the ADR-010 clinical set). | Tier-2a migration + matrix. | Enforced on Tier 2a. **ADR-010's named table set is now fully covered.** |
 | **P3 — `patient` + Tier 2b** | Execute **Decision D2** (backfill `branch_id` on `patient`, or direct-`preferred_branch_id` policy), then policy `patient` + the ~13 `patient_id`-only tables. | Patient backfill migration (if D2-A) + Tier-2b migration + matrix. | Enforced on the patient subtree. |
 | **P4 — Tier 3 child/line + admin carve-outs** | Parent-join (or denormalized-`branch_id`) policies on child/line tables; finalize the BYPASSRLS admin handle for erasure/audit (D3). | Tier-3 migration + matrix + admin-path tests. | Full enforcement. |
@@ -249,10 +268,10 @@ This ordering front-loads the ADR-010 named tables (done by end of P2) and isola
 6. **Test-template staleness.** RLS DDL must be a Drizzle migration in `_journal.json` so `monobase_test` and every clone pick it up.
 
 **Decisions the user must make before build starts:**
-- **D1 — Session-var shape.** Confirm **set-valued `app.current_branches` (uuid[])** as the primary key (recommended; ADR-010 text says scalar `current_org/current_branch`, but scalar breaks EM-BIL-002 + multi-branch users). Org-level tables use a separate `app.current_org`.
+- **D1 — Session-var shape. ✅ RESOLVED (set-valued).** `app.current_branches` (uuid[]) is the primary key; org-level tables use the set-valued `app.current_orgs` (uuid[]) via `app_current_orgs()`. Both fail closed (unset/empty → empty array → zero rows). Proven by the `[A,B]`-sees-both isolation tests.
 - **D2 — `patient` tenancy.** **D2-A (recommended): backfill NOT NULL `branch_id` on `patient`** (makes ~13 tables tractable, removes nullable ambiguity) vs **D2-B: policy directly on nullable `preferred_branch_id`** (lower migration cost, bakes branchless-hidden semantics into the DB). This cascades to all of Tier 2b.
 - **D3 — Cross-tenant admin/report model.** BYPASSRLS owner handle for erasure-queue/audit-list (recommended), or per-tenant enumeration loops?
-- **D4 — Production connection role.** Confirm the runtime app server will connect as non-superuser `app_rls` (not `postgres`), and that creating the role + GRANTs is in scope for the same migration set. RLS is moot until this happens.
+- **D4 — Production connection role. ✅ RESOLVED (stays `postgres` + `SET LOCAL ROLE`).** The runtime app server keeps its `postgres` connection; RLS is entered per-request via `SET LOCAL ROLE app_rls` inside `withTenantTx` (transaction-local). `app_rls` is therefore `NOLOGIN` (no credential to manage), and admin/cross-tenant paths bypass simply by not calling `withTenantTx` — no separate `BYPASSRLS` login handle needed (revisit only if the connection model ever changes).
 - **D5 — `pmd_document` (nullable `branch_id`, FK-less) and other nullable-tenant ops tables** (`legal_hold`, `erasure_request`, `retention_policy`, `dental_sync_log`, `dental_audit`): per-tenant RLS with NULL carve-outs, or excluded as admin/system tables? (Recommendation: exclude the nullable ops tables from the first cut; revisit in P4.)
 - **D6 — Membership-set caching.** Resolve the caller's branch set per-request via DB (keeps auth fast-path unchanged, recommended) vs cache on session/JWT (avoids the per-request DB hit but adds staleness on membership change)?
 - **D7 — Upstream person-scoped modules** (billing `invoice`, `booking`, `notification`, `stored_file`, `consultation_note`): confirmed **out of scope** for this branch-keyed gate, handled separately? (ADR-010's named set is dental-only, so this is consistent — just needs explicit sign-off.)

@@ -32,11 +32,17 @@ export interface TenantScope {
    * The caller's in-scope branch UUIDs. The key is SET-VALUED (not a single
    * branch) on purpose: multi-branch users and the cross-branch billing reports
    * (EM-BIL-002) legitimately read across several branches in one request. An
-   * empty array ⇒ every RLS-enabled table returns zero rows.
+   * empty array ⇒ every branch-scoped RLS table returns zero rows.
    */
   branchIds: string[];
-  /** Optional org UUID for the few org-level RLS tables (later phases). */
-  orgId?: string;
+  /**
+   * Optional in-scope org UUIDs for the org-level RLS tables (e.g.
+   * dental_feature_permission). SET-VALUED for the same reason as branchIds — a
+   * caller may legitimately span several orgs. Published to the
+   * `app.current_orgs` GUC and read by app_current_orgs() in the policies. Omit
+   * (or empty) ⇒ every org-scoped RLS table returns zero rows.
+   */
+  orgIds?: string[];
 }
 
 /**
@@ -72,8 +78,8 @@ export async function withTenantTx<T>(
     // app_rls. set_config(..., is_local => true) == SET LOCAL — transaction-scoped.
     const branchCsv = scope.branchIds.join(',');
     await tx.execute(sql`SELECT set_config('app.current_branches', ${branchCsv}, true)`);
-    if (scope.orgId !== undefined) {
-      await tx.execute(sql`SELECT set_config('app.current_org', ${scope.orgId}, true)`);
+    if (scope.orgIds !== undefined) {
+      await tx.execute(sql`SELECT set_config('app.current_orgs', ${scope.orgIds.join(',')}, true)`);
     }
     await tx.execute(sql`SET LOCAL ROLE app_rls`);
     return fn(tx as unknown as DatabaseInstance);
