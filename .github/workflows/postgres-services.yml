@@ -188,3 +188,49 @@ jobs:
           name: coverage-report
           path: services/api-ts/coverage-report.txt
           retention-days: 30
+
+  rls-posture:
+    name: RLS Posture Gate
+    runs-on: ubuntu-latest
+    # ADR-010 P5 drift gate: migrate a fresh DB, then assert every PHI table the
+    # RLS migrations armed still has ENABLE+FORCE ROW LEVEL SECURITY + a policy
+    # (scripts/check-rls-posture.ts). Catches a future migration that disables RLS
+    # or drops a policy. Fast (migrate + one catalog query).
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: monobase_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monobase_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
+
+      - name: Migrate test database
+        run: cd services/api-ts && bun run db:migrate
+
+      - name: Check RLS posture (every PHI table still ENABLE+FORCE + policy)
+        run: cd services/api-ts && bun run check:rls-posture
