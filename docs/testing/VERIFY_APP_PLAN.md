@@ -109,3 +109,23 @@ product (`apps/dentalemon` + `services/api-ts`).
 ## Discipline
 Verify "works for users" by running the real-stack proof (Tier 1) and the deep sweep (Tier 2) and
 citing their artifacts — not by reporting green unit/coverage numbers as proof of function.
+
+## Continuation & autonomy mandate (read this to resume)
+**Status:** Phase 1a ✅ (PR#33) + Phase 1c ✅ (PR#34) merged; main `2c99a9f7`. **Remaining: Task 1b → Phase 2 → Phase 3.**
+
+**Authority (when the user invokes this section): execute to the end autonomously — do NOT ask;
+decide-and-proceed on every design call, document each decision in the PR + this tracker, and only
+stop for a genuinely destructive or unrecoverably-ambiguous situation.** Fix clear bugs via TDD;
+allowlist/report product-decision-gated findings rather than stalling (that is what sank the old AHA
+pipeline). Give one consolidated report at the end (every bug found + every gate added).
+
+**Order — one PR fully merged (all 16 required checks green) before the next; branch off latest main after each merge:**
+1. **Task 1b** — Schemathesis shadow→blocking in `contract.yml` (`--checks not_a_server_error,status_code_conformance` over all 369 ops; spec-precision findings stay advisory). Triage 5xx: real → TDD fix; spec nit → allowlist.
+2. **Phase 2** — `scripts/verify-app.ts` (Tier 0 `coverage:all:ci` + Tier 1 journey harness + coherence oracles + invoke the existing 16 gates → one `VERDICT.md`) + `.claude/skills/verify-app/` + generalize the `test-utils.ts` coherence oracles + a BE twin. Verify against the reseeded real stack.
+3. **Phase 3** — adversarial deep sweep (re-plan bite-sized at phase start): mutation on the 4 critical module-classes (seed the 8 historical bugs; 0-survivors hard gate); the 26-module **parallel** skeptic fan-out (AHA battery → committed RED→GREEN pins, "refuted-and-survived"); 4 per-role persona walks; refresh the knowledge graph.
+
+**How:** subagent-driven-development; parallelize independent work (disjoint-files+no-commit+integrate, OR worktree isolation); TDD; atomic commits; Co-Author `Claude Opus 4.8 <noreply@anthropic.com>`; explicit `git add`. Coverage-gate policy: **role-op drift HARD (never allowlisted), br report-only.** New api-ts tests use the shared `buildTestApp` (lint:test-harness blocks raw mounts). Backend tests: `DATABASE_URL=…monobase_test bun run scripts/test-with-db.ts <FILE>`; root coverage tests: `bun test ./scripts/coverage/`. **`TypeScript` required check is FLAKY** (transient TS2769) → cancel run + `gh run rerun <id> --failed`. LEAVE-ALONE: `bun.lock`, `.agents/`, `apps/website/`, `skills-lock.json`, `.claude/skills/design-taste-frontend`, `docs/aha/`.
+
+**Already-decided (don't re-litigate):** cover-what-ships + compute-the-rest; Tier 3 deferred; br P0 hard-gate deferred (the 26 traceability gaps are a triage backlog); `Coverage Ratchet` not-yet-required (admin adds to branch protection). **Opportunistic follow-ups:** triage the 26 P0 BR gaps; fe-route render-smoke; populate endpoint integration/journey columns via `COVERAGE_RECORD=1`.
+
+**Full context/gotchas:** memory `project_verify_app_2026_06_15.md`; detailed phased tasks: `~/.claude/plans/if-you-are-an-soft-planet.md`.
