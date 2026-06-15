@@ -25,6 +25,7 @@ import {
   UpdateDentalVisitBody, UpdateDentalVisitParams,
   CreateDentalTreatmentBody, CreateDentalTreatmentParams,
   UpdateDentalTreatmentBody, UpdateDentalTreatmentParams,
+  InitializeDentitionBody, InitializeDentitionParams,
 } from '@/generated/openapi/validators';
 import { VisitRepository } from './repos/visit.repo';
 import { TreatmentRepository } from './repos/treatment.repo';
@@ -47,7 +48,7 @@ import { getTreatmentPlan } from './treatment-plans/getTreatmentPlan';
 import { acceptTreatmentPlan } from './treatments/acceptTreatmentPlan';
 import { updateDentalTreatment } from './treatments/updateDentalTreatment';
 import { treatmentPlanVersions } from './repos/treatment-plan-version.schema';
-import { initializeDentition } from './chart/initializeDentition';
+import { initializeDentition } from '@/handlers/dental-patient/identity/initializeDentition';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -123,7 +124,11 @@ function buildTestApp(user?: typeof TEST_USER) {
   app.patch('/dental/visits/:visitId/treatments/:treatmentId', zValidator('param', UpdateDentalTreatmentParams, ve), zValidator('json', UpdateDentalTreatmentBody, ve), updateDentalTreatment as any);
 
   // FR1.19: Dentition management
-  app.post('/dental/patients/:patientId/dentition', initializeDentition as any);
+  app.post('/dental/patients/:patientId/dentition',
+    zValidator('param', InitializeDentitionParams, ve),
+    zValidator('json', InitializeDentitionBody, ve),
+    initializeDentition as any,
+  );
 
   return app;
 }
@@ -692,7 +697,7 @@ describe('FR1.19 — Dentition Management (deciduous auto-populate)', () => {
     const res = await app.request(`/dental/patients/${PATIENT_ID}/dentition`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dateOfBirth: dob.toISOString().slice(0, 10), visitId: 'any-id' }),
+      body: JSON.stringify({ dateOfBirth: dob.toISOString().slice(0, 10), visitId: NONEXISTENT_ID }),
     });
 
     expect(res.status).toBe(401);

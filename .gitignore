@@ -156,6 +156,12 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 *.lcov
+# …but the computed-verification "coverage" engine lives under these paths and is
+# intentionally version-controlled (source generators + committed matrix artifacts).
+!scripts/coverage/
+!scripts/coverage/**
+!docs/testing/coverage/
+!docs/testing/coverage/**
 
 # nyc test coverage
 .nyc_output

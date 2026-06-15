@@ -1,0 +1,1475 @@
+[
+  {
+    "operationId": "acceptCasePresentation",
+    "method": "POST",
+    "path": "/dental/patients/{patientId}/case-presentations/{presentationId}/accept",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "treatment_coordinator",
+      "staff_full",
+      "front_desk",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "addFollowUpNote",
+    "method": "POST",
+    "path": "/dental/patients/{id}/follow-up-notes",
+    "module": "dental-patient",
+    "codeAllowedRoles": "dynamic",
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "applyDentalDiscount",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/discount",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "applyTemplate",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/apply-template/{templateId}",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "archiveDentalPatient",
+    "method": "POST",
+    "path": "/dental/patients/{id}/archive",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "bulkArchiveDentalPatients",
+    "method": "POST",
+    "path": "/dental/patients/bulk-archive",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "cancelAppointment",
+    "method": "DELETE",
+    "path": "/dental/appointments/{appointmentId}",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "staff_full"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "staff_full"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "carryOverTreatments",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/carry-over",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_deleteCephLandmark",
+    "method": "DELETE",
+    "path": "/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_getCephLandmarkDetectionJob",
+    "method": "GET",
+    "path": "/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_getCephSuperimposition",
+    "method": "GET",
+    "path": "/dental/imaging/ceph/superimpositions/{superimpositionId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_listCephSuperimpositions",
+    "method": "GET",
+    "path": "/dental/imaging/patients/{patientId}/ceph/superimpositions",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_recomputeCephAnalysis",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/ceph/analysis/recompute",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "checkInAppointment",
+    "method": "POST",
+    "path": "/dental/appointments/{appointmentId}/check-in",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": "dynamic",
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specConditionalRoles": [
+      "hygienist"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "completePerioChart",
+    "method": "POST",
+    "path": "/dental/perio-charts/{chartId}/complete",
+    "module": "dental-perio",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "confirmAppointment",
+    "method": "POST",
+    "path": "/dental/appointments/{appointmentId}/confirm",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "convertFindingToTreatment",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/findings/{findingId}/treatment",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createAmendment",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/amendments",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createAppointment",
+    "method": "POST",
+    "path": "/dental/appointments",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createAttachment",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/attachments",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "dental_assistant"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createCasePresentation",
+    "method": "POST",
+    "path": "/dental/patients/{patientId}/case-presentations",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "treatment_coordinator"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "treatment_coordinator"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createConsentForm",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/consents",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createDentalFinding",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/findings",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createDentalInvoice",
+    "method": "POST",
+    "path": "/dental/billing/invoices",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createDentalPatient",
+    "method": "POST",
+    "path": "/dental/patients",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createDentalPaymentPlan",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/plan",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createDentalTreatment",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/treatments",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createDentalVisit",
+    "method": "POST",
+    "path": "/dental/visits",
+    "module": "dental-visit",
+    "codeAllowedRoles": "dynamic",
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specConditionalRoles": [
+      "hygienist"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createInventoryAdjustment",
+    "method": "POST",
+    "path": "/dental/branches/{branchId}/inventory/{itemId}/adjustments",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createInventoryItem",
+    "method": "POST",
+    "path": "/dental/branches/{branchId}/inventory",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createLabOrder",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/lab-orders",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createMedicalHistoryEntry",
+    "method": "POST",
+    "path": "/dental/clinical/medical-history",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createMember",
+    "method": "POST",
+    "path": "/dental/org/members",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createOcclusionScreening",
+    "method": "POST",
+    "path": "/dental/patients/{patientId}/occlusion-screenings",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createPerioChart",
+    "method": "POST",
+    "path": "/dental/perio-charts",
+    "module": "dental-perio",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createPostopTemplate",
+    "method": "POST",
+    "path": "/dental/branches/{branchId}/postop-templates",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createPrescription",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/prescriptions",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "createVisitNoteAddendum",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/notes/addendum",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "createWaitlistEntry",
+    "method": "POST",
+    "path": "/dental/branches/{branchId}/waitlist",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "deactivateMember",
+    "method": "DELETE",
+    "path": "/dental/org/members/{memberId}",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "deleteAttachment",
+    "method": "DELETE",
+    "path": "/dental/visits/{visitId}/attachments/{attachmentId}",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "DentalMembershipManagement_create",
+    "method": "POST",
+    "path": "/dental/organizations/{orgId}/branches/{branchId}/members",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "DentalMembershipManagement_deactivate",
+    "method": "POST",
+    "path": "/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "discardVisit",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/discard",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "exportDentalPatients",
+    "method": "GET",
+    "path": "/dental/patients/export",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "exportPMD",
+    "method": "GET",
+    "path": "/dental/visits/{visitId}/pmd/export",
+    "module": "dental-pmd",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "generatePMD",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/pmd",
+    "module": "dental-pmd",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "getAuditEvents",
+    "method": "GET",
+    "path": "/dental/audit-events",
+    "module": "dental-audit",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "getCasePresentation",
+    "method": "GET",
+    "path": "/dental/patients/{patientId}/case-presentations/{presentationId}",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "treatment_coordinator",
+      "staff_full",
+      "front_desk",
+      "dental_assistant",
+      "billing_staff"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "getDashboardSummary",
+    "method": "GET",
+    "path": "/dental/dashboard/summary",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "getFeeSchedule",
+    "method": "GET",
+    "path": "/dental/fee-schedule",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "getPerioChart",
+    "method": "GET",
+    "path": "/dental/perio-charts/{chartId}",
+    "module": "dental-perio",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "getVisitNoteHistory",
+    "method": "GET",
+    "path": "/dental/visits/{visitId}/notes/history",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "getVisitPerioChart",
+    "method": "GET",
+    "path": "/dental/visits/{visitId}/perio-chart",
+    "module": "dental-perio",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingFindingsMgmt_createFinding",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/findings",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingFindingsMgmt_deleteFinding",
+    "method": "DELETE",
+    "path": "/dental/imaging/findings/{findingId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingFindingsMgmt_updateFinding",
+    "method": "PATCH",
+    "path": "/dental/imaging/findings/{findingId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_createImageLink",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/links",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_createImagingStudy",
+    "method": "POST",
+    "path": "/dental/imaging/studies",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_createMeasurement",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/measurements",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_deleteImage",
+    "method": "DELETE",
+    "path": "/dental/imaging/images/{imageId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_deleteImageLink",
+    "method": "DELETE",
+    "path": "/dental/imaging/links/{linkId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_deleteMeasurement",
+    "method": "DELETE",
+    "path": "/dental/imaging/measurements/{measurementId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_finalizeCbctStudy",
+    "method": "POST",
+    "path": "/dental/imaging/studies/{studyId}/cbct/finalize",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_updateImageCalibration",
+    "method": "PATCH",
+    "path": "/dental/imaging/images/{imageId}/calibration",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_updateImageMetadata",
+    "method": "PATCH",
+    "path": "/dental/imaging/images/{imageId}/metadata",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_updateImageModality",
+    "method": "PATCH",
+    "path": "/dental/imaging/images/{imageId}/modality",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "importPatients",
+    "method": "POST",
+    "path": "/dental/patients/import",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "importPMD",
+    "method": "POST",
+    "path": "/dental/pmd/import",
+    "module": "dental-pmd",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "initializeDentition",
+    "method": "POST",
+    "path": "/dental/patients/{patientId}/dentition",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "dental_assistant"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "issueDentalInvoice",
+    "method": "PATCH",
+    "path": "/dental/billing/invoices/{invoiceId}/issue",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "listCasePresentations",
+    "method": "GET",
+    "path": "/dental/patients/{patientId}/case-presentations",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "treatment_coordinator",
+      "staff_full",
+      "front_desk",
+      "dental_assistant",
+      "billing_staff"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listConsentRefusals",
+    "method": "GET",
+    "path": "/dental/visits/{visitId}/consent-refusals",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listDentalPatients",
+    "method": "GET",
+    "path": "/dental/patients",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "staff_full",
+      "staff_scheduling",
+      "dental_assistant",
+      "front_desk",
+      "billing_staff",
+      "read_only"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listFollowUpNotes",
+    "method": "GET",
+    "path": "/dental/patients/{id}/follow-up-notes",
+    "module": "dental-patient",
+    "codeAllowedRoles": "dynamic",
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listInventoryAdjustments",
+    "method": "GET",
+    "path": "/dental/branches/{branchId}/inventory/{itemId}/adjustments",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listInventoryItems",
+    "method": "GET",
+    "path": "/dental/branches/{branchId}/inventory",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listOcclusionScreenings",
+    "method": "GET",
+    "path": "/dental/patients/{patientId}/occlusion-screenings",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listPerioChartsForPatient",
+    "method": "GET",
+    "path": "/dental/perio-charts",
+    "module": "dental-perio",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "listPostopTemplates",
+    "method": "GET",
+    "path": "/dental/branches/{branchId}/postop-templates",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "markUncollectible",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/uncollectible",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "promoteWaitlistEntry",
+    "method": "POST",
+    "path": "/dental/waitlist/{entryId}/promote",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "recordClaimRemittance",
+    "method": "POST",
+    "path": "/dental/billing/claims/{claimId}/remittance",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "recordConsentRefusal",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/consent-refusals",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "recordDentalPayment",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/payments",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "recordMedicalHistoryReview",
+    "method": "POST",
+    "path": "/dental/clinical/medical-history-review",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "rejectCasePresentation",
+    "method": "POST",
+    "path": "/dental/patients/{patientId}/case-presentations/{presentationId}/reject",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "treatment_coordinator",
+      "staff_full",
+      "front_desk",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "resolveChartConflict",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/chart/resolve-conflict",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "restoreDentalPatient",
+    "method": "POST",
+    "path": "/dental/patients/{id}/restore",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "revokeConsentForm",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}/consents/{cid}/revoke",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "signConsentForm",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/consents/{consentId}/sign",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "signVisitNotes",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/notes/sign",
+    "module": "dental-visit",
+    "codeAllowedRoles": "dynamic",
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specConditionalRoles": [
+      "hygienist"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "updateAppointment",
+    "method": "PATCH",
+    "path": "/dental/appointments/{appointmentId}",
+    "module": "dental-scheduling",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full",
+      "staff_scheduling"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "updateDentalFinding",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}/findings/{findingId}",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updateDentalPatient",
+    "method": "PATCH",
+    "path": "/dental/patients/{id}",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updateDentalTreatment",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}/treatments/{treatmentId}",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "updateDentalVisit",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updateFeeScheduleEntry",
+    "method": "PATCH",
+    "path": "/dental/fee-schedule/{cdt}",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "updateInventoryItem",
+    "method": "PATCH",
+    "path": "/dental/branches/{branchId}/inventory/{itemId}",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "staff_full"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updateLabOrder",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}/lab-orders/{orderId}",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updatePostopTemplate",
+    "method": "PATCH",
+    "path": "/dental/branches/{branchId}/postop-templates/{templateId}",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updatePrescription",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}/prescriptions/{prescriptionId}",
+    "module": "dental-clinical",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updateTooth",
+    "method": "PATCH",
+    "path": "/dental/visits/{visitId}/chart/teeth/{toothNumber}",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "dental_assistant"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "updateTreatmentPlan",
+    "method": "PATCH",
+    "path": "/dental/patients/{patientId}/treatment-plans/{planId}",
+    "module": "dental-patient",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "treatment_coordinator"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "updateWorkingHours",
+    "method": "PUT",
+    "path": "/dental/branches/{branchId}/working-hours",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "upsertDentalChart",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/chart",
+    "module": "dental-visit",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "upsertToothReading",
+    "method": "PUT",
+    "path": "/dental/perio-charts/{chartId}/readings/{toothNumber}",
+    "module": "dental-perio",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "upsertVisitNotes",
+    "method": "POST",
+    "path": "/dental/visits/{visitId}/notes",
+    "module": "dental-visit",
+    "codeAllowedRoles": "dynamic",
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "dental_assistant"
+    ],
+    "specConditionalRoles": [
+      "hygienist"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "voidDentalInvoice",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/void",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "voidDentalPayment",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/payments/{paymentId}/void",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  }
+]

@@ -34,7 +34,9 @@
     "turbo:test": "turbo run test --filter=dentalemon --filter=@monobase/api-ts",
     "audit:rust": "bash scripts/cargo-audit.sh",
     "audit:trace": "bun scripts/audit-traceability.ts",
-    "audit:trace:ci": "bun scripts/audit-traceability.ts --ci"
+    "audit:trace:ci": "bun scripts/audit-traceability.ts --ci",
+    "coverage:roles": "bun scripts/coverage/role-op-matrix.ts",
+    "coverage:roles:ci": "bun scripts/coverage/role-op-matrix.ts --check"
   },
   "engines": {
     "node": ">=18.0.0",

@@ -2,8 +2,8 @@
  * initializeDentition — POST /dental/patients/:patientId/dentition
  *
  * FR1.19: Dentition Management (deciduous auto-populate).
- * Route lives under /dental/patients so the codegen registry entry is here;
- * delegates to the canonical implementation in dental-visit/.
+ * This IS the canonical implementation — the codegen registry wires this file
+ * (the former duplicate under dental-visit/chart/ was dead and has been removed).
  */
 
 import type { ValidatedContext } from '@/types/app';
@@ -68,7 +68,9 @@ export async function initializeDentition(
   // Branch authorization — look up visit to get branchId
   const visit = await getVisitById(db, body.visitId);
   if (!visit) throw new NotFoundError('Dental visit');
-  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
+  // E2: dental_assistant may scaffold the dentition (a chart-condition write) under
+  // dentist supervision — healthy teeth only, no treatment/diagnosis.
+  await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'dental_assistant']);
 
   const age = getAgeYears(body.dateOfBirth);
 

@@ -41,11 +41,13 @@ import {
   CreateAttachmentParams,
   CreateDentalTreatmentBody,
   CreateDentalTreatmentParams,
+  InitializeDentitionBody,
+  InitializeDentitionParams,
 } from '@/generated/openapi/validators';
 
 import { upsertDentalChart } from './chart/upsertDentalChart';
 import { updateTooth } from './chart/updateTooth';
-import { initializeDentition } from './chart/initializeDentition';
+import { initializeDentition } from '@/handlers/dental-patient/identity/initializeDentition';
 import { upsertVisitNotes } from './notes/upsertVisitNotes';
 import { signVisitNotes } from './notes/signVisitNotes';
 import { createDentalTreatment } from './treatments/createDentalTreatment';
@@ -175,7 +177,11 @@ function buildApp(user?: { id: string; email: string }) {
     zValidator('json', UpdateToothBody, ve),
     updateTooth as any,
   );
-  app.post('/dental/patients/:patientId/dentition', initializeDentition as any);
+  app.post('/dental/patients/:patientId/dentition',
+    zValidator('param', InitializeDentitionParams, ve),
+    zValidator('json', InitializeDentitionBody, ve),
+    initializeDentition as any,
+  );
 
   // notes
   app.post('/dental/visits/:visitId/notes',
