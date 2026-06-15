@@ -1,0 +1,117 @@
+[
+  {
+    "routePath": "/",
+    "file": "apps/dentalemon/src/routes/index.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/$patientId",
+    "file": "apps/dentalemon/src/routes/_workspace/$patientId.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/$patientId/case-presentation/$presentationId",
+    "file": "apps/dentalemon/src/routes/_workspace/$patientId.case-presentation.$presentationId.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/auth/$authView",
+    "file": "apps/dentalemon/src/routes/auth/$authView.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/auth/pin-entry/$memberId",
+    "file": "apps/dentalemon/src/routes/auth/pin-entry.$memberId.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/auth/pin-select",
+    "file": "apps/dentalemon/src/routes/auth/pin-select.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/billing",
+    "file": "apps/dentalemon/src/routes/_dashboard/billing.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/book/$branchId",
+    "file": "apps/dentalemon/src/routes/book.$branchId.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/calendar",
+    "file": "apps/dentalemon/src/routes/_dashboard/calendar.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/dashboard",
+    "file": "apps/dentalemon/src/routes/_dashboard/dashboard.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/dental-onboarding",
+    "file": "apps/dentalemon/src/routes/dental-onboarding.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/imaging-ceph-report/$imageId",
+    "file": "apps/dentalemon/src/routes/imaging-ceph-report.$imageId.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/onboarding",
+    "file": "apps/dentalemon/src/routes/onboarding.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/patients",
+    "file": "apps/dentalemon/src/routes/_dashboard/patients.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/patients/$patientId",
+    "file": "apps/dentalemon/src/routes/_dashboard/patients_/$patientId.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/portal",
+    "file": "apps/dentalemon/src/routes/_portal/portal.index.tsx",
+    "exercisedByE2E": false
+  },
+  {
+    "routePath": "/portal/appointments",
+    "file": "apps/dentalemon/src/routes/_portal/portal.appointments.tsx",
+    "exercisedByE2E": false
+  },
+  {
+    "routePath": "/portal/bills",
+    "file": "apps/dentalemon/src/routes/_portal/portal.bills.tsx",
+    "exercisedByE2E": false
+  },
+  {
+    "routePath": "/queue-board",
+    "file": "apps/dentalemon/src/routes/_workspace/queue-board.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/reports",
+    "file": "apps/dentalemon/src/routes/_dashboard/reports.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/settings",
+    "file": "apps/dentalemon/src/routes/_dashboard/settings.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/staff",
+    "file": "apps/dentalemon/src/routes/_dashboard/staff.tsx",
+    "exercisedByE2E": true
+  },
+  {
+    "routePath": "/verify-email",
+    "file": "apps/dentalemon/src/routes/verify-email.tsx",
+    "exercisedByE2E": true
+  }
+]

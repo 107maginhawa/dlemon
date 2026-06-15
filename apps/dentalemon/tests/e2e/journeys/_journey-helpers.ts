@@ -133,10 +133,95 @@ export const test = base.extend<Fixtures>({
           `Run \`bun run db:reseed\`. Body: ${(await signIn.text()).slice(0, 300)}`,
       )
     }
-    await use(ctx)
+    // Wrap with the env-gated coverage recorder (strict no-op unless
+    // COVERAGE_RECORD is set) so the endpoint coverage matrix learns which
+    // operations the journey suite exercises through this client.
+    await use(withCoverageRecorder(ctx))
     await ctx.dispose()
   },
 })
+
+// ── Coverage recorder (env-gated, STRICT no-op unless COVERAGE_RECORD is set) ──
+//
+// The endpoint coverage matrix (scripts/coverage/endpoint-matrix.ts) reads a
+// JSONL "recorded ops" sink to populate its `hasJourney` column. There is no
+// static way to know which operations a journey hits (a request URL is built at
+// runtime), so the journey HTTP client appends each request it makes — but ONLY
+// when COVERAGE_RECORD is set. With the env var UNSET, `withCoverageRecorder`
+// returns the context UNTOUCHED: zero proxy, zero file I/O, zero behaviour
+// change for the normal journey run.
+//
+// Each recorded line is `{ method, matchedRoutePath, corpus: 'journeys' }`. The
+// matrix normalises the request path positionally (UUID/query segments collapse
+// to a placeholder) and resolves it to an operationId via the OpenAPI paths map,
+// so the raw request URL the client sends is sufficient — no route template is
+// needed on this side.
+
+// apps/dentalemon/tests/e2e/journeys → repo root is five levels up.
+const COVERAGE_SINK = path.resolve(
+  HELPER_DIR,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'docs/testing/coverage/.recorded-ops.jsonl',
+)
+
+function coverageRecordingEnabled(): boolean {
+  return Boolean(process.env.COVERAGE_RECORD)
+}
+
+/** Append one request record to the JSONL sink. Best-effort; never throws. */
+function recordCoverageHit(method: string, urlOrPath: string): void {
+  try {
+    // Reduce an absolute URL to its pathname+query; leave a bare path as-is.
+    let p = urlOrPath
+    if (/^https?:\/\//i.test(p)) {
+      const u = new URL(p)
+      p = u.pathname + u.search
+    }
+    if (!p.startsWith('/')) p = `/${p}`
+    fs.mkdirSync(path.dirname(COVERAGE_SINK), { recursive: true })
+    fs.appendFileSync(
+      COVERAGE_SINK,
+      JSON.stringify({ method: method.toUpperCase(), matchedRoutePath: p, corpus: 'journeys' }) +
+        '\n',
+    )
+  } catch {
+    // A recorder failure must never fail a journey — coverage is advisory.
+  }
+}
+
+/**
+ * Return `ctx` unchanged when recording is off; otherwise a Proxy that records
+ * every request verb (get/post/put/patch/delete/head/fetch) before delegating.
+ */
+function withCoverageRecorder(ctx: APIRequestContext): APIRequestContext {
+  if (!coverageRecordingEnabled()) return ctx
+  const VERBS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head'])
+  return new Proxy(ctx, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      if (typeof value !== 'function') return value
+      const name = String(prop)
+      if (VERBS.has(name)) {
+        return (url: string, ...rest: unknown[]) => {
+          recordCoverageHit(name, url)
+          return (value as (...a: unknown[]) => unknown).call(target, url, ...rest)
+        }
+      }
+      if (name === 'fetch') {
+        return (url: string, opts?: { method?: string }, ...rest: unknown[]) => {
+          recordCoverageHit(opts?.method ?? 'GET', url)
+          return (value as (...a: unknown[]) => unknown).call(target, url, opts, ...rest)
+        }
+      }
+      // Bind other methods (e.g. dispose, storageState) to the real context.
+      return (value as (...a: unknown[]) => unknown).bind(target)
+    },
+  }) as APIRequestContext
+}
 
 // ── Independent-read context resolution ───────────────────────────────────────
 

@@ -36,7 +36,14 @@
     "audit:trace": "bun scripts/audit-traceability.ts",
     "audit:trace:ci": "bun scripts/audit-traceability.ts --ci",
     "coverage:roles": "bun scripts/coverage/role-op-matrix.ts",
-    "coverage:roles:ci": "bun scripts/coverage/role-op-matrix.ts --check"
+    "coverage:roles:ci": "bun scripts/coverage/role-op-matrix.ts --check",
+    "coverage:endpoints": "bun scripts/coverage/endpoint-matrix.ts",
+    "coverage:br": "bun scripts/coverage/br-matrix.ts",
+    "coverage:fsm": "bun scripts/coverage/fsm-matrix.ts",
+    "coverage:workflows": "bun scripts/coverage/workflow-matrix.ts",
+    "coverage:fe-route": "bun scripts/coverage/fe-route-matrix.ts",
+    "coverage:all": "bun scripts/coverage/run-all.ts",
+    "coverage:all:ci": "bun scripts/coverage/run-all.ts --check"
   },
   "engines": {
     "node": ">=18.0.0",

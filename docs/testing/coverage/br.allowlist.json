@@ -1,0 +1,66 @@
+[
+  {
+    "id": "dental-imaging::BR-031",
+    "reason": "unauditable"
+  },
+  {
+    "id": "dental-patient::BR-020",
+    "reason": "not-implemented"
+  },
+  {
+    "id": "external-records-import::V-XRI-003 (FHIR/CDA/PDF EMR-import bridge is FUTURE-PHASE — not built)",
+    "reason": "deferred"
+  },
+  {
+    "id": "dental-imaging::CIMG-005",
+    "reason": "ratchet baseline: P1 state-guard UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-imaging::CIMG-011",
+    "reason": "ratchet baseline: P2 response-contract UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-imaging::CIMG-013",
+    "reason": "ratchet baseline: P2 response-contract UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-imaging::CIMG-014",
+    "reason": "ratchet baseline: P1 state-guard UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-imaging::CIMG-015",
+    "reason": "ratchet baseline: P2 response-contract UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-perio::BR-P03",
+    "reason": "ratchet baseline: P2 validation POSITIVE_ONLY (implemented)"
+  },
+  {
+    "id": "dental-perio::BR-P06",
+    "reason": "ratchet baseline: P1 data-integrity UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-perio::V-PER-STAGING",
+    "reason": "ratchet baseline: P2 clinical-correctness UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-pmd::EF-PMD-001",
+    "reason": "ratchet baseline: P1 data-integrity UNTESTED (implemented)"
+  },
+  {
+    "id": "dental-scheduling::BR-SCH-003",
+    "reason": "ratchet baseline: P2 validation UNTESTED (implemented)"
+  },
+  {
+    "id": "emr-consultation::V-EMR-CTX (context idempotency key is unique)",
+    "reason": "ratchet baseline: P1 conflict-prevention UNTESTED (implemented)"
+  },
+  {
+    "id": "external-records-import::V-XRI-002 (ingestion safety — untrusted external input rejected with a specific 4xx, never a 500/crash)",
+    "reason": "ratchet baseline: P2 validation UNTESTED (implemented)"
+  },
+  {
+    "id": "provider::V-PROV-004 (deactivate is a soft-delete — records retained)",
+    "reason": "ratchet baseline: P1 state-guard UNTESTED (implemented)"
+  }
+]

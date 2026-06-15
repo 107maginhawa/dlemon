@@ -162,6 +162,8 @@ coverage
 !scripts/coverage/**
 !docs/testing/coverage/
 !docs/testing/coverage/**
+# …except the endpoint recorder's runtime sink (regenerated under COVERAGE_RECORD=1).
+docs/testing/coverage/.recorded-ops.jsonl
 
 # nyc test coverage
 .nyc_output

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "Appointment:completed->checked_in",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "CephLandmark:confirmed->not_placed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "CephLandmark:locked->not_placed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "CephLandmark:not_placed->confirmed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "CephLandmark:not_placed->locked",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "CephLandmark:not_placed->placed",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "CephLandmark:placed->not_placed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "LabOrder:delivered->cancelled",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "LabOrder:in_fabrication->cancelled",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "LabOrder:ordered->cancelled",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:declined->performed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:declined->verified",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:diagnosed->verified",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:dismissed->performed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:performed->declined",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:performed->dismissed",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:verified->declined",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Treatment:verified->diagnosed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:active->discarded",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:active->locked",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:completed->draft",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:completed->locked",
+    "reason": "baseline — legal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:discarded->draft",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:discarded->locked",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:draft->completed",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:draft->discarded",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:draft->locked",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:locked->active",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:locked->discarded",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "Visit:locked->draft",
+    "reason": "baseline — illegal edge uncovered at matrix introduction"
+  }
+]

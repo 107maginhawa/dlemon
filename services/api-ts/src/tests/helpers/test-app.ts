@@ -68,6 +68,8 @@
  * Omit `user` (or pass `null`) to exercise the unauthenticated path → 401.
  */
 
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { Hono } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
@@ -128,6 +130,54 @@ let cachedConfig: Config | undefined;
 function defaultConfig(): Config {
   if (!cachedConfig) cachedConfig = parseConfig();
   return cachedConfig;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage recorder (env-gated, STRICT no-op unless COVERAGE_RECORD is set)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The endpoint coverage matrix (scripts/coverage/endpoint-matrix.ts) needs to
+// know which operations the integration suite actually exercises. There is no
+// static way to read that from a test file (a request is a runtime string), so
+// the matrix reads a JSONL "recorded ops" sink that this harness appends to —
+// but ONLY when COVERAGE_RECORD is set. With the env var UNSET the recorder is a
+// strict no-op: the `app.use` below is never even mounted, so the 121 existing
+// buildTestApp tests pay ZERO cost and see ZERO behavioural change.
+//
+// Each recorded line is `{ method, matchedRoutePath, corpus: 'api-unit' }` where
+// matchedRoutePath is Hono's matched route template (e.g. `/persons/:person`).
+// The matrix normalises `:param` → positional placeholder and resolves it to an
+// operationId. Sink path mirrors the matrix's RECORDED_SINK constant.
+//
+//   services/api-ts/src/tests/helpers → repo root is six levels up.
+const COVERAGE_SINK = join(
+  import.meta.dir,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'docs/testing/coverage/.recorded-ops.jsonl',
+);
+
+/** True only when the coverage recorder is explicitly enabled for this run. */
+function coverageRecordingEnabled(): boolean {
+  return Boolean(process.env['COVERAGE_RECORD']);
+}
+
+/** Append one matched-route record to the JSONL sink. Best-effort; never throws. */
+function recordCoverageHit(method: string, routePath: string): void {
+  // Unmatched/global routes (Hono reports `/*` or `*`) carry no operationId.
+  if (!routePath || routePath === '/*' || routePath === '*') return;
+  try {
+    mkdirSync(dirname(COVERAGE_SINK), { recursive: true });
+    appendFileSync(
+      COVERAGE_SINK,
+      JSON.stringify({ method, matchedRoutePath: routePath, corpus: 'api-unit' }) + '\n',
+    );
+  } catch {
+    // A recorder failure must never fail a test — coverage is advisory.
+  }
 }
 
 /**
@@ -196,6 +246,16 @@ export function buildTestApp(opts: BuildTestAppOptions): Hono<{ Variables: Varia
     }
     await next();
   });
+
+  // Coverage recorder — mounted ONLY when COVERAGE_RECORD is set, so the default
+  // test path is untouched. Runs the chain first, then records the matched route
+  // template (available on `c.req.routePath` after the route resolves).
+  if (coverageRecordingEnabled()) {
+    app.use('*', async (c, next) => {
+      await next();
+      recordCoverageHit(c.req.method, c.req.routePath);
+    });
+  }
 
   // The exact production route table: authMiddleware → generated zValidator → handler.
   registerRoutes(app);

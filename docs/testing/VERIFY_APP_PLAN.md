@@ -65,10 +65,24 @@ product (`apps/dentalemon` + `services/api-ts`).
         `contract-spine.json` regenerated in CI; `.understand-anything/` is gitignored).
 - [ ] **1b — Schemathesis shadow→blocking.** Blocking profile (`not_a_server_error,status_code_conformance`)
       over all 369 ops; spec-precision findings stay advisory.
-- [ ] **1c — Computed coverage engine + 6 matrices.** Shared `scripts/coverage/lib/{sources,scan-tests,
-      ratchet}.ts` + endpoint / br / fsm / role-op / workflow / fe-route generators → `docs/testing/coverage/`.
-      Env-gated `COVERAGE_RECORD` recorder in `test-app.ts` + journey client. Replace `audit:trace:ci`
-      with `coverage:br:ci`. New `coverage-ratchet` CI job.
+- [x] **1c — Computed coverage engine + 6 matrices. ✅ DONE** (built via a 5-way parallel agent
+      fan-out on the `scan-tests`+`ratchet` foundation; 172 engine unit tests). Each matrix = a
+      deterministic set-diff over a machine-readable source → committed artifact + seeded
+      `*.allowlist.json` (ratchet; allowlists only shrink). `coverage:all[:ci]` (`run-all.ts`) is the
+      single entry; new **`Coverage Ratchet` CI job** regenerates the contract spine offline then
+      enforces the gates. Findings (the "compute-the-rest" inventory):
+      - **endpoint**: 369 ops → 134 tested / 23 gap / **212 orphan** (built, no FE consumer →
+        `orphan-disposition.md` wire/remove backlog, NOT test-ratcheted). Env-gated `COVERAGE_RECORD`
+        recorder in `test-app.ts` + journey client (strict no-op when unset; fixed a journey-sink off-by-one).
+      - **br**: 122 BRs, severity from `type` (P0 48/P1 36/P2 38) → 82 fully / 4 positive-only / 36 untested.
+        **REPORT-ONLY**: 26 P0s are *traceability* gaps (tested but BR code untagged) needing triage — hard
+        P0 gate deferred; `audit:trace:ci` stays the P0 gate meanwhile.
+      - **fsm**: 8 FSMs, 136 edges → 30 uncovered (Visit + Ceph weakest). **workflow**: 84 (16 cross-module)
+        → 27 gap, 0 dangling. **fe-route**: 23 routes → 3 gaps (patient portal).
+      - Gate policy: role-op drift HARD (0); endpoint/fsm/workflow/fe-route RATCHET; br report-only.
+      - **`Coverage Ratchet` CI gate is NOT-yet-required** — admin adds to branch protection (like the
+        RLS Posture / Code-DB Drift gates). Follow-ups: triage the 26 P0 BRs; render-smoke for fe-route;
+        populate endpoint integration/journey columns by running suites under `COVERAGE_RECORD=1`.
 - **Verification gate:** 6 matrices generate + commit; `coverage-ratchet` green; 0 un-triaged
       `drift:true`; Schemathesis-blocking green; **non-vacuity proof** (revert a historical fix on a
       scratch branch → a matrix/probe goes RED; re-apply → GREEN).

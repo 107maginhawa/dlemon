@@ -23,6 +23,7 @@
  * Usage: bun run scripts/build-contract-spine.ts
  */
 import { Glob } from 'bun';
+import { existsSync } from 'node:fs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const OPENAPI = `${ROOT}specs/api/dist/openapi/openapi.json`;
@@ -163,6 +164,16 @@ await Bun.write(
 );
 
 // ── 6. inject operation nodes + contract edges into the knowledge graph ───────
+// The spine JSON above is the source of truth for the coverage engine, built purely
+// from openapi/registry/SDK/FE-glob — no KG needed. The KG injection below is an
+// optional navigation side-effect; skip it when the (gitignored, heavy)
+// knowledge-graph.json is absent (e.g. CI), so the spine stays regenerable offline.
+if (!existsSync(GRAPH)) {
+  console.log(
+    `contract-spine: ${spine.length} ops | handler=${withHandler} sdk=${withSdk} consumers=${withConsumers}\n` +
+      `knowledge-graph.json absent — wrote spine only, skipped KG injection (offline/CI mode).`,
+  );
+} else {
 const graph = await Bun.file(GRAPH).json();
 const fileNodeIds = new Set<string>(graph.nodes.map((n: any) => n.id));
 // Prune any prior injection so this is idempotent.
@@ -208,3 +219,4 @@ console.log(
   `contract-spine: ${spine.length} ops | handler=${withHandler} sdk=${withSdk} consumers=${withConsumers}\n` +
     `graph injected: ${spine.length} operation nodes, ${implEdges} implements_operation, ${consumerEdges} operation_consumed_by edges`,
 );
+}

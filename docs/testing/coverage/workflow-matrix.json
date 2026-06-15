@@ -1,0 +1,658 @@
+{
+  "generatedBy": "scripts/coverage/workflow-matrix.ts",
+  "totals": {
+    "workflows": 84,
+    "crossModule": 16,
+    "covered": 55,
+    "gap": 27,
+    "deferred": 2,
+    "wfgGaps": 14,
+    "danglingSpecRefs": 0
+  },
+  "dangling": [],
+  "rows": [
+    {
+      "wfId": "WF-001",
+      "name": "User Login (email+password)",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/auth-gates.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-002",
+      "name": "User Login (passkey)",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-003",
+      "name": "Magic link login (patient)",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-004",
+      "name": "Staff invitation + first login",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/add-staff.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-005",
+      "name": "Patient registration",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/patient-registration.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-006",
+      "name": "Appointment booking",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/17-scheduling-booking.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-007",
+      "name": "Appointment check-in → visit creation",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/patient-checkin.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-008",
+      "name": "Workspace open (patient record)",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/workspace-readonly.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-009",
+      "name": "Dental chart entry (condition/treatment)",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/01-new-patient-exam.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-010",
+      "name": "Treatment mark as performed",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-011",
+      "name": "Clinical notes (SOAP) authoring",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-012",
+      "name": "Complete visit",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-013",
+      "name": "Create invoice from visit",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-014",
+      "name": "Record payment",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-015",
+      "name": "Create payment plan",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/payment-plan.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-016",
+      "name": "Write prescription",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/prescribe-medication.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-017",
+      "name": "Create lab order",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/lab-order-ui.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-018",
+      "name": "Obtain consent signature",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/19-case-presentation-accept.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-019",
+      "name": "Upload radiographic study",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/imaging-annotation.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-020",
+      "name": "Annotate radiograph",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/imaging-annotation.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-021",
+      "name": "Generate PMD",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/pmd-generation.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-022",
+      "name": "Import external PMD",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/20-pmd-import-merge.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-023",
+      "name": "Patient search",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/patient-profile.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-024",
+      "name": "Calendar / schedule view",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/calendar.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-025",
+      "name": "Configure fee schedule",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/fee-schedule.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-026",
+      "name": "Configure branch hours",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/dental-onboarding.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-027",
+      "name": "Staff member management",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/add-staff.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-028",
+      "name": "View audit log",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/10-void-amend-audit.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-029",
+      "name": "Export practice reports",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/reporting.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-030",
+      "name": "Cephalometric analysis",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/11-ceph-tier-gate.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-031",
+      "name": "Ceph landmark placement",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/12-ceph-landmarks-numeric.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-032",
+      "name": "Initializate dentition",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-033",
+      "name": "Carry-over treatment display",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/returning-patient-carryover-ui.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-034",
+      "name": "Timeline carousel navigation",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-035",
+      "name": "Consent revocation",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/consent-revoke-ui.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-036",
+      "name": "Lab order status progression",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/lab-order-tracking-api.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-037",
+      "name": "Medical history entry",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/medical-history-wiring.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-038",
+      "name": "Clinical amendment",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/10-void-amend-audit.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-039",
+      "name": "File attachment upload",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/attachments.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-040",
+      "name": "Imaging finding record",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/imaging-findings.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-041",
+      "name": "Invoice void",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-042",
+      "name": "Fee schedule lookup",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/fee-schedule.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-043",
+      "name": "Branch-scoped login (membership select)",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-044",
+      "name": "Patient consent at registration",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/patient-registration.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-046",
+      "name": "Visit lock job",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-048",
+      "name": "Update (plan)",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/treatment-templates.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-049",
+      "name": "Update (verify)",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-050",
+      "name": "Dismiss",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-051",
+      "name": "Outstanding invoices list",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-054",
+      "name": "Invoice overdue job",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-059",
+      "name": "BR-004",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-064",
+      "name": "Prescription history",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/rx-lifecycle-ui.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-066",
+      "name": "PMD archive",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/pmd-import.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-080",
+      "name": "Appointment notification",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-081",
+      "name": "Appointment reminder",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-087",
+      "name": "Imaging study",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-088",
+      "name": "GDPR erasure",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/data-erasure-admin.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-089",
+      "name": "Check-in flow",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/patient-checkin.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-090",
+      "name": "Visit → Invoice creation",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-091",
+      "name": "Imaging context from visit",
+      "crossModule": true,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-092",
+      "name": "PMD generation",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/pmd-generation.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-093",
+      "name": "Clinical amendment approval",
+      "crossModule": true,
+      "specExists": false,
+      "status": "deferred"
+    },
+    {
+      "wfId": "WF-094",
+      "name": "Carry-over treatment display",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/chart-patch-carryover.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-095",
+      "name": "Notification on appointment",
+      "crossModule": true,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-096",
+      "name": "Audit trail on every write",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/10-void-amend-audit.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-097",
+      "name": "Fee schedule on invoice",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/fee-schedule.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-098",
+      "name": "Storage for attachments",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/attachments.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-099",
+      "name": "Storage for imaging",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/imaging-annotation.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-100",
+      "name": "EMR import into patient records",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/pmd-import.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-101",
+      "name": "PMD import creates records",
+      "crossModule": true,
+      "mappedSpec": "apps/dentalemon/tests/e2e/pmd-import.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-102",
+      "name": "Dentition init on first visit",
+      "crossModule": true,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-103",
+      "name": "Booking slot generation (job)",
+      "crossModule": true,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-104",
+      "name": "Email notifications",
+      "crossModule": true,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-EMRC-001",
+      "name": "Provider creates a draft consultation note for a patient.",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-EMRC-002",
+      "name": "Provider updates clinical fields on a draft note.",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-EMRC-003",
+      "name": "Provider finalizes a draft note (terminal).",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-EMRC-004",
+      "name": "~~Provider amends a finalized note, then re-finalizes.~~ STRUCK (V-EMR-001) — no amend endpoint; finalize rejects non-draft notes.",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-EMRC-005",
+      "name": "Patient/provider/admin reads a note, optionally expanding patient/provider/person.",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-EMRC-006",
+      "name": "Provider lists the patients they have consulted (with consultation stats).",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-P01",
+      "name": "Create perio chart for a visit",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/03-perio-charting.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-P02",
+      "name": "Record tooth-level readings (probing, BOP, recession, mobility, furcation)",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/03-perio-charting.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-P03",
+      "name": "Complete / lock perio chart",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-P04",
+      "name": "View perio chart (historical)",
+      "crossModule": false,
+      "specExists": false,
+      "status": "gap"
+    },
+    {
+      "wfId": "WF-P05",
+      "name": "Print perio chart (PDF export)",
+      "crossModule": false,
+      "specExists": false,
+      "status": "deferred"
+    }
+  ]
+}

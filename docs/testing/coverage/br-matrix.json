@@ -1,0 +1,1692 @@
+[
+  {
+    "key": "dental-audit::AC-AUD-002",
+    "brId": "AC-AUD-002",
+    "module": "dental-audit",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-audit::AC-AUD-003 / EM-AUD-002",
+    "brId": "AC-AUD-003 / EM-AUD-002",
+    "module": "dental-audit",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-audit::AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A",
+    "brId": "AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A",
+    "module": "dental-audit",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "POSITIVE_ONLY"
+  },
+  {
+    "key": "dental-audit::AUD-BR-004",
+    "brId": "AUD-BR-004",
+    "module": "dental-audit",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "POSITIVE_ONLY"
+  },
+  {
+    "key": "dental-audit::V-AUD-007 / EM-AUD-008",
+    "brId": "V-AUD-007 / EM-AUD-008",
+    "module": "dental-audit",
+    "type": "reliability",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-audit::V-AUD-NEW-B / WF-028",
+    "brId": "V-AUD-NEW-B / WF-028",
+    "module": "dental-audit",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-009",
+    "brId": "BR-009",
+    "module": "dental-billing",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-010",
+    "brId": "BR-010",
+    "module": "dental-billing",
+    "type": "calculation-stub",
+    "derivedSeverity": "P2",
+    "status": "partial",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-011",
+    "brId": "BR-011",
+    "module": "dental-billing",
+    "type": "lifecycle-guard",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-012",
+    "brId": "BR-012",
+    "module": "dental-billing",
+    "type": "state-machine",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-013",
+    "brId": "BR-013",
+    "module": "dental-billing",
+    "type": "state-machine",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-014",
+    "brId": "BR-014",
+    "module": "dental-billing",
+    "type": "lifecycle-guard",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-015",
+    "brId": "BR-015",
+    "module": "dental-billing",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::EM-BIL-002",
+    "brId": "EM-BIL-002",
+    "module": "dental-billing",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-clinical::BR-014",
+    "brId": "BR-014",
+    "module": "dental-clinical",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-clinical::BR-015",
+    "brId": "BR-015",
+    "module": "dental-clinical",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-clinical::BR-017",
+    "brId": "BR-017",
+    "module": "dental-clinical",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-clinical::BR-018",
+    "brId": "BR-018",
+    "module": "dental-clinical",
+    "type": "state-machine",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-clinical::V-CLN-010",
+    "brId": "V-CLN-010",
+    "module": "dental-clinical",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-023",
+    "brId": "BR-023",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-024",
+    "brId": "BR-024",
+    "module": "dental-imaging",
+    "type": "ux-guard",
+    "derivedSeverity": "P2",
+    "status": "partial",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-025",
+    "brId": "BR-025",
+    "module": "dental-imaging",
+    "type": "referential-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-026",
+    "brId": "BR-026",
+    "module": "dental-imaging",
+    "type": "access-control",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-027",
+    "brId": "BR-027",
+    "module": "dental-imaging",
+    "type": "access-control",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-028",
+    "brId": "BR-028",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-029",
+    "brId": "BR-029",
+    "module": "dental-imaging",
+    "type": "multi-tenancy",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-030",
+    "brId": "BR-030",
+    "module": "dental-imaging",
+    "type": "backwards-compatibility",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-031",
+    "brId": "BR-031",
+    "module": "dental-imaging",
+    "type": "offline-ux",
+    "derivedSeverity": "P2",
+    "status": "unauditable",
+    "guardTyped": false,
+    "corporaHit": [
+      "app-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-032",
+    "brId": "BR-032",
+    "module": "dental-imaging",
+    "type": "schema-constraint",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-033",
+    "brId": "BR-033",
+    "module": "dental-imaging",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "partial",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-034",
+    "brId": "BR-034",
+    "module": "dental-imaging",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-035",
+    "brId": "BR-035",
+    "module": "dental-imaging",
+    "type": "concurrency",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-036",
+    "brId": "BR-036",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-037",
+    "brId": "BR-037",
+    "module": "dental-imaging",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-038",
+    "brId": "BR-038",
+    "module": "dental-imaging",
+    "type": "computation-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-039",
+    "brId": "BR-039",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-040",
+    "brId": "BR-040",
+    "module": "dental-imaging",
+    "type": "ux-guard",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-041",
+    "brId": "BR-041",
+    "module": "dental-imaging",
+    "type": "multi-tenancy",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-042",
+    "brId": "BR-042",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-043",
+    "brId": "BR-043",
+    "module": "dental-imaging",
+    "type": "schema-constraint",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-044",
+    "brId": "BR-044",
+    "module": "dental-imaging",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-045",
+    "brId": "BR-045",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-046",
+    "brId": "BR-046",
+    "module": "dental-imaging",
+    "type": "computation-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::BR-047",
+    "brId": "BR-047",
+    "module": "dental-imaging",
+    "type": "referential-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-001",
+    "brId": "CIMG-001",
+    "module": "dental-imaging",
+    "type": "access-control",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-002",
+    "brId": "CIMG-002",
+    "module": "dental-imaging",
+    "type": "access-control",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-003",
+    "brId": "CIMG-003",
+    "module": "dental-imaging",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-004",
+    "brId": "CIMG-004",
+    "module": "dental-imaging",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-005",
+    "brId": "CIMG-005",
+    "module": "dental-imaging",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-imaging::CIMG-006",
+    "brId": "CIMG-006",
+    "module": "dental-imaging",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-007",
+    "brId": "CIMG-007",
+    "module": "dental-imaging",
+    "type": "multi-tenancy",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-008",
+    "brId": "CIMG-008",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-009",
+    "brId": "CIMG-009",
+    "module": "dental-imaging",
+    "type": "response-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-010",
+    "brId": "CIMG-010",
+    "module": "dental-imaging",
+    "type": "response-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-011",
+    "brId": "CIMG-011",
+    "module": "dental-imaging",
+    "type": "response-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-imaging::CIMG-012",
+    "brId": "CIMG-012",
+    "module": "dental-imaging",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-imaging::CIMG-013",
+    "brId": "CIMG-013",
+    "module": "dental-imaging",
+    "type": "response-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-imaging::CIMG-014",
+    "brId": "CIMG-014",
+    "module": "dental-imaging",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-imaging::CIMG-015",
+    "brId": "CIMG-015",
+    "module": "dental-imaging",
+    "type": "response-contract",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-org::BR-016",
+    "brId": "BR-016",
+    "module": "dental-org",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-org::BR-016b",
+    "brId": "BR-016b",
+    "module": "dental-org",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-patient::BR-015",
+    "brId": "BR-015",
+    "module": "dental-patient",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-patient::BR-015b",
+    "brId": "BR-015b",
+    "module": "dental-patient",
+    "type": "state-machine",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "app-unit",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-patient::BR-015c",
+    "brId": "BR-015c",
+    "module": "dental-patient",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-patient::BR-019",
+    "brId": "BR-019",
+    "module": "dental-patient",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "partial",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-patient::BR-020",
+    "brId": "BR-020",
+    "module": "dental-patient",
+    "type": "implementation-gap",
+    "derivedSeverity": "P2",
+    "status": "not-implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-patient::TP-BR-005",
+    "brId": "TP-BR-005",
+    "module": "dental-patient",
+    "type": "state-machine",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::BR-P01",
+    "brId": "BR-P01",
+    "module": "dental-perio",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::BR-P02",
+    "brId": "BR-P02",
+    "module": "dental-perio",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::BR-P03",
+    "brId": "BR-P03",
+    "module": "dental-perio",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "POSITIVE_ONLY"
+  },
+  {
+    "key": "dental-perio::BR-P04",
+    "brId": "BR-P04",
+    "module": "dental-perio",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::BR-P05",
+    "brId": "BR-P05",
+    "module": "dental-perio",
+    "type": "access-control",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::BR-P06",
+    "brId": "BR-P06",
+    "module": "dental-perio",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-perio::BR-P07",
+    "brId": "BR-P07",
+    "module": "dental-perio",
+    "type": "business-rule",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::V-PER-007",
+    "brId": "V-PER-007",
+    "module": "dental-perio",
+    "type": "state-machine",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-perio::V-PER-STAGING",
+    "brId": "V-PER-STAGING",
+    "module": "dental-perio",
+    "type": "clinical-correctness",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-pmd::BR-021",
+    "brId": "BR-021",
+    "module": "dental-pmd",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-pmd::BR-022",
+    "brId": "BR-022",
+    "module": "dental-pmd",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-pmd::EF-PMD-001",
+    "brId": "EF-PMD-001",
+    "module": "dental-pmd",
+    "type": "data-integrity",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-pmd::EF-PMD-005",
+    "brId": "EF-PMD-005",
+    "module": "dental-pmd",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-pmd::N-PMD-02",
+    "brId": "N-PMD-02",
+    "module": "dental-pmd",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-pmd::V-PMD-007",
+    "brId": "V-PMD-007",
+    "module": "dental-pmd",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-pmd::V-PMD-008",
+    "brId": "V-PMD-008",
+    "module": "dental-pmd",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-portal::V-PORTAL-001 (IDOR-free self-scope — headline invariant)",
+    "brId": "V-PORTAL-001 (IDOR-free self-scope — headline invariant)",
+    "module": "dental-portal",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-portal::V-PORTAL-002 (staff-only account denied; patient-only boundary)",
+    "brId": "V-PORTAL-002 (staff-only account denied; patient-only boundary)",
+    "module": "dental-portal",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-portal::V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)",
+    "brId": "V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)",
+    "module": "dental-portal",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-portal::V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)",
+    "brId": "V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)",
+    "module": "dental-portal",
+    "type": "privacy",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-portal::V-PORTAL-005 (read-only; no patient write/mutate path)",
+    "brId": "V-PORTAL-005 (read-only; no patient write/mutate path)",
+    "module": "dental-portal",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-scheduling::BR-004",
+    "brId": "BR-004",
+    "module": "dental-scheduling",
+    "type": "lifecycle-coupling",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-scheduling::BR-SCH-001",
+    "brId": "BR-SCH-001",
+    "module": "dental-scheduling",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-scheduling::BR-SCH-002",
+    "brId": "BR-SCH-002",
+    "module": "dental-scheduling",
+    "type": "business-rule",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-scheduling::BR-SCH-003",
+    "brId": "BR-SCH-003",
+    "module": "dental-scheduling",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-scheduling::BR-SCH-004",
+    "brId": "BR-SCH-004",
+    "module": "dental-scheduling",
+    "type": "business-rule",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-scheduling::FR3.7",
+    "brId": "FR3.7",
+    "module": "dental-scheduling",
+    "type": "business-rule",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-001",
+    "brId": "BR-001",
+    "module": "dental-visit",
+    "type": "conflict-prevention",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-002",
+    "brId": "BR-002",
+    "module": "dental-visit",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-003",
+    "brId": "BR-003",
+    "module": "dental-visit",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-005",
+    "brId": "BR-005",
+    "module": "dental-visit",
+    "type": "lifecycle-guard",
+    "derivedSeverity": "P2",
+    "status": "implemented-flag-gated",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-006",
+    "brId": "BR-006",
+    "module": "dental-visit",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-007",
+    "brId": "BR-007",
+    "module": "dental-visit",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-008",
+    "brId": "BR-008",
+    "module": "dental-visit",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-visit::BR-VIS-009",
+    "brId": "BR-VIS-009",
+    "module": "dental-visit",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "dental-visit::BR-VIS-010",
+    "brId": "BR-VIS-010",
+    "module": "dental-visit",
+    "type": "authorization",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "emr-consultation::V-EMR-001 (finalize is terminal — sign-immutability, no amend-after-finalize)",
+    "brId": "V-EMR-001 (finalize is terminal — sign-immutability, no amend-after-finalize)",
+    "module": "emr-consultation",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "emr-consultation::V-EMR-005 (audit tenant slot is a non-PHI sentinel, never the patient UUID)",
+    "brId": "V-EMR-005 (audit tenant slot is a non-PHI sentinel, never the patient UUID)",
+    "module": "emr-consultation",
+    "type": "privacy",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "POSITIVE_ONLY"
+  },
+  {
+    "key": "emr-consultation::V-EMR-AUTH (authoring/finalizing role-gated to the owning provider)",
+    "brId": "V-EMR-AUTH (authoring/finalizing role-gated to the owning provider)",
+    "module": "emr-consultation",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "emr-consultation::V-EMR-CTX (context idempotency key is unique)",
+    "brId": "V-EMR-CTX (context idempotency key is unique)",
+    "module": "emr-consultation",
+    "type": "conflict-prevention",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "emr-consultation::V-EMR-OWN (ownership self-scope — headline isolation invariant)",
+    "brId": "V-EMR-OWN (ownership self-scope — headline isolation invariant)",
+    "module": "emr-consultation",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "erasure-legal-hold-retention::AC-LH-001..004 (legal-hold workflow + RBAC + FSM)",
+    "brId": "AC-LH-001..004 (legal-hold workflow + RBAC + FSM)",
+    "module": "erasure-legal-hold-retention",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "erasure-legal-hold-retention::AC-RET-001..006 (retention enforcement: dry-run, soft-archive, protected, legal-hold-excluded)",
+    "brId": "AC-RET-001..006 (retention enforcement: dry-run, soft-archive, protected, legal-hold-excluded)",
+    "module": "erasure-legal-hold-retention",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "erasure-legal-hold-retention::EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)",
+    "brId": "EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)",
+    "module": "erasure-legal-hold-retention",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "erasure-legal-hold-retention::V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)",
+    "brId": "V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)",
+    "module": "erasure-legal-hold-retention",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "erasure-legal-hold-retention::V-DG-002-AU (erasure audited AND the audit trail survives the erasure)",
+    "brId": "V-DG-002-AU (erasure audited AND the audit trail survives the erasure)",
+    "module": "erasure-legal-hold-retention",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "erasure-legal-hold-retention::V-DG-002-LH (legal-hold blocks erasure — headline invariant)",
+    "brId": "V-DG-002-LH (legal-hold blocks erasure — headline invariant)",
+    "module": "erasure-legal-hold-retention",
+    "type": "compliance",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "external-records-import::V-XRI-001 (bulk patient import is cross-tenant isolated — owner-of-the-named-branch only)",
+    "brId": "V-XRI-001 (bulk patient import is cross-tenant isolated — owner-of-the-named-branch only)",
+    "module": "external-records-import",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "external-records-import::V-XRI-002 (ingestion safety — untrusted external input rejected with a specific 4xx, never a 500/crash)",
+    "brId": "V-XRI-002 (ingestion safety — untrusted external input rejected with a specific 4xx, never a 500/crash)",
+    "module": "external-records-import",
+    "type": "validation",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "external-records-import::V-XRI-003 (FHIR/CDA/PDF EMR-import bridge is FUTURE-PHASE — not built)",
+    "brId": "V-XRI-003 (FHIR/CDA/PDF EMR-import bridge is FUTURE-PHASE — not built)",
+    "module": "external-records-import",
+    "type": "documentation",
+    "derivedSeverity": "P2",
+    "status": "deferred",
+    "guardTyped": false,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "external-records-import::V-XRI-004 (imported-PMD immutability + checksum + provenance + audit are the PMD-side import invariants)",
+    "brId": "V-XRI-004 (imported-PMD immutability + checksum + provenance + audit are the PMD-side import invariants)",
+    "module": "external-records-import",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "provider::V-PROV-001 (Provider profile is self-service — created for the session user only)",
+    "brId": "V-PROV-001 (Provider profile is self-service — created for the session user only)",
+    "module": "provider",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "provider::V-PROV-002 (Practitioner credentials are privileged-read-only — no public/patient projection)",
+    "brId": "V-PROV-002 (Practitioner credentials are privileged-read-only — no public/patient projection)",
+    "module": "provider",
+    "type": "privacy",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "provider::V-PROV-003 (Practitioner / PractitionerRole writes are admin/credentialing role-gated)",
+    "brId": "V-PROV-003 (Practitioner / PractitionerRole writes are admin/credentialing role-gated)",
+    "module": "provider",
+    "type": "security",
+    "derivedSeverity": "P0",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  },
+  {
+    "key": "provider::V-PROV-004 (deactivate is a soft-delete — records retained)",
+    "brId": "V-PROV-004 (deactivate is a soft-delete — records retained)",
+    "module": "provider",
+    "type": "state-guard",
+    "derivedSeverity": "P1",
+    "status": "implemented",
+    "guardTyped": true,
+    "corporaHit": [],
+    "hasNegativePath": false,
+    "coverageState": "UNTESTED"
+  }
+]
