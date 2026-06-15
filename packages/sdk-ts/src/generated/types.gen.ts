@@ -67508,6 +67508,15 @@ export type CephMgmtCreateCephSuperimpositionData = {
     url: '/dental/imaging/ceph/superimpositions';
 };
 
+export type CephMgmtCreateCephSuperimpositionErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtCreateCephSuperimpositionError = CephMgmtCreateCephSuperimpositionErrors[keyof CephMgmtCreateCephSuperimpositionErrors];
+
 export type CephMgmtCreateCephSuperimpositionResponses = {
     /**
      * The request has succeeded.
@@ -67523,6 +67532,15 @@ export type CephMgmtPreviewCephSuperimpositionData = {
     query?: never;
     url: '/dental/imaging/ceph/superimpositions/preview';
 };
+
+export type CephMgmtPreviewCephSuperimpositionErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtPreviewCephSuperimpositionError = CephMgmtPreviewCephSuperimpositionErrors[keyof CephMgmtPreviewCephSuperimpositionErrors];
 
 export type CephMgmtPreviewCephSuperimpositionResponses = {
     /**
@@ -67542,6 +67560,15 @@ export type CephMgmtGetCephSuperimpositionData = {
     url: '/dental/imaging/ceph/superimpositions/{superimpositionId}';
 };
 
+export type CephMgmtGetCephSuperimpositionErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtGetCephSuperimpositionError = CephMgmtGetCephSuperimpositionErrors[keyof CephMgmtGetCephSuperimpositionErrors];
+
 export type CephMgmtGetCephSuperimpositionResponses = {
     /**
      * The request has succeeded.
@@ -67559,6 +67586,15 @@ export type ImagingFindingsMgmtDeleteFindingData = {
     query?: never;
     url: '/dental/imaging/findings/{findingId}';
 };
+
+export type ImagingFindingsMgmtDeleteFindingErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingFindingsMgmtDeleteFindingError = ImagingFindingsMgmtDeleteFindingErrors[keyof ImagingFindingsMgmtDeleteFindingErrors];
 
 export type ImagingFindingsMgmtDeleteFindingResponses = {
     /**
@@ -67582,6 +67618,15 @@ export type ImagingFindingsMgmtUpdateFindingData = {
     url: '/dental/imaging/findings/{findingId}';
 };
 
+export type ImagingFindingsMgmtUpdateFindingErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingFindingsMgmtUpdateFindingError = ImagingFindingsMgmtUpdateFindingErrors[keyof ImagingFindingsMgmtUpdateFindingErrors];
+
 export type ImagingFindingsMgmtUpdateFindingResponses = {
     /**
      * The request has succeeded.
@@ -67599,6 +67644,15 @@ export type ImagingMgmtDeleteImageData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}';
 };
+
+export type ImagingMgmtDeleteImageErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtDeleteImageError = ImagingMgmtDeleteImageErrors[keyof ImagingMgmtDeleteImageErrors];
 
 export type ImagingMgmtDeleteImageResponses = {
     /**
@@ -67622,6 +67676,15 @@ export type ImagingMgmtUpdateImageCalibrationData = {
     url: '/dental/imaging/images/{imageId}/calibration';
 };
 
+export type ImagingMgmtUpdateImageCalibrationErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtUpdateImageCalibrationError = ImagingMgmtUpdateImageCalibrationErrors[keyof ImagingMgmtUpdateImageCalibrationErrors];
+
 export type ImagingMgmtUpdateImageCalibrationResponses = {
     /**
      * The request has succeeded.
@@ -67641,6 +67704,15 @@ export type CephMgmtGetCephAnalysisData = {
     };
     url: '/dental/imaging/images/{imageId}/ceph/analysis';
 };
+
+export type CephMgmtGetCephAnalysisErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtGetCephAnalysisError = CephMgmtGetCephAnalysisErrors[keyof CephMgmtGetCephAnalysisErrors];
 
 export type CephMgmtGetCephAnalysisResponses = {
     /**
@@ -67662,6 +67734,15 @@ export type CephMgmtRecomputeCephAnalysisData = {
     url: '/dental/imaging/images/{imageId}/ceph/analysis/recompute';
 };
 
+export type CephMgmtRecomputeCephAnalysisErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtRecomputeCephAnalysisError = CephMgmtRecomputeCephAnalysisErrors[keyof CephMgmtRecomputeCephAnalysisErrors];
+
 export type CephMgmtRecomputeCephAnalysisResponses = {
     /**
      * The request has succeeded.
@@ -67679,6 +67760,15 @@ export type CephMgmtListCephLandmarksData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks';
 };
+
+export type CephMgmtListCephLandmarksErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtListCephLandmarksError = CephMgmtListCephLandmarksErrors[keyof CephMgmtListCephLandmarksErrors];
 
 export type CephMgmtListCephLandmarksResponses = {
     /**
@@ -67698,6 +67788,15 @@ export type CephMgmtBatchUpsertCephLandmarksData = {
     url: '/dental/imaging/images/{imageId}/ceph/landmarks';
 };
 
+export type CephMgmtBatchUpsertCephLandmarksErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtBatchUpsertCephLandmarksError = CephMgmtBatchUpsertCephLandmarksErrors[keyof CephMgmtBatchUpsertCephLandmarksErrors];
+
 export type CephMgmtBatchUpsertCephLandmarksResponses = {
     /**
      * The request has succeeded.
@@ -67715,6 +67814,15 @@ export type CephMgmtDetectCephLandmarksData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks/detect';
 };
+
+export type CephMgmtDetectCephLandmarksErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtDetectCephLandmarksError = CephMgmtDetectCephLandmarksErrors[keyof CephMgmtDetectCephLandmarksErrors];
 
 export type CephMgmtDetectCephLandmarksResponses = {
     /**
@@ -67735,6 +67843,15 @@ export type CephMgmtGetCephLandmarkDetectionJobData = {
     url: '/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}';
 };
 
+export type CephMgmtGetCephLandmarkDetectionJobErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtGetCephLandmarkDetectionJobError = CephMgmtGetCephLandmarkDetectionJobErrors[keyof CephMgmtGetCephLandmarkDetectionJobErrors];
+
 export type CephMgmtGetCephLandmarkDetectionJobResponses = {
     /**
      * The request has succeeded.
@@ -67753,6 +67870,15 @@ export type CephMgmtDeleteCephLandmarkData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}';
 };
+
+export type CephMgmtDeleteCephLandmarkErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtDeleteCephLandmarkError = CephMgmtDeleteCephLandmarkErrors[keyof CephMgmtDeleteCephLandmarkErrors];
 
 export type CephMgmtDeleteCephLandmarkResponses = {
     /**
@@ -67777,6 +67903,15 @@ export type CephMgmtUpdateCephLandmarkData = {
     url: '/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}';
 };
 
+export type CephMgmtUpdateCephLandmarkErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtUpdateCephLandmarkError = CephMgmtUpdateCephLandmarkErrors[keyof CephMgmtUpdateCephLandmarkErrors];
+
 export type CephMgmtUpdateCephLandmarkResponses = {
     /**
      * The request has succeeded.
@@ -67797,6 +67932,15 @@ export type CephMgmtGetCephReportData = {
     url: '/dental/imaging/images/{imageId}/ceph/reports';
 };
 
+export type CephMgmtGetCephReportErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtGetCephReportError = CephMgmtGetCephReportErrors[keyof CephMgmtGetCephReportErrors];
+
 export type CephMgmtGetCephReportResponses = {
     /**
      * The request has succeeded.
@@ -67814,6 +67958,15 @@ export type CephMgmtCreateCephReportData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/reports';
 };
+
+export type CephMgmtCreateCephReportErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtCreateCephReportError = CephMgmtCreateCephReportErrors[keyof CephMgmtCreateCephReportErrors];
 
 export type CephMgmtCreateCephReportResponses = {
     /**
@@ -67833,6 +67986,15 @@ export type ImagingFindingsMgmtListFindingsData = {
     url: '/dental/imaging/images/{imageId}/findings';
 };
 
+export type ImagingFindingsMgmtListFindingsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingFindingsMgmtListFindingsError = ImagingFindingsMgmtListFindingsErrors[keyof ImagingFindingsMgmtListFindingsErrors];
+
 export type ImagingFindingsMgmtListFindingsResponses = {
     /**
      * The request has succeeded.
@@ -67850,6 +68012,15 @@ export type ImagingFindingsMgmtCreateFindingData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/findings';
 };
+
+export type ImagingFindingsMgmtCreateFindingErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingFindingsMgmtCreateFindingError = ImagingFindingsMgmtCreateFindingErrors[keyof ImagingFindingsMgmtCreateFindingErrors];
 
 export type ImagingFindingsMgmtCreateFindingResponses = {
     /**
@@ -67869,6 +68040,15 @@ export type ImagingMgmtListImageLinksData = {
     url: '/dental/imaging/images/{imageId}/links';
 };
 
+export type ImagingMgmtListImageLinksErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtListImageLinksError = ImagingMgmtListImageLinksErrors[keyof ImagingMgmtListImageLinksErrors];
+
 export type ImagingMgmtListImageLinksResponses = {
     /**
      * The request has succeeded.
@@ -67886,6 +68066,15 @@ export type ImagingMgmtCreateImageLinkData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/links';
 };
+
+export type ImagingMgmtCreateImageLinkErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtCreateImageLinkError = ImagingMgmtCreateImageLinkErrors[keyof ImagingMgmtCreateImageLinkErrors];
 
 export type ImagingMgmtCreateImageLinkResponses = {
     /**
@@ -67905,6 +68094,15 @@ export type ImagingMgmtListMeasurementsData = {
     url: '/dental/imaging/images/{imageId}/measurements';
 };
 
+export type ImagingMgmtListMeasurementsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtListMeasurementsError = ImagingMgmtListMeasurementsErrors[keyof ImagingMgmtListMeasurementsErrors];
+
 export type ImagingMgmtListMeasurementsResponses = {
     /**
      * The request has succeeded.
@@ -67922,6 +68120,15 @@ export type ImagingMgmtCreateMeasurementData = {
     query?: never;
     url: '/dental/imaging/images/{imageId}/measurements';
 };
+
+export type ImagingMgmtCreateMeasurementErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtCreateMeasurementError = ImagingMgmtCreateMeasurementErrors[keyof ImagingMgmtCreateMeasurementErrors];
 
 export type ImagingMgmtCreateMeasurementResponses = {
     /**
@@ -67941,6 +68148,15 @@ export type ImagingMgmtUpdateImageMetadataData = {
     url: '/dental/imaging/images/{imageId}/metadata';
 };
 
+export type ImagingMgmtUpdateImageMetadataErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtUpdateImageMetadataError = ImagingMgmtUpdateImageMetadataErrors[keyof ImagingMgmtUpdateImageMetadataErrors];
+
 export type ImagingMgmtUpdateImageMetadataResponses = {
     /**
      * The request has succeeded.
@@ -67959,6 +68175,15 @@ export type ImagingMgmtUpdateImageModalityData = {
     url: '/dental/imaging/images/{imageId}/modality';
 };
 
+export type ImagingMgmtUpdateImageModalityErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtUpdateImageModalityError = ImagingMgmtUpdateImageModalityErrors[keyof ImagingMgmtUpdateImageModalityErrors];
+
 export type ImagingMgmtUpdateImageModalityResponses = {
     /**
      * The request has succeeded.
@@ -67976,6 +68201,15 @@ export type ImagingMgmtDeleteImageLinkData = {
     query?: never;
     url: '/dental/imaging/links/{linkId}';
 };
+
+export type ImagingMgmtDeleteImageLinkErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtDeleteImageLinkError = ImagingMgmtDeleteImageLinkErrors[keyof ImagingMgmtDeleteImageLinkErrors];
 
 export type ImagingMgmtDeleteImageLinkResponses = {
     /**
@@ -67999,6 +68233,15 @@ export type ImagingMgmtDeleteMeasurementData = {
     url: '/dental/imaging/measurements/{measurementId}';
 };
 
+export type ImagingMgmtDeleteMeasurementErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtDeleteMeasurementError = ImagingMgmtDeleteMeasurementErrors[keyof ImagingMgmtDeleteMeasurementErrors];
+
 export type ImagingMgmtDeleteMeasurementResponses = {
     /**
      * The request has succeeded.
@@ -68021,6 +68264,15 @@ export type CephMgmtListCephSuperimpositionsData = {
     url: '/dental/imaging/patients/{patientId}/ceph/superimpositions';
 };
 
+export type CephMgmtListCephSuperimpositionsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type CephMgmtListCephSuperimpositionsError = CephMgmtListCephSuperimpositionsErrors[keyof CephMgmtListCephSuperimpositionsErrors];
+
 export type CephMgmtListCephSuperimpositionsResponses = {
     /**
      * The request has succeeded.
@@ -68036,6 +68288,15 @@ export type ImagingMgmtCreateImagingStudyData = {
     query?: never;
     url: '/dental/imaging/studies';
 };
+
+export type ImagingMgmtCreateImagingStudyErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtCreateImagingStudyError = ImagingMgmtCreateImagingStudyErrors[keyof ImagingMgmtCreateImagingStudyErrors];
 
 export type ImagingMgmtCreateImagingStudyResponses = {
     /**
@@ -68055,6 +68316,15 @@ export type ImagingMgmtGetImagingStudyData = {
     url: '/dental/imaging/studies/{studyId}';
 };
 
+export type ImagingMgmtGetImagingStudyErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtGetImagingStudyError = ImagingMgmtGetImagingStudyErrors[keyof ImagingMgmtGetImagingStudyErrors];
+
 export type ImagingMgmtGetImagingStudyResponses = {
     /**
      * The request has succeeded.
@@ -68073,6 +68343,15 @@ export type ImagingMgmtFinalizeCbctStudyData = {
     url: '/dental/imaging/studies/{studyId}/cbct/finalize';
 };
 
+export type ImagingMgmtFinalizeCbctStudyErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtFinalizeCbctStudyError = ImagingMgmtFinalizeCbctStudyErrors[keyof ImagingMgmtFinalizeCbctStudyErrors];
+
 export type ImagingMgmtFinalizeCbctStudyResponses = {
     /**
      * The request has succeeded.
@@ -68090,6 +68369,15 @@ export type ImagingMgmtGetCbctViewerLinkData = {
     query?: never;
     url: '/dental/imaging/studies/{studyId}/cbct/viewer-link';
 };
+
+export type ImagingMgmtGetCbctViewerLinkErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtGetCbctViewerLinkError = ImagingMgmtGetCbctViewerLinkErrors[keyof ImagingMgmtGetCbctViewerLinkErrors];
 
 export type ImagingMgmtGetCbctViewerLinkResponses = {
     /**
@@ -68459,6 +68747,10 @@ export type RecoverPinErrors = {
      * Validation error response
      */
     400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
     /**
      * Resource not found response
      */
@@ -70360,6 +70652,15 @@ export type PatientImageMgmtListPatientImagesData = {
     };
     url: '/dental/patients/{patientId}/images';
 };
+
+export type PatientImageMgmtListPatientImagesErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type PatientImageMgmtListPatientImagesError = PatientImageMgmtListPatientImagesErrors[keyof PatientImageMgmtListPatientImagesErrors];
 
 export type PatientImageMgmtListPatientImagesResponses = {
     /**

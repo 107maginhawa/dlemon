@@ -6,8 +6,13 @@ name: Contract Tests
 #   3. Hurl auth email round-trip (auth-verification, auth-password-reset) via
 #      Mailpit — BLOCKING.
 #   4. Hurl Stripe (billing-lifecycle) via stripe-mock — NON-BLOCKING (mock 500s).
-#   5. Schemathesis schema fuzzing — shadow check (allowed to fail by design:
-#      it surfaces spec-precision nits, not impl bugs).
+#   5. Schemathesis BLOCKING profile — `not_a_server_error,status_code_conformance`
+#      over all ~372 ops. A green, enforceable gate: no 5xx, and every status the
+#      impl returns is documented in the spec. (Imaging + recoverPin under-declared
+#      their 401s until the spec was fixed; this gate keeps the contract honest.)
+#   6. Schemathesis shadow (all default checks) — NON-BLOCKING by design: it
+#      surfaces spec-precision nits (under-declared 4xx bodies, datetime params),
+#      not impl bugs.
 #
 # All run against whichever HTTP implementation is booted on $API_URL,
 # so the same workflow can be retargeted at a Rust impl, a remote staging
@@ -36,12 +41,12 @@ on:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    # 20m (was 15m): the job historically runs ~14m53s, leaving almost no
-    # headroom — the Schemathesis shadow tail (capped to its own
-    # timeout-minutes below) was eating the remaining budget and risking a
-    # job-level timeout, which would fail this branch-protected check on a
-    # NON-blocking step. 20m gives the blocking Hurl layers comfortable room.
-    timeout-minutes: 20
+    # 25m: the Hurl layers run ~14m53s; the new BLOCKING Schemathesis profile
+    # adds ~3–5m on a CI runner (max-examples=15 over ~372 ops) and the shadow
+    # tail is capped to its own timeout-minutes below. 25m keeps the blocking
+    # layers (Hurl + Schemathesis blocking) clear of a job-level timeout, which
+    # would otherwise fail this branch-protected check.
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -224,12 +229,24 @@ jobs:
           CONTRACT_ONLY: billing-lifecycle
         run: bun run test:contract
 
-      # Shadow check by design: Schemathesis fuzzing surfaces spec-precision nits
-      # (under-declared 401s, datetime query params), not impl bugs — kept advisory.
-      # Its own timeout-minutes caps the fuzz tail so it can never starve the
-      # blocking Hurl layers or blow the job budget; combined with
-      # continue-on-error, a slow/hung fuzz run is isolated and keeps the
-      # branch-protected `contract` check green.
+      # BLOCKING profile: the narrow real-bug checks (no 5xx; every returned
+      # status is documented) over all ops. SCHEMATHESIS_MAX_EXAMPLES bounds
+      # wall-clock; SCHEMATHESIS_SUPPRESS_HEALTH_CHECK=all silences schemathesis's
+      # OWN data-generation health checks (filter_too_much etc.) — they fire
+      # non-deterministically on 2 tight-input-regex ops (confirmationCode,
+      # practitioner-roles) and are never impl bugs, so they must not fail the
+      # gate. The 5xx + status-code checks themselves passed (369 ops) after the
+      # imaging + recoverPin 401 spec fix that closed the under-declared-status gap.
+      - name: Schemathesis — 5xx + status-code conformance (blocking)
+        timeout-minutes: 8
+        run: bun run test:contract:fuzz:blocking
+
+      # Shadow check by design: the full default check suite surfaces
+      # spec-precision nits (under-declared 4xx response bodies, datetime query
+      # params), not impl bugs — kept advisory. Its own timeout-minutes caps the
+      # fuzz tail so it can never starve the blocking layers or blow the job
+      # budget; combined with continue-on-error, a slow/hung run is isolated and
+      # keeps the branch-protected `contract` check green.
       - name: Schemathesis fuzz (shadow)
         continue-on-error: true
         timeout-minutes: 6

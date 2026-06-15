@@ -63,8 +63,24 @@ product (`apps/dentalemon` + `services/api-ts`).
         documents 28). Not drift; "compute-the-rest" backlog for spec coverage.
       - **Blocking CI gate** for role drift lands with the unified `coverage-ratchet` job in 1c (it needs
         `contract-spine.json` regenerated in CI; `.understand-anything/` is gitignored).
-- [ ] **1b — Schemathesis shadow→blocking.** Blocking profile (`not_a_server_error,status_code_conformance`)
-      over all 369 ops; spec-precision findings stay advisory.
+- [x] **1b — Schemathesis shadow→blocking. ✅ DONE** (PR#36). Blocking profile
+      (`--checks not_a_server_error,status_code_conformance --suppress-health-check=filter_too_much
+      --max-examples 15`) over all ~372 ops, wired as a new BLOCKING `contract.yml` step
+      (`test:contract:fuzz:blocking`; runner env-parameterized); the full-check shadow run stays
+      advisory. Triage of the local run: **0 `not_a_server_error` (5xx)** — no impl bug of that class.
+      All 34 `status_code_conformance` failures were a single **spec↔impl drift** (computed, not hunted):
+      the entire `dental-imaging` module (33 ops) returned `401` but declared only success codes — it
+      used a status-less `| ErrorResponse` that collapsed into the **200 body** — and `recoverPin`
+      returned `401` while the spec marked it **public**, despite the handler *requiring* auth
+      (CF-39/AUTH-03, an anti-brute-force guard on the security-question reset). Fixed in TypeSpec:
+      appended `| ApiUnauthorizedResponse` to the imaging ops (kept the 200 body intact → zero
+      SDK/FE success-type change), and added `@useAuth(bearerAuth)` + 401 to `recoverPin` (it now
+      carries the same route-level `authMiddleware({roles:["user"]})` its siblings always had —
+      a real security-doc fix). Regenerated routes/SDK + one behavior-preserving FE widening
+      (`use-ceph-superimposition.ts`: the SDK now types the 401 error concretely). Proof: 23.5k fuzz
+      cases pass / 0 failures; typecheck + lint green; 45 dental-org auth tests + 404 FE imaging tests green.
+      The 3 schemathesis "errors" were its OWN data-generation health checks (tight input regex on 3 ops),
+      suppressed via `filter_too_much` so they can't fail the gate on a non-impl issue.
 - [x] **1c — Computed coverage engine + 6 matrices. ✅ DONE** (built via a 5-way parallel agent
       fan-out on the `scan-tests`+`ratchet` foundation; 172 engine unit tests). Each matrix = a
       deterministic set-diff over a machine-readable source → committed artifact + seeded
@@ -111,7 +127,7 @@ Verify "works for users" by running the real-stack proof (Tier 1) and the deep s
 citing their artifacts — not by reporting green unit/coverage numbers as proof of function.
 
 ## Continuation & autonomy mandate (read this to resume)
-**Status:** Phase 1a ✅ (PR#33) + Phase 1c ✅ (PR#34) merged; main `2c99a9f7`. **Remaining: Task 1b → Phase 2 → Phase 3.**
+**Status:** Phase 1a ✅ (PR#33) + Phase 1c ✅ (PR#34) + Task 1b ✅ (PR#36) merged. **Phase 1 COMPLETE. Remaining: Phase 2 → Phase 3.**
 
 **Authority (when the user invokes this section): execute to the end autonomously — do NOT ask;
 decide-and-proceed on every design call, document each decision in the PR + this tracker, and only

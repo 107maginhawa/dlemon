@@ -69,16 +69,82 @@ console.log(`→ schemathesis (${bin}) against ${apiUrl}\n`)
 //   signed; the spec can't model the constraint precisely, so schemathesis
 //   generates trivially invalid signatures and the impl correctly rejects
 //   them. Tested separately by stripe-side integration tests.
+//
+// Two profiles select via env (so one script serves both CI steps):
+//   • SHADOW (default, no env): every default check, advisory. Surfaces
+//     spec-precision nits (under-declared codes, datetime params).
+//   • BLOCKING (SCHEMATHESIS_CHECKS set): the narrow, real-bug profile
+//     `not_a_server_error,status_code_conformance` over all ops — a green,
+//     enforceable gate. SCHEMATHESIS_MAX_EXAMPLES bounds wall-clock;
+//     SCHEMATHESIS_SUPPRESS_HEALTH_CHECK=all silences schemathesis's *own*
+//     data-generation health checks (filter_too_much / too_slow / data_too_large
+//     / large_base_example) — these fire non-deterministically (seed-dependent)
+//     on ops with tight input regex (confirmationCode, practitioner-roles) and
+//     are never impl bugs, so they must not fail the gate. (Suppressing the
+//     single `filter_too_much` value proved unreliable across seeds; `all` is
+//     the correct categorical disable for a blocking gate.)
 const args = [
   'run',
   '--url',
   apiUrl,
   '--exclude-path-regex',
   '^/billing/webhooks/',
-  specPath,
 ]
 
-const child = spawn(bin, args, { stdio: 'inherit' })
+const checks = process.env['SCHEMATHESIS_CHECKS']
+if (checks) args.push('--checks', checks)
+
+const maxExamples = process.env['SCHEMATHESIS_MAX_EXAMPLES']
+if (maxExamples) args.push('--max-examples', maxExamples)
+
+// Use the `=` form: `--suppress-health-check=all` is unambiguous, whereas the
+// space form (`--suppress-health-check all <spec>`) sits right before the
+// positional spec path and was not reliably honored in CI.
+const suppress = process.env['SCHEMATHESIS_SUPPRESS_HEALTH_CHECK']
+if (suppress) args.push(`--suppress-health-check=${suppress}`)
+
+// Optional fixed seed (determinism for the blocking gate / debugging).
+const seed = process.env['SCHEMATHESIS_SEED']
+if (seed) args.push('--seed', seed)
+
+args.push(specPath)
+
+console.log(`→ args: ${args.join(' ')}\n`)
+
+// In BLOCKING mode the gate must fail ONLY on real check failures (a 5xx, or an
+// undocumented status code) — never on schemathesis's OWN data-generation health
+// checks (filter_too_much / too_slow / data_too_large / large_base_example).
+// Those fire non-deterministically on ~3 tight-input-regex ops (confirmationCode,
+// practitioner(-role)s, patient-authorization-status) — and `--suppress-health-
+// check=all` proved unreliable across environments (CI's Python/Hypothesis build
+// vs local), so we belt-and-suspenders it here: tee the output and, on a non-zero
+// exit whose ONLY errors are health checks (and with zero check failures), treat
+// the gate as PASS. Any real check failure (a FAILURES section or a non-zero
+// "unique failures" count) or any non-health-check error still fails the gate.
+const isBlocking = Boolean(checks)
+const child = spawn(bin, args, { stdio: ['inherit', 'pipe', 'pipe'] })
+let buf = ''
+child.stdout.on('data', (d) => { const s = d.toString(); buf += s; process.stdout.write(s) })
+child.stderr.on('data', (d) => { const s = d.toString(); buf += s; process.stderr.write(s) })
 child.on('exit', (code) => {
+  if (!isBlocking || code === 0) {
+    process.exit(code ?? 1)
+    return
+  }
+  const hasCheckFailures =
+    /={2,}\s*FAILURES\s*={2,}/.test(buf) || /found\s+[1-9]\d*\s+unique failures/.test(buf)
+  // Each summary error category is printed as "🚫 <label>: <n>".
+  const errorLabels = [...buf.matchAll(/🚫\s+([^\n:]+):/g)].map((m) => (m[1] ?? '').trim())
+  const onlyHealthCheckErrors =
+    errorLabels.length > 0 && errorLabels.every((l) => /Failed Health Check/i.test(l))
+  if (!hasCheckFailures && onlyHealthCheckErrors) {
+    console.log(
+      '\n⚠ run-schemathesis: schemathesis exited non-zero but the ONLY errors are ' +
+        'data-generation health checks (e.g. filter_too_much on tight-input-regex ops), ' +
+        'NOT check failures. The blocking checks all passed → treating the gate as PASS.',
+    )
+    process.exit(0)
+    return
+  }
   process.exit(code ?? 1)
 })

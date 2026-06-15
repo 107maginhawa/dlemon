@@ -125,11 +125,12 @@ export function useLatestCephReport(imageId: string | undefined) {
       if (httpStatus === 404) return null
       // Surface other non-2xx errors to TanStack Query's error boundary.
       if (result.error != null) {
-        throw new Error(
-          typeof result.error === 'string'
-            ? result.error
-            : JSON.stringify(result.error),
-        )
+        // The spec now declares getCephReport's 401, so the SDK types
+        // result.error as the structured AuthenticationError envelope (never a
+        // string). The bare mock-fetch path in unit tests can still yield a
+        // plain string, so widen to unknown to keep both shapes handled.
+        const err = result.error as unknown
+        throw new Error(typeof err === 'string' ? err : JSON.stringify(err))
       }
       const raw = result.data as { id: string; version: number; createdAt: Date | string }
       return {

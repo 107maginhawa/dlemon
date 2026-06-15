@@ -1014,15 +1014,24 @@ namespace DentalOrgModule {
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 
+    // recoverPin MUST be authenticated (handler CF-39/AUTH-03): the device owner
+    // (practice owner/admin) holds the Better-Auth session and must be
+    // authenticated before a locked-out member's PIN can be reset via security
+    // question — an unauthenticated endpoint would let any attacker brute-force
+    // the answer. The spec previously omitted @useAuth, under-declaring the real
+    // auth requirement (and the 401 the impl returns) — a spec↔impl drift.
     @post
     @route("/{memberId}/recover-pin")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
     @operationId("recoverPin")
     recoverPin(
       @path memberId: UUID,
       @body body: RecoverPinRequest
     ): ApiOkResponse<RecoverPinResponse>
       | ApiBadRequestResponse
-      | ApiNotFoundResponse;
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
   }
 
   @doc("Granular feature-permission grid management (P2-17)")

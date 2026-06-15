@@ -1197,6 +1197,7 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
 
   // recoverPin
   app.post('/dental/org/members/:memberId/recover-pin',
+    authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.RecoverPinParams, validationErrorHandler),
     zValidator('json', validators.RecoverPinBody, validationErrorHandler),
     registry.recoverPin as unknown as Handler
