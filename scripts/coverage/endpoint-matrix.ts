@@ -34,8 +34,12 @@
  *   5. Emits docs/testing/coverage/endpoint-matrix.{json,md}, seeds the gap
  *      allowlist baseline (endpoint.allowlist.json), and writes the orphan
  *      disposition doc.
+ *   6. --check: ratchets the current gaps against endpoint.allowlist.json — a
+ *      FE-consumed-but-untested op not on the allowlist FAILS the gate (exit 1).
+ *      Run-all.ts passes --check through (gate:true); this is the live gate that
+ *      catches a newly-wired FE call that ships without any test layer.
  *
- * Run from repo root:  bun scripts/coverage/endpoint-matrix.ts
+ * Run from repo root:  bun scripts/coverage/endpoint-matrix.ts [--check]
  * (root-level script — does NOT trip the api-ts db-guard preload).
  *
  * RECORDING the integration/journey columns:
@@ -49,6 +53,13 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ROOT, loadContractSpine } from './lib/sources';
 import { listFiles } from './lib/scan-tests';
+import {
+  loadAllowlist,
+  ratchet,
+  formatRatchetReport,
+  type AllowlistEntry,
+  type Gap,
+} from './lib/ratchet';
 
 const SPINE_PATH = join(ROOT, '.understand-anything/contract-spine.json');
 const OPENAPI_PATH = join(ROOT, 'specs/api/dist/openapi/openapi.json');
@@ -259,6 +270,38 @@ export function classifyDisposition(row: EndpointRow): Disposition {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Gaps + ratchet
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EndpointGap extends Gap {
+  id: string;
+  operationId: string;
+  module: string | null;
+  method: string;
+  path: string;
+}
+
+/**
+ * The ratchet gap stream: every FE-consumed operation with no test on ANY layer
+ * (`disposition === 'gap'`) — the "broken while CI is green" class. The gap `id`
+ * is the operationId; a NEW such gap that is not on `endpoint.allowlist.json`
+ * FAILS `--check`. Orphans are deliberately NOT gaps (nothing in the app calls
+ * them, so a missing test cannot break the app — they are tracked in
+ * `orphan-disposition.md` for a wire/remove decision instead).
+ */
+export function gapsOf(rows: EndpointRow[]): EndpointGap[] {
+  return rows
+    .filter((r) => r.disposition === 'gap')
+    .map((r) => ({
+      id: r.operationId,
+      operationId: r.operationId,
+      module: r.module,
+      method: r.method,
+      path: r.path,
+    }));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Build
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -462,15 +505,17 @@ function renderOrphans(rows: EndpointRow[]): string {
 }
 
 /** Seed the ratchet baseline: today's gap ops, keyed by operationId. */
-function renderAllowlist(rows: EndpointRow[]): string {
-  const gaps = rows.filter((r) => r.disposition === 'gap');
-  const entries = gaps.map((r) => ({
-    id: r.operationId,
+export function seedAllowlist(rows: EndpointRow[]): AllowlistEntry[] {
+  return gapsOf(rows).map((g) => ({
+    id: g.id,
     reason:
-      `Baseline gap seeded ${new Date().toISOString().slice(0, 10)}: ${r.method} ${r.path} ` +
+      `Baseline gap seeded ${new Date().toISOString().slice(0, 10)}: ${g.method} ${g.path} ` +
       `is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet.`,
   }));
-  return JSON.stringify(entries, null, 2) + '\n';
+}
+
+function renderAllowlist(rows: EndpointRow[]): string {
+  return JSON.stringify(seedAllowlist(rows), null, 2) + '\n';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -499,6 +544,16 @@ function main(): void {
       `${orphans.length} orphan. Wrote ${OUT_JSON} + ${OUT_MD} + ${OUT_ORPHANS}` +
       (existsSync(OUT_ALLOWLIST) ? '' : ` + ${OUT_ALLOWLIST}`),
   );
+
+  // --check (gate mode): a FE-consumed-but-untested op that is NOT on the
+  // allowlist FAILS the ratchet. New "broken while CI is green" debt cannot be
+  // introduced silently; the allowlist only ever shrinks (resolved gaps reported).
+  if (process.argv.includes('--check')) {
+    const allowlist = loadAllowlist(OUT_ALLOWLIST);
+    const result = ratchet(gapsOf(rows), allowlist);
+    console.log(formatRatchetReport(result, { label: 'endpoint-matrix' }));
+    if (!result.ok) process.exit(1);
+  }
 }
 
 if (import.meta.main) main();

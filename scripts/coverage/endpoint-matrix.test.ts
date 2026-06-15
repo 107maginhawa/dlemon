@@ -15,8 +15,11 @@ import {
   parseHurlContractOps,
   loadRecordedOps,
   classifyDisposition,
+  gapsOf,
+  seedAllowlist,
   type EndpointRow,
 } from './endpoint-matrix';
+import { ratchet } from './lib/ratchet';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // (a) path normalization — templated segments → positional placeholder
@@ -237,6 +240,70 @@ describe('classifyDisposition', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// (f2) gaps + ratchet — the ARMED gate (this is what makes endpoint-matrix
+//       --check enforce; before arming, main() ignored --check = a verified no-op)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('gapsOf', () => {
+  test('returns exactly the gap-disposition rows, keyed by operationId', () => {
+    const rows = [
+      row({ operationId: 'a', hasFEConsumer: true }), // gap
+      row({ operationId: 'b', hasFEConsumer: true, hasContractTest: true }), // tested
+      row({ operationId: 'c', hasHandler: true, hasSDK: true, hasFEConsumer: false }), // orphan
+      row({ operationId: 'd', hasFEConsumer: true }), // gap
+    ].map((r) => ({ ...r, disposition: classifyDisposition(r) }));
+
+    const gaps = gapsOf(rows);
+    expect(gaps.map((g) => g.id).sort()).toEqual(['a', 'd']);
+    // gap carries the explanatory columns for the CI report
+    expect(gaps[0]).toMatchObject({ id: 'a', operationId: 'a', method: 'GET', path: '/x' });
+  });
+
+  test('orphans are NOT gaps (nothing in the app calls them → cannot break it)', () => {
+    const rows = [
+      row({ operationId: 'orphan1', hasHandler: true, hasSDK: true, hasFEConsumer: false }),
+    ].map((r) => ({ ...r, disposition: classifyDisposition(r) }));
+    expect(gapsOf(rows)).toHaveLength(0);
+  });
+});
+
+describe('armed ratchet (non-vacuity)', () => {
+  // The headline regression this guards: endpoint-matrix --check used to be a
+  // verified no-op (main() never loaded the allowlist). These assertions pin the
+  // wiring so a future refactor that re-breaks the gate turns the suite RED.
+  test('a NEW gap not on the allowlist FAILS the ratchet', () => {
+    const rows = [row({ operationId: 'newlyWired', hasFEConsumer: true })].map((r) => ({
+      ...r,
+      disposition: classifyDisposition(r),
+    }));
+    const result = ratchet(gapsOf(rows), /* empty allowlist */ []);
+    expect(result.ok).toBe(false);
+    expect(result.newGaps.map((g) => g.id)).toContain('newlyWired');
+  });
+
+  test('a gap that IS on the allowlist passes (baseline debt is tolerated, tracked)', () => {
+    const rows = [row({ operationId: 'baselineGap', hasFEConsumer: true })].map((r) => ({
+      ...r,
+      disposition: classifyDisposition(r),
+    }));
+    const result = ratchet(gapsOf(rows), [{ id: 'baselineGap', reason: 'baseline' }]);
+    expect(result.ok).toBe(true);
+  });
+
+  test('seedAllowlist produces a reason-bearing entry for every current gap (only-shrink invariant holds)', () => {
+    const rows = [
+      row({ operationId: 'g1', method: 'POST', path: '/p', hasFEConsumer: true }),
+      row({ operationId: 't1', hasFEConsumer: true, hasJourney: true }),
+    ].map((r) => ({ ...r, disposition: classifyDisposition(r) }));
+    const seeded = seedAllowlist(rows);
+    expect(seeded.map((e) => e.id)).toEqual(['g1']);
+    expect(seeded[0]!.reason.length).toBeGreaterThan(0);
+    // a freshly-seeded baseline ratchets green by construction
+    expect(ratchet(gapsOf(rows), seeded).ok).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // (g) integration: the real generated artifacts join cleanly
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -263,5 +330,20 @@ describe('generated endpoint-matrix.json', () => {
     for (const r of rows) {
       expect(classifyDisposition(r)).toBe(r.disposition);
     }
+  });
+
+  test('the committed allowlist covers every current gap (the live --check is GREEN)', () => {
+    const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) as EndpointRow[];
+    const allowlistPath = path.join(ROOT, 'docs/testing/coverage/endpoint.allowlist.json');
+    const allowlist = JSON.parse(fs.readFileSync(allowlistPath, 'utf8')) as {
+      id: string;
+      reason: string;
+    }[];
+    const result = ratchet(gapsOf(rows), allowlist);
+    // If this is RED, regenerate (`bun scripts/coverage/endpoint-matrix.ts`) and
+    // either add a test for the new FE-consumed op or allowlist it with a reason.
+    expect(result.newGaps.map((g) => g.id)).toEqual([]);
+    // every allowlist entry must carry a non-empty reason (governance invariant)
+    for (const e of allowlist) expect(e.reason.trim().length).toBeGreaterThan(0);
   });
 });

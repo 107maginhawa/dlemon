@@ -12,6 +12,10 @@
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "createPatient",
+    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): POST /patients is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating PII — Phase 3 skeptic-fan-out pin (createPatient validator + tenant-scoping)."
+  },
+  {
     "id": "deactivateMember",
     "reason": "Baseline gap seeded 2026-06-15: DELETE /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
@@ -64,6 +68,10 @@
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/patients/{patientId}/treatment-options/{optionGroupId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "markNotificationAsRead",
+    "reason": "Baseline gap seeded 2026-06-15: POST /notifs/{notif}/read is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
+  },
+  {
     "id": "markUncollectible",
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/billing/invoices/{invoiceId}/uncollectible is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
@@ -78,6 +86,14 @@
   {
     "id": "updateFeeScheduleEntry",
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/fee-schedule/{cdt} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
+  },
+  {
+    "id": "updateMember",
+    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. SUSPECTED credential-write IDOR (license/npi writable by any member on any memberId) — Phase 3 skeptic-fan-out pin."
+  },
+  {
+    "id": "updatePatientCommunicationConsent",
+    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/patients/{patientId}/communication-consent is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating consent PII — Phase 3 skeptic-fan-out pin (cross-tenant + branch authz)."
   },
   {
     "id": "updateQueueItemStatus",

@@ -52,6 +52,19 @@
     "disposition": "tested"
   },
   {
+    "operationId": "activateOrganization",
+    "method": "POST",
+    "path": "/dental/organizations/{id}/activate",
+    "module": "dental-org",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
+  },
+  {
     "operationId": "addFollowUpNote",
     "method": "POST",
     "path": "/dental/patients/{id}/follow-up-notes",
@@ -97,11 +110,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "applyTemplate",
@@ -110,11 +123,11 @@
     "module": "dental-visit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "approveAmendment",
@@ -136,11 +149,11 @@
     "module": "dental-erasure",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "approveTreatmentPlan",
@@ -201,11 +214,11 @@
     "module": "dental-scheduling",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "cancelBooking",
@@ -253,11 +266,11 @@
     "module": "dental-visit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "CephMgmt_batchUpsertCephLandmarks",
@@ -682,11 +695,11 @@
     "module": "dental-org",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "createConsultation",
@@ -773,11 +786,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "createDentalTreatment",
@@ -994,11 +1007,11 @@
     "module": "patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "createPatientContact",
@@ -1202,11 +1215,11 @@
     "module": "dental-visit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "createVisitNoteAddendum",
@@ -1319,11 +1332,11 @@
     "module": "dental-org",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "deleteFile",
@@ -1397,11 +1410,11 @@
     "module": "dental-visit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "DentalBranchManagement_create",
@@ -1761,11 +1774,11 @@
     "module": "dental-audit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "getBooking",
@@ -1995,11 +2008,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "getDentalVisit",
@@ -2418,6 +2431,19 @@
     "disposition": "tested"
   },
   {
+    "operationId": "getRetentionStatus",
+    "method": "GET",
+    "path": "/dental/retention-status",
+    "module": "retention",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": false,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "orphan"
+  },
+  {
     "operationId": "getReview",
     "method": "GET",
     "path": "/reviews/{review}",
@@ -2658,11 +2684,11 @@
     "module": "dental-imaging",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "ImagingMgmt_deleteImageLink",
@@ -2788,11 +2814,11 @@
     "module": "dental-imaging",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "importPatients",
@@ -2892,11 +2918,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listAppointments",
@@ -3022,11 +3048,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listConsentTemplates",
@@ -3035,11 +3061,11 @@
     "module": "dental-org",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listConsultations",
@@ -3217,11 +3243,11 @@
     "module": "dental-erasure",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listEventSlots",
@@ -3412,11 +3438,11 @@
     "module": "notifs",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listOcclusionScreenings",
@@ -3633,11 +3659,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listQueueBoard",
@@ -3724,11 +3750,11 @@
     "module": "dental-visit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "listWaitlist",
@@ -3750,11 +3776,11 @@
     "module": "notifs",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "markInvoiceUncollectible",
@@ -3789,11 +3815,11 @@
     "module": "notifs",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "markUncollectible",
@@ -3807,6 +3833,19 @@
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "gap"
+  },
+  {
+    "operationId": "mergeImportedPMDSafetyFloor",
+    "method": "POST",
+    "path": "/dental/pmd/imported/{id}/merge-safety-floor",
+    "module": "dental-pmd",
+    "hasHandler": true,
+    "hasSDK": false,
+    "hasFEConsumer": false,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
   },
   {
     "operationId": "mergePatients",
@@ -3997,11 +4036,11 @@
     "module": "dental-erasure",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "releaseLegalHold",
@@ -4101,11 +4140,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "sendChatMessage",
@@ -4244,11 +4283,11 @@
     "module": "dental-org",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "updateConsultation",
@@ -4309,11 +4348,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "updateDentalTreatment",
@@ -4465,11 +4504,11 @@
     "module": "dental-org",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "updatePatient",
@@ -4491,11 +4530,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "updatePatientContact",
@@ -4582,11 +4621,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "updateQueueItemStatus",
@@ -4673,11 +4712,11 @@
     "module": "dental-visit",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "updateVideoCallParticipant",
@@ -4777,11 +4816,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "voidInvoice",
