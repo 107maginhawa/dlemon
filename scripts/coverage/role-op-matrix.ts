@@ -32,6 +32,7 @@ import {
   ROOT,
   loadContractSpine,
   loadRolePermissionMatrix,
+  cmpByCodepoint,
   type SpecAllow,
 } from './lib/sources';
 
@@ -357,7 +358,7 @@ function build(): MatrixRow[] {
     });
   }
 
-  rows.sort((a, b) => a.operationId.localeCompare(b.operationId));
+  rows.sort((a, b) => cmpByCodepoint(a.operationId, b.operationId));
   return rows;
 }
 

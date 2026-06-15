@@ -51,7 +51,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ROOT, loadContractSpine } from './lib/sources';
+import { ROOT, loadContractSpine, cmpByCodepoint } from './lib/sources';
 import { listFiles } from './lib/scan-tests';
 import {
   loadAllowlist,
@@ -374,7 +374,7 @@ export function build(): EndpointRow[] {
     rows.push(base);
   }
 
-  rows.sort((a, b) => a.operationId.localeCompare(b.operationId));
+  rows.sort((a, b) => cmpByCodepoint(a.operationId, b.operationId));
   return rows;
 }
 

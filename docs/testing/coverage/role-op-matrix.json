@@ -1,5 +1,250 @@
 [
   {
+    "operationId": "CephMgmt_deleteCephLandmark",
+    "method": "DELETE",
+    "path": "/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_getCephLandmarkDetectionJob",
+    "method": "GET",
+    "path": "/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_getCephSuperimposition",
+    "method": "GET",
+    "path": "/dental/imaging/ceph/superimpositions/{superimpositionId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_listCephSuperimpositions",
+    "method": "GET",
+    "path": "/dental/imaging/patients/{patientId}/ceph/superimpositions",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "CephMgmt_recomputeCephAnalysis",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/ceph/analysis/recompute",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "DentalMembershipManagement_create",
+    "method": "POST",
+    "path": "/dental/organizations/{orgId}/branches/{branchId}/members",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "DentalMembershipManagement_deactivate",
+    "method": "POST",
+    "path": "/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate",
+    "module": "dental-org",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingFindingsMgmt_createFinding",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/findings",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingFindingsMgmt_deleteFinding",
+    "method": "DELETE",
+    "path": "/dental/imaging/findings/{findingId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingFindingsMgmt_updateFinding",
+    "method": "PATCH",
+    "path": "/dental/imaging/findings/{findingId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_createImageLink",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/links",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_createImagingStudy",
+    "method": "POST",
+    "path": "/dental/imaging/studies",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "specAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "hygienist",
+      "dental_assistant"
+    ],
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_createMeasurement",
+    "method": "POST",
+    "path": "/dental/imaging/images/{imageId}/measurements",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_deleteImage",
+    "method": "DELETE",
+    "path": "/dental/imaging/images/{imageId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_deleteImageLink",
+    "method": "DELETE",
+    "path": "/dental/imaging/links/{linkId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_deleteMeasurement",
+    "method": "DELETE",
+    "path": "/dental/imaging/measurements/{measurementId}",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_finalizeCbctStudy",
+    "method": "POST",
+    "path": "/dental/imaging/studies/{studyId}/cbct/finalize",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_updateImageCalibration",
+    "method": "PATCH",
+    "path": "/dental/imaging/images/{imageId}/calibration",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_updateImageMetadata",
+    "method": "PATCH",
+    "path": "/dental/imaging/images/{imageId}/metadata",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "ImagingMgmt_updateImageModality",
+    "method": "PATCH",
+    "path": "/dental/imaging/images/{imageId}/modality",
+    "module": "dental-imaging",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
     "operationId": "acceptCasePresentation",
     "method": "POST",
     "path": "/dental/patients/{patientId}/case-presentations/{presentationId}/accept",
@@ -89,66 +334,6 @@
     "method": "POST",
     "path": "/dental/visits/{visitId}/carry-over",
     "module": "dental-visit",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "CephMgmt_deleteCephLandmark",
-    "method": "DELETE",
-    "path": "/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "CephMgmt_getCephLandmarkDetectionJob",
-    "method": "GET",
-    "path": "/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "CephMgmt_getCephSuperimposition",
-    "method": "GET",
-    "path": "/dental/imaging/ceph/superimpositions/{superimpositionId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "CephMgmt_listCephSuperimpositions",
-    "method": "GET",
-    "path": "/dental/imaging/patients/{patientId}/ceph/superimpositions",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "CephMgmt_recomputeCephAnalysis",
-    "method": "POST",
-    "path": "/dental/imaging/images/{imageId}/ceph/analysis/recompute",
-    "module": "dental-imaging",
     "codeAllowedRoles": [
       "dentist_owner",
       "dentist_associate"
@@ -551,28 +736,6 @@
     "drift": false
   },
   {
-    "operationId": "DentalMembershipManagement_create",
-    "method": "POST",
-    "path": "/dental/organizations/{orgId}/branches/{branchId}/members",
-    "module": "dental-org",
-    "codeAllowedRoles": [
-      "dentist_owner"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "DentalMembershipManagement_deactivate",
-    "method": "POST",
-    "path": "/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate",
-    "module": "dental-org",
-    "codeAllowedRoles": [
-      "dentist_owner"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
     "operationId": "discardVisit",
     "method": "POST",
     "path": "/dental/visits/{visitId}/discard",
@@ -717,164 +880,14 @@
     "drift": false
   },
   {
-    "operationId": "ImagingFindingsMgmt_createFinding",
+    "operationId": "importPMD",
     "method": "POST",
-    "path": "/dental/imaging/images/{imageId}/findings",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingFindingsMgmt_deleteFinding",
-    "method": "DELETE",
-    "path": "/dental/imaging/findings/{findingId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingFindingsMgmt_updateFinding",
-    "method": "PATCH",
-    "path": "/dental/imaging/findings/{findingId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_createImageLink",
-    "method": "POST",
-    "path": "/dental/imaging/images/{imageId}/links",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_createImagingStudy",
-    "method": "POST",
-    "path": "/dental/imaging/studies",
-    "module": "dental-imaging",
+    "path": "/dental/pmd/import",
+    "module": "dental-pmd",
     "codeAllowedRoles": [
       "dentist_owner",
       "dentist_associate",
-      "hygienist",
-      "dental_assistant"
-    ],
-    "specAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate",
-      "hygienist",
-      "dental_assistant"
-    ],
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_createMeasurement",
-    "method": "POST",
-    "path": "/dental/imaging/images/{imageId}/measurements",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_deleteImage",
-    "method": "DELETE",
-    "path": "/dental/imaging/images/{imageId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_deleteImageLink",
-    "method": "DELETE",
-    "path": "/dental/imaging/links/{linkId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_deleteMeasurement",
-    "method": "DELETE",
-    "path": "/dental/imaging/measurements/{measurementId}",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_finalizeCbctStudy",
-    "method": "POST",
-    "path": "/dental/imaging/studies/{studyId}/cbct/finalize",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_updateImageCalibration",
-    "method": "PATCH",
-    "path": "/dental/imaging/images/{imageId}/calibration",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_updateImageMetadata",
-    "method": "PATCH",
-    "path": "/dental/imaging/images/{imageId}/metadata",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "ImagingMgmt_updateImageModality",
-    "method": "PATCH",
-    "path": "/dental/imaging/images/{imageId}/modality",
-    "module": "dental-imaging",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate"
+      "staff_full"
     ],
     "specAllowedRoles": null,
     "drift": false
@@ -886,19 +899,6 @@
     "module": "dental-patient",
     "codeAllowedRoles": [
       "dentist_owner"
-    ],
-    "specAllowedRoles": null,
-    "drift": false
-  },
-  {
-    "operationId": "importPMD",
-    "method": "POST",
-    "path": "/dental/pmd/import",
-    "module": "dental-pmd",
-    "codeAllowedRoles": [
-      "dentist_owner",
-      "dentist_associate",
-      "staff_full"
     ],
     "specAllowedRoles": null,
     "drift": false
@@ -1072,6 +1072,19 @@
     "module": "dental-billing",
     "codeAllowedRoles": [
       "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
+    "operationId": "mergeImportedPMDSafetyFloor",
+    "method": "POST",
+    "path": "/dental/pmd/imported/{id}/merge-safety-floor",
+    "module": "dental-pmd",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate",
+      "staff_full"
     ],
     "specAllowedRoles": null,
     "drift": false

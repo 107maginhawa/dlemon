@@ -35,7 +35,7 @@ import {
   mkdirSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ROOT } from './lib/sources';
+import { ROOT, cmpByCodepoint } from './lib/sources';
 import { scanForToken, type CorpusName } from './lib/scan-tests';
 import {
   loadAllowlist,
@@ -114,9 +114,7 @@ export function parseRouteTree(src: string): ParsedRoute[] {
     }
   }
 
-  return [...byPath.values()].sort((a, b) =>
-    a.routePath.localeCompare(b.routePath),
-  );
+  return [...byPath.values()].sort((a, b) => cmpByCodepoint(a.routePath, b.routePath));
 }
 
 /** Strip a trailing slash from a non-root fullPath ("/portal/" → "/portal"). */

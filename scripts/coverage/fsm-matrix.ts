@@ -37,7 +37,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ROOT } from './lib/sources';
+import { ROOT, cmpByCodepoint } from './lib/sources';
 import { listFiles } from './lib/scan-tests';
 import {
   loadAllowlist,
@@ -262,7 +262,7 @@ export function discoverFsms(): ParsedFsm[] {
       });
     }
   }
-  out.sort((a, b) => a.constName.localeCompare(b.constName));
+  out.sort((a, b) => cmpByCodepoint(a.constName, b.constName));
   return out;
 }
 
@@ -477,9 +477,9 @@ export function buildMatrix(): MatrixRow[] {
   // Stable order: fsm, legal-first… actually keep from/to alpha within fsm.
   rows.sort(
     (a, b) =>
-      a.fsm.localeCompare(b.fsm) ||
-      a.from.localeCompare(b.from) ||
-      a.to.localeCompare(b.to),
+      cmpByCodepoint(a.fsm, b.fsm) ||
+      cmpByCodepoint(a.from, b.from) ||
+      cmpByCodepoint(a.to, b.to),
   );
   return rows;
 }
@@ -606,7 +606,7 @@ function seedAllowlist(gaps: FsmGap[]): AllowlistEntry[] {
       id: g.id,
       reason: `baseline — ${g.legal ? 'legal' : 'illegal'} edge uncovered at matrix introduction`,
     }))
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) => cmpByCodepoint(a.id, b.id));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

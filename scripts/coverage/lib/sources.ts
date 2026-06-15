@@ -22,6 +22,23 @@ import { join } from 'node:path';
 
 export const ROOT = join(import.meta.dir, '..', '..', '..');
 
+/**
+ * Deterministic string comparator by UTF-16 code unit — the SAME ordering on
+ * every platform, runtime, and Bun/ICU version.
+ *
+ * Every coverage matrix is a COMMITTED artifact guarded by a freshness gate
+ * (CI: `git diff --exit-code docs/testing/coverage` after a regen). For that
+ * gate to be sound, a CI (Linux, pinned Bun) regen must be byte-identical to the
+ * committed (possibly macOS, possibly different Bun) artifact. `localeCompare`
+ * is locale/ICU-dependent and silently breaks that invariant; this does not.
+ * Use it for EVERY row sort whose result is written to a committed artifact.
+ * (Our ids — operationIds, zero-padded `WF-001` workflow ids — need no numeric
+ * collation: code-unit order already matches their intended order.)
+ */
+export function cmpByCodepoint(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 export const CONTRACT_SPINE_PATH = join(ROOT, '.understand-anything/contract-spine.json');
 export const ROLE_MATRIX_PATH = join(ROOT, 'docs/product/ROLE_PERMISSION_MATRIX.md');
 

@@ -31,6 +31,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { listFiles } from './lib/scan-tests';
 import { ratchet, loadAllowlist, formatRatchetReport, type Gap } from './lib/ratchet';
+import { cmpByCodepoint } from './lib/sources';
 
 // ROOT is three levels up from this file (scripts/coverage/ → repo root), matching
 // lib/sources.ts. Kept local so this generator owns its own WORKFLOW_MAP parsing
@@ -289,7 +290,9 @@ export function buildRows(
       status,
     });
   }
-  rows.sort((a, b) => a.wfId.localeCompare(b.wfId, undefined, { numeric: true }));
+  // Zero-padded ids (WF-001 … WF-084) → code-unit order already matches numeric
+  // order; cmpByCodepoint keeps the committed artifact byte-stable across runtimes.
+  rows.sort((a, b) => cmpByCodepoint(a.wfId, b.wfId));
   return rows;
 }
 

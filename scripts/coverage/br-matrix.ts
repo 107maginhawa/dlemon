@@ -38,7 +38,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ROOT } from './lib/sources';
+import { ROOT, cmpByCodepoint } from './lib/sources';
 import { scanForToken, scanForRegex, type CorpusName } from './lib/scan-tests';
 import {
   ratchet,
@@ -268,7 +268,7 @@ export function buildBrMatrix(): BrRow[] {
     }
   }
 
-  rows.sort((a, b) => a.key.localeCompare(b.key));
+  rows.sort((a, b) => cmpByCodepoint(a.key, b.key));
   return rows;
 }
 

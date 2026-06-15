@@ -8,11 +8,11 @@ Computed comparison of what each handler *enforces* via `assertBranchRole(...)` 
 
 | Metric | Count |
 |--------|------:|
-| Operations with a role gate | 110 |
+| Operations with a role gate | 111 |
 | Joined to the spec matrix | 28 |
 | **Drift (code ≠ spec)** | **0** |
 | Dynamic (computed) gates | 6 |
-| Gated but unmapped to spec | 82 |
+| Gated but unmapped to spec | 83 |
 
 ## DRIFT
 
@@ -22,6 +22,26 @@ _No drift detected._
 
 | operationId | module | method | path | code allows | spec allows | drift |
 |-------------|--------|--------|------|-------------|-------------|:-----:|
+| `CephMgmt_deleteCephLandmark` | dental-imaging | DELETE | `/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `CephMgmt_getCephLandmarkDetectionJob` | dental-imaging | GET | `/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `CephMgmt_getCephSuperimposition` | dental-imaging | GET | `/dental/imaging/ceph/superimpositions/{superimpositionId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `CephMgmt_listCephSuperimpositions` | dental-imaging | GET | `/dental/imaging/patients/{patientId}/ceph/superimpositions` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | dentist_owner | — (unmapped) |  |
+| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | dentist_owner | — (unmapped) |  |
+| `ImagingFindingsMgmt_createFinding` | dental-imaging | POST | `/dental/imaging/images/{imageId}/findings` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingFindingsMgmt_deleteFinding` | dental-imaging | DELETE | `/dental/imaging/findings/{findingId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingFindingsMgmt_updateFinding` | dental-imaging | PATCH | `/dental/imaging/findings/{findingId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_createImageLink` | dental-imaging | POST | `/dental/imaging/images/{imageId}/links` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_createImagingStudy` | dental-imaging | POST | `/dental/imaging/studies` | dentist_owner, dentist_associate, hygienist, dental_assistant | dentist_owner, dentist_associate, hygienist, dental_assistant |  |
+| `ImagingMgmt_createMeasurement` | dental-imaging | POST | `/dental/imaging/images/{imageId}/measurements` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_deleteImage` | dental-imaging | DELETE | `/dental/imaging/images/{imageId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_deleteImageLink` | dental-imaging | DELETE | `/dental/imaging/links/{linkId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_deleteMeasurement` | dental-imaging | DELETE | `/dental/imaging/measurements/{measurementId}` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_updateImageCalibration` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/calibration` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_updateImageMetadata` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/metadata` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_updateImageModality` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/modality` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `acceptCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations/{presentationId}/accept` | dentist_owner, dentist_associate, treatment_coordinator, staff_full, front_desk, dental_assistant | — (unmapped) |  |
 | `addFollowUpNote` | dental-patient | POST | `/dental/patients/{id}/follow-up-notes` | _dynamic_ | — (unmapped) |  |
 | `applyDentalDiscount` | dental-billing | POST | `/dental/billing/invoices/{invoiceId}/discount` | dentist_owner | — (unmapped) |  |
@@ -30,11 +50,6 @@ _No drift detected._
 | `bulkArchiveDentalPatients` | dental-patient | POST | `/dental/patients/bulk-archive` | dentist_owner | — (unmapped) |  |
 | `cancelAppointment` | dental-scheduling | DELETE | `/dental/appointments/{appointmentId}` | dentist_owner, staff_full | dentist_owner, staff_full |  |
 | `carryOverTreatments` | dental-visit | POST | `/dental/visits/{visitId}/carry-over` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `CephMgmt_deleteCephLandmark` | dental-imaging | DELETE | `/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `CephMgmt_getCephLandmarkDetectionJob` | dental-imaging | GET | `/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `CephMgmt_getCephSuperimposition` | dental-imaging | GET | `/dental/imaging/ceph/superimpositions/{superimpositionId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `CephMgmt_listCephSuperimpositions` | dental-imaging | GET | `/dental/imaging/patients/{patientId}/ceph/superimpositions` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `checkInAppointment` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/check-in` | _dynamic_ | dentist_owner, dentist_associate, staff_full, hygienistᴴ |  |
 | `completePerioChart` | dental-perio | POST | `/dental/perio-charts/{chartId}/complete` | dentist_owner, dentist_associate, hygienist | — (unmapped) |  |
 | `confirmAppointment` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/confirm` | dentist_owner, dentist_associate, staff_full, staff_scheduling | — (unmapped) |  |
@@ -63,8 +78,6 @@ _No drift detected._
 | `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | dentist_owner, dentist_associate, staff_full, staff_scheduling | — (unmapped) |  |
 | `deactivateMember` | dental-org | DELETE | `/dental/org/members/{memberId}` | dentist_owner | — (unmapped) |  |
 | `deleteAttachment` | dental-clinical | DELETE | `/dental/visits/{visitId}/attachments/{attachmentId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | dentist_owner | — (unmapped) |  |
-| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | dentist_owner | — (unmapped) |  |
 | `discardVisit` | dental-visit | POST | `/dental/visits/{visitId}/discard` | dentist_owner | — (unmapped) |  |
 | `exportDentalPatients` | dental-patient | GET | `/dental/patients/export` | dentist_owner | — (unmapped) |  |
 | `exportPMD` | dental-pmd | GET | `/dental/visits/{visitId}/pmd/export` | dentist_owner, dentist_associate, staff_full | — (unmapped) |  |
@@ -76,21 +89,8 @@ _No drift detected._
 | `getPerioChart` | dental-perio | GET | `/dental/perio-charts/{chartId}` | dentist_owner, dentist_associate, hygienist, staff_full | — (unmapped) |  |
 | `getVisitNoteHistory` | dental-visit | GET | `/dental/visits/{visitId}/notes/history` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `getVisitPerioChart` | dental-perio | GET | `/dental/visits/{visitId}/perio-chart` | dentist_owner, dentist_associate, hygienist, staff_full | — (unmapped) |  |
-| `ImagingFindingsMgmt_createFinding` | dental-imaging | POST | `/dental/imaging/images/{imageId}/findings` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingFindingsMgmt_deleteFinding` | dental-imaging | DELETE | `/dental/imaging/findings/{findingId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingFindingsMgmt_updateFinding` | dental-imaging | PATCH | `/dental/imaging/findings/{findingId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_createImageLink` | dental-imaging | POST | `/dental/imaging/images/{imageId}/links` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_createImagingStudy` | dental-imaging | POST | `/dental/imaging/studies` | dentist_owner, dentist_associate, hygienist, dental_assistant | dentist_owner, dentist_associate, hygienist, dental_assistant |  |
-| `ImagingMgmt_createMeasurement` | dental-imaging | POST | `/dental/imaging/images/{imageId}/measurements` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_deleteImage` | dental-imaging | DELETE | `/dental/imaging/images/{imageId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_deleteImageLink` | dental-imaging | DELETE | `/dental/imaging/links/{linkId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_deleteMeasurement` | dental-imaging | DELETE | `/dental/imaging/measurements/{measurementId}` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_updateImageCalibration` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/calibration` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_updateImageMetadata` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/metadata` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `ImagingMgmt_updateImageModality` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/modality` | dentist_owner, dentist_associate | — (unmapped) |  |
-| `importPatients` | dental-patient | POST | `/dental/patients/import` | dentist_owner | — (unmapped) |  |
 | `importPMD` | dental-pmd | POST | `/dental/pmd/import` | dentist_owner, dentist_associate, staff_full | — (unmapped) |  |
+| `importPatients` | dental-patient | POST | `/dental/patients/import` | dentist_owner | — (unmapped) |  |
 | `initializeDentition` | dental-patient | POST | `/dental/patients/{patientId}/dentition` | dentist_owner, dentist_associate, dental_assistant | dentist_owner, dentist_associate, dental_assistant |  |
 | `issueDentalInvoice` | dental-billing | PATCH | `/dental/billing/invoices/{invoiceId}/issue` | dentist_owner, dentist_associate | dentist_owner, dentist_associate |  |
 | `listCasePresentations` | dental-patient | GET | `/dental/patients/{patientId}/case-presentations` | dentist_owner, dentist_associate, hygienist, treatment_coordinator, staff_full, front_desk, dental_assistant, billing_staff | — (unmapped) |  |
@@ -103,6 +103,7 @@ _No drift detected._
 | `listPerioChartsForPatient` | dental-perio | GET | `/dental/perio-charts` | dentist_owner, dentist_associate, hygienist, staff_full | — (unmapped) |  |
 | `listPostopTemplates` | dental-clinical | GET | `/dental/branches/{branchId}/postop-templates` | dentist_owner, dentist_associate, staff_full, hygienist | — (unmapped) |  |
 | `markUncollectible` | dental-billing | POST | `/dental/billing/invoices/{invoiceId}/uncollectible` | dentist_owner | — (unmapped) |  |
+| `mergeImportedPMDSafetyFloor` | dental-pmd | POST | `/dental/pmd/imported/{id}/merge-safety-floor` | dentist_owner, dentist_associate, staff_full | — (unmapped) |  |
 | `promoteWaitlistEntry` | dental-scheduling | POST | `/dental/waitlist/{entryId}/promote` | dentist_owner, dentist_associate, staff_full, staff_scheduling | — (unmapped) |  |
 | `recordClaimRemittance` | dental-billing | POST | `/dental/billing/claims/{claimId}/remittance` | dentist_owner, dentist_associate, staff_full | — (unmapped) |  |
 | `recordConsentRefusal` | dental-clinical | POST | `/dental/visits/{visitId}/consent-refusals` | dentist_owner, dentist_associate | — (unmapped) |  |

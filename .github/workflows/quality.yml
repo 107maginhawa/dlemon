@@ -258,6 +258,18 @@ jobs:
         run: bun test ./scripts/coverage/
       - name: Run all coverage matrices + enforce gates
         run: bun run coverage:all:ci
+      - name: Fail if committed coverage matrices are stale (regen-drift freshness gate)
+        # The previous step regenerated every matrix from the truth sources. If the
+        # committed artifacts under docs/testing/coverage/ differ from that fresh
+        # regen, the engine's findings have silently drifted from what reviewers see
+        # in the PR. Generation is byte-deterministic across runtimes (codepoint
+        # sorts, no Date/random in output), so any diff here is real staleness.
+        run: |
+          if ! git diff --exit-code -- docs/testing/coverage; then
+            echo "::error::Committed coverage matrices are STALE vs a fresh regen."
+            echo "Run 'bun run coverage:all' locally and commit docs/testing/coverage/."
+            exit 1
+          fi
 
   module-boundaries:
     name: Module Boundary Gate

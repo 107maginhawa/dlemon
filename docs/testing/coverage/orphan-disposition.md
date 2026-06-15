@@ -14,6 +14,23 @@ Total orphans: **180**
 
 | operationId | module | method | path | decision | notes |
 |-------------|--------|--------|------|----------|-------|
+| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | keep | _triage pending_ |
+| `CephMgmt_getCephLandmarkDetectionJob` | dental-imaging | GET | `/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}` | keep | _triage pending_ |
+| `CephMgmt_getCephSuperimposition` | dental-imaging | GET | `/dental/imaging/ceph/superimpositions/{superimpositionId}` | keep | _triage pending_ |
+| `CephMgmt_listCephSuperimpositions` | dental-imaging | GET | `/dental/imaging/patients/{patientId}/ceph/superimpositions` | keep | _triage pending_ |
+| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | keep | _triage pending_ |
+| `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
+| `DentalBranchManagement_get` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}` | keep | _triage pending_ |
+| `DentalBranchManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
+| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
+| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | keep | _triage pending_ |
+| `DentalMembershipManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
+| `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | keep | _triage pending_ |
+| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | keep | _triage pending_ |
+| `DentalOrganizationManagement_get` | dental-org | GET | `/dental/organizations/{id}` | keep | _triage pending_ |
+| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | _triage pending_ |
+| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | _triage pending_ |
+| `ImagingMgmt_getImagingStudy` | dental-imaging | GET | `/dental/imaging/studies/{studyId}` | keep | _triage pending_ |
 | `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | keep | _triage pending_ |
 | `addHouseholdMember` | dental-patient | POST | `/dental/households/{householdId}/members` | keep | _triage pending_ |
 | `addInsuranceClaimLine` | dental-billing | POST | `/dental/billing/claims/{claimId}/lines` | keep | _triage pending_ |
@@ -23,11 +40,6 @@ Total orphans: **180**
 | `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` | keep | _triage pending_ |
 | `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` | keep | _triage pending_ |
 | `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | keep | _triage pending_ |
-| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | keep | _triage pending_ |
-| `CephMgmt_getCephLandmarkDetectionJob` | dental-imaging | GET | `/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}` | keep | _triage pending_ |
-| `CephMgmt_getCephSuperimposition` | dental-imaging | GET | `/dental/imaging/ceph/superimpositions/{superimpositionId}` | keep | _triage pending_ |
-| `CephMgmt_listCephSuperimpositions` | dental-imaging | GET | `/dental/imaging/patients/{patientId}/ceph/superimpositions` | keep | _triage pending_ |
-| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | keep | _triage pending_ |
 | `completeMultipartUpload` | storage | POST | `/storage/multipart/{file}/complete` | keep | _triage pending_ |
 | `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | keep | _triage pending_ |
 | `confirmBooking` | booking | POST | `/booking/bookings/{booking}/confirm` | keep | _triage pending_ |
@@ -64,16 +76,6 @@ Total orphans: **180**
 | `deletePatientContact` | dental-patient | DELETE | `/dental/patients/{patientId}/contacts/{contactId}` | keep | _triage pending_ |
 | `deleteReview` | reviews | DELETE | `/reviews/{review}` | keep | _triage pending_ |
 | `deleteScheduleException` | booking | DELETE | `/booking/events/{event}/exceptions/{exception}` | keep | _triage pending_ |
-| `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
-| `DentalBranchManagement_get` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}` | keep | _triage pending_ |
-| `DentalBranchManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
-| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
-| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | keep | _triage pending_ |
-| `DentalMembershipManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
-| `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | keep | _triage pending_ |
-| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | keep | _triage pending_ |
-| `DentalOrganizationManagement_get` | dental-org | GET | `/dental/organizations/{id}` | keep | _triage pending_ |
-| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | _triage pending_ |
 | `detachTreatmentAppointment` | dental-patient | DELETE | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | _triage pending_ |
 | `endVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/end` | keep | _triage pending_ |
 | `exportPatientCareRecord` | dental-pmd | GET | `/dental/pmd/patient/{patientId}/care-record` | keep | _triage pending_ |
@@ -119,8 +121,6 @@ Total orphans: **180**
 | `getTimeSlot` | booking | GET | `/booking/slots/{slotId}` | keep | _triage pending_ |
 | `getTreatmentPlanVersion` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plan/versions/{versionId}` | keep | _triage pending_ |
 | `handleStripeWebhook` | billing | POST | `/billing/webhooks/stripe` | keep | _triage pending_ |
-| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | _triage pending_ |
-| `ImagingMgmt_getImagingStudy` | dental-imaging | GET | `/dental/imaging/studies/{studyId}` | keep | _triage pending_ |
 | `importPatients` | dental-patient | POST | `/dental/patients/import` | keep | _triage pending_ |
 | `initiateMultipartUpload` | storage | POST | `/storage/multipart/initiate` | keep | _triage pending_ |
 | `joinVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/join` | keep | _triage pending_ |
@@ -145,9 +145,9 @@ Total orphans: **180**
 | `listPatientConditions` | dental-patient | GET | `/dental/patients/{patientId}/treatments` | keep | _triage pending_ |
 | `listPatientContacts` | dental-patient | GET | `/dental/patients/{patientId}/contacts` | keep | _triage pending_ |
 | `listPatientInsuranceProfiles` | dental-patient | GET | `/dental/patients/{patientId}/insurance-profiles` | keep | _triage pending_ |
-| `listPatients` | patient | GET | `/patients` | keep | _triage pending_ |
 | `listPatientTasks` | dental-patient | GET | `/dental/patients/{patientId}/tasks` | keep | _triage pending_ |
 | `listPatientVisits` | dental-patient | GET | `/dental/patients/{patientId}/visits` | keep | _triage pending_ |
+| `listPatients` | patient | GET | `/patients` | keep | _triage pending_ |
 | `listPersons` | person | GET | `/persons` | keep | _triage pending_ |
 | `listPostopTemplates` | dental-clinical | GET | `/dental/branches/{branchId}/postop-templates` | keep | _triage pending_ |
 | `listPractitionerRoles` | provider | GET | `/providers/practitioner-roles` | keep | _triage pending_ |

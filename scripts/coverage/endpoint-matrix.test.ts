@@ -20,6 +20,7 @@ import {
   type EndpointRow,
 } from './endpoint-matrix';
 import { ratchet } from './lib/ratchet';
+import { cmpByCodepoint } from './lib/sources';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // (a) path normalization — templated segments → positional placeholder
@@ -330,6 +331,16 @@ describe('generated endpoint-matrix.json', () => {
     for (const r of rows) {
       expect(classifyDisposition(r)).toBe(r.disposition);
     }
+  });
+
+  test('rows are sorted by operationId codepoint (the freshness-gate determinism invariant)', () => {
+    // The CI freshness gate (git diff --exit-code docs/testing/coverage) only
+    // holds if a Linux/CI regen byte-matches this committed artifact. That needs
+    // an env-independent sort: cmpByCodepoint, NOT locale-dependent localeCompare.
+    const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) as EndpointRow[];
+    const ids = rows.map((r) => r.operationId);
+    const resorted = [...ids].sort(cmpByCodepoint);
+    expect(ids).toEqual(resorted);
   });
 
   test('the committed allowlist covers every current gap (the live --check is GREEN)', () => {
