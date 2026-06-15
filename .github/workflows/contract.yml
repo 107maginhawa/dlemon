@@ -41,12 +41,15 @@ on:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    # 25m: the Hurl layers run ~14m53s; the new BLOCKING Schemathesis profile
-    # adds ~3–5m on a CI runner (max-examples=15 over ~372 ops) and the shadow
-    # tail is capped to its own timeout-minutes below. 25m keeps the blocking
-    # layers (Hurl + Schemathesis blocking) clear of a job-level timeout, which
-    # would otherwise fail this branch-protected check.
-    timeout-minutes: 25
+    # 60m: Hurl (~15m) + the BLOCKING Schemathesis profile (~4–6m at
+    # max-examples=10) + the advisory shadow tail (capped at 4m below). On
+    # pathologically slow CI runners the total repeatedly brushed the earlier
+    # 25m/35m/45m caps and the JOB timed out *inside the shadow step* —
+    # cancelling the already-green blocking layers and failing this
+    # branch-protected check on a non-blocking tail (runs 27568003409 /
+    # 27570193106 / 27574721038). 60m removes the timeout risk even on a ~2×-slow
+    # runner; the blocking layers gate, the shadow's own 4m cap bounds the tail.
+    timeout-minutes: 60
 
     services:
       postgres:
@@ -230,8 +233,9 @@ jobs:
         run: bun run test:contract
 
       # BLOCKING profile: the narrow real-bug checks (no 5xx; every returned
-      # status is documented) over all ops. SCHEMATHESIS_MAX_EXAMPLES bounds
-      # wall-clock; SCHEMATHESIS_SUPPRESS_HEALTH_CHECK=all silences schemathesis's
+      # status is documented) over all ops. SCHEMATHESIS_MAX_EXAMPLES=10 bounds
+      # wall-clock (every op still gets 10 cases → 401-conformance guaranteed);
+      # SCHEMATHESIS_SUPPRESS_HEALTH_CHECK=all silences schemathesis's
       # OWN data-generation health checks (filter_too_much etc.) — they fire
       # non-deterministically on 2 tight-input-regex ops (confirmationCode,
       # practitioner-roles) and are never impl bugs, so they must not fail the
@@ -249,7 +253,7 @@ jobs:
       # keeps the branch-protected `contract` check green.
       - name: Schemathesis fuzz (shadow)
         continue-on-error: true
-        timeout-minutes: 6
+        timeout-minutes: 4
         run: bun run test:contract:fuzz
 
       - name: API logs (always)

@@ -13,6 +13,7 @@ import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
 import { buildTestApp } from '@/tests/helpers/test-app';
+import { assertEndpointTotalEqualsRepoSum } from '@/tests/helpers/coherence';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { persons } from '@/handlers/person/repos/person.schema';
@@ -84,5 +85,71 @@ describe('FIX-010 — getPatientBalance equals Σ per-invoice balanceCents (non-
     // And the voided invoice's 9999 leaked into neither source.
     expect(body.outstandingBalanceCents).toBe(10000);
     expect(body.overdueAmountCents).toBe(2000);
+  });
+});
+
+/**
+ * Backend coherence-oracle wiring (EM-BIL-002 class).
+ *
+ * getArAging returns BOTH an aggregate `summary.totalOutstandingCents` AND the
+ * itemised `patients[]` rows it was computed over. The leak incident was a
+ * report whose summary was summed across a DIFFERENT (wider) scope than the
+ * rows it shipped. `assertEndpointTotalEqualsRepoSum` pins the invariant
+ * against the RESPONSE: the summary must equal Σ of the rows THIS response
+ * returned. We seed two patients with overdue balances so the summary genuinely
+ * aggregates multiple rows — a single-row case could pass vacuously.
+ */
+describe('EM-BIL-002 coherence — getArAging summary equals Σ of its returned patient rows', () => {
+  // Second patient (same branch) so the aging summary aggregates >1 row.
+  const PERSON_2 = 'ee000000-0000-1000-8000-0000000ba102';
+  const PATIENT_2 = 'aa000000-0000-1000-8000-0000000ba102';
+  const VISIT_2 = 'dd000000-0000-1000-8000-0000000ba102';
+
+  beforeAll(async () => {
+    await db.insert(persons).values({ id: PERSON_2, firstName: 'Ar', lastName: 'Aging', createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
+    await db.insert(patients).values({ id: PATIENT_2, person: PERSON_2, preferredBranchId: BRANCH_ID, createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
+    await db.insert(dentalVisits).values({ id: VISIT_2, patientId: PATIENT_2, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', createdBy: USER.id, updatedBy: USER.id }).onConflictDoNothing();
+  });
+
+  async function seedOverdueInvoiceFor(patientId: string, total: number, balance: number, ageDays: number) {
+    const invoiceRepo = new DentalInvoiceRepository(db);
+    const invoiceNumber = await invoiceRepo.generateInvoiceNumber();
+    const due = new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000);
+    await db.insert(dentalInvoices).values({
+      id: crypto.randomUUID(), patientId, branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID, invoiceNumber, status: 'overdue',
+      subtotalCents: total, discountCents: 0, taxCents: 0, taxRate: '0',
+      totalCents: total, paidCents: total - balance, balanceCents: balance,
+      dueDate: due, issuedAt: due, createdBy: USER.id, updatedBy: USER.id,
+    });
+  }
+
+  afterEach(async () => {
+    await db.delete(dentalInvoices).where(eq(dentalInvoices.patientId, PATIENT_2));
+  });
+
+  test('the practice-wide AR summary is fully explained by the rows the same response returns', async () => {
+    // Two patients, three overdue invoices across different aging buckets.
+    await seedOverdueInvoiceFor(PATIENT_ID, 5000, 5000, 40);   // patient 1: 5000
+    await seedOverdueInvoiceFor(PATIENT_ID, 3000, 3000, 95);   // patient 1: +3000
+    await seedOverdueInvoiceFor(PATIENT_2, 7000, 7000, 200);   // patient 2: 7000
+
+    const res = await buildTestApp({ db, user: USER }).request('/dental/billing/collections/aging');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+
+    // Sanity: the rows we seeded actually surfaced (≥2 patients, non-zero summary).
+    expect(body.patients.length).toBeGreaterThanOrEqual(2);
+    expect(body.summary.totalOutstandingCents).toBeGreaterThan(0);
+
+    // THE ORACLE: the summary total must equal Σ over the response's OWN rows.
+    // Drizzle numerics arrive as numbers here (computed in the handler), but coerce
+    // defensively — a summary summed from a different/wider scope than these rows
+    // (the EM-BIL-002 leak) would make this throw.
+    assertEndpointTotalEqualsRepoSum({
+      total: Number(body.summary.totalOutstandingCents),
+      rowAmounts: body.patients.map((p: any) => Number(p.totalOutstandingCents)),
+      label: 'AR aging summary.totalOutstandingCents',
+    });
   });
 });

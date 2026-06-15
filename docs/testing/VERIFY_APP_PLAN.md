@@ -103,13 +103,21 @@ product (`apps/dentalemon` + `services/api-ts`).
       `drift:true`; Schemathesis-blocking green; **non-vacuity proof** (revert a historical fix on a
       scratch branch → a matrix/probe goes RED; re-apply → GREEN).
 
-### Phase 2 — The repeatable button (Tiers 0–1)
-- [ ] `package.json` `coverage:*` scripts; generalize coherence oracles (`test-utils.ts`) + BE twin
-      `assertEndpointTotalEqualsRepoSum`.
-- [ ] `scripts/verify-app.ts` (Tier 0 + Tier 1 + invoke existing 16 gates → one `VERDICT.md`) + `--deep` flag.
-- [ ] `.claude/skills/verify-app/SKILL.md` wrapper.
-- **Verification gate:** `bun run verify:app` runs against the reseeded real stack → one VERDICT.md;
-      Tier-1 journey harness green; coherence oracles pass; skill returns a readable summary.
+### Phase 2 — The repeatable button (Tiers 0–1) ✅ DONE (PR#37)
+- [x] `coverage:*` scripts already existed (Phase 1c); added `verify:app` + `verify:app:ci`. **BE twin
+      `assertEndpointTotalEqualsRepoSum`** (`services/api-ts/src/tests/helpers/coherence.ts`, the
+      server-side mirror of FE `assertTotalExplainedByRows`) + 5 pure unit tests, wired into the
+      **EM-BIL-002 `getArAging`** report test (summary total == Σ returned rows; mutation-proven RED).
+- [x] **`scripts/verify-app.ts`** — orchestrator. Tier 0 (typecheck, lint, coverage-engine tests,
+      `coverage:all:ci` regen+ratchet, module-boundaries, BR traceability) + Tier 1 (FE unit/coherence
+      always; core Hurl contract + journey harness when api-ts is reachable on :7213) → one
+      `docs/testing/coverage/VERDICT.md` (gitignored, per-run). `--ci` (non-zero on blocking fail),
+      `--tier0`/`--tier1`, `--deep` (reserved → Tier 2/Phase 3). Aggregates the gates; does not duplicate them.
+- [x] **`.claude/skills/verify-app/SKILL.md`** — thin wrapper: runs `verify:app`, summarizes VERDICT.md
+      + points at the committed `*-matrix.md` gap reports.
+- **Verification gate ✅:** full `bun run verify:app` against the **reseeded real stack** = 9/9 steps PASS
+      (Tier-1 journey harness 17 passed/4 ceph-skipAllowed; core Hurl green; coherence oracles green;
+      typecheck+lint+coverage-ratchet green). Skill returns a readable summary.
 
 ### Phase 3 — Adversarial deep sweep (Tier 2) — re-plan in detail at phase start
 - [ ] Mutation spike + harness (4 critical module-classes; seed the 8 historical bugs; **0 surviving
@@ -127,7 +135,7 @@ Verify "works for users" by running the real-stack proof (Tier 1) and the deep s
 citing their artifacts — not by reporting green unit/coverage numbers as proof of function.
 
 ## Continuation & autonomy mandate (read this to resume)
-**Status:** Phase 1a ✅ (PR#33) + Phase 1c ✅ (PR#34) + Task 1b ✅ (PR#36) merged. **Phase 1 COMPLETE. Remaining: Phase 2 → Phase 3.**
+**Status:** Phase 1a ✅ (PR#33) + Phase 1c ✅ (PR#34) + Task 1b ✅ (PR#36) + Phase 2 ✅ (PR#37) merged. **Phases 1–2 COMPLETE. Remaining: Phase 3.**
 
 **Authority (when the user invokes this section): execute to the end autonomously — do NOT ask;
 decide-and-proceed on every design call, document each decision in the PR + this tracker, and only

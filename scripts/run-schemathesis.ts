@@ -123,14 +123,19 @@ console.log(`→ args: ${args.join(' ')}\n`)
 // "unique failures" count) or any non-health-check error still fails the gate.
 const isBlocking = Boolean(checks)
 const child = spawn(bin, args, { stdio: ['inherit', 'pipe', 'pipe'] })
-let buf = ''
-child.stdout.on('data', (d) => { const s = d.toString(); buf += s; process.stdout.write(s) })
-child.stderr.on('data', (d) => { const s = d.toString(); buf += s; process.stderr.write(s) })
+// Accumulate in an ARRAY and join once at exit — NOT `buf += chunk` per data
+// event, which is O(n²) over the blocking profile's huge ~26k-case output (each
+// `+=` copies the whole growing string) and was slowing the CI `contract` job
+// from ~16m to >35m, tripping its job-level timeout.
+const chunks: string[] = []
+child.stdout.on('data', (d) => { const s = d.toString(); chunks.push(s); process.stdout.write(s) })
+child.stderr.on('data', (d) => { const s = d.toString(); chunks.push(s); process.stderr.write(s) })
 child.on('exit', (code) => {
   if (!isBlocking || code === 0) {
     process.exit(code ?? 1)
     return
   }
+  const buf = chunks.join('')
   const hasCheckFailures =
     /={2,}\s*FAILURES\s*={2,}/.test(buf) || /found\s+[1-9]\d*\s+unique failures/.test(buf)
   // Each summary error category is printed as "🚫 <label>: <n>".
