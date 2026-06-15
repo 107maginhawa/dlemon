@@ -35,7 +35,7 @@ export async function deletePatientContact(ctx: HandlerContext): Promise<Respons
   }
 
   const contactRepo = new PatientContactRepository(db, logger);
-  const deleted = await contactRepo.softDelete(contactId);
+  const deleted = await contactRepo.softDelete(patientId, contactId);
   if (!deleted) throw new NotFoundError('Contact not found');
 
   logger?.info({ action: 'deletePatientContact', patientId, contactId }, 'Patient contact soft-deleted');

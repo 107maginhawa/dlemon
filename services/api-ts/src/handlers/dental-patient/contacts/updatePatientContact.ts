@@ -36,7 +36,7 @@ export async function updatePatientContact(ctx: HandlerContext): Promise<Respons
   }
 
   const contactRepo = new PatientContactRepository(db, logger);
-  const updated = await contactRepo.update(contactId, body);
+  const updated = await contactRepo.update(patientId, contactId, body);
   if (!updated) throw new NotFoundError('Contact not found');
 
   logger?.info({ action: 'updatePatientContact', patientId, contactId }, 'Patient contact updated');

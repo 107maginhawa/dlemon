@@ -46,6 +46,13 @@ const PATIENT_ID = 'd0000000-0000-1000-8000-000000000011';
 const PERSON_ID = 'e0000000-0000-1000-8000-000000000011';
 const NONEXISTENT_ID = 'f0000000-0000-1000-8000-000000000099';
 
+// A SECOND tenant the TEST_USER is NOT a member of — for the cross-tenant IDOR proof.
+const FOREIGN_ORG_ID = 'c0000000-0000-1000-8000-0000000000f1';
+const FOREIGN_BRANCH_ID = 'b0000000-0000-1000-8000-0000000000f1';
+const FOREIGN_PERSON_ID = 'e0000000-0000-1000-8000-0000000000f1';
+const FOREIGN_PATIENT_ID = 'd0000000-0000-1000-8000-0000000000f1';
+const FOREIGN_CONTACT_ID = '11110000-0000-1000-8000-0000000000f1';
+
 const ve = (result: any, c: any) => {
   if (!result.success) {
     return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
@@ -88,6 +95,28 @@ beforeAll(async () => {
     preferredBranchId: BRANCH_ID,
     status: 'active',
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+  }).onConflictDoNothing();
+
+  // FOREIGN tenant (different org/branch) — TEST_USER has NO membership here.
+  await db.insert(dentalOrganizations).values({
+    id: FOREIGN_ORG_ID, name: 'Foreign Clinic', tier: 'solo',
+    ownerPersonId: FOREIGN_PERSON_ID, countryCode: 'PH',
+    createdBy: FOREIGN_PERSON_ID, updatedBy: FOREIGN_PERSON_ID,
+  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({
+    id: FOREIGN_BRANCH_ID, organizationId: FOREIGN_ORG_ID, name: 'Foreign Branch',
+    timezone: 'Asia/Manila', createdBy: FOREIGN_PERSON_ID, updatedBy: FOREIGN_PERSON_ID,
+  }).onConflictDoNothing();
+  await db.insert(persons).values({
+    id: FOREIGN_PERSON_ID, firstName: 'Foreign', lastName: 'Patient',
+    dateOfBirth: '1990-01-01',
+    createdBy: FOREIGN_PERSON_ID, updatedBy: FOREIGN_PERSON_ID,
+  }).onConflictDoNothing();
+  await db.insert(patients).values({
+    id: FOREIGN_PATIENT_ID, person: FOREIGN_PERSON_ID,
+    preferredBranchId: FOREIGN_BRANCH_ID,
+    status: 'active',
+    createdBy: FOREIGN_PERSON_ID, updatedBy: FOREIGN_PERSON_ID,
   }).onConflictDoNothing();
 });
 
@@ -495,5 +524,81 @@ describe('Validation (AC-007, BR-002)', () => {
     });
 
     expect(res.status).toBe(400);
+  });
+});
+
+// =============================================================================
+// CONF-DP-IDOR (P0): a contact must only be mutable via ITS OWN patient's URL.
+// The handler authorizes the URL patientId's branch but then mutates a
+// caller-supplied contactId — so a member of branch A who authorizes their own
+// patient could overwrite / soft-delete a contact belonging to a patient in a
+// DIFFERENT branch (cross-tenant PHI write/delete). The repo WHERE must key on
+// (patientId, contactId), not contactId alone.
+// =============================================================================
+
+describe('CONF-DP-IDOR: cross-tenant contact write/delete is rejected (P0)', () => {
+  async function seedForeignContact() {
+    const { dentalPatientContacts } = await import('./repos/patient-contact.schema');
+    await db.insert(dentalPatientContacts).values({
+      id: FOREIGN_CONTACT_ID, patientId: FOREIGN_PATIENT_ID, name: 'Foreign Guardian',
+      isGuardian: true, isEmergencyContact: false,
+      createdBy: FOREIGN_PERSON_ID, updatedBy: FOREIGN_PERSON_ID,
+    }).onConflictDoNothing();
+  }
+  async function readForeignContact() {
+    const { dentalPatientContacts } = await import('./repos/patient-contact.schema');
+    const [row] = await db.select().from(dentalPatientContacts)
+      .where(eq(dentalPatientContacts.id, FOREIGN_CONTACT_ID));
+    return row;
+  }
+  async function cleanForeignContact() {
+    const { dentalPatientContacts } = await import('./repos/patient-contact.schema');
+    await db.delete(dentalPatientContacts).where(eq(dentalPatientContacts.id, FOREIGN_CONTACT_ID));
+  }
+
+  test('PATCH via own patient URL cannot mutate another patient\'s contact (404, unchanged)', async () => {
+    await cleanForeignContact();
+    await seedForeignContact();
+    try {
+      const app = buildTestApp(TEST_USER); // member of BRANCH_ID, authorizes PATIENT_ID
+
+      // Caller authorizes their OWN patient (PATIENT_ID, auth passes) but targets
+      // the FOREIGN patient's contact id.
+      const res = await app.request(`/dental/patients/${PATIENT_ID}/contacts/${FOREIGN_CONTACT_ID}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'PWNED', phone: '+639170000000' }),
+      });
+
+      expect(res.status).toBe(404);
+
+      // Independent read: the foreign contact is UNTOUCHED.
+      const after = await readForeignContact();
+      expect(after?.name).toBe('Foreign Guardian');
+      expect(after?.phone ?? null).toBeNull();
+    } finally {
+      await cleanForeignContact();
+    }
+  });
+
+  test('DELETE via own patient URL cannot soft-delete another patient\'s contact (404, not deleted)', async () => {
+    await cleanForeignContact();
+    await seedForeignContact();
+    try {
+      const app = buildTestApp(TEST_USER);
+
+      const res = await app.request(`/dental/patients/${PATIENT_ID}/contacts/${FOREIGN_CONTACT_ID}`, {
+        method: 'DELETE',
+      });
+
+      expect(res.status).toBe(404);
+
+      // Independent read: the foreign contact is NOT soft-deleted.
+      const after = await readForeignContact();
+      expect(after).toBeDefined();
+      expect(after?.deletedAt ?? null).toBeNull();
+    } finally {
+      await cleanForeignContact();
+    }
   });
 });
