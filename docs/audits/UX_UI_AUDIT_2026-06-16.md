@@ -53,7 +53,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 
 - [x] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, key handlers. No visual change. *(done — commit below; gate green 2473/0)*
 - [~] **Batch 2 — Design-token compliance** — **foundation + safe (color-preserving / fill / icon) swaps DONE** 🟢 (commit below; gate 2473/0). **Text-bearing status badges + inline/SVG colors DEFERRED → Batch 2-cont** (need accessible `*-foreground` tokens; recoloring text to mid-tone semantic tokens would REGRESS contrast — see D8).
-- [~] **Batch 3 — Feedback** — **3a (toasts) DONE** 🟢 (commit below; gate 2473/0). **3b (native confirm/prompt→dialogs, new "Try again" buttons, price-cell cue) deferred to visual checkpoint** (introduces new visible UI).
+- [x] **Batch 3 — Feedback** — **3a (toasts) + 3b (dialogs/retry/cue) DONE** 🟢. 3a: `26e3e971`. 3b: `54d2e719` (retry/price/keypad) + dialog commit below (confirm→AlertDialog, prompt→annotation-input-dialog).
 - [x] **Batch 4 — Focus rings** 🟢/🟡 — `focus-visible` rings across **24 files** (whole `focus:border-lemon` pattern, not just the audit's few) + staff/portal nav. (commit below; gate 2473/0)
 - [x] **Batch 5 — Touch targets (44px)** 🟡 — raised ~25 controls (nav/scheduling/booking/billing/patients/workspace/imaging/case-pres/reports). Perio dense-grid handled by judgment, not blanket 44px (D11). (commit below; gate 2473/0). *Visual/E2E pass still advised — see note.*
 - [x] **Batch 6 — Structural a11y** 🟡 — `patient-image-list` clickable div → `role="button"`+keyboard (NOT literal `<button>` — would be invalid HTML around `<p>`/`<div>`, D14). (commit below)
@@ -208,4 +208,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 | 2026-06-16 | Batch 5 — Touch targets (~25 controls; perio D11) | `88785782` | ✅ app+ui typecheck · ✅ lint · ✅ unit 2473/0 (E2E/visual advised) |
 | 2026-06-16 | Batch 2d — Design-token finish (inline/SVG, banners, auth, invoice) | `541b2d0d` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 7 — Loading/CLS (skeletons ×15, img dims, Ceph seed) | `1475cee7` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
-| 2026-06-16 | Batch 6 + 3b(part) — div→button role, portal retry, price cue, keypad | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 6 + 3b(part) — div→button role, portal retry, price cue, keypad | `54d2e719` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 3b — native confirm/prompt → AlertDialog / input Dialog | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 (+11 tests) |

@@ -6,6 +6,8 @@ import { useMeasurements } from '../hooks/use-measurements'
 import { MeasurementToolbar, type ToolMode } from './measurement-toolbar'
 import { AnnotationToolbar } from './annotation-toolbar'
 import { CalibrationDialog } from './calibration-dialog'
+import { AnnotationInputDialog } from './annotation-input-dialog'
+import type { Point } from './imaging-workspace.handlers'
 import { FindingsSidebar } from './FindingsSidebar'
 import { CephWorkspacePanel } from './CephWorkspacePanel'
 import { CephLandmarkLayer } from './CephLandmarkLayer'
@@ -81,6 +83,9 @@ export function ImagingWorkspace({
   }
 
   const [drawPoints, setDrawPoints] = useState<{ x: number; y: number }[]>([])
+  // Pending annotation captured by the styled input dialog (replaces window.prompt).
+  // Holds the click point + which kind of input we're collecting; null = closed.
+  const [pendingAnnotation, setPendingAnnotation] = useState<{ kind: 'label' | 'tooth'; point: Point } | null>(null)
   const [calibrationOpen, setCalibrationOpen] = useState(false)
   const [calibrationPixelDist, setCalibrationPixelDist] = useState(0)
   const [internalPixelSpacingMm, setInternalPixelSpacingMm] = useState<number | null>(null)
@@ -281,34 +286,50 @@ export function ImagingWorkspace({
           setDrawPoints([])
           onMeasurementSaved?.()
           return
-        case 'promptLabel': {
-          const text = window.prompt('Label text (max 200 chars):')
-          const input = text == null ? null : buildLabelMeasurement(action.point, text)
-          if (!input) { setDrawPoints([]); return }
-          createMeasurement.mutate(input, {
-            onSuccess: () => toast.success('Measurement saved'),
-            onError: (err) => toastError(err, 'Could not save measurement.'),
-          })
-          setDrawPoints([])
-          onMeasurementSaved?.()
+        case 'promptLabel':
+          setPendingAnnotation({ kind: 'label', point: action.point })
           return
-        }
-        case 'promptTooth': {
-          const raw = window.prompt('Tooth number (1–32):')
-          const input = raw == null ? null : buildToothMeasurement(action.point, raw)
-          if (!input) { setDrawPoints([]); return }
-          createMeasurement.mutate(input, {
-            onSuccess: () => toast.success('Measurement saved'),
-            onError: (err) => toastError(err, 'Could not save measurement.'),
-          })
-          setDrawPoints([])
-          onMeasurementSaved?.()
+        case 'promptTooth':
+          setPendingAnnotation({ kind: 'tooth', point: action.point })
           return
-        }
       }
     },
     [toolMode, drawPoints, pixelSpacingMm, createMeasurement, onMeasurementSaved],
   )
+
+  // Confirm handler for the annotation input dialog. Builds the measurement from
+  // the pending point + raw input exactly as the old window.prompt path did, then
+  // commits with the same toasts. Validation lives both inline in the dialog
+  // (tooth range / inline error) and in build*Measurement (the final guard — an
+  // empty label or out-of-range tooth returns null → no commit), which matches
+  // the prior behaviour. On success or a null build it closes + clears points.
+  const handleAnnotationConfirm = useCallback(
+    (raw: string) => {
+      if (!pendingAnnotation) return
+      const { kind, point } = pendingAnnotation
+      const input =
+        kind === 'label' ? buildLabelMeasurement(point, raw) : buildToothMeasurement(point, raw)
+      setPendingAnnotation(null)
+      if (!input) {
+        setDrawPoints([])
+        return
+      }
+      createMeasurement.mutate(input, {
+        onSuccess: () => toast.success('Measurement saved'),
+        onError: (err) => toastError(err, 'Could not save measurement.'),
+      })
+      setDrawPoints([])
+      onMeasurementSaved?.()
+    },
+    [pendingAnnotation, createMeasurement, onMeasurementSaved],
+  )
+
+  // Cancel mirrors the prior `text == null` branch of window.prompt: clear the
+  // in-progress draw points and close the dialog without committing.
+  const handleAnnotationCancel = useCallback(() => {
+    setPendingAnnotation(null)
+    setDrawPoints([])
+  }, [])
 
   const handleCalibrationConfirm = useCallback(
     async (actualMm: number) => {
@@ -535,6 +556,13 @@ export function ImagingWorkspace({
         pixelDistance={calibrationPixelDist}
         onConfirm={(mm) => void handleCalibrationConfirm(mm)}
         onCancel={() => { setCalibrationOpen(false); setDrawPoints([]) }}
+      />
+
+      <AnnotationInputDialog
+        open={pendingAnnotation !== null}
+        kind={pendingAnnotation?.kind ?? 'label'}
+        onConfirm={handleAnnotationConfirm}
+        onCancel={handleAnnotationCancel}
       />
     </div>
   )

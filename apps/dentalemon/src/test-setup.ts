@@ -166,6 +166,68 @@ mock.module('@radix-ui/react-dialog', () => ({
   createDialogScope: () => () => ({}),
 }))
 
+// @radix-ui/react-alert-dialog — like react-dialog, Radix portal + focus-trap
+// don't behave under happy-dom. Stub the raw primitive globally so every
+// consumer (notably @monobase/ui's AlertDialog) renders deterministically.
+//
+// MUST be global, not per-file: `mock.module()` is a process-wide override that
+// persists across files. The export surface below is a faithful SUPERSET of
+// @monobase/ui's AlertDialog usage (Root/Content/Header/Footer/Title/
+// Description/Action/Cancel/Overlay/Portal/Trigger) plus the scope factory the
+// primitive composes at module-eval time. Action/Cancel render as <button> so
+// their onClick fires and userEvent can target them by role/testid.
+const _AlertDialogPassthrough = ({ children }: { children?: React.ReactNode }) =>
+  React.createElement(React.Fragment, null, children)
+const _AlertDialogDiv = React.forwardRef<
+  HTMLDivElement,
+  { children?: React.ReactNode } & React.HTMLAttributes<HTMLDivElement>
+>(({ children, ...props }, ref) => React.createElement('div', { ref, ...props }, children))
+_AlertDialogDiv.displayName = 'AlertDialogStubDiv'
+const _AlertDialogTitle = React.forwardRef<HTMLHeadingElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('h2', { ref }, children),
+)
+_AlertDialogTitle.displayName = 'AlertDialogStubTitle'
+const _AlertDialogDescription = React.forwardRef<HTMLParagraphElement, { children?: React.ReactNode }>(
+  ({ children }, ref) => React.createElement('p', { ref }, children),
+)
+_AlertDialogDescription.displayName = 'AlertDialogStubDescription'
+// Context carries the controlled `onOpenChange` down to Action/Cancel so that,
+// like real Radix, clicking either button requests a close (onOpenChange(false))
+// in addition to firing the consumer's own onClick. This keeps "dialog dismissed
+// after cancel/confirm" assertions meaningful.
+const _AlertDialogCtx = React.createContext<((open: boolean) => void) | undefined>(undefined)
+const _AlertDialogButton = React.forwardRef<
+  HTMLButtonElement,
+  { children?: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>
+>(({ children, onClick, ...props }, ref) => {
+  const onOpenChange = React.useContext(_AlertDialogCtx)
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+    onClick?.(e)
+    onOpenChange?.(false)
+  }
+  return React.createElement('button', { ref, type: 'button', onClick: handleClick, ...props }, children)
+})
+_AlertDialogButton.displayName = 'AlertDialogStubButton'
+mock.module('@radix-ui/react-alert-dialog', () => ({
+  Root: ({ open, onOpenChange, children }: { open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactNode }) =>
+    open !== false
+      ? React.createElement(
+          _AlertDialogCtx.Provider,
+          { value: onOpenChange },
+          React.createElement('div', { role: 'alertdialog' }, children),
+        )
+      : null,
+  Trigger: _AlertDialogPassthrough,
+  Portal: _AlertDialogPassthrough,
+  Overlay: () => null,
+  Content: _AlertDialogDiv,
+  Title: _AlertDialogTitle,
+  Description: _AlertDialogDescription,
+  Action: _AlertDialogButton,
+  Cancel: _AlertDialogButton,
+  createAlertDialogScope: () => () => ({}),
+}))
+
 // @/components/sheet — Radix portal won't work in happy-dom
 mock.module('@/components/sheet', () => ({
   Sheet: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
