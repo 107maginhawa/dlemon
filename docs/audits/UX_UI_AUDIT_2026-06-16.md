@@ -58,7 +58,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 - [x] **Batch 5 — Touch targets (44px)** 🟡 — raised ~25 controls (nav/scheduling/booking/billing/patients/workspace/imaging/case-pres/reports). Perio dense-grid handled by judgment, not blanket 44px (D11). (commit below; gate 2473/0). *Visual/E2E pass still advised — see note.*
 - [x] **Batch 6 — Structural a11y** 🟡 — `patient-image-list` clickable div → `role="button"`+keyboard (NOT literal `<button>` — would be invalid HTML around `<p>`/`<div>`, D14). (commit below)
 - [x] **Batch 7 — Loading & CLS** 🟡 — `<Skeleton>` swaps across ~15 loaders + intrinsic imaging `<img>` dims + Ceph overlay seed (commit below; gate 2473/0). *treatment-table skeleton is opt-in via new `isLoading` prop — caller wire-up is a small follow-up.*
-- [ ] **Batch 8 — Performance / CWV** 🟠 — code-splitting, manualChunks, list virtualization.
+- [x] **Batch 8 — Performance / CWV** 🟠 — `autoCodeSplitting` (route chunks; main entry **521kB→283kB gzip, −46%**) + vendor `manualChunks` (build-verified). Virtualization deferred (D15: needs a new dep + runtime measurement). (commit below)
 - [x] **Batch 9 — Forms** 🟠 — disable-on-submit (personal-info-form `isSubmitting||isLoading`; onboarding Step-1 idempotent guard), patient-edit email/phone validation, contact-info success toast. (commit below; gate 2484/0)
 
 Counts after dedupe: **High 53 · Medium 50 · Low 14 · Total 117**.
@@ -149,10 +149,10 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 - [ ] `my-appointments-view.tsx:94` + `my-invoices-view.tsx:103` — skeleton heights derived from card padding. **Medium [Technical]**
 - [ ] `CephReportView.tsx:179` — seed `imgDims` estimate so overlay isn't invisible 1-2s. **Low [Technical]**
 
-## Batch 8 — Performance / CWV 🟠
+## Batch 8 — Performance / CWV 🟠 ✅ (code-splitting) (commit `<batch8>`)
 
-- [ ] `vite.config.ts` — `build.rollupOptions.output.manualChunks`; lazy-load heavy routes/components (Swiper, `@vvo/tzdb`, `country-list`, `react-easy-crop`). **Medium [Technical]**
-- [ ] `FmxMount.tsx` + `patient-image-list.tsx` — paginate/virtualize large lists (TanStack Virtual). **Medium [Technical]**
+- [x] `vite.config.ts` — `tanstackRouter({ autoCodeSplitting: true })` → 56 chunks, route components load on navigation; main entry **1.9MB→959kB (521→283kB gzip, −46%)**. Plus `manualChunks` isolating the 5 heavy libs (phone 209kB, tzdb 119kB, swiper 70kB, cropper 25kB, geo 18kB). Build verified (EXIT 0); routeTree.gen.ts unchanged; suite 2484/0. **Medium [Technical]**
+- [~] **Deferred (D15): list virtualization** (`FmxMount`, `patient-image-list`) — needs a new dep (`@tanstack/react-virtual`) + scroll-behavior changes + a runtime perf measurement to justify; the shipped code-splitting is the higher-leverage CWV win. The ~959kB shared core (react/radix/tanstack/shared) could be split further but also needs measurement (run `/benchmark`).
 
 ## Batch 9 — Forms 🟠
 
@@ -210,4 +210,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 | 2026-06-16 | Batch 7 — Loading/CLS (skeletons ×15, img dims, Ceph seed) | `1475cee7` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 6 + 3b(part) — div→button role, portal retry, price cue, keypad | `54d2e719` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 3b — native confirm/prompt → AlertDialog / input Dialog | `3a002a94` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 (+11 tests) |
-| 2026-06-16 | Batch 9 — Forms (disable-on-submit, validation, success toast) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 |
+| 2026-06-16 | Batch 9 — Forms (disable-on-submit, validation, success toast) | `f8f6eb94` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 |
+| 2026-06-16 | Batch 8 — Perf (autoCodeSplitting −46% main chunk + manualChunks) | (this commit) | ✅ typecheck · ✅ lint · ✅ unit 2484/0 · ✅ build EXIT 0 |
