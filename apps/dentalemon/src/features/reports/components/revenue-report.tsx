@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Skeleton } from '@monobase/ui';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useInvoices } from '@/features/billing/hooks/use-invoices';
 import { InvoiceDetailSheet } from './invoice-detail-sheet';
@@ -86,7 +87,28 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <>
+          {/* Summary cards skeleton — matches the 4-up card grid below */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="rounded-xl border border-border p-4">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-32 mt-2" />
+              </div>
+            ))}
+          </div>
+          {/* Table skeleton — header row + rows */}
+          <div className="rounded-xl border border-border">
+            <div className="px-4 py-3 border-b">
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="flex flex-col gap-3 p-4">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-5 w-full" />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

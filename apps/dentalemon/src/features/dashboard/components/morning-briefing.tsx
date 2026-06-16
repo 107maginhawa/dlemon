@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { Skeleton } from '@monobase/ui';
 import { canViewFinancials } from '@/lib/rbac';
 import { MetricCard } from './metric-card';
 import type { DentalRole } from '@/lib/rbac';
@@ -40,17 +41,17 @@ function DashboardSkeleton() {
     <div className="flex flex-col gap-4" data-testid="dashboard-skeleton" aria-busy="true" aria-label="Loading dashboard">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-2xl bg-muted/40 h-32 animate-pulse" />
+          <Skeleton key={i} className="rounded-2xl h-32" />
         ))}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-2xl bg-muted/40 h-24 animate-pulse" />
+          <Skeleton key={i} className="rounded-2xl h-24" />
         ))}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
-        <div className="rounded-2xl bg-muted/40 h-48 animate-pulse" />
-        <div className="rounded-2xl bg-muted/40 h-48 animate-pulse" />
+        <Skeleton className="rounded-2xl h-48" />
+        <Skeleton className="rounded-2xl h-48" />
       </div>
     </div>
   );

@@ -16,6 +16,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { X, Activity } from 'lucide-react';
+import { Skeleton } from '@monobase/ui';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { cn } from '@/lib/utils';
 import { isFeatureEnabled } from '@/lib/feature-flags';
@@ -231,7 +232,13 @@ export function PerioChartOverlay({
         {view === 'history' ? (
           <PerioComparison patientId={patientId} enabled={open} />
         ) : isLoading ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">Loading perio chart…</p>
+          // Hold the loaded grid's footprint: summary strip, a legend line, then the
+          // probing-depth grid block — so content arriving doesn't shift the layout.
+          <div data-testid="perio-loading" className="flex flex-col gap-4">
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-64 w-full rounded-lg" />
+          </div>
         ) : isError ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <Activity className="h-8 w-8 text-destructive/50" />

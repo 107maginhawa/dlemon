@@ -29,6 +29,7 @@ import {
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
+import { Skeleton } from '@monobase/ui';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canApplyDiscount, canVoidPayment, type DentalRole } from '@/lib/rbac';
 import { PaymentReceipt } from './payment-receipt';
@@ -354,7 +355,30 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
-          {loading && <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>}
+          {loading && (
+            <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading invoice">
+              {/* Invoice info header */}
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-20 rounded-md" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <Skeleton className="h-3 w-12 ml-auto" />
+                  <Skeleton className="h-4 w-28 ml-auto" />
+                </div>
+              </div>
+              {/* Line item rows */}
+              <div className="flex flex-col gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-12 rounded-xl" />
+                ))}
+              </div>
+              {/* Totals */}
+              <Skeleton className="h-24 rounded-xl" />
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{error}</div>
           )}

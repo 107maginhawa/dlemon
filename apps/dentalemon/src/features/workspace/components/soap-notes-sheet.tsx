@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { Button, Input, Textarea } from '@monobase/ui';
+import { Button, Input, Textarea, Skeleton } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
 import { APP_LOCALE } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
@@ -226,9 +226,9 @@ export function SoapNotesSheet({
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           {isLoading ? (
             <>
-              <div className="h-16 bg-muted animate-pulse rounded-xl" />
-              <div className="h-16 bg-muted animate-pulse rounded-xl" />
-              <div className="h-16 bg-muted animate-pulse rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
             </>
           ) : showAddendum ? (
             /* ── Addendum form ── */

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Skeleton } from '@monobase/ui';
 import { usePatientReport } from '../hooks/use-patient-report';
 
 export interface PatientReportProps {
@@ -68,7 +69,28 @@ export function PatientReport({ branchId }: PatientReportProps) {
       {isError ? (
         <p className="text-sm text-destructive">Failed to load patient report. Please try again.</p>
       ) : isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <>
+          {/* Stats cards skeleton — matches the 3-up card grid below */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-xl border border-border p-4">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-8 w-20 mt-2" />
+              </div>
+            ))}
+          </div>
+          {/* Patient list table skeleton — header row + rows */}
+          <div className="rounded-xl border border-border">
+            <div className="px-4 py-3 border-b">
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="flex flex-col gap-3 p-4">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-5 w-full" />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           {/* Stats cards */}

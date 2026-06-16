@@ -9,6 +9,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getDentalPaymentPlanOptions } from '@monobase/sdk-ts/generated/react-query';
+import { Skeleton } from '@monobase/ui';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -225,7 +226,28 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
-          {loading && <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>}
+          {loading && (
+            <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading payment plan">
+              {/* Plan header */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-20 rounded-md" />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                </div>
+              </div>
+              {/* Installment table */}
+              <div className="flex flex-col gap-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 rounded-xl" />
+                ))}
+              </div>
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
               {error}

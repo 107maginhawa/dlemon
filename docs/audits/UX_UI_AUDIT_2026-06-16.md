@@ -57,7 +57,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 - [x] **Batch 4 — Focus rings** 🟢/🟡 — `focus-visible` rings across **24 files** (whole `focus:border-lemon` pattern, not just the audit's few) + staff/portal nav. (commit below; gate 2473/0)
 - [x] **Batch 5 — Touch targets (44px)** 🟡 — raised ~25 controls (nav/scheduling/booking/billing/patients/workspace/imaging/case-pres/reports). Perio dense-grid handled by judgment, not blanket 44px (D11). (commit below; gate 2473/0). *Visual/E2E pass still advised — see note.*
 - [ ] **Batch 6 — Structural a11y** 🟡 — `<div onClick>` → `<button>` conversions.
-- [ ] **Batch 7 — Loading & CLS** 🟡 — `<Skeleton>` swaps + intrinsic `<img>` dims.
+- [x] **Batch 7 — Loading & CLS** 🟡 — `<Skeleton>` swaps across ~15 loaders + intrinsic imaging `<img>` dims + Ceph overlay seed (commit below; gate 2473/0). *treatment-table skeleton is opt-in via new `isLoading` prop — caller wire-up is a small follow-up.*
 - [ ] **Batch 8 — Performance / CWV** 🟠 — code-splitting, manualChunks, list virtualization.
 - [ ] **Batch 9 — Forms** 🟠 — disable-on-submit, inline validation, success confirmation.
 
@@ -206,4 +206,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 | 2026-06-16 | Batch 2b — Accessible status tokens + badge recolor (14 files) | `269ce943` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 4 — Focus rings (24 files, WCAG 2.4.7) | `6c87c234` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 5 — Touch targets (~25 controls; perio D11) | `88785782` | ✅ app+ui typecheck · ✅ lint · ✅ unit 2473/0 (E2E/visual advised) |
-| 2026-06-16 | Batch 2d — Design-token finish (inline/SVG, banners, auth, invoice) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 2d — Design-token finish (inline/SVG, banners, auth, invoice) | `541b2d0d` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 7 — Loading/CLS (skeletons ×15, img dims, Ceph seed) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |

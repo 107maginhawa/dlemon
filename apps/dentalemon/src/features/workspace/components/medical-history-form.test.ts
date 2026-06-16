@@ -3,7 +3,7 @@
  *
  * Uses a real QueryClient + mocked global.fetch (same pattern as hook tests).
  * Tests verify:
- *  - Loading spinner renders while fetch is pending
+ *  - Loading skeleton renders while fetch is pending
  *  - Error state renders on non-ok fetch
  *  - Preset checkboxes render and reflect active state from loaded entries
  *  - Surgical history textarea renders
@@ -57,10 +57,12 @@ const mockEntry = {
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
 describe('MedicalHistoryForm — rendering', () => {
-  test('shows loading spinner while fetch is pending', () => {
+  test('shows loading skeleton while fetch is pending', () => {
     global.fetch = mock(() => new Promise(() => {}));
     renderForm();
-    expect(document.querySelector('.animate-spin')).not.toBeNull();
+    expect(screen.getByTestId('medical-history-loading')).not.toBeNull();
+    // Skeleton primitive animates via animate-pulse placeholders.
+    expect(document.querySelector('.animate-pulse')).not.toBeNull();
   });
 
   test('shows error message on non-ok fetch', async () => {

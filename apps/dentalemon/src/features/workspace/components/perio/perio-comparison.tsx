@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Skeleton } from '@monobase/ui';
 import type { PerioChart } from '@monobase/sdk-ts/generated';
 import { usePerioHistory } from '@/features/workspace/hooks/use-perio-history';
 import {
@@ -160,7 +161,22 @@ export function PerioComparison({ patientId, enabled = true }: { patientId: stri
   const { charts, isLoading, isError } = usePerioHistory({ patientId, enabled });
 
   if (isLoading) {
-    return <p className="py-12 text-center text-sm text-muted-foreground">Loading perio history…</p>;
+    // Mirror the two-section comparison footprint (section heading + a few metric
+    // rows each) so the trend tables don't pop in and shift the layout.
+    return (
+      <div data-testid="perio-comparison-loading" className="flex flex-col gap-6">
+        {[0, 1].map((section) => (
+          <section key={section}>
+            <Skeleton className="mb-2 h-3 w-48" />
+            <div className="flex flex-col gap-1.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-full" />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
   }
   if (isError) {
     return (

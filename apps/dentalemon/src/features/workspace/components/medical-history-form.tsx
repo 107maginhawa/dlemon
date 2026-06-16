@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { Skeleton } from '@monobase/ui';
 import { toastError } from '@/lib/error-toast';
 import {
   useMedicalHistory,
@@ -264,9 +265,24 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
   }
 
   if (isLoading) {
+    // Mirror the loaded layout's footprint (stacked section cards: a header strip
+    // over a few rows) so swapping skeleton → content does not shift layout.
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-5 h-5 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin" />
+      <div data-testid="medical-history-loading" className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto pb-24">
+            {[0, 1, 2].map((section) => (
+              <div key={section} className="mt-4 rounded-xl border border-border overflow-hidden">
+                <Skeleton className="h-9 w-full rounded-none" />
+                <div className="flex flex-col gap-3 px-4 py-3">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-5 w-3/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

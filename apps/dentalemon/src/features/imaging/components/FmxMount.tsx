@@ -61,7 +61,7 @@ export function FmxMount({ images, onSelectImage }: FmxMountProps) {
                         src={item.downloadUrl}
                         alt={item.fileName}
                         crossOrigin="anonymous"
-                        className="h-full w-full rounded object-cover"
+                        className="h-full w-full rounded object-cover aspect-[3/4]"
                       />
                     ) : (
                       <span className="px-0.5 text-center leading-tight">{slot.position.label}</span>

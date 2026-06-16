@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Skeleton } from '@monobase/ui';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useTreatmentReport } from '../hooks/use-treatment-report';
 
@@ -73,7 +74,28 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
       {isError ? (
         <p className="text-sm text-destructive">Failed to load treatment report. Please try again.</p>
       ) : isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <>
+          {/* Summary cards skeleton — matches the 3-up card grid below */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-xl border border-border p-4">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-28 mt-2" />
+              </div>
+            ))}
+          </div>
+          {/* Table skeleton — header row + rows */}
+          <div className="rounded-xl border border-border">
+            <div className="px-4 py-3 border-b">
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <div className="flex flex-col gap-3 p-4">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-5 w-full" />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           {/* Summary cards */}

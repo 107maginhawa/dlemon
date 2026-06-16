@@ -100,7 +100,7 @@ export function MyInvoicesView() {
       {isLoading ? (
         <div className="space-y-3" data-testid="portal-invoices-loading">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[88px] w-full rounded-xl" />
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       ) : error ? (

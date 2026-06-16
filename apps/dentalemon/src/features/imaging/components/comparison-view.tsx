@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
+import { Skeleton } from '@monobase/ui'
 import { useOfflineCache } from '@/features/imaging/hooks/use-offline-cache'
 import { ImagingWorkspace } from './imaging-workspace'
 import { SuperimpositionPanel } from './SuperimpositionPanel'
@@ -161,7 +162,7 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
           <div className="flex-1 min-w-0 flex flex-col" data-testid="comparison-pane-a">
             <p className="text-xs text-zinc-400 px-1 pb-1 truncate">{imageA.fileName}</p>
             {urlA === 'loading' ? (
-              <div className="flex-1 bg-zinc-900 animate-pulse rounded" />
+              <Skeleton className="flex-1 bg-zinc-900" />
             ) : urlA === null ? (
               <OfflinePlaceholder fileName={imageA.fileName} />
             ) : (
@@ -171,7 +172,7 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
           <div className="flex-1 min-w-0 flex flex-col" data-testid="comparison-pane-b">
             <p className="text-xs text-zinc-400 px-1 pb-1 truncate">{imageB.fileName}</p>
             {urlB === 'loading' ? (
-              <div className="flex-1 bg-zinc-900 animate-pulse rounded" />
+              <Skeleton className="flex-1 bg-zinc-900" />
             ) : urlB === null ? (
               <OfflinePlaceholder fileName={imageB.fileName} />
             ) : (
@@ -188,6 +189,8 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
               <img
                 src={urlA}
                 alt={`${imageA.fileName} (earlier timepoint)`}
+                width={1024}
+                height={1280}
                 className="absolute inset-0 h-full w-full object-contain"
               />
             )}
@@ -195,6 +198,8 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
               <img
                 src={urlB}
                 alt={`${imageB.fileName} (later timepoint)`}
+                width={1024}
+                height={1280}
                 className="absolute inset-0 h-full w-full object-contain"
                 style={{ opacity: bLayerOpacity }}
                 data-testid="superimposition-b-layer"

@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Check, ChevronRight, ChevronDown } from 'lucide-react';
+import { Skeleton } from '@monobase/ui';
 import type { Treatment } from '@/features/workspace/hooks/use-treatments';
 import type { TreatmentPlanItem } from '@/features/workspace/hooks/use-treatment-plan';
 import type { VisitCard } from '@/features/workspace/components/timeline-carousel';
@@ -36,6 +37,10 @@ interface TreatmentTableProps {
   selectedTooth?: number | null;
   /** P0-D: clear the tooth scope (show all teeth again). */
   onClearToothFilter?: () => void;
+  /** While the parent is still fetching treatments, render a table-shaped skeleton
+   *  (header strip + rows) instead of collapsing to an empty box — keeps the layout
+   *  footprint stable so content arriving does not shift the page (reduce CLS). */
+  isLoading?: boolean;
 }
 
 function formatDate(iso: string) {
@@ -81,6 +86,7 @@ export function TreatmentTable({
   readOnly: readOnlyProp = false,
   selectedTooth = null,
   onClearToothFilter,
+  isLoading = false,
 }: TreatmentTableProps) {
   // P0-D: scope the whole table to the selected tooth. Every downstream
   // computation (body rows, completed count, subtotals, grand total) reads these
@@ -144,6 +150,37 @@ export function TreatmentTable({
   useEffect(() => {
     setShowCompleted(false);
   }, [visitId]);
+
+  // While the parent is fetching, hold the table's footprint with a header strip +
+  // ~5 row skeletons inside the SAME wrapper/grid as the loaded table, so content
+  // arriving does not collapse-then-jump the layout (reduce CLS).
+  if (isLoading) {
+    return (
+      <div
+        data-testid="treatment-table-loading"
+        className="border border-border/50 rounded-lg overflow-hidden bg-card mx-4 my-3"
+      >
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border/50">
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div className="px-4 py-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 border-t border-border/40 py-3 first:border-t-0"
+            >
+              <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" />
+              <Skeleton className="h-4 w-8 flex-shrink-0" />
+              <Skeleton className="h-4 w-12 flex-shrink-0" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-4 w-10 flex-shrink-0" />
+              <Skeleton className="ml-auto h-4 w-16 flex-shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const hasRows = nativeTreatments.length > 0 || carriedOverItems.length > 0;
   const completedCount = nativeTreatments.filter(
