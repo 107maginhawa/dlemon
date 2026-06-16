@@ -65,6 +65,26 @@ export async function listInvoices(
     filters.context = query.context;
   }
 
+  // P1-1: the generic `invoice` table has NO tenant column and NO RLS, and this
+  // list endpoint previously forced no ownership filter — any authed user could
+  // page every invoice system-wide, or enumerate a provider's book via
+  // `?merchant=<victim>`. Scope non-admins to invoices they are party to (mirrors
+  // the getInvoice single-record ownership guard).
+  const isAdmin = user.role === 'admin';
+  if (!isAdmin) {
+    if (query.merchant && query.merchant !== user.id) {
+      throw new ForbiddenError('You can only list invoices where you are the merchant or customer');
+    }
+    if (query.customer && query.customer !== user.id) {
+      throw new ForbiddenError('You can only list invoices where you are the merchant or customer');
+    }
+    if (!query.merchant && !query.customer) {
+      // No ownership filter supplied → scope to the caller's own (merchant) book;
+      // a caller wanting their customer-side invoices passes ?customer=<self>.
+      filters.merchant = user.id;
+    }
+  }
+
   // Create repository instance
   const invoiceRepo = new InvoiceRepository(database, logger);
 
