@@ -36,7 +36,7 @@ const ALLOWLIST_PATH = join(ROOT, 'scripts/secret-logging.allowlist.json');
 // Detection
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type SecretLogKind = 'secret-value-in-log' | 'literal-secret';
+export type SecretLogKind = 'secret-value-in-log' | 'literal-secret' | 'pii-in-log-message';
 
 export interface Finding {
   line: number;
@@ -51,6 +51,15 @@ const SECRET_RE =
 /** Opener for a logger call whose first argument is an object literal. */
 const LOGGER_OPEN_RE =
   /\b(?:this\.)?(?:logger|log)\.(?:trace|debug|info|warn|error|fatal)\s*\(\s*\{/g;
+
+/** Opener for a logger call whose first argument is a template-literal MESSAGE.
+ * PII in the message string escapes the redactor (which only walks object fields). */
+const LOGGER_MSG_RE =
+  /\b(?:this\.)?(?:logger|log)\??\.(?:trace|debug|info|warn|error|fatal)\??\s*\(\s*`/g;
+
+/** A PII-named accessor interpolated into a message template (e.g. `${user.email}`). */
+const PII_INTERP_RE =
+  /\$\{[^}]*\b(email|phone|firstName|lastName|ssn|dob|dateOfBirth|address)\b[^}]*\}/i;
 
 /** `key: valueExpr` pairs at any nesting depth (value stops at , } or newline). */
 const PAIR_RE = /(['"]?)(\w+)\1\s*:\s*([^,}\n]+)/g;
@@ -115,6 +124,24 @@ export function scanSource(source: string, redactKeys: Set<string>): Finding[] {
         line: lineAt(source, offset),
         kind: 'secret-value-in-log',
         detail: `${key}: ${value}`.slice(0, 120),
+      });
+    }
+  }
+
+  // Rule C — PII interpolated into a logger MESSAGE template (escapes the
+  // field-name redactor). Only the first-arg template form is checked — the
+  // common leak shape `logger.info(`… ${user.email} …`)`.
+  for (const open of source.matchAll(LOGGER_MSG_RE)) {
+    const tickIdx = open.index! + open[0].length - 1; // index of the opening backtick
+    const closeIdx = source.indexOf('`', tickIdx + 1);
+    if (closeIdx < 0) continue;
+    const msg = source.slice(tickIdx, closeIdx + 1);
+    const m = PII_INTERP_RE.exec(msg);
+    if (m) {
+      findings.push({
+        line: lineAt(source, tickIdx + (m.index ?? 0)),
+        kind: 'pii-in-log-message',
+        detail: `PII in message: ${m[0].slice(0, 80)}`,
       });
     }
   }

@@ -48,8 +48,18 @@ export async function updateMember(ctx: Context): Promise<Response> {
   if (!member) throw new NotFoundError('Membership');
   await assertBranchAccess(db, user.id, member.branchId);
 
-  // G7-S3: Role changes require dentist_owner — assertBranchAccess alone allows self-promotion
-  if (body.role !== undefined) {
+  // G7-S3 + P1-5: role changes AND provider-credential writes require
+  // dentist_owner. assertBranchAccess alone admits ANY active branch member (any
+  // role), which left licenseNumber/npi/credentialType/licenseExpiry writable by
+  // e.g. front_desk on any other member — a provider-of-record integrity break
+  // (and unaudited, since the audit row below is gated to role changes). Gate
+  // credentials with the same owner check as the role field.
+  const touchesCredentials =
+    body.licenseNumber !== undefined ||
+    body.npi !== undefined ||
+    body.credentialType !== undefined ||
+    body.licenseExpiry !== undefined;
+  if (body.role !== undefined || touchesCredentials) {
     const [callerMembership] = await db
       .select({ role: dentalMemberships.role })
       .from(dentalMemberships)
@@ -60,7 +70,7 @@ export async function updateMember(ctx: Context): Promise<Response> {
       ))
       .limit(1);
     if (callerMembership?.role !== 'dentist_owner') {
-      throw new ForbiddenError('Only dentist_owner can change member roles');
+      throw new ForbiddenError('Only dentist_owner can change member roles or credentials');
     }
   }
 

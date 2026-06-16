@@ -136,7 +136,13 @@ export function createAuth(database: DatabaseInstance, config: Config, logger: L
               const newRole = 'admin';
 
               if (logger) {
-                logger.info(`Auto-promoting new user ${user.email} to admin role during creation`);
+                // P1-7b: email goes in a redacted OBJECT FIELD, not the message
+                // string (redactPhi only redacts fields, so message-string PII
+                // would leak in cleartext).
+                logger.info(
+                  { userId: user.id, email: user.email },
+                  'Auto-promoting new user to admin role during creation',
+                );
               }
 
               // Return wrapped in data object - Better-Auth requirement

@@ -78,6 +78,26 @@ describe('scanSource — committed literal secrets (gitleaks-lite)', () => {
   });
 });
 
+describe('scanSource — PII interpolated into a logger MESSAGE string (Rule C)', () => {
+  test('flags a PII accessor interpolated into a logger message template', () => {
+    // The redactor only redacts OBJECT field names, so PII in the message string
+    // escapes it (the verified auth.ts email-in-message leak).
+    const src = 'logger.info(`Auto-promoting ${user.email} to admin role`)';
+    const found = scanSource(src, REDACT);
+    expect(found.some((f) => f.kind === 'pii-in-log-message')).toBe(true);
+  });
+
+  test('does NOT flag a non-PII interpolation (job name / id)', () => {
+    const src = 'logger.info(`job ${jobId} (${pattern}) scheduled`)';
+    expect(scanSource(src, REDACT).filter((f) => f.kind === 'pii-in-log-message')).toHaveLength(0);
+  });
+
+  test('does NOT flag a plain string message with no interpolation', () => {
+    const src = "logger.warn('stripe.initialize failed')";
+    expect(scanSource(src, REDACT)).toHaveLength(0);
+  });
+});
+
 describe('parseRedactFields — read the live redact set from logger.ts', () => {
   test('extracts the field names from a PHI_FIELDS Set literal', () => {
     const loggerSrc = [

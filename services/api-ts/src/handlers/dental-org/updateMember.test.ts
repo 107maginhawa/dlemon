@@ -420,4 +420,51 @@ describe('updateMember handler', () => {
       spy.mockRestore();
     }
   });
+
+  // --------------------------------------------------------------------------
+  // P1-5: provider credentials (license/npi/...) are owner-gated, not just role.
+  // assertBranchAccess admits any active branch member, so before this fix a
+  // non-owner could overwrite another member's provider-of-record credentials.
+  // --------------------------------------------------------------------------
+
+  test("[P1-5] a non-owner cannot write another member's credentials (403)", async () => {
+    const NON_OWNER_ID = 'c5000000-0000-1000-8000-0000000000f0';
+    const membershipRepo = await seedAll();
+    // Caller: an active NON-owner (staff_full) in the branch — assertBranchAccess
+    // passes, but they are not dentist_owner.
+    await membershipRepo.createOne({
+      branchId: BRANCH_ID, personId: NON_OWNER_ID, displayName: 'Staff', role: 'staff_full',
+      status: 'active', pinFailedAttempts: 0,
+    });
+    const target = await membershipRepo.createOne({
+      branchId: BRANCH_ID, displayName: 'Dr. Provider', role: 'dentist_associate',
+      status: 'active', pinFailedAttempts: 0, licenseNumber: 'LIC-REAL', npi: '1234567890',
+    });
+    const app = buildTestApp({ id: NON_OWNER_ID, email: 'staff@clinic.com' });
+
+    const res = await app.request(`/dental/org/members/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ npi: '9999999999', licenseNumber: 'FAKE' }),
+    });
+    expect(res.status).toBe(403);
+    const reloaded = await membershipRepo.findOneById(target.id);
+    expect(reloaded!.npi).toBe('1234567890'); // credentials untouched
+    expect(reloaded!.licenseNumber).toBe('LIC-REAL');
+  });
+
+  test('[P1-5] the dentist_owner CAN still write member credentials (200)', async () => {
+    const membershipRepo = await seedAll();
+    const target = await membershipRepo.createOne({
+      branchId: BRANCH_ID, displayName: 'Dr. Provider', role: 'dentist_associate',
+      status: 'active', pinFailedAttempts: 0, licenseNumber: 'LIC-OLD', npi: '1111111111',
+    });
+    const app = buildTestApp(authedUser); // dentist_owner
+    const res = await app.request(`/dental/org/members/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ npi: '2222222222' }),
+    });
+    expect(res.status).toBe(200);
+  });
 });
