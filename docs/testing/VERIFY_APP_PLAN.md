@@ -131,6 +131,21 @@ The 5-agent self-audit found `verify:app` sound but partly inert; all 5 fixes sh
 - [x] **#5 (#43)** Reclassified **sensitive mutating orphans** into a tracked obligation ratchet (an
       IDOR-able write can no longer be a "no-obligation orphan").
 
+### Phase 2.6 — strict mode (close the "false-green when the stack is down" gap)
+The default button is **skip-tolerant**: when api-ts isn't reachable on `:7213`, the
+stack-dependent Tier-1 proofs (`contract-core`, `journey-harness`) are reported **SKIP** and
+the overall verdict is still **PASS** — so a green `verify:app` on a stackless box proves
+**zero** functional/e2e (the exact false-green this whole system exists to prevent).
+- [x] **`--require-stack` flag + `verify:app:strict`** (`--ci --require-stack`): a `needsStack`
+      step that would SKIP becomes a **blocking FAIL**; overall = FAIL if any functional proof
+      was skipped. **Default mode stays skip-tolerant** (CI without a stack still passes). Pure,
+      unit-tested logic (`resolveStackGate` + `computeOverall`, `scripts/verify-app.test.ts`),
+      wired into the Coverage-Ratchet CI job + the button's own Tier-0 engine-test step.
+- **Non-vacuity proof:** on a box with no stack, `verify:app:strict` (`--tier1 --require-stack`)
+      → **Overall FAIL, exit 1** (the two stack steps become FAIL); the same box in default mode
+      (`--tier1`) → **Overall PASS, exit 0** (the two stack steps SKIP). Strict mode = the real
+      *"works end-to-end"* claim.
+
 ### Phase 3a/3b — Adversarial skeptic fan-out ✅ FOUND + FIXED 9 launch-blocking bugs (PRs #44–#49)
 A 10-agent skeptic fan-out (2 rounds) over the AHA battery (cross-tenant 2-org / IDOR /
 illegal-FSM / role-reject / validator-drift). Every finding re-verified in source, fixed via

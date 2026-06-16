@@ -40,7 +40,18 @@ If the stack is not reachable, Tier 0 still runs fully and Tier 1 runs the stack
 ```bash
 bun run verify:app        # Tier 0 + Tier 1, report mode
 bun run verify:app:ci     # same, exits non-zero on any blocking-gate failure
+bun run verify:app:strict # --ci --require-stack: the functional proof is MANDATORY
 ```
+
+**Default mode is skip-tolerant:** when the api-ts stack is not reachable on `:7213`, the
+stack-dependent Tier-1 steps (`contract-core`, `journey-harness`) are reported **SKIP** and
+the overall verdict can still be **PASS**. That is intentional for CI-without-a-stack — but
+it means a green default verdict on a stackless box proves **zero** functional/e2e.
+
+**`--require-stack` (strict mode) closes that false-green:** a would-be SKIP becomes a
+**blocking FAIL**, so a skipped functional proof is never green. Use `verify:app:strict`
+(or `--require-stack`) when you want the verdict to be the real *"works end-to-end"* claim —
+boot the stack first (step 1), or it will (correctly) go red.
 
 `--deep` is **RESERVED for Tier 2** (adversarial sweep — mutation, skeptic fan-out, persona walks). **Not yet implemented** (Phase 3); it is a no-op / not-yet-wired today.
 

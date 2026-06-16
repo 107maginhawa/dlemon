@@ -254,8 +254,8 @@ jobs:
           cd ../../services/api-ts && bun run generate
       - name: Regenerate the contract spine (offline — no knowledge graph)
         run: bun scripts/build-contract-spine.ts
-      - name: Coverage engine unit tests
-        run: bun test ./scripts/coverage/
+      - name: Coverage engine + verify-app verdict-logic unit tests
+        run: bun test ./scripts/coverage/ ./scripts/verify-app.test.ts
       - name: Run all coverage matrices + enforce gates
         run: bun run coverage:all:ci
       - name: Fail if committed coverage matrices are stale (regen-drift freshness gate)

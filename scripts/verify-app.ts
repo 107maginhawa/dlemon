@@ -18,13 +18,19 @@
  * Usage:
  *   bun run verify:app            # Tier 0 + Tier 1, report mode (always exit 0)
  *   bun run verify:app:ci         # same, but exit non-zero on any blocking failure
+ *   bun run verify:app:strict     # --ci --require-stack: the functional proof is
+ *                                 #   MANDATORY (stack down → FAIL, never SKIP)
  *   bun scripts/verify-app.ts --tier0   # only the computed gates
  *   bun scripts/verify-app.ts --tier1   # only the functional proof
  *   bun scripts/verify-app.ts --deep    # (reserved) Tier 2 adversarial sweep
  *
- * Tier-1 steps that need a running stack are SKIPPED (not failed) when api-ts is
- * not reachable on :7213 — boot it first (`cd services/api-ts && bun dev`) to
- * include them. The verdict is written to docs/testing/coverage/VERDICT.md.
+ * By DEFAULT, Tier-1 steps that need a running stack are SKIPPED (not failed) when
+ * api-ts is not reachable on :7213 — so CI without a booted stack still passes. But
+ * a green verdict then proves ZERO functional/e2e. `--require-stack` (strict mode)
+ * closes that false-green: a would-be SKIP becomes a BLOCKING FAIL, so a green
+ * strict verdict is the real "works end-to-end" claim. Boot the stack first
+ * (`cd services/api-ts && bun dev`) to satisfy it. The verdict is written to
+ * docs/testing/coverage/VERDICT.md.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -40,6 +46,10 @@ const ci = argv.has('--ci')
 const deep = argv.has('--deep')
 const only0 = argv.has('--tier0')
 const only1 = argv.has('--tier1')
+// Strict mode: a stack-dependent functional proof that would SKIP (stack down)
+// becomes a BLOCKING FAIL — a green verdict can never rest on a skipped proof.
+// Default mode stays skip-tolerant so CI without a booted stack still passes.
+const requireStack = argv.has('--require-stack')
 const runTier0 = only0 || (!only1)
 const runTier1 = only1 || (!only0)
 
@@ -65,8 +75,8 @@ const STEPS: Step[] = [
     cmd: 'bun run typecheck' },
   { id: 'lint', tier: 0, blocking: true, what: 'ESLint (0 errors) + FSM-token drift guard',
     cmd: 'bun run lint' },
-  { id: 'coverage-engine-tests', tier: 0, blocking: true, what: 'the computed-coverage engine unit tests',
-    cmd: 'bun test ./scripts/coverage/' },
+  { id: 'coverage-engine-tests', tier: 0, blocking: true, what: 'the computed-coverage engine + verify-app verdict-logic unit tests',
+    cmd: 'bun test ./scripts/coverage/ ./scripts/verify-app.test.ts' },
   { id: 'coverage-matrices', tier: 0, blocking: true,
     what: 'regenerate + ratchet the 6 coverage matrices (role-op drift HARD; br report-only)',
     // Mirror the CI coverage job: build spec + codegen → regenerate the (gitignored)
@@ -108,14 +118,62 @@ interface Result {
   detail: string
 }
 
+/**
+ * Decide the early result for a stack-dependent (`needsStack`) step.
+ * Returns `null` when the step should run normally (not stack-dependent, or the
+ * stack is up).
+ *
+ * - **Default mode** + stack down → `SKIP` (skip-tolerant: CI without a booted
+ *   stack still passes; the functional proof is reported missing, not failed).
+ * - **Strict mode** (`--require-stack`) + stack down → `FAIL` (blocking): the
+ *   functional proof was REQUIRED but could not run, so the run must go red — a
+ *   green verdict can never rest on a skipped proof. This is the false-green fix.
+ */
+export function resolveStackGate(
+  step: { needsStack?: boolean },
+  stackUp: boolean,
+  requireStack: boolean,
+  apiUrl: string,
+): { status: Status; detail: string } | null {
+  if (!step.needsStack || stackUp) return null
+  if (requireStack) {
+    return {
+      status: 'FAIL',
+      detail: `REQUIRED functional proof could not run: api-ts not reachable at ${apiUrl} and --require-stack is set — boot it (cd services/api-ts && bun dev) so this proof runs`,
+    }
+  }
+  return {
+    status: 'SKIP',
+    detail: `api-ts not reachable at ${apiUrl} — boot it (cd services/api-ts && bun dev) to include this proof`,
+  }
+}
+
+/**
+ * The overall verdict + whether the process should exit non-zero.
+ * - A **blocking FAIL** always fails the run.
+ * - In **strict mode**, any `SKIP` also fails it — a skipped functional proof is
+ *   never green when the stack was required (belt-and-suspenders alongside
+ *   {@link resolveStackGate}, which already converts those SKIPs to FAILs).
+ */
+export function computeOverall(
+  results: { status: Status; step: { blocking: boolean } }[],
+  requireStack = false,
+): { overall: Status; fail: boolean } {
+  const anyBlockingFail = results.some((r) => r.status === 'FAIL' && r.step.blocking)
+  const skippedWhenRequired = requireStack && results.some((r) => r.status === 'SKIP')
+  const fail = anyBlockingFail || skippedWhenRequired
+  return { overall: fail ? 'FAIL' : 'PASS', fail }
+}
+
 function lastMeaningful(out: string): string {
   const lines = out.split('\n').map((l) => l.trimEnd()).filter((l) => l.trim() !== '')
   return lines.slice(-1)[0]?.slice(0, 200) ?? ''
 }
 
 function run(step: Step, stackUp: boolean): Result {
-  if (step.needsStack && !stackUp) {
-    return { step, status: 'SKIP', ms: 0, detail: `api-ts not reachable at ${API_URL} — boot it (cd services/api-ts && bun dev) to include this proof` }
+  const gated = resolveStackGate(step, stackUp, requireStack, API_URL)
+  if (gated) {
+    return { step, status: gated.status, ms: 0, detail: gated.detail }
   }
   const started = performance.now()
   process.stdout.write(`\n▶ [Tier ${step.tier}] ${step.id} — ${step.what}\n`)
@@ -164,13 +222,19 @@ function writeVerdict(results: Result[], stackUp: boolean, overall: Status) {
     .join('\n')
   const failed = results.filter((r) => r.status === 'FAIL')
   const skipped = results.filter((r) => r.status === 'SKIP')
+  const flags = `${ci ? ' --ci' : ''}${requireStack ? ' --require-stack' : ''}${deep ? ' --deep' : ''}`
+  // In strict mode the functional proof is mandatory: a green verdict means the
+  // wired surface actually ran against a live stack — not that the proof was skipped.
+  const modeLine = requireStack
+    ? '\n> **Strict mode (`--require-stack`):** the stack-dependent functional proofs are MANDATORY —\n> a skipped Tier-1 proof is a FAILURE, so a green verdict here is the real "works end-to-end" claim.'
+    : ''
   const md = `# verify:app — VERDICT
 
-> Generated by \`bun run verify:app\`${ci ? ' --ci' : ''}. One re-runnable proof that the wired/shipped
+> Generated by \`bun run verify:app${flags}\`. One re-runnable proof that the wired/shipped
 > surface works end-to-end + every computed gap is ratcheted. This AGGREGATES the
-> verify-app gates; the full 16 CI gates still run in CI.
+> verify-app gates; the full 16 CI gates still run in CI.${modeLine}
 
-**Overall: ${icon(overall)} ${overall}**  ·  stack ${stackUp ? 'reachable' : `NOT reachable at ${API_URL}`}  ·  ${results.length} steps, ${failed.length} failed, ${skipped.length} skipped
+**Overall: ${icon(overall)} ${overall}**  ·  stack ${stackUp ? 'reachable' : `NOT reachable at ${API_URL}`}${requireStack ? ' (REQUIRED)' : ''}  ·  ${results.length} steps, ${failed.length} failed, ${skipped.length} skipped
 
 | Status | Tier | Step | Time | What |
 |--------|------|------|------|------|
@@ -193,41 +257,48 @@ Reserved for Phase 3 (mutation + 26-module skeptic fan-out + persona walks). Run
 }
 
 // ── main ──────────────────────────────────────────────────────────────────
-console.log('═'.repeat(72))
-console.log(' verify:app — end-to-end verification' + (ci ? ' (--ci)' : ''))
-console.log('═'.repeat(72))
+function main() {
+  console.log('═'.repeat(72))
+  console.log(' verify:app — end-to-end verification' + (ci ? ' (--ci)' : ''))
+  console.log('═'.repeat(72))
 
-if (deep) {
-  console.log('\n⏭️  Tier 2 (--deep) adversarial sweep is Phase 3 — not yet implemented.')
-  console.log('   Running Tier 0 + Tier 1 below; the deep sweep lands with Phase 3.\n')
+  if (deep) {
+    console.log('\n⏭️  Tier 2 (--deep) adversarial sweep is Phase 3 — not yet implemented.')
+    console.log('   Running Tier 0 + Tier 1 below; the deep sweep lands with Phase 3.\n')
+  }
+
+  const stackUp = runTier1 ? stackReachable() : false
+  const stackDownConsequence = requireStack
+    ? 'Tier-1 stack steps will FAIL (--require-stack)'
+    : 'Tier-1 stack steps will be skipped'
+  console.log(`\nStack on ${API_URL}: ${stackUp ? 'reachable ✓' : `not reachable (${stackDownConsequence})`}`)
+
+  const selected = STEPS.filter((s) => (s.tier === 0 ? runTier0 : runTier1))
+  const results: Result[] = []
+  for (const step of selected) results.push(run(step, stackUp))
+
+  const { overall, fail } = computeOverall(results, requireStack)
+
+  writeVerdict(results, stackUp, overall)
+
+  console.log('\n' + '═'.repeat(72))
+  console.log(' VERDICT')
+  console.log('═'.repeat(72))
+  for (const r of results) {
+    const tag = r.status === 'PASS' ? '✅' : r.status === 'FAIL' ? '❌' : '⏭️ '
+    console.log(`${tag} [T${r.step.tier}] ${r.step.id.padEnd(22)} ${(r.ms / 1000).toFixed(1).padStart(6)}s`)
+  }
+  console.log('─'.repeat(72))
+  const fails = results.filter((r) => r.status === 'FAIL')
+  const skips = results.filter((r) => r.status === 'SKIP')
+  console.log(`Overall: ${overall}  |  ${results.length} steps, ${fails.length} failed, ${skips.length} skipped`)
+  console.log(`Wrote ${VERDICT.replace(ROOT + '/', '')}`)
+  if (skips.length) console.log(`(${skips.length} Tier-1 stack step(s) skipped — boot api-ts on :7213 to include them.)`)
+  console.log('═'.repeat(72))
+
+  // --ci OR --require-stack makes a (blocking / strict-skipped) failure fatal;
+  // plain report mode always exits 0.
+  process.exit((ci || requireStack) && fail ? 1 : 0)
 }
 
-const stackUp = runTier1 ? stackReachable() : false
-console.log(`\nStack on ${API_URL}: ${stackUp ? 'reachable ✓' : 'not reachable (Tier-1 stack steps will be skipped)'}`)
-
-const selected = STEPS.filter((s) => (s.tier === 0 ? runTier0 : runTier1))
-const results: Result[] = []
-for (const step of selected) results.push(run(step, stackUp))
-
-const anyBlockingFail = results.some((r) => r.status === 'FAIL' && r.step.blocking)
-const overall: Status = anyBlockingFail ? 'FAIL' : results.some((r) => r.status === 'SKIP') ? 'PASS' : 'PASS'
-
-writeVerdict(results, stackUp, overall)
-
-console.log('\n' + '═'.repeat(72))
-console.log(' VERDICT')
-console.log('═'.repeat(72))
-for (const r of results) {
-  const tag = r.status === 'PASS' ? '✅' : r.status === 'FAIL' ? '❌' : '⏭️ '
-  console.log(`${tag} [T${r.step.tier}] ${r.step.id.padEnd(22)} ${(r.ms / 1000).toFixed(1).padStart(6)}s`)
-}
-console.log('─'.repeat(72))
-const fails = results.filter((r) => r.status === 'FAIL')
-const skips = results.filter((r) => r.status === 'SKIP')
-console.log(`Overall: ${overall}  |  ${results.length} steps, ${fails.length} failed, ${skips.length} skipped`)
-console.log(`Wrote ${VERDICT.replace(ROOT + '/', '')}`)
-if (skips.length) console.log(`(${skips.length} Tier-1 stack step(s) skipped — boot api-ts on :7213 to include them.)`)
-console.log('═'.repeat(72))
-
-// In --ci mode a blocking failure is fatal; report mode always exits 0.
-process.exit(ci && anyBlockingFail ? 1 : 0)
+if (import.meta.main) main()
