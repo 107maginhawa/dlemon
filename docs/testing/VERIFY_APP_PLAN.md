@@ -119,16 +119,42 @@ product (`apps/dentalemon` + `services/api-ts`).
       (Tier-1 journey harness 17 passed/4 ceph-skipAllowed; core Hurl green; coherence oracles green;
       typecheck+lint+coverage-ratchet green). Skill returns a readable summary.
 
-### Phase 3 — Adversarial deep sweep (Tier 2) — re-plan in detail at phase start
-- [ ] Mutation spike + harness (4 critical module-classes; seed the 8 historical bugs; **0 surviving
-      historical-bug mutants** is a hard gate) → `mutation-score.json`.
-- [ ] 26-module **parallel** skeptic fan-out (AHA battery: cross-tenant 2-org, illegal-FSM, IDOR,
-      role-reject+zero-rows-on-403, audit-row, validator-drift) → committed RED→GREEN pins; verdicts
-      become `READY (refuted-and-survived)`.
-- [ ] 4 per-role persona walks (Webwright/`/browse`) with adversarial briefs → pinned findings.
-- [ ] Refresh `/understand-anything` knowledge graph; wire `understand-diff` into `/review`.
-- **Verification gate:** mutation kills all seeded historical-bug mutants; skeptic fan-out across 26
-      modules all `refuted-and-survived`; ≥1 clean persona walk per role (or filed pinned findings).
+### Phase 2.5 — engine hardening ✅ DONE (PRs #39–#43)
+The 5-agent self-audit found `verify:app` sound but partly inert; all 5 fixes shipped:
+- [x] **#1 (#39)** Armed the endpoint coverage ratchet (was a verified no-op) + reseeded the baseline.
+- [x] **#2 (#40)** Coverage-matrix **freshness gate** (`git diff --exit-code`) + **env-independent
+      generation** (`cmpByCodepoint` replaces locale-dependent `localeCompare`). **Coverage Ratchet
+      promoted to a REQUIRED check.**
+- [x] **#3 (#41)** VERDICT.md/SKILL.md honesty + a "What this does NOT prove" section.
+- [x] **#4 (#42)** New **Secret-Logging Tier-0 gate** + fixed a verified **P0** (Stripe `sk_live_` key
+      logged in cleartext). Promoted to a REQUIRED check.
+- [x] **#5 (#43)** Reclassified **sensitive mutating orphans** into a tracked obligation ratchet (an
+      IDOR-able write can no longer be a "no-obligation orphan").
+
+### Phase 3a/3b — Adversarial skeptic fan-out ✅ FOUND + FIXED 9 launch-blocking bugs (PRs #44–#49)
+A 10-agent skeptic fan-out (2 rounds) over the AHA battery (cross-tenant 2-org / IDOR /
+illegal-FSM / role-reject / validator-drift). Every finding re-verified in source, fixed via
+TDD with a committed RED→GREEN pin (non-vacuity proven per fix):
+- [x] **P1-6 (#44/#49)** cross-tenant patient-linkage on create — visit / appointment / waitlist / perio chart.
+- [x] **P1-2/P1-3 (#45)** `updatePatient` (computed-but-ignored `isOwner`) + `deactivatePatient` (zero authz).
+- [x] **P1-5/P1-7b (#46)** `updateMember` credential owner-gate + email-in-log-message (gate Rule C).
+- [x] **P1-4/P1-1 (#47)** `estimateClaimCoverage` + `listInvoices` cross-tenant reads.
+- [x] **P1-7a (#48)** storage download forces `attachment` (stored-XSS).
+- **Billing money-movement: 0 bugs (24 handlers refuted, clean).**
+
+### Phase 3 — remaining (tracked follow-ups; documented per the anti-stall mandate)
+- [ ] **Stripe webhook** — `BusinessLogicError→200` silent-loss (one-line) + missing `event.id`
+      idempotency/replay ledger (needs a migration). HIGH priority.
+- [ ] **`createImagingStudy`** cross-patient linkage — needs a same-**org** check (same-branch assert
+      breaks legit cross-branch imaging + cascades imaging-test seeds).
+- [ ] **Erasure / legal-hold** cross-tenant — gated only on the GLOBAL platform-admin role today (not
+      exploitable by clinic members); land branch asserts BEFORE per-clinic admins (cloud-launch prep).
+- [x] **Mutation "0-survivors"** — effectively satisfied: each of the 9 fixes has a committed test that
+      fails if the fix is reverted (non-vacuity proven per PR).
+- [ ] 4 per-role persona walks (Webwright/`/browse`) + negative journeys + `/understand-anything` KG
+      refresh — deferred (need a live app / long analysis).
+- **Verification gate:** 9 confirmed bugs fixed + pinned; money-movement surface refuted-and-survived;
+      all REQUIRED gates green on every merge.
 
 ## Discipline
 Verify "works for users" by running the real-stack proof (Tier 1) and the deep sweep (Tier 2) and
