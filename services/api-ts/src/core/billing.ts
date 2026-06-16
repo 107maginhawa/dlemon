@@ -104,10 +104,10 @@ export class BillingService {
       this.logger.info({ url: this.config.url }, 'Using custom Stripe URL');
     }
 
-    this.logger.info({ 
-      key: this.config.secretKey,
-      stripeOptions
-    }, 'stripe.initialize')
+    // NEVER log this.config.secretKey — it is a live sk_live_… payments
+    // credential and `key`/`secretKey` redaction must not be relied on at the
+    // call-site (guarded by scripts/check-secret-logging.ts).
+    this.logger.info({ stripeOptions }, 'stripe.initialize')
     this.stripe = new Stripe(this.config.secretKey, stripeOptions);
 
     return this.stripe;

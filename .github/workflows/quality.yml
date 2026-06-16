@@ -286,6 +286,24 @@ jobs:
       - name: Check cross-module repo boundaries
         run: cd services/api-ts && bun run check:boundaries
 
+  secret-logging:
+    name: Secret Logging Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Tier-0 security gate (verify-app). Fails if a secret reaches a log under a
+    # key the pino redactor won't catch (e.g. the verified Stripe-key-in-log P0)
+    # or a high-confidence secret literal is committed. Pure static scan — no DB.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - run: bun install --frozen-lockfile
+      - name: Secret-logging unit tests
+        run: bun test scripts/check-secret-logging.test.ts
+      - name: Scan for secrets reaching logs / committed secret literals
+        run: bun run check:secret-logging
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest

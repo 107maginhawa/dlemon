@@ -16,6 +16,11 @@ const PHI_FIELDS = new Set([
   'password', 'token', 'email', 'phone', 'ssn', 'dateOfBirth', 'dob',
   'firstName', 'lastName', 'address', 'notes', 'soap',
   'refusalReason', 'dismissReason', 'accessKeyId', 'secretAccessKey',
+  // Credential/secret field NAMES — defense-in-depth for the secret-logging
+  // class (the Stripe-key-in-log P0): if a secret-named field is ever logged it
+  // is redacted by name. The static gate (scripts/check-secret-logging.ts) also
+  // blocks a secret reaching a log under a NON-secret key (e.g. `key`).
+  'secretKey', 'apiKey', 'clientSecret', 'privateKey', 'accessToken', 'refreshToken',
 ]);
 
 const REDACTED = '[REDACTED]';

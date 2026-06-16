@@ -37,6 +37,23 @@ describe('createLogger — PHI redaction (HIPAA)', () => {
     expect(rec.visitId).toBe('abc-123');
   });
 
+  test('redacts credential/secret fields (secretKey, apiKey, clientSecret, privateKey)', () => {
+    // Defense-in-depth for the secret-logging class (the Stripe-key-in-log P0):
+    // if a secret-named field is ever logged, the redactor catches it by name.
+    const { dest, lines } = makeCapture();
+    const logger = createLogger(makeConfig(), dest);
+    logger.info(
+      { secretKey: 'REDACT_ME', apiKey: 'ak_1', clientSecret: 'cs_1', privateKey: 'pk_1', service: 'stripe' },
+      'init',
+    );
+    const rec = JSON.parse(lines[0]!);
+    expect(rec.secretKey).toBe('[REDACTED]');
+    expect(rec.apiKey).toBe('[REDACTED]');
+    expect(rec.clientSecret).toBe('[REDACTED]');
+    expect(rec.privateKey).toBe('[REDACTED]');
+    expect(rec.service).toBe('stripe'); // non-secret field preserved
+  });
+
   test('redacts nested PHI fields one level deep', () => {
     const { dest, lines } = makeCapture();
     const logger = createLogger(makeConfig(), dest);

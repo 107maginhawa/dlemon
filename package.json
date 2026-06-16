@@ -38,6 +38,7 @@
     "audit:rust": "bash scripts/cargo-audit.sh",
     "audit:trace": "bun scripts/audit-traceability.ts",
     "audit:trace:ci": "bun scripts/audit-traceability.ts --ci",
+    "check:secret-logging": "bun scripts/check-secret-logging.ts",
     "coverage:roles": "bun scripts/coverage/role-op-matrix.ts",
     "coverage:roles:ci": "bun scripts/coverage/role-op-matrix.ts --check",
     "coverage:endpoints": "bun scripts/coverage/endpoint-matrix.ts",
