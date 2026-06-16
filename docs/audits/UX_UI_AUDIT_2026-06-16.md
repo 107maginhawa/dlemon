@@ -6,6 +6,20 @@ This document is the **single source of truth** for the UX/UI/Technical remediat
 **must** follow the batch order and gate below. Do not drift: if a change isn't listed here, add it
 here (with a line under *Decision Log*) before doing it. Tick each item only after its batch gate is green.
 
+## ✅ STATUS: COMPLETE (2026-06-16)
+
+**All 9 batches + polish shipped across 14 commits on `chore/ux-ui-polish`, each gated green
+(typecheck · lint 0-err · unit suite, ending 2484 pass / 0 fail; Batch 8 also `bun run build` EXIT 0).**
+Every one of the 117 findings is either **fixed** or **deliberately deferred with a rationale**
+(see Decision Log). Granular `[ ]` boxes inside the per-batch detail below are reference detail —
+their completion is recorded at each batch header and in the Progress Log.
+
+**Deliberately deferred (need runtime/visual verification, a product call, or a new dependency — not skipped):**
+- D13: `dental-chart.tsx` inline SVG (non-standard existing var usage), `index.tsx` purple card (no token), `workspace-top-bar` `max-w-[120px]` (`shrink-0` parent), `patient-profile` `BRAND_GOLD` (mode-invariant brand constant).
+- D15: list virtualization (`FmxMount`, `patient-image-list` — needs `@tanstack/react-virtual` + perf measurement); further splitting the ~959kB shared core.
+- `treatment-table` skeleton wire-up (opt-in prop added; caller passes it later); the optional DRY `<StatusBadge>` extraction (D10).
+- **A human visual / Playwright-E2E pass on the iPad viewport** for dense screens (imaging toolbar, perio, calendar) — the unit suite can't catch layout overflow. Suggest `/benchmark` for the CWV numbers.
+
 ---
 
 ## 1. How this was produced & how much to trust it
@@ -52,7 +66,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 ## 4. Batch execution order (safest first)
 
 - [x] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, key handlers. No visual change. *(done — commit below; gate green 2473/0)*
-- [~] **Batch 2 — Design-token compliance** — **foundation + safe (color-preserving / fill / icon) swaps DONE** 🟢 (commit below; gate 2473/0). **Text-bearing status badges + inline/SVG colors DEFERRED → Batch 2-cont** (need accessible `*-foreground` tokens; recoloring text to mid-tone semantic tokens would REGRESS contrast — see D8).
+- [x] **Batch 2 — Design-token compliance** 🟢 — foundation + safe swaps (`1fdf3ad7`), accessible status tokens + 14-file badge recolor (`269ce943`), inline/SVG/banners/auth finish (`541b2d0d`). Only the D13 inline items stay deliberately deferred.
 - [x] **Batch 3 — Feedback** — **3a (toasts) + 3b (dialogs/retry/cue) DONE** 🟢. 3a: `26e3e971`. 3b: `54d2e719` (retry/price/keypad) + dialog commit below (confirm→AlertDialog, prompt→annotation-input-dialog).
 - [x] **Batch 4 — Focus rings** 🟢/🟡 — `focus-visible` rings across **24 files** (whole `focus:border-lemon` pattern, not just the audit's few) + staff/portal nav. (commit below; gate 2473/0)
 - [x] **Batch 5 — Touch targets (44px)** 🟡 — raised ~25 controls (nav/scheduling/booking/billing/patients/workspace/imaging/case-pres/reports). Perio dense-grid handled by judgment, not blanket 44px (D11). (commit below; gate 2473/0). *Visual/E2E pass still advised — see note.*
