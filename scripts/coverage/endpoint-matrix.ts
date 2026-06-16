@@ -68,6 +68,10 @@ const RECORDED_SINK = join(ROOT, 'docs/testing/coverage/.recorded-ops.jsonl');
 const OUT_JSON = join(ROOT, 'docs/testing/coverage/endpoint-matrix.json');
 const OUT_MD = join(ROOT, 'docs/testing/coverage/endpoint-matrix.md');
 const OUT_ALLOWLIST = join(ROOT, 'docs/testing/coverage/endpoint.allowlist.json');
+const OUT_SENSITIVE_ALLOWLIST = join(
+  ROOT,
+  'docs/testing/coverage/endpoint-sensitive-orphan.allowlist.json',
+);
 const OUT_ORPHANS = join(ROOT, 'docs/testing/coverage/orphan-disposition.md');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -302,6 +306,110 @@ export function gapsOf(rows: EndpointRow[]): EndpointGap[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Sensitive mutating orphans — the "an IDOR-able endpoint must not be a
+// no-obligation orphan" rule.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// An orphan (handler+SDK, no FE consumer) is normally NOT a test obligation —
+// nothing in the app calls it, so a missing test cannot break the app. But that
+// rule SWALLOWED the P0 cross-tenant patient-contact IDOR (updatePatientContact:
+// a PATCH that mutated PHI was a "no-obligation orphan"). A WRITE to PII /
+// clinical / billing data is reachable over the wire whether or not the app's FE
+// calls it, so it CAN be exploited (IDOR / cross-tenant) even as an orphan.
+//
+// So a mutating orphan in a sensitive module is reclassified into a tracked
+// OBLIGATION: it must carry a cross-tenant / object-ownership negative test, or
+// be allowlisted with a reason. This does NOT move all ~180 orphans (that drowns
+// signal) — only the writes to sensitive data.
+
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/** Modules/paths whose rows carry PII / clinical / billing / org data. */
+const SENSITIVE_MODULE_RE =
+  /patient|clinical|billing|imaging|perio|visit|pmd|erasure|consent|insurance|org|scheduling|provider|household/i;
+
+export interface SensitiveOrphanGap extends Gap {
+  id: string;
+  operationId: string;
+  module: string | null;
+  method: string;
+  path: string;
+}
+
+/** A mutating (write) orphan whose module/path touches sensitive data. */
+export function isSensitiveMutatingOrphan(row: EndpointRow): boolean {
+  return (
+    row.disposition === 'orphan' &&
+    MUTATING_METHODS.has(row.method.toUpperCase()) &&
+    SENSITIVE_MODULE_RE.test(`${row.module ?? ''} ${row.path}`)
+  );
+}
+
+/** A test that names a cross-tenant / object-ownership negative scenario. */
+const OWNERSHIP_MARKER_RE =
+  /cross-?tenant|cross-?org|\bforeign\b|\bIDOR\b|other (?:branch|org|tenant|patient)|not a member|different (?:branch|org|tenant)|isolation|object-ownership|object ownership/i;
+
+/** A rejection assertion (the negative path proves the access is DENIED). */
+const REJECTION_RE = /\b(401|403|404)\b/;
+
+/**
+ * Heuristic: an operation has an ownership/cross-tenant negative test if some
+ * test file (a) references the operationId, (b) contains an ownership marker, and
+ * (c) asserts a 401/403/404 rejection. Like the fsm/br matrices, this proves a
+ * test *exercises* the ownership scenario with the right polarity — not that the
+ * assertion is semantically perfect. Documented as a heuristic.
+ */
+export function detectOwnershipTested(operationId: string, fileTexts: string[]): boolean {
+  const idRe = new RegExp(`\\b${operationId}\\b`);
+  for (const text of fileTexts) {
+    if (!idRe.test(text)) continue;
+    if (OWNERSHIP_MARKER_RE.test(text) && REJECTION_RE.test(text)) return true;
+  }
+  return false;
+}
+
+/**
+ * The ratchet gap stream for sensitive mutating orphans: those WITHOUT a detected
+ * ownership test. A new such op (a fresh PII/clinical/billing write with no FE
+ * consumer and no cross-tenant test) FAILS `--check` until it is tested or
+ * allowlisted with a reason — it can never silently be a no-obligation orphan.
+ */
+export function sensitiveOrphanGapsOf(
+  rows: EndpointRow[],
+  ownershipTested: Set<string>,
+): SensitiveOrphanGap[] {
+  return rows
+    .filter(isSensitiveMutatingOrphan)
+    .filter((r) => !ownershipTested.has(r.operationId))
+    .map((r) => ({
+      id: r.operationId,
+      operationId: r.operationId,
+      module: r.module,
+      method: r.method,
+      path: r.path,
+    }));
+}
+
+/**
+ * Compute the set of sensitive-mutating-orphan operationIds that DO carry an
+ * ownership/cross-tenant negative test, by scanning the api-unit test corpus.
+ * (Read from disk here — kept out of the pure `build()` so build stays testable
+ * off the committed JSON alone.)
+ */
+export function computeOwnershipTested(rows: EndpointRow[]): Set<string> {
+  const sensitiveIds = rows.filter(isSensitiveMutatingOrphan).map((r) => r.operationId);
+  if (sensitiveIds.length === 0) return new Set();
+  const texts = listFiles('api-unit').map((f) => {
+    try {
+      return readFileSync(join(ROOT, f), 'utf8');
+    } catch {
+      return '';
+    }
+  });
+  return new Set(sensitiveIds.filter((id) => detectOwnershipTested(id, texts)));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Build
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -464,8 +572,9 @@ function renderMd(rows: EndpointRow[]): string {
   return lines.join('\n');
 }
 
-function renderOrphans(rows: EndpointRow[]): string {
+function renderOrphans(rows: EndpointRow[], ownershipTested: Set<string>): string {
   const orphans = rows.filter((r) => r.disposition === 'orphan');
+  const sensitive = rows.filter(isSensitiveMutatingOrphan);
   const lines: string[] = [];
   lines.push('<!-- GENERATED by scripts/coverage/endpoint-matrix.ts — do not edit by hand. -->');
   lines.push('');
@@ -473,11 +582,51 @@ function renderOrphans(rows: EndpointRow[]): string {
   lines.push('');
   lines.push(
     'An **orphan** is an operation with a shipped handler AND a generated SDK ' +
-      'surface that NO file under `apps/dentalemon/src/**` consumes. Orphans are ' +
-      'NOT a test obligation (nothing in the product calls them, so a missing test ' +
-      'cannot break the app) — they are tracked here for a deliberate wire / remove ' +
-      '/ keep decision instead of being silently swept into the test ratchet.',
+      'surface that NO file under `apps/dentalemon/src/**` consumes. A *read-only* ' +
+      'orphan is not a test obligation (nothing in the product calls it, so a missing ' +
+      'test cannot break the app). **A *mutating* orphan that writes PII / clinical / ' +
+      'billing data is the exception** — it is reachable over the wire and therefore ' +
+      'IDOR / cross-tenant exploitable even with no FE consumer (this is the class ' +
+      'that swallowed the P0 `updatePatientContact` contact IDOR). Those are ' +
+      'reclassified below into a tracked OBLIGATION (ratcheted in ' +
+      '`endpoint-sensitive-orphan.allowlist.json`).',
   );
+  lines.push('');
+
+  // ── Sensitive mutating orphans (the obligation set) ─────────────────────────
+  const sTested = sensitive.filter((r) => ownershipTested.has(r.operationId));
+  const sGap = sensitive.filter((r) => !ownershipTested.has(r.operationId));
+  lines.push('## Sensitive mutating orphans — require a cross-tenant / ownership negative test');
+  lines.push('');
+  lines.push(
+    'A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no ' +
+      'FE consumer. `ownership test` = a heuristic match (the operationId named in an ' +
+      'api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). ' +
+      'An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove ' +
+      'it, or allowlist it with a reason.',
+  );
+  lines.push('');
+  lines.push(
+    `Sensitive mutating orphans: **${sensitive.length}** ` +
+      `(${sTested.length} ownership-tested, **${sGap.length} obligation gaps**).`,
+  );
+  lines.push('');
+  if (sensitive.length > 0) {
+    lines.push('| operationId | module | method | path | ownership test? |');
+    lines.push('|-------------|--------|--------|------|:---------------:|');
+    for (const r of sensitive) {
+      const ok = ownershipTested.has(r.operationId);
+      lines.push(
+        `| \`${r.operationId}\` | ${r.module ?? '—'} | ${r.method} | \`${r.path}\` | ${
+          ok ? '✅' : '⚠️ obligation'
+        } |`,
+      );
+    }
+    lines.push('');
+  }
+
+  // ── Full orphan list (the wire/remove/keep backlog) ─────────────────────────
+  lines.push('## All orphans (wire / remove / keep backlog)');
   lines.push('');
   lines.push('Decision column legend:');
   lines.push('');
@@ -495,8 +644,13 @@ function renderOrphans(rows: EndpointRow[]): string {
     lines.push('| operationId | module | method | path | decision | notes |');
     lines.push('|-------------|--------|--------|------|----------|-------|');
     for (const r of orphans) {
+      const sens = isSensitiveMutatingOrphan(r)
+        ? ownershipTested.has(r.operationId)
+          ? 'sensitive-write (ownership-tested)'
+          : 'sensitive-write (obligation)'
+        : '_triage pending_';
       lines.push(
-        `| \`${r.operationId}\` | ${r.module ?? '—'} | ${r.method} | \`${r.path}\` | keep | _triage pending_ |`,
+        `| \`${r.operationId}\` | ${r.module ?? '—'} | ${r.method} | \`${r.path}\` | keep | ${sens} |`,
       );
     }
   }
@@ -518,41 +672,70 @@ function renderAllowlist(rows: EndpointRow[]): string {
   return JSON.stringify(seedAllowlist(rows), null, 2) + '\n';
 }
 
+/** Seed the sensitive-mutating-orphan obligation baseline (those with no
+ * detected ownership test), keyed by operationId. */
+export function seedSensitiveAllowlist(
+  rows: EndpointRow[],
+  ownershipTested: Set<string>,
+): AllowlistEntry[] {
+  return sensitiveOrphanGapsOf(rows, ownershipTested).map((g) => ({
+    id: g.id,
+    reason:
+      `Baseline obligation seeded ${new Date().toISOString().slice(0, 10)}: ${g.method} ${g.path} ` +
+      `is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/` +
+      `ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op.`,
+  }));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
 
 function main(): void {
   const rows = build();
+  const ownershipTested = computeOwnershipTested(rows);
 
   mkdirSync(dirname(OUT_JSON), { recursive: true });
   writeFileSync(OUT_JSON, JSON.stringify(rows, null, 2) + '\n');
   writeFileSync(OUT_MD, renderMd(rows));
-  writeFileSync(OUT_ORPHANS, renderOrphans(rows));
+  writeFileSync(OUT_ORPHANS, renderOrphans(rows, ownershipTested));
 
-  // Seed the allowlist baseline ONLY if it does not already exist, so a later
+  // Seed the allowlist baselines ONLY if they do not already exist, so a later
   // tightened allowlist is never clobbered by a re-run of the generator.
   if (!existsSync(OUT_ALLOWLIST)) {
     writeFileSync(OUT_ALLOWLIST, renderAllowlist(rows));
+  }
+  if (!existsSync(OUT_SENSITIVE_ALLOWLIST)) {
+    writeFileSync(
+      OUT_SENSITIVE_ALLOWLIST,
+      JSON.stringify(seedSensitiveAllowlist(rows, ownershipTested), null, 2) + '\n',
+    );
   }
 
   const gaps = rows.filter((r) => r.disposition === 'gap');
   const orphans = rows.filter((r) => r.disposition === 'orphan');
   const tested = rows.filter((r) => r.disposition === 'tested');
+  const sensGaps = sensitiveOrphanGapsOf(rows, ownershipTested);
   console.log(
     `endpoint-matrix: ${rows.length} ops — ${tested.length} tested, ${gaps.length} gap, ` +
-      `${orphans.length} orphan. Wrote ${OUT_JSON} + ${OUT_MD} + ${OUT_ORPHANS}` +
-      (existsSync(OUT_ALLOWLIST) ? '' : ` + ${OUT_ALLOWLIST}`),
+      `${orphans.length} orphan (${sensGaps.length} sensitive-mutating-orphan obligation gaps). ` +
+      `Wrote ${OUT_JSON} + ${OUT_MD} + ${OUT_ORPHANS}`,
   );
 
-  // --check (gate mode): a FE-consumed-but-untested op that is NOT on the
-  // allowlist FAILS the ratchet. New "broken while CI is green" debt cannot be
-  // introduced silently; the allowlist only ever shrinks (resolved gaps reported).
+  // --check (gate mode): TWO ratchets, both must pass.
+  //  1. a FE-consumed-but-untested op (gap) not on endpoint.allowlist.json, and
+  //  2. a mutating PII/clinical/billing orphan with no ownership test, not on
+  //     endpoint-sensitive-orphan.allowlist.json (an IDOR-able op can never be a
+  //     silent no-obligation orphan).
+  // New debt of either class cannot be introduced silently; allowlists only shrink.
   if (process.argv.includes('--check')) {
-    const allowlist = loadAllowlist(OUT_ALLOWLIST);
-    const result = ratchet(gapsOf(rows), allowlist);
-    console.log(formatRatchetReport(result, { label: 'endpoint-matrix' }));
-    if (!result.ok) process.exit(1);
+    const r1 = ratchet(gapsOf(rows), loadAllowlist(OUT_ALLOWLIST));
+    console.log(formatRatchetReport(r1, { label: 'endpoint-matrix (FE-consumed gaps)' }));
+    const r2 = ratchet(sensGaps, loadAllowlist(OUT_SENSITIVE_ALLOWLIST));
+    console.log(
+      formatRatchetReport(r2, { label: 'endpoint-matrix (sensitive mutating orphans)' }),
+    );
+    if (!r1.ok || !r2.ok) process.exit(1);
   }
 }
 

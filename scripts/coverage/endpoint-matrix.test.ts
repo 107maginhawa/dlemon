@@ -17,6 +17,10 @@ import {
   classifyDisposition,
   gapsOf,
   seedAllowlist,
+  isSensitiveMutatingOrphan,
+  detectOwnershipTested,
+  sensitiveOrphanGapsOf,
+  computeOwnershipTested,
   type EndpointRow,
 } from './endpoint-matrix';
 import { ratchet } from './lib/ratchet';
@@ -305,6 +309,87 @@ describe('armed ratchet (non-vacuity)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// (f3) sensitive mutating orphans — an IDOR-able endpoint must NOT be a
+//       "no-obligation orphan" (the class that swallowed updatePatientContact)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('isSensitiveMutatingOrphan', () => {
+  test('a mutating (PATCH) orphan in a PII module is sensitive', () => {
+    expect(
+      isSensitiveMutatingOrphan(
+        row({
+          disposition: 'orphan',
+          method: 'PATCH',
+          module: 'dental-patient',
+          path: '/dental/patients/{id}/contacts/{cid}',
+          hasFEConsumer: false,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  test('a read-only (GET) orphan is NOT sensitive (cannot mutate cross-tenant)', () => {
+    expect(
+      isSensitiveMutatingOrphan(row({ disposition: 'orphan', method: 'GET', module: 'dental-patient' })),
+    ).toBe(false);
+  });
+
+  test('a mutating orphan in a non-sensitive module is NOT flagged', () => {
+    expect(
+      isSensitiveMutatingOrphan(
+        row({ disposition: 'orphan', method: 'POST', module: 'notifs', path: '/notifs/x/read' }),
+      ),
+    ).toBe(false);
+  });
+
+  test('an FE-consumed op is a gap, not an orphan → not flagged here', () => {
+    expect(
+      isSensitiveMutatingOrphan(
+        row({ disposition: 'gap', method: 'PATCH', module: 'dental-patient', hasFEConsumer: true }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('detectOwnershipTested (heuristic: op + cross-tenant marker + 4xx rejection)', () => {
+  test('detects an op that has a cross-tenant 404 rejection test (the CONF-DP-IDOR shape)', () => {
+    const t = [
+      "import { updatePatientContact } from './contacts/updatePatientContact';",
+      '// CONF-DP-IDOR: cross-tenant contact write via a FOREIGN tenant is rejected',
+      'expect(res.status).toBe(404)',
+    ].join('\n');
+    expect(detectOwnershipTested('updatePatientContact', [t])).toBe(true);
+  });
+
+  test('does NOT count a test that names the op but has no ownership marker', () => {
+    const t = "import { updatePatientContact } from './x';\nexpect(res.status).toBe(200)";
+    expect(detectOwnershipTested('updatePatientContact', [t])).toBe(false);
+  });
+
+  test('does NOT count an ownership test that never references the op', () => {
+    const t = 'cross-tenant IDOR rejection toBe(404) for someOtherOperation';
+    expect(detectOwnershipTested('updatePatientContact', [t])).toBe(false);
+  });
+
+  test('requires a rejection assertion, not just the marker', () => {
+    const t = 'updatePatientContact cross-tenant note but no rejection assertion, toBe(200)';
+    expect(detectOwnershipTested('updatePatientContact', [t])).toBe(false);
+  });
+});
+
+describe('sensitiveOrphanGapsOf', () => {
+  test('a sensitive mutating orphan WITHOUT an ownership test is a gap; WITH one is not', () => {
+    const rows = [
+      row({ operationId: 'updatePatientContact', disposition: 'orphan', method: 'PATCH', module: 'dental-patient' }),
+      row({ operationId: 'deletePatientRecord', disposition: 'orphan', method: 'DELETE', module: 'dental-patient' }),
+      row({ operationId: 'getPatientThing', disposition: 'orphan', method: 'GET', module: 'dental-patient' }),
+    ];
+    const gaps = sensitiveOrphanGapsOf(rows, new Set(['updatePatientContact']));
+    expect(gaps.map((g) => g.id)).toEqual(['deletePatientRecord']); // GET excluded, tested op excluded
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // (g) integration: the real generated artifacts join cleanly
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -341,6 +426,29 @@ describe('generated endpoint-matrix.json', () => {
     const ids = rows.map((r) => r.operationId);
     const resorted = [...ids].sort(cmpByCodepoint);
     expect(ids).toEqual(resorted);
+  });
+
+  test('updatePatientContact (#38 IDOR op) is recognized ownership-tested — NOT a no-obligation orphan', () => {
+    const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) as EndpointRow[];
+    const tested = computeOwnershipTested(rows);
+    // The whole point of the reclassification: the contact IDOR write is a
+    // sensitive mutating orphan, but its CONF-DP-IDOR cross-tenant test makes it
+    // covered (not swallowed). If the IDOR test is deleted, this turns RED.
+    expect(isSensitiveMutatingOrphan(rows.find((r) => r.operationId === 'updatePatientContact')!)).toBe(
+      true,
+    );
+    expect(tested.has('updatePatientContact')).toBe(true);
+    expect(tested.has('deletePatientContact')).toBe(true);
+  });
+
+  test('the committed sensitive-orphan allowlist covers every current obligation (live --check GREEN)', () => {
+    const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) as EndpointRow[];
+    const tested = computeOwnershipTested(rows);
+    const allowPath = path.join(ROOT, 'docs/testing/coverage/endpoint-sensitive-orphan.allowlist.json');
+    const allowlist = JSON.parse(fs.readFileSync(allowPath, 'utf8')) as { id: string; reason: string }[];
+    const result = ratchet(sensitiveOrphanGapsOf(rows, tested), allowlist);
+    expect(result.newGaps.map((g) => g.id)).toEqual([]);
+    for (const e of allowlist) expect(e.reason.trim().length).toBeGreaterThan(0);
   });
 
   test('the committed allowlist covers every current gap (the live --check is GREEN)', () => {

@@ -2,7 +2,88 @@
 
 # Orphan Endpoint Disposition
 
-An **orphan** is an operation with a shipped handler AND a generated SDK surface that NO file under `apps/dentalemon/src/**` consumes. Orphans are NOT a test obligation (nothing in the product calls them, so a missing test cannot break the app) — they are tracked here for a deliberate wire / remove / keep decision instead of being silently swept into the test ratchet.
+An **orphan** is an operation with a shipped handler AND a generated SDK surface that NO file under `apps/dentalemon/src/**` consumes. A *read-only* orphan is not a test obligation (nothing in the product calls it, so a missing test cannot break the app). **A *mutating* orphan that writes PII / clinical / billing data is the exception** — it is reachable over the wire and therefore IDOR / cross-tenant exploitable even with no FE consumer (this is the class that swallowed the P0 `updatePatientContact` contact IDOR). Those are reclassified below into a tracked OBLIGATION (ratcheted in `endpoint-sensitive-orphan.allowlist.json`).
+
+## Sensitive mutating orphans — require a cross-tenant / ownership negative test
+
+A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
+
+Sensitive mutating orphans: **70** (21 ownership-tested, **49 obligation gaps**).
+
+| operationId | module | method | path | ownership test? |
+|-------------|--------|--------|------|:---------------:|
+| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | ⚠️ obligation |
+| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | ✅ |
+| `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | ✅ |
+| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | ⚠️ obligation |
+| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | ✅ |
+| `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | ✅ |
+| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | ⚠️ obligation |
+| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | ⚠️ obligation |
+| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | ⚠️ obligation |
+| `addHouseholdMember` | dental-patient | POST | `/dental/households/{householdId}/members` | ⚠️ obligation |
+| `addInsuranceClaimLine` | dental-billing | POST | `/dental/billing/claims/{claimId}/lines` | ✅ |
+| `approveAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments/{amendmentId}/approve` | ⚠️ obligation |
+| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | ⚠️ obligation |
+| `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | ✅ |
+| `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | ⚠️ obligation |
+| `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | ⚠️ obligation |
+| `createClaimDraft` | dental-patient | POST | `/dental/patients/{patientId}/claims` | ✅ |
+| `createDentalAlert` | dental-patient | POST | `/dental/patients/{patientId}/dental-alerts` | ⚠️ obligation |
+| `createHousehold` | dental-patient | POST | `/dental/households` | ⚠️ obligation |
+| `createInsuranceClaim` | dental-billing | POST | `/dental/billing/claims` | ✅ |
+| `createInsuranceProfile` | dental-patient | POST | `/dental/patients/{patientId}/insurance-profiles` | ✅ |
+| `createInventoryAdjustment` | dental-clinical | POST | `/dental/branches/{branchId}/inventory/{itemId}/adjustments` | ✅ |
+| `createInventoryItem` | dental-clinical | POST | `/dental/branches/{branchId}/inventory` | ✅ |
+| `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | ⚠️ obligation |
+| `createOcclusionScreening` | dental-clinical | POST | `/dental/patients/{patientId}/occlusion-screenings` | ⚠️ obligation |
+| `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | ✅ |
+| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | ⚠️ obligation |
+| `createPractitioner` | provider | POST | `/providers/practitioners` | ⚠️ obligation |
+| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | ⚠️ obligation |
+| `createProvider` | provider | POST | `/providers` | ⚠️ obligation |
+| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | ⚠️ obligation |
+| `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | ✅ |
+| `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | ⚠️ obligation |
+| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | ⚠️ obligation |
+| `deactivatePatient` | patient | DELETE | `/patients/{id}` | ⚠️ obligation |
+| `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | ⚠️ obligation |
+| `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | ⚠️ obligation |
+| `deleteInvoice` | billing | DELETE | `/billing/invoices/{invoice}` | ⚠️ obligation |
+| `deletePatientContact` | dental-patient | DELETE | `/dental/patients/{patientId}/contacts/{contactId}` | ✅ |
+| `detachTreatmentAppointment` | dental-patient | DELETE | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | ✅ |
+| `finalizeInvoice` | billing | POST | `/billing/invoices/{invoice}/finalize` | ⚠️ obligation |
+| `getMerchantDashboard` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/dashboard` | ⚠️ obligation |
+| `handleStripeWebhook` | billing | POST | `/billing/webhooks/stripe` | ⚠️ obligation |
+| `importPatients` | dental-patient | POST | `/dental/patients/import` | ✅ |
+| `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | ⚠️ obligation |
+| `mergePatients` | patient | POST | `/patients/merge` | ⚠️ obligation |
+| `onboardMerchantAccount` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/onboard` | ⚠️ obligation |
+| `payInvoice` | billing | POST | `/billing/invoices/{invoice}/pay` | ⚠️ obligation |
+| `promoteWaitlistEntry` | dental-scheduling | POST | `/dental/waitlist/{entryId}/promote` | ⚠️ obligation |
+| `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | ✅ |
+| `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | ⚠️ obligation |
+| `removeHouseholdMember` | dental-patient | DELETE | `/dental/households/{householdId}/members/{patientId}` | ⚠️ obligation |
+| `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | ⚠️ obligation |
+| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | ⚠️ obligation |
+| `unmergePatients` | patient | POST | `/patients/unmerge` | ⚠️ obligation |
+| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | ⚠️ obligation |
+| `updateDentalAlert` | dental-patient | PATCH | `/dental/patients/{patientId}/dental-alerts/{alertId}` | ⚠️ obligation |
+| `updateInsuranceClaimLine` | dental-billing | PATCH | `/dental/billing/claims/{claimId}/lines/{lineId}` | ✅ |
+| `updateInsuranceProfile` | dental-patient | PATCH | `/dental/patients/{patientId}/insurance-profiles/{profileId}` | ⚠️ obligation |
+| `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | ✅ |
+| `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | ⚠️ obligation |
+| `updatePatient` | patient | PATCH | `/patients/{id}` | ⚠️ obligation |
+| `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | ✅ |
+| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | ⚠️ obligation |
+| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | ⚠️ obligation |
+| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | ⚠️ obligation |
+| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | ⚠️ obligation |
+| `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | ✅ |
+| `updateTask` | dental-patient | PATCH | `/dental/patients/{patientId}/tasks/{taskId}` | ⚠️ obligation |
+| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | ⚠️ obligation |
+
+## All orphans (wire / remove / keep backlog)
 
 Decision column legend:
 
@@ -14,73 +95,73 @@ Total orphans: **180**
 
 | operationId | module | method | path | decision | notes |
 |-------------|--------|--------|------|----------|-------|
-| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | keep | _triage pending_ |
+| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | keep | sensitive-write (obligation) |
 | `CephMgmt_getCephLandmarkDetectionJob` | dental-imaging | GET | `/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}` | keep | _triage pending_ |
 | `CephMgmt_getCephSuperimposition` | dental-imaging | GET | `/dental/imaging/ceph/superimpositions/{superimpositionId}` | keep | _triage pending_ |
 | `CephMgmt_listCephSuperimpositions` | dental-imaging | GET | `/dental/imaging/patients/{patientId}/ceph/superimpositions` | keep | _triage pending_ |
-| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | keep | _triage pending_ |
-| `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
+| `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | keep | sensitive-write (ownership-tested) |
+| `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | keep | sensitive-write (ownership-tested) |
 | `DentalBranchManagement_get` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}` | keep | _triage pending_ |
 | `DentalBranchManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
-| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
-| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | keep | _triage pending_ |
+| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | sensitive-write (obligation) |
+| `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | keep | sensitive-write (ownership-tested) |
 | `DentalMembershipManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
-| `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | keep | _triage pending_ |
-| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | keep | _triage pending_ |
+| `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | keep | sensitive-write (ownership-tested) |
+| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | keep | sensitive-write (obligation) |
 | `DentalOrganizationManagement_get` | dental-org | GET | `/dental/organizations/{id}` | keep | _triage pending_ |
-| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | _triage pending_ |
-| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | _triage pending_ |
+| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | sensitive-write (obligation) |
+| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | sensitive-write (obligation) |
 | `ImagingMgmt_getImagingStudy` | dental-imaging | GET | `/dental/imaging/studies/{studyId}` | keep | _triage pending_ |
 | `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | keep | _triage pending_ |
-| `addHouseholdMember` | dental-patient | POST | `/dental/households/{householdId}/members` | keep | _triage pending_ |
-| `addInsuranceClaimLine` | dental-billing | POST | `/dental/billing/claims/{claimId}/lines` | keep | _triage pending_ |
-| `approveAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments/{amendmentId}/approve` | keep | _triage pending_ |
-| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | keep | _triage pending_ |
-| `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | _triage pending_ |
+| `addHouseholdMember` | dental-patient | POST | `/dental/households/{householdId}/members` | keep | sensitive-write (obligation) |
+| `addInsuranceClaimLine` | dental-billing | POST | `/dental/billing/claims/{claimId}/lines` | keep | sensitive-write (ownership-tested) |
+| `approveAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments/{amendmentId}/approve` | keep | sensitive-write (obligation) |
+| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | keep | sensitive-write (obligation) |
+| `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | sensitive-write (ownership-tested) |
 | `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` | keep | _triage pending_ |
 | `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` | keep | _triage pending_ |
-| `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | keep | _triage pending_ |
+| `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | keep | sensitive-write (obligation) |
 | `completeMultipartUpload` | storage | POST | `/storage/multipart/{file}/complete` | keep | _triage pending_ |
-| `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | keep | _triage pending_ |
+| `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | keep | sensitive-write (obligation) |
 | `confirmBooking` | booking | POST | `/booking/bookings/{booking}/confirm` | keep | _triage pending_ |
 | `createBookingEvent` | booking | POST | `/booking/events` | keep | _triage pending_ |
 | `createChatRoom` | comms | POST | `/comms/chat-rooms` | keep | _triage pending_ |
-| `createClaimDraft` | dental-patient | POST | `/dental/patients/{patientId}/claims` | keep | _triage pending_ |
+| `createClaimDraft` | dental-patient | POST | `/dental/patients/{patientId}/claims` | keep | sensitive-write (ownership-tested) |
 | `createConsultation` | emr | POST | `/emr/consultations` | keep | _triage pending_ |
-| `createDentalAlert` | dental-patient | POST | `/dental/patients/{patientId}/dental-alerts` | keep | _triage pending_ |
+| `createDentalAlert` | dental-patient | POST | `/dental/patients/{patientId}/dental-alerts` | keep | sensitive-write (obligation) |
 | `createEmailTemplate` | email | POST | `/email/templates` | keep | _triage pending_ |
-| `createHousehold` | dental-patient | POST | `/dental/households` | keep | _triage pending_ |
-| `createInsuranceClaim` | dental-billing | POST | `/dental/billing/claims` | keep | _triage pending_ |
-| `createInsuranceProfile` | dental-patient | POST | `/dental/patients/{patientId}/insurance-profiles` | keep | _triage pending_ |
-| `createInventoryAdjustment` | dental-clinical | POST | `/dental/branches/{branchId}/inventory/{itemId}/adjustments` | keep | _triage pending_ |
-| `createInventoryItem` | dental-clinical | POST | `/dental/branches/{branchId}/inventory` | keep | _triage pending_ |
-| `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | keep | _triage pending_ |
-| `createOcclusionScreening` | dental-clinical | POST | `/dental/patients/{patientId}/occlusion-screenings` | keep | _triage pending_ |
-| `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | keep | _triage pending_ |
-| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | keep | _triage pending_ |
-| `createPractitioner` | provider | POST | `/providers/practitioners` | keep | _triage pending_ |
-| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | keep | _triage pending_ |
-| `createProvider` | provider | POST | `/providers` | keep | _triage pending_ |
-| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | keep | _triage pending_ |
+| `createHousehold` | dental-patient | POST | `/dental/households` | keep | sensitive-write (obligation) |
+| `createInsuranceClaim` | dental-billing | POST | `/dental/billing/claims` | keep | sensitive-write (ownership-tested) |
+| `createInsuranceProfile` | dental-patient | POST | `/dental/patients/{patientId}/insurance-profiles` | keep | sensitive-write (ownership-tested) |
+| `createInventoryAdjustment` | dental-clinical | POST | `/dental/branches/{branchId}/inventory/{itemId}/adjustments` | keep | sensitive-write (ownership-tested) |
+| `createInventoryItem` | dental-clinical | POST | `/dental/branches/{branchId}/inventory` | keep | sensitive-write (ownership-tested) |
+| `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | keep | sensitive-write (obligation) |
+| `createOcclusionScreening` | dental-clinical | POST | `/dental/patients/{patientId}/occlusion-screenings` | keep | sensitive-write (obligation) |
+| `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | keep | sensitive-write (ownership-tested) |
+| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | keep | sensitive-write (obligation) |
+| `createPractitioner` | provider | POST | `/providers/practitioners` | keep | sensitive-write (obligation) |
+| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | keep | sensitive-write (obligation) |
+| `createProvider` | provider | POST | `/providers` | keep | sensitive-write (obligation) |
+| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | keep | sensitive-write (obligation) |
 | `createReview` | reviews | POST | `/reviews/` | keep | _triage pending_ |
 | `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` | keep | _triage pending_ |
-| `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | keep | _triage pending_ |
-| `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | keep | _triage pending_ |
-| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | keep | _triage pending_ |
-| `deactivatePatient` | patient | DELETE | `/patients/{id}` | keep | _triage pending_ |
-| `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | keep | _triage pending_ |
-| `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | keep | _triage pending_ |
+| `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | keep | sensitive-write (ownership-tested) |
+| `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | keep | sensitive-write (obligation) |
+| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | keep | sensitive-write (obligation) |
+| `deactivatePatient` | patient | DELETE | `/patients/{id}` | keep | sensitive-write (obligation) |
+| `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | keep | sensitive-write (obligation) |
+| `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |
 | `deleteBookingEvent` | booking | DELETE | `/booking/events/{event}` | keep | _triage pending_ |
 | `deleteFile` | storage | DELETE | `/storage/files/{file}` | keep | _triage pending_ |
-| `deleteInvoice` | billing | DELETE | `/billing/invoices/{invoice}` | keep | _triage pending_ |
-| `deletePatientContact` | dental-patient | DELETE | `/dental/patients/{patientId}/contacts/{contactId}` | keep | _triage pending_ |
+| `deleteInvoice` | billing | DELETE | `/billing/invoices/{invoice}` | keep | sensitive-write (obligation) |
+| `deletePatientContact` | dental-patient | DELETE | `/dental/patients/{patientId}/contacts/{contactId}` | keep | sensitive-write (ownership-tested) |
 | `deleteReview` | reviews | DELETE | `/reviews/{review}` | keep | _triage pending_ |
 | `deleteScheduleException` | booking | DELETE | `/booking/events/{event}/exceptions/{exception}` | keep | _triage pending_ |
-| `detachTreatmentAppointment` | dental-patient | DELETE | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | _triage pending_ |
+| `detachTreatmentAppointment` | dental-patient | DELETE | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | sensitive-write (ownership-tested) |
 | `endVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/end` | keep | _triage pending_ |
 | `exportPatientCareRecord` | dental-pmd | GET | `/dental/pmd/patient/{patientId}/care-record` | keep | _triage pending_ |
 | `finalizeConsultation` | emr | POST | `/emr/consultations/{consultation}/finalize` | keep | _triage pending_ |
-| `finalizeInvoice` | billing | POST | `/billing/invoices/{invoice}/finalize` | keep | _triage pending_ |
+| `finalizeInvoice` | billing | POST | `/billing/invoices/{invoice}/finalize` | keep | sensitive-write (obligation) |
 | `generateMultipartPartUrl` | storage | GET | `/storage/multipart/{file}/part-url` | keep | _triage pending_ |
 | `getAppointment` | dental-scheduling | GET | `/dental/appointments/{appointmentId}` | keep | _triage pending_ |
 | `getBooking` | booking | GET | `/booking/bookings/{booking}` | keep | _triage pending_ |
@@ -104,7 +185,7 @@ Total orphans: **180**
 | `getInsuranceClaim` | dental-billing | GET | `/dental/billing/claims/{claimId}` | keep | _triage pending_ |
 | `getInvoice` | billing | GET | `/billing/invoices/{invoice}` | keep | _triage pending_ |
 | `getMerchantAccount` | billing | GET | `/billing/merchant-accounts/{merchantAccount}` | keep | _triage pending_ |
-| `getMerchantDashboard` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/dashboard` | keep | _triage pending_ |
+| `getMerchantDashboard` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/dashboard` | keep | sensitive-write (obligation) |
 | `getNotification` | notifs | GET | `/notifs/{notif}` | keep | _triage pending_ |
 | `getOnlineBooking` | dental-scheduling | GET | `/dental/public/bookings/{confirmationCode}` | keep | _triage pending_ |
 | `getOrgContext` | dental-org | GET | `/dental/org/context` | keep | _triage pending_ |
@@ -120,8 +201,8 @@ Total orphans: **180**
 | `getScheduleException` | booking | GET | `/booking/events/{event}/exceptions/{exception}` | keep | _triage pending_ |
 | `getTimeSlot` | booking | GET | `/booking/slots/{slotId}` | keep | _triage pending_ |
 | `getTreatmentPlanVersion` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plan/versions/{versionId}` | keep | _triage pending_ |
-| `handleStripeWebhook` | billing | POST | `/billing/webhooks/stripe` | keep | _triage pending_ |
-| `importPatients` | dental-patient | POST | `/dental/patients/import` | keep | _triage pending_ |
+| `handleStripeWebhook` | billing | POST | `/billing/webhooks/stripe` | keep | sensitive-write (obligation) |
+| `importPatients` | dental-patient | POST | `/dental/patients/import` | keep | sensitive-write (ownership-tested) |
 | `initiateMultipartUpload` | storage | POST | `/storage/multipart/initiate` | keep | _triage pending_ |
 | `joinVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/join` | keep | _triage pending_ |
 | `leaveVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/leave` | keep | _triage pending_ |
@@ -156,41 +237,41 @@ Total orphans: **180**
 | `listScheduleExceptions` | booking | GET | `/booking/events/{event}/exceptions` | keep | _triage pending_ |
 | `listTreatmentPlanStatusHistory` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plans/{planId}/status-history` | keep | _triage pending_ |
 | `listWaitlist` | dental-scheduling | GET | `/dental/branches/{branchId}/waitlist` | keep | _triage pending_ |
-| `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | keep | _triage pending_ |
+| `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | keep | sensitive-write (obligation) |
 | `markNoShowBooking` | booking | POST | `/booking/bookings/{booking}/no-show` | keep | _triage pending_ |
-| `mergePatients` | patient | POST | `/patients/merge` | keep | _triage pending_ |
-| `onboardMerchantAccount` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/onboard` | keep | _triage pending_ |
-| `payInvoice` | billing | POST | `/billing/invoices/{invoice}/pay` | keep | _triage pending_ |
+| `mergePatients` | patient | POST | `/patients/merge` | keep | sensitive-write (obligation) |
+| `onboardMerchantAccount` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/onboard` | keep | sensitive-write (obligation) |
+| `payInvoice` | billing | POST | `/billing/invoices/{invoice}/pay` | keep | sensitive-write (obligation) |
 | `placeLegalHold` | dental-legalhold | POST | `/dental/legal-holds` | keep | _triage pending_ |
-| `promoteWaitlistEntry` | dental-scheduling | POST | `/dental/waitlist/{entryId}/promote` | keep | _triage pending_ |
-| `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | keep | _triage pending_ |
-| `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | keep | _triage pending_ |
+| `promoteWaitlistEntry` | dental-scheduling | POST | `/dental/waitlist/{entryId}/promote` | keep | sensitive-write (obligation) |
+| `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | keep | sensitive-write (ownership-tested) |
+| `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | keep | sensitive-write (obligation) |
 | `rejectBooking` | booking | POST | `/booking/bookings/{booking}/reject` | keep | _triage pending_ |
 | `releaseLegalHold` | dental-legalhold | POST | `/dental/legal-holds/{id}/release` | keep | _triage pending_ |
-| `removeHouseholdMember` | dental-patient | DELETE | `/dental/households/{householdId}/members/{patientId}` | keep | _triage pending_ |
-| `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | keep | _triage pending_ |
+| `removeHouseholdMember` | dental-patient | DELETE | `/dental/households/{householdId}/members/{patientId}` | keep | sensitive-write (obligation) |
+| `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | keep | sensitive-write (obligation) |
 | `retryEmailQueueItem` | email | POST | `/email/queue/{queue}/retry` | keep | _triage pending_ |
 | `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` | keep | _triage pending_ |
-| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | keep | _triage pending_ |
+| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | keep | sensitive-write (obligation) |
 | `testEmailTemplate` | email | POST | `/email/templates/{template}/test` | keep | _triage pending_ |
-| `unmergePatients` | patient | POST | `/patients/unmerge` | keep | _triage pending_ |
+| `unmergePatients` | patient | POST | `/patients/unmerge` | keep | sensitive-write (obligation) |
 | `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` | keep | _triage pending_ |
-| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | keep | _triage pending_ |
+| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | keep | sensitive-write (obligation) |
 | `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` | keep | _triage pending_ |
-| `updateDentalAlert` | dental-patient | PATCH | `/dental/patients/{patientId}/dental-alerts/{alertId}` | keep | _triage pending_ |
+| `updateDentalAlert` | dental-patient | PATCH | `/dental/patients/{patientId}/dental-alerts/{alertId}` | keep | sensitive-write (obligation) |
 | `updateEmailTemplate` | email | PATCH | `/email/templates/{template}` | keep | _triage pending_ |
-| `updateInsuranceClaimLine` | dental-billing | PATCH | `/dental/billing/claims/{claimId}/lines/{lineId}` | keep | _triage pending_ |
-| `updateInsuranceProfile` | dental-patient | PATCH | `/dental/patients/{patientId}/insurance-profiles/{profileId}` | keep | _triage pending_ |
-| `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | keep | _triage pending_ |
-| `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | keep | _triage pending_ |
-| `updatePatient` | patient | PATCH | `/patients/{id}` | keep | _triage pending_ |
-| `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | keep | _triage pending_ |
-| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | keep | _triage pending_ |
+| `updateInsuranceClaimLine` | dental-billing | PATCH | `/dental/billing/claims/{claimId}/lines/{lineId}` | keep | sensitive-write (ownership-tested) |
+| `updateInsuranceProfile` | dental-patient | PATCH | `/dental/patients/{patientId}/insurance-profiles/{profileId}` | keep | sensitive-write (obligation) |
+| `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | keep | sensitive-write (ownership-tested) |
+| `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | keep | sensitive-write (obligation) |
+| `updatePatient` | patient | PATCH | `/patients/{id}` | keep | sensitive-write (obligation) |
+| `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | keep | sensitive-write (ownership-tested) |
+| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | keep | sensitive-write (obligation) |
 | `updatePerson` | person | PATCH | `/persons/{person}` | keep | _triage pending_ |
-| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | keep | _triage pending_ |
-| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | keep | _triage pending_ |
-| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | _triage pending_ |
-| `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | keep | _triage pending_ |
-| `updateTask` | dental-patient | PATCH | `/dental/patients/{patientId}/tasks/{taskId}` | keep | _triage pending_ |
+| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | keep | sensitive-write (obligation) |
+| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | keep | sensitive-write (obligation) |
+| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |
+| `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | keep | sensitive-write (ownership-tested) |
+| `updateTask` | dental-patient | PATCH | `/dental/patients/{patientId}/tasks/{taskId}` | keep | sensitive-write (obligation) |
 | `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` | keep | _triage pending_ |
-| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | keep | _triage pending_ |
+| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | keep | sensitive-write (obligation) |
