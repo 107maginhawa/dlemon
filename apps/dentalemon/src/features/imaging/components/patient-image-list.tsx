@@ -198,7 +198,19 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     className="shrink-0 accent-lemon"
                     data-testid={`select-image-${item.id}`}
                   />
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelectImage?.(item)}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Select image: ${item.fileName}`}
+                    className="flex-1 min-w-0 cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => onSelectImage?.(item)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onSelectImage?.(item)
+                      }
+                    }}
+                  >
                     <p className="text-sm text-zinc-900 truncate">{item.fileName}</p>
                     <p className="text-xs text-zinc-400 capitalize">
                       {item.modality.replace('_', ' ')}

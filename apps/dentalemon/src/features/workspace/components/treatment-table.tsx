@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Check, ChevronRight, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { Skeleton } from '@monobase/ui';
 import type { Treatment } from '@/features/workspace/hooks/use-treatments';
 import type { TreatmentPlanItem } from '@/features/workspace/hooks/use-treatment-plan';
@@ -449,10 +450,13 @@ export function TreatmentTable({
                             const parsed = parseFloat(draftPrice);
                             if (!isNaN(parsed) && parsed >= 0) {
                               const cents = Math.round(parsed * 100);
-                              updateMutation.mutate({
-                                path: { visitId, treatmentId: t.id },
-                                body: { priceCents: cents },
-                              });
+                              updateMutation.mutate(
+                                {
+                                  path: { visitId, treatmentId: t.id },
+                                  body: { priceCents: cents },
+                                },
+                                { onSuccess: () => toast.success('Price updated') },
+                              );
                             }
                           }
                           setEditingPriceId(null);
@@ -472,7 +476,7 @@ export function TreatmentTable({
                           setEditingPriceId(t.id);
                           setDraftPrice(String(t.priceAmount ?? 0));
                         }}
-                        className="tabular-nums hover:underline disabled:cursor-default"
+                        className="tabular-nums rounded px-1 hover:underline hover:bg-primary/10 focus:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:bg-transparent"
                       >
                         {CURRENCY_SYMBOL}
                         {(t.priceAmount ?? 0).toLocaleString(APP_LOCALE)}

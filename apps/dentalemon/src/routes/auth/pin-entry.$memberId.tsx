@@ -194,7 +194,7 @@ export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil, 
                   aria-label={key}
                   onClick={() => handleKey(key)}
                   disabled={isSubmitting}
-                  className="h-14 rounded-2xl bg-secondary flex items-center justify-center text-xl font-medium hover:bg-secondary/80 transition-colors"
+                  className="h-14 rounded-2xl bg-secondary flex items-center justify-center text-xl font-medium hover:bg-secondary/80 active:scale-95 transition-all"
                 >
                   {key}
                 </button>
