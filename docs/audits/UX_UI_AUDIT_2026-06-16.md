@@ -59,7 +59,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 - [x] **Batch 6 — Structural a11y** 🟡 — `patient-image-list` clickable div → `role="button"`+keyboard (NOT literal `<button>` — would be invalid HTML around `<p>`/`<div>`, D14). (commit below)
 - [x] **Batch 7 — Loading & CLS** 🟡 — `<Skeleton>` swaps across ~15 loaders + intrinsic imaging `<img>` dims + Ceph overlay seed (commit below; gate 2473/0). *treatment-table skeleton is opt-in via new `isLoading` prop — caller wire-up is a small follow-up.*
 - [ ] **Batch 8 — Performance / CWV** 🟠 — code-splitting, manualChunks, list virtualization.
-- [ ] **Batch 9 — Forms** 🟠 — disable-on-submit, inline validation, success confirmation.
+- [x] **Batch 9 — Forms** 🟠 — disable-on-submit (personal-info-form `isSubmitting||isLoading`; onboarding Step-1 idempotent guard), patient-edit email/phone validation, contact-info success toast. (commit below; gate 2484/0)
 
 Counts after dedupe: **High 53 · Medium 50 · Low 14 · Total 117**.
 
@@ -209,4 +209,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 | 2026-06-16 | Batch 2d — Design-token finish (inline/SVG, banners, auth, invoice) | `541b2d0d` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 7 — Loading/CLS (skeletons ×15, img dims, Ceph seed) | `1475cee7` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 6 + 3b(part) — div→button role, portal retry, price cue, keypad | `54d2e719` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
-| 2026-06-16 | Batch 3b — native confirm/prompt → AlertDialog / input Dialog | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 (+11 tests) |
+| 2026-06-16 | Batch 3b — native confirm/prompt → AlertDialog / input Dialog | `3a002a94` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 (+11 tests) |
+| 2026-06-16 | Batch 9 — Forms (disable-on-submit, validation, success toast) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 |

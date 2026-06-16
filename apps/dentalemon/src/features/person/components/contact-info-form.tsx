@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Mail, Phone } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@monobase/ui'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@monobase/ui'
 import { Input } from '@monobase/ui'
@@ -68,6 +69,8 @@ export function ContactInfoForm({
 
   const handleSubmit = async (data: ContactInfo) => {
     await onSubmit(data)
+    // Only reached when onSubmit resolves successfully (a throw skips this).
+    toast.success('Contact info saved')
   }
 
   const getDefaultSubmitText = () => {

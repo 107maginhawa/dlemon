@@ -47,6 +47,12 @@ interface PersonalInfoFormProps {
    * Member since date for avatar section
    */
   memberSince?: Date | string | number
+  /**
+   * External loading state (e.g. a parent mutation that resolves after onSubmit).
+   * OR-ed into the submit button's disabled state so the button stays disabled
+   * until the parent's async work settles.
+   */
+  isLoading?: boolean
 }
 
 export function PersonalInfoForm({
@@ -60,7 +66,8 @@ export function PersonalInfoForm({
   formId,
   showAvatar = mode === 'edit',
   onAvatarUpload,
-  memberSince
+  memberSince,
+  isLoading = false
 }: PersonalInfoFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -400,8 +407,11 @@ export function PersonalInfoForm({
                 Cancel
               </Button>
             )}
-            <Button type="submit">
-              {getDefaultSubmitText()}
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isUploadingAvatar || isLoading}
+            >
+              {form.formState.isSubmitting ? 'Saving…' : getDefaultSubmitText()}
             </Button>
           </div>
         )}
