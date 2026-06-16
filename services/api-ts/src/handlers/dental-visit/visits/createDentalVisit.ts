@@ -7,9 +7,11 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, ConflictError } from '@/core/errors';
+import { UnauthorizedError, ConflictError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { assertOrgLive } from '@/handlers/shared/assert-org-live';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { withTenantTx } from '@/core/tenant-tx';
 import { VisitRepository } from '../repos/visit.repo';
 import { VisitNotesRepository } from '../repos/treatment.repo';
@@ -39,6 +41,14 @@ export async function createDentalVisit(
   await assertBranchRole(db, user.id, body.branchId, [...allowedRoles]);
   // C-1: provisional clinics cannot accumulate PHI until activated (production-only).
   await assertOrgLive(db, body.branchId);
+
+  // P1-6 (cross-tenant create-linkage): body.patientId is caller-supplied and the
+  // RLS WITH CHECK only validates the NEW visit's own branch_id — not the patient's.
+  // Resolve the patient and require the caller to belong to ITS branch, so a
+  // foreign-branch patient cannot be linked into this branch (cross-tenant PHI).
+  const patient = await getPatientForDentalPatient(db, body.patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // RLS P1b activation: the idempotency reads + the visit/notes WRITES run under
   // app_rls scoped to body.branchId, so the policy WITH CHECK is a second wall on

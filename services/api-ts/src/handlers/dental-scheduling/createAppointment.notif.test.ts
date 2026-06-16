@@ -21,6 +21,18 @@ mock.module('@/handlers/shared/assert-branch-role', () => ({
   assertBranchRole: mock(() => Promise.resolve()),
 }));
 
+// ── Stub the patient-branch resolution added by the P1-6 cross-tenant fix ─────
+// (this test stubs heavy deps; patient authz is not under test here).
+mock.module('@/handlers/patient/repos/patient-dental-patient.facade', () => ({
+  getPatientForDentalPatient: mock(() =>
+    Promise.resolve({ id: 'a0000000-0000-1000-8000-000000000001', preferredBranchId: 'c0000000-0000-1000-8000-000000000001' }),
+  ),
+}));
+mock.module('@/handlers/shared/assert-branch-access', () => ({
+  assertBranchAccess: mock(() => Promise.resolve()),
+  assertPatientBranchAccess: mock(() => Promise.resolve()),
+}));
+
 // ── Stub DentalAppointmentRepository ─────────────────────────────────────────
 const mockFindOverlapping = mock(() => Promise.resolve([]));
 const mockCreateOne = mock(() =>

@@ -8,8 +8,10 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { withTenantTx } from '@/core/tenant-tx';
 import { DentalWaitlistEntryRepository } from './repos/waitlist-entry.repo';
 import type { User } from '@/types/auth';
@@ -29,6 +31,14 @@ export async function createWaitlistEntry(ctx: HandlerContext) {
   await assertBranchRole(db, user.id, branchId, [
     'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
   ]);
+
+  // P1-6 (cross-tenant create-linkage): body.patientId is caller-supplied; the RLS
+  // WITH CHECK only validates the waitlist row's own branch_id. Resolve the patient
+  // and require the caller to belong to ITS branch so a foreign-branch patient
+  // cannot be waitlisted into this branch.
+  const patient = await getPatientForDentalPatient(db, body.patientId);
+  if (!patient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
   // RLS P1b activation: the waitlist-entry write goes through withTenantTx so the
   // app_rls policy on dental_waitlist_entry enforces the branch scope. Authz above

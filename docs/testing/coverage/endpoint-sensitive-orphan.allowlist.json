@@ -80,10 +80,6 @@
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/patients/{patientId}/tasks is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
-    "id": "createWaitlistEntry",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/branches/{branchId}/waitlist is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
     "id": "deactivatePatient",
     "reason": "Baseline obligation seeded 2026-06-16: DELETE /patients/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },

@@ -8,7 +8,7 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **70** (21 ownership-tested, **49 obligation gaps**).
+Sensitive mutating orphans: **70** (22 ownership-tested, **48 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
@@ -45,7 +45,7 @@ Sensitive mutating orphans: **70** (21 ownership-tested, **49 obligation gaps**)
 | `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | ⚠️ obligation |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | ✅ |
 | `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | ⚠️ obligation |
-| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | ⚠️ obligation |
+| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | ✅ |
 | `deactivatePatient` | patient | DELETE | `/patients/{id}` | ⚠️ obligation |
 | `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | ⚠️ obligation |
 | `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | ⚠️ obligation |
@@ -147,7 +147,7 @@ Total orphans: **180**
 | `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` | keep | _triage pending_ |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | keep | sensitive-write (ownership-tested) |
 | `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | keep | sensitive-write (obligation) |
-| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | keep | sensitive-write (obligation) |
+| `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | keep | sensitive-write (ownership-tested) |
 | `deactivatePatient` | patient | DELETE | `/patients/{id}` | keep | sensitive-write (obligation) |
 | `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | keep | sensitive-write (obligation) |
 | `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |

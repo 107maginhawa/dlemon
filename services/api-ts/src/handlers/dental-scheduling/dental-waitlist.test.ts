@@ -60,7 +60,10 @@ beforeAll(async () => {
     id: PERSON_ID, firstName: 'Waitlist', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
   await db.insert(patients).values({
-    id: PATIENT_ID, person: PERSON_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    // preferredBranchId is REQUIRED for a waitlistable patient: createWaitlistEntry
+    // now asserts the caller belongs to the patient's branch (P1-6 branch-link fix).
+    id: PATIENT_ID, person: PERSON_ID, preferredBranchId: BRANCH_ID,
+    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
 });
 

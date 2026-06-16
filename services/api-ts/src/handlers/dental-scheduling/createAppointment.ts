@@ -7,9 +7,11 @@
 
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, BusinessLogicError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, BusinessLogicError, ValidationError, NotFoundError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
 import { withTenantTx } from '@/core/tenant-tx';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
+import { getPatientForDentalPatient } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { getBranchSchedulingConfig } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { parseWorkingHours, isWithinWorkingHours } from './workingHours';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -35,6 +37,14 @@ export async function createAppointment(ctx: HandlerContext) {
   await assertBranchRole(db, user.id, body.branchId, [
     'dentist_owner', 'dentist_associate', 'staff_full', 'staff_scheduling',
   ]);
+
+  // P1-6 (cross-tenant create-linkage): body.patientId is caller-supplied; the RLS
+  // WITH CHECK only validates the appointment's own branch_id. Resolve the patient
+  // and require the caller to belong to ITS branch before any insert/notification,
+  // so a foreign-branch patient cannot be scheduled into this branch.
+  const linkedPatient = await getPatientForDentalPatient(db, body.patientId);
+  if (!linkedPatient) throw new NotFoundError('Patient not found');
+  await assertPatientBranchAccess(db, user.id, linkedPatient.preferredBranchId);
 
   // Canonical wire shape: providerId / startAt / endAt / visitType (V-SCH-006/007).
   const startAt = body.startAt instanceof Date ? body.startAt : new Date(String(body.startAt));
