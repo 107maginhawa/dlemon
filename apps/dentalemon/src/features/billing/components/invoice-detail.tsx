@@ -407,7 +407,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                         <td className="px-3 py-2.5 text-xs text-muted-foreground">{idx + 1}</td>
                         <td className="px-3 py-2.5 text-[13px] font-medium">{item.description}</td>
                         <td className="px-3 py-2.5">
-                          {item.cdtCode && <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">{item.cdtCode}</span>}
+                          {item.cdtCode && <span className="text-[11px] font-semibold text-info-foreground bg-info/15 px-1.5 py-0.5 rounded">{item.cdtCode}</span>}
                         </td>
                         <td className="px-3 py-2.5 text-[13px] text-muted-foreground">{item.toothNumber ? `#${item.toothNumber}` : '--'}</td>
                         <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(item.priceCents)}</td>
@@ -425,7 +425,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   {invoice.discountCents > 0 && (
                     <div className="flex justify-between text-[13px]">
                       <span className="text-muted-foreground">Discount</span>
-                      <span className="font-medium tabular-nums text-green-700">-{formatCents(invoice.discountCents)}</span>
+                      <span className="font-medium tabular-nums text-success-foreground">-{formatCents(invoice.discountCents)}</span>
                     </div>
                   )}
                   {invoice.taxCents > 0 && (
@@ -500,7 +500,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                 )}
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
                   <span className="text-sm font-semibold text-muted-foreground">Balance Remaining</span>
-                  <span className={`text-2xl font-bold tabular-nums ${invoice.balanceCents > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                  <span className={`text-2xl font-bold tabular-nums ${invoice.balanceCents > 0 ? 'text-destructive-emphasis' : 'text-success-foreground'}`}>
                     {formatCents(invoice.balanceCents)}
                   </span>
                 </div>

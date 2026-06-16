@@ -28,7 +28,11 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
     if (!ctx) return;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1a1a1a';
+    // Ink follows the theme foreground so the signature stays visible in dark
+    // mode (the canvas bg is bg-muted/30, which is dark when the theme is). Falls
+    // back to near-black when the CSS var is unavailable (e.g. happy-dom tests).
+    const fg = getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim();
+    ctx.strokeStyle = fg ? `hsl(${fg})` : '#1a1a1a';
   }, []);
 
   function pos(e: React.PointerEvent<HTMLCanvasElement>) {

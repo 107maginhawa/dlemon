@@ -25,14 +25,14 @@ function HomePage() {
       name: 'Smart Scheduling',
       description: 'Book sessions and manage your calendar with ease',
       icon: Calendar,
-      color: 'bg-blue-500',
+      color: 'bg-info',
     },
     {
       id: 'records',
       name: 'Data Management',
       description: 'Access and organize your important documents securely',
       icon: Activity,
-      color: 'bg-green-500',
+      color: 'bg-success',
     },
     {
       id: 'network',

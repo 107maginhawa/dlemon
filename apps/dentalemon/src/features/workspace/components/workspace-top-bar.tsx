@@ -12,7 +12,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard } from 'lucide-react';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
-import { BRAND_GOLD_TEXT } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canPrescribe, canAddTreatment, canCaptureConsent, type DentalRole } from '@/lib/rbac';
 
@@ -147,8 +146,7 @@ export function WorkspaceTopBar({
       {/* LEFT: Patient avatar + name */}
       <div className="flex items-center gap-2 shrink-0">
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-          style={{ backgroundColor: 'rgba(255,233,125,0.3)', color: BRAND_GOLD_TEXT }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-lemon/30 text-lemon-foreground"
           aria-label={`Patient avatar: ${displayName}`}
         >
           {initials}

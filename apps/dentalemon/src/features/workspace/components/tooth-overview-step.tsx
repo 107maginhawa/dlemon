@@ -117,7 +117,7 @@ export function ToothOverviewStep({
   return (
     <div className="flex flex-col gap-4">
       {/* Interactive five-surface tooth diagram */}
-      <div className="rounded-xl border border-border bg-[#fafaf9] p-4 flex flex-col gap-3">
+      <div className="rounded-xl border border-border bg-secondary/30 p-4 flex flex-col gap-3">
         <div
           className="flex justify-center cursor-pointer"
           onClick={handleSvgClick}
@@ -261,7 +261,7 @@ export function ToothOverviewStep({
 
       {/* Treatment Breakdown table */}
       <div className="rounded-xl border border-border overflow-hidden">
-        <div className="px-3 py-2 bg-[#fafaf9] border-b border-border">
+        <div className="px-3 py-2 bg-secondary/30 border-b border-border">
           <h3 className="text-sm font-bold text-foreground">Treatment Breakdown</h3>
         </div>
 
@@ -286,7 +286,7 @@ export function ToothOverviewStep({
         {!isLoading && !error && history.length > 0 && (
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-[#f5f5f3]">
+              <tr className="bg-secondary/50">
                 <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Surface</th>
                 <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Condition</th>
                 <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Treatment</th>
@@ -326,7 +326,7 @@ export function ToothOverviewStep({
             </tbody>
             {history.some(e => e.treatmentPriceCents) && (
               <tfoot>
-                <tr className="bg-[#fafaf9] border-t-2 border-border">
+                <tr className="bg-secondary/30 border-t-2 border-border">
                   <td colSpan={4} className="px-3 py-2 font-bold text-foreground">Total</td>
                   <td className="px-3 py-2 font-bold text-foreground text-right">
                     ₱{(history

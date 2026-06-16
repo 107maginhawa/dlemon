@@ -50,7 +50,7 @@ function VerifyEmailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <div className="flex justify-center mb-4">
@@ -60,8 +60,8 @@ function VerifyEmailPage() {
 
         <Card>
           <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2">
-              <Mail className="w-6 h-6 text-blue-600" />
+            <div className="mx-auto w-12 h-12 rounded-full bg-info/15 flex items-center justify-center mb-2">
+              <Mail className="w-6 h-6 text-info-foreground" />
             </div>
             <CardTitle className="text-2xl">Verify Your Email</CardTitle>
             <CardDescription>

@@ -76,7 +76,7 @@ export function ClinicSettings() {
         </div>
       )}
       {isSuccess && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">Settings saved</div>
+        <div className="rounded-lg bg-success/10 border border-success/30 px-3 py-2 text-sm text-success-foreground">Settings saved</div>
       )}
       <div><label className={labelClass}>Clinic Name *</label><input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} /></div>
       <div><label className={labelClass}>Address *</label><input type="text" value={address} onChange={e => setAddress(e.target.value)} className={inputClass} /></div>
