@@ -170,10 +170,10 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                     aria-label={`${todayAppointments.length} appointment slots`}
                   >
                     {todayAppointments.map((appt) => {
-                      let slotClass = 'bg-gray-200';
+                      let slotClass = 'bg-muted';
                       if (appt.status === 'completed' || appt.status === 'no_show')
-                        slotClass = 'bg-green-500';
-                      if (appt.status === 'checked_in') slotClass = 'bg-sky-400';
+                        slotClass = 'bg-success';
+                      if (appt.status === 'checked_in') slotClass = 'bg-info';
                       return (
                         <div
                           key={appt.id}
@@ -222,12 +222,12 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                         className="flex items-center justify-between py-2 border-b border-border last:border-b-0"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-destructive flex-shrink-0" />
                           <span className="text-[13px] font-medium truncate">
                             {inv.patientName ?? inv.invoiceNumber}
                           </span>
                         </div>
-                        <span className="text-[13px] font-semibold text-red-500 tabular-nums">
+                        <span className="text-[13px] font-semibold text-destructive-emphasis tabular-nums">
                           {formatCents(inv.balanceCents)}
                         </span>
                       </div>
@@ -235,7 +235,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                     {overdueTotal > 0 && (
                       <p className="text-[11px] text-muted-foreground mt-2">
                         Total outstanding:{' '}
-                        <strong className="text-red-500">{formatCents(overdueTotal)}</strong>
+                        <strong className="text-destructive-emphasis">{formatCents(overdueTotal)}</strong>
                       </p>
                     )}
                   </div>
@@ -275,7 +275,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                 action={{ label: 'Manage', onClick: () => navigate({ to: '/billing' }) }}
               >
                 {paymentPlansBehind != null && paymentPlansBehind > 0 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-700">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-warning/15 text-warning-foreground">
                     {paymentPlansBehind} behind
                   </span>
                 )}
@@ -297,7 +297,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               accentColor={overdueLabOrders != null && overdueLabOrders > 0 ? 'red' : undefined}
             >
               {overdueLabOrders != null && overdueLabOrders > 0 && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-700">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-destructive/15 text-destructive-emphasis">
                   {overdueLabOrders} overdue
                 </span>
               )}
@@ -329,7 +329,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                     year: 'numeric',
                   })}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-blue-100 text-blue-700">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-info/15 text-info-foreground">
                   {tomorrowAppointments.length} appointment{tomorrowAppointments.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -348,7 +348,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                   <span className="text-xs font-medium text-muted-foreground tabular-nums w-[52px] flex-shrink-0">
                     {formatTime(appt.scheduledAt)}
                   </span>
-                  <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
                     {getInitials(appt.patientName)}
                   </div>
                   <span className="text-[13px] font-medium truncate">
@@ -371,7 +371,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
 
               <div className="flex flex-col gap-0">
                 <div className="flex gap-2 items-start py-2 border-b border-border">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-1.5" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-warning flex-shrink-0 mt-1.5" />
                   <div>
                     <p className="text-[13px] font-medium">Reorder composite resin (A2)</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -380,7 +380,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                   </div>
                 </div>
                 <div className="flex gap-2 items-start py-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0 mt-1.5" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-info flex-shrink-0 mt-1.5" />
                   <div>
                     <p className="text-[13px] font-medium">X-ray calibration due</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">

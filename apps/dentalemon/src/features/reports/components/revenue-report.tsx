@@ -96,11 +96,11 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Collected</p>
-              <p className="text-2xl font-bold mt-1 text-green-600">{formatCents(totalCollected)}</p>
+              <p className="text-2xl font-bold mt-1 text-success-foreground">{formatCents(totalCollected)}</p>
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Outstanding</p>
-              <p className="text-2xl font-bold mt-1 text-red-600">{formatCents(totalOutstanding)}</p>
+              <p className="text-2xl font-bold mt-1 text-destructive-emphasis">{formatCents(totalOutstanding)}</p>
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Collection Rate</p>
@@ -126,8 +126,8 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                   <tr key={d.date} className="border-b last:border-0">
                     <td className="px-4 py-2.5">{d.date}</td>
                     <td className="px-4 py-2.5 text-right">{formatCents(d.billed)}</td>
-                    <td className="px-4 py-2.5 text-right text-green-600">{formatCents(d.collected)}</td>
-                    <td className="px-4 py-2.5 text-right text-red-600">{formatCents(d.billed - d.collected)}</td>
+                    <td className="px-4 py-2.5 text-right text-success-foreground">{formatCents(d.collected)}</td>
+                    <td className="px-4 py-2.5 text-right text-destructive-emphasis">{formatCents(d.billed - d.collected)}</td>
                   </tr>
                 ))}
                 {dailyData.length === 0 && (
@@ -179,10 +179,10 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                       {inv.status}
                     </td>
                     <td className="px-4 py-2.5 text-right">{formatCents(inv.totalCents)}</td>
-                    <td className="px-4 py-2.5 text-right text-green-600 hidden sm:table-cell">
+                    <td className="px-4 py-2.5 text-right text-success-foreground hidden sm:table-cell">
                       {formatCents(inv.paidCents)}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-red-600">
+                    <td className="px-4 py-2.5 text-right text-destructive-emphasis">
                       {formatCents(inv.balanceCents)}
                     </td>
                   </tr>

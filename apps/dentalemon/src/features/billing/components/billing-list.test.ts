@@ -47,16 +47,16 @@ describe('BillingList -- formatInvoiceStatus', () => {
 });
 
 describe('BillingList -- getStatusBadgeClass', () => {
-  test('getStatusBadgeClass("paid") includes "green"', () => {
-    expect(getStatusBadgeClass('paid')).toContain('green');
+  test('getStatusBadgeClass("paid") includes "success"', () => {
+    expect(getStatusBadgeClass('paid')).toContain('success');
   });
 
-  test('getStatusBadgeClass("overdue") includes "red"', () => {
-    expect(getStatusBadgeClass('overdue')).toContain('red');
+  test('getStatusBadgeClass("overdue") includes "destructive"', () => {
+    expect(getStatusBadgeClass('overdue')).toContain('destructive');
   });
 
-  test('getStatusBadgeClass("voided") includes "gray"', () => {
-    expect(getStatusBadgeClass('voided')).toContain('gray');
+  test('getStatusBadgeClass("voided") includes "muted"', () => {
+    expect(getStatusBadgeClass('voided')).toContain('muted');
   });
 });
 
@@ -71,12 +71,12 @@ describe('BillingList -- formatCents', () => {
 });
 
 describe('BillingList -- getBalanceClass', () => {
-  test('getBalanceClass(1000) includes "text-red"', () => {
-    expect(getBalanceClass(1000)).toContain('text-red');
+  test('getBalanceClass(1000) includes "text-destructive"', () => {
+    expect(getBalanceClass(1000)).toContain('text-destructive');
   });
 
-  test('getBalanceClass(0) includes "text-green"', () => {
-    expect(getBalanceClass(0)).toContain('text-green');
+  test('getBalanceClass(0) includes "text-success"', () => {
+    expect(getBalanceClass(0)).toContain('text-success');
   });
 });
 

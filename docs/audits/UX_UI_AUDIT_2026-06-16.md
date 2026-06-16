@@ -93,10 +93,10 @@ Counts after dedupe: **High 53 · Medium 50 · Low 14 · Total 117**.
 - [x] `patients.tsx` — selected toggle `bg-[#FFF9DB]` → `bg-accent`. **Medium [UI]**
 - [x] `tooth-overview-step.tsx:314` — watchlist badge `bg-[#fef9c3] text-[#854d0e]` → `bg-dental-watchlist text-dental-watchlist-foreground` (exact bg + accessible fg). **Medium [UI]**
 
-### 2-cont — DEFERRED (needs accessible `*-foreground` tokens + visual review; see D8 & "Batch 2b" below)
-- [ ] Shared `<StatusBadge>` + all text-bearing status badges: `billing-list`, `workspace-payment-modal`, `invoice-detail.helpers`, `invoice-detail-sheet`, `patient-folder-card:129,138`, `patient-profile-page`, `treatment-plans-sheet`, `perio-comparison`, `case-presentation-view`, `accepted-plan-viewer`, revenue/patient reports. **High [UI]**
-- [ ] `morning-briefing.tsx` — fills (slot bars/dots 173-176,225,374,383) are safe → swap; text badges (278,300,332) need fg tokens. + `metric-card.tsx:28-31` trend pills. **High [UI]**
-- [ ] `billing-list.tsx:143,161` — `text-amber-600` → needs `warning-foreground` (raw `text-warning` would regress). **Medium [UI]**
+### 2b — Accessible status tokens + badge recolor ✅ DONE (commit `<batch2b>`; gate 2473/0)
+- [x] Added `success/warning/info` `-foreground` (#15803d/#b45309/#0369a1) + `destructive.emphasis` (#b91c1c) tokens. **High [UI]**
+- [x] Recolored all text-bearing status badges/numbers IN PLACE (no structural `<StatusBadge>` — see D10) across: `billing-list`, `invoice-detail.helpers`, `workspace-payment-modal`, `treatment-plans-sheet` (fixed the 2 real contrast fails `bg-green-50 text-green-500` / `bg-red-50 text-red-400`), `perio-comparison`, `patient-folder-card`, `patient-profile-page`, `revenue-report`, `patient-report`, `morning-briefing` (fills→solid, badges→tint+fg), `metric-card`, `case-presentation-view`, `accepted-plan-viewer`. Co-located test assertions updated (`billing-list.test`, `patient-folder-card.test`). **High [UI]**
+- [ ] **Remaining badge file:** `invoice-detail.tsx` (audit's "invoice-detail-sheet" ref was wrong) still has palette badge classes → fold into next swap pass. **Low [UI]**
 - [ ] `tooth-overview-step.tsx:120,264,289,329` — off-white surfaces → `bg-secondary/*` (subtle warm→cool shift; eyeball). **Medium [UI]**
 - [ ] **2d inline/SVG:** `dental-chart.tsx:217-258` SVG strokes (note: `--dental-implant` is hex, use `var(--dental-implant)` NOT `hsl()`; `#B8860A`≈`lemon-accent` not `lemon`), `treatment-plan-tab.tsx:46-51` `PHASE_ACCENTS`→`var(--phase-*)`, `signature-pad.tsx:31` canvas read `--foreground`, `workspace-top-bar.tsx:149-156` `rgba(255,233,125,0.3)`→`bg-lemon/20`, `patient-profile-page.tsx:85,345` inline gold. **Medium [Technical]**
 - [ ] Auth backgrounds: `onboarding.tsx:217`/`verify-email.tsx:53` `bg-gray-50`→`bg-background`; `verify-email.tsx:63` blue→`bg-accent`; `index.tsx:28,35,42` (fills, safe); `onboarding-wizard.tsx:304`→`<Button variant="lemon">`. **High [UI]** *(mostly safe — fold into next batch)*
@@ -186,6 +186,7 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | D7 | Batch 3a hung the full suite (in-suite only; isolation green) | **Root-caused & fixed the latent test landmine.** | 11 test files mocked `sonner` as `{ toast: { error } }` (no `.success`). Bun's `mock.module` is **process-wide**, so once one ran, `toast.success` was `undefined` for all later files → new `toast.success()` calls threw → handlers died → `waitFor` hung. Proven by stash-revert (baseline 2473/0 clean vs hang). Fixed by adding `.success` to all 11 mocks (now matches the already-complete ones). Not a product bug. |
 | D8 | Audit's badge pattern `bg-success/15 text-success` | **Rejected for text; deferred text-badge recolor to Batch 2b.** | `success`/`warning`/`info` are mid-tone Apple FILL colors. As text on a light tint they fail (~1.7–2:1); the existing `text-green-800`/`amber-600` are darker. Naive swap = contrast REGRESSION. Need AA `*-foreground` tokens first (proposed in Batch 2b). Batch 2 shipped only color-preserving / fill / icon swaps. |
 | D9 | `dental-chart.tsx` SVG: audit said `hsl(var(--lemon))` | **Corrected mapping (for Batch 2d).** | There is no `--lemon` var; dental vars are stored as **hex** (`--dental-implant: #007AFF`) so they need `var(--x)` NOT `hsl(var(--x))`. Declined-tooth `#B8860A` ≈ the new `lemon-accent` (#C8B800), not lemon (#FFE97D). |
+| D10 | Audit wanted a shared `<StatusBadge>` primitive | **Did in-place token swaps instead.** | Each badge site has its own status→label logic; recoloring classes in place fixes the actual defects (token drift + contrast) with far less regression risk than a 14-site structural refactor. The DRY `<StatusBadge>` extraction is an optional follow-up, not a blocker. |
 
 ## Progress Log
 
@@ -194,4 +195,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | 2026-06-16 | (tracker created) | `44ff21d1` | — |
 | 2026-06-16 | Batch 1 — Accessibility (additive) | `2b6e8087` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 3a — Feedback toasts (+ sonner mock-shape fix) | `26e3e971` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 (stash-revert proved no regression) |
-| 2026-06-16 | Batch 2 — Token foundation + safe color-preserving swaps | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 2 — Token foundation + safe color-preserving swaps | `1fdf3ad7` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 2b — Accessible status tokens + badge recolor (14 files) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |

@@ -41,19 +41,19 @@ export function formatInvoiceStatus(status: string): string {
 export function getStatusBadgeClass(status: string): string {
   switch (status) {
     case 'draft':
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-muted text-muted-foreground';
     case 'issued':
-      return 'bg-blue-100 text-blue-700';
+      return 'bg-info/15 text-info-foreground';
     case 'partial':
-      return 'bg-orange-100 text-orange-700';
+      return 'bg-warning/15 text-warning-foreground';
     case 'paid':
-      return 'bg-green-100 text-green-700';
+      return 'bg-success/15 text-success-foreground';
     case 'overdue':
-      return 'bg-red-100 text-red-700';
+      return 'bg-destructive/15 text-destructive-emphasis';
     case 'voided':
-      return 'bg-gray-100 text-gray-400 line-through';
+      return 'bg-muted text-muted-foreground line-through';
     default:
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -63,7 +63,7 @@ export function formatCents(cents: number): string {
 }
 
 export function getBalanceClass(balanceCents: number): string {
-  return balanceCents > 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
+  return balanceCents > 0 ? 'text-destructive-emphasis font-bold' : 'text-success-foreground font-bold';
 }
 
 export function summarizeInvoices(invoices: Invoice[]): {
@@ -140,7 +140,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
           <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
             Total Outstanding
           </span>
-          <span className="text-3xl font-bold tracking-tight tabular-nums text-red-500">
+          <span className="text-3xl font-bold tracking-tight tabular-nums text-destructive-emphasis">
             {formatCents(summary.totalOutstanding)}
           </span>
         </div>
@@ -158,7 +158,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
           <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
             Overdue
           </span>
-          <span className="text-3xl font-bold tracking-tight tabular-nums text-amber-600">
+          <span className="text-3xl font-bold tracking-tight tabular-nums text-warning-foreground">
             {formatCents(summary.overdueAmount)}
           </span>
         </div>

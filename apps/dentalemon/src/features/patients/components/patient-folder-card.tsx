@@ -34,7 +34,7 @@ function tabClass(status?: 'active' | 'archived' | 'in-session'): string {
   switch (status) {
     case 'active': return 'bg-lemon';
     case 'archived': return 'bg-muted';
-    case 'in-session': return 'bg-teal-500';
+    case 'in-session': return 'bg-info';
     default: return 'bg-lemon';
   }
 }
@@ -131,7 +131,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           {patient.needsFollowUp && (
             <span
               data-testid="follow-up-indicator"
-              className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-medium"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning-foreground font-medium"
               title="Follow-up needed"
             >
               Follow-up
@@ -140,7 +140,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           {patient.hasBalance && (
             <span
               data-testid="balance-badge"
-              className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive-emphasis font-medium"
               title="Outstanding balance"
             >
               Balance

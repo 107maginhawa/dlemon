@@ -77,7 +77,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
                 Active Patients
               </p>
-              <p className="text-2xl font-bold mt-1 text-green-600">{stats.totalActive}</p>
+              <p className="text-2xl font-bold mt-1 text-success-foreground">{stats.totalActive}</p>
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -89,7 +89,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
                 New Registrations
               </p>
-              <p className="text-2xl font-bold mt-1 text-blue-600">{stats.newRegistrations}</p>
+              <p className="text-2xl font-bold mt-1 text-info-foreground">{stats.newRegistrations}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {startDate} to {endDate}
               </p>

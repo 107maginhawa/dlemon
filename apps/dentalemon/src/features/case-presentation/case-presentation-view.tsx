@@ -155,7 +155,7 @@ export function CasePresentationView({
       {decided ? (
         <div
           className={`rounded-xl px-4 py-3 text-sm font-semibold ${
-            accepted ? 'bg-green-100 text-green-800' : 'bg-red-50 text-red-700'
+            accepted ? 'bg-success/15 text-success-foreground' : 'bg-destructive/15 text-destructive-emphasis'
           }`}
           data-testid="decision-banner"
         >

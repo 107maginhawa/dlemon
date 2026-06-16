@@ -33,7 +33,7 @@ function fmtValue(key: 'bop' | 'meanDepth' | 'deepPockets', v: number | null): s
 function DeltaBadge({ delta }: { delta: MetricDelta | null }) {
   if (!delta || delta.dir === 'flat') return null;
   const Icon = delta.dir === 'down' ? ChevronDown : ChevronUp;
-  const cls = delta.better ? 'text-emerald-600' : 'text-destructive';
+  const cls = delta.better ? 'text-success-foreground' : 'text-destructive-emphasis';
   return (
     <span className={`ml-1 inline-flex items-center text-[11px] font-medium ${cls}`}>
       <Icon className="h-3 w-3" />

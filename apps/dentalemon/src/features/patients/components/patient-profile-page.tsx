@@ -47,9 +47,9 @@ function formatCents(cents: number): string {
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
-    active: 'bg-green-100 text-green-800',
+    active: 'bg-success/15 text-success-foreground',
     archived: 'bg-muted text-muted-foreground',
-    'in-session': 'bg-teal-100 text-teal-800',
+    'in-session': 'bg-info/15 text-info-foreground',
   };
   const label: Record<string, string> = {
     active: 'Active',
@@ -148,9 +148,9 @@ function OverviewTab({ patientId }: { patientId: string }) {
                   className={[
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap',
                     v.status === 'completed' || v.status === 'locked'
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-success/15 text-success-foreground'
                       : v.status === 'active'
-                      ? 'bg-teal-100 text-teal-800'
+                      ? 'bg-info/15 text-info-foreground'
                       : 'bg-muted text-muted-foreground',
                   ].join(' ')}
                 >
@@ -234,11 +234,11 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
                   className={[
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
                     inv.status === 'paid'
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-success/15 text-success-foreground'
                       : // 'pending' was never a real DentalInvoiceStatus (draft|issued|
                         // partial|paid|overdue|voided) → this branch was always false.
                         inv.status === 'issued' || inv.status === 'partial' || inv.status === 'overdue'
-                      ? 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-warning/15 text-warning-foreground'
                       : 'bg-muted text-muted-foreground',
                   ].join(' ')}
                 >
