@@ -38,11 +38,15 @@ function ReportsPage() {
   return (
     <div className="p-6">
       {/* Tab navigation */}
-      <div className="flex items-center gap-1 mb-6 border-b border-border">
+      <div role="tablist" aria-label="Reports" className="flex items-center gap-1 mb-6 border-b border-border">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             type="button"
+            role="tab"
+            id={`tab-${tab.key}`}
+            aria-selected={activeTab === tab.key}
+            aria-controls={`tabpanel-${tab.key}`}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 text-sm font-medium transition-colors relative ${
               activeTab === tab.key
@@ -59,9 +63,11 @@ function ReportsPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'revenue' && <RevenueReport branchId={branchId} />}
-      {activeTab === 'treatment' && <TreatmentReport branchId={branchId} />}
-      {activeTab === 'patient' && <PatientReport branchId={branchId} />}
+      <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+        {activeTab === 'revenue' && <RevenueReport branchId={branchId} />}
+        {activeTab === 'treatment' && <TreatmentReport branchId={branchId} />}
+        {activeTab === 'patient' && <PatientReport branchId={branchId} />}
+      </div>
     </div>
   );
 }

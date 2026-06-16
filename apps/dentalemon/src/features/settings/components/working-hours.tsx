@@ -132,6 +132,8 @@ export function WorkingHours() {
             <span className="text-sm font-medium">{DAY_LABELS[day]}</span>
             <button
               type="button"
+              role="switch"
+              aria-checked={hours[day].open}
               onClick={() => handleToggle(day)}
               className={`w-10 h-6 rounded-full transition-colors relative ${hours[day].open ? 'bg-lemon' : 'bg-secondary'}`}
               aria-label={`Toggle ${DAY_LABELS[day]}`}

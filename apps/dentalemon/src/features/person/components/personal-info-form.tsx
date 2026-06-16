@@ -222,6 +222,7 @@ export function PersonalInfoForm({
                     className="h-8 w-8 rounded-full"
                     onClick={handleAvatarClick}
                     disabled={isUploadingAvatar}
+                    aria-label={isUploadingAvatar ? 'Uploading photo…' : 'Change avatar photo'}
                   >
                     {isUploadingAvatar ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -237,6 +238,7 @@ export function PersonalInfoForm({
                       className="h-8 w-8 rounded-full"
                       onClick={handleRemoveAvatar}
                       disabled={isUploadingAvatar}
+                      aria-label="Remove avatar photo"
                     >
                       <X className="h-4 w-4" />
                     </Button>

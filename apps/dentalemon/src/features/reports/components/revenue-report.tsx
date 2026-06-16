@@ -157,8 +157,17 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                 {invoices.map(inv => (
                   <tr
                     key={inv.id}
-                    className="border-b last:border-0 cursor-pointer hover:bg-secondary/50 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open invoice ${inv.invoiceNumber}`}
+                    className="border-b last:border-0 cursor-pointer hover:bg-secondary/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     onClick={() => setSelectedInvoiceId(inv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedInvoiceId(inv.id)
+                      }
+                    }}
                   >
                     <td className="px-4 py-2.5 font-medium text-primary" data-testid="revenue-invoice-number">
                       {inv.invoiceNumber}

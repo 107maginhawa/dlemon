@@ -164,7 +164,12 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-40 flex items-end"
+      role="dialog"
+      aria-modal="true"
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
+    >
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       <div

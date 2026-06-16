@@ -73,7 +73,12 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
       tabIndex={0}
       aria-label={`Open patient record for ${patient.displayName}`}
       onClick={() => onClick(patient)}
-      onKeyDown={(e) => e.key === 'Enter' && onClick(patient)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(patient)
+        }
+      }}
       className="relative flex flex-col rounded-xl bg-card border border-border hover:border-primary/60 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer overflow-hidden w-48"
     >
       {/* Manila folder tab strip */}

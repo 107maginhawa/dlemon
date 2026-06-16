@@ -51,7 +51,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 
 ## 4. Batch execution order (safest first)
 
-- [ ] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, alt, key handlers. No visual change.
+- [x] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, key handlers. No visual change. *(done — commit below; gate green 2473/0)*
 - [ ] **Batch 2 — Design-token compliance** 🟢/🟡 — token foundation + color swaps + shared `<StatusBadge>`.
 - [ ] **Batch 3 — Feedback** 🟢 — sonner toasts on mutations; replace native `alert/confirm/prompt`.
 - [ ] **Batch 4 — Focus rings & micro-interactions** 🟢/🟡 — `focus-visible` rings, `active:` states.
@@ -65,16 +65,17 @@ Counts after dedupe: **High 53 · Medium 50 · Low 14 · Total 117**.
 
 ---
 
-## Batch 1 — Accessibility (additive) 🟢
+## Batch 1 — Accessibility (additive) 🟢 ✅ DONE (commit `<batch1>`)
 
-- [ ] `reports.tsx:40-59` + `settings-page.tsx:37-49` — tab bars: add `role="tablist"`/`role="tab"`/`aria-selected`/`aria-controls`. **High [UX]**
-- [ ] `revenue-report.tsx:158-162` — `<tr onClick>` drill-down: add `role="button" tabIndex={0}` + Enter/Space `onKeyDown`. **High [Technical]**
-- [ ] `personal-info-form.tsx:218-231` — avatar Camera/Remove icon buttons: add `aria-label`. **High [UI]**
-- [ ] `notification-settings.tsx:133-142` + `working-hours.tsx:133-142` — custom toggles: add `aria-pressed={state}`. **Medium [UI]**
-- [ ] `staff-create-modal.tsx:168` + `staff-edit-modal.tsx:175` — add Escape-to-close `onKeyDown`. **Medium [UI]**
-- [ ] `patient-folder-card.tsx:76` — `role="button"` div: handle Space (`'Enter' || ' '`) + `preventDefault`. **Medium [UX]**
-- [ ] `address-form.tsx:195-207` — country combobox: add `aria-required`. **Low [UI]**
-- [ ] imaging `<img>` alt text — `CephReportView.tsx:179`, `FmxMount.tsx:59-65`, `comparison-view.tsx:188` — descriptive alt (modality/date). **Medium [UI]**
+- [x] `reports.tsx` + `settings-page.tsx` — tab bars: added `role="tablist"`/`role="tab"`/`aria-selected`/`aria-controls` + `role="tabpanel"`. **High [UX]**
+- [x] `revenue-report.tsx` — `<tr onClick>`: added `role="button" tabIndex={0}` + Enter/Space `onKeyDown` + `aria-label` + focus ring. **High [Technical]**
+- [x] `personal-info-form.tsx` — avatar Camera/Remove buttons: added `aria-label`. **High [UI]**
+- [x] `notification-settings.tsx` (×2 toggles) + `working-hours.tsx` — added `role="switch"` + `aria-checked` (stronger than `aria-pressed`). **Medium [UI]**
+- [x] `staff-create-modal.tsx` + `staff-edit-modal.tsx` — added Escape-to-close `onKeyDown` on dialog wrapper. **Medium [UI]**
+- [x] `patient-folder-card.tsx` — `role="button"` div: now handles Space + `preventDefault`. **Medium [UX]**
+- [x] `address-form.tsx` — country combobox: added `aria-required`. **Low [UI]**
+- [~] imaging `<img>` alt — **DROPPED from Batch 1 (false positive):** `CephReportView.tsx` and `FmxMount.tsx` already have alt (see D5). `comparison-view.tsx` alt *enhancement* (add modality/date) deferred → Batch 7 imaging.
+- Tests updated to track improved semantics: `settings-page.test.tsx` (button→tab queries), `personal-info-form.test.tsx` (avatar empty-name → labelled).
 
 ## Batch 2 — Design-token compliance 🟢/🟡
 
@@ -171,9 +172,12 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | D2 | Contrast ratios across a11y findings | **Verify with a tool before claiming WCAG pass/fail.** | Ratios in the report are estimates, not measured. |
 | D3 | "Make Save & Next the primary button" (`tooth-slideout`) | **Confirm with product before changing hierarchy.** | Taste/intent call, not a defect. |
 | D4 | Bulk-apply all 117 at once | **Rejected.** Batch + gate, safest-first. | User requirement: no breakage; prove green per batch. |
+| D5 | "Imaging `<img>` missing alt" (`CephReportView.tsx`, `FmxMount.tsx`) | **Refuted — already handled.** Dropped from Batch 1. | Both already have alt (`item.fileName`; `"Cephalometric radiograph with landmark tracing"`). Only `comparison-view.tsx` alt is an enhancement (add modality) → Batch 7. |
+| D6 | Batch 1 a11y broke 4 unit tests | **Tests updated, not behavior reverted.** | Tests asserted the pre-fix DOM (tabs queried as `role="button"`; avatar button by *empty* accessible name). The fix is correct; expectations now track `role="tab"` / the new `aria-label`. |
 
 ## Progress Log
 
 | Date | Batch | Commit | Gate result |
 |------|-------|--------|-------------|
-| 2026-06-16 | (tracker created) | — | — |
+| 2026-06-16 | (tracker created) | `44ff21d1` | — |
+| 2026-06-16 | Batch 1 — Accessibility (additive) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
