@@ -173,6 +173,14 @@ export class S3StorageProvider implements StorageProvider {
     const command = new GetObjectCommand({
       Bucket: this.config.bucket,
       Key: fileId,
+      // P1-7a (stored-XSS): the uploader-supplied mimeType is stored as the
+      // object's Content-Type, and the object is served from the storage origin
+      // (not proxied through the API, so the app's nosniff header never applies).
+      // Forcing `attachment` makes the browser DOWNLOAD rather than render inline,
+      // so an uploaded text/html / SVG-with-script cannot execute on view. The
+      // multipart path already sets this; the single-PUT download path did not.
+      ResponseContentDisposition: 'attachment',
+      ResponseContentType: 'application/octet-stream',
     });
 
     // Use publicClient for generating URLs accessible from outside Docker network
