@@ -18,7 +18,7 @@ A thin wrapper over `bun run verify:app` (orchestrator at `scripts/verify-app.ts
 
 ## What it runs
 
-- **Tier 0 — Computed gates** (seconds): typecheck, lint, the 6 coverage matrices via `coverage:all:ci` (role-op drift, endpoint, BR traceability, FSM, workflow, fe-route), module-boundaries, and BR traceability. Set-diffs over the machine-readable sources — computes what's untested and ratchets it.
+- **Tier 0 — Computed gates** (seconds): typecheck, lint, the 6 coverage matrices via `coverage:all:ci` (role-op drift **HARD**; endpoint/FSM/workflow/fe-route **ratchet**; `br` **report-only**), module-boundaries, and the legacy P0-BR traceability gate (`audit:trace:ci`, a fixed subset — see caveats below). Set-diffs over the machine-readable sources — computes what's untested and ratchets it.
 - **Tier 1 — Functional proof** (3–5 min): FE unit + coherence tests, and — **when the api-ts stack is reachable on `:7213`** — the core Hurl contract suite + the journey harness. This is the real-stack proof that the wired surface works.
 
 It writes one verdict file: `docs/testing/coverage/VERDICT.md`.
@@ -66,6 +66,18 @@ Then point the user at the committed coverage artifacts under `docs/testing/cove
 - **role-op drift** — HARD (must be 0; never allowlisted)
 - **endpoint / fsm / workflow / fe-route** — RATCHET (allowlists can only shrink; new entries need a `reason` + sign-off)
 - **br** — REPORT-ONLY (the 26 P0 traceability gaps are a triage backlog; `audit:trace:ci` remains the P0 gate)
+
+## What this does NOT prove
+
+A green verdict means the **wired/shipped** surface works and the computed gaps are ratcheted. It is **not** an adversarial audit (that is Tier 2 / Phase 3). When you report the verdict, carry these caveats — do not let "green" read as "nobody can break this":
+
+- **Object-level IDOR · cross-tenant LIST leaks · secrets-in-logs · "inert" authz** (a permission computed but never enforced) are **not** detected here. The P0 cross-tenant patient-contact IDOR (fixed in #38) passed every Tier-0/1 gate.
+- **Not all P0 BRs are traced.** `br-traceability` runs the legacy fixed-subset gate (`audit:trace:ci`), not the 48 computed P0 BRs — **26 of 48 are untraced** (IDOR / erasure / legal-hold among them; see `br-matrix.md`).
+- **role-op "0 drift" is true-but-narrow** — only ~28 of ~110 role-gated ops are expressible in the spec matrix tables; "0 drift" means no contradiction among the joinable subset, not "all 110 verified".
+- **Per-endpoint test breadth is partial** — the endpoint matrix's *integration*/*journey* columns read a gitignored `COVERAGE_RECORD` sink not populated in a normal pass, so a "tested" disposition can rest on the *contract* column alone.
+- **~180 orphan endpoints** (built, no FE consumer — incl. payments / erasure / legal-hold) are tracked in `orphan-disposition.md`, not exercised.
+
+(The VERDICT.md it generates ends with this same "What this verdict does NOT prove" block.)
 
 ## When NOT to use this skill
 

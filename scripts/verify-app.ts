@@ -74,7 +74,8 @@ const STEPS: Step[] = [
     cmd: 'cd specs/api && bun run build >/dev/null && cd ../../services/api-ts && bun run generate >/dev/null && cd ../.. && bun scripts/build-contract-spine.ts >/dev/null && bun run coverage:all:ci' },
   { id: 'module-boundaries', tier: 0, blocking: true, what: 'cross-module repository-import isolation',
     cmd: 'cd services/api-ts && bun run check:boundaries:error' },
-  { id: 'br-traceability', tier: 0, blocking: true, what: 'every P0 business rule is traced to a test',
+  { id: 'br-traceability', tier: 0, blocking: true,
+    what: 'the LEGACY fixed-subset P0-BR traceability gate (audit:trace:ci) — NOT all 48 computed P0 BRs (26 untraced; see br-matrix.md)',
     cmd: 'bun run audit:trace:ci' },
 
   // ── Tier 1 — functional proof ─────────────────────────────────────────────
@@ -125,6 +126,34 @@ function run(step: Step, stackUp: boolean): Result {
   return { step, status, ms, detail }
 }
 
+/**
+ * The honest ceiling. verify-app proves the WIRED/SHIPPED surface works and
+ * RATCHETS the computed gaps — it is not an adversarial audit. Spelling this out
+ * stops a green verdict from being read as "nobody can break this" (the P0
+ * patient-contact IDOR fixed in #38 was invisible to every Tier-0/1 gate here).
+ */
+const DOES_NOT_PROVE = `## What this verdict does NOT prove
+A green verdict means the wired surface works and the computed gaps are ratcheted.
+It is **not** an adversarial audit. It does **not** detect:
+
+- **Object-level IDOR · cross-tenant LIST leaks · secrets-in-logs · "inert" authz**
+  (a permission the code computes but never enforces). These are Tier-2 probes
+  (Phase 3) — e.g. the P0 cross-tenant patient-contact IDOR (fixed in #38) passed
+  every Tier-0/1 gate.
+- **All P0 business rules.** \`br-traceability\` runs the LEGACY fixed-subset gate
+  (\`audit:trace:ci\`), not the 48 computed P0 BRs — **26 of 48 are untraced**
+  (IDOR / erasure / legal-hold among them; see \`br-matrix.md\`). \`br\` is report-only.
+- **Full role coverage.** role-op "0 drift" is true-but-narrow: only ~28 of ~110
+  role-gated ops are expressible in the spec matrix tables, so "0 drift" means "no
+  contradiction among the joinable subset", not "all 110 verified".
+- **Per-endpoint test breadth.** The endpoint matrix's *integration* + *journey*
+  columns read a \`COVERAGE_RECORD\` sink that is gitignored / not populated in this
+  pass — only the *contract* column is authoritative, so a "tested" disposition can
+  rest on contract coverage alone.
+- **The ~180 orphan endpoints** (built, no FE consumer — incl. payments / erasure /
+  legal-hold) or product-decision-gated gaps; those are tracked in
+  \`orphan-disposition.md\`, not exercised.`
+
 function writeVerdict(results: Result[], stackUp: boolean, overall: Status) {
   const icon = (s: Status) => (s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : '⏭️')
   const rows = results
@@ -150,6 +179,8 @@ The 6 coverage matrices + their gap reports are committed under \`docs/testing/c
 \`role-op-matrix.md\`, \`endpoint-matrix.md\` (+ \`orphan-disposition.md\`), \`br-matrix.md\`,
 \`fsm-matrix.md\`, \`workflow-matrix.md\`, \`fe-route-matrix.md\`. Each is a deterministic
 set-diff over a machine-readable source; new gaps must be allowlisted with a reason.
+
+${DOES_NOT_PROVE}
 
 ## Tier 2 (deep sweep)
 Reserved for Phase 3 (mutation + 26-module skeptic fan-out + persona walks). Run with \`--deep\` once it lands.
