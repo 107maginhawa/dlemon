@@ -24,6 +24,7 @@
     "verify:app": "bun scripts/verify-app.ts",
     "verify:app:ci": "bun scripts/verify-app.ts --ci",
     "verify:app:strict": "bun scripts/verify-app.ts --ci --require-stack",
+    "verify:app:deep": "bun scripts/verify-app.ts --ci --deep",
     "infra:up": "docker compose -f services/api-ts/docker-compose.deps.yml up -d --wait",
     "infra:down": "docker compose -f services/api-ts/docker-compose.deps.yml down",
     "infra:reset": "docker compose -f services/api-ts/docker-compose.deps.yml down -v && docker compose -f services/api-ts/docker-compose.deps.yml up -d --wait",

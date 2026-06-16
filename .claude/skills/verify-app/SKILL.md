@@ -20,20 +20,44 @@ A thin wrapper over `bun run verify:app` (orchestrator at `scripts/verify-app.ts
 
 - **Tier 0 — Computed gates** (seconds): typecheck, lint, the 6 coverage matrices via `coverage:all:ci` (role-op drift **HARD**; endpoint/FSM/workflow/fe-route **ratchet**; `br` **report-only**), module-boundaries, and the legacy P0-BR traceability gate (`audit:trace:ci`, a fixed subset — see caveats below). Set-diffs over the machine-readable sources — computes what's untested and ratchets it.
 - **Tier 1 — Functional proof** (3–5 min): FE unit + coherence tests, and — **when the api-ts stack is reachable on `:7213`** — the core Hurl contract suite + the journey harness. This is the real-stack proof that the wired surface works.
+- **Tier 2 — Deep e2e** (`--deep`, ~tens of min): the broad Playwright sweep (chromium + iPad, ~70 specs) against the live stack. Opt-in; **requires** the stack. The *adversarial* Tier-2 (mutation / skeptic fan-out / persona walks) is still Phase 3.
 
 It writes one verdict file: `docs/testing/coverage/VERDICT.md`.
 
 ## Workflow
 
-### 1. (Optional) boot the real stack for Tier 1
+### 1. (Optional) boot the real stack for Tier 1 / required for `--deep`
 
 For the full Tier-1 proof (contract + journeys), have the API reachable on `:7213`:
 
 ```bash
-cd services/api-ts && bun dev   # listens on 7213
+cd services/api-ts && bun dev   # listens on 7213 (auto-migrates on boot)
 ```
 
-If the stack is not reachable, Tier 0 still runs fully and Tier 1 runs the stack-independent steps (FE unit/coherence); the contract + journey steps are reported as skipped.
+If the stack is not reachable, Tier 0 still runs fully and Tier 1 runs the stack-independent steps (FE unit/coherence); the contract + journey steps are reported as **skipped** (default) or **failed** (`--require-stack` / `--deep`).
+
+**verify-app is an aggregator — it does NOT boot infra or seed.** Bring the stack up yourself.
+
+#### Boot the full stack for `--deep` (or `--require-stack`)
+
+The `--deep` e2e sweep needs Postgres + MinIO + a seeded demo DB. Boot it once (per `CONTRIBUTING.md`):
+
+```bash
+cd specs/api && bun run build && cd ../..   # generate openapi.json (API imports it at runtime)
+bun run infra:up                            # Postgres + MinIO via docker (the API's /readyz needs both)
+cd services/api-ts && bun dev               # api-ts on :7213, auto-migrates — leave running
+# in another terminal, from the repo root, once :7213 is up:
+bun run db:reseed                           # seed demo data over HTTP (needs API + MinIO up)
+```
+
+Then run the proof:
+
+```bash
+bun run verify:app:strict   # --ci --require-stack: Tier 0+1, functional proof MANDATORY
+bun run verify:app:deep     # --ci --deep: also the broad Playwright e2e sweep (chromium + iPad)
+```
+
+The journey-harness step reseeds the DB itself just before it runs; the broad e2e sweep then reuses that seeded stack (its Playwright `webServer` reuses the api-ts on `:7213` and boots the Vite app on `:3003`).
 
 ### 2. Run verify-app
 
@@ -53,7 +77,16 @@ it means a green default verdict on a stackless box proves **zero** functional/e
 (or `--require-stack`) when you want the verdict to be the real *"works end-to-end"* claim —
 boot the stack first (step 1), or it will (correctly) go red.
 
-`--deep` is **RESERVED for Tier 2** (adversarial sweep — mutation, skeptic fan-out, persona walks). **Not yet implemented** (Phase 3); it is a no-op / not-yet-wired today.
+`--deep` (or `bun run verify:app:deep`) folds in the **broad Playwright e2e sweep**
+(chromium + iPad, ~70 specs) against the live stack — the full pre-release proof. It is
+**not** in the default button because it is slow (`workers:1`) and ceph/MinIO-fragile; the
+stabilized journey harness is the default proxy. `--deep` **IMPLIES `--require-stack`**: it
+probes and REQUIRES the stack on `:7213` and goes red (clear FAIL) if it is down — so you
+must boot the full stack first (see *Boot the full stack for --deep* below).
+
+verify-app is an **aggregator, not a provisioner** — it does **not** boot Postgres/MinIO/seed
+for you. The Tier-2 *adversarial* sweep (mutation, skeptic fan-out, persona walks) is still
+**Phase 3** (not yet wired).
 
 ### 3. Read and summarize the verdict
 

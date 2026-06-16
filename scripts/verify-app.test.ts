@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { resolveStackGate, computeOverall } from './verify-app';
+import { resolveStackGate, computeOverall, selectSteps } from './verify-app';
 
 const API_URL = 'http://localhost:7213';
 const stackStep = { needsStack: true } as const;
@@ -71,5 +71,41 @@ describe('computeOverall — verdict + exit decision', () => {
 
   test('a NON-blocking FAIL alone → PASS (matches today: only blocking fails count)', () => {
     expect(computeOverall([pass, nonBlockingFail], false)).toEqual({ overall: 'PASS', fail: false });
+  });
+});
+
+describe('selectSteps — which steps run for the given flags', () => {
+  const t0 = { id: 't0', tier: 0 as const };
+  const t1 = { id: 't1', tier: 1 as const };
+  const t1deep = { id: 't1deep', tier: 1 as const, deepOnly: true };
+  const t2deep = { id: 'e2e', tier: 2 as const, deepOnly: true };
+  const all = [t0, t1, t1deep, t2deep];
+  const ids = (steps: { id: string }[]) => steps.map((s) => s.id);
+
+  test('default (no flags): Tier 0 + Tier 1, NO deep steps', () => {
+    expect(ids(selectSteps(all, { runTier0: true, runTier1: true, deep: false }))).toEqual(['t0', 't1']);
+  });
+
+  test('--deep: adds the Tier-2 e2e + any deepOnly steps', () => {
+    expect(ids(selectSteps(all, { runTier0: true, runTier1: true, deep: true }))).toEqual([
+      't0', 't1', 't1deep', 'e2e',
+    ]);
+  });
+
+  test('--tier1 only: just Tier-1 non-deep steps', () => {
+    expect(ids(selectSteps(all, { runTier0: false, runTier1: true, deep: false }))).toEqual(['t1']);
+  });
+
+  test('--tier0 only: just Tier-0 steps (no Tier-1, no deep)', () => {
+    expect(ids(selectSteps(all, { runTier0: true, runTier1: false, deep: false }))).toEqual(['t0']);
+  });
+
+  test('a deepOnly step is excluded when deep=false even if its tier is selected', () => {
+    expect(ids(selectSteps([t1deep], { runTier0: true, runTier1: true, deep: false }))).toEqual([]);
+  });
+
+  test('Tier-2 steps run only under --deep (never in a plain or --tier1 run)', () => {
+    expect(ids(selectSteps([t2deep], { runTier0: true, runTier1: true, deep: false }))).toEqual([]);
+    expect(ids(selectSteps([t2deep], { runTier0: true, runTier1: true, deep: true }))).toEqual(['e2e']);
   });
 });

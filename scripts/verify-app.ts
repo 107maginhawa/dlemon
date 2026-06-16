@@ -20,9 +20,12 @@
  *   bun run verify:app:ci         # same, but exit non-zero on any blocking failure
  *   bun run verify:app:strict     # --ci --require-stack: the functional proof is
  *                                 #   MANDATORY (stack down → FAIL, never SKIP)
+ *   bun run verify:app:deep       # --ci --deep: also runs the broad Playwright e2e
+ *                                 #   sweep; REQUIRES a live, seeded stack on :7213
  *   bun scripts/verify-app.ts --tier0   # only the computed gates
  *   bun scripts/verify-app.ts --tier1   # only the functional proof
- *   bun scripts/verify-app.ts --deep    # (reserved) Tier 2 adversarial sweep
+ *   bun scripts/verify-app.ts --deep    # Tier 0 + 1 + the broad Playwright e2e sweep
+ *                                 #   (Tier 2); --deep IMPLIES --require-stack
  *
  * By DEFAULT, Tier-1 steps that need a running stack are SKIPPED (not failed) when
  * api-ts is not reachable on :7213 — so CI without a booted stack still passes. But
@@ -49,7 +52,9 @@ const only1 = argv.has('--tier1')
 // Strict mode: a stack-dependent functional proof that would SKIP (stack down)
 // becomes a BLOCKING FAIL — a green verdict can never rest on a skipped proof.
 // Default mode stays skip-tolerant so CI without a booted stack still passes.
-const requireStack = argv.has('--require-stack')
+// `--deep` (Tier 2) IMPLIES strict: the deep e2e sweep is meaningless without a
+// live stack, so --deep PROBES and REQUIRES it (clear FAIL if :7213 is down).
+const requireStack = argv.has('--require-stack') || deep
 const runTier0 = only0 || (!only1)
 const runTier1 = only1 || (!only0)
 
@@ -57,7 +62,7 @@ type Status = 'PASS' | 'FAIL' | 'SKIP'
 
 interface Step {
   id: string
-  tier: 0 | 1
+  tier: 0 | 1 | 2
   /** Shell command, run via `bash -lc` from `cwd`. */
   cmd: string
   cwd?: string
@@ -65,8 +70,28 @@ interface Step {
   blocking: boolean
   /** Requires the api-ts stack reachable on :7213 → SKIP when it is not. */
   needsStack?: boolean
+  /** Tier-2 deep sweep — only runs under `--deep` (opt-in, slow, needs the stack). */
+  deepOnly?: boolean
   /** One-line purpose for the verdict. */
   what: string
+}
+
+/**
+ * Which steps run for the given flags.
+ * - Tier 0 steps run when `runTier0`; Tier 1 when `runTier1`.
+ * - `deepOnly` steps (incl. the Tier-2 e2e sweep) run ONLY under `--deep`.
+ * - Tier-2 steps are deep-gated regardless of the Tier flags.
+ */
+export function selectSteps<T extends { tier: 0 | 1 | 2; deepOnly?: boolean }>(
+  steps: T[],
+  opts: { runTier0: boolean; runTier1: boolean; deep: boolean },
+): T[] {
+  return steps.filter((s) => {
+    if (s.deepOnly && !opts.deep) return false
+    if (s.tier === 0) return opts.runTier0
+    if (s.tier === 1) return opts.runTier1
+    return opts.deep // tier 2 — only under --deep
+  })
 }
 
 const STEPS: Step[] = [
@@ -101,6 +126,17 @@ const STEPS: Step[] = [
   { id: 'journey-harness', tier: 1, blocking: true, needsStack: true,
     what: 'the clinical journey harness on a reseeded real DB (proves flows work for users)',
     cmd: 'bun apps/dentalemon/scripts/run-journey-harness.ts' },
+
+  // ── Tier 2 — deep sweep (opt-in via --deep; needs the live stack) ──────────
+  // The broad ~70-spec Playwright sweep (chromium + iPad) against the real
+  // backend. Deliberately NOT in the default button — it is slow (workers:1) and
+  // ceph/MinIO-fragile, so the stabilized journey harness is the default proxy.
+  // --deep folds it in for a full pre-release proof. Its Playwright webServer
+  // reuses the api-ts on :7213 and boots the Vite app; the journey-harness step
+  // above reseeds the DB just before it runs.
+  { id: 'e2e-playwright', tier: 2, blocking: true, needsStack: true, deepOnly: true,
+    what: 'the broad Playwright e2e sweep (chromium + iPad) against the live stack — opt-in --deep',
+    cmd: 'bun run --filter dentalemon test:e2e' },
 ]
 
 function stackReachable(): boolean {
@@ -250,7 +286,10 @@ set-diff over a machine-readable source; new gaps must be allowlisted with a rea
 ${DOES_NOT_PROVE}
 
 ## Tier 2 (deep sweep)
-Reserved for Phase 3 (mutation + 26-module skeptic fan-out + persona walks). Run with \`--deep\` once it lands.
+\`--deep\` folds in the broad **Playwright e2e sweep** (chromium + iPad, ~70 specs)
+against the LIVE stack — it requires :7213 (FAILs if the stack is down). The
+adversarial **mutation + 26-module skeptic fan-out + persona walks** are still
+Phase 3 (not yet wired).
 `
   mkdirSync(join(ROOT, 'docs', 'testing', 'coverage'), { recursive: true })
   writeFileSync(VERDICT, md)
@@ -263,17 +302,21 @@ function main() {
   console.log('═'.repeat(72))
 
   if (deep) {
-    console.log('\n⏭️  Tier 2 (--deep) adversarial sweep is Phase 3 — not yet implemented.')
-    console.log('   Running Tier 0 + Tier 1 below; the deep sweep lands with Phase 3.\n')
+    console.log('\n🔬 Tier 2 (--deep): folds in the broad Playwright e2e sweep (chromium + iPad)')
+    console.log('   against the LIVE stack — it PROBES and REQUIRES :7213 (FAIL if the stack is down).')
+    console.log('   Boot the stack + seed first (see the verify-app SKILL). The Tier-2 adversarial')
+    console.log('   mutation/skeptic sweep is still Phase 3.\n')
   }
 
-  const stackUp = runTier1 ? stackReachable() : false
+  // Probe the stack when any stack-dependent step could run (Tier 1, or the
+  // Tier-2 e2e sweep under --deep — which can be selected even with --tier0).
+  const stackUp = runTier1 || deep ? stackReachable() : false
   const stackDownConsequence = requireStack
-    ? 'Tier-1 stack steps will FAIL (--require-stack)'
+    ? 'stack-dependent steps will FAIL (strict/--deep)'
     : 'Tier-1 stack steps will be skipped'
   console.log(`\nStack on ${API_URL}: ${stackUp ? 'reachable ✓' : `not reachable (${stackDownConsequence})`}`)
 
-  const selected = STEPS.filter((s) => (s.tier === 0 ? runTier0 : runTier1))
+  const selected = selectSteps(STEPS, { runTier0, runTier1, deep })
   const results: Result[] = []
   for (const step of selected) results.push(run(step, stackUp))
 

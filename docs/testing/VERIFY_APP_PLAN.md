@@ -145,6 +145,13 @@ the overall verdict is still **PASS** — so a green `verify:app` on a stackless
       → **Overall FAIL, exit 1** (the two stack steps become FAIL); the same box in default mode
       (`--tier1`) → **Overall PASS, exit 0** (the two stack steps SKIP). Strict mode = the real
       *"works end-to-end"* claim.
+- [x] **`--deep` / `verify:app:deep`** — folds in the broad Playwright e2e sweep (chromium + iPad,
+      ~70 specs) as a Tier-2 step against the live stack. `--deep` **IMPLIES `--require-stack`**
+      (probes + REQUIRES :7213; clear FAIL if down). verify-app stays an **aggregator, not a
+      provisioner** — the full-stack boot (`infra:up` → api-ts → `db:reseed`) is documented in the
+      verify-app SKILL, not run by the button. Step-selection is pure + unit-tested (`selectSteps`).
+      Non-vacuity: `--tier1 --deep` on a stackless box → the e2e/contract/journey steps FAIL,
+      Overall FAIL, exit 1 (the e2e step short-circuits — it does not launch the 40m Playwright run).
 
 ### Phase 3a/3b — Adversarial skeptic fan-out ✅ FOUND + FIXED 9 launch-blocking bugs (PRs #44–#49)
 A 10-agent skeptic fan-out (2 rounds) over the AHA battery (cross-tenant 2-org / IDOR /
