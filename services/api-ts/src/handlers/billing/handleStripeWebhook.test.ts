@@ -8,10 +8,12 @@
 import { describe, test, expect, mock } from 'bun:test';
 // Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
+import { BusinessLogicError } from '@/core/errors';
 
 function buildTestApp(options: {
   verifyResult?: any;
   verifyThrows?: boolean;
+  db?: any;
 } = {}) {
   const mockBilling = {
     verifyWebhookSignature: mock(async (body: string, sig: string) => {
@@ -31,9 +33,11 @@ function buildTestApp(options: {
     createNotification: mock(async () => ({})),
   };
 
-  const db = {
-    select: () => ({ from: () => [] }),
-  } as any;
+  const db =
+    options.db ??
+    ({
+      select: () => ({ from: () => [] }),
+    } as any);
 
   const app = buildHarnessApp({
     db,
@@ -102,6 +106,61 @@ describe('handleStripeWebhook', () => {
     });
 
     expect(mockBilling.verifyWebhookSignature).toHaveBeenCalledTimes(1);
+  });
+
+  // Mirrors InvoiceRepository.findByStripePaymentIntentId's query chain
+  // (.select().from().where().limit()); the final call throws `err`.
+  const throwingDb = (err: Error) => ({
+    select: () => ({ from: () => ({ where: () => ({ limit: () => { throw err; } }) }) }),
+  });
+
+  const refundEvent = {
+    id: 'evt_proc_fail',
+    type: 'charge.refunded',
+    livemode: false,
+    data: { object: { id: 'ch_1', payment_intent: 'pi_1' } },
+  };
+
+  test('a BusinessLogicError thrown while processing a valid event is NOT swallowed as 200 — Stripe must retry', async () => {
+    // A valid, signature-verified event whose processing throws must NOT return
+    // 200: a 200 tells Stripe "handled, do not retry" → the event is lost forever
+    // (silent payment loss). It must return a retryable SERVER error (5xx) so
+    // Stripe re-delivers. The safe "ignore" cases (missing invoice/metadata)
+    // already return early INSIDE the handlers, so they never reach this path.
+    // This case pins the exact deleted branch: `if (err instanceof BusinessLogicError) return 200`.
+    const { app } = buildTestApp({
+      db: throwingDb(new BusinessLogicError('simulated processing failure', 'SIM_PROCESSING_FAILURE')),
+      verifyResult: refundEvent,
+    });
+
+    const res = await app.request('/billing/webhooks/stripe', {
+      method: 'POST',
+      headers: { 'stripe-signature': 'sig_valid' },
+      body: '{}',
+    });
+
+    expect(res.status).not.toBe(200); // <-- the silent-loss bug: today this was 200
+    expect(res.status).toBeGreaterThanOrEqual(500); // retryable SERVER error, not a 4xx
+  });
+
+  test('a generic Error thrown while processing a valid event also returns a retryable 5xx (not 200)', async () => {
+    // The realistic production failure mode: repos throw generic Errors /
+    // DrizzleQueryErrors, never BusinessLogicError. This guards against a future
+    // broad re-swallow (e.g. `if (error instanceof Error) return 200`) that the
+    // BusinessLogicError-only case above would not catch.
+    const { app } = buildTestApp({
+      db: throwingDb(new Error('db connection lost')),
+      verifyResult: refundEvent,
+    });
+
+    const res = await app.request('/billing/webhooks/stripe', {
+      method: 'POST',
+      headers: { 'stripe-signature': 'sig_valid' },
+      body: '{}',
+    });
+
+    expect(res.status).not.toBe(200);
+    expect(res.status).toBeGreaterThanOrEqual(500);
   });
 
   test('returns 200 for payment_intent.succeeded event', async () => {

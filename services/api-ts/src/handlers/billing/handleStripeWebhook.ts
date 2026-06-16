@@ -3,7 +3,7 @@ import type { NotificationService } from '@/core/notifs';
 import type { Logger } from '@/types/logger';
 import {
   ValidationError,
-  BusinessLogicError
+  AppError
 } from '@/core/errors';
 import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
 import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
@@ -129,18 +129,22 @@ export async function handleStripeWebhook(
     
   } catch (error) {
     logger.error(
-      { error, eventType: event.type, eventId: event.id }, 
+      { error, eventType: event.type, eventId: event.id },
       'Failed to process webhook event'
     );
-    
-    // Still return 200 to prevent retries for business logic errors
-    if (error instanceof BusinessLogicError) {
-      return ctx.json({ received: true, error: error.message }, 200);
-    }
-    
-    throw new BusinessLogicError(
+
+    // A processing failure must surface as a retryable non-2xx so Stripe
+    // re-delivers the event — returning 200 here would tell Stripe "handled, do
+    // not retry" and silently drop a real payment/refund event (silent loss).
+    // Use a 5xx (not 422): reaching this catch means a SERVER-side processing
+    // failure (DB/repo error), not a malformed/semantically-invalid request, so a
+    // 4xx would mislabel it. The "safe ignore" cases (missing invoice / metadata)
+    // already return early INSIDE the per-event handlers and never reach here; a
+    // bad signature is rejected earlier as a 400 (ValidationError) and not retried.
+    throw new AppError(
       'Failed to process webhook event',
-      'WEBHOOK_PROCESSING_ERROR'
+      'WEBHOOK_PROCESSING_ERROR',
+      500
     );
   }
 }
