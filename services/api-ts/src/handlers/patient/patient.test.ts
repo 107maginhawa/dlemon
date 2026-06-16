@@ -49,6 +49,10 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 const TEST_USER_ID    = 'a0000000-0000-1000-8000-000000000001';
 const OTHER_USER_ID   = 'a0000000-0000-1000-8000-000000000002';
 const NONEXISTENT_ID  = 'f0000000-0000-1000-8000-000000000099';
+// Branch the seeded patient belongs to; TEST_USER is an active member so the
+// P1-2/P1-3 assertPatientBranchAccess gate (updatePatient/deactivatePatient) passes.
+const PT_ORG_ID    = 'a1000000-0000-1000-8000-0000000000d1';
+const PT_BRANCH_ID = 'a2000000-0000-1000-8000-0000000000d1';
 
 const authedUser = { id: TEST_USER_ID, email: 'patient@test.com', name: 'Test Patient' };
 // Admin caller — merge/unmerge require x-security-required-roles: ["admin"]
@@ -186,12 +190,25 @@ async function seedPerson(userId: string = TEST_USER_ID) {
  * Seed a full patient: user + person + patient rows.
  * Returns the created patient.
  */
+async function seedBranchMembership(userId: string = TEST_USER_ID) {
+  const { dentalOrganizations } = await import('@/handlers/dental-org/repos/organization.schema');
+  const { dentalBranches } = await import('@/handlers/dental-org/repos/branch.schema');
+  const { dentalMemberships } = await import('@/handlers/dental-org/repos/membership.schema');
+  await db.insert(dentalOrganizations).values({ id: PT_ORG_ID, name: 'Patient Test Org', tier: 'solo', ownerPersonId: userId, countryCode: 'PH', createdBy: userId, updatedBy: userId }).onConflictDoNothing();
+  await db.insert(dentalBranches).values({ id: PT_BRANCH_ID, organizationId: PT_ORG_ID, name: 'PT Branch', timezone: 'Asia/Manila', createdBy: userId, updatedBy: userId }).onConflictDoNothing();
+  // Membership.personId references person; seed AFTER seedPerson. Re-seeded each
+  // call because truncate(person CASCADE) clears it between tests.
+  await db.insert(dentalMemberships).values({ branchId: PT_BRANCH_ID, personId: userId, displayName: 'PT Member', role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: userId, updatedBy: userId }).onConflictDoNothing();
+}
+
 async function seedPatient(userId: string = TEST_USER_ID) {
   await seedUser(userId);
   const person = await seedPerson(userId);
+  await seedBranchMembership(userId);
   const patientRepo = new PatientRepository(db);
   return patientRepo.createOne({
     person: person.id,
+    preferredBranchId: PT_BRANCH_ID,
     createdBy: userId,
     updatedBy: userId,
   });

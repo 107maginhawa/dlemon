@@ -8,6 +8,7 @@ import {
 } from '@/core/errors';
 import { PatientRepository } from './repos/patient.repo';
 import { type Patient, type PatientUpdateRequest } from './repos/patient.schema';
+import { assertPatientBranchAccess } from '@/handlers/shared/assert-branch-access';
 import type { User } from '@/types/auth';
 
 /**
@@ -44,7 +45,14 @@ export async function updatePatient(ctx: HandlerContext) {
     });
   }
   
-  // Prepare update data — admin/staff can update any patient
+  // P1-2: enforce access on the PATIENT's branch. This handler previously
+  // computed `isOwner` and only LOGGED it — the mutation ran unconditionally and
+  // the route admits the bare `user` role, so any authenticated user could write
+  // any patient row (IDOR). Require the caller to be a member of the patient's
+  // branch (a foreign-branch / branchless patient yields 403).
+  await assertPatientBranchAccess(db, user.id, existingPatient.preferredBranchId);
+
+  // Prepare update data (caller is an authorized member of the patient's branch).
   const updateData: Partial<Patient> = {
     updatedBy: user.id
   };

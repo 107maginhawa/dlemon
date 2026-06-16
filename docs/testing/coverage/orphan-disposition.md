@@ -8,7 +8,7 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **70** (22 ownership-tested, **48 obligation gaps**).
+Sensitive mutating orphans: **70** (24 ownership-tested, **46 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
@@ -46,7 +46,7 @@ Sensitive mutating orphans: **70** (22 ownership-tested, **48 obligation gaps**)
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | ✅ |
 | `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | ⚠️ obligation |
 | `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | ✅ |
-| `deactivatePatient` | patient | DELETE | `/patients/{id}` | ⚠️ obligation |
+| `deactivatePatient` | patient | DELETE | `/patients/{id}` | ✅ |
 | `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | ⚠️ obligation |
 | `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | ⚠️ obligation |
 | `deleteInvoice` | billing | DELETE | `/billing/invoices/{invoice}` | ⚠️ obligation |
@@ -73,7 +73,7 @@ Sensitive mutating orphans: **70** (22 ownership-tested, **48 obligation gaps**)
 | `updateInsuranceProfile` | dental-patient | PATCH | `/dental/patients/{patientId}/insurance-profiles/{profileId}` | ⚠️ obligation |
 | `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | ✅ |
 | `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | ⚠️ obligation |
-| `updatePatient` | patient | PATCH | `/patients/{id}` | ⚠️ obligation |
+| `updatePatient` | patient | PATCH | `/patients/{id}` | ✅ |
 | `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | ✅ |
 | `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | ⚠️ obligation |
 | `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | ⚠️ obligation |
@@ -148,7 +148,7 @@ Total orphans: **180**
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | keep | sensitive-write (ownership-tested) |
 | `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | keep | sensitive-write (obligation) |
 | `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | keep | sensitive-write (ownership-tested) |
-| `deactivatePatient` | patient | DELETE | `/patients/{id}` | keep | sensitive-write (obligation) |
+| `deactivatePatient` | patient | DELETE | `/patients/{id}` | keep | sensitive-write (ownership-tested) |
 | `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | keep | sensitive-write (obligation) |
 | `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |
 | `deleteBookingEvent` | booking | DELETE | `/booking/events/{event}` | keep | _triage pending_ |
@@ -264,7 +264,7 @@ Total orphans: **180**
 | `updateInsuranceProfile` | dental-patient | PATCH | `/dental/patients/{patientId}/insurance-profiles/{profileId}` | keep | sensitive-write (obligation) |
 | `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | keep | sensitive-write (ownership-tested) |
 | `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | keep | sensitive-write (obligation) |
-| `updatePatient` | patient | PATCH | `/patients/{id}` | keep | sensitive-write (obligation) |
+| `updatePatient` | patient | PATCH | `/patients/{id}` | keep | sensitive-write (ownership-tested) |
 | `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | keep | sensitive-write (ownership-tested) |
 | `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | keep | sensitive-write (obligation) |
 | `updatePerson` | person | PATCH | `/persons/{person}` | keep | _triage pending_ |
