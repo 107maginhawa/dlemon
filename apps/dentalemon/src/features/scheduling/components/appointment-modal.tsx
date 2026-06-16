@@ -17,6 +17,8 @@ import {
   type UpdateAppointmentRequest,
 } from '@monobase/sdk-ts/generated';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 
 export const DURATION_OPTIONS = [
   { value: 30, label: '30 min' },
@@ -192,7 +194,11 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
         return;
       }
       onSaved?.(appointment);
+      toast.success(appointmentId ? 'Appointment rescheduled' : 'Appointment saved');
       handleClose();
+    } catch (err) {
+      toastError(err, appointmentId ? 'Could not reschedule the appointment. Please try again.' : 'Could not save the appointment. Please try again.');
+      throw err;
     } finally {
       setSaving(false);
     }

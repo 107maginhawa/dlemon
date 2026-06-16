@@ -8,6 +8,8 @@
  */
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -115,7 +117,9 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
       invalidate();
       setShowCreate(false);
       setForm({ labName: '', description: '', shade: '', material: '', dueDate: '', expectedDeliveryDate: '' });
+      toast.success('Lab order created');
     },
+    onError: (err) => toastError(err, 'Could not create the lab order'),
   });
 
   function handleAdvanceStatus(order: LabOrder) {

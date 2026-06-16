@@ -9,6 +9,8 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import {
   getDentalInvoiceOptions,
   getDentalInvoiceQueryKey,
@@ -193,9 +195,11 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       setReceiptNumber('');
       invalidateInvoice();
       onUpdated?.();
+      toast.success('Payment recorded');
     },
     onError: (err) => {
       setPaymentErrors([err instanceof Error ? err.message : 'Failed']);
+      toastError(err, 'Could not record payment');
     },
   });
 

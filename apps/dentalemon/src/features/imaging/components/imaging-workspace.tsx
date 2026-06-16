@@ -18,6 +18,8 @@ import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
 import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
 import { BRAND_GOLD } from '@/constants/brand'
+import { toast } from 'sonner'
+import { toastError } from '@/lib/error-toast'
 import { imagingMgmtUpdateImageCalibration } from '@monobase/sdk-ts/generated'
 import {
   processToolClick,
@@ -272,7 +274,10 @@ export function ImagingWorkspace({
           setCalibrationOpen(true)
           return
         case 'commit':
-          createMeasurement.mutate(action.input)
+          createMeasurement.mutate(action.input, {
+            onSuccess: () => toast.success('Measurement saved'),
+            onError: (err) => toastError(err, 'Could not save measurement.'),
+          })
           setDrawPoints([])
           onMeasurementSaved?.()
           return
@@ -280,7 +285,10 @@ export function ImagingWorkspace({
           const text = window.prompt('Label text (max 200 chars):')
           const input = text == null ? null : buildLabelMeasurement(action.point, text)
           if (!input) { setDrawPoints([]); return }
-          createMeasurement.mutate(input)
+          createMeasurement.mutate(input, {
+            onSuccess: () => toast.success('Measurement saved'),
+            onError: (err) => toastError(err, 'Could not save measurement.'),
+          })
           setDrawPoints([])
           onMeasurementSaved?.()
           return
@@ -289,7 +297,10 @@ export function ImagingWorkspace({
           const raw = window.prompt('Tooth number (1–32):')
           const input = raw == null ? null : buildToothMeasurement(action.point, raw)
           if (!input) { setDrawPoints([]); return }
-          createMeasurement.mutate(input)
+          createMeasurement.mutate(input, {
+            onSuccess: () => toast.success('Measurement saved'),
+            onError: (err) => toastError(err, 'Could not save measurement.'),
+          })
           setDrawPoints([])
           onMeasurementSaved?.()
           return

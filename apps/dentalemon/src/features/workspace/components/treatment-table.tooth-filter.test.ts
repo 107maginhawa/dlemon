@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { freshClientWithMutations, makeWrapper as makeWrapperBase, assertCountMatchesItems } from '@/test-utils';
 
-mock.module('sonner', () => ({ toast: { error: mock(() => {}) } }));
+mock.module('sonner', () => ({ toast: { error: mock(() => {}), success: mock(() => {}) } }));
 
 import { TreatmentTable } from './treatment-table';
 

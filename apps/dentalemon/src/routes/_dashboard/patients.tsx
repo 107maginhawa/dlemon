@@ -12,6 +12,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { PatientList } from '@/features/patients/components/patient-list';
 import { PatientRegistrationModal } from '@/features/patients/components/patient-registration-modal';
 import { PatientFilterTabs, type PatientFilter } from '@/features/patients/components/patient-filter-tabs';
@@ -81,7 +82,7 @@ function PatientsPage() {
     if (!res.ok) {
       const err = await res.json().catch(() => null);
       const message = err?.message ?? `Registration failed (${res.status})`;
-      alert(message);
+      toast.error(message);
       return;
     }
 

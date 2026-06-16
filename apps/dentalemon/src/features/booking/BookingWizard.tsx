@@ -15,6 +15,7 @@ import {
   Button, Input, Label, Badge, Skeleton, Logo,
 } from '@monobase/ui'
 import { Calendar, Clock, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react'
+import { toastError } from '@/lib/error-toast'
 import {
   useBookingConfig, useAvailability, useCreateHold, useCreateBooking,
   useBookingWizard, type VisitType, type SelectedSlot,
@@ -236,8 +237,9 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                       })
                       wiz.setSessionToken(hold.sessionToken)
                       wiz.setStep('details')
-                    } catch {
+                    } catch (err) {
                       // Slot was taken between render and hold — refresh availability.
+                      toastError(err, "Couldn't hold that time slot. Please pick another.")
                       wiz.setSelectedSlot(undefined)
                       void availabilityQuery.refetch()
                     }
@@ -270,8 +272,9 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                   })
                   wiz.setConfirmation({ confirmationCode: res.confirmationCode, startAt: res.startAt })
                   wiz.setStep('confirmed')
-                } catch {
+                } catch (err) {
                   // 409 SLOT_TAKEN → bounce back to the grid and re-fetch.
+                  toastError(err, 'Booking failed. Please try again.')
                   wiz.setStep('slot')
                   wiz.setSelectedSlot(undefined)
                   void availabilityQuery.refetch()

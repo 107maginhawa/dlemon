@@ -53,7 +53,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 
 - [x] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, key handlers. No visual change. *(done — commit below; gate green 2473/0)*
 - [ ] **Batch 2 — Design-token compliance** 🟢/🟡 — token foundation + color swaps + shared `<StatusBadge>`.
-- [ ] **Batch 3 — Feedback** 🟢 — sonner toasts on mutations; replace native `alert/confirm/prompt`.
+- [~] **Batch 3 — Feedback** — **3a (toasts) DONE** 🟢 (commit below; gate 2473/0). **3b (native confirm/prompt→dialogs, new "Try again" buttons, price-cell cue) deferred to visual checkpoint** (introduces new visible UI).
 - [ ] **Batch 4 — Focus rings & micro-interactions** 🟢/🟡 — `focus-visible` rings, `active:` states.
 - [ ] **Batch 5 — Touch targets (44px)** 🟡 — raise sub-44px controls. Layout-sensitive.
 - [ ] **Batch 6 — Structural a11y** 🟡 — `<div onClick>` → `<button>` conversions.
@@ -103,11 +103,18 @@ Counts after dedupe: **High 53 · Medium 50 · Low 14 · Total 117**.
 - [ ] `queue-board.tsx:37` — `bg-[#FFF8D6]` → `bg-accent`. **Low [Technical]**
 - [ ] Auth: `onboarding.tsx:217`, `verify-email.tsx:53` `bg-gray-50` → `bg-background`; `verify-email.tsx:63` blue → `bg-accent text-accent-foreground`; `index.tsx:28,35,42` `bg-blue/green/purple-500` → `bg-primary/bg-success/bg-info`; `onboarding-wizard.tsx:304` inline lemon → `<Button variant="lemon">`. **High [UI]**
 
-## Batch 3 — Feedback (sonner toasts; replace native dialogs) 🟢
+## Batch 3 — Feedback (sonner toasts; replace native dialogs)
 
-- [ ] Add `toast.success`/`toast.error` to mutations (`onSuccess`/`onError`). **High:** `clinic-activation-banner.tsx:25`, `data-erasure.tsx:233-234`, `calendar.tsx:148-165` (check-in/confirm), `appointment-modal.tsx:189-195`, `BookingWizard.tsx:233-238,260-278`. **Medium:** `use-image-library.ts:85-149` (5), `lab-orders-sheet.tsx:107-119`, `pmd-import.tsx:76-118`, `rx-sheet.tsx:267`, `consent-sheet.tsx:274`, `invoice-detail.tsx` record-payment, `treatment-table.tsx` price edit, `imaging-workspace.tsx:275`. **[UX]**
-- [ ] Replace native dialogs: `patients.tsx:84` `alert()` → `toast.error`; `patient-list.tsx:96,114,126` `window.confirm()` → `<ConfirmDialog>`; `imaging-workspace.tsx:279-286` `window.prompt()` → `<Dialog>` w/ validated input. **High [UX]**
-- [ ] `medical-history-form.tsx` — allergy toggle: toast on add/remove. **Medium [UX]**
+### 3a — Additive toasts 🟢 ✅ DONE (commit `<batch3a>`; gate 2473/0)
+- [x] Success/error toasts on silent mutations via `toast.success(...)` + `toastError(err, fallback)` (canonical `@/lib/error-toast`): `clinic-activation-banner`, `data-erasure` (approve/reject), `calendar` (check-in/confirm), `appointment-modal` (save/reschedule, re-throws preserved), `BookingWizard` (hold/confirm; success screen already existed → error-only), `use-image-library` (5 mutations), `lab-orders-sheet`, `pmd-import` (import+merge), `rx-sheet` (save + acknowledge), `consent-sheet`, `invoice-detail` (record-payment), `imaging-workspace` (measurement). **[UX]**
+- [x] `patients.tsx:84` `alert()` → `toast.error` (only native-dialog→toast swap in 3a). **High [UX]**
+- [x] `medical-history-form.tsx` — allergy toggle confirms ("Added/Removed: <allergen>"); non-allergy left silent (would be noisy). **Medium [UX]**
+- Skipped (already had inline feedback, no double-toast): invoice void/discount/uncollectible/payment-void, appointment double-booking branch, lab-order status-advance, consent refusal/revoke, rx dispense/cancel.
+- **Test-infra fix (root cause):** 11 test files mocked `sonner` as `{ toast: { error } }` with no `.success`; Bun's `mock.module` is process-wide, so `toast.success` was `undefined` for later files and the new calls threw in-suite. Added `.success` to all 11 (D7).
+
+### 3b — New visible UI 🟡 DEFERRED to visual checkpoint (with Batch 2)
+- [ ] `patient-list.tsx:96,114,126` `window.confirm()` → `<ConfirmDialog>`. **High [UX]**
+- [ ] `imaging-workspace.tsx:279-286` `window.prompt()` → `<Dialog>` w/ validated input. **High [UX]**
 - [ ] Portal empty/error: `my-appointments-view.tsx:97-111` + `my-invoices-view.tsx:106-120` — add `Try again` (`refetch()`). **Medium [UX]**
 - [ ] `treatment-table.tsx:430-442` — editable price cell: hover/focus cue + `toast.success` on save. **Medium [UX]**
 - [ ] `pin-entry.$memberId.tsx:197` — keypad: `active:scale-95 transition-all`. **Low [UX]** *(also Batch 4)*
@@ -174,10 +181,12 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | D4 | Bulk-apply all 117 at once | **Rejected.** Batch + gate, safest-first. | User requirement: no breakage; prove green per batch. |
 | D5 | "Imaging `<img>` missing alt" (`CephReportView.tsx`, `FmxMount.tsx`) | **Refuted — already handled.** Dropped from Batch 1. | Both already have alt (`item.fileName`; `"Cephalometric radiograph with landmark tracing"`). Only `comparison-view.tsx` alt is an enhancement (add modality) → Batch 7. |
 | D6 | Batch 1 a11y broke 4 unit tests | **Tests updated, not behavior reverted.** | Tests asserted the pre-fix DOM (tabs queried as `role="button"`; avatar button by *empty* accessible name). The fix is correct; expectations now track `role="tab"` / the new `aria-label`. |
+| D7 | Batch 3a hung the full suite (in-suite only; isolation green) | **Root-caused & fixed the latent test landmine.** | 11 test files mocked `sonner` as `{ toast: { error } }` (no `.success`). Bun's `mock.module` is **process-wide**, so once one ran, `toast.success` was `undefined` for all later files → new `toast.success()` calls threw → handlers died → `waitFor` hung. Proven by stash-revert (baseline 2473/0 clean vs hang). Fixed by adding `.success` to all 11 mocks (now matches the already-complete ones). Not a product bug. |
 
 ## Progress Log
 
 | Date | Batch | Commit | Gate result |
 |------|-------|--------|-------------|
 | 2026-06-16 | (tracker created) | `44ff21d1` | — |
-| 2026-06-16 | Batch 1 — Accessibility (additive) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 1 — Accessibility (additive) | `2b6e8087` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 3a — Feedback toasts (+ sonner mock-shape fix) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 (stash-revert proved no regression) |

@@ -11,7 +11,7 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 import { makeWrapper, jsonResponse } from '@/test-utils';
 
 const _toastError = mock(() => {});
-mock.module('sonner', () => ({ toast: { error: _toastError } }));
+mock.module('sonner', () => ({ toast: { error: _toastError, success: mock(() => {}) } }));
 
 const originalFetch = global.fetch;
 const mockFetch = mock(() => jsonResponse([]));

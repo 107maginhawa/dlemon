@@ -17,7 +17,7 @@ import {
 import { makeWrapper, jsonResponse } from '@/test-utils';
 
 const _toastError = mock(() => {});
-mock.module('sonner', () => ({ toast: { error: _toastError } }));
+mock.module('sonner', () => ({ toast: { error: _toastError, success: mock(() => {}) } }));
 
 const mockFetch = mock(() => jsonResponse({ data: [], pagination: {} }));
 

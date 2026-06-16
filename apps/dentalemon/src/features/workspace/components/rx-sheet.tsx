@@ -16,6 +16,8 @@
 
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import {
   createPrescription,
@@ -264,8 +266,11 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
         return;
       }
 
+      toast.success('Prescription saved');
       onSaved?.();
       onClose();
+    } catch (err) {
+      toastError(err, 'Could not save the prescription');
     } finally {
       setSaving(false);
     }
@@ -274,6 +279,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
   function handleAcknowledge() {
     setAllergyConflicts([]);
     setDrugInteractions([]);
+    toast.success('Prescription saved');
     onSaved?.();
     onClose();
   }

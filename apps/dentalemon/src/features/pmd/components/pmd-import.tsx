@@ -6,6 +6,8 @@
 
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { importPmdMutation, mergeImportedPmdSafetyFloorMutation } from '@monobase/sdk-ts/generated/react-query';
 import { medicalHistoryKey } from '@/features/workspace/hooks/use-medical-history';
 
@@ -87,8 +89,10 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
           content: content.trim(),
         },
       });
-    } catch {
+      toast.success('PMD imported');
+    } catch (err) {
       setErrors(['Failed to import PMD']);
+      toastError(err, 'Could not import PMD');
       setStep('form');
       setSaving(false);
       return;
@@ -106,10 +110,12 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
       await queryClient.invalidateQueries({ queryKey: medicalHistoryKey(patientId) });
       setStep('done');
       onImported?.();
-    } catch {
+      toast.success('Safety Floor updated');
+    } catch (err) {
       // The record imported but the safety-floor merge failed; be honest about it.
       // The imported PMD persists and can be merged later from the imported record.
       setErrors(['PMD imported, but updating the Safety Floor failed. Please try again from the imported record.']);
+      toastError(err, 'PMD imported, but updating the Safety Floor failed');
       setStep('form');
       onImported?.();
     } finally {

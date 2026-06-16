@@ -18,6 +18,8 @@ import { CancelAppointmentDialog } from '../../features/scheduling/components/ca
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { ListErrorState } from '@/components/list-error-state';
 import { checkInAppointment, updateAppointment, confirmAppointment, cancelAppointment } from '@monobase/sdk-ts/generated';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { APP_LOCALE } from '@/constants/brand';
 import { RecallDueList } from '../../features/scheduling/components/recall-due-list';
 import type { RecallDueItem } from '../../features/scheduling/hooks/use-recall-due-list';
@@ -149,8 +151,9 @@ function CalendarPage() {
     try {
       await checkInAppointment({ path: { appointmentId } });
       invalidateAppointments();
-    } catch {
-      // Network error — ignore silently
+      toast.success('Patient checked in');
+    } catch (err) {
+      toastError(err, 'Check-in failed. Please try again.');
     }
   }
 
@@ -160,8 +163,9 @@ function CalendarPage() {
       // synchronously expires queued reminders). Falls back to no-op on error.
       await confirmAppointment({ path: { appointmentId } });
       invalidateAppointments();
-    } catch {
-      // Network error — ignore silently
+      toast.success('Appointment confirmed');
+    } catch (err) {
+      toastError(err, 'Could not confirm the appointment. Please try again.');
     }
   }
 

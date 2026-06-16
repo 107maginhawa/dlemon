@@ -11,6 +11,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import {
   useMedicalHistory,
   useMedicalHistoryMutations,
@@ -172,16 +174,28 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
     entryType: 'condition' | 'medication' | 'allergy',
   ) {
     const existing = findEntryByCode(entries, entryType, preset);
-    if (existing) {
-      await toggleEntry({ entryId: existing.id, active: !existing.active });
-    } else {
-      await addEntry({
-        patientId,
-        entryType,
-        displayName: preset.label,
-        codeSystem: preset.codeSystem,
-        code: preset.code,
-      });
+    // Resulting active state after this toggle (drives the allergy confirmation toast).
+    const willBeActive = existing ? !existing.active : true;
+    try {
+      if (existing) {
+        await toggleEntry({ entryId: existing.id, active: !existing.active });
+      } else {
+        await addEntry({
+          patientId,
+          entryType,
+          displayName: preset.label,
+          codeSystem: preset.codeSystem,
+          code: preset.code,
+        });
+      }
+      // Allergies are safety-critical — confirm the change so it is never silent.
+      if (entryType === 'allergy') {
+        toast.success(`${willBeActive ? 'Added' : 'Removed'}: ${preset.label}`);
+      }
+    } catch (err) {
+      if (entryType === 'allergy') {
+        toastError(err, `Could not update allergy: ${preset.label}`);
+      }
     }
   }
 

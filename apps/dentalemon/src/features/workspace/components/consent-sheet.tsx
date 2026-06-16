@@ -13,6 +13,8 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import {
   createConsentForm,
@@ -271,8 +273,11 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
       if ((signResult as { error?: unknown }).error) { setError('Failed to sign consent form'); return; }
 
       setSigned(true);
+      toast.success('Consent recorded');
       onSaved?.();
       onClose();
+    } catch (err) {
+      toastError(err, 'Could not save the consent form');
     } finally {
       setSaving(false);
     }
