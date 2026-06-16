@@ -285,6 +285,31 @@ pipeline). Give one consolidated report at the end (every bug found + every gate
 - **LEAVE-ALONE:** `bun.lock`, `.agents/`, `apps/website/`, `skills-lock.json`,
   `.claude/skills/design-taste-frontend`, `docs/aha/`.
 
+### Strict mode + `--deep`, and the live functional run (Phase 2.6, PRs #53/#54)
+- **The false-green gap.** The default button reported the stack-dependent Tier-1 proofs
+  (`contract-core`, `journey-harness`) as **SKIP** when api-ts was down, yet the overall
+  verdict stayed **PASS** — so a green `verify:app` on a stackless box proved zero
+  functional/e2e. Fixed with `--require-stack` (strict) + `--deep` (which implies strict):
+  a would-be SKIP becomes a blocking FAIL; default mode stays skip-tolerant. Pure,
+  unit-tested logic (`resolveStackGate` / `computeOverall` / `selectSteps`) behind an
+  `import.meta.main` guard; non-vacuity proven (strict + no stack → red; default → green).
+- **The live run (the payoff).** Booted the real stack the documented way — Postgres on
+  `:5432` + `cd services/api-ts && bun dev` (`:7213`, auto-migrate); **MinIO/object-store
+  was down** (no docker), so storage/ceph are environmental. Ran `verify:app --tier1
+  --require-stack` against it: **Overall PASS** — `fe-unit-coherence` ✓, `contract-core` ✓
+  (39 Hurl files, 0 failed), `journey-harness` **17 PASS / 0 BROKEN / 0 ERROR / 4 ceph
+  SKIPPED** (B01–B04, MinIO-absent, `skipAllowed`).
+- **The demo-seed-vs-authz risk did NOT materialize.** The journeys that exercise the s13
+  authz asserts (#44–#49) — **J21 create-visit→201, J17 book-appointment, J03 perio**, all
+  of Set A — passed against the real stack. The demo seed already grants the test user an
+  active branch membership and patients a `preferredBranchId`; **no seed change was needed.**
+- **Not run live:** the broad `--deep` Playwright sweep (~70 specs, ~40m, MinIO-fragile)
+  exceeded the timebox and the local box has no object-store; the journey harness (its
+  deliberate stabilized proxy) is fully green. Booting the full object-store-backed stack
+  for the broad sweep + ceph/storage flows is the follow-up. Honest claim: the **core
+  clinical flows are proven to run end-to-end** (strict journey-harness against a real
+  reseeded DB); the broad e2e + MinIO-backed storage/ceph were **not** exercised live.
+
 ### Remaining (tracked, not stalled)
 Stripe webhook `BusinessLogicError→200` silent-loss + missing `event.id` idempotency
 ledger (HIGH, needs a migration); `createImagingStudy` cross-patient linkage (needs a

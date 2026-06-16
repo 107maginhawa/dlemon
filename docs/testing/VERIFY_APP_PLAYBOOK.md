@@ -157,6 +157,18 @@ the ones your domain has sources for:
   journey/persona harness **against a booted instance of the real backend**. If the
   backend isn't reachable, run the stack-independent steps (FE unit + coherence) and
   **report the rest as skipped** — never as passed.
+- **Skip-tolerant by default, but ship a strict mode — and watch the OVERALL roll-up.**
+  Skip-tolerance is right for "every commit" CI (a stackless runner still passes Tier 0
+  + the stack-independent Tier 1). But a *skipped* functional proof must never make the
+  **overall verdict green** when the run is claiming "works end-to-end" — that is the
+  exact false-green this system exists to prevent (a green button on a box with no booted
+  stack proves zero functional/e2e). Offer an opt-in **`--require-stack` / strict mode**
+  that converts a would-be-SKIP stack step into a **blocking FAIL** and fails the overall
+  verdict; make that strict run the real "works end-to-end" claim. Keep the heavy/flaky
+  broad e2e suite **behind the same opt-in** (`--deep`) so it requires the stack too —
+  and keep the button an **aggregator, not a provisioner** (document the infra/seed boot;
+  don't have the button start Postgres/object-store/seed). Prove non-vacuity: strict +
+  no stack must go **red**; default + no stack must stay **green**.
 - **Coherence oracles** — derive the *expected* value from the **rendered output** (parse
   the DOM / the response body), not from the fixture, then assert
   `summary == Σ rows` and `badge == count(items acted on)`. Ship a **backend twin** of the
