@@ -5,7 +5,7 @@ import {
   ValidationError,
   AppError
 } from '@/core/errors';
-import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
+import { InvoiceRepository, MerchantAccountRepository, ProcessedWebhookEventRepository } from './repos/billing.repo';
 import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
 import type Stripe from 'stripe';
 
@@ -55,10 +55,22 @@ export async function handleStripeWebhook(
   );
   
   try {
+    // Idempotency: Stripe is at-least-once and re-delivers events. Short-circuit
+    // one we already processed so its side effects (invoice writes, patient /
+    // provider notifications) do not fire twice on a re-delivery.
+    const webhookLedger = new ProcessedWebhookEventRepository(database, logger);
+    if (await webhookLedger.isProcessed(event.id)) {
+      logger.info(
+        { eventId: event.id, eventType: event.type },
+        'Duplicate Stripe webhook event — already processed; skipping'
+      );
+      return ctx.json({ received: true, duplicate: true }, 200);
+    }
+
     // Create repository instances
     const invoiceRepo = new InvoiceRepository(database, logger);
     const merchantAccountRepo = new MerchantAccountRepository(database, logger);
-    
+
     // Handle different webhook event types
     // Cast to string so rare event types not yet in Stripe SDK union can be matched
     switch (event.type as string) {
@@ -120,10 +132,22 @@ export async function handleStripeWebhook(
     }
     
     logger.info(
-      { eventType: event.type, eventId: event.id }, 
+      { eventType: event.type, eventId: event.id },
       'Webhook event processed successfully'
     );
-    
+
+    // Record the event id AFTER successful processing. A FAILED event is NOT
+    // recorded (the catch below throws a retryable 5xx), so Stripe's retry still
+    // reprocesses it — no silent loss, and the per-event DB writes are
+    // absolute-assignment (set status=paid, etc.), so a reprocess is money-safe.
+    // The repo's INSERT … ON CONFLICT DO NOTHING keeps the LEDGER ROW idempotent;
+    // it does NOT serialize concurrent in-flight handlers, so the narrow window
+    // between a successful write and this mark (a markProcessed failure, or a rare
+    // truly-concurrent re-delivery) can still re-fire non-idempotent side effects
+    // (patient/provider notifications are not yet dedup-keyed). Money state is
+    // unaffected. Tracked follow-up: dedup-key webhook notifications.
+    await webhookLedger.markProcessed(event.id, event.type);
+
     // Return 200 to acknowledge receipt
     return ctx.json({ received: true }, 200);
     

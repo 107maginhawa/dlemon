@@ -186,9 +186,31 @@ export const invoiceLineItems = pgTable('invoice_line_item', {
   invoiceIdx: index('invoice_line_items_invoice_idx').on(table.invoice),
 }));
 
+// Stripe webhook idempotency / replay ledger.
+//
+// Platform-level, NOT tenant-scoped — a Stripe webhook is not bound to a tenant
+// at receipt, so this carries no tenant column and no RLS (same posture as the
+// generic `invoice` table). It records each Stripe `event.id` AFTER the event is
+// processed successfully, so a redelivery of an already-handled event is
+// short-circuited (Stripe is at-least-once; this makes the side effects
+// effectively exactly-once). A processing FAILURE is deliberately NOT recorded,
+// so Stripe's retry of a failed event still reprocesses it — no silent loss
+// (pairs with the 5xx-on-failure fix in handleStripeWebhook).
+export const processedWebhookEvents = pgTable('processed_webhook_event', {
+  // The provider event id (Stripe `evt_…`), globally unique → natural primary key.
+  eventId: text('event_id').primaryKey(),
+  // The event type (e.g. 'charge.succeeded') — for observability only.
+  eventType: text('event_type'),
+  // When processing completed.
+  processedAt: timestamp('processed_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Type exports for TypeScript
 export type Invoice = typeof invoices.$inferSelect;
 export type NewInvoice = typeof invoices.$inferInsert;
+
+export type ProcessedWebhookEvent = typeof processedWebhookEvents.$inferSelect;
+export type NewProcessedWebhookEvent = typeof processedWebhookEvents.$inferInsert;
 
 export type MerchantAccount = typeof merchantAccounts.$inferSelect;
 export type NewMerchantAccount = typeof merchantAccounts.$inferInsert;

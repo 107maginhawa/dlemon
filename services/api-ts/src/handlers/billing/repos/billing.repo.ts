@@ -11,6 +11,7 @@ import {
   invoices,
   invoiceLineItems,
   merchantAccounts,
+  processedWebhookEvents,
   type Invoice,
   type NewInvoice,
   type InvoiceLineItem,
@@ -314,5 +315,44 @@ export class MerchantAccountRepository extends DatabaseRepository<MerchantAccoun
     }, 'Merchant account metadata updated');
 
     return updated;
+  }
+}
+
+/**
+ * Stripe webhook idempotency / replay ledger.
+ *
+ * Records each provider event id (Stripe `evt_…`) AFTER it is processed so a
+ * re-delivery of an already-handled event can be short-circuited. Stripe is
+ * at-least-once; this makes the side effects effectively exactly-once. The table
+ * is platform-level (no tenant column / no RLS) — a webhook is not tenant-bound
+ * at receipt. Standalone (not a DatabaseRepository) since the table has no
+ * id/version/audit base fields — its natural key is the event id.
+ */
+export class ProcessedWebhookEventRepository {
+  constructor(
+    private readonly db: DatabaseInstance,
+    private readonly logger?: Logger
+  ) {}
+
+  /** True if this provider event id has already been recorded as processed. */
+  async isProcessed(eventId: string): Promise<boolean> {
+    const rows = await this.db
+      .select()
+      .from(processedWebhookEvents)
+      .where(eq(processedWebhookEvents.eventId, eventId))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /**
+   * Record an event id as processed. INSERT … ON CONFLICT DO NOTHING so a
+   * concurrent or duplicate insert is a harmless no-op (the natural-key PK makes
+   * the write idempotent).
+   */
+  async markProcessed(eventId: string, eventType?: string): Promise<void> {
+    await this.db
+      .insert(processedWebhookEvents)
+      .values({ eventId, eventType: eventType ?? null })
+      .onConflictDoNothing();
   }
 }
