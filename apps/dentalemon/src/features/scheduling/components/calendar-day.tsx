@@ -154,7 +154,7 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
               style={{ height: SLOT_HEIGHT_PX }}
             >
               <div
-                className="absolute inset-1.5 border-[1.5px] border-dashed border-border rounded-md flex items-center justify-center text-[11px] font-medium text-muted-foreground/40 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute inset-1.5 border-[1.5px] border-dashed border-border rounded-md flex items-center justify-center text-[11px] font-medium text-muted-foreground cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity"
                 role="button"
                 tabIndex={0}
                 aria-label={`Book ${formatSlotTime(slot.hour, slot.minute)} slot`}

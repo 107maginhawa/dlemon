@@ -172,7 +172,7 @@ export function PerioToothColumn({
             value={reading?.furcation ?? 0}
             disabled={readOnly || singleRooted}
             onChange={(e) => onPatch({ furcation: Number(e.target.value) })}
-            className="h-9 rounded border border-border bg-background text-[10px] disabled:cursor-not-allowed"
+            className="h-9 rounded border border-border bg-background text-[10px] disabled:bg-muted/30 disabled:cursor-not-allowed"
           >
             {[0, 1, 2, 3].map((g) => (
               <option key={g} value={g}>

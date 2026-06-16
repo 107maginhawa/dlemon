@@ -167,7 +167,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
                   isToday
                     ? 'bg-lemon text-lemon-foreground w-7 h-7 rounded-full text-[13px]'
                     : overflow
-                      ? 'text-muted-foreground/40'
+                      ? 'text-muted-foreground/60'
                       : 'text-foreground',
                 ].join(' ')}
               >

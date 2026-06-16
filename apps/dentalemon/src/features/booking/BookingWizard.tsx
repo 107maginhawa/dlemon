@@ -355,7 +355,7 @@ function ContactForm({ slot, submitting, error, onBack, onSubmit }: {
       }}
     >
       <BackButton onClick={onBack} />
-      <div className="rounded-md bg-accent p-3 text-sm text-accent-foreground">
+      <div className="rounded-md border-l-4 border-primary bg-primary/10 p-3 text-sm font-semibold text-foreground">
         {formatDayKey(slot.startAt)} at {formatTime(slot.startAt)}
       </div>
       <div className="space-y-2">

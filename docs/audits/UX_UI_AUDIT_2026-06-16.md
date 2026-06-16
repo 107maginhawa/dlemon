@@ -162,7 +162,11 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 
 ---
 
-## Remaining (workspace/clinical polish, mostly Low — fold into nearest batch)
+## Workspace/clinical/auth polish ✅ DONE (commit `<polish>`; gate 2484/0)
+
+**All items below applied** (Save & Next→primary, read-only steps keep keyboard access, perio disabled-furcation/scroll-hint/spacing, calendar empty-slot affordance + overflow-day contrast, booking slot-summary emphasis, lucide close icon, payment-status icon aria, pin-select Retry / pin-entry Back → `<Button>`+icons, year-segment/footer spacing), **except** `workspace-top-bar max-w-[120px]` which stays deferred (D13: `flex-1` doesn't fit its `shrink-0` parent).
+
+Original list (all ticked except top-bar):
 
 - [ ] `tooth-slideout.tsx:496-516` — make "Save & Next" the lemon primary when present. **High [UX]** *(taste — see Decision Log)*
 - [ ] `tooth-slideout.tsx:287-321` — read-only steps keep keyboard access (`aria-disabled` not `disabled`). **Medium [UX]**
@@ -184,7 +188,7 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 |---|---------|----------|--------|
 | D1 | `rx-sheet.tsx:337` active tab "fails 4.5:1 contrast" | **Re-reasoned, kept fix.** Apply `bg-primary text-primary-foreground` for *brand consistency* only. | `bg-foreground text-background` is black-on-white = max contrast; the contrast rationale is **wrong**. Switching to lemon actually *lowers* contrast (verify lemon `#FFE97D` + brown `#4A4018` ≈ AA before merging). |
 | D2 | Contrast ratios across a11y findings | **Verify with a tool before claiming WCAG pass/fail.** | Ratios in the report are estimates, not measured. |
-| D3 | "Make Save & Next the primary button" (`tooth-slideout`) | **Confirm with product before changing hierarchy.** | Taste/intent call, not a defect. |
+| D3 | "Make Save & Next the primary button" (`tooth-slideout`) | **Applied** (user deferred taste calls to best judgment). | The recommended multi-tooth flow should read as primary; reversible if product disagrees. |
 | D4 | Bulk-apply all 117 at once | **Rejected.** Batch + gate, safest-first. | User requirement: no breakage; prove green per batch. |
 | D5 | "Imaging `<img>` missing alt" (`CephReportView.tsx`, `FmxMount.tsx`) | **Refuted — already handled.** Dropped from Batch 1. | Both already have alt (`item.fileName`; `"Cephalometric radiograph with landmark tracing"`). Only `comparison-view.tsx` alt is an enhancement (add modality) → Batch 7. |
 | D6 | Batch 1 a11y broke 4 unit tests | **Tests updated, not behavior reverted.** | Tests asserted the pre-fix DOM (tabs queried as `role="button"`; avatar button by *empty* accessible name). The fix is correct; expectations now track `role="tab"` / the new `aria-label`. |
@@ -211,4 +215,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per scree
 | 2026-06-16 | Batch 6 + 3b(part) — div→button role, portal retry, price cue, keypad | `54d2e719` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 3b — native confirm/prompt → AlertDialog / input Dialog | `3a002a94` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 (+11 tests) |
 | 2026-06-16 | Batch 9 — Forms (disable-on-submit, validation, success toast) | `f8f6eb94` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 |
-| 2026-06-16 | Batch 8 — Perf (autoCodeSplitting −46% main chunk + manualChunks) | (this commit) | ✅ typecheck · ✅ lint · ✅ unit 2484/0 · ✅ build EXIT 0 |
+| 2026-06-16 | Batch 8 — Perf (autoCodeSplitting −46% main chunk + manualChunks) | `f919e53e` | ✅ typecheck · ✅ lint · ✅ unit 2484/0 · ✅ build EXIT 0 |
+| 2026-06-16 | Polish — workspace/perio/calendar/booking/auth (16 items) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2484/0 |

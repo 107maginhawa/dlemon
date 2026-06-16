@@ -9,6 +9,8 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
+import { Button } from '@monobase/ui';
+import { ChevronLeft } from 'lucide-react';
 import { pinSession } from '@/lib/pin-session';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
@@ -99,14 +101,16 @@ export function PinEntry({ member, onSubmit, onBack, errorMessage, lockedUntil, 
     <div className="flex flex-col items-center gap-6 py-10 px-4 min-h-screen">
       {/* Back navigation */}
       <div className="w-full max-w-xs">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           data-testid="pin-back-btn"
           onClick={onBack}
           aria-label="Go back to profile selection"
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Profiles
-        </button>
+          <ChevronLeft className="h-4 w-4" />
+          Profiles
+        </Button>
       </div>
 
       {/* User identity */}

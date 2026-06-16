@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { PatientImageList } from '@/features/imaging/components/patient-image-list';
 import { ImagingWorkspace } from '@/features/imaging/components/imaging-workspace';
 import { ComparisonView } from '@/features/imaging/components/comparison-view';
@@ -34,7 +35,7 @@ export function WorkspaceImagingOverlay({
           className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Close imaging"
         >
-          ×
+          <X size={20} />
         </button>
       </div>
       <div className="flex flex-1 min-h-0">

@@ -288,6 +288,12 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
         {steps.map((s, i) => {
           const isActive = step === s;
           const isCompleted = i < stepIdx;
+          // A tab is navigable when it represents a completed or active step.
+          // Unreachable (future) steps stay non-interactive. In readOnly mode the
+          // tabs remain focusable for review (setStep just changes the viewed step;
+          // the content is read-only) — we use aria-disabled + an opacity class
+          // instead of the `disabled` attr so a clinician can keyboard-review them.
+          const navigable = isCompleted || isActive;
           return (
             <React.Fragment key={s}>
               {i > 0 && (
@@ -295,9 +301,9 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
               )}
               <button
                 type="button"
-                onClick={() => !readOnly && (isCompleted || isActive) && setStep(s)}
-                disabled={readOnly || (!isCompleted && !isActive)}
-                className="flex flex-col items-center gap-1 shrink-0"
+                onClick={() => navigable && setStep(s)}
+                aria-disabled={!navigable}
+                className={`flex flex-col items-center gap-1 shrink-0 ${navigable ? '' : 'opacity-50 cursor-not-allowed'}`}
               >
                 <span
                   className={[
@@ -450,7 +456,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+              className="px-4 py-2 min-h-[44px] rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
             >
               Close
             </button>
@@ -458,7 +464,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
               <button
                 type="button"
                 onClick={() => setShowAmendment(true)}
-                className="px-4 py-2 rounded-lg bg-secondary text-sm font-medium hover:bg-secondary/80 transition-colors"
+                className="px-4 py-2 min-h-[44px] rounded-lg bg-secondary text-sm font-medium hover:bg-secondary/80 transition-colors"
               >
                 Add Amendment
               </button>
@@ -468,7 +474,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
           <button
             type="button"
             onClick={() => setStep(steps[stepIdx - 1]!)}
-            className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+            className="px-4 py-2 min-h-[44px] rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
           >
             Back
           </button>
@@ -476,7 +482,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+            className="px-4 py-2 min-h-[44px] rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
           >
             Cancel
           </button>
@@ -488,31 +494,44 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             type="button"
             onClick={() => setStep(steps[stepIdx + 1]!)}
             disabled={step === 'overview' && !primaryState}
-            className="px-4 py-2 rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="px-4 py-2 min-h-[44px] rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             Next
           </button>
         ) : (
           <div className="flex gap-2">
-            {onSaveAndNext && (
+            {onSaveAndNext ? (
+              <>
+                {/* Multi-tooth flow: "Save & Next" is the primary (lemon) action;
+                    plain "Save" becomes the secondary/outline action. */}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || (!primaryState && !entryClassification)}
+                  className="px-4 py-2 min-h-[44px] rounded-lg border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAndNext}
+                  disabled={saving || !primaryState}
+                  className="px-4 py-2 min-h-[44px] rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+                  title="Save and record next tooth"
+                >
+                  {saving ? '…' : 'Save & Next'}
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
-                onClick={handleSaveAndNext}
-                disabled={saving || !primaryState}
-                className="px-3 py-2 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
-                title="Save and record next tooth"
+                onClick={handleSave}
+                disabled={saving || (!primaryState && !entryClassification)}
+                className="px-4 py-2 min-h-[44px] rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
               >
-                {saving ? '…' : 'Save & Next'}
+                {saving ? 'Saving…' : 'Save'}
               </button>
             )}
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving || (!primaryState && !entryClassification)}
-              className="px-4 py-2 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
           </div>
         ))}
       </div>

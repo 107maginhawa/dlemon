@@ -73,10 +73,10 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
         </h3>
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr>
-              <th className="border-b px-2 py-1.5 text-left font-medium text-muted-foreground">Metric</th>
+            <tr className="bg-muted/30 font-semibold">
+              <th className="border-b px-3 py-2 text-left font-medium text-muted-foreground">Metric</th>
               {charts.map((c) => (
-                <th key={c.id} className="border-b px-2 py-1.5 text-right font-medium">
+                <th key={c.id} className="border-b px-3 py-2 text-right font-medium">
                   {examDateLabel(c)}
                 </th>
               ))}
@@ -86,9 +86,9 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             {/* FIX-003: the persisted AAP/EFP staging trajectory (diagnosis of record)
                 per exam. Legacy charts with no persisted stage show an em-dash. */}
             <tr data-testid="summary-row-stage">
-              <td className="border-b px-2 py-1.5 text-left text-muted-foreground">AAP/EFP stage</td>
+              <td className="border-b px-3 py-2 text-left text-muted-foreground">AAP/EFP stage</td>
               {stagingCells.map((cell, i) => (
-                <td key={i} className="border-b px-2 py-1.5 text-right">
+                <td key={i} className="border-b px-3 py-2 text-right">
                   {cell.stage ? (
                     <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                       {formatStage(cell.stage)}
@@ -102,9 +102,9 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             </tr>
             {summary.map((row) => (
               <tr key={row.key} data-testid={`summary-row-${row.key}`}>
-                <td className="border-b px-2 py-1.5 text-left text-muted-foreground">{row.label}</td>
+                <td className="border-b px-3 py-2 text-left text-muted-foreground">{row.label}</td>
                 {row.values.map((v, i) => (
-                  <td key={i} className="border-b px-2 py-1.5 text-right tabular-nums">
+                  <td key={i} className="border-b px-3 py-2 text-right tabular-nums">
                     {fmtValue(row.key, v)}
                     <DeltaBadge delta={row.deltas[i] ?? null} />
                   </td>
@@ -123,10 +123,10 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
         <div className="overflow-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr>
-                <th className="border-b px-2 py-1.5 text-left font-medium text-muted-foreground">Tooth</th>
+              <tr className="bg-muted/30 font-semibold">
+                <th className="border-b px-3 py-2 text-left font-medium text-muted-foreground">Tooth</th>
                 {charts.map((c) => (
-                  <th key={c.id} className="border-b px-2 py-1.5 text-right font-medium">
+                  <th key={c.id} className="border-b px-3 py-2 text-right font-medium">
                     {examDateLabel(c)}
                   </th>
                 ))}
@@ -135,12 +135,12 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             <tbody>
               {toothRows.map((row) => (
                 <tr key={row.toothNumber} data-testid={`tooth-row-${row.toothNumber}`}>
-                  <td className="border-b px-2 py-1.5 text-left font-medium tabular-nums">{row.toothNumber}</td>
+                  <td className="border-b px-3 py-2 text-left font-medium tabular-nums">{row.toothNumber}</td>
                   {row.maxPd.map((v, i) => (
                     <td
                       key={i}
                       data-worse={row.worse[i] ? 'true' : undefined}
-                      className={`border-b px-2 py-1.5 text-right tabular-nums ${
+                      className={`border-b px-3 py-2 text-right tabular-nums ${
                         row.worse[i] ? 'font-semibold text-destructive' : ''
                       }`}
                     >

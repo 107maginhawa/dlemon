@@ -80,11 +80,15 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
           {item.toothNumber && <span>T{item.toothNumber}</span>}
         </p>
       </div>
-      <div className="text-right">
+      <div
+        className="text-right"
+        role="img"
+        aria-label={isDone ? 'Status: completed' : 'Status: pending'}
+      >
         {isDone ? (
-          <CheckCircle2 className="ml-auto h-4 w-4 text-success" />
+          <CheckCircle2 className="ml-auto h-5 w-5 text-success" />
         ) : (
-          <Clock className="ml-auto h-4 w-4 text-muted-foreground/50" />
+          <Clock className="ml-auto h-5 w-5 text-muted-foreground" />
         )}
       </div>
       <div className="text-right">
