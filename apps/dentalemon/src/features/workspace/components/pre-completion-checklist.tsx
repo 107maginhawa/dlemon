@@ -207,9 +207,9 @@ export function PreCompletionChecklist({
                   className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0"
                 >
                   {check.pass ? (
-                    <CheckCircle2 className="size-4 text-[#34C759] flex-shrink-0" />
+                    <CheckCircle2 className="size-4 text-success flex-shrink-0" />
                   ) : (
-                    <AlertTriangle className="size-4 text-[#FF9500] flex-shrink-0" />
+                    <AlertTriangle className="size-4 text-warning flex-shrink-0" />
                   )}
                   <div>
                     <p className="text-sm">{check.label}</p>

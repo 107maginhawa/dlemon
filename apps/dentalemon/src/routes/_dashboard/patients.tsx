@@ -112,7 +112,7 @@ function PatientsPage() {
             className={[
               'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
               showDuplicates
-                ? 'border-lemon bg-[#FFF9DB] text-lemon-foreground'
+                ? 'border-lemon bg-accent text-lemon-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground',
             ].join(' ')}
             data-testid="find-duplicates-btn"

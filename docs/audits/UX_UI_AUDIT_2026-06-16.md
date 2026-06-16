@@ -52,7 +52,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 ## 4. Batch execution order (safest first)
 
 - [x] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, key handlers. No visual change. *(done — commit below; gate green 2473/0)*
-- [ ] **Batch 2 — Design-token compliance** 🟢/🟡 — token foundation + color swaps + shared `<StatusBadge>`.
+- [~] **Batch 2 — Design-token compliance** — **foundation + safe (color-preserving / fill / icon) swaps DONE** 🟢 (commit below; gate 2473/0). **Text-bearing status badges + inline/SVG colors DEFERRED → Batch 2-cont** (need accessible `*-foreground` tokens; recoloring text to mid-tone semantic tokens would REGRESS contrast — see D8).
 - [~] **Batch 3 — Feedback** — **3a (toasts) DONE** 🟢 (commit below; gate 2473/0). **3b (native confirm/prompt→dialogs, new "Try again" buttons, price-cell cue) deferred to visual checkpoint** (introduces new visible UI).
 - [ ] **Batch 4 — Focus rings & micro-interactions** 🟢/🟡 — `focus-visible` rings, `active:` states.
 - [ ] **Batch 5 — Touch targets (44px)** 🟡 — raise sub-44px controls. Layout-sensitive.
@@ -77,31 +77,33 @@ Counts after dedupe: **High 53 · Medium 50 · Low 14 · Total 117**.
 - [~] imaging `<img>` alt — **DROPPED from Batch 1 (false positive):** `CephReportView.tsx` and `FmxMount.tsx` already have alt (see D5). `comparison-view.tsx` alt *enhancement* (add modality/date) deferred → Batch 7 imaging.
 - Tests updated to track improved semantics: `settings-page.test.tsx` (button→tab queries), `personal-info-form.test.tsx` (avatar empty-name → labelled).
 
-## Batch 2 — Design-token compliance 🟢/🟡
+## Batch 2 — Design-token compliance
 
-**2a — Token foundation (config + CSS, no visual change):**
-- [ ] `tailwind.config.ts` `colors.dental` — add `implant`, `watchlist`, `healthy`, `extracted` (vars already in globals.css). **High [UI]**
-- [ ] `tailwind.config.ts` — add `lemon.accent` (#C8B800 emphasis) for CDT selected/star. **High [UI]**
-- [ ] `globals.css` — add `--dental-watchlist-foreground` (higher-contrast); add `--phase-*` accent vars. **Medium [UI]**
+### 2a — Token foundation ✅ DONE (commit `<batch2>`)
+- [x] `tailwind.config.ts` `colors.dental` — added `healthy`, `implant`, `extracted`, `watchlist`, `watchlist-foreground`. **High [UI]**
+- [x] `tailwind.config.ts` — added `lemon.accent` (#C8B800). **High [UI]**
+- [x] `globals.css` — added `--dental-watchlist-foreground` (#713f12, AA on pale yellow) + `--phase-1..4` vars. **Medium [UI]**
 
-**2b — Shared primitive:**
-- [ ] Create `<StatusBadge status=...>` (one place) mapping → `bg-success/15 text-success`, `bg-warning/15`, `bg-destructive/15`, `bg-info/15`. Migrate call sites in 2c. **High [UI]**
+### 2c — Safe color-preserving / fill / icon swaps ✅ DONE (commit `<batch2>`; gate 2473/0)
+- [x] `dental-chart-thumbnail.tsx` — `bg-[#007AFF]` → `bg-dental-implant` (exact; test updated). **High [UI]**
+- [x] `cdt-code-browser.tsx` — `border-[#c8b800]`/`text-[#c8b800]` → `border/text-lemon-accent`; `bg-[rgba(255,233,125,0.08)]` → `bg-lemon/10`. (Left `hover:text-[#a08800]` — no token.) **High [UI]**
+- [x] `pre-completion-checklist.tsx` — icon `text-[#34C759]`/`text-[#FF9500]` → `text-success`/`text-warning` (exact). **Medium [UI]**
+- [x] `queue-board.tsx` — `bg-[#FFF8D6]` → `bg-accent`; `hover:bg-[#f5df6a]` → `hover:bg-lemon-hover`. **Low/Med**
+- [x] `recalls-sheet.tsx` — `hover:bg-[#f5df6a]` → `hover:bg-lemon-hover`. **Medium [Technical]**
+- [x] `patients.tsx` — selected toggle `bg-[#FFF9DB]` → `bg-accent`. **Medium [UI]**
+- [x] `tooth-overview-step.tsx:314` — watchlist badge `bg-[#fef9c3] text-[#854d0e]` → `bg-dental-watchlist text-dental-watchlist-foreground` (exact bg + accessible fg). **Medium [UI]**
 
-**2c — Pure class swaps (consume tokens):**
-- [ ] `dental-chart-thumbnail.tsx:32` — `bg-[#007AFF]` → `bg-dental-implant`. **High [UI]**
-- [ ] `dental-chart.tsx:217-258` — inline SVG `#B8860A`/`#007AFF`/`#9CA3AF` → `hsl(var(--lemon|--primary|--border))`. **High [UI]**
-- [ ] `treatment-plan-tab.tsx:46-51` — `PHASE_ACCENTS` hardcodes → read `--phase-*` vars. **High [UI]**
-- [ ] `cdt-code-browser.tsx:215-287` — 5× `#c8b800` → `border-lemon-accent`/`text-lemon-accent`. **High [UI]**
-- [ ] `morning-briefing.tsx` (173-176, 225, 278, 300, 332, 374, 383) + `metric-card.tsx:28-31` — palette → semantic tokens. **High [UI]**
-- [ ] Status badges → `<StatusBadge>`: `billing-list.tsx:42-58`, `workspace-payment-modal.tsx:52-62`, `invoice-detail.helpers.ts:154-173`, `invoice-detail-sheet.tsx:45-52`, `patient-folder-card.tsx:129,138`, `patient-profile-page.tsx:49-54,150-154,236-242`, `treatment-plans-sheet.tsx:76-84`, `perio-comparison.tsx:36`, `case-presentation-view.tsx:158`, `accepted-plan-viewer.tsx:44`, revenue/patient reports. **High [UI]**
-- [ ] `billing-list.tsx:143,161` — `text-red-500`/`text-amber-600` → `text-destructive`/`text-warning`. **Medium [UI]**
-- [ ] inline-style brand colors → tokens: `patient-profile-page.tsx:85,345`, `workspace-top-bar.tsx:149-156` (`rgba(255,233,125,0.3)` → `bg-lemon/20`), `signature-pad.tsx:31` (canvas read `--foreground`). **Medium [Technical]**
-- [ ] `queue-board.tsx:91` + `recalls-sheet.tsx:270` — `hover:bg-[#f5df6a]` → `hover:bg-lemon-hover`. **Medium [Technical]**
-- [ ] `tooth-overview-step.tsx:120,264,289,314,329` — off-whites + watchlist → `bg-secondary/20-30`, `bg-dental-watchlist`. **Medium [UI]**
-- [ ] `pre-completion-checklist.tsx:210-212` — `text-[#34C759]`/`text-[#FF9500]` → `text-success`/`text-warning`. **Medium [UI]**
-- [ ] `patients.tsx:114` — `bg-[#FFF9DB]` → `bg-accent`. **Medium [UI]**
-- [ ] `queue-board.tsx:37` — `bg-[#FFF8D6]` → `bg-accent`. **Low [Technical]**
-- [ ] Auth: `onboarding.tsx:217`, `verify-email.tsx:53` `bg-gray-50` → `bg-background`; `verify-email.tsx:63` blue → `bg-accent text-accent-foreground`; `index.tsx:28,35,42` `bg-blue/green/purple-500` → `bg-primary/bg-success/bg-info`; `onboarding-wizard.tsx:304` inline lemon → `<Button variant="lemon">`. **High [UI]**
+### 2-cont — DEFERRED (needs accessible `*-foreground` tokens + visual review; see D8 & "Batch 2b" below)
+- [ ] Shared `<StatusBadge>` + all text-bearing status badges: `billing-list`, `workspace-payment-modal`, `invoice-detail.helpers`, `invoice-detail-sheet`, `patient-folder-card:129,138`, `patient-profile-page`, `treatment-plans-sheet`, `perio-comparison`, `case-presentation-view`, `accepted-plan-viewer`, revenue/patient reports. **High [UI]**
+- [ ] `morning-briefing.tsx` — fills (slot bars/dots 173-176,225,374,383) are safe → swap; text badges (278,300,332) need fg tokens. + `metric-card.tsx:28-31` trend pills. **High [UI]**
+- [ ] `billing-list.tsx:143,161` — `text-amber-600` → needs `warning-foreground` (raw `text-warning` would regress). **Medium [UI]**
+- [ ] `tooth-overview-step.tsx:120,264,289,329` — off-white surfaces → `bg-secondary/*` (subtle warm→cool shift; eyeball). **Medium [UI]**
+- [ ] **2d inline/SVG:** `dental-chart.tsx:217-258` SVG strokes (note: `--dental-implant` is hex, use `var(--dental-implant)` NOT `hsl()`; `#B8860A`≈`lemon-accent` not `lemon`), `treatment-plan-tab.tsx:46-51` `PHASE_ACCENTS`→`var(--phase-*)`, `signature-pad.tsx:31` canvas read `--foreground`, `workspace-top-bar.tsx:149-156` `rgba(255,233,125,0.3)`→`bg-lemon/20`, `patient-profile-page.tsx:85,345` inline gold. **Medium [Technical]**
+- [ ] Auth backgrounds: `onboarding.tsx:217`/`verify-email.tsx:53` `bg-gray-50`→`bg-background`; `verify-email.tsx:63` blue→`bg-accent`; `index.tsx:28,35,42` (fills, safe); `onboarding-wizard.tsx:304`→`<Button variant="lemon">`. **High [UI]** *(mostly safe — fold into next batch)*
+
+### Batch 2b — Accessible status tokens 🟠 NEEDS DECISION (before the text-badge swaps above)
+The semantic tokens `success`/`warning`/`info` (#34C759/#FF9500/#5AC8FA) are **mid-tone FILL colors** — fine for backgrounds/dots/icons, but as *text on a light tint they fail ~1.7–2:1*. To recolor status badges without regressing contrast, add AA-readable foreground tokens, then swap badges to `bg-X/15 text-X-foreground`. **Proposed (for review):**
+`success-foreground: #15803d` · `warning-foreground: #b45309` · `info-foreground: #0369a1` · a light-bg `destructive` text needs `#b91c1c` (current `--destructive-foreground` is white, for text ON red). All ≥ 4.7:1 on white.
 
 ## Batch 3 — Feedback (sonner toasts; replace native dialogs)
 
@@ -182,6 +184,8 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | D5 | "Imaging `<img>` missing alt" (`CephReportView.tsx`, `FmxMount.tsx`) | **Refuted — already handled.** Dropped from Batch 1. | Both already have alt (`item.fileName`; `"Cephalometric radiograph with landmark tracing"`). Only `comparison-view.tsx` alt is an enhancement (add modality) → Batch 7. |
 | D6 | Batch 1 a11y broke 4 unit tests | **Tests updated, not behavior reverted.** | Tests asserted the pre-fix DOM (tabs queried as `role="button"`; avatar button by *empty* accessible name). The fix is correct; expectations now track `role="tab"` / the new `aria-label`. |
 | D7 | Batch 3a hung the full suite (in-suite only; isolation green) | **Root-caused & fixed the latent test landmine.** | 11 test files mocked `sonner` as `{ toast: { error } }` (no `.success`). Bun's `mock.module` is **process-wide**, so once one ran, `toast.success` was `undefined` for all later files → new `toast.success()` calls threw → handlers died → `waitFor` hung. Proven by stash-revert (baseline 2473/0 clean vs hang). Fixed by adding `.success` to all 11 mocks (now matches the already-complete ones). Not a product bug. |
+| D8 | Audit's badge pattern `bg-success/15 text-success` | **Rejected for text; deferred text-badge recolor to Batch 2b.** | `success`/`warning`/`info` are mid-tone Apple FILL colors. As text on a light tint they fail (~1.7–2:1); the existing `text-green-800`/`amber-600` are darker. Naive swap = contrast REGRESSION. Need AA `*-foreground` tokens first (proposed in Batch 2b). Batch 2 shipped only color-preserving / fill / icon swaps. |
+| D9 | `dental-chart.tsx` SVG: audit said `hsl(var(--lemon))` | **Corrected mapping (for Batch 2d).** | There is no `--lemon` var; dental vars are stored as **hex** (`--dental-implant: #007AFF`) so they need `var(--x)` NOT `hsl(var(--x))`. Declined-tooth `#B8860A` ≈ the new `lemon-accent` (#C8B800), not lemon (#FFE97D). |
 
 ## Progress Log
 
@@ -189,4 +193,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 |------|-------|--------|-------------|
 | 2026-06-16 | (tracker created) | `44ff21d1` | — |
 | 2026-06-16 | Batch 1 — Accessibility (additive) | `2b6e8087` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
-| 2026-06-16 | Batch 3a — Feedback toasts (+ sonner mock-shape fix) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 (stash-revert proved no regression) |
+| 2026-06-16 | Batch 3a — Feedback toasts (+ sonner mock-shape fix) | `26e3e971` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 (stash-revert proved no regression) |
+| 2026-06-16 | Batch 2 — Token foundation + safe color-preserving swaps | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |

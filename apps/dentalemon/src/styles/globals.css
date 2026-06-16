@@ -58,6 +58,13 @@
     --dental-implant: #007AFF;
     --dental-extracted: #111111;
     --dental-watchlist: #fef9c3;
+    --dental-watchlist-foreground: #713f12; /* AA-readable on the pale-yellow watchlist fill */
+
+    /* Treatment-plan phase accents (categorical; no semantic-token home) */
+    --phase-1: #DC2626;
+    --phase-2: #EA580C;
+    --phase-3: #7C3AED;
+    --phase-4: #059669;
 
     /* Semantic */
     --success: #34C759;

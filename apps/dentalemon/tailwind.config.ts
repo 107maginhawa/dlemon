@@ -58,13 +58,21 @@ const config: Config = {
           foreground: "#4A4018",
           soft: "rgba(255,233,125,0.15)",
           focus: "rgba(255,233,125,0.35)",
+          // Darker lemon for emphasis/selection accents (e.g. CDT-code selected
+          // borders & star). AA-readable as a border/icon, not as body text.
+          accent: "#C8B800",
         },
         dental: {
+          healthy: "var(--dental-healthy)",
           caries: "var(--dental-caries)",
           fractured: "var(--dental-fractured)",
           filled: "var(--dental-filled)",
           crown: "var(--dental-crown)",
           missing: "var(--dental-missing)",
+          implant: "var(--dental-implant)",
+          extracted: "var(--dental-extracted)",
+          watchlist: "var(--dental-watchlist)",
+          "watchlist-foreground": "var(--dental-watchlist-foreground)",
         },
         success: "#34C759",
         warning: "#FF9500",

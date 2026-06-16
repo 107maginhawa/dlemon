@@ -267,7 +267,7 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
               <button
                 type="submit"
                 disabled={isCreating || !formDueDate}
-                className="rounded px-3 py-1.5 text-xs font-semibold bg-lemon text-lemon-foreground hover:bg-[#f5df6a] disabled:opacity-50"
+                className="rounded px-3 py-1.5 text-xs font-semibold bg-lemon text-lemon-foreground hover:bg-lemon-hover disabled:opacity-50"
               >
                 {isCreating ? 'Saving…' : 'Save Recall'}
               </button>

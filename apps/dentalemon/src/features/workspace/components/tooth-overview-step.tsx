@@ -311,7 +311,7 @@ export function ToothOverviewStep({
                       'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold',
                       entry.treatmentStatus === 'performed'
                         ? 'bg-green-100 text-green-700'
-                        : 'bg-[#fef9c3] text-[#854d0e]',
+                        : 'bg-dental-watchlist text-dental-watchlist-foreground',
                     ].join(' ')}>
                       {entry.treatmentStatus === 'performed' ? 'Done' : 'Pending'}
                     </span>
