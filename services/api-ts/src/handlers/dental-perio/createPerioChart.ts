@@ -43,6 +43,14 @@ export async function createPerioChart(
   // BR-P05: dentist or hygienist role required on branch.
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);
 
+  // P1-6 class (cross-patient create-linkage): body.patientId is caller-supplied;
+  // the chart must belong to the VISIT's patient. Reject a mismatch rather than
+  // mislabeling clinical PHI to a foreign patient (mirrors generatePMD's
+  // PATIENT_VISIT_MISMATCH guard).
+  if (body.patientId !== visit.patientId) {
+    throw new BusinessLogicError('patientId does not match the visit patient', 'PATIENT_VISIT_MISMATCH');
+  }
+
   // Resolve examiner membership for this user on this branch.
   const membership = await getActiveMembershipId(db, user.id, visit.branchId);
   if (!membership) throw new NotFoundError('Membership');
