@@ -54,7 +54,7 @@ export function MeasurementToolbar({
               disabled={needsCalibration}
               title={needsCalibration ? 'Calibrate first to enable mm measurements' : undefined}
               onClick={() => handleClick(mode)}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
+              className={`min-h-[40px] px-2.5 py-1.5 text-xs rounded transition-colors ${
                 needsCalibration
                   ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50'
                   : isActive

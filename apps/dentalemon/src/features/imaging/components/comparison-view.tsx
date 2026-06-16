@@ -128,7 +128,7 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
             aria-selected={mode === 'compare'}
             onClick={() => setMode('compare')}
             className={[
-              'text-xs px-2 py-1 rounded',
+              'text-xs min-h-[40px] px-3 py-1.5 rounded',
               mode === 'compare' ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-zinc-300 hover:text-white',
             ].join(' ')}
           >
@@ -139,7 +139,7 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
             aria-selected={mode === 'superimpose'}
             onClick={() => setMode('superimpose')}
             className={[
-              'text-xs px-2 py-1 rounded',
+              'text-xs min-h-[40px] px-3 py-1.5 rounded',
               mode === 'superimpose' ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-zinc-300 hover:text-white',
             ].join(' ')}
           >

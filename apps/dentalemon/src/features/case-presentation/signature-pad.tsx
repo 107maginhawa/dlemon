@@ -109,7 +109,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
           type="button"
           onClick={clear}
           disabled={submitted}
-          className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
           Clear
         </button>
@@ -118,7 +118,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
           data-testid="accept-sign-btn"
           disabled={!canSubmit}
           onClick={submit}
-          className="flex-1 rounded-xl bg-lemon px-3 py-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="h-11 flex-1 rounded-xl bg-lemon px-3 py-3 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitted ? 'Accepted' : isSubmitting ? 'Submitting…' : 'Accept & Sign'}
         </button>

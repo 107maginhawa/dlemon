@@ -119,7 +119,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           aria-label={`View profile for ${patient.displayName}`}
           onClick={(e) => { e.stopPropagation(); onProfile(patient); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onProfile(patient); } }}
-          className="mx-3 mb-1 text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
+          className="mx-3 mb-1 min-h-[44px] flex items-center py-2 text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
         >
           View Profile
         </button>

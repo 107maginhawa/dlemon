@@ -327,7 +327,7 @@ export function TreatmentTable({
                             setMarkDoneErrorId(t.id);
                             markDone(t.id, t.visitId, t.status as Parameters<typeof markDone>[2]);
                           }}
-                          className="text-xs text-primary hover:underline disabled:opacity-50"
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-xs text-primary hover:underline disabled:opacity-50"
                         >
                           Mark Done
                         </button>

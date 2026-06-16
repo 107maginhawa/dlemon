@@ -133,7 +133,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
               value={linkTypeFilter}
               onChange={(e) => setLinkTypeFilter(e.target.value as '' | ImageLinkType)}
               data-testid="filter-link-type"
-              className="rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-600"
+              className="rounded border border-zinc-200 min-h-[40px] px-2 py-1.5 text-zinc-600"
             >
               <option value="">All links</option>
               {(Object.keys(LINK_TYPE_LABELS) as ImageLinkType[]).map((lt) => (
@@ -146,7 +146,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
               data-testid="filter-tag"
-              className="ml-auto rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-600"
+              className="ml-auto rounded border border-zinc-200 min-h-[40px] px-2 py-1.5 text-zinc-600"
             >
               <option value="">All tags</option>
               {availableTags.map((t) => (

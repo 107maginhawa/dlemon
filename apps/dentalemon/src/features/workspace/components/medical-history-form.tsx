@@ -351,7 +351,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={`h-8 px-3.5 rounded-md text-sm font-medium transition-colors ${
+            className={`h-10 px-3.5 rounded-md text-sm font-medium transition-colors ${
               value === opt.value
                 ? 'bg-background text-foreground shadow-sm font-semibold'
                 : 'text-muted-foreground hover:text-foreground'

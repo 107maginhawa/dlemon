@@ -192,7 +192,7 @@ export function ToothOverviewStep({
                 onClick={() => onAssignCondition(value)}
                 disabled={!focusedSurface}
                 className={[
-                  'flex flex-col items-center gap-1.5 rounded-lg border py-2.5 text-xs font-medium transition-colors',
+                  'flex flex-col items-center gap-1.5 rounded-lg border py-3 min-h-[44px] text-xs font-medium transition-colors',
                   isActive
                     ? 'border-2 font-semibold'
                     : !focusedSurface

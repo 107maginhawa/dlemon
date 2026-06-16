@@ -160,7 +160,7 @@ export function VoicePerioControls({
               type="button"
               data-testid="voice-confirm-yes"
               onClick={onConfirm}
-              className="min-h-[36px] rounded-md bg-lemon px-3 py-1 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover"
+              className="min-h-[44px] rounded-md bg-lemon px-3 py-1 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover"
             >
               Yes
             </button>
@@ -168,7 +168,7 @@ export function VoicePerioControls({
               type="button"
               data-testid="voice-confirm-no"
               onClick={onDismiss}
-              className="min-h-[36px] rounded-md border border-border px-3 py-1 text-xs font-semibold hover:bg-muted"
+              className="min-h-[44px] rounded-md border border-border px-3 py-1 text-xs font-semibold hover:bg-muted"
             >
               No, repeat
             </button>

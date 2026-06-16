@@ -52,7 +52,7 @@ export function DismissTreatmentPopover({
           disabled={!reasonOk || isPending}
           onClick={() => { if (reasonOk) onConfirm(); }}
           aria-label="Confirm dismiss treatment"
-          className="mt-2 w-full rounded-xl bg-destructive/10 text-destructive text-sm py-1.5 font-medium disabled:opacity-50 hover:bg-destructive/20 transition-colors"
+          className="mt-2 w-full rounded-xl bg-destructive/10 text-destructive text-sm py-3 min-h-[44px] font-medium disabled:opacity-50 hover:bg-destructive/20 transition-colors"
         >
           Confirm Dismiss
         </button>

@@ -347,7 +347,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           <h2 className="text-[17px] font-semibold tracking-tight">
             {invoice ? `Invoice ${invoice.invoiceNumber}` : 'Invoice Detail'}
           </h2>
-          <button type="button" onClick={handleClose} aria-label="Close" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">
+          <button type="button" onClick={handleClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">
             ✕
           </button>
         </div>

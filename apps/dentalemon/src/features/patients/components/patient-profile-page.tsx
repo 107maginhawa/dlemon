@@ -84,7 +84,7 @@ function TabButton({
       onClick={onClick}
       style={active ? { borderBottomColor: BRAND_GOLD, color: BRAND_GOLD_TEXT } : undefined}
       className={[
-        'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+        'px-4 py-3 min-h-[44px] text-sm font-medium border-b-2 -mb-px transition-colors',
         active
           ? 'border-lemon text-lemon-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',

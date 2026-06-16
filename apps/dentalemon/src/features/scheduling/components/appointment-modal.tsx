@@ -342,7 +342,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                   variant="ghost"
                   onClick={() => setDurationMinutes(opt.value)}
                   aria-pressed={durationMinutes === opt.value}
-                  className={`flex-1 h-9 px-0 text-[13px] font-medium rounded-lg transition-colors ${
+                  className={`flex-1 h-11 px-0 text-[13px] font-medium rounded-lg transition-colors ${
                     durationMinutes === opt.value
                       ? 'bg-lemon text-lemon-foreground font-semibold hover:bg-lemon'
                       : 'text-muted-foreground hover:bg-background'

@@ -77,7 +77,7 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
             data-testid="note-submit"
             onClick={handleSubmit}
             disabled={!isValid || isPending}
-            className="px-4 py-1.5 text-sm font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 min-h-[44px] text-sm font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isPending ? 'Saving...' : 'Add Note'}
           </button>

@@ -55,7 +55,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 - [~] **Batch 2 — Design-token compliance** — **foundation + safe (color-preserving / fill / icon) swaps DONE** 🟢 (commit below; gate 2473/0). **Text-bearing status badges + inline/SVG colors DEFERRED → Batch 2-cont** (need accessible `*-foreground` tokens; recoloring text to mid-tone semantic tokens would REGRESS contrast — see D8).
 - [~] **Batch 3 — Feedback** — **3a (toasts) DONE** 🟢 (commit below; gate 2473/0). **3b (native confirm/prompt→dialogs, new "Try again" buttons, price-cell cue) deferred to visual checkpoint** (introduces new visible UI).
 - [x] **Batch 4 — Focus rings** 🟢/🟡 — `focus-visible` rings across **24 files** (whole `focus:border-lemon` pattern, not just the audit's few) + staff/portal nav. (commit below; gate 2473/0)
-- [ ] **Batch 5 — Touch targets (44px)** 🟡 — raise sub-44px controls. Layout-sensitive.
+- [x] **Batch 5 — Touch targets (44px)** 🟡 — raised ~25 controls (nav/scheduling/booking/billing/patients/workspace/imaging/case-pres/reports). Perio dense-grid handled by judgment, not blanket 44px (D11). (commit below; gate 2473/0). *Visual/E2E pass still advised — see note.*
 - [ ] **Batch 6 — Structural a11y** 🟡 — `<div onClick>` → `<button>` conversions.
 - [ ] **Batch 7 — Loading & CLS** 🟡 — `<Skeleton>` swaps + intrinsic `<img>` dims.
 - [ ] **Batch 8 — Performance / CWV** 🟠 — code-splitting, manualChunks, list virtualization.
@@ -128,9 +128,11 @@ The semantic tokens `success`/`warning`/`info` (#34C759/#FF9500/#5AC8FA) are **m
 - Deferred micro-interactions (`active:scale-95` keypad, transitions) → fold into a later pass.
 - Note: a few success/error BANNERS still use raw palette (e.g. `working-hours.tsx:113` `bg-green-50 text-green-700`) — tokenize in a follow-up (distinct from badges; acceptable contrast today).
 
-## Batch 5 — Touch targets (Apple HIG 44px) 🟡
+## Batch 5 — Touch targets (Apple HIG 44px) 🟡 ✅ DONE (commit `<batch5>`; gate 2473/0)
 
-Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wrapping/overflow per screen.**
+**Done.** Standalone controls raised to `h-11`/`min-h-[44px]` (NB: the `<Button size="lg">` variant is only `h-10`/40px, so explicit `h-11` was used). Dense toolbars (imaging) raised to a conservative `min-h-[40px]`. Perio chart handled per D11. **Recommended: a human visual/E2E pass on the iPad viewport for the dense screens (imaging toolbar, perio, calendar) — the unit suite can't catch overflow.** Original target list retained below for reference.
+
+Shared fix: raise to `h-11`/`min-h-[44px]`. **Verify wrapping/overflow per screen.**
 - [ ] **High:** `sidebar.tsx:284` (h-7→h-11, drop `-ml-1` at `_dashboard.tsx:150`); `queue-board.tsx:28`; `appointment-modal.tsx:339`; `comparison-view.tsx:126` + `imaging-workspace.tsx:381` + `measurement-toolbar.tsx:46`; `treatment-table.tsx:316-340`; `billing.tsx:74`; `patient-registration-modal.tsx:208` + `patient-edit-form.tsx:229` + `follow-up-notes.tsx:80`; `patient-folder-card.tsx:117`; `BookingWizard.tsx:136-170,210-220,302`; `signature-pad.tsx:112,121` + `case-presentation-view.tsx:172`; `invoice-detail.tsx:346` + `payment-plan-create.tsx:91`.
 - [ ] **Medium:** `perio-tooth-column.tsx:154,175` + `perio-bop-dot.tsx:32` + `voice-perio-controls.tsx:163`; `tooth-overview-step.tsx:184-215` + `treatment-row-popovers.tsx:50-58` + `medical-history-form.tsx:334-350`; `treatment-plans-sheet.tsx:289` + `notification-bell.tsx:90` + `personal-info-form.tsx:222,237`; `patient-image-list.tsx:136`; `case-presentation-view.tsx:200` + `…presentationId.tsx:31`.
 - [ ] **Low:** `revenue-report.tsx:82` + `treatment-report.tsx:66` + `patient-report.tsx:61`; `patient-profile-page.tsx:87`; `signature-pad.tsx` Clear.
@@ -189,6 +191,8 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | D8 | Audit's badge pattern `bg-success/15 text-success` | **Rejected for text; deferred text-badge recolor to Batch 2b.** | `success`/`warning`/`info` are mid-tone Apple FILL colors. As text on a light tint they fail (~1.7–2:1); the existing `text-green-800`/`amber-600` are darker. Naive swap = contrast REGRESSION. Need AA `*-foreground` tokens first (proposed in Batch 2b). Batch 2 shipped only color-preserving / fill / icon swaps. |
 | D9 | `dental-chart.tsx` SVG: audit said `hsl(var(--lemon))` | **Corrected mapping (for Batch 2d).** | There is no `--lemon` var; dental vars are stored as **hex** (`--dental-implant: #007AFF`) so they need `var(--x)` NOT `hsl(var(--x))`. Declined-tooth `#B8860A` ≈ the new `lemon-accent` (#C8B800), not lemon (#FFE97D). |
 | D10 | Audit wanted a shared `<StatusBadge>` primitive | **Did in-place token swaps instead.** | Each badge site has its own status→label logic; recoloring classes in place fixes the actual defects (token drift + contrast) with far less regression risk than a 14-site structural refactor. The DRY `<StatusBadge>` extraction is an optional follow-up, not a blocker. |
+| D11 | "44px touch targets" blanket-applied to the perio chart | **Rejected blanket 44px for the perio grid.** | The perio chart is 6 sites × 32 teeth; 44px cells would make it unusable. Applied judgment: per-tooth mobility/furcation selects `h-6`→`h-9`; the 12px BOP dot wrapped in a 24px tap area (visual dot unchanged); standalone voice-control buttons → 44px. Dense clinical grids are a deliberate exception (cf. the local-first/no-AI non-goals). |
+| D12 | `<Button size="lg">` assumed = 44px | **Used explicit `h-11`.** | The primitive's `lg` size is `h-10` (40px), 4px short of HIG. Touch-target fixes used explicit `h-11`. (Optional: bump the `lg` variant itself later.) |
 
 ## Progress Log
 
@@ -199,4 +203,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | 2026-06-16 | Batch 3a — Feedback toasts (+ sonner mock-shape fix) | `26e3e971` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 (stash-revert proved no regression) |
 | 2026-06-16 | Batch 2 — Token foundation + safe color-preserving swaps | `1fdf3ad7` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 2b — Accessible status tokens + badge recolor (14 files) | `269ce943` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
-| 2026-06-16 | Batch 4 — Focus rings (24 files, WCAG 2.4.7) | `e92dcb76` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 4 — Focus rings (24 files, WCAG 2.4.7) | `6c87c234` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 5 — Touch targets (~25 controls; perio D11) | (this commit) | ✅ app+ui typecheck · ✅ lint · ✅ unit 2473/0 (E2E/visual advised) |

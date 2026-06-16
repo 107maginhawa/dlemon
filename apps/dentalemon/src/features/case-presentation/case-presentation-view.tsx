@@ -169,7 +169,7 @@ export function CasePresentationView({
               <button
                 type="button"
                 data-testid="reject-btn"
-                className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                className="h-11 rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Decline this plan
               </button>
@@ -197,7 +197,7 @@ export function CasePresentationView({
                   onReject({ rejectionReason: reason.trim() || undefined });
                   setRejectOpen(false);
                 }}
-                className="mt-2 w-full rounded-xl bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
+                className="mt-2 min-h-[44px] w-full rounded-xl bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Confirm decline
               </button>

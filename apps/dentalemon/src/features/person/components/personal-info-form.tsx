@@ -219,7 +219,7 @@ export function PersonalInfoForm({
                     type="button"
                     size="icon"
                     variant="secondary"
-                    className="h-8 w-8 rounded-full"
+                    className="h-10 w-10 rounded-full"
                     onClick={handleAvatarClick}
                     disabled={isUploadingAvatar}
                     aria-label={isUploadingAvatar ? 'Uploading photo…' : 'Change avatar photo'}
@@ -235,7 +235,7 @@ export function PersonalInfoForm({
                       type="button"
                       size="icon"
                       variant="destructive"
-                      className="h-8 w-8 rounded-full"
+                      className="h-10 w-10 rounded-full"
                       onClick={handleRemoveAvatar}
                       disabled={isUploadingAvatar}
                       aria-label="Remove avatar photo"

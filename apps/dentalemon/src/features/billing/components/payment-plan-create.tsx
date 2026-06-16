@@ -88,7 +88,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
       <div data-testid="payment-plan-create" className="relative w-full max-w-[440px] bg-background rounded-2xl shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 h-[52px] border-b flex-shrink-0">
           <h2 className="text-[17px] font-semibold tracking-tight">Create Payment Plan</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">✕</button>
         </div>
 
         <div className="px-5 py-5 flex flex-col gap-4">

@@ -79,7 +79,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
           <input type="date" aria-label="End date" value={endDate} onChange={e => setEndDate(e.target.value)}
             className="h-9 rounded-lg border border-border px-3 text-sm bg-background" />
           <button type="button" onClick={handleExportCSV}
-            className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-secondary transition-colors">
+            className="h-11 px-4 rounded-lg border border-border text-sm hover:bg-secondary transition-colors">
             Export CSV
           </button>
         </div>
