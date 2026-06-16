@@ -179,3 +179,94 @@ pipeline). Give one consolidated report at the end (every bug found + every gate
 **Already-decided (don't re-litigate):** cover-what-ships + compute-the-rest; Tier 3 deferred; br P0 hard-gate deferred (the 26 traceability gaps are a triage backlog); `Coverage Ratchet` not-yet-required (admin adds to branch protection). **Opportunistic follow-ups:** triage the 26 P0 BR gaps; fe-route render-smoke; populate endpoint integration/journey columns via `COVERAGE_RECORD=1`.
 
 **Full context/gotchas:** memory `project_verify_app_2026_06_15.md`; detailed phased tasks: `~/.claude/plans/if-you-are-an-soft-planet.md`.
+
+---
+
+## Field Notes
+
+> Dense, repo-specific lessons from building this system end-to-end (Phases 1–3a/3b).
+> The repo-agnostic distillation lives in `VERIFY_APP_PLAYBOOK.md`; this is the
+> "what actually happened here" record. Numbers are as-recorded at the cited PRs.
+
+### What the computed engine actually found (the payoff)
+- **Role×op drift (1a, #33) is the highest-ROI check by far** — zero test-writing, just a
+  static scan of `assertBranchRole` call sites joined via `contract-spine.json` vs the
+  `ROLE_PERMISSION_MATRIX.md` grids. Scanned **110 role-gated ops, 3 drifts → triaged to
+  0**, and one was a **real authz bug**: the wired `initializeDentition` blocked
+  `dental_assistant` (spec + sibling `updateTooth` grant it) while a **dead duplicate
+  handler** held the correct roles. Fixing it also exposed a **vacuously-green test**
+  (`dental-assistant.clinical-assist.test.ts` asserted 201 against the *dead* handler) —
+  the "false-green test wiring" class, only catchable by a *computed* check. The other 2
+  were detector false-positives (prose grants the spec *tables* can't express → modeled as
+  cited `PROSE_DOCUMENTED_GRANTS`).
+- **Schemathesis status-conformance (1b, #36) computed a whole-module spec drift:** all 33
+  `dental-imaging` ops returned `401` but declared only success codes — a status-less
+  `| ErrorResponse` collapsed into the **200 body**; plus `recoverPin` returned `401` while
+  the spec marked it *public* despite the handler requiring auth. **0 `not_a_server_error`
+  (5xx)** — no impl bug of that class; the 34 failures were one drift. Fixed in TypeSpec
+  (append `| ApiUnauthorizedResponse`, keep the 200 body → zero SDK/FE churn).
+- **Phase 3a/3b skeptic fan-out found + fixed 9 launch-blocking bugs (#44–#49)**, each
+  pinned RED→GREEN: cross-tenant patient-linkage on create (visit/appt/waitlist/perio,
+  #44/#49); `updatePatient` computed-but-ignored `isOwner` + `deactivatePatient` zero-authz
+  (#45); `updateMember` credential owner-gate + email-in-log (#46); `estimateClaimCoverage`
+  + `listInvoices` cross-tenant reads (#47); storage download stored-XSS forced to
+  `attachment` (#48). **Billing money-movement: 24 handlers refuted, 0 bugs** — clean.
+
+### The blind spots the engine did NOT catch (carry these)
+- **The P0 cross-tenant PHI IDOR on patient contacts (#38) passed every Tier-0/1 gate.**
+  Object-level IDOR, cross-tenant LIST leaks, secrets-in-logs, and "inert" authz are
+  fundamentally Tier-2 work — the matrices compute *coverage*, not *exploitability*.
+- **The `sk_live_` Stripe key logged in cleartext (P0, #42)** needed a *dedicated*
+  Secret-Logging Tier-0 gate — no coverage matrix would surface it. Now a REQUIRED check.
+- **"0 drift" is true-but-narrow:** only ~28 of ~110 role-gated ops are expressible in the
+  spec matrix tables. "0 drift" = no contradiction among the *joinable* subset.
+
+### Matrix numbers as-built (the compute-the-rest inventory)
+- **endpoint:** 369 ops → **134 tested / 23 gap / ~212 orphan**. Orphans (built, no FE
+  consumer — incl. payments/erasure/legal-hold) go to `orphan-disposition.md`, NOT the test
+  ratchet. The integration/journey columns read a gitignored `COVERAGE_RECORD` sink that's
+  empty in a normal pass → a "tested" disposition can rest on the *contract* column alone.
+- **br:** 122 BRs (P0 48 / P1 36 / P2 38) → 82 fully / 4 positive-only / 36 untested.
+  **REPORT-ONLY:** **26 of the 48 P0s are *traceability* gaps** (tested but BR code
+  untagged) — the hard P0 gate is deferred; `audit:trace:ci` stays the P0 gate meanwhile.
+- **fsm:** 8 FSMs, 136 edges → 30 uncovered (Visit + Ceph weakest). **workflow:** 84
+  (16 cross-module) → 27 gap, 0 dangling. **fe-route:** 23 routes → 3 gaps (patient portal).
+- **Gate policy:** role-op **HARD** (0, never allowlisted); endpoint/fsm/workflow/fe-route
+  **RATCHET**; br **REPORT-ONLY**.
+
+### Engine-hardening (Phase 2.5, #39–#43) — the "armed but inert" lessons
+- **#39:** the endpoint ratchet was a verified **no-op** (wrong baseline) — armed + reseeded.
+  *Always prove a ratchet fails on a synthetic new gap before trusting it.*
+- **#40:** matrices were **locale-sort-dependent** (nondeterministic across machines) → use
+  `cmpByCodepoint`, and add a **freshness gate** (`git diff --exit-code` after regen).
+  Coverage Ratchet promoted to **REQUIRED**.
+- **#41:** added the "What this does NOT prove" block to VERDICT.md + SKILL.md.
+- **#42:** Secret-Logging gate (see above), REQUIRED.
+- **#43:** sensitive *mutating* orphans reclassified into a tracked obligation — an
+  IDOR-able write can no longer hide as a "no-obligation orphan".
+
+### Operational gotchas (this repo)
+- Backend tests: `DATABASE_URL=…monobase_test bun run scripts/test-with-db.ts <FILE>` —
+  **pass FILE args, never a DIR** (one shared clone → phantom fails). Root coverage tests:
+  `bun test ./scripts/coverage/`.
+- New api-ts tests **must** use the shared `buildTestApp` (real authMiddleware→zValidator→
+  handler chain); `lint:test-harness` blocks raw mounts — this is what closes the
+  raw-handler-test-blindspot that hid several drifts.
+- `--deep` (Tier 2) is **reserved / a no-op today** — Phase 3 mutation + skeptic fan-out is
+  the only adversarial path, run as parallel subagents, not via the flag.
+- The **`TypeScript` required check is FLAKY** (transient TS2769 in `apps/dentalemon`,
+  unrelated to RLS/coverage) → cancel the run + `gh run rerun <id> --failed`.
+- Schemathesis `--suppress-health-check` is unreliable on CI; the runner tolerates
+  health-check-only exits so a data-generation health-check can't fail the gate.
+- New gates land **not-required → promote to required** via branch protection (admin
+  action). Still NOT-yet-required: triage the 26 P0 BR gaps before the br hard-gate.
+- **LEAVE-ALONE:** `bun.lock`, `.agents/`, `apps/website/`, `skills-lock.json`,
+  `.claude/skills/design-taste-frontend`, `docs/aha/`.
+
+### Remaining (tracked, not stalled)
+Stripe webhook `BusinessLogicError→200` silent-loss + missing `event.id` idempotency
+ledger (HIGH, needs a migration); `createImagingStudy` cross-patient linkage (needs a
+same-*org* check, not same-branch); erasure/legal-hold cross-tenant branch asserts
+(cloud-launch prep); 4 per-role persona walks + negative journeys + KG refresh (need a
+live app). Mutation "0-survivors" is effectively satisfied — each of the 9 fixes has a
+committed test that fails on revert.
