@@ -403,7 +403,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
                   value={asaClass}
                   onChange={(e) => setAsaClass(e.target.value as AsaClassification | '')}
                   aria-label="ASA Physical Status classification"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 >
                   <option value="">Not classified</option>
                   {ASA_OPTIONS.map((o) => (

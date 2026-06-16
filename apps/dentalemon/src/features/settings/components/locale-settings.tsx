@@ -72,7 +72,7 @@ export function LocaleSettings() {
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Country / Region</label>
         <select value={selectedCode} onChange={e => { setSelectedCode(e.target.value); const l = LOCALES.find(x => x.code === e.target.value); if (l) setNotation(l.toothNotation); }}
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none">
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none">
           {LOCALES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
         </select>
       </div>

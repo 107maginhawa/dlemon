@@ -54,7 +54,7 @@ One commit per batch (or per coherent sub-batch). Never bulk-commit across risk 
 - [x] **Batch 1 — Accessibility (additive)** 🟢 — aria-*, roles, key handlers. No visual change. *(done — commit below; gate green 2473/0)*
 - [~] **Batch 2 — Design-token compliance** — **foundation + safe (color-preserving / fill / icon) swaps DONE** 🟢 (commit below; gate 2473/0). **Text-bearing status badges + inline/SVG colors DEFERRED → Batch 2-cont** (need accessible `*-foreground` tokens; recoloring text to mid-tone semantic tokens would REGRESS contrast — see D8).
 - [~] **Batch 3 — Feedback** — **3a (toasts) DONE** 🟢 (commit below; gate 2473/0). **3b (native confirm/prompt→dialogs, new "Try again" buttons, price-cell cue) deferred to visual checkpoint** (introduces new visible UI).
-- [ ] **Batch 4 — Focus rings & micro-interactions** 🟢/🟡 — `focus-visible` rings, `active:` states.
+- [x] **Batch 4 — Focus rings** 🟢/🟡 — `focus-visible` rings across **24 files** (whole `focus:border-lemon` pattern, not just the audit's few) + staff/portal nav. (commit below; gate 2473/0)
 - [ ] **Batch 5 — Touch targets (44px)** 🟡 — raise sub-44px controls. Layout-sensitive.
 - [ ] **Batch 6 — Structural a11y** 🟡 — `<div onClick>` → `<button>` conversions.
 - [ ] **Batch 7 — Loading & CLS** 🟡 — `<Skeleton>` swaps + intrinsic `<img>` dims.
@@ -121,10 +121,12 @@ The semantic tokens `success`/`warning`/`info` (#34C759/#FF9500/#5AC8FA) are **m
 - [ ] `treatment-table.tsx:430-442` — editable price cell: hover/focus cue + `toast.success` on save. **Medium [UX]**
 - [ ] `pin-entry.$memberId.tsx:197` — keypad: `active:scale-95 transition-all`. **Low [UX]** *(also Batch 4)*
 
-## Batch 4 — Focus rings & micro-interactions 🟢/🟡
+## Batch 4 — Focus rings ✅ DONE (commit `<batch4>`; gate 2473/0)
 
-- [ ] `wizard-step-clinic.tsx:32,42,62,74`, `signature-pad.tsx:90`, `case-presentation-view.tsx:190` — add `focus-visible:ring-2 focus-visible:ring-ring`. **Medium–High [UI]**
-- [ ] `staff-list.tsx:215-231`, `_portal.tsx:76-87` — add `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`. **Medium [UI]**
+- [x] Upgraded the systemic `focus:border-lemon` (border-color-only) → `focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring` across **all 24 files** that had it (settings forms, workspace sheets, onboarding wizard, scheduling, billing, pmd) — not just the audit's 3. **High [UI]**
+- [x] `staff-list.tsx` Edit/Deactivate buttons + `_portal.tsx` nav links — `focus-visible` rings (Deactivate's `text-red-600` also tokenized → `text-destructive-emphasis`). **Medium [UI]**
+- Deferred micro-interactions (`active:scale-95` keypad, transitions) → fold into a later pass.
+- Note: a few success/error BANNERS still use raw palette (e.g. `working-hours.tsx:113` `bg-green-50 text-green-700`) — tokenize in a follow-up (distinct from badges; acceptable contrast today).
 
 ## Batch 5 — Touch targets (Apple HIG 44px) 🟡
 
@@ -196,4 +198,5 @@ Shared fix: raise to `h-11`/`min-h-[44px]` or `<Button size="lg">`. **Verify wra
 | 2026-06-16 | Batch 1 — Accessibility (additive) | `2b6e8087` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
 | 2026-06-16 | Batch 3a — Feedback toasts (+ sonner mock-shape fix) | `26e3e971` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 (stash-revert proved no regression) |
 | 2026-06-16 | Batch 2 — Token foundation + safe color-preserving swaps | `1fdf3ad7` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
-| 2026-06-16 | Batch 2b — Accessible status tokens + badge recolor (14 files) | (this commit) | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 2b — Accessible status tokens + badge recolor (14 files) | `269ce943` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |
+| 2026-06-16 | Batch 4 — Focus rings (24 files, WCAG 2.4.7) | `e92dcb76` | ✅ typecheck · ✅ lint (0 err) · ✅ unit 2473/0 |

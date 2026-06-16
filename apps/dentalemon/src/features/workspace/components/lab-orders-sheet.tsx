@@ -209,7 +209,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   value={form.labName}
                   onChange={e => setForm(f => ({ ...f, labName: e.target.value }))}
                   placeholder="e.g. Precision Dental Lab"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -220,7 +220,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. PFM Crown tooth 21"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div className="flex gap-3">
@@ -232,7 +232,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                     value={form.shade}
                     onChange={e => setForm(f => ({ ...f, shade: e.target.value }))}
                     placeholder="e.g. A2"
-                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   />
                 </div>
                 <div className="flex-1">
@@ -243,7 +243,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                     value={form.material}
                     onChange={e => setForm(f => ({ ...f, material: e.target.value }))}
                     placeholder="e.g. Zirconia"
-                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                     type="date"
                     value={form.dueDate}
                     onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   />
                 </div>
                 <div className="flex-1">
@@ -265,7 +265,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
                     type="date"
                     value={form.expectedDeliveryDate}
                     onChange={e => setForm(f => ({ ...f, expectedDeliveryDate: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   />
                 </div>
               </div>

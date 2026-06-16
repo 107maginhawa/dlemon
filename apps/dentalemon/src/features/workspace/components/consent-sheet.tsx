@@ -414,7 +414,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                   onChange={handleSelectTemplate}
                   disabled={signed}
                   aria-label="Select consent form template"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none disabled:opacity-50"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none disabled:opacity-50"
                 >
                   <option value="">Choose template…</option>
                   {templateOptions.map(t => (
@@ -465,7 +465,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     rows={2}
                     placeholder="What the procedure involves…"
                     aria-label="Nature of procedure"
-                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-50"
+                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -480,7 +480,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     rows={2}
                     placeholder="Expected benefits…"
                     aria-label="Benefits"
-                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-50"
+                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -495,7 +495,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     rows={2}
                     placeholder="Material risks…"
                     aria-label="Risks"
-                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-50"
+                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -510,7 +510,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     rows={2}
                     placeholder="Reasonable alternatives…"
                     aria-label="Alternatives"
-                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-50"
+                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -525,7 +525,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     rows={2}
                     placeholder="What happens if untreated…"
                     aria-label="Risks of non-treatment"
-                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-50"
+                    className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -595,7 +595,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                   rows={2}
                   placeholder="e.g. Extraction of tooth #48"
                   aria-label="Treatment refused"
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
               <div>
@@ -609,7 +609,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                   rows={2}
                   placeholder="Patient's stated reason…"
                   aria-label="Reason for refusal"
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
               <div>
@@ -623,7 +623,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                   rows={2}
                   placeholder="I understand the risks of declining treatment and choose to do so."
                   aria-label="Patient acknowledgement"
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
 

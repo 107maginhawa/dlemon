@@ -204,7 +204,7 @@ export function TreatmentTemplates() {
               value={editor.name}
               onChange={(e) => setEditor({ ...editor, name: e.target.value })}
               placeholder="e.g. New Patient Exam"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
           <div>
@@ -217,7 +217,7 @@ export function TreatmentTemplates() {
               value={editor.description}
               onChange={(e) => setEditor({ ...editor, description: e.target.value })}
               placeholder="Short summary of this bundle"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -232,7 +232,7 @@ export function TreatmentTemplates() {
                   value={it.cdtCode}
                   onChange={(e) => patchItem(idx, { cdtCode: e.target.value })}
                   placeholder="CDT"
-                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus:border-lemon outline-none font-mono"
+                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none font-mono"
                 />
                 <input
                   type="text"
@@ -240,7 +240,7 @@ export function TreatmentTemplates() {
                   value={it.description}
                   onChange={(e) => patchItem(idx, { description: e.target.value })}
                   placeholder="Procedure description"
-                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus:border-lemon outline-none"
+                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
                 <input
                   type="number"
@@ -249,7 +249,7 @@ export function TreatmentTemplates() {
                   onChange={(e) => patchItem(idx, { price: e.target.value })}
                   placeholder={CURRENCY_SYMBOL}
                   min={0}
-                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus:border-lemon outline-none tabular-nums"
+                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tabular-nums"
                 />
                 <button
                   type="button"

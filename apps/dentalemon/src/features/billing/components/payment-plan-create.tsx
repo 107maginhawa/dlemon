@@ -106,7 +106,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="plan-installments">Number of installments *</label>
-            <input id="plan-installments" type="number" min="2" max="24" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+            <input id="plan-installments" type="number" min="2" max="24" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
           </div>
 
           <div>
@@ -123,7 +123,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="plan-start-date">Start date *</label>
-            <input id="plan-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+            <input id="plan-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
           </div>
 
           {perInstallment > 0 && (

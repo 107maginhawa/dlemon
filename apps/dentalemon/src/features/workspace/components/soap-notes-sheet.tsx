@@ -249,7 +249,7 @@ export function SoapNotesSheet({
                   value={addendumForm.reason}
                   onChange={handleAddendumFieldChange('reason')}
                   placeholder="e.g. Correction, additional finding…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -265,7 +265,7 @@ export function SoapNotesSheet({
                   value={addendumForm.content}
                   onChange={handleAddendumFieldChange('content')}
                   placeholder="Addendum text…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
             </>
@@ -287,7 +287,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('subjective')}
                   disabled={isLocked}
                   placeholder="Chief complaint and patient-reported symptoms…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -306,7 +306,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('objective')}
                   disabled={isLocked}
                   placeholder="Clinical findings, examination results…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -325,7 +325,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('assessment')}
                   disabled={isLocked}
                   placeholder="Diagnosis and clinical impression…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -344,7 +344,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('plan')}
                   disabled={isLocked}
                   placeholder="Treatment plan and next steps…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -363,7 +363,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('notes')}
                   disabled={isLocked}
                   placeholder="Any additional observations or notes…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 

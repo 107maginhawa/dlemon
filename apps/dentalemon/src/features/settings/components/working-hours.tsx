@@ -90,7 +90,7 @@ export function WorkingHours() {
     }
   }
 
-  const inputClass = 'h-9 rounded-lg border border-border px-2 text-sm bg-background focus:border-lemon outline-none';
+  const inputClass = 'h-9 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
   if (isError) return <div className="text-sm text-destructive">Failed to load working hours. Please try again.</div>;

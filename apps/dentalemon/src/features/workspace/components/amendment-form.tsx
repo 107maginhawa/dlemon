@@ -100,7 +100,7 @@ export function AmendmentForm({
           id="amendment-reason"
           value={reason}
           onChange={e => setReason(e.target.value as AmendmentReason)}
-          className="h-9 rounded-lg border border-border px-2.5 text-sm bg-background focus:border-lemon outline-none"
+          className="h-9 rounded-lg border border-border px-2.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         >
           <option value="">Select reason…</option>
           {AMENDMENT_REASONS.map(r => (
@@ -120,7 +120,7 @@ export function AmendmentForm({
           onChange={e => setContent(e.target.value)}
           placeholder="Describe the amendment…"
           rows={3}
-          className="rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none"
+          className="rounded-lg border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
         />
         {content.length > 0 && content.trim().length < 10 && (
           <p className="text-xs text-muted-foreground">{10 - content.trim().length} more characters needed</p>

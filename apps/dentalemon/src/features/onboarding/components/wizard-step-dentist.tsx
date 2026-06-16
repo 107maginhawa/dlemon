@@ -29,7 +29,7 @@ export function DentistStep({
           onChange={e => onDentistNameChange(e.target.value)}
           placeholder="Dr. Juan dela Cruz"
           aria-label="Full Name"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
       </div>
       <div>
@@ -42,7 +42,7 @@ export function DentistStep({
           onChange={e => onLicenseNumberChange(e.target.value)}
           placeholder="PRC License #"
           aria-label="License Number"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
       </div>
       <div>
@@ -55,7 +55,7 @@ export function DentistStep({
           onChange={e => onSpecializationChange(e.target.value)}
           placeholder="e.g. General Dentistry"
           aria-label="Specialization"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
       </div>
       {/* FR9.1: User-defined 6-digit PIN — never hardcoded */}
@@ -75,7 +75,7 @@ export function DentistStep({
           onChange={e => onPinChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
           placeholder="••••••"
           aria-label="6-digit PIN"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tracking-widest"
         />
         <p className="text-xs text-muted-foreground mt-1">
           You'll use this PIN to sign in to the app

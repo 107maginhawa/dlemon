@@ -187,7 +187,7 @@ export function CasePresentationView({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Want to think it over"
                 rows={3}
-                className="w-full resize-none rounded-xl border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-lemon"
+                className="w-full resize-none rounded-xl border border-border bg-background px-2 py-1.5 text-sm outline-none focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring"
               />
               <button
                 type="button"

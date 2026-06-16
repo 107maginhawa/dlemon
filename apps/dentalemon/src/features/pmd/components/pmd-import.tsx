@@ -180,7 +180,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   value={sourceFacility}
                   onChange={e => setSourceFacility(e.target.value)}
                   placeholder="e.g. City Dental Clinic"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -193,7 +193,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   value={sourceReference}
                   onChange={e => setSourceReference(e.target.value)}
                   placeholder="e.g. REF-2025-001"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -207,7 +207,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   onChange={e => setSourceDescription(e.target.value)}
                   maxLength={200}
                   placeholder="e.g. Open Dental v21.1, Dentrix G7"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Originating system — required for data-provenance audit trail.</p>
               </div>
@@ -221,7 +221,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   onChange={e => setContent(e.target.value)}
                   placeholder='{"conditions":["I10"],"medications":["Amoxicillin"],"allergies":[]}'
                   rows={5}
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
             </>

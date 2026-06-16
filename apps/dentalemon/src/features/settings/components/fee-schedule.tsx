@@ -92,7 +92,7 @@ export function FeeSchedule() {
                     aria-label={`Price for ${fee.cdtCode}`}
                     value={(prices[fee.cdtCode] ?? fee.priceCents) / 100 || ''}
                     onChange={e => setPrice(fee.cdtCode, Math.round(parseFloat(e.target.value || '0') * 100))}
-                    className="w-24 h-8 rounded-lg border border-border px-2 text-sm text-right bg-background focus:border-lemon outline-none" />
+                    className="w-24 h-8 rounded-lg border border-border px-2 text-sm text-right bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                 </td>
               </tr>
             ))}

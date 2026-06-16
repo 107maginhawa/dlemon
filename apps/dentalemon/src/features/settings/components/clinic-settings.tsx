@@ -57,7 +57,7 @@ export function ClinicSettings() {
     }
   }
 
-  const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none';
+  const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none';
   const labelClass = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
