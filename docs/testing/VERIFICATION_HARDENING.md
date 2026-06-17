@@ -301,6 +301,12 @@ suite stays green, with the allow flagged for removal once fixed):
 - 2026-06-17 — P4 executed: FIX-GUARD lifted; canary RED→GREEN proven (transient
   `broken-canary` step-2 → J21 + firewall red → restore → green); `verify:app:strict` 10/10
   green with the stack up. No app code committed (the flow already worked). See P4 result above.
+- 2026-06-17 — P6 executed: spec-driven FE↔BE request-shape conformance —
+  `apps/dentalemon/src/test-utils/spec-request-validator.ts` validates request bodies
+  against `@monobase/api-spec/openapi.json` (ajv); pure `validateRequestBody` core +
+  an opt-in SDK request interceptor. Proving test: missing-required / wrong-enum /
+  wrong-type rejected, valid passes (5/5). Full FE suite 2489 pass / 0 fail (no corpus
+  impact — opt-in, not global, after a singleton-leak detour). Added `ajv` devDep.
 - 2026-06-17 — P5 executed: WFG register dispositioned — WFG-NEW-VISIT enforced (J21),
   WFG-002 enforced-by-design (atomic `withTenantTx` check-in + tagged regression test),
   WFG-004 accepted-risk (offline-retry guarded by `localId`; one-invoice-per-visit is a
