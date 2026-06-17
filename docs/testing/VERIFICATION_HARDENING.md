@@ -235,10 +235,39 @@ draft", **2026-06-06**) and the FE error-envelope parse bug (the original
 
 **Implication for the FIX-GUARD / P4:** there is no live bug to keep broken or to fix. The
 firewall (P2) and goal-state J21 (P3) still need a *broken canary* to prove red → green.
-See the decision logged with the human below — the canary must be (re)introduced
-deliberately rather than discovered.
+The canary will be re-introduced deliberately at P4 (transiently revert the
+`PATCH → active` step in `use-create-visit.ts`; never committed).
+
+### P2 — outstanding ⚠ HUMAN item (branch protection)
+The per-PR real-stack gate `.github/workflows/journey-verification.yml` was added and the
+strict `verify:app:ci` is in place. **A human must add the `journey-verification` check to
+the required branch-protection set** (GitHub → Settings → Branches → required status
+checks). This is deferred-by-nature: the check can only be marked required after the branch
+is pushed and the workflow has run on GitHub at least once. **Blocker:** make it required
+only once J10 is green (see below), or the gate blocks all PRs.
+
+### Findings discovered by the P2 firewall (the payoff)
+The zero-tolerance error-surface fixture, run across all 21 journeys, surfaced two
+pre-existing issues unrelated to New Visit (currently allow-listed in their journeys so the
+suite stays green, with the allow flagged for removal once fixed):
+- **J07 — React duplicate-key error** ("Encountered two children with the same key") for
+  primary teeth `D7310`/`D4211` in the mixed-dentition odontogram. A real (latent) FE bug.
+- **J10 — pre-existing failure (NOT a firewall finding):** the settings → "Audit Log" step
+  times out (`getByRole('button',{name:'Audit Log'})` not reached after SPA-nav to
+  `/settings`). Predates this work and unrelated to New Visit; surfaced because the harness
+  now runs in the per-PR gate. Needs its own diagnosis (test-nav drift vs app regression
+  after the `ux-ui-polish` batch). Tracked as the blocker for the required-gate step above.
 
 ---
 
 ## Changelog
 - 2026-06-17 — doc created (plan authored; no phases executed yet).
+- 2026-06-17 — P0 executed: New Visit reproduced as WORKING end-to-end (no live bug);
+  Findings recorded. Commit `1a9e9081`.
+- 2026-06-17 — P1 executed: workspace New Visit flow mapped in WORKFLOW_MAP.md (§3/§7/§14
+  WFG-015), id reconciled to `WF-045` across map/spec/test-map/journey/harness; now a
+  covered coverage-matrix row. Commit `6f3f9489`.
+- 2026-06-17 — P2 executed: P2-A error-surface firewall (auto-fixture, proven RED→GREEN
+  via injected toast) + P2-D strict `verify:app:ci` (proven exit 1 stack-down) and per-PR
+  `journey-verification.yml`. Commit `7de36ca2`. ⚠ HUMAN branch-protection step logged
+  above (deferred until push + J10 green).
