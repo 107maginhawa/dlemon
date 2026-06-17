@@ -233,10 +233,23 @@ draft", **2026-06-06**) and the FE error-envelope parse bug (the original
 (`project_error_envelope_blindspot`, 2026-06-09). Both predate the plan (`ccb9f072`,
 2026-06-17). The running code already contains both fixes.
 
-**Implication for the FIX-GUARD / P4:** there is no live bug to keep broken or to fix. The
-firewall (P2) and goal-state J21 (P3) still need a *broken canary* to prove red → green.
-The canary will be re-introduced deliberately at P4 (transiently revert the
-`PATCH → active` step in `use-create-visit.ts`; never committed).
+**Implication for the FIX-GUARD / P4:** there was no live bug to keep broken or to fix, so
+the canary was re-introduced deliberately at P4 (transiently, never committed) to prove the
+firewall + hardened J21 go red → green. **DONE — see P4 result below.**
+
+### P4 result (2026-06-17) — canary RED → GREEN proven
+The FIX-GUARD lifted at P4. With no live bug, the canary was the real incident class:
+transiently set step 2 to an invalid status (`PATCH /dental/visits/:id {status:'broken-canary'}`)
+in `use-create-visit.ts` (uncommitted). Both new layers caught it:
+- **Hardened J21 (P3)** failed at `step 2: activate PATCH must be 2xx` (the PATCH returned
+  `400`) and at the `active` goal read (the visit was stranded at `draft`).
+- **P2-A error-surface firewall** caught the error toast (`Validation failed: status…`) and
+  the `PATCH 400` failed response.
+Restoring `status:'active'` (the "fix") → J21 green again. Then **`bun run verify:app:strict`
+passed with the stack up** (10/10 steps: typecheck, lint, coverage-engine, coverage-matrices,
+module-boundaries, secret-logging, br-traceability, fe-unit-coherence, contract-core,
+journey-harness 21/21 — 0 failed, 0 skipped). New Visit works in the running app; nothing
+broken was committed.
 
 ### P2 — outstanding ⚠ HUMAN item (branch protection)
 The per-PR real-stack gate `.github/workflows/journey-verification.yml` was added and the
@@ -271,4 +284,10 @@ suite stays green, with the allow flagged for removal once fixed):
 - 2026-06-17 — P2 executed: P2-A error-surface firewall (auto-fixture, proven RED→GREEN
   via injected toast) + P2-D strict `verify:app:ci` (proven exit 1 stack-down) and per-PR
   `journey-verification.yml`. Commit `7de36ca2`. ⚠ HUMAN branch-protection step logged
-  above (deferred until push + J10 green).
+  above (deferred until push + J10 green). J10 stale-locator fixed (`7eb204dd` precursor).
+- 2026-06-17 — P3 executed: J21 hardened to the 4-clause DoD (both calls + `active` goal +
+  independent goal read), J19 clause-3 hardened, J04/J03/J17 verified compliant, contract
+  doc created (`docs/audits/JOURNEY_HARNESS_CONTRACT.md`). Commit `7eb204dd`. Harness 21/21.
+- 2026-06-17 — P4 executed: FIX-GUARD lifted; canary RED→GREEN proven (transient
+  `broken-canary` step-2 → J21 + firewall red → restore → green); `verify:app:strict` 10/10
+  green with the stack up. No app code committed (the flow already worked). See P4 result above.
