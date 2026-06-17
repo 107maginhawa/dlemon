@@ -243,8 +243,9 @@ The per-PR real-stack gate `.github/workflows/journey-verification.yml` was adde
 strict `verify:app:ci` is in place. **A human must add the `journey-verification` check to
 the required branch-protection set** (GitHub → Settings → Branches → required status
 checks). This is deferred-by-nature: the check can only be marked required after the branch
-is pushed and the workflow has run on GitHub at least once. **Blocker:** make it required
-only once J10 is green (see below), or the gate blocks all PRs.
+is pushed and the workflow has run on GitHub at least once. The former J10 blocker is
+RESOLVED (see below) — the harness is now **21/21 green** with the firewall active, so the
+gate is ready to be made required once it has run on GitHub.
 
 ### Findings discovered by the P2 firewall (the payoff)
 The zero-tolerance error-surface fixture, run across all 21 journeys, surfaced two
@@ -252,11 +253,11 @@ pre-existing issues unrelated to New Visit (currently allow-listed in their jour
 suite stays green, with the allow flagged for removal once fixed):
 - **J07 — React duplicate-key error** ("Encountered two children with the same key") for
   primary teeth `D7310`/`D4211` in the mixed-dentition odontogram. A real (latent) FE bug.
-- **J10 — pre-existing failure (NOT a firewall finding):** the settings → "Audit Log" step
-  times out (`getByRole('button',{name:'Audit Log'})` not reached after SPA-nav to
-  `/settings`). Predates this work and unrelated to New Visit; surfaced because the harness
-  now runs in the per-PR gate. Needs its own diagnosis (test-nav drift vs app regression
-  after the `ux-ui-polish` batch). Tracked as the blocker for the required-gate step above.
+- **J10 — pre-existing failure, now FIXED (test-only):** the settings → "Audit Log" step
+  timed out because the `ux-ui-polish` batch moved the settings panels behind a `role="tab"`
+  tablist, but J10 still looked for `getByRole('button',{name:'Audit Log'})`. Diagnosed
+  against the live app (the Audit Log tab opens `audit-log-panel` correctly — the app works),
+  so the fix is test-only: `button` → `tab`. Unrelated to New Visit. Harness back to 21/21.
 
 ---
 
