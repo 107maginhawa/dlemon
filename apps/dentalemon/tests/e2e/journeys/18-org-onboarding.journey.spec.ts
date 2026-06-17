@@ -45,7 +45,12 @@ const META: JourneyMeta = {
   rubricIds: ['WF-ORG-001'],
 }
 
-test(`${META.id} — ${META.name}`, async ({ page }) => {
+test(`${META.id} — ${META.name}`, async ({ page, errorSurface }) => {
+  // P2-A: the wizard sign-up uses the fixed admin email; if the account already
+  // exists (org wiped but Better-Auth account retained, see below) sign-up returns
+  // 422 and the journey falls back to sign-in. That 422 is an expected control-flow
+  // branch, not a failure.
+  errorSurface.allowStatus(422, /\/auth\/sign-up/)
   // Admin-allowlisted owner (auto-promoted to admin on sign-up) — the only
   // persona permitted to create an org (EM-ORG-002). Fresh on a reseeded DB.
   const stamp = Date.now()

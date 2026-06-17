@@ -40,7 +40,11 @@ const META: JourneyMeta = {
   rubricIds: ['CIMG-001', 'CIMG-002', 'CIMG-007'],
 }
 
-test(`${META.id} — ${META.name}`, async ({ page }) => {
+test(`${META.id} — ${META.name}`, async ({ page, errorSurface }) => {
+  // P2-A: NEGATIVE journey — the free-tier ceph gate MUST return 403 on
+  // landmarks/analysis. Declare it as the expected error surface so the firewall
+  // does not flag the deliberate gate response.
+  errorSurface.allowStatus(403, /\/ceph\//)
   // Independent-read client authenticated as the FREE clinic owner (its own org,
   // not the demo seed owner). Used for the post-UI gate assertion.
   const freeApi = await pwRequest.newContext({ baseURL: API })

@@ -16,10 +16,12 @@
  *   Tier 2 — Adversarial deep sweep — RESERVED for Phase 3 (--deep prints a note).
  *
  * Usage:
- *   bun run verify:app            # Tier 0 + Tier 1, report mode (always exit 0)
- *   bun run verify:app:ci         # same, but exit non-zero on any blocking failure
- *   bun run verify:app:strict     # --ci --require-stack: the functional proof is
- *                                 #   MANDATORY (stack down → FAIL, never SKIP)
+ *   bun run verify:app            # Tier 0 + Tier 1, report mode (skip-tolerant; always exit 0)
+ *   bun run verify:app:ci         # --ci: exit non-zero on any blocking failure AND
+ *                                 #   STRICT — the real-stack functional proof is MANDATORY
+ *                                 #   (stack down → FAIL, never SKIP). Boot the stack first.
+ *   bun run verify:app:strict     # --ci --require-stack: identical to verify:app:ci now that
+ *                                 #   --ci implies strict; kept as an explicit alias
  *   bun run verify:app:deep       # --ci --deep: also runs the broad Playwright e2e
  *                                 #   sweep; REQUIRES a live, seeded stack on :7213
  *   bun scripts/verify-app.ts --tier0   # only the computed gates
@@ -27,12 +29,13 @@
  *   bun scripts/verify-app.ts --deep    # Tier 0 + 1 + the broad Playwright e2e sweep
  *                                 #   (Tier 2); --deep IMPLIES --require-stack
  *
- * By DEFAULT, Tier-1 steps that need a running stack are SKIPPED (not failed) when
- * api-ts is not reachable on :7213 — so CI without a booted stack still passes. But
- * a green verdict then proves ZERO functional/e2e. `--require-stack` (strict mode)
- * closes that false-green: a would-be SKIP becomes a BLOCKING FAIL, so a green
- * strict verdict is the real "works end-to-end" claim. Boot the stack first
- * (`cd services/api-ts && bun dev`) to satisfy it. The verdict is written to
+ * In the no-flag REPORT run (`bun run verify:app`), Tier-1 steps that need a running
+ * stack are SKIPPED (not failed) when api-ts is not reachable on :7213 — that run is
+ * informational and always exits 0. In ANY CI run (`--ci`, and therefore `--require-stack`
+ * and `--deep`), a would-be SKIP becomes a BLOCKING FAIL: a green CI verdict can never
+ * rest on a skipped proof — that skip-to-green is exactly how the New-Visit break stayed
+ * invisible while CI was green. Boot the stack first (`cd services/api-ts && bun dev`) so
+ * the functional proof actually runs. The verdict is written to
  * docs/testing/coverage/VERDICT.md.
  */
 
@@ -51,10 +54,13 @@ const only0 = argv.has('--tier0')
 const only1 = argv.has('--tier1')
 // Strict mode: a stack-dependent functional proof that would SKIP (stack down)
 // becomes a BLOCKING FAIL — a green verdict can never rest on a skipped proof.
-// Default mode stays skip-tolerant so CI without a booted stack still passes.
-// `--deep` (Tier 2) IMPLIES strict: the deep e2e sweep is meaningless without a
-// live stack, so --deep PROBES and REQUIRES it (clear FAIL if :7213 is down).
-const requireStack = argv.has('--require-stack') || deep
+// `--ci` IMPLIES strict (P2-D, VERIFICATION_HARDENING.md): any CI run of verify-app
+// must EXECUTE the real-stack functional proof, never skip it to green — that
+// skip-to-green was exactly how the New-Visit break stayed invisible. Skip-tolerance
+// now survives ONLY for the local no-flag report run (`bun run verify:app`), which
+// is informational and always exits 0. `--deep` (Tier 2) also implies strict: the
+// deep e2e sweep is meaningless without a live stack.
+const requireStack = argv.has('--require-stack') || deep || ci
 const runTier0 = only0 || (!only1)
 const runTier1 = only1 || (!only0)
 
