@@ -21,7 +21,7 @@ remained genuinely live after vetting every audit item against current code.
 | Plan | Title | Priority | Effort | Risk | Depends on | Status |
 |------|-------|----------|--------|------|------------|--------|
 | 001 | pg-boss production-safe retention/expiry outside tests | P1 | S | LOW | — | DONE (59ebad00) |
-| 002 | createInvoice honors request `tax` instead of hardcoded 0 | P2 | S | MED | — | BLOCKED — plan premise wrong; see note |
+| 002 | createInvoice tax | P2 | S | LOW | — | RESOLVED — descoped for v1, ADR-011 (aafe999f). API has no tax input; tax=0 is contract-consistent. |
 | 003 | markInvoiceUncollectible performs cleanup (cancel intent, audit, notify) | P2 | M | MED | — | DONE (d788f6a1) |
 | 004 | Assert rejection of the 23 uncovered illegal FSM transitions | P2 | M | LOW | — | DONE (6cb00d21) |
 
