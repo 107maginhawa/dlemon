@@ -1,6 +1,7 @@
 # Verification Hardening — living plan
 
-> **Status:** OPEN · **Owner:** eng · **Created:** 2026-06-17
+> **Status:** P0–P6 + P8 COMPLETE (P7 tracked separately in `UA_KG_UPGRADE.md`) ·
+> **Owner:** eng · **Created:** 2026-06-17 · one ⚠ HUMAN item open (branch protection)
 > **How to run:** execute phase-by-phase (`/goal`, `gsd-execute-phase`, or by hand). Each
 > phase has a **Done when** gate — do not advance until it is green. Phases declare their
 > **Depends on**. Two kinds of stop are marked: **🚧 FIX-GUARD** (do not fix New Visit yet)
@@ -301,6 +302,9 @@ suite stays green, with the allow flagged for removal once fixed):
 - 2026-06-17 — P4 executed: FIX-GUARD lifted; canary RED→GREEN proven (transient
   `broken-canary` step-2 → J21 + firewall red → restore → green); `verify:app:strict` 10/10
   green with the stack up. No app code committed (the flow already worked). See P4 result above.
+- 2026-06-17 — P8 executed: the 4-clause Definition of Done for a user journey written
+  into `docs/development/CONTRIBUTING_FRONTEND.md` (cross-referencing
+  `JOURNEY_HARNESS_CONTRACT.md` + this plan). The standard is now the default for new flows.
 - 2026-06-17 — P6 executed: spec-driven FE↔BE request-shape conformance —
   `apps/dentalemon/src/test-utils/spec-request-validator.ts` validates request bodies
   against `@monobase/api-spec/openapi.json` (ajv); pure `validateRequestBody` core +
