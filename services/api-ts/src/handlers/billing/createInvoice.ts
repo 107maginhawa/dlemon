@@ -116,7 +116,7 @@ export async function createInvoice(
     };
   });
 
-  const tax = 0; // TODO: Calculate tax based on jurisdiction
+  const tax = 0; // Tax is out of scope for v1 — invoices are tax-exclusive. See docs/decisions/ADR-011-invoice-tax-out-of-scope-v1.md.
   const total = subtotal + tax;
 
   // Create invoice with line items using transaction
