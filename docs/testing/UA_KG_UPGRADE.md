@@ -114,11 +114,26 @@ journeys. Do not over-invest here.
     surface as gaps rather than being hidden under a broad journey. `understand-diff` remains
     available for deeper interactive diff analysis against the structural graphs.
 
-### U4 — (optional) Per-module scoping
+### U4 — (optional) Per-module scoping — ✅ DONE (decided in D1, proven in U1)
 - **Goal:** Smaller, faster, more accurate graphs.
 - **Steps:** evaluate scoping UA per top-level module (`services/api-ts/src/handlers/*`,
   `apps/dentalemon/src/features/*`) instead of one whole-repo graph.
 - **Done when:** a decision is recorded (adopt per-module, or keep monolithic with reason).
+- **Decision (see D1): ADOPT per-domain, NOT per-handler-module and NOT monolithic.**
+  Rationale, now validated empirically by the U1 FE build:
+  - **Monolithic rejected** — the whole-repo graph self-warns >100 files (we had 2,681),
+    went shallow, was expensive to refresh, and flattened "Create Visit" to one backend
+    handler (the incident blind spot).
+  - **Per-handler-module (40+ tiny graphs) rejected** — unmanageable freshness/merge
+    overhead for an *advisory* tool (over-investment).
+  - **Per-domain chosen** — two structural graphs (`frontend-knowledge-graph.json`,
+    `backend-knowledge-graph.json`) + the `domain-graph.json` flow layer, merged into the
+    root graph via the plugin's native subdomain-merge. The FE/BE split keeps their
+    divergence visible (the exact failure mode). U1 proved it: the FE graph built cleanly
+    in 17 batches → 806 nodes / 7 coherent layers / 0 validation issues, far more tractable
+    and accurate than a 2,681-file monolith would be. Scope each build with a per-build
+    `.understandignore` (exclude tests/generated) and relocate to a repo-relative
+    `*-knowledge-graph.json` at the root (see U1 method).
 
 ### U5 — Decision gate: graphify as a replacement?
 - **Goal:** Revisit the tool choice only if warranted.
@@ -180,3 +195,5 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
 - 2026-06-17 — U3 done: `scripts/kg-review-radar.ts` (+ TDD test, `kg-flow-journey-map.json`,
   `check:kg-review` npm script) maps diff→flow→journey-coverage; wired as a non-blocking
   advisory `kg-review-radar` job in journey-verification.yml (PR check summary).
+- 2026-06-17 — U4 done: recorded the per-domain decision (= D1), now validated by the U1
+  FE build (806 nodes / 7 layers / 0 issues). Monolithic + per-handler-module both rejected.
