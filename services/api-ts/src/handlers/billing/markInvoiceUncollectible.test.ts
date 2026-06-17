@@ -24,7 +24,6 @@ const mockFindOneById          = mock(() => Promise.resolve(null as any));
 const mockUpdateStatus         = mock(() => Promise.resolve());
 const mockFindOneWithLineItems = mock(() => Promise.resolve(null as any));
 const mockMerchantFindByPerson = mock(() => Promise.resolve(null as any));
-const mockMerchantFindOnePerson= mock(() => Promise.resolve(null as any));
 
 mock.module('@/handlers/billing/repos/billing.repo', () => ({
   InvoiceRepository: class {
@@ -212,5 +211,27 @@ describe('markInvoiceUncollectible handler', () => {
     expect(mockLogAuditEvent).toHaveBeenCalledTimes(1);
     const [_db, _logger, event] = mockLogAuditEvent.mock.calls[0] as any[];
     expect(event.action).toBe('invoice.mark_uncollectible');
+  });
+
+  test('has stripePaymentIntentId but merchant has no stripeAccountId — skips cancel, still returns 200 and writes audit', async () => {
+    // Merchant account exists but has no stripeAccountId in metadata
+    mockMerchantFindByPerson.mockImplementation(() =>
+      Promise.resolve(makeMerchantAccount())  // no stripeAccountId
+    );
+
+    const app = buildApp({ billing: { cancelPaymentIntent } });
+
+    const res = await app.request(`/invoices/${INVOICE_ID}/mark-uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    // cancelPaymentIntent must NOT have been called
+    expect(cancelPaymentIntent).not.toHaveBeenCalled();
+    // Audit row must still be written
+    expect(mockLogAuditEvent).toHaveBeenCalledTimes(1);
+    const [_db, _logger, event] = mockLogAuditEvent.mock.calls[0] as any[];
+    expect(event.action).toBe('invoice.mark_uncollectible');
+    expect(event.resourceId).toBe(INVOICE_ID);
   });
 });

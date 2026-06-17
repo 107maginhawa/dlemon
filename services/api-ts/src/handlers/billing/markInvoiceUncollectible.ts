@@ -107,6 +107,8 @@ export async function markInvoiceUncollectible(
       const merchantMeta = merchantAccount?.metadata as MerchantMetadata | undefined;
       if (merchantMeta?.stripeAccountId) {
         await billing.cancelPaymentIntent(stripePaymentIntentId, merchantMeta.stripeAccountId, 'Marked uncollectible');
+      } else {
+        logger.warn({ invoiceId, stripePaymentIntentId }, 'Skipping intent cancel: merchant has no stripeAccountId');
       }
     } catch (err) {
       // Non-fatal: the invoice is already uncollectible. Log and continue —
