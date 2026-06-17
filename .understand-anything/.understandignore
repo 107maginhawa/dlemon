@@ -1,0 +1,28 @@
+# .understandignore — patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore. Built-in defaults (node_modules/, .git/, dist/,
+# build/, *.lock, *.min.js, etc.) are always excluded unless negated with !.
+
+# --- Ephemeral Claude Code worktrees (5400+ duplicate files — MUST exclude) ---
+.claude/
+
+# --- This tool's own output ---
+.understand-anything/
+
+# --- Generated code (codegen from TypeSpec/OpenAPI — not hand-authored) ---
+services/api-ts/src/generated/
+packages/sdk-ts/src/generated/
+specs/api/dist/
+
+# --- Build artifacts ---
+dist/
+build/
+out/
+.next/
+target/
+coverage/
+
+# --- Rust build output ---
+**/target/
+
+# --- Test snapshots / fixtures (high volume, low signal) ---
+*.snap

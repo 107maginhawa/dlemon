@@ -86,5 +86,44 @@ journeys. Do not over-invest here.
 
 ---
 
+## Decisions (recorded during execution)
+
+### D1 — KG shape & commit policy (settles U1 commit-question + U4) — 2026-06-17
+Decided while executing U1, with the long-term goal stated explicitly by the owner:
+*"full, thorough understanding of OUR codebase by the AI."* Reasoning: the New-Visit
+miss proves the failure mode is **staleness + structural-only + monolithic + unqueried**,
+not "no graph." A 4.4 MB blob is never read whole by an agent — its only value is a
+**fresh, flow-aware, queryable** index. Therefore:
+
+- **Per-domain scoping (adopt — closes U4).** Not one whole-repo monolith (self-warns
+  >100 files; flattened "Create Visit" to one backend handler), and not 40 tiny
+  per-handler graphs (unmanageable). Two domain-scoped structural graphs plus the flow
+  layer:
+  - `backend-knowledge-graph.json` ← `services/api-ts` (handlers/business logic)
+  - `frontend-knowledge-graph.json` ← `apps/dentalemon`
+  - `domain-graph.json` ← business flows/steps (`understand-domain`; the layer that
+    maps to `WORKFLOW_MAP.md` and is what was *missing*)
+  - root `knowledge-graph.json` ← the merged product (the `/understand` skill natively
+    merges `*-knowledge-graph.json` subdomain files).
+  The FE/BE split is deliberate: the original blind spot was the **divergence** between
+  them (FE two-step `POST draft → PATCH active` vs BE one-step handler). Two graphs keep
+  that divergence visible instead of flattening it.
+- **Commit the graphs (decide U1 staleness story = committed).** Un-ignore the graph
+  JSONs so the index travels with the repo and freshness is PR-auditable. Keep the
+  derived `fingerprints.json` cache + `intermediate/`/`tmp/` git-ignored (they regenerate;
+  committing them makes every refresh an unreadable multi-MB diff). See `.gitignore`.
+- **Freshness is the deliverable, not the snapshot.** Highest-leverage long-term
+  investment = the auto-refresh machinery (U2) + the review radar (U3), so the graphs
+  self-maintain per-commit and a stale graph is loud. A one-time refresh is not
+  "over-investing" (the guardrail warns against treating UA as a *gate*, which we don't).
+- **Refresh cadence:** plugin `PostToolUse` hook runs the incremental updater on every
+  `git commit`; `SessionStart` hook warns when `meta.gitCommitHash` drifts from HEAD.
+  Large drift (this rebaseline = 948 changed source files) bounces the incremental path
+  to `FULL_UPDATE`, so a periodic `/understand --full` re-baseline (per domain) is the
+  backstop when drift is large.
+
 ## Changelog
 - 2026-06-17 — doc created (UA/KG track split out of Phase 7; graphify assessed, not adopted).
+- 2026-06-17 — U1 started: recorded D1 (per-domain shape + commit policy, closes U4 &
+  the U1 commit-question); un-ignored graph JSONs in `.gitignore` (kept fingerprints/
+  intermediate ignored).
