@@ -6,11 +6,11 @@
  *   2. No cancel call when invoice has no stripePaymentIntentId
  *   3. logAuditEvent is called with action 'invoice.mark_uncollectible'
  *   4. cancel failure is non-fatal — handler still returns 200 and writes audit
+ *   5. has stripePaymentIntentId but no stripeAccountId — skips cancel, returns 200
  */
 
 import { describe, test, expect, mock, beforeEach } from 'bun:test';
-import { Hono } from 'hono';
-import { AppError } from '@/core/errors';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
 
 const INVOICE_ID    = 'f1000000-0000-1000-8000-000000000001';
 const MERCHANT_ID   = 'b1000000-0000-1000-8000-000000000001';
@@ -46,10 +46,6 @@ const mockLogAuditEvent = mock(() => Promise.resolve());
 mock.module('@/core/audit-logger', () => ({
   logAuditEvent: mockLogAuditEvent,
 }));
-
-// ─── import handler AFTER mocks ──────────────────────────────────────────────
-
-const { markInvoiceUncollectible } = await import('./markInvoiceUncollectible');
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -96,27 +92,16 @@ function buildApp(opts: {
   billing?: object;
   notifs?: object;
 } = {}) {
-  const app = new Hono();
-  app.onError((err, c) => {
-    if (err instanceof AppError) return c.json({ error: err.message }, err.statusCode as any);
-    return c.json({ error: String(err) }, 500);
+  return buildHarnessApp({
+    db: {} as any,
+    // The handler authorizes by merchantPerson.id === user.id; findBillingParty
+    // returns { id: MERCHANT_ID }, so the session user must match.
+    user: { id: MERCHANT_ID },
+    services: {
+      ...(opts.billing ? { billing: opts.billing as any } : {}),
+      ...(opts.notifs  ? { notifs:   opts.notifs  as any } : {}),
+    },
   });
-  app.use('*', async (c, next) => {
-    (c as any).set('database', {});
-    (c as any).set('logger', {
-      debug: () => {}, info: () => {}, warn: () => {}, error: () => {},
-    });
-    (c as any).set('session', { user: { id: MERCHANT_ID } });
-    if (opts.billing) (c as any).set('billing', opts.billing);
-    if (opts.notifs)  (c as any).set('notifs',  opts.notifs);
-    await next();
-  });
-  app.post('/invoices/:invoice/mark-uncollectible', async (c) => {
-    (c.req as any).valid = (key: string) =>
-      key === 'param' ? { invoice: INVOICE_ID } : undefined;
-    return markInvoiceUncollectible(c as any);
-  });
-  return app;
 }
 
 // ─── tests ───────────────────────────────────────────────────────────────────
@@ -147,7 +132,7 @@ describe('markInvoiceUncollectible handler', () => {
   test('cancels payment intent when stripePaymentIntentId and stripeAccountId present', async () => {
     const app = buildApp({ billing: { cancelPaymentIntent } });
 
-    const res = await app.request(`/invoices/${INVOICE_ID}/mark-uncollectible`, {
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
       method: 'POST',
     });
 
@@ -170,7 +155,7 @@ describe('markInvoiceUncollectible handler', () => {
 
     const app = buildApp({ billing: { cancelPaymentIntent } });
 
-    const res = await app.request(`/invoices/${INVOICE_ID}/mark-uncollectible`, {
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
       method: 'POST',
     });
 
@@ -181,7 +166,7 @@ describe('markInvoiceUncollectible handler', () => {
   test('logAuditEvent is called with action invoice.mark_uncollectible', async () => {
     const app = buildApp({ billing: { cancelPaymentIntent } });
 
-    const res = await app.request(`/invoices/${INVOICE_ID}/mark-uncollectible`, {
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
       method: 'POST',
     });
 
@@ -200,7 +185,7 @@ describe('markInvoiceUncollectible handler', () => {
     const failingCancel = mock(() => Promise.reject(new Error('Stripe error')));
     const app = buildApp({ billing: { cancelPaymentIntent: failingCancel } });
 
-    const res = await app.request(`/invoices/${INVOICE_ID}/mark-uncollectible`, {
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
       method: 'POST',
     });
 
@@ -221,7 +206,7 @@ describe('markInvoiceUncollectible handler', () => {
 
     const app = buildApp({ billing: { cancelPaymentIntent } });
 
-    const res = await app.request(`/invoices/${INVOICE_ID}/mark-uncollectible`, {
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
       method: 'POST',
     });
 
