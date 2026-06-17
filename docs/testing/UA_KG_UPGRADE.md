@@ -135,13 +135,31 @@ journeys. Do not over-invest here.
     `.understandignore` (exclude tests/generated) and relocate to a repo-relative
     `*-knowledge-graph.json` at the root (see U1 method).
 
-### U5 — Decision gate: graphify as a replacement?
+### U5 — Decision gate: graphify as a replacement? — ✅ DONE (gate NOT triggered → keep UA)
 - **Goal:** Revisit the tool choice only if warranted.
 - **Trigger:** UA staleness/impact still causes misses after U1–U3.
 - **Steps:** trial graphify (`/graphify .`) as a **replacement** for UA (not an add-on);
   compare freshness (`--watch`), change-impact (`affected`/`prs`), polyglot coverage
   (Rust/SQL), and MCP query against UA's business-flow layer. Pick **one**.
 - **Done when:** a recorded keep-UA / switch-to-graphify decision with rationale.
+- **Decision (2026-06-17): KEEP UA. Gate NOT triggered; graphify NOT trialled now.**
+  Rationale:
+  - The trigger is forward-looking — "UA staleness/impact *still* causes misses *after*
+    U1–U3." U1–U3 *just shipped* (fresh per-domain graphs + the freshness radar U2 + the
+    review radar U3). There is no post-investment miss to evaluate yet, so the gate has not
+    fired. Trialling graphify now would be premature.
+  - Graphify is the **same category** (tree-sitter + LLM structural graph; `calls/imports/
+    contains/…`; no runtime/test awareness; **no business flow/step layer**). UA's one edge
+    — the `domain-graph.json` flow layer that maps to `WORKFLOW_MAP.md` and now models the
+    Start-Visit FE two-step — is exactly what closed the incident blind spot. Replacing UA
+    would lose it. Running both is explicitly disallowed (two stale structural graphs).
+  - The plan's scope guardrail ("advisory radar, do not over-invest") argues against a
+    speculative tool migration with no demonstrated need.
+  - **Reopen trigger (revisit graphify then, not before):** if, after this investment, the
+    KG *still* goes stale in practice (the freshness radar repeatedly fires on main) OR a
+    real change-impact miss recurs that a fresh UA graph should have caught. At that point
+    trial graphify's `--watch`/incremental + `affected.py` change-impact + polyglot (Rust/SQL)
+    + MCP against UA's flow layer, and pick **one**.
 
 ---
 
@@ -197,3 +215,5 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
   advisory `kg-review-radar` job in journey-verification.yml (PR check summary).
 - 2026-06-17 — U4 done: recorded the per-domain decision (= D1), now validated by the U1
   FE build (806 nodes / 7 layers / 0 issues). Monolithic + per-handler-module both rejected.
+- 2026-06-17 — U5 done: graphify gate NOT triggered (trigger is post-U1–U3 misses, which
+  just shipped) → keep UA (its flow layer is the differentiator); reopen trigger documented.
