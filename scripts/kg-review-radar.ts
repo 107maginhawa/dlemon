@@ -126,7 +126,10 @@ function parseJourneyIds(): Set<string> {
   const ids = new Set<string>();
   if (!existsSync(p)) return ids;
   const src = readFileSync(p, 'utf8');
-  for (const m of src.matchAll(/\b(J\d+)\s*:\s*\{\s*name:/g)) ids.add(m[1]!);
+  // Match BOTH Set-A (J##) and Set-B (B##) journey ids — same id shape the harness
+  // itself uses (\b[JB]\d{2}\b). Missing the B-journeys here would make any flow
+  // mapped only to ceph journeys (B01–B04) read as falsely uncovered.
+  for (const m of src.matchAll(/\b([JB]\d+)\s*:\s*\{\s*name:/g)) ids.add(m[1]!);
   return ids;
 }
 

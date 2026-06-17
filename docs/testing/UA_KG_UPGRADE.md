@@ -240,3 +240,9 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
   DoD, WF-012) + roster + coverage-map entry. Full harness 22/22 PASS. Found+documented the
   real backend gate it exercises: completing a non-empty visit requires a signed consent
   (`VISIT_CONSENT_REQUIRED`). Decision stands: write journeys for genuine gaps, don't mass-map.
+- 2026-06-17 — imaging/ceph review fixed a radar false-NEGATIVE: the review-radar journey-id
+  parser matched only `J\d+`, dropping the Set-B ceph journeys (`B01–B04`), so any flow mapped
+  to them read as falsely uncovered. Fixed the regex to `[JB]\d+` and mapped
+  `cephalometric-analysis → B01–B04` (it was wrongly in known-uncovered). Recorded the genuine
+  remaining gaps in `_subGaps`/known-uncovered: ceph **superimposition** (no journey) and the
+  **capture-imaging** upload pipeline (no journey, infra-gated).

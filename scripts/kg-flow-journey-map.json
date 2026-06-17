@@ -12,7 +12,8 @@
     "flow:schedule-appointment": ["J17"],
     "flow:clinic-onboarding": ["J18"],
     "flow:register-patient": ["J01"],
-    "flow:notifications-and-recalls": ["J02"]
+    "flow:notifications-and-recalls": ["J02"],
+    "flow:cephalometric-analysis": ["B01", "B02", "B03", "B04"]
   },
   "_knownUncovered": {
     "_doc": "Flows with no specific goal-state journey today (real coverage gaps the radar will flag when touched). Listed for visibility, not consumed by the script.",
@@ -21,10 +22,13 @@
       "flow:check-in-and-queue",
       "flow:online-booking",
       "flow:capture-imaging",
-      "flow:cephalometric-analysis",
       "flow:pin-chairside-auth",
       "flow:manage-staff-permissions",
       "flow:patient-portal-access"
     ]
+  },
+  "_subGaps": {
+    "_doc": "Flows that ARE journey-covered overall but have a specific UNcovered step (the coverage map is flow-level, so it can't express this — recorded here so the partial coverage isn't mistaken for full).",
+    "flow:cephalometric-analysis": "Landmarks→analysis→report are covered by B02/B03/B04 (gate by B01), but the 'Superimpose tracings' step (cephSuperimposition.ts + FE comparison-view.tsx) has NO journey."
   }
 }
