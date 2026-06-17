@@ -81,3 +81,27 @@ describe('Treatment FSM property tests', () => {
     }
   });
 });
+
+describe('illegal Treatment transitions are rejected (FSM coverage)', () => {
+  test('declined -> performed is not a legal transition', () => {
+    expect(isValidTransition('declined', 'performed')).toBe(false);
+  });
+  test('declined -> verified is not a legal transition', () => {
+    expect(isValidTransition('declined', 'verified')).toBe(false);
+  });
+  test('diagnosed -> verified is not a legal transition', () => {
+    expect(isValidTransition('diagnosed', 'verified')).toBe(false);
+  });
+  test('dismissed -> performed is not a legal transition', () => {
+    expect(isValidTransition('dismissed', 'performed')).toBe(false);
+  });
+  test('performed -> declined is not a legal transition', () => {
+    expect(isValidTransition('performed', 'declined')).toBe(false);
+  });
+  test('verified -> declined is not a legal transition', () => {
+    expect(isValidTransition('verified', 'declined')).toBe(false);
+  });
+  test('verified -> diagnosed is not a legal transition', () => {
+    expect(isValidTransition('verified', 'diagnosed')).toBe(false);
+  });
+});

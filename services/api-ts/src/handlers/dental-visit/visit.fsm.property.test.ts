@@ -75,3 +75,36 @@ describe('Visit FSM property tests', () => {
     }
   });
 });
+
+describe('illegal Visit transitions are rejected (FSM coverage)', () => {
+  test('active -> locked is not a legal transition', () => {
+    expect(isValidTransition('active', 'locked')).toBe(false);
+  });
+  test('completed -> draft is not a legal transition', () => {
+    expect(isValidTransition('completed', 'draft')).toBe(false);
+  });
+  test('discarded -> draft is not a legal transition', () => {
+    expect(isValidTransition('discarded', 'draft')).toBe(false);
+  });
+  test('discarded -> locked is not a legal transition', () => {
+    expect(isValidTransition('discarded', 'locked')).toBe(false);
+  });
+  test('draft -> completed is not a legal transition', () => {
+    expect(isValidTransition('draft', 'completed')).toBe(false);
+  });
+  test('draft -> discarded is not a legal transition', () => {
+    expect(isValidTransition('draft', 'discarded')).toBe(false);
+  });
+  test('draft -> locked is not a legal transition', () => {
+    expect(isValidTransition('draft', 'locked')).toBe(false);
+  });
+  test('locked -> active is not a legal transition', () => {
+    expect(isValidTransition('locked', 'active')).toBe(false);
+  });
+  test('locked -> discarded is not a legal transition', () => {
+    expect(isValidTransition('locked', 'discarded')).toBe(false);
+  });
+  test('locked -> draft is not a legal transition', () => {
+    expect(isValidTransition('locked', 'draft')).toBe(false);
+  });
+});

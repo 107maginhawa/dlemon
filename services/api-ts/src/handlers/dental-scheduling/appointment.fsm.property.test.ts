@@ -102,3 +102,9 @@ describe('Appointment FSM property tests', () => {
     }
   });
 });
+
+describe('illegal Appointment transitions are rejected (FSM coverage)', () => {
+  test('completed -> checked_in is not a legal transition', () => {
+    expect(isValidTransition('completed', 'checked_in')).toBe(false);
+  });
+});

@@ -78,3 +78,21 @@ describe('CephLandmark FSM property tests', () => {
     }
   });
 });
+
+describe('illegal CephLandmark transitions are rejected (FSM coverage)', () => {
+  test('confirmed -> not_placed is not a legal transition', () => {
+    expect(isValidTransition('confirmed', 'not_placed')).toBe(false);
+  });
+  test('locked -> not_placed is not a legal transition', () => {
+    expect(isValidTransition('locked', 'not_placed')).toBe(false);
+  });
+  test('not_placed -> confirmed is not a legal transition', () => {
+    expect(isValidTransition('not_placed', 'confirmed')).toBe(false);
+  });
+  test('not_placed -> locked is not a legal transition', () => {
+    expect(isValidTransition('not_placed', 'locked')).toBe(false);
+  });
+  test('placed -> not_placed is not a legal transition', () => {
+    expect(isValidTransition('placed', 'not_placed')).toBe(false);
+  });
+});
