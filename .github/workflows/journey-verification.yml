@@ -114,3 +114,35 @@ jobs:
       - name: Stop api-ts
         if: always()
         run: kill "$(cat /tmp/api-journey.pid)" || true
+
+  # UA_KG_UPGRADE.md U3 — ADVISORY review radar. Maps the PR's changed files to
+  # the domain-graph business flows they touch, then flags any flow with NO
+  # covering goal-state journey. Lightweight (no stack, no deps — reads committed
+  # JSON + the harness roster). NEVER blocks: the script exits 0 and the step is
+  # continue-on-error. Output lands in the PR check summary as a visible note.
+  kg-review-radar:
+    name: KG review radar (advisory — flows ↔ journeys)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Map changed flows to journey coverage (advisory)
+        continue-on-error: true
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE="${{ github.event.pull_request.base.sha }}"
+          {
+            echo "## understand-anything review radar (advisory)"
+            echo ''
+            echo '```'
+            bun scripts/kg-review-radar.ts --base="$BASE"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

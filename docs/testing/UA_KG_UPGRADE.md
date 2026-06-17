@@ -83,7 +83,7 @@ journeys. Do not over-invest here.
   - Belt-and-suspenders with the plugin's SessionStart stale-hook (fires when
     `meta.gitCommitHash` ≠ HEAD), which already triggered this session.
 
-### U3 — Wire `understand-diff` into review as an advisory radar
+### U3 — Wire `understand-diff` into review as an advisory radar — ✅ DONE (2026-06-17)
 - **Goal:** At PR/review time, surface "this diff changed a **mapped flow** that has no
   green journey."
 - **Steps:** add `understand-diff` to the review step (e.g. the `/review` flow) so changed
@@ -92,6 +92,27 @@ journeys. Do not over-invest here.
   not a blocking check.
 - **Done when:** a PR touching a mapped flow with no covering journey produces a visible
   advisory note.
+- **Outcome:**
+  - **`scripts/kg-review-radar.ts`** (+ `.test.ts`, 8 cases, TDD RED→GREEN). Maps each
+    changed file → its `domain-graph` **step** (by `filePath`) → its **flow** (via
+    `flow_step` edges), then cross-checks each affected flow against the journey roster
+    parsed from `run-journey-harness.ts`, using the explicit **`scripts/kg-flow-journey-map.json`**
+    coverage map. A touched flow with no covering journey (or a map entry pointing only at a
+    journey that no longer exists) is flagged. `bun run check:kg-review` (or `--base=`,
+    `--files=`, `--json`). All 79 domain steps carry filePaths (43 BE / 36 FE), so the radar
+    covers FE *and* BE diffs.
+  - **Wired into CI as a non-blocking advisory job** (`kg-review-radar` in
+    `.github/workflows/journey-verification.yml`): pull_request-only, no stack/deps, writes
+    the radar output to the PR check **summary**. Exits 0 + `continue-on-error` → never blocks
+    (scope guardrail: advisory radar, not a gate). Also runnable inside `/review`.
+  - **Demonstrated (Done-when):** a simulated New-Visit-style diff touching
+    `apps/dentalemon/src/routes/_workspace/$patientId.tsx` + an imaging handler prints
+    *"Start Clinical Visit — covered by J21"* and *"Capture & Upload Imaging — ⚠ NO covering
+    journey."* The uncovered set (imaging, ceph, check-in, online-booking, portal,
+    pin-auth, staff-perms, complete-visit, duplicate-resolution) is itself a real coverage map.
+  - The coverage map is intentionally **conservative** (specific pairs only); unmapped flows
+    surface as gaps rather than being hidden under a broad journey. `understand-diff` remains
+    available for deeper interactive diff analysis against the structural graphs.
 
 ### U4 — (optional) Per-module scoping
 - **Goal:** Smaller, faster, more accurate graphs.
@@ -156,3 +177,6 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
 - 2026-06-17 — U2 done: `scripts/check-kg-freshness.ts` advisory radar (+ TDD test,
   `check:kg-freshness` npm script); verified worktree-redirect present in the refresh
   entry points; documented the incremental-hook redirect gap + mitigation.
+- 2026-06-17 — U3 done: `scripts/kg-review-radar.ts` (+ TDD test, `kg-flow-journey-map.json`,
+  `check:kg-review` npm script) maps diff→flow→journey-coverage; wired as a non-blocking
+  advisory `kg-review-radar` job in journey-verification.yml (PR check summary).
