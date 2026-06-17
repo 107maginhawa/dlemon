@@ -234,3 +234,9 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
   batches) + merged root `knowledge-graph.json` (2440 nodes) + `meta.json`@HEAD + 1088-file
   fingerprints → per-commit incremental auto-updater ARMED, stale-hook silenced. All UA/KG
   phases (U1–U5) now complete.
+- 2026-06-17 — radar triage payoff: surveyed the 9 uncovered flows; the standout gap was
+  `complete-visit` (J21 covered *starting* a visit, nothing covered *finishing* it — the half
+  that gates billing). Closed it with **J22** (`22-complete-visit.journey.spec.ts`, 4-clause
+  DoD, WF-012) + roster + coverage-map entry. Full harness 22/22 PASS. Found+documented the
+  real backend gate it exercises: completing a non-empty visit requires a signed consent
+  (`VISIT_CONSENT_REQUIRED`). Decision stands: write journeys for genuine gaps, don't mass-map.

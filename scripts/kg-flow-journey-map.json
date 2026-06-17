@@ -2,6 +2,7 @@
   "_doc": "UA_KG_UPGRADE U3 — explicit coverage map: which goal-state journey(s) SPECIFICALLY exercise each domain-graph business flow. Used by scripts/kg-review-radar.ts to flag a diff that touches a mapped flow with no covering journey. Deliberately CONSERVATIVE: only specific pairs are listed; a flow that is merely incidentally touched by a broad journey is left UNMAPPED so it surfaces as a real coverage gap (advisory — a human adds a mapping when a journey genuinely covers it). Journey IDs must match apps/dentalemon/scripts/run-journey-harness.ts. Keep this in sync when adding journeys or renaming flows.",
   "coverage": {
     "flow:start-visit": ["J21"],
+    "flow:complete-visit": ["J22"],
     "flow:perio-exam": ["J03"],
     "flow:chart-dentition": ["J05", "J07"],
     "flow:present-treatment-plan": ["J19"],
@@ -19,7 +20,6 @@
       "flow:resolve-duplicate-patients",
       "flow:check-in-and-queue",
       "flow:online-booking",
-      "flow:complete-visit",
       "flow:capture-imaging",
       "flow:cephalometric-analysis",
       "flow:pin-chairside-auth",
