@@ -14,12 +14,23 @@
  * patient (independent-read API write — the allowed pre-journey seeding) who has
  * zero visits, making the precondition deterministic regardless of seed drift:
  *   register patient (0 visits)  →  hard-assert New Visit ENABLED (no silent skip)
- *   →  click  →  require POST /dental/visits = 201  →  button flips DISABLED
- *   →  independent-read exactly 1 open visit (durable persistence).
+ *   →  click  →  require BOTH steps: POST /dental/visits = 201 (draft) AND
+ *      PATCH /dental/visits/:id = 2xx (draft → active)  →  button flips DISABLED
+ *   →  independent-read EXACTLY ONE ACTIVE visit + a direct goal read on the created
+ *      entity asserting status === 'active'.
  *
- * If New Visit breaks (button missing/disabled, or the create doesn't 201) the
- * asserts fail LOUDLY — never a silent pass. Obeys the harness Anti-Cheating Rules:
- * DOM-only drive, independent post-UI read, no state shortcut.
+ * P3 hardening (VERIFICATION_HARDENING.md): the original incident is a TWO-STEP,
+ * client-orchestrated flow (use-create-visit.ts) where EITHER step can fail; the
+ * first J21 asserted only step 1 (the POST) and counted a `draft` as "open", so a
+ * visit stranded at `draft` (step-2 failed) passed silently. This version asserts
+ * the GOAL STATE (`active`/chartable), every step (POST 201 + PATCH 2xx), and
+ * confirms it with an INDEPENDENT read — the 4-clause Definition of Done. A stranded
+ * draft now FAILS. (Proven RED→GREEN by transiently breaking step 2 in P4.)
+ *
+ * If New Visit breaks (button missing/disabled, create not 201, activate not 2xx, or
+ * the visit stranded at draft) the asserts fail LOUDLY — never a silent pass. Obeys
+ * the harness Anti-Cheating Rules: DOM-only drive, independent post-UI read, no
+ * state shortcut. The P2-A error-surface fixture also fails it on any error toast.
  */
 import {
   test,
@@ -35,7 +46,7 @@ import type { APIRequestContext } from '@playwright/test'
 
 const META: JourneyMeta = {
   id: 'J21',
-  name: 'Start a new clinical visit (New Visit → POST /dental/visits 201)',
+  name: 'Start a new clinical visit (New Visit → POST draft 201 + PATCH active 2xx → one active visit)',
   set: 'A',
   expectedVerdict: 'PASS',
   rubricIds: ['WF-045'],
@@ -59,6 +70,27 @@ async function openVisits(
     ? body
     : (body.items ?? body.data ?? [])
   return items.filter((v) => v.status === 'active' || v.status === 'open' || v.status === 'draft')
+}
+
+/**
+ * List a patient's ACTIVE (chartable) visits via the independent reader. This is the
+ * GOAL predicate, distinct from "open": the workspace flow creates a `draft` then
+ * transitions it to `active`, and only an `active` visit is chartable/completable. A
+ * visit stranded at `draft` (step-2 PATCH failed) is "open" (so it disables New Visit)
+ * but is NOT the goal — this helper makes that stranded-draft state FAIL.
+ */
+async function activeVisits(
+  api: APIRequestContext,
+  branchId: string,
+  patientId: string,
+): Promise<Array<{ id: string; status: string }>> {
+  const r = await api.get(`/dental/visits?patientId=${patientId}&branchId=${branchId}`)
+  if (!r.ok()) throw new Error(`list visits → ${r.status()}`)
+  const body = await r.json()
+  const items: Array<{ id: string; status: string }> = Array.isArray(body)
+    ? body
+    : (body.items ?? body.data ?? [])
+  return items.filter((v) => v.status === 'active')
 }
 
 /**
@@ -107,17 +139,36 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       'New Visit must be ENABLED for a patient with no open visit (regression guard: this is the click the old probe-and-skip silently bypassed)',
     ).toBeEnabled()
 
-    // DOM-only drive: click and REQUIRE the real create write to land 201.
-    const [createResp] = await Promise.all([
+    // DOM-only drive: a single click fires the TWO-STEP flow (use-create-visit.ts):
+    //   1. POST /dental/visits      → creates a `draft` (201)
+    //   2. PATCH /dental/visits/:id → transitions draft → active (2xx)
+    // The original incident (and the blind spot this journey closes) is that EITHER
+    // step can fail; the old J21 asserted only step 1. Require BOTH, every step.
+    const [createResp, activateResp] = await Promise.all([
       page.waitForResponse(
-        (r) => r.url().includes('/dental/visits') && r.request().method() === 'POST',
+        (r) =>
+          /\/dental\/visits(\?|$)/.test(r.url().split('#')[0]!) &&
+          r.request().method() === 'POST',
+        { timeout: 15_000 },
+      ),
+      page.waitForResponse(
+        (r) =>
+          /\/dental\/visits\/[^/?]+/.test(r.url()) && r.request().method() === 'PATCH',
         { timeout: 15_000 },
       ),
       newVisitBtn.click(),
     ])
-    expect(createResp.status(), 'POST /dental/visits must return 201 when starting a visit').toBe(
+    expect(createResp.status(), 'step 1: POST /dental/visits must return 201 (draft created)').toBe(
       201,
     )
+    expect(
+      activateResp.status(),
+      'step 2: PATCH /dental/visits/:id {status:active} must succeed (2xx) — a failure here strands a draft',
+    ).toBeGreaterThanOrEqual(200)
+    expect(activateResp.status(), 'step 2: activate PATCH must be 2xx').toBeLessThan(300)
+
+    const createdId: string | undefined = (await createResp.json())?.id
+    expect(createdId, 'POST response must carry the new visit id').toBeTruthy()
 
     // User-visible reflection: starting a visit flips New Visit to DISABLED (an
     // open visit now exists — the same gating J01 relies on).
@@ -126,13 +177,27 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       'New Visit must become disabled once a visit is open',
     ).toBeDisabled({ timeout: 10_000 })
 
-    // Independent read (durable persistence): exactly one open visit now exists.
+    // GOAL STATE (not existence): the independent read must find EXACTLY ONE ACTIVE
+    // visit. A visit stranded at `draft` (step-2 PATCH failed) would still be "open"
+    // (and disable New Visit) but is NOT chartable — so asserting `active`, not merely
+    // "a visit exists", is what makes a stranded draft FAIL here.
     await expect
-      .poll(async () => (await openVisits(apiReader, branchId, patientId)).length, {
-        message: 'starting a visit must persist exactly one open visit (independent read)',
+      .poll(async () => (await activeVisits(apiReader, branchId, patientId)).length, {
+        message:
+          'starting a visit must persist exactly one ACTIVE visit (a stranded draft must fail this)',
         timeout: 10_000,
       })
       .toBe(1)
+
+    // Direct goal read on the created entity: its durable status must be `active`.
+    const goalRead = await apiReader.get(`/dental/visits/${createdId}`)
+    expect(goalRead.ok(), `independent goal read GET /dental/visits/${createdId} → ${goalRead.status()}`).toBe(
+      true,
+    )
+    expect(
+      (await goalRead.json())?.status,
+      'the started visit must be active/chartable (draft → active completed), not stranded at draft',
+    ).toBe('active')
 
     recordJourneyPass(META)
   } catch (err) {
