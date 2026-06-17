@@ -209,8 +209,34 @@ Phase 8 writes this into the contributing standards.
 
 ## Findings (filled by P0)
 
-> _P0 writes the confirmed New Visit failure mode here: failing call, HTTP status, response
-> body, and root-cause hypothesis. Empty until P0 runs._
+**P0 result (2026-06-17): the New Visit failure is NOT reproducible — the flow works
+end-to-end against the current running stack.** No failing call to record.
+
+Reproduced two ways against the live stack (api :7213, web :3003, demo seed):
+
+1. **Through the rendered UI** (real PIN auth as `dentist_owner` → real workspace for a
+   freshly-registered zero-visit patient → real `new-visit-btn` click). Captured network:
+   - `POST /dental/visits` → **201** (creates `draft`)
+   - `PATCH /dental/visits/:id {status:'active'}` → **200** (transitions `draft → active`)
+   - No error toast (`[data-sonner-toast][data-type="error"]` absent); no `pageerror`;
+     no unexpected 4xx/5xx. (The only 4xx is `GET …/chart → 404`, the expected
+     "no chart yet" state for a brand-new visit.)
+   - New Visit button flips **disabled**; independent read returns **exactly one `active`**
+     visit. All four Definition-of-Done clauses hold.
+2. **Raw API** (cookie-jar curl, same two calls): `201` then `200`, body shows
+   `status:"active"`, `activatedAt` set.
+
+**Why the premise no longer holds:** the two-step `POST(draft) → PATCH(active)`
+orchestration in `use-create-visit.ts` was added by `8f36791f` ("start visits active, not
+draft", **2026-06-06**) and the FE error-envelope parse bug (the original
+*"Failed to create visit. Please try again."* toast) was fixed earlier
+(`project_error_envelope_blindspot`, 2026-06-09). Both predate the plan (`ccb9f072`,
+2026-06-17). The running code already contains both fixes.
+
+**Implication for the FIX-GUARD / P4:** there is no live bug to keep broken or to fix. The
+firewall (P2) and goal-state J21 (P3) still need a *broken canary* to prove red → green.
+See the decision logged with the human below — the canary must be (re)introduced
+deliberately rather than discovered.
 
 ---
 
