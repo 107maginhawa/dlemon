@@ -197,13 +197,23 @@ Phase 8 writes this into the contributing standards.
 
 ## WFG gap register
 
-| ID | Gap | Severity | Source | Status |
+| ID | Gap | Severity | Source | Status (P5) |
 |----|-----|----------|--------|--------|
-| WFG-NEW-VISIT | Workspace New Visit step-2 (`draft→active`) fails → stranded draft + user error | HIGH | this incident | open (P1 maps it, P4 fixes) |
-| WFG-002 | Check-in → visit draft fails → orphan appointment, no recovery path | HIGH | `WORKFLOW_MAP.md:614` | open |
-| WFG-004 | Concurrent create → two invoices possible | (review) | `WORKFLOW_MAP.md:457` | open |
+| WFG-NEW-VISIT (= WFG-015) | Workspace New Visit step-2 (`draft→active`) fails → stranded draft + user error | HIGH | this incident | **enforced** (J21: both steps + `active` goal + independent read; P2-A firewall catches the toast). Stranded-draft *recovery* = accepted-risk (auto-discard deferred → WFG-001). |
+| WFG-002 | Check-in → visit draft fails → orphan appointment, no recovery path | HIGH | `WORKFLOW_MAP.md` §7 WF-007 | **enforced-by-design**: `checkInAppointment.ts` runs check-in + createVisit + linkVisit in one `withTenantTx` (atomic; no orphan on failure). Regression test: `dental-scheduling.test.ts` "appointment stays in scheduled status when check-in fails" (tagged WFG-002). |
+| WFG-004 | Concurrent create → two invoices possible | (review) | `WORKFLOW_MAP.md` §7 WF-013 | **accepted-risk**: accidental offline-retry duplicates ARE guarded (idempotency by `localId` + unique index on `(branchId, localId)`; test `createDentalInvoice.idempotency.test.ts`). A concurrent double-invoice for the same visit *without* a `localId` remains possible — but one-invoice-per-visit is a **product decision** (staged / partial / insurance-split billing may legitimately need multiple invoices per visit), not a clear bug. Revisit before multi-tenant cloud launch. |
 
-> Add `create → activate/confirm` siblings here as P5 surfaces them.
+**Sibling sweep (`create → activate/confirm`):** the adjacent two-step flows are now each
+covered by a goal-state journey, so none is left `open`:
+- **treatment-plan accept** → J19 (asserts the accept POST 2xx, `decision='accepted'`,
+  `plan='approved'`, independent read). enforced.
+- **invoice-from-visit** → J04 (asserts the invoice POST ok + independent read it persists).
+  The double-invoice edge is WFG-004 above. enforced (creation) + accepted-risk (dup).
+- **appointment book→confirm** → J17 (asserts modal-close + independent read,
+  `status='scheduled'`, `visitType`). enforced.
+
+> Every register row is now `enforced` / `enforced-by-design` / `accepted-risk (reason)` —
+> none left `open` (P5 Done-when met).
 
 ---
 
@@ -291,3 +301,8 @@ suite stays green, with the allow flagged for removal once fixed):
 - 2026-06-17 — P4 executed: FIX-GUARD lifted; canary RED→GREEN proven (transient
   `broken-canary` step-2 → J21 + firewall red → restore → green); `verify:app:strict` 10/10
   green with the stack up. No app code committed (the flow already worked). See P4 result above.
+- 2026-06-17 — P5 executed: WFG register dispositioned — WFG-NEW-VISIT enforced (J21),
+  WFG-002 enforced-by-design (atomic `withTenantTx` check-in + tagged regression test),
+  WFG-004 accepted-risk (offline-retry guarded by `localId`; one-invoice-per-visit is a
+  product decision). Sibling sweep: treatment-plan-accept/invoice-from-visit/book→confirm
+  covered by J19/J04/J17. None left `open`.
