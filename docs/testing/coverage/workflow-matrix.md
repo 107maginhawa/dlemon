@@ -8,12 +8,12 @@ Computed join of every workflow in `docs/product/WORKFLOW_MAP.md` against the jo
 
 | Metric | Count |
 |--------|------:|
-| Total workflows | 84 |
+| Total workflows | 85 |
 | Cross-module (§12) | 16 |
-| **Covered** (mapped + spec exists) | **55** |
+| **Covered** (mapped + spec exists) | **56** |
 | Gap | 27 |
 | Deferred | 2 |
-| Allowlisted gaps | 43 |
+| Allowlisted gaps | 44 |
 | Dangling spec refs | 0 |
 
 ## Cross-module flows (§12)
@@ -87,6 +87,7 @@ The 16 inter-module handoffs — the highest-risk integration seams.
 | `WF-042` | Fee schedule lookup |  | `apps/dentalemon/tests/e2e/fee-schedule.spec.ts` | ✅ | covered |
 | `WF-043` | Branch-scoped login (membership select) |  | — | — | gap |
 | `WF-044` | Patient consent at registration |  | `apps/dentalemon/tests/e2e/patient-registration.spec.ts` | ✅ | covered |
+| `WF-045` | Create (from workspace +, two-step `POST draft → PATCH active`) |  | `apps/dentalemon/tests/e2e/journeys/21-new-visit-create.journey.spec.ts` | ✅ | covered |
 | `WF-046` | Visit lock job |  | — | — | gap |
 | `WF-048` | Update (plan) |  | `apps/dentalemon/tests/e2e/treatment-templates.spec.ts` | ✅ | covered |
 | `WF-049` | Update (verify) |  | — | — | gap |

@@ -48,7 +48,7 @@ Spec Version: 1.0 | Last Updated: 2026-05-24 | Last Validated Against: PRD v3-de
 | WF-032 | Dentist | Initialize dentition | P1 |
 | WF-033 | Dentist | Carry-over display | P1 |
 | WF-034 | Dentist | Timeline carousel navigation | P1 |
-| WF-045 [INFERRED] | Dentist | Create visit from workspace (+) | P1 |
+| WF-045 | Dentist | Create visit from workspace (+) — two-step POST draft → PATCH active | P1 |
 | WF-046 [INFERRED] | System (pg-boss) | Lock completed visits | P2 |
 | WF-047 [INFERRED] | System | Auto-discard empty draft (BR-005 deferred) | P3 |
 

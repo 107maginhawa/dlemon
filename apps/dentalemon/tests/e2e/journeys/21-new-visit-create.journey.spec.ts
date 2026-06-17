@@ -38,7 +38,7 @@ const META: JourneyMeta = {
   name: 'Start a new clinical visit (New Visit → POST /dental/visits 201)',
   set: 'A',
   expectedVerdict: 'PASS',
-  rubricIds: ['WF-VIS-001'],
+  rubricIds: ['WF-045'],
 }
 
 /**

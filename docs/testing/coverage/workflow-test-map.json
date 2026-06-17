@@ -39,7 +39,7 @@
   "WF-041": { "e2eSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts", "status": "covered", "anchor": "e2e: invoice void/uncollectible (BR-011/BR-013) on invoice detail" },
   "WF-042": { "e2eSpec": "apps/dentalemon/tests/e2e/fee-schedule.spec.ts", "status": "covered", "anchor": "e2e: fee schedule lookup on invoice (FR6.3)" },
   "WF-044": { "e2eSpec": "apps/dentalemon/tests/e2e/patient-registration.spec.ts", "status": "covered", "anchor": "e2e: patient consent at registration (BR-015)" },
-  "WF-045": { "journeySpec": "apps/dentalemon/tests/e2e/journeys/21-new-visit-create.journey.spec.ts", "status": "covered", "anchor": "journey J21 rubric WF-VIS-001 → create visit from workspace (New Visit → 201)" },
+  "WF-045": { "journeySpec": "apps/dentalemon/tests/e2e/journeys/21-new-visit-create.journey.spec.ts", "status": "covered", "anchor": "journey J21 → create visit from workspace (two-step POST draft → PATCH active)" },
   "WF-048": { "e2eSpec": "apps/dentalemon/tests/e2e/treatment-templates.spec.ts", "status": "covered", "anchor": "e2e: treatment plan update (diagnosed→planned, BR-006)" },
   "WF-051": { "e2eSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts", "status": "covered", "anchor": "e2e: invoice detail read (WF-051 inferred)" },
   "WF-055": { "e2eSpec": "apps/dentalemon/tests/e2e/patient-profile.spec.ts", "status": "covered", "anchor": "e2e: patient profile read (WF-055 inferred)" },

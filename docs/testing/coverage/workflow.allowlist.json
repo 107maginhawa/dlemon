@@ -13,6 +13,7 @@
   { "id": "WFG-012", "reason": "§14 gap: lab-order-complete notification not implemented." },
   { "id": "WFG-013", "reason": "§14 gap: appointment-booking confirmation to patient — implementation status unknown, not journey-locked." },
   { "id": "WFG-014", "reason": "§14 gap: lab orders and consent forms have no documented list/search flow." },
+  { "id": "WFG-015", "reason": "§14 gap (HIGH): WF-045 New-Visit step-2 partial failure (POST draft ok, PATCH activate fails → stranded draft + error toast). Happy-path goal state is journey-locked by J21 (P3); the stranded-draft recovery error-path is undefined and not yet enforced — sibling of WFG-002. P5 decides enforce-vs-accept." },
 
   { "id": "WF-002", "reason": "Passkey login — Better-Auth feature; no dedicated dentalemon journey/e2e spec yet (auth-gates covers password login WF-001)." },
   { "id": "WF-003", "reason": "Magic-link patient login — portal-phase-1 surface; no journey/e2e spec dedicated to the magic-link flow yet." },
