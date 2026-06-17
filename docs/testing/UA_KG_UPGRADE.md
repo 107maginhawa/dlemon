@@ -52,13 +52,36 @@ journeys. Do not over-invest here.
 - **Done when:** `knowledge-graph.json` `analyzedAt`/`gitCommitHash` match a recent commit,
   and the staleness story is decided (committed or scheduled-refresh).
 
-### U2 — Fix staleness / worktree rot (#133)
+### U2 — Fix staleness / worktree rot (#133) — ✅ DONE (2026-06-17)
 - **Goal:** The KG stops silently going stale.
 - **Steps:** ensure the auto-update hook redirects worktree runs to the main repo root
   (per the `understand-domain` skill's worktree-redirect logic); add a lightweight freshness
   check (warn when `gitCommitHash` drifts > N commits from HEAD).
 - **Done when:** a refresh run from a worktree writes to the main repo; a stale graph emits
   a visible warning.
+- **Outcome:**
+  - **Worktree redirect — already present at the refresh entry points.** Verified in plugin
+    2.7.6: both `/understand` and `/understand-domain` Phase 0 detect a worktree
+    (`git rev-parse --git-dir` ≠ `--git-common-dir`) and redirect output to the main repo
+    root. So a *refresh* run from a worktree writes to the main repo. ✅
+  - **Known residual gap (documented, not in-repo-fixable):** the plugin's *incremental*
+    `hooks/auto-update-prompt.md` (PostToolUse-on-commit) has NO worktree redirect — it sets
+    `PROJECT_ROOT = cwd`. A per-commit auto-update fired from an ephemeral worktree writes
+    there and is lost. The plugin cache is external/ephemeral (overwritten on upgrade), so it
+    can't be durably patched from the repo. **Mitigation:** run refreshes from the main
+    checkout; the freshness radar below is the backstop that makes any resulting staleness
+    loud regardless of where auto-update ran.
+  - **Freshness radar (the durable, plugin-independent teeth):** `scripts/check-kg-freshness.ts`
+    (+ `.test.ts`, 8 cases, TDD RED→GREEN). Reads every committed graph's
+    `project.gitCommitHash`, measures `git rev-list --count <hash>..HEAD`, and emits a VISIBLE
+    warning when a graph is stale past `--max-drift` (default 50), has no recorded commit, or
+    records a commit not in history. Wired as `bun run check:kg-freshness`. **Advisory by
+    design** (exits 0 on drift — never a blocking gate, per the scope guardrail); `--strict`
+    exits 1 only on a config error (missing/corrupt hash), never on drift. Live run correctly
+    flags the stale legacy monolith (`knowledge-graph: 421 behind`) while the fresh FE + domain
+    graphs read healthy.
+  - Belt-and-suspenders with the plugin's SessionStart stale-hook (fires when
+    `meta.gitCommitHash` ≠ HEAD), which already triggered this session.
 
 ### U3 — Wire `understand-diff` into review as an advisory radar
 - **Goal:** At PR/review time, surface "this diff changed a **mapped flow** that has no
@@ -127,3 +150,9 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
 - 2026-06-17 — U1 started: recorded D1 (per-domain shape + commit policy, closes U4 &
   the U1 commit-question); un-ignored graph JSONs in `.gitignore` (kept fingerprints/
   intermediate ignored).
+- 2026-06-17 — U1 (FE) done: committed fresh `frontend-knowledge-graph.json`
+  (806 nodes) + refreshed `domain-graph.json` (FE↔BE flows; Start Visit two-step). BE
+  structural rebuild + whole-repo arm deferred ("FE now, BE scheduled").
+- 2026-06-17 — U2 done: `scripts/check-kg-freshness.ts` advisory radar (+ TDD test,
+  `check:kg-freshness` npm script); verified worktree-redirect present in the refresh
+  entry points; documented the incremental-hook redirect gap + mitigation.

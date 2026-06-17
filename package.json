@@ -41,6 +41,7 @@
     "audit:trace": "bun scripts/audit-traceability.ts",
     "audit:trace:ci": "bun scripts/audit-traceability.ts --ci",
     "check:secret-logging": "bun scripts/check-secret-logging.ts",
+    "check:kg-freshness": "bun scripts/check-kg-freshness.ts",
     "coverage:roles": "bun scripts/coverage/role-op-matrix.ts",
     "coverage:roles:ci": "bun scripts/coverage/role-op-matrix.ts --check",
     "coverage:endpoints": "bun scripts/coverage/endpoint-matrix.ts",
