@@ -44,13 +44,26 @@ journeys. Do not over-invest here.
 
 ## Phases
 
-### U1 — Refresh + commit the graph
+### U1 — Refresh + commit the graph — ✅ DONE (FE 2026-06-17; BE arm + full merge 2026-06-17)
 - **Goal:** A current KG that reflects HEAD.
 - **Steps:** run `/understand` (and `/understand-domain`) on the main checkout (not a
   worktree); confirm `project.gitCommitHash` ≈ HEAD; decide whether to commit
   `.understand-anything/` (or document a refresh cadence so it never silently rots).
 - **Done when:** `knowledge-graph.json` `analyzedAt`/`gitCommitHash` match a recent commit,
   and the staleness story is decided (committed or scheduled-refresh).
+- **Outcome (both tranches done):**
+  - FE: `frontend-knowledge-graph.json` (806 nodes), domain flow graph refreshed (Start-Visit
+    two-step). See D1 + the U1-FE changelog entry.
+  - **BE arm (done):** `backend-knowledge-graph.json` — fresh structural graph of
+    `services/api-ts` (1634 nodes / 5519 edges / 10 layers / 15-step tour over 801 files;
+    34 file-analyzer batches; 0 validation issues; repo-relative IDs).
+  - **Full arm (done):** merged FE+BE → fresh root `knowledge-graph.json` (2440 nodes / 7026
+    edges / 17 layers / 30 tour steps, 0 dangling) + `meta.json` at HEAD + 1088-file
+    fingerprints baseline. This **arms the per-commit incremental auto-updater** (the baseline
+    is now HEAD, so future commits incrementally update instead of bouncing to FULL_UPDATE)
+    and **silences the SessionStart stale-hook**. `check:kg-freshness` is green on all 4 graphs.
+  - Committed: root `knowledge-graph.json` + `meta.json` + `frontend-`/`backend-knowledge-graph.json`
+    + `domain-graph.json`. Derived `fingerprints.json` stays git-ignored (regenerates).
 
 ### U2 — Fix staleness / worktree rot (#133) — ✅ DONE (2026-06-17)
 - **Goal:** The KG stops silently going stale.
@@ -217,3 +230,7 @@ not "no graph." A 4.4 MB blob is never read whole by an agent — its only value
   FE build (806 nodes / 7 layers / 0 issues). Monolithic + per-handler-module both rejected.
 - 2026-06-17 — U5 done: graphify gate NOT triggered (trigger is post-U1–U3 misses, which
   just shipped) → keep UA (its flow layer is the differentiator); reopen trigger documented.
+- 2026-06-17 — U1 BE arm + full merge done: `backend-knowledge-graph.json` (1634 nodes, 34
+  batches) + merged root `knowledge-graph.json` (2440 nodes) + `meta.json`@HEAD + 1088-file
+  fingerprints → per-commit incremental auto-updater ARMED, stale-hook silenced. All UA/KG
+  phases (U1–U5) now complete.
