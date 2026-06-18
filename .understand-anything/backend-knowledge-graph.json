@@ -23,8 +23,8 @@
       "OneSignal"
     ],
     "description": "Dentalemon backend API (services/api-ts): Bun + Hono + Drizzle ORM over PostgreSQL. Per-operation handler modules under src/handlers/<module>/ (router → Zod validators → operationId handlers → repos/*.repo.ts + Drizzle *.schema.ts + cross-module facades), multi-tenant RLS via withTenantTx, Better-Auth, Stripe billing + idempotent webhook, pg-boss jobs, OneSignal/email notifs, audit logging w/ PHI sanitizers, and GDPR erasure/retention/legal-hold governance. Scoped per-domain structural graph (UA_KG_UPGRADE BE arm).",
-    "analyzedAt": "2026-06-17T13:54:01.839Z",
-    "gitCommitHash": "deaecf8dec01aeaf53372a119dadc09cee53760f"
+    "analyzedAt": "2026-06-18T14:16:58.000Z",
+    "gitCommitHash": "a1aef9f4f98c9f93274b922a5e73d5b2457c1e3e"
   },
   "nodes": [
     {
@@ -8197,19 +8197,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:services/api-ts/src/core/jobs.ts",
-      "type": "file",
-      "name": "jobs.ts",
-      "filePath": "services/api-ts/src/core/jobs.ts",
-      "summary": "pg-boss backed job scheduler supporting cron, interval and delayed jobs with health and queue introspection.",
-      "tags": [
-        "service",
-        "jobs",
-        "scheduler"
-      ],
-      "complexity": "complex"
-    },
-    {
       "id": "file:services/api-ts/src/core/logger.ts",
       "type": "file",
       "name": "logger.ts",
@@ -8579,23 +8566,6 @@
         "email",
         "service",
         "serialization"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "class:services/api-ts/src/core/jobs.ts:PgBossScheduler",
-      "type": "class",
-      "name": "PgBossScheduler",
-      "filePath": "services/api-ts/src/core/jobs.ts",
-      "lineRange": [
-        93,
-        609
-      ],
-      "summary": "pg-boss based scheduler registering cron/interval/delayed jobs with health and trigger controls.",
-      "tags": [
-        "jobs",
-        "scheduler",
-        "service"
       ],
       "complexity": "complex"
     },
@@ -15948,34 +15918,6 @@
       "complexity": "simple"
     },
     {
-      "id": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "type": "file",
-      "name": "captureInvoicePayment.ts",
-      "filePath": "services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "summary": "Hono handler that captures a previously authorized Stripe payment intent for an invoice and marks the invoice paid.",
-      "tags": [
-        "api-handler",
-        "billing",
-        "payment",
-        "stripe"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "type": "file",
-      "name": "createInvoice.ts",
-      "filePath": "services/api-ts/src/handlers/billing/createInvoice.ts",
-      "summary": "Hono handler that creates a new invoice with line items, resolving customer and merchant billing parties.",
-      "tags": [
-        "api-handler",
-        "billing",
-        "invoice",
-        "validation"
-      ],
-      "complexity": "moderate"
-    },
-    {
       "id": "file:services/api-ts/src/handlers/billing/createMerchantAccount.ts",
       "type": "file",
       "name": "createMerchantAccount.ts",
@@ -16054,40 +15996,6 @@
         "billing",
         "stripe",
         "merchant"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
-      "type": "function",
-      "name": "captureInvoicePayment",
-      "filePath": "services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "lineRange": [
-        23,
-        230
-      ],
-      "summary": "Captures an authorized Stripe payment intent and finalizes the invoice as paid, with role and ownership checks.",
-      "tags": [
-        "api-handler",
-        "payment",
-        "stripe"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
-      "type": "function",
-      "name": "createInvoice",
-      "filePath": "services/api-ts/src/handlers/billing/createInvoice.ts",
-      "lineRange": [
-        30,
-        185
-      ],
-      "summary": "Creates an invoice with line items, resolving customer and merchant billing parties and computing totals.",
-      "tags": [
-        "api-handler",
-        "invoice",
-        "validation"
       ],
       "complexity": "moderate"
     },
@@ -16222,19 +16130,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "type": "file",
-      "name": "markInvoiceUncollectible.ts",
-      "filePath": "services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "summary": "Hono handler that transitions an invoice to the uncollectible status after authorization checks.",
-      "tags": [
-        "api-handler",
-        "billing",
-        "invoice"
-      ],
-      "complexity": "moderate"
-    },
-    {
       "id": "file:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts",
       "type": "file",
       "name": "onboardMerchantAccount.ts",
@@ -16259,21 +16154,6 @@
         "api-handler",
         "billing",
         "payment",
-        "stripe"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "type": "file",
-      "name": "refundInvoicePayment.ts",
-      "filePath": "services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "summary": "Hono handler that issues a full or partial Stripe refund against an invoice payment and updates invoice state.",
-      "tags": [
-        "api-handler",
-        "billing",
-        "payment",
-        "refund",
         "stripe"
       ],
       "complexity": "complex"
@@ -16339,22 +16219,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
-      "type": "function",
-      "name": "markInvoiceUncollectible",
-      "filePath": "services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "lineRange": [
-        27,
-        143
-      ],
-      "summary": "Marks an invoice uncollectible after authorization checks.",
-      "tags": [
-        "api-handler",
-        "invoice"
-      ],
-      "complexity": "moderate"
-    },
-    {
       "id": "function:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts:onboardMerchantAccount",
       "type": "function",
       "name": "onboardMerchantAccount",
@@ -16384,23 +16248,6 @@
       "tags": [
         "api-handler",
         "payment",
-        "stripe"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
-      "type": "function",
-      "name": "refundInvoicePayment",
-      "filePath": "services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "lineRange": [
-        23,
-        205
-      ],
-      "summary": "Issues a full or partial Stripe refund and updates invoice payment state.",
-      "tags": [
-        "api-handler",
-        "refund",
         "stripe"
       ],
       "complexity": "complex"
@@ -16695,20 +16542,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "type": "file",
-      "name": "voidInvoice.ts",
-      "filePath": "services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "summary": "Hono handler that voids an invoice, cancelling any open Stripe payment intent and recording the void.",
-      "tags": [
-        "api-handler",
-        "billing",
-        "invoice",
-        "stripe"
-      ],
-      "complexity": "complex"
-    },
-    {
       "id": "file:services/api-ts/src/handlers/dental-clinical/amendments/approveAmendment.ts",
       "type": "file",
       "name": "approveAmendment.ts",
@@ -16804,23 +16637,6 @@
         "validation"
       ],
       "complexity": "moderate"
-    },
-    {
-      "id": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
-      "type": "function",
-      "name": "voidInvoice",
-      "filePath": "services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "lineRange": [
-        23,
-        212
-      ],
-      "summary": "Voids an invoice and cancels any open Stripe payment intent.",
-      "tags": [
-        "api-handler",
-        "invoice",
-        "stripe"
-      ],
-      "complexity": "complex"
     },
     {
       "id": "function:services/api-ts/src/handlers/dental-clinical/inventory/createInventoryAdjustment.ts:createInventoryAdjustment",
@@ -24907,6 +24723,230 @@
         "expand",
         "utility",
         "grouping"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:services/api-ts/src/core/jobs.ts",
+      "type": "file",
+      "name": "jobs.ts",
+      "filePath": "services/api-ts/src/core/jobs.ts",
+      "summary": "pg-boss backed job scheduler supporting cron, interval and delayed jobs with health and queue introspection; resolvePgBossTuning selects production vs test cleanup/expiry tuning at construction.",
+      "tags": [
+        "service",
+        "jobs",
+        "scheduler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:services/api-ts/src/core/jobs.ts:PgBossScheduler",
+      "type": "class",
+      "name": "PgBossScheduler",
+      "filePath": "services/api-ts/src/core/jobs.ts",
+      "lineRange": [
+        93,
+        609
+      ],
+      "summary": "pg-boss based scheduler registering cron/interval/delayed jobs with health and trigger controls.",
+      "tags": [
+        "jobs",
+        "scheduler",
+        "service"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:services/api-ts/src/core/jobs.ts:resolvePgBossTuning",
+      "type": "function",
+      "name": "resolvePgBossTuning",
+      "filePath": "services/api-ts/src/core/jobs.ts",
+      "summary": "Resolves pg-boss constructor tuning by environment: fast cleanup/expiry under NODE_ENV=test, long-horizon production-safe defaults otherwise (so the 30-day slot horizon is not force-expired).",
+      "tags": [
+        "jobs",
+        "scheduler",
+        "config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "type": "file",
+      "name": "captureInvoicePayment.ts",
+      "filePath": "services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "summary": "Hono handler that captures a previously authorized Stripe payment intent for an invoice and marks the invoice paid.",
+      "tags": [
+        "api-handler",
+        "billing",
+        "payment",
+        "stripe"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
+      "type": "function",
+      "name": "captureInvoicePayment",
+      "filePath": "services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "lineRange": [
+        23,
+        230
+      ],
+      "summary": "Captures an authorized Stripe payment intent and finalizes the invoice as paid, with role and ownership checks.",
+      "tags": [
+        "api-handler",
+        "payment",
+        "stripe"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "type": "file",
+      "name": "createInvoice.ts",
+      "filePath": "services/api-ts/src/handlers/billing/createInvoice.ts",
+      "summary": "Hono handler that creates a new invoice with line items, resolving customer and merchant billing parties.",
+      "tags": [
+        "api-handler",
+        "billing",
+        "invoice",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
+      "type": "function",
+      "name": "createInvoice",
+      "filePath": "services/api-ts/src/handlers/billing/createInvoice.ts",
+      "lineRange": [
+        30,
+        185
+      ],
+      "summary": "Creates an invoice with line items, resolving customer and merchant billing parties and computing totals.",
+      "tags": [
+        "api-handler",
+        "invoice",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "type": "file",
+      "name": "markInvoiceUncollectible.ts",
+      "filePath": "services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "summary": "Hono handler that transitions an invoice to the uncollectible status after authorization checks.",
+      "tags": [
+        "api-handler",
+        "billing",
+        "invoice"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
+      "type": "function",
+      "name": "markInvoiceUncollectible",
+      "filePath": "services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "lineRange": [
+        27,
+        143
+      ],
+      "summary": "Marks an invoice uncollectible after authorization checks.",
+      "tags": [
+        "api-handler",
+        "invoice"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "type": "file",
+      "name": "refundInvoicePayment.ts",
+      "filePath": "services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "summary": "Hono handler that issues a full or partial Stripe refund against an invoice payment and updates invoice state.",
+      "tags": [
+        "api-handler",
+        "billing",
+        "payment",
+        "refund",
+        "stripe"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
+      "type": "function",
+      "name": "refundInvoicePayment",
+      "filePath": "services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "lineRange": [
+        23,
+        205
+      ],
+      "summary": "Issues a full or partial Stripe refund and updates invoice payment state.",
+      "tags": [
+        "api-handler",
+        "refund",
+        "stripe"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "type": "file",
+      "name": "voidInvoice.ts",
+      "filePath": "services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "summary": "Hono handler that voids an invoice, cancelling any open Stripe payment intent and recording the void.",
+      "tags": [
+        "api-handler",
+        "billing",
+        "invoice",
+        "stripe"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
+      "type": "function",
+      "name": "voidInvoice",
+      "filePath": "services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "lineRange": [
+        23,
+        212
+      ],
+      "summary": "Voids an invoice and cancels any open Stripe payment intent.",
+      "tags": [
+        "api-handler",
+        "invoice",
+        "stripe"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "type": "file",
+      "name": "parse-user-roles.ts",
+      "filePath": "services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "summary": "Shared handler helper that splits the comma-separated user.role string into trimmed role tokens (empty when absent); a behavior-preserving extraction reused across ~15 handler call sites (billing, email, emr).",
+      "tags": [
+        "utility",
+        "shared",
+        "rbac",
+        "authorization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:services/api-ts/src/handlers/shared/parse-user-roles.ts:parseUserRoles",
+      "type": "function",
+      "name": "parseUserRoles",
+      "filePath": "services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "summary": "Parses user.role into a trimmed string[] of role tokens, returning [] when the user or role is missing.",
+      "tags": [
+        "utility",
+        "shared",
+        "rbac"
       ],
       "complexity": "simple"
     }
@@ -39291,13 +39331,6 @@
       "weight": 1
     },
     {
-      "source": "file:services/api-ts/src/core/jobs.ts",
-      "target": "class:services/api-ts/src/core/jobs.ts:PgBossScheduler",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
       "source": "file:services/api-ts/src/core/logger.ts",
       "target": "function:services/api-ts/src/core/logger.ts:redactPhi",
       "type": "contains",
@@ -39789,20 +39822,6 @@
     },
     {
       "source": "file:services/api-ts/src/core/email.ts",
-      "target": "file:services/api-ts/src/types/logger.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/core/jobs.ts",
-      "target": "file:services/api-ts/src/core/database.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/core/jobs.ts",
       "target": "file:services/api-ts/src/types/logger.ts",
       "type": "imports",
       "direction": "forward",
@@ -50729,34 +50748,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:services/api-ts/src/handlers/billing/createMerchantAccount.ts",
       "target": "function:services/api-ts/src/handlers/billing/createMerchantAccount.ts:createMerchantAccount",
       "type": "contains",
@@ -50839,90 +50830,6 @@
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "file:services/api-ts/src/core/errors.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "file:services/api-ts/src/handlers/billing/billing.types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "file:services/api-ts/src/types/app.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-      "target": "file:services/api-ts/src/types/auth.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "file:services/api-ts/src/core/errors.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "file:services/api-ts/src/handlers/billing/repos/billing.schema.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "file:services/api-ts/src/types/app.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
-      "target": "file:services/api-ts/src/types/auth.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
     },
     {
       "source": "file:services/api-ts/src/handlers/billing/createMerchantAccount.ts",
@@ -51149,20 +51056,6 @@
       "weight": 0.7
     },
     {
-      "source": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
-      "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
-      "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "function:services/api-ts/src/handlers/billing/createMerchantAccount.ts:createMerchantAccount",
       "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
       "type": "calls",
@@ -51205,20 +51098,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts",
       "target": "function:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts:onboardMerchantAccount",
       "type": "contains",
@@ -51242,20 +51121,6 @@
     {
       "source": "file:services/api-ts/src/handlers/billing/payInvoice.ts",
       "target": "function:services/api-ts/src/handlers/billing/payInvoice.ts:payInvoice",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
@@ -51562,41 +51427,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "file:services/api-ts/src/core/errors.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "file:services/api-ts/src/types/app.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
-      "target": "file:services/api-ts/src/types/auth.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts",
       "target": "file:services/api-ts/src/core/errors.ts",
       "type": "imports",
@@ -51688,48 +51518,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "file:services/api-ts/src/core/errors.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "file:services/api-ts/src/handlers/billing/billing.types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "file:services/api-ts/src/types/app.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
-      "target": "file:services/api-ts/src/types/auth.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:services/api-ts/src/handlers/billing/repos/billing-person.facade.ts",
       "target": "file:services/api-ts/src/core/database.ts",
       "type": "imports",
@@ -51807,13 +51595,6 @@
       "weight": 0.7
     },
     {
-      "source": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
-      "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "function:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts:onboardMerchantAccount",
       "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
       "type": "calls",
@@ -51822,13 +51603,6 @@
     },
     {
       "source": "function:services/api-ts/src/handlers/billing/payInvoice.ts:payInvoice",
-      "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
       "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
       "type": "calls",
       "direction": "forward",
@@ -51933,20 +51707,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:services/api-ts/src/handlers/dental-clinical/inventory/createInventoryAdjustment.ts",
       "target": "function:services/api-ts/src/handlers/dental-clinical/inventory/createInventoryAdjustment.ts:createInventoryAdjustment",
       "type": "contains",
@@ -52074,48 +51834,6 @@
     },
     {
       "source": "file:services/api-ts/src/handlers/billing/updateInvoice.ts",
-      "target": "file:services/api-ts/src/types/auth.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "file:services/api-ts/src/core/errors.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "file:services/api-ts/src/handlers/billing/billing.types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
-      "target": "file:services/api-ts/src/types/app.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
       "target": "file:services/api-ts/src/types/auth.ts",
       "type": "imports",
       "direction": "forward",
@@ -52326,13 +52044,6 @@
     },
     {
       "source": "function:services/api-ts/src/handlers/billing/updateInvoice.ts:updateInvoice",
-      "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
       "target": "function:services/api-ts/src/handlers/person/repos/person-billing.facade.ts:findBillingParty",
       "type": "calls",
       "direction": "forward",
@@ -63544,6 +63255,356 @@
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/core/jobs.ts",
+      "target": "class:services/api-ts/src/core/jobs.ts:PgBossScheduler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/core/jobs.ts",
+      "target": "file:services/api-ts/src/core/database.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/core/jobs.ts",
+      "target": "file:services/api-ts/src/types/logger.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/core/jobs.ts",
+      "target": "function:services/api-ts/src/core/jobs.ts:resolvePgBossTuning",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/core/jobs.ts",
+      "target": "function:services/api-ts/src/core/jobs.ts:resolvePgBossTuning",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "function:services/api-ts/src/handlers/billing/captureInvoicePayment.ts:captureInvoicePayment",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/core/errors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/billing/billing.types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/types/app.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/types/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "function:services/api-ts/src/handlers/billing/createInvoice.ts:createInvoice",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "file:services/api-ts/src/core/errors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/billing/repos/billing.schema.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "file:services/api-ts/src/types/app.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+      "target": "file:services/api-ts/src/types/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "function:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:markInvoiceUncollectible",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "file:services/api-ts/src/core/errors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "file:services/api-ts/src/types/app.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+      "target": "file:services/api-ts/src/types/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "function:services/api-ts/src/handlers/billing/refundInvoicePayment.ts:refundInvoicePayment",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/core/errors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/billing/billing.types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/types/app.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/types/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+      "target": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "function:services/api-ts/src/handlers/billing/voidInvoice.ts:voidInvoice",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/core/errors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/billing/billing.types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/billing/repos/billing.repo.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/types/app.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/types/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+      "target": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "target": "function:services/api-ts/src/handlers/shared/parse-user-roles.ts:parseUserRoles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "target": "function:services/api-ts/src/handlers/shared/parse-user-roles.ts:parseUserRoles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:services/api-ts/src/handlers/shared/parse-user-roles.ts",
+      "target": "file:services/api-ts/src/types/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
     }
   ],
   "layers": [
@@ -63870,8 +63931,6 @@
         "file:services/api-ts/src/handlers/dental-perio/upsertToothReading.ts",
         "file:services/api-ts/src/handlers/dental-perio/utils/perio-cal.ts",
         "file:services/api-ts/src/handlers/billing/billing.types.ts",
-        "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
-        "file:services/api-ts/src/handlers/billing/createInvoice.ts",
         "file:services/api-ts/src/handlers/billing/createMerchantAccount.ts",
         "file:services/api-ts/src/handlers/billing/deleteInvoice.ts",
         "file:services/api-ts/src/handlers/billing/finalizeInvoice.ts",
@@ -63880,12 +63939,9 @@
         "file:services/api-ts/src/handlers/billing/getMerchantDashboard.ts",
         "file:services/api-ts/src/handlers/billing/handleStripeWebhook.ts",
         "file:services/api-ts/src/handlers/billing/listInvoices.ts",
-        "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
         "file:services/api-ts/src/handlers/billing/onboardMerchantAccount.ts",
         "file:services/api-ts/src/handlers/billing/payInvoice.ts",
-        "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
         "file:services/api-ts/src/handlers/billing/updateInvoice.ts",
-        "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
         "file:services/api-ts/src/handlers/dental-clinical/amendments/approveAmendment.ts",
         "file:services/api-ts/src/handlers/dental-clinical/inventory/createInventoryAdjustment.ts",
         "file:services/api-ts/src/handlers/dental-clinical/inventory/createInventoryItem.ts",
@@ -64077,7 +64133,13 @@
         "file:services/api-ts/src/handlers/email/templates/auth/password-reset.html.hbs",
         "file:services/api-ts/src/handlers/email/templates/auth/password-reset.text.hbs",
         "file:services/api-ts/src/handlers/email/templates/auth/welcome.html.hbs",
-        "file:services/api-ts/src/handlers/email/templates/auth/welcome.text.hbs"
+        "file:services/api-ts/src/handlers/email/templates/auth/welcome.text.hbs",
+        "file:services/api-ts/src/handlers/billing/captureInvoicePayment.ts",
+        "file:services/api-ts/src/handlers/billing/createInvoice.ts",
+        "file:services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts",
+        "file:services/api-ts/src/handlers/billing/refundInvoicePayment.ts",
+        "file:services/api-ts/src/handlers/billing/voidInvoice.ts",
+        "file:services/api-ts/src/handlers/shared/parse-user-roles.ts"
       ]
     },
     {
@@ -64306,7 +64368,6 @@
         "file:services/api-ts/src/core/constants.ts",
         "file:services/api-ts/src/core/email.ts",
         "file:services/api-ts/src/core/email.types.ts",
-        "file:services/api-ts/src/core/jobs.ts",
         "file:services/api-ts/src/core/logger.ts",
         "file:services/api-ts/src/core/metrics.ts",
         "file:services/api-ts/src/core/notifs.ts",
@@ -64317,7 +64378,8 @@
         "file:services/api-ts/src/core/schema-drift.ts",
         "file:services/api-ts/src/core/tenant-tx.ts",
         "file:services/api-ts/src/core/dev-doctor.ts",
-        "file:services/api-ts/src/core/test-tx.ts"
+        "file:services/api-ts/src/core/test-tx.ts",
+        "file:services/api-ts/src/core/jobs.ts"
       ]
     },
     {

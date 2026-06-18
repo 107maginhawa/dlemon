@@ -2,9 +2,9 @@
   "version": "1.0.0",
   "project": {
     "name": "dentalemon",
-    "description": "Business domain / flow graph for the dentalemon dental clinic platform. Flows modeled as end-to-end FE↔BE user journeys (e.g. Start Visit = POST draft → PATCH active). Refreshed in UA_KG_UPGRADE U1.",
-    "analyzedAt": "2026-06-17T12:28:31.948Z",
-    "gitCommitHash": "e75d4864bf4842f12c55b300dea628174e250963"
+    "description": "Business domain / flow graph for the dentalemon dental clinic platform. Flows modeled as end-to-end FE↔BE user journeys (e.g. Start Visit = POST draft → PATCH active). Refreshed in UA_KG_UPGRADE U1; incrementally updated to add the patient follow-up-notes flow and refresh billing void/uncollectible/discount summaries.",
+    "analyzedAt": "2026-06-18T14:22:23.000Z",
+    "gitCommitHash": "a1aef9f4f98c9f93274b922a5e73d5b2457c1e3e"
   },
   "nodes": [
     {
@@ -190,7 +190,7 @@
       "id": "domain:billing",
       "type": "domain",
       "name": "Billing & Revenue Cycle",
-      "summary": "Invoice-based revenue cycle: build invoices from treatments, apply discounts, issue, record/void payments, generate receipts, payment plans, insurance claims with remittance, and accounts-receivable reporting (AR aging, collections, statements).",
+      "summary": "Invoice-based revenue cycle: build invoices from treatments, apply discounts, issue, record/void payments, void invoices, mark balances uncollectible (bad-debt write-off), generate receipts, payment plans, insurance claims with remittance, and accounts-receivable reporting (AR aging, collections, statements). The invoice detail view wires the void-payment, void-invoice, mark-uncollectible, and apply-discount handlers, each audited inside a tenant transaction.",
       "tags": [
         "billing",
         "invoice",
@@ -324,6 +324,23 @@
       "complexity": "moderate",
       "domainMeta": {
         "entryPoint": "Patient profile -> Duplicate Patients panel",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:patient-follow-up-notes",
+      "type": "flow",
+      "name": "Record Patient Follow-Up Notes",
+      "summary": "Staff view a patient's timestamped follow-up notes and append a new note from the patient profile; the note is persisted via the SDK and the notes list refreshes optimistically.",
+      "tags": [
+        "patient",
+        "notes",
+        "follow-up",
+        "engagement"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Patient profile -> Follow-Up Notes panel",
         "entryType": "manual"
       }
     },
@@ -497,7 +514,7 @@
       "id": "flow:invoice-and-collect-payment",
       "type": "flow",
       "name": "Invoice & Collect Payment",
-      "summary": "Build an invoice from treatments, optionally apply a discount, issue it, record a payment, and produce a receipt — the core revenue-cycle journey.",
+      "summary": "Build an invoice from treatments, optionally apply a discount, issue it, record a payment, and produce a receipt — the core revenue-cycle journey. From the invoice detail view, staff can also void a recorded payment or void the invoice itself (guarded against active payment plans), all audited and reversible only via void rather than delete.",
       "tags": [
         "billing",
         "invoice",
@@ -531,7 +548,7 @@
       "id": "flow:payment-plan-and-collections",
       "type": "flow",
       "name": "Payment Plans & Collections",
-      "summary": "Set up a patient payment plan, monitor AR aging and the collections view, generate statement batches, and mark uncollectible balances.",
+      "summary": "Set up a patient payment plan, monitor AR aging and the collections view, generate statement batches, and mark uncollectible balances. Marking an invoice uncollectible is a bad-debt write-off wired from the invoice detail view (gated by canMarkUncollectible) and audited inside a tenant transaction.",
       "tags": [
         "payment-plan",
         "collections",
@@ -711,6 +728,57 @@
       ],
       "complexity": "complex",
       "filePath": "services/api-ts/src/handlers/dental-patient/identity"
+    },
+    {
+      "id": "step:patient-follow-up-notes:view-notes",
+      "type": "step",
+      "name": "View follow-up notes",
+      "summary": "The follow-up notes panel lists the patient's existing timestamped notes via the useFollowUpNotes query hook.",
+      "tags": [
+        "frontend",
+        "notes",
+        "data-fetching"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
+      "lineRange": [
+        30,
+        46
+      ]
+    },
+    {
+      "id": "step:patient-follow-up-notes:enter-note",
+      "type": "step",
+      "name": "Enter a new note",
+      "summary": "Staff type a follow-up note into the add-note form within the FollowUpNotes panel.",
+      "tags": [
+        "frontend",
+        "notes",
+        "form"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/components/follow-up-notes.tsx",
+      "lineRange": [
+        30,
+        140
+      ]
+    },
+    {
+      "id": "step:patient-follow-up-notes:save-note",
+      "type": "step",
+      "name": "Append follow-up note",
+      "summary": "Submitting the form appends the note via the useAddFollowUpNote mutation hook (SDK), then invalidates the notes query so the new note appears.",
+      "tags": [
+        "frontend",
+        "notes",
+        "mutation"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
+      "lineRange": [
+        54,
+        78
+      ]
     },
     {
       "id": "step:schedule-appointment:open-modal",
@@ -1656,6 +1724,13 @@
       "weight": 1
     },
     {
+      "source": "domain:patient-management",
+      "target": "flow:patient-follow-up-notes",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
       "source": "domain:scheduling",
       "target": "flow:schedule-appointment",
       "type": "contains_flow",
@@ -1826,6 +1901,27 @@
     {
       "source": "flow:resolve-duplicate-patients",
       "target": "step:resolve-duplicate-patients:merge",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:patient-follow-up-notes",
+      "target": "step:patient-follow-up-notes:view-notes",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:patient-follow-up-notes",
+      "target": "step:patient-follow-up-notes:enter-note",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:patient-follow-up-notes",
+      "target": "step:patient-follow-up-notes:save-note",
       "type": "flow_step",
       "direction": "forward",
       "weight": 1
