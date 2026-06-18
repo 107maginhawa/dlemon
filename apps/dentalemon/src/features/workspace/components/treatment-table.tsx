@@ -317,7 +317,7 @@ export function TreatmentTable({
                   onClick={() => onSelectTreatment?.(t.id)}
                   className={[
                     'border-t border-border/40 transition-colors',
-                    isSelected ? 'bg-[#F2F2F7]' : 'hover:bg-lemon/10',
+                    isSelected ? 'bg-muted' : 'hover:bg-lemon/10',
                     onSelectTreatment ? 'cursor-pointer' : '',
                   ].join(' ')}
                 >
