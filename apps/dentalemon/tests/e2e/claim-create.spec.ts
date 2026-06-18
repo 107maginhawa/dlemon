@@ -87,5 +87,12 @@ test.describe('Insurance claims: file a claim from the worklist (slice 1b.A)', (
     // billed amount (₱50.00 = 5000¢ from the seeded treatment).
     await expect(page.getByTestId('claims-worklist')).toContainText('CLM-');
     await expect(page.getByTestId('claims-worklist')).toContainText('₱50.00');
+
+    // Slice 1b.B — open the claim and verify its derived line breakdown (the
+    // Prophylaxis line carried over from the anchor invoice).
+    await page.getByTestId('claims-worklist').getByRole('button', { name: /CLM-/ }).first().click();
+    await expect(page.getByTestId('claim-detail')).toBeVisible();
+    await expect(page.getByTestId('claim-detail')).toContainText('D1110');
+    await expect(page.getByTestId('claim-detail')).toContainText('Prophylaxis');
   });
 });

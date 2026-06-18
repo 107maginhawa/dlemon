@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { useInsuranceClaims, usePayerArAging, useClaimMutations } from '../hooks/use-insurance-claims';
 import { ClaimCreate } from './claim-create';
+import { ClaimDetail } from './claim-detail';
 import { ListErrorState } from '@/components/list-error-state';
 import {
   formatPeso,
@@ -47,6 +48,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
   const { submit, remit, markReady, isSubmitting, isRemitting } = useClaimMutations({ branchId });
 
   const [showCreate, setShowCreate] = useState(false);
+  const [detailFor, setDetailFor] = useState<string | null>(null);
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [payerReference, setPayerReference] = useState('');
   const [remitAmount, setRemitAmount] = useState('');
@@ -93,8 +95,12 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
         onCreated={() => { setShowCreate(false); refetch(); }}
       />
 
+      {detailFor && (
+        <ClaimDetail claimId={detailFor} open onClose={() => setDetailFor(null)} />
+      )}
+
       {/* Payer-AR aging summary */}
-      {aging && aging.payers.length > 0 && (
+      {aging?.payers && aging.payers.length > 0 && (
         <div className="bg-background rounded-2xl shadow-sm overflow-hidden" data-testid="payer-aging">
           <div className="px-5 py-3 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground border-b border-border">
             AR by payer · {formatPeso(aging.summary.totalOutstandingCents)} outstanding across {aging.summary.payerCount} payer{aging.summary.payerCount !== 1 ? 's' : ''}
@@ -172,7 +178,16 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                 {!isLoading && claims.map((claim) => (
                   <React.Fragment key={claim.id}>
                     <tr className="border-t border-border first:border-t-0">
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium pl-5">{claim.claimNumber}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium pl-5">
+                        <button
+                          type="button"
+                          data-testid={`claim-open-${claim.id}`}
+                          onClick={() => setDetailFor(claim.id)}
+                          className="text-left hover:text-lemon hover:underline underline-offset-2 transition-colors"
+                        >
+                          {claim.claimNumber}
+                        </button>
+                      </td>
                       <td className="px-4 py-0 h-12 align-middle">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${claimStatusClass(claim.status)}`}>
                           {CLAIM_STATUS_LABELS[claim.status]}

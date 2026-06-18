@@ -16,6 +16,8 @@ import {
   listCoverageAuthorizationsOptions,
   listCoverageAuthorizationsQueryKey,
   listPatientInsuranceProfilesOptions,
+  getInsuranceClaimOptions,
+  getInsuranceClaimQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
 import {
   createInsuranceClaim,
@@ -29,6 +31,7 @@ import {
   type CoverageEstimateResult,
   type DentalPatientFinanceModuleCoverageAuthorization,
   type DentalPatientFinanceModuleInsuranceProfile,
+  type InsuranceClaimWithLines,
 } from '@monobase/sdk-ts/generated';
 import { toInsuranceClaimRow } from '../components/insurance.helpers';
 import type { InsuranceClaimStatus } from '../components/insurance.helpers';
@@ -156,6 +159,24 @@ export function useClaimMutations({ branchId }: BranchOpt) {
     error: (create.error ?? submit.error ?? remit.error ?? markReady.error) as Error | null,
   };
 }
+
+// Single claim + its lines (detail view / line editor).
+export function useClaimDetail(claimId?: string | null) {
+  const query = useQuery({
+    ...getInsuranceClaimOptions({ path: { claimId: claimId ?? '' } }),
+    enabled: Boolean(claimId),
+    select: (data) => data as InsuranceClaimWithLines,
+  });
+  return {
+    claim: (query.data ?? null) as InsuranceClaimWithLines | null,
+    isLoading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
+  };
+}
+
+// Query key for the claim detail — handlers invalidate this after line edits.
+export const claimDetailQueryKey = (claimId: string) => getInsuranceClaimQueryKey({ path: { claimId } });
 
 // Patient insurance profiles — the payer picker for the create-claim form.
 export function usePatientInsuranceProfiles(patientId?: string | null) {
