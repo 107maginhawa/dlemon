@@ -25,6 +25,8 @@ export interface BranchSettings {
   dentistLicenseNumber?: string;
   // Fee schedule
   feeSchedule?: Record<string, number>;
+  // BR-048: clinic-wide default payment terms (days). Feeds dueDate at issue.
+  defaultPaymentTermsDays?: number;
   // Locale
   locale?: string;
   currency?: string;
