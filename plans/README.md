@@ -33,7 +33,7 @@ GREEN, before merge** (these touch patient clinical data).
 | 007 | Native git pre-commit hook (typecheck + lint, no new dep) | P3 | S | LOW | no | DONE (advisor/007) — .githooks/pre-commit + prepare→core.hooksPath, no dep; bad-path (TS2322) blocks commit, good-path allows; hook ran live on its own commit |
 | 008 | Surface calibration-save failures in imaging workspace (toast) | P3 | S | LOW | no | DONE (advisor/008) — try/catch→toastError + early-return (dialog stays open). Full render impractical (canvas + 4 data hooks), so used the plan-sanctioned extract: tiny confirmCalibrationSave orchestrator in handlers.ts (+2 unit tests). tsc 0, lint 0err |
 | 009 | Make carry-over treatment writes atomic via `withTenantTx` | P2 | M | MED | **yes** | DONE (advisor/009, commit 3730affd) — both write loops in one withTenantTx({branchIds:[currentVisit.branchId]}); dismissed read lifted to db; field mapping byte-identical. RED→GREEN (spyOn tx + persistence). Code review PASSED (impl correct; caught a stash-induced commit-split — amended). 41 tests pass, tsc 0, lint 0err |
-| 010 | acceptTreatmentPlan — validate consent form before snapshotting | P2 | S | LOW | **yes** | TODO |
+| 010 | acceptTreatmentPlan — validate consent form before snapshotting | P2 | S | LOW | **yes** | DONE (advisor/010, commit aff29686) — consent-form check hoisted above createSnapshotVersion (retry loop left un-wrapped); edited handler is the live route (dental-patient file is a codegen re-export shim). RED→GREEN (404+no-orphan) + added valid-link happy-path test. Code review PASSED (Yes, no Critical/Important). 10+21 tests pass, tsc 0, lint 0err |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
