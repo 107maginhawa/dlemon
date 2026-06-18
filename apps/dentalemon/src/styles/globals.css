@@ -183,6 +183,17 @@
   }
 }
 
+/* iPad / touch: force >=16px on form fields so iOS Safari does not auto-zoom
+   on focus. Scoped to coarse pointers — desktop (fine pointer) keeps its
+   tighter md:text-sm sizing. Covers shared <Input> and all raw <input>s. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* Reduced motion — disable animations, flatten carousel */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
