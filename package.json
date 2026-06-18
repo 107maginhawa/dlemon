@@ -32,6 +32,7 @@
     "typecheck": "bun run --filter dentalemon --filter '@monobase/api-ts' typecheck",
     "lint": "bun run --filter dentalemon --filter '@monobase/api-ts' lint && bun run check:fsm-tokens",
     "check:fsm-tokens": "bun scripts/check-fsm-tokens.ts",
+    "prepare": "git config core.hooksPath .githooks || true",
     "test": "bun run --filter dentalemon test",
     "test:e2e": "bun run --filter dentalemon test:e2e",
     "turbo:typecheck": "turbo run typecheck --filter=dentalemon --filter=@monobase/api-ts",
