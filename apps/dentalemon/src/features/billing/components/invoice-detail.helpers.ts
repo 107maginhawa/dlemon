@@ -146,10 +146,8 @@ export function calcChangeAmount(tenderedCents: number, totalCents: number): num
   return Math.max(0, tenderedCents - totalCents);
 }
 
-export function formatCents(cents: number): string {
-  const pesos = cents / 100;
-  return `₱${pesos.toFixed(2)}`;
-}
+// Grouped ₱ / en-PH formatting via the shared single-source formatter.
+export { formatCents } from '@/lib/format-currency';
 
 export function getStatusBadgeClass(status: string): string {
   switch (status) {

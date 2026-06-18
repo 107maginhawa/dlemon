@@ -158,10 +158,10 @@ describe('InvoiceDetail — void a payment (owner-only)', () => {
 
       // Coherence: after the refetch the Balance Remaining is restored to the full
       // total (₱2,500.00) — the void response alone did not carry it. Scope the
-      // assertion to the balance row (₱2500.00 also appears as subtotal + total).
+      // assertion to the balance row (₱2,500.00 also appears as subtotal + total).
       const balanceText = () =>
         screen.getByText('Balance Remaining').parentElement!.lastElementChild!.textContent;
-      await waitFor(() => expect(balanceText()).toBe('₱2500.00'));
+      await waitFor(() => expect(balanceText()).toBe('₱2,500.00'));
       // The voided payment stays in the list (soft-delete), flagged as voided.
       await waitFor(() => expect(screen.getByText(/voided/i)).not.toBeNull());
       expect((onUpdated as any).mock.calls.length).toBeGreaterThanOrEqual(1);

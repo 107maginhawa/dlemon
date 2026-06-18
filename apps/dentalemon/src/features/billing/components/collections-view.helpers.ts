@@ -6,6 +6,7 @@
  */
 
 import type { ArAgingPatientRow, ArAgingSummary, PatientStatement } from '@monobase/sdk-ts/generated';
+import { formatCents } from '@/lib/format-currency';
 
 // Cause-fix (oli QA_ESCAPES §6): these were hand-rolled duplicates of the
 // generated SDK rows (field-for-field identical, live-confirmed 2026-06-04).
@@ -21,10 +22,8 @@ export const AGING_BUCKETS = [
   { key: 'days90PlusCents', label: '90+', sublabel: '90+ days' },
 ] as const;
 
-/** Format integer cents as a Philippine Peso string (matches invoice-detail). */
-export function formatCents(cents: number): string {
-  return `₱${(cents / 100).toFixed(2)}`;
-}
+/** Re-exported for existing importers; grouped ₱ / en-PH via the shared formatter. */
+export { formatCents };
 
 /**
  * Risk tier for a patient's oldest outstanding invoice. Drives the row accent

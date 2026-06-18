@@ -10,6 +10,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getDentalPaymentPlanOptions } from '@monobase/sdk-ts/generated/react-query';
 import { Skeleton } from '@monobase/ui';
+import { formatCents } from '@/lib/format-currency';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,11 +85,6 @@ export function calcProgress(paidCents: number, totalCents: number): number {
 
 export function isInstallmentOverdue(installment: { status: string }): boolean {
   return installment.status === 'overdue';
-}
-
-function formatCents(cents: number): string {
-  const pesos = cents / 100;
-  return `₱${pesos.toFixed(2)}`;
 }
 
 function formatPlanStatus(status: string): string {

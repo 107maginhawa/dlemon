@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useInvoices, type Invoice } from '../hooks/use-invoices';
 import { ListErrorState } from '@/components/list-error-state';
+import { formatCents } from '@/lib/format-currency';
 
 // ---------------------------------------------------------------------------
 // Types — Invoice is the single SDK-derived type (see use-invoices); no local
@@ -57,10 +58,8 @@ export function getStatusBadgeClass(status: string): string {
   }
 }
 
-export function formatCents(cents: number): string {
-  const pesos = cents / 100;
-  return `\u20B1${pesos.toFixed(2)}`;
-}
+// Re-exported for existing importers; grouped \u20B1 / en-PH via the shared formatter.
+export { formatCents };
 
 export function getBalanceClass(balanceCents: number): string {
   return balanceCents > 0 ? 'text-destructive-emphasis font-bold' : 'text-success-foreground font-bold';

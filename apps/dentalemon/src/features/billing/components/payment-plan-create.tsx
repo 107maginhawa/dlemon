@@ -12,10 +12,7 @@ import { useMutation } from '@tanstack/react-query';
 import { createDentalPaymentPlanMutation } from '@monobase/sdk-ts/generated/react-query';
 import type { PlanFrequency } from '@monobase/sdk-ts/generated';
 import { getErrorMessage } from '@/lib/error-toast';
-
-function formatCents(cents: number): string {
-  return `₱${(cents / 100).toFixed(2)}`;
-}
+import { formatCents } from '@/lib/format-currency';
 
 const FREQUENCIES: { value: PlanFrequency; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
