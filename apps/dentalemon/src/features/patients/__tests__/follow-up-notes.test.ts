@@ -89,6 +89,27 @@ describe('FollowUpNotes', () => {
     await waitFor(() => expect((screen.getByTestId('note-input') as HTMLTextAreaElement).value).toBe(''));
   });
 
+  test('keeps the typed note and shows an error when save fails', async () => {
+    const user = userEvent.setup();
+    let callCount = 0;
+    global.fetch = mock(() => {
+      callCount++;
+      if (callCount === 1) return jsonResponse({ notes: [], total: 0 }); // GET
+      return new Response('error', { status: 500 }); // POST fails
+    }) as unknown as typeof fetch;
+    renderNotes();
+    await waitFor(() => expect(screen.getByTestId('note-input')).not.toBeNull());
+
+    const textarea = screen.getByTestId('note-input') as HTMLTextAreaElement;
+    await user.clear(textarea);
+    await user.type(textarea, 'Important clinical note');
+    await act(async () => { await user.click(screen.getByTestId('note-submit')); });
+
+    // The note must NOT be lost, and the failure must be visible.
+    await waitFor(() => expect(screen.getByText(/could not save note/i)).not.toBeNull());
+    expect((screen.getByTestId('note-input') as HTMLTextAreaElement).value).toBe('Important clinical note');
+  });
+
   test('submit button is disabled when textarea is empty', async () => {
     global.fetch = mock(() => jsonResponse({ notes: [], total: 0 }));
     renderNotes();

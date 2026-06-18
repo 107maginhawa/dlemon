@@ -29,7 +29,7 @@ interface FollowUpNotesProps {
 
 export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
   const { notes, isLoading, error } = useFollowUpNotes({ patientId });
-  const { addNote, isPending } = useAddFollowUpNote({ patientId });
+  const { addNote, isPending, error: addError } = useAddFollowUpNote({ patientId });
   const [text, setText] = useState('');
 
   // V-PAT-013: note text must be 5–2000 characters (matches the API contract).
@@ -39,8 +39,7 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
   const handleSubmit = () => {
     const trimmed = text.trim();
     if (!isValid) return;
-    addNote(trimmed);
-    setText('');
+    addNote(trimmed, { onSuccess: () => setText('') });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -82,6 +81,11 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
             {isPending ? 'Saving...' : 'Add Note'}
           </button>
         </div>
+        {addError && (
+          <p className="mt-2 text-sm text-destructive" role="alert">
+            Could not save note. Please try again.
+          </p>
+        )}
       </div>
 
       {/* Notes list */}

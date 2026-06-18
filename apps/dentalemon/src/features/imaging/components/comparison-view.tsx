@@ -100,6 +100,11 @@ export function ComparisonView({ imageA, imageB, onClose }: ComparisonViewProps)
         }
       },
     )
+      .catch(() => {
+        if (cancelled) return
+        setUrlA(null)
+        setUrlB(null)
+      })
     return () => {
       cancelled = true
       objectUrls.forEach(URL.revokeObjectURL)

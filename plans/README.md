@@ -1,12 +1,52 @@
 # Implementation Plans
 
-Two `improve` runs are recorded here.
+Three `improve` runs are recorded here.
 
 - **Run 1** — 2026-06-17, commit `6bcb3af6`. Plans **001–004** (all DONE/RESOLVED).
-- **Run 2** — 2026-06-18, commit `c3d93891`. Plans **005–010** (this batch).
+- **Run 2** — 2026-06-18, commit `c3d93891`. Plans **005–010** (all DONE).
+- **Run 3** — 2026-06-18, commit `9524a2d3`. Plan **011** (this batch).
 
 Each executor: read the plan fully before starting, honor its STOP conditions,
 run the drift check first, and update your row when done.
+
+---
+
+## Run 3 — 2026-06-18 (commit `9524a2d3`)
+
+A re-audit after Run 2, explicitly excluding everything already tracked/rejected
+in Runs 1–2 and `docs/KNOWN_LIMITATIONS.md`. It was a deliberately **thin** run —
+no P0/P1; the prior runs cleared the high-leverage backlog and most of what
+remains is multi-tenant-cloud-scale concern (deferred for the local-first,
+1–3-dentist-clinic v1). Only the two cheap, real frontend error-handling bugs
+(same class as plan 008) were worth planning now.
+
+### Run 3 status
+
+| Plan | Title | Priority | Effort | Risk | Review-gated | Status |
+|------|-------|----------|--------|------|--------------|--------|
+| 011 | Surface 2 silent FE failures (image-compare blob-load + follow-up-note save) | P3 | S | LOW | no | DONE (advisor/011) — Bug1: `.catch`→both urls null routes openDB rejection to OfflinePlaceholder (`.then` byte-unchanged); Bug2: `addNote(text,{onSuccess})` clears textarea only on 2xx + inline "Could not save note" on error. RED→GREEN both; +2 tests (reject-open fake IDB / POST 500). tsc 0, lint 0err |
+
+### Run 3 — findings considered and NOT planned (so nobody re-audits them)
+
+Vetted against live code at `9524a2d3`:
+
+- **Payment-plan / insurance-claim FSM check-then-act race** (`dental-billing/repos/dental-payment-plan.repo.ts:198` setStatus reads→checks→updates with no row lock). REAL race class, but the auditor's premise ("a `version` field exists but is unused") is **false** — there is no version column. For a local-first single-clinic product, concurrent transitions on the same plan are near-impossible. Deferred to multi-tenant-cloud prep (fix then = compare-and-swap `WHERE status = ?` or `SELECT … FOR UPDATE`, no new column needed).
+- **New N+1 instances**: `dental-perio/listPerioChartsForPatient.ts:58` (1 query/chart, ≤12), `dental-imaging/getImagingStudy.ts` + `listPatientImages.ts` (per-image teeth + per-image presigned S3 URL). Bounded per request; same family as the documented `listDentalInvoices` N+1. Cloud-scale; not now.
+- **`booking/updateScheduleException.ts:36` mass-assignment** (`updateOneById(id, body)`, no zod). Auditor claimed cross-user IDOR — **false**: the handler enforces `exception.owner !== personId → 403`. Also the route is **not in the OpenAPI registry** (`booking` = generic template module, unmounted in dentalemon) → not a live surface. Residual = low-severity self-record mass-assignment on near-dead code. Not worth it.
+- **`dental-clinical/consent/listConsentRefusals.ts` no pagination**: already known — this is the exact handler plan 006 deliberately left as-is (returns all in one page).
+- **`dental-org/branchSettings.ts` `.passthrough()` schema**: settings are stored as opaque JSON; low-signal hygiene, not a live bug.
+- **Direction (options, not problems)**: SDK has only 2 hand-written flows (`packages/sdk-ts/src/flows/`) — a clinical/imaging multi-step flow would help *external* SDK consumers (only worth it if that's a goal); the E2E job is non-blocking (`quality.yml:325`, `continue-on-error: true`, "drop once green") — splitting into a blocking no-infra tier + optional infra tier would let real regressions gate CI.
+
+### Run 3 — Rust hardening (separate concern, not planned here)
+
+`services/cadence` + `services/api-ts-embedded` were never audited before. A light
+read found panic-on-untrusted-input sites: JWKS parse `.unwrap()`
+(`cadence/src/auth.rs:435,569`), stream `pop_front().unwrap()`
+(`cadence/src/stream.rs:146,233`), embedded `serde_json::to_string().unwrap()` ×6
+(`api-ts-embedded/src/engine.rs`), and `lock().unwrap()` mutex-poison patterns.
+Real defensive-hardening items, but cadence sync is "not yet fully exercised"
+(per CLAUDE.md) and the product is local-first — worth a dedicated Rust-hardening
+plan **if/when** live P2P sync gets exercised, not now.
 
 ---
 

@@ -63,11 +63,14 @@ export function useAddFollowUpNote({ patientId }: UseAddFollowUpNoteOptions) {
     },
   });
 
-  const addNote = (text: string) => {
-    mutation.mutate({
-      path: { id: patientId },
-      body: { text },
-    });
+  const addNote = (text: string, opts?: { onSuccess?: () => void }) => {
+    mutation.mutate(
+      {
+        path: { id: patientId },
+        body: { text },
+      },
+      opts,
+    );
   };
 
   return {
