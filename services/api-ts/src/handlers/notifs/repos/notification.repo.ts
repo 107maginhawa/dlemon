@@ -355,7 +355,10 @@ export class NotificationRepository extends DatabaseRepository<Notification, New
       .where(
         and(
           eq(notifications.status, 'queued'),
-          lte(notifications.scheduledAt, now)
+          or(
+            lte(notifications.scheduledAt, now),
+            isNull(notifications.scheduledAt),
+          ),
         )
       )
       .limit(100); // Process in batches
