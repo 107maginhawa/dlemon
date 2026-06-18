@@ -1,3 +1,4 @@
+import { parseUserRoles } from '@/handlers/shared/parse-user-roles';
 import type { ValidatedContext } from '@/types/app';
 import type { ListEmailQueueItemsQuery } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
@@ -23,7 +24,7 @@ export async function listEmailQueueItems(
   const user = ctx.get('user') as User;
 
   // Verify admin role is required for email queue management
-  const userRoles = user.role ? user.role.split(',').map(r => r.trim()) : [];
+  const userRoles = parseUserRoles(user);
   if (!userRoles.includes('admin')) {
     throw new ForbiddenError('Admin role required for email queue management');
   }
