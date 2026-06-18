@@ -81,7 +81,7 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
   return (
     <Sidebar>
       <SidebarHeader className="flex flex-row h-16 items-center gap-2 border-b border-sidebar-border px-4">
-        <Logo variant="horizontal" size="md" />
+        <Logo variant="horizontal" size="md" alt="Dentalemon" />
         {headerSubtitle && (
           <p className="text-xs text-sidebar-foreground/60">{headerSubtitle}</p>
         )}

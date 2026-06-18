@@ -13,11 +13,11 @@ function RouteComponent() {
   const authHeaders = {
     'sign-in': {
       title: 'Welcome back',
-      subtitle: 'Sign in to your Monobase account'
+      subtitle: 'Sign in to your Dentalemon account'
     },
     'sign-up': {
       title: 'Create an account',
-      subtitle: 'Join Monobase today'
+      subtitle: 'Join Dentalemon today'
     },
     'forgot-password': {
       title: 'Reset your password',
@@ -45,7 +45,7 @@ function RouteComponent() {
         {headerContent && (
           <div className="text-center mb-6">
             <div className="flex justify-center mb-3">
-              <Logo variant="horizontal" size="xl" />
+              <Logo variant="horizontal" size="xl" alt="Dentalemon" />
             </div>
             <h1 className="text-2xl font-headline font-bold text-foreground">{headerContent.title}</h1>
             <p className="subtitle text-muted-foreground mt-2">{headerContent.subtitle}</p>

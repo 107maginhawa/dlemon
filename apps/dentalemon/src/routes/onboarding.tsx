@@ -221,9 +221,9 @@ function OnboardingPage() {
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <Logo variant="horizontal" size="xl" />
+            <Logo variant="horizontal" size="xl" alt="Dentalemon" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome to Monobase</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome to Dentalemon</h1>
           <p className="text-gray-600 mt-2">Let's set up your profile</p>
         </div>
 
