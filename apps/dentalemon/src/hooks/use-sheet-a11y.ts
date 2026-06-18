@@ -44,6 +44,9 @@ export function useSheetA11y({ open, onClose }: UseSheetA11yOptions) {
   }, [open]);
 
   // Close on Escape while the sheet is open.
+  // NOTE: do NOT use this hook on a Radix Dialog/Sheet — Radix has its own
+  // capture-phase Escape handler and the stopPropagation() below would
+  // suppress it. This hook is only for hand-rolled overlays.
   useEffect(() => {
     if (!open) return;
 

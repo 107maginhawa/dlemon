@@ -34,6 +34,11 @@ const buttonVariants = cva(
         icon: "h-9 w-9 coarse:size-11",
       },
     },
+    compoundVariants: [
+      // The link variant is inline text, not a box — don't force a 44px
+      // touch height on it (would break surrounding text layout on iPad).
+      { variant: "link", className: "coarse:min-h-0" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

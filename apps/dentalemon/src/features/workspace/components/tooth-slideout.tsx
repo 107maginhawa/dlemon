@@ -251,7 +251,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
   return (
     <aside
       data-testid="tooth-slideout"
-      className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl overflow-y-auto z-30 lg:translate-x-0 max-lg:bottom-0 max-lg:top-0 max-lg:w-full max-lg:z-50"
+      className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl overflow-y-auto z-30 lg:translate-x-0 max-lg:bottom-0 max-lg:top-0 max-lg:w-full max-lg:z-50 max-lg:pb-[env(safe-area-inset-bottom)]"
       style={{ transform: 'translateX(0)' }}
       aria-label={`Tooth ${toothNumber} details`}
     >

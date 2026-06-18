@@ -11,6 +11,8 @@ import type { KeyboardEvent } from 'react';
  */
 export function activateOnKey(handler: () => void) {
   return (e: KeyboardEvent) => {
+    // Ignore auto-repeat from a held key — native buttons fire once per press.
+    if (e.repeat) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handler();
