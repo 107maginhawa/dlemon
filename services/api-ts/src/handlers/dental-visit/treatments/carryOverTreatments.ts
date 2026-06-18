@@ -18,6 +18,7 @@ import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { withTenantTx } from '@/core/tenant-tx';
 import { VisitRepository } from '../repos/visit.repo';
 import { TreatmentRepository } from '../repos/treatment.repo';
 import type { DentalTreatment } from '../repos/treatment.schema';
@@ -46,7 +47,6 @@ export async function carryOverTreatments(ctx: BaseContext) {
   const body = carryOverBodySchema.parse(rawBody);
 
   const visitRepo = new VisitRepository(db);
-  const treatmentRepo = new TreatmentRepository(db);
 
   const currentVisit = await visitRepo.findOneById(visitId);
   if (!currentVisit) throw new NotFoundError('Visit not found');
@@ -100,29 +100,11 @@ export async function carryOverTreatments(ctx: BaseContext) {
       )
     );
 
-  // Create carry-over copies in current visit
-  const carriedOver = await Promise.all(
-    pendingTreatments.map(t =>
-      treatmentRepo.createOne({
-        visitId,
-        patientId: currentVisit.patientId,
-        cdtCode: t.cdtCode,
-        description: t.description,
-        toothNumber: t.toothNumber ?? undefined,
-        surfaces: t.surfaces ?? undefined,
-        conditionCode: t.conditionCode ?? undefined,
-        priceCents: t.priceCents,
-        status: t.status,
-        carriedOver: true,
-        sourceVisitId: t.visitId,
-      })
-    )
-  );
-
-  // FR1.11: Restore from dismissed if requested
-  const restoredDismissed: DentalTreatment[] = [];
+  // FR1.11: resolve the dismissed treatments to restore (READ stays on `db`,
+  // outside the write tx — same ADR-010 split as the reads above).
+  let dismissedTreatments: DentalTreatment[] = [];
   if (Array.isArray(body?.restoreDismissedIds) && body.restoreDismissedIds.length > 0) {
-    const dismissedTreatments = await db
+    dismissedTreatments = await db
       .select()
       .from(dentalTreatments)
       .where(
@@ -132,24 +114,58 @@ export async function carryOverTreatments(ctx: BaseContext) {
           eq(dentalTreatments.patientId, currentVisit.patientId)
         )
       );
-
-    for (const t of dismissedTreatments) {
-      const restored = await treatmentRepo.createOne({
-        visitId,
-        patientId: currentVisit.patientId,
-        cdtCode: t.cdtCode,
-        description: t.description,
-        toothNumber: t.toothNumber ?? undefined,
-        surfaces: t.surfaces ?? undefined,
-        conditionCode: t.conditionCode ?? undefined,
-        priceCents: t.priceCents,
-        status: 'planned',
-        carriedOver: true,
-        sourceVisitId: t.visitId,
-      });
-      restoredDismissed.push(restored);
-    }
   }
+
+  // Atomicity (ADR-010): both write loops run in ONE tenant tx scoped to the
+  // current visit's branch, so a partial failure rolls the whole batch back
+  // instead of leaving some carried/restored rows committed. The repo is re-bound
+  // to the tx connection (createOne is a plain INSERT, no internal tx).
+  const { carriedOver, restoredDismissed } = await withTenantTx(
+    db,
+    { branchIds: [currentVisit.branchId] },
+    async (tx) => {
+      const txRepo = new TreatmentRepository(tx);
+
+      // Create carry-over copies in current visit
+      const carried = await Promise.all(
+        pendingTreatments.map(t =>
+          txRepo.createOne({
+            visitId,
+            patientId: currentVisit.patientId,
+            cdtCode: t.cdtCode,
+            description: t.description,
+            toothNumber: t.toothNumber ?? undefined,
+            surfaces: t.surfaces ?? undefined,
+            conditionCode: t.conditionCode ?? undefined,
+            priceCents: t.priceCents,
+            status: t.status,
+            carriedOver: true,
+            sourceVisitId: t.visitId,
+          })
+        )
+      );
+
+      // FR1.11: Restore from dismissed if requested
+      const restored: DentalTreatment[] = [];
+      for (const t of dismissedTreatments) {
+        restored.push(await txRepo.createOne({
+          visitId,
+          patientId: currentVisit.patientId,
+          cdtCode: t.cdtCode,
+          description: t.description,
+          toothNumber: t.toothNumber ?? undefined,
+          surfaces: t.surfaces ?? undefined,
+          conditionCode: t.conditionCode ?? undefined,
+          priceCents: t.priceCents,
+          status: 'planned',
+          carriedOver: true,
+          sourceVisitId: t.visitId,
+        }));
+      }
+
+      return { carriedOver: carried, restoredDismissed: restored };
+    },
+  );
 
   logger?.info(
     { action: 'carryOverTreatments', visitId, sourceVisitId: body.sourceVisitId ?? null, carriedCount: carriedOver.length, restoredCount: restoredDismissed.length },
