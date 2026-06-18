@@ -11,15 +11,7 @@
  *   formatCents(15000)      // "₱150.00"  (amount in centavos ÷ 100)
  */
 
-import { CURRENCY_SYMBOL, APP_LOCALE, CURRENCY_CODE } from '@/constants/brand';
-
-const formatter = new Intl.NumberFormat(APP_LOCALE, {
-  style: 'currency',
-  currency: CURRENCY_CODE,
-  // Intl prepends the currency symbol; we strip it and use our own constant
-  // so that the symbol is always ₱ regardless of runtime locale quirks.
-  currencyDisplay: 'narrowSymbol',
-});
+import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
 /**
  * Format a peso amount (already in pesos/PHP, not centavos).
