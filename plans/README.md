@@ -32,7 +32,7 @@ GREEN, before merge** (these touch patient clinical data).
 | 006 | Push dental-clinical list pagination into the DB (7 repos + handlers) | P2 | M | MED | no | DONE (advisor/006) — 7 overrides deleted, 6 handlers→count+findMany(pagination); consent-refusal handler left as-is (no slice, just override dropped); 185 affected tests pass, tsc 0, lint 346w |
 | 007 | Native git pre-commit hook (typecheck + lint, no new dep) | P3 | S | LOW | no | DONE (advisor/007) — .githooks/pre-commit + prepare→core.hooksPath, no dep; bad-path (TS2322) blocks commit, good-path allows; hook ran live on its own commit |
 | 008 | Surface calibration-save failures in imaging workspace (toast) | P3 | S | LOW | no | DONE (advisor/008) — try/catch→toastError + early-return (dialog stays open). Full render impractical (canvas + 4 data hooks), so used the plan-sanctioned extract: tiny confirmCalibrationSave orchestrator in handlers.ts (+2 unit tests). tsc 0, lint 0err |
-| 009 | Make carry-over treatment writes atomic via `withTenantTx` | P2 | M | MED | **yes** | TODO |
+| 009 | Make carry-over treatment writes atomic via `withTenantTx` | P2 | M | MED | **yes** | DONE (advisor/009, commit 3730affd) — both write loops in one withTenantTx({branchIds:[currentVisit.branchId]}); dismissed read lifted to db; field mapping byte-identical. RED→GREEN (spyOn tx + persistence). Code review PASSED (impl correct; caught a stash-induced commit-split — amended). 41 tests pass, tsc 0, lint 0err |
 | 010 | acceptTreatmentPlan — validate consent form before snapshotting | P2 | S | LOW | **yes** | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
