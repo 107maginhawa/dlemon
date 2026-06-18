@@ -28,6 +28,7 @@ import {
   buildLabelMeasurement,
   buildToothMeasurement,
   buildCalibrationRequest,
+  confirmCalibrationSave,
 } from './imaging-workspace.handlers'
 
 interface ImagingWorkspaceProps {
@@ -337,21 +338,27 @@ export function ImagingWorkspace({
       // drawPoints still holds the two calibration points the operator drew.
       const req = buildCalibrationRequest({ points: drawPoints, actualMm })
       if (!req) return
-      await imagingMgmtUpdateImageCalibration({
-        path: { imageId },
-        body: {
-          pixelSpacingMm: req.pixelSpacingMm,
-          pointA: req.pointA,
-          pointB: req.pointB,
-          knownDistanceMm: req.knownDistanceMm,
+      await confirmCalibrationSave({
+        save: () =>
+          imagingMgmtUpdateImageCalibration({
+            path: { imageId },
+            body: {
+              pixelSpacingMm: req.pixelSpacingMm,
+              pointA: req.pointA,
+              pointB: req.pointB,
+              knownDistanceMm: req.knownDistanceMm,
+            },
+            throwOnError: true,
+          }),
+        onError: (err) => toastError(err, 'Could not save calibration.'),
+        onSuccess: () => {
+          setInternalPixelSpacingMm(req.pixelSpacingMm)
+          onCalibrationSaved?.(req.pixelSpacingMm)
+          setCalibrationOpen(false)
+          setDrawPoints([])
+          setToolMode('none')
         },
-        throwOnError: true,
       })
-      setInternalPixelSpacingMm(req.pixelSpacingMm)
-      onCalibrationSaved?.(req.pixelSpacingMm)
-      setCalibrationOpen(false)
-      setDrawPoints([])
-      setToolMode('none')
     },
     [drawPoints, imageId, onCalibrationSaved],
   )
