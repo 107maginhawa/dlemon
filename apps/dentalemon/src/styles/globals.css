@@ -159,6 +159,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-variant-numeric: tabular-nums;
+    /* Stop the whole page rubber-banding / scroll-chaining on iPad. */
+    overscroll-behavior: contain;
+  }
+
+  /* The app has its own pressed states; suppress the iOS grey tap flash. */
+  a, button, [role="button"], [role="tab"], [role="switch"], [role="menuitem"], summary, label {
+    -webkit-tap-highlight-color: transparent;
   }
 
   .hairline {
@@ -200,6 +207,15 @@
   select {
     font-size: 16px;
   }
+}
+
+/* iPad safe area: with viewport-fit=cover the layout extends under the home
+   indicator. Lift slide-up sheet panels (the bottom-anchored action bars) above
+   it. env() resolves to 0 on devices without insets, so this is a no-op on
+   desktop and non-notch devices. The .rounded-t-2xl.shadow-2xl pair is unique
+   to these sheet panels (flex-col, no existing bottom padding → additive). */
+.rounded-t-2xl.shadow-2xl {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Reduced motion — disable animations, flatten carousel */
