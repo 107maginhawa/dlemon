@@ -141,7 +141,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                           <th className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2">Billed</th>
                           <th className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2">Approved</th>
                           <th className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2">Paid</th>
-                          <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2">{editable ? '' : 'Status'}</th>
+                          <th className={`text-xs font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2 ${editable ? 'text-right' : 'text-left'}`}>{editable ? 'Action' : 'Status'}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -170,8 +170,8 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                               <td className="px-3 py-2 text-sm tabular-nums text-right text-muted-foreground">—</td>
                               <td className="px-3 py-2">
                                 <div className="flex items-center gap-1.5 justify-end">
-                                  <button type="button" onClick={() => handleSaveLine(l.id)} disabled={isMutating} data-testid={`save-line-${l.id}`} className="h-8 px-3 rounded-lg bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover disabled:opacity-50">Save</button>
-                                  <button type="button" onClick={() => setEditingId(null)} className="h-8 px-2 rounded-lg border border-border text-xs hover:bg-secondary">Cancel</button>
+                                  <button type="button" onClick={() => handleSaveLine(l.id)} disabled={isMutating} data-testid={`save-line-${l.id}`} className="h-9 px-3 rounded-lg bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none">Save</button>
+                                  <button type="button" onClick={() => setEditingId(null)} className="h-9 px-3 min-w-[4rem] rounded-lg border border-border text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring outline-none">Cancel</button>
                                 </div>
                               </td>
                             </tr>
@@ -184,7 +184,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                               <td className="px-3 py-2 text-sm tabular-nums text-right">{formatPeso(l.paidAmountCents)}</td>
                               <td className="px-3 py-2 text-xs text-right">
                                 {editable ? (
-                                  <button type="button" onClick={() => startEdit(l.id, l.billedAmountCents, l.description)} data-testid={`edit-line-${l.id}`} className="h-8 px-3 rounded-lg bg-secondary/60 text-xs font-medium hover:bg-secondary">Edit</button>
+                                  <button type="button" onClick={() => startEdit(l.id, l.billedAmountCents, l.description)} data-testid={`edit-line-${l.id}`} className="h-9 px-3 rounded-lg bg-secondary/60 text-xs font-medium hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring outline-none">Edit</button>
                                 ) : (
                                   <span className="text-muted-foreground">{LINE_STATUS_LABEL[l.status] ?? l.status}</span>
                                 )}
@@ -212,7 +212,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                       <span className="text-muted-foreground">Billed (₱)</span>
                       <input value={newBilled} onChange={(e) => setNewBilled(e.target.value)} inputMode="decimal" data-testid="add-line-billed" placeholder="0.00" className="h-9 px-2 w-28 rounded-lg border border-border text-sm tabular-nums text-right" />
                     </label>
-                    <button type="button" onClick={handleAddLine} disabled={isMutating || !newCdt.trim() || !newBilled.trim()} data-testid="add-line-submit" className="h-9 px-4 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover disabled:opacity-50">
+                    <button type="button" onClick={handleAddLine} disabled={isMutating || !newCdt.trim() || !newBilled.trim()} data-testid="add-line-submit" className="h-9 px-4 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none">
                       {isMutating ? 'Adding…' : 'Add line'}
                     </button>
                   </div>
@@ -224,7 +224,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                 <section className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Coverage estimate</span>
-                    <button type="button" onClick={handleEstimate} disabled={isEstimating} data-testid="estimate-coverage-btn" className="h-8 px-3 rounded-lg bg-secondary/60 text-xs font-medium hover:bg-secondary disabled:opacity-50">
+                    <button type="button" onClick={handleEstimate} disabled={isEstimating} data-testid="estimate-coverage-btn" className="h-9 px-3 rounded-lg bg-secondary/60 text-xs font-medium hover:bg-secondary disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none">
                       {isEstimating ? 'Estimating…' : estimateResult ? 'Re-estimate' : 'Estimate coverage'}
                     </button>
                   </div>
