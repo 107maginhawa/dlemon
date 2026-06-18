@@ -94,5 +94,13 @@ test.describe('Insurance claims: file a claim from the worklist (slice 1b.A)', (
     await expect(page.getByTestId('claim-detail')).toBeVisible();
     await expect(page.getByTestId('claim-detail')).toContainText('D1110');
     await expect(page.getByTestId('claim-detail')).toContainText('Prophylaxis');
+
+    // Slice 1b.C — add a line to the (draft) claim and verify it materialises.
+    await page.getByTestId('add-line-cdt').fill('D0220');
+    await page.getByTestId('add-line-description').fill('Periapical X-ray');
+    await page.getByTestId('add-line-billed').fill('30.00');
+    await page.getByTestId('add-line-submit').click();
+    await expect(page.getByTestId('claim-detail')).toContainText('D0220');
+    await expect(page.getByTestId('claim-detail')).toContainText('Periapical X-ray');
   });
 });

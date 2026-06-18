@@ -96,7 +96,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
       />
 
       {detailFor && (
-        <ClaimDetail claimId={detailFor} open onClose={() => setDetailFor(null)} />
+        <ClaimDetail claimId={detailFor} open canWrite={canWrite} branchId={branchId} onClose={() => setDetailFor(null)} />
       )}
 
       {/* Payer-AR aging summary */}

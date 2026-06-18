@@ -93,6 +93,12 @@ export function canSubmitClaim(status: InsuranceClaimStatus): boolean {
   return CLAIM_FSM[status].includes('submitted');
 }
 
+/** Lines may be added/edited only before submission — mirrors the backend gate
+ *  in addInsuranceClaimLine (`status !== 'draft' && status !== 'ready'`). */
+export function isClaimEditable(status: InsuranceClaimStatus): boolean {
+  return status === 'draft' || status === 'ready';
+}
+
 export function canRecordRemittance(status: InsuranceClaimStatus): boolean {
   // A payer remittance is meaningful once the claim has been decided.
   return status === 'approved' || status === 'partially_paid' || status === 'submitted' || status === 'under_review';

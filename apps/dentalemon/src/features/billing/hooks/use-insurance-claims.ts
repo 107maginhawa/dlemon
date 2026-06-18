@@ -21,6 +21,8 @@ import {
 } from '@monobase/sdk-ts/generated/react-query';
 import {
   createInsuranceClaim,
+  addInsuranceClaimLine,
+  updateInsuranceClaimLine,
   updateInsuranceClaimStatus,
   recordClaimRemittance,
   estimateClaimCoverage,
@@ -177,6 +179,40 @@ export function useClaimDetail(claimId?: string | null) {
 
 // Query key for the claim detail — handlers invalidate this after line edits.
 export const claimDetailQueryKey = (claimId: string) => getInsuranceClaimQueryKey({ path: { claimId } });
+
+// Add / update lines on a claim (line editor). Invalidates the claim detail (and
+// the worklist totals) so the rollup re-renders from the server's recompute.
+export function useClaimLineMutations(claimId: string, branchId?: string | null) {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: claimDetailQueryKey(claimId) });
+    queryClient.invalidateQueries({ queryKey: listInsuranceClaimsQueryKey({ query: { branchId: branchId ?? undefined } }) });
+  };
+
+  const addLine = useMutation({
+    mutationFn: async (args: { cdtCode: string; description: string; billedAmountCents: number; treatmentId?: string; invoiceLineItemId?: string }) => {
+      const { data } = await addInsuranceClaimLine({ path: { claimId }, body: args, throwOnError: true });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateLine = useMutation({
+    mutationFn: async (args: { lineId: string; billedAmountCents?: number; description?: string; approvedAmountCents?: number; paidAmountCents?: number; status?: 'pending' | 'covered' | 'partial' | 'disallowed' }) => {
+      const { lineId, ...body } = args;
+      const { data } = await updateInsuranceClaimLine({ path: { claimId, lineId }, body, throwOnError: true });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
+  return {
+    addLine: addLine.mutateAsync,
+    updateLine: updateLine.mutateAsync,
+    isMutating: addLine.isPending || updateLine.isPending,
+    error: (addLine.error ?? updateLine.error) as Error | null,
+  };
+}
 
 // Patient insurance profiles — the payer picker for the create-claim form.
 export function usePatientInsuranceProfiles(patientId?: string | null) {
