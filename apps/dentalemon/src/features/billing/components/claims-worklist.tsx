@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { useInsuranceClaims, usePayerArAging, useClaimMutations } from '../hooks/use-insurance-claims';
+import { ClaimCreate } from './claim-create';
 import { ListErrorState } from '@/components/list-error-state';
 import {
   formatPeso,
@@ -45,6 +46,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
   const { aging } = usePayerArAging({ branchId });
   const { submit, remit, markReady, isSubmitting, isRemitting } = useClaimMutations({ branchId });
 
+  const [showCreate, setShowCreate] = useState(false);
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [payerReference, setPayerReference] = useState('');
   const [remitAmount, setRemitAmount] = useState('');
@@ -69,6 +71,28 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
 
   return (
     <div className="flex flex-col gap-4" data-testid="claims-worklist">
+      {/* Header: title + originate a new claim */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold tracking-tight">Insurance claims</h2>
+        {canWrite && (
+          <button
+            type="button"
+            data-testid="new-claim-btn"
+            onClick={() => setShowCreate(true)}
+            className="h-8 px-3 rounded-lg bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover transition-colors"
+          >
+            New claim
+          </button>
+        )}
+      </div>
+
+      <ClaimCreate
+        branchId={branchId}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={() => { setShowCreate(false); refetch(); }}
+      />
+
       {/* Payer-AR aging summary */}
       {aging && aging.payers.length > 0 && (
         <div className="bg-background rounded-2xl shadow-sm overflow-hidden" data-testid="payer-aging">

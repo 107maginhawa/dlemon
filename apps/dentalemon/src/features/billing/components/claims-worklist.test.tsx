@@ -77,19 +77,15 @@ describe('ClaimsWorklist', () => {
     await waitFor(() => expect(screen.getByTestId('claims-empty')).not.toBeNull());
   });
 
-  test('renders NO create-claim affordance — claims create is parked Phase-2 (decision #3, billing-owned SoT)', async () => {
+  test('exposes a create-claim affordance for writers (Phase 1b — roadmap-approved, supersedes the parked decision #3)', async () => {
     renderWorklist();
     await waitFor(() => expect(screen.getByTestId('claims-worklist')).not.toBeNull());
-    // The HMO-claims CREATE path is intentionally absent in V1: claims are parked
-    // Phase-2 and billing owns the single source of truth. This pin keeps the create
-    // affordance absent — wiring a "Create/New/Add Claim" button (or a create-claim
-    // testid) would flip it RED. The submit/remit LIFECYCLE actions (post-creation,
-    // billing-owned) are deliberately NOT matched here and remain present.
-    expect(
-      screen.queryByRole('button', { name: /create claim|new claim|add claim|create insurance claim|new insurance claim/i }),
-    ).toBeNull();
-    expect(screen.queryByTestId('create-claim-btn')).toBeNull();
-    expect(screen.queryByTestId('new-claim-btn')).toBeNull();
+    // DECISION REVERSAL: the billing roadmap (BILLING_ROADMAP_AND_SPECS §3, Phase 1b,
+    // approved 2026-06-18) builds the full HMO cycle INCLUDING create-claim into this
+    // worklist. The earlier "parked Phase-2" pin is superseded. Full create-flow
+    // behaviour is covered in claims-worklist.create.test.tsx; here we just confirm
+    // the affordance is present (writer) so a regression that drops it flips RED.
+    expect(screen.getByTestId('new-claim-btn')).not.toBeNull();
     // Non-vacuous: the worklist itself rendered (read path works) + a row is present.
     await waitFor(() => expect(screen.getByText('CLM-2026-AAA')).not.toBeNull());
   });

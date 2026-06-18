@@ -15,8 +15,10 @@ import {
   getPayerArAgingQueryKey,
   listCoverageAuthorizationsOptions,
   listCoverageAuthorizationsQueryKey,
+  listPatientInsuranceProfilesOptions,
 } from '@monobase/sdk-ts/generated/react-query';
 import {
+  createInsuranceClaim,
   updateInsuranceClaimStatus,
   recordClaimRemittance,
   estimateClaimCoverage,
@@ -26,6 +28,7 @@ import {
   type PayerArAgingResponse,
   type CoverageEstimateResult,
   type DentalPatientFinanceModuleCoverageAuthorization,
+  type DentalPatientFinanceModuleInsuranceProfile,
 } from '@monobase/sdk-ts/generated';
 import { toInsuranceClaimRow } from '../components/insurance.helpers';
 import type { InsuranceClaimStatus } from '../components/insurance.helpers';
@@ -93,6 +96,16 @@ export function useClaimMutations({ branchId }: BranchOpt) {
     queryClient.invalidateQueries({ queryKey: getPayerArAgingQueryKey({ query: { branchId: branchId ?? undefined } }) });
   };
 
+  // Originate a claim (Phase 1b sub-slice A). Lines derive from the anchored
+  // invoice server-side when none are supplied.
+  const create = useMutation({
+    mutationFn: async (args: { patientId: string; insuranceProfileId: string; invoiceId?: string; visitId?: string; authorizationId?: string }) => {
+      const { data } = await createInsuranceClaim({ body: args, throwOnError: true });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
   const submit = useMutation({
     mutationFn: async (args: { claimId: string; payerReference?: string; submissionChannel?: string }) => {
       const { data } = await updateInsuranceClaimStatus({
@@ -133,12 +146,29 @@ export function useClaimMutations({ branchId }: BranchOpt) {
   });
 
   return {
+    create: create.mutateAsync,
+    isCreating: create.isPending,
     submit: submit.mutateAsync,
     isSubmitting: submit.isPending,
     markReady: markReady.mutateAsync,
     remit: remit.mutateAsync,
     isRemitting: remit.isPending,
-    error: (submit.error ?? remit.error ?? markReady.error) as Error | null,
+    error: (create.error ?? submit.error ?? remit.error ?? markReady.error) as Error | null,
+  };
+}
+
+// Patient insurance profiles — the payer picker for the create-claim form.
+export function usePatientInsuranceProfiles(patientId?: string | null) {
+  const query = useQuery({
+    ...listPatientInsuranceProfilesOptions({ path: { patientId: patientId ?? '' } }),
+    enabled: Boolean(patientId),
+    staleTime: 30_000,
+    select: (data) => (Array.isArray(data) ? (data as DentalPatientFinanceModuleInsuranceProfile[]) : []),
+  });
+  return {
+    profiles: query.data ?? [],
+    isLoading: query.isLoading,
+    error: query.error as Error | null,
   };
 }
 
