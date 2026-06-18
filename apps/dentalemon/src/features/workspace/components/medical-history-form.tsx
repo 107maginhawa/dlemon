@@ -487,7 +487,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
               value={surgicalHistory}
               onChange={(e) => setSurgicalHistory(e.target.value)}
               placeholder="Describe any past surgeries, procedures, or hospitalizations…"
-              className="w-full min-h-[80px] px-4 py-3 text-sm bg-background resize-y outline-none placeholder:text-muted-foreground"
+              className="w-full min-h-[80px] px-4 py-3 text-sm bg-background resize-y outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground"
               data-testid="surgical-history-textarea"
             />
           </div>
