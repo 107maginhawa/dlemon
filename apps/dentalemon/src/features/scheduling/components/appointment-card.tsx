@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { activateOnKey } from '@/lib/a11y';
 
 export interface Appointment {
   id: string;
@@ -105,6 +106,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
       <div
         className={`border-l-3 rounded-md px-2 py-1 cursor-pointer hover:brightness-95 transition-all ${cardStyle}`}
         onClick={() => onClick?.(appointment)}
+        onKeyDown={activateOnKey(() => onClick?.(appointment))}
         role="button"
         tabIndex={0}
         aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.serviceType}`}
@@ -117,8 +119,9 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
 
   return (
     <div
-      className={`border-l-[3px] rounded-lg px-3 py-2 cursor-pointer hover:shadow-md transition-all relative group ${cardStyle}`}
+      className={`border-l-[3px] rounded-lg px-3 py-2 cursor-pointer hover:shadow-md transition-all relative group focus-within:ring-2 focus-within:ring-ring ${cardStyle}`}
       onClick={() => onClick?.(appointment)}
+      onKeyDown={activateOnKey(() => onClick?.(appointment))}
       role="button"
       tabIndex={0}
       aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.serviceType}, ${badge.label}`}
@@ -130,7 +133,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-1 ${badge.className}`}>
         {badge.label}
       </span>
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         {confirmAllowed && onConfirm && (
           <button
             type="button"

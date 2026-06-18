@@ -7,6 +7,7 @@
 import React from 'react';
 import type { Appointment } from './appointment-card';
 import { computeAppointmentColumns, type AppointmentColumn } from '../utils/appointment-layout';
+import { activateOnKey } from '@/lib/a11y';
 
 const SLOT_HEIGHT_PX = 48;
 const DAY_START_HOUR = 7;
@@ -203,6 +204,7 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                       tabIndex={0}
                       aria-label={`${truncateId(appt.patientId)}, ${formatChipTime(appt.scheduledAt)}`}
                       onClick={() => onAppointmentClick(appt)}
+                      onKeyDown={activateOnKey(() => onAppointmentClick(appt))}
                     >
                       <div className="text-[11px] font-semibold truncate">{truncateId(appt.patientId)}</div>
                       <div className="text-[10px] text-muted-foreground tabular-nums">{formatChipTime(appt.scheduledAt)}</div>
