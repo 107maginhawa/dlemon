@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Monobase Account",
+  "productName": "Dentalemon",
   "version": "../package.json",
-  "identifier": "com.monobase.account",
+  "identifier": "com.dentalemon.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3003",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Monobase Account",
+        "title": "Dentalemon",
         "width": 1200,
         "height": 800,
         "minWidth": 1000,
@@ -47,10 +47,10 @@
       "hardenedRuntime": true
     },
     "resources": [],
-    "copyright": "2025 Monobase Labs",
+    "copyright": "2026 Dentalemon",
     "category": "Productivity",
-    "shortDescription": "Monobase Account App",
-    "longDescription": "Self-service account app — offline-first reference implementation with embedded P2P sync",
+    "shortDescription": "Dentalemon",
+    "longDescription": "Dentalemon — dental practice management, offline-first with embedded P2P sync",
     "iOS": {
       "developmentTeam": "",
       "minimumSystemVersion": "14.0"
