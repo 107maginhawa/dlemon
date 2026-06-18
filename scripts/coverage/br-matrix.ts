@@ -17,7 +17,7 @@
  *   2. corporaHit      — which of the 4 test corpora reference the BR id
  *      (scanForToken(brId) over api-unit / app-unit / e2e / hurl).
  *   3. hasNegativePath — does a file that mentions the BR also assert a failure
- *      status (403/409/422/405) or an error-code token? Guard-typed BRs need
+ *      status (403/409/422/405/429) or an error-code token? Guard-typed BRs need
  *      this to count as fully covered (a positive-only authz test is a trap).
  *   4. coverageState   — FULLY_COVERED / POSITIVE_ONLY / UNTESTED.
  *
@@ -192,8 +192,13 @@ export function scanCodesForId(id: string): string[] {
 // Negative-path detection
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Failure HTTP status tokens a guard test is expected to assert. */
-const NEG_STATUS_RE = /\b(403|409|422|405)\b/;
+/**
+ * Failure HTTP status tokens a guard test is expected to assert. Includes 429
+ * (Too Many Requests): a lockout / rate-limit refusal (e.g. PIN-lockout BR-016b)
+ * is a genuine negative path — the guard returns 429 with a lockedUntil, not a
+ * 4xx in the 403/409/422 family.
+ */
+const NEG_STATUS_RE = /\b(403|409|422|405|429)\b/;
 /**
  * Error-code tokens: SCREAMING_SNAKE constants the handlers throw (e.g.
  * ACTIVE_VISIT_EXISTS, CONSENT_REQUIRED, LANDMARK_LOCKED). An UPPER_SNAKE token

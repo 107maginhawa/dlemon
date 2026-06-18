@@ -90,7 +90,7 @@ async function seedTemplate(branchId: string): Promise<string> {
   return t!.id;
 }
 
-describe('applyTemplate — RBAC + cross-branch (audit 2026-06-08)', () => {
+describe('applyTemplate — RBAC + cross-branch (audit 2026-06-08) [BR-VIS-009]', () => {
   test('staff_full member cannot apply a template (clinical-role gate, parity with createDentalTreatment)', async () => {
     const visitId = await seedVisitA();
     const templateId = await seedTemplate(BRANCH_A);
@@ -113,7 +113,7 @@ describe('applyTemplate — RBAC + cross-branch (audit 2026-06-08)', () => {
   });
 });
 
-describe('treatment-plan — cross-tenant PHI scoping (audit 2026-06-08)', () => {
+describe('treatment-plan — cross-tenant PHI scoping (audit 2026-06-08) [BR-VIS-010]', () => {
   test('getTreatmentPlan: a foreign-branch owner cannot read another branch patient by supplying their OWN branchId', async () => {
     // OWNER_B belongs only to BRANCH_B; PATIENT_A belongs to BRANCH_A.
     const res = await buildApp(OWNER_B).request(`/dental/patients/${PATIENT_A}/treatment-plan?branchId=${BRANCH_B}`);

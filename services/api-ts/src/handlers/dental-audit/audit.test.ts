@@ -8,7 +8,7 @@
  * "da01" UUID namespace — won't collide with seed data.
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
 import { openTestTx } from '@/core/test-tx';
 import { AuditLogRepository } from './repos/audit-log.repo';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -289,5 +289,133 @@ describe('V-AUD-NEW-A: PHI sanitization of before/after snapshots', () => {
     );
     expect(entries[0]!.beforeSnapshot).toBeNull();
     expect(entries[0]!.afterSnapshot).toBeNull();
+  });
+
+  // --------------------------------------------------------------------------
+  // V-AUD-001 (AC-AUD-004) — NEGATIVE path: PHI in metadata is stripped at the
+  // AuditLogRepository.insert choke point, so a forbidden PHI value is ABSENT
+  // from the persisted row regardless of entry point. The append-only store
+  // makes a leaked value unremediable, so the "negative" is: the forbidden
+  // value must NOT be present anywhere in the row.
+  // --------------------------------------------------------------------------
+  test('V-AUD-001: PHI metadata keys are stripped at the repo choke point (forbidden value ABSENT)', async () => {
+    const FORBIDDEN_PHI = 'Bob Patient bob@example.com';
+    // Write DIRECTLY through the repository (bypassing logAuditEvent) to prove the
+    // choke-point sanitizer — not the logger — is what removes PHI on EVERY path.
+    const row = await repo.insert(
+      makeEntry({
+        action: 'patient.view',
+        metadata: {
+          resultCount: 1,
+          name: 'Bob Patient',
+          email: 'bob@example.com',
+          diagnosis: 'caries',
+        } as Record<string, unknown>,
+      }),
+    );
+
+    const meta = row.metadata as Record<string, unknown>;
+    // Non-PHI structural key survives.
+    expect(meta['resultCount']).toBe(1);
+    // PHI keys are stripped — the negative assertion (the forbidden keys are absent).
+    expect(meta).not.toHaveProperty('name');
+    expect(meta).not.toHaveProperty('email');
+    expect(meta).not.toHaveProperty('diagnosis');
+    // The forbidden PHI value appears NOWHERE in the persisted append-only row.
+    expect(JSON.stringify(row)).not.toContain('Bob Patient');
+    expect(JSON.stringify(row)).not.toContain('bob@example.com');
+    expect(JSON.stringify(row)).not.toContain('caries');
+  });
+
+  // --------------------------------------------------------------------------
+  // V-AUD-001 — failure path: a SECURITY-class audit write is fail-closed
+  // (V-AUD-007). When the authoritative dental_audit_log write fails, the error
+  // surfaces rather than being swallowed — a swallowed security-audit failure is
+  // itself a compliance hole. Forcing the sink to fail must REJECT.
+  // --------------------------------------------------------------------------
+  test('V-AUD-001: a failing security-class audit write is fail-closed (rejects, not swallowed)', async () => {
+    const spy = spyOn(AuditLogRepository.prototype, 'insert').mockImplementation(async () => {
+      throw new Error('SECURITY_AUDIT_WRITE_FAILED: dental_audit_log sink unavailable');
+    });
+    try {
+      await expect(
+        logAuditEvent(db, null, {
+          personId: ACTOR_A,
+          tenantId: TENANT_A,
+          action: 'tenant.access.denied',
+          resourceType: 'dental_patient',
+          resourceId: TARGET_A,
+          eventType: 'security',
+        }),
+      ).rejects.toThrow(/SECURITY_AUDIT_WRITE_FAILED/);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// AUD-BR-004 — NEGATIVE path: actorId is the TRUE session actor and can NEVER be
+// overridden by caller-supplied data. A PHI/display "actor" field smuggled into
+// metadata must be IGNORED (stripped) — it cannot become or replace the row's
+// actorId, which stays the server-resolved session user.
+// ----------------------------------------------------------------------------
+describe('AUD-BR-004: actorId is the session user, never caller-supplied', () => {
+  test('a caller-supplied actor display field in metadata cannot override actorId', async () => {
+    const UNIQUE_TENANT = 'da010001-0000-0000-0000-000000000015';
+    const ATTACKER_NAME = 'Mallory Impersonator';
+    await logAuditEvent(db, null, {
+      personId: ACTOR_A, // the TRUE actor (server-resolved session user)
+      tenantId: UNIQUE_TENANT,
+      action: 'patient.view',
+      resourceType: 'dental_patient',
+      resourceId: TARGET_A,
+      metadata: {
+        // Caller tries to smuggle a display "actor" name — it must NOT become the
+        // row's actorId, and being a PHI-blocklisted key (`name`) it is stripped.
+        name: ATTACKER_NAME,
+        resultCount: 1,
+      } as Record<string, unknown>,
+    });
+
+    const { entries } = await repo.list(
+      { action: 'patient.view', tenantId: UNIQUE_TENANT },
+      { limit: 10, offset: 0 },
+    );
+    const entry = entries[0]!;
+    // actorId is the server-set session user — unchanged by the caller's payload.
+    expect(entry.actorId).toBe(ACTOR_A);
+    expect(entry.actorId).not.toBe(ATTACKER_NAME);
+    // The smuggled PHI display name is stripped at the choke point and absent.
+    const meta = entry.metadata as Record<string, unknown>;
+    expect(meta).not.toHaveProperty('name');
+    expect(meta['resultCount']).toBe(1); // non-PHI structural key survives
+    expect(JSON.stringify(entry)).not.toContain(ATTACKER_NAME);
+    // Mandatory fields still present + server-set timestamp.
+    expect(entry.action).toBe('patient.view');
+    expect(entry.targetType).toBe('dental_patient');
+    expect(entry.timestamp).toBeDefined();
+  });
+
+  test('AUD-BR-004: a failing audit write surfaces (fail-closed) — actor integrity is not silently dropped', async () => {
+    // The mandatory-field guarantee is meaningless if a write can vanish silently;
+    // a security-class write that cannot persist must REJECT (V-AUD-007).
+    const spy = spyOn(AuditLogRepository.prototype, 'insert').mockImplementation(async () => {
+      throw new Error('AUDIT_WRITE_FAILED: cannot persist mandatory audit fields');
+    });
+    try {
+      await expect(
+        logAuditEvent(db, null, {
+          personId: ACTOR_A,
+          tenantId: TENANT_A,
+          action: 'role.change',
+          resourceType: 'membership',
+          resourceId: TARGET_A,
+          eventType: 'security',
+        }),
+      ).rejects.toThrow(/AUDIT_WRITE_FAILED/);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

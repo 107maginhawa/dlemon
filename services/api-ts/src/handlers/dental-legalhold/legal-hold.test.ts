@@ -1,6 +1,11 @@
 /**
  * Legal-hold store tests (V-DG-002 support): place/release + the
  * isPersonUnderLegalHold predicate the governance engines consult.
+ *
+ * AC-LH-001..004 (FSM): a hold is created 'active'; active→released is terminal —
+ * releasing an already-released hold is rejected (ValidationError 'already
+ * released'); releasing a non-existent hold → NotFound. (HTTP RBAC negative paths
+ * for AC-LH-001 live in legal-hold-routes.test.ts: non-admin → 403.)
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
@@ -39,7 +44,7 @@ describe('legal-hold store', () => {
     expect(await isPersonUnderLegalHold(db, PERSON)).toBe(false);
   });
 
-  test('placing a hold makes the subject held; another person is unaffected', async () => {
+  test('AC-LH-001: placing a hold makes the subject held; another person is unaffected', async () => {
     await placeLegalHold(db, noopLogger, holdInput);
     expect(await isPersonUnderLegalHold(db, PERSON)).toBe(true);
     expect(await isPersonUnderLegalHold(db, OTHER)).toBe(false);

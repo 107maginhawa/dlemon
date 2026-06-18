@@ -22,7 +22,14 @@ const OTHER_ID = 'bbbbbbbb-1111-4000-8000-000000000002';
 // inline 405 responders with no auth/DB dependency, so they respond directly.
 const app = createApp(parseConfig());
 
-describe('BR-022 / AC-PMD-002 — imported PMD immutable (real app routes)', () => {
+// V-XRI-004 — imported-PMD immutability is one of the external-records-import
+// PMD-side invariants: a PMD ingested via import MUST be tamper-proof on the
+// import surface. PATCH/PUT/DELETE /dental/pmd/imported/:id → 405
+// IMPORTED_PMD_IMMUTABLE (the negative-path assertions below). Checksum
+// (CHECKSUM_MISMATCH 422), sourceDescription provenance (422), and the pmd.import
+// audit are pinned in importPMD.* tests; the immutability 405 is the headline
+// negative path and is asserted here.
+describe('V-XRI-004 / BR-022 / AC-PMD-002 — imported PMD immutable (real app routes)', () => {
   test('PATCH /dental/pmd/imported/:id → 405 IMPORTED_PMD_IMMUTABLE', async () => {
     const res = await app.request(`/dental/pmd/imported/${FAKE_ID}`, {
       method: 'PATCH',

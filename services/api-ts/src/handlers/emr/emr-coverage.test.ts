@@ -198,19 +198,30 @@ describe('createConsultation handler', () => {
     expect(res.status).toBe(400);
   });
 
-  test('provider not found → ≥400 (provider profile missing)', async () => {
-    // ADMIN_USER has no provider profile → PROVIDER_NOT_FOUND / BusinessLogicError
-    const app = buildTestApp({ user: ADMIN_USER });
+  test('V-EMR-AUTH: caller with no provider profile → ≥400 (PROVIDER_NOT_FOUND)', async () => {
+    // V-EMR-AUTH: only a provider may create, and only as themselves. A caller
+    // whose person has NO linked provider record → getProviderByPersonIdForEMR
+    // returns null → BusinessLogicError('PROVIDER_NOT_FOUND'). Someone who is not
+    // a provider can never author a consultation note. (ADMIN_USER's person IS
+    // linked to a provider here, so we use a person with no provider profile.)
+    const noProfileUser = { id: NONEXISTENT_ID, email: 'noprofile@clinic.com', role: 'provider' };
+    const app = buildTestApp({ user: noProfileUser as any });
     const res = await app.request('/emr/consultations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patient: PATIENT_ID, provider: PROVIDER_ID }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
+    const body = await res.json() as any;
+    // The negative-path error code is the PROVIDER_NOT_FOUND guard, not a generic 500.
+    expect(body.code).toBe('PROVIDER_NOT_FOUND');
   });
 
-  test('wrong provider in body → 403', async () => {
-    // PROVIDER_USER is linked to PROVIDER_ID but body says OTHER_PROVIDER_ID
+  test('V-EMR-AUTH: wrong provider in body → 403 (can only author as self)', async () => {
+    // V-EMR-AUTH: body.provider must resolve to the caller's OWN provider profile.
+    // PROVIDER_USER is linked to PROVIDER_ID but body says OTHER_PROVIDER_ID →
+    // ForbiddenError. A provider cannot author a note attributed to a different
+    // provider (no impersonation / no scope widening via the body).
     const app = buildTestApp({ user: PROVIDER_USER });
     const res = await app.request('/emr/consultations', {
       method: 'POST',
@@ -285,16 +296,19 @@ describe('getConsultation handler', () => {
     expect(res.status).toBe(404);
   });
 
-  test('wrong user (non-admin, no provider/patient profile) → 403', async () => {
+  test('V-EMR-OWN: non-owning provider reading another provider\'s note → 403', async () => {
+    // V-EMR-OWN: getConsultation grants admin OR owning-provider OR owning-patient,
+    // else 403. `stranger` (role=provider, but NOT the note's provider and not an
+    // admin) is a non-owner → ForbiddenError. Ownership is the entire isolation
+    // boundary (no branch/tenant), so a non-owner read MUST be refused.
     const consultation = await seedDraftConsultation();
-    // A user with a non-owning role and no provider/patient profile → ForbiddenError.
     const stranger = { id: OTHER_PERSON_ID, email: 'stranger@clinic.com', role: 'provider' };
     const app = buildTestApp({ user: stranger as any });
     const res = await app.request(`/emr/consultations/${consultation.id}`);
     expect(res.status).toBe(403);
   });
 
-  test('admin → 200 reads any consultation (MODULE_SPEC §6 admin grant, V-EMR-C-003)', async () => {
+  test('V-EMR-OWN: admin → 200 reads any consultation (MODULE_SPEC §6 admin grant, V-EMR-C-003)', async () => {
     const consultation = await seedDraftConsultation();
     // ADMIN_USER is neither the owning provider nor patient, but §6 grants admin read-one.
     const app = buildTestApp({ user: ADMIN_USER });
@@ -411,7 +425,7 @@ describe('listConsultations handler', () => {
 // passing another patient's id in `?patient=`.
 // ---------------------------------------------------------------------------
 
-describe('listConsultations — cross-owner self-scoping (adversarial)', () => {
+describe('listConsultations — V-EMR-OWN cross-owner self-scoping (adversarial)', () => {
   const SECOND_PATIENT_PERSON_ID = 'ec000000-0000-4000-8000-0000000000a1';
   const SECOND_PATIENT_ID = 'ec000000-0000-4000-8000-0000000000a2';
 
@@ -485,7 +499,7 @@ describe('listConsultations — cross-owner self-scoping (adversarial)', () => {
     expect(body.data.every((c: any) => c.patient === PATIENT_ID)).toBe(true);
   });
 
-  test("patient passing ANOTHER patient's id in ?patient= is rejected → 403 (cannot widen scope)", async () => {
+  test("V-EMR-OWN: patient passing ANOTHER patient's id in ?patient= is rejected → 403 (cannot widen scope)", async () => {
     await seedForeignOwnerData();
     const app = buildTestApp({ user: PATIENT_USER });
     // PATIENT_USER tries to scope the list to SECOND_PATIENT_ID's records.
@@ -582,9 +596,11 @@ describe('updateConsultation handler', () => {
     expect(res.status).toBe(404);
   });
 
-  test('wrong provider → 403', async () => {
+  test('V-EMR-OWN / V-EMR-AUTH: non-owning provider update → 403', async () => {
+    // V-EMR-OWN + V-EMR-AUTH: update is provider:owner — a provider who does NOT
+    // own the note cannot edit it. OTHER_PROVIDER_ID's person is OTHER_PERSON_ID,
+    // not the consultation's authoring provider → ForbiddenError.
     const consultation = await seedDraftConsultation();
-    // OTHER_PROVIDER_ID's person is OTHER_PERSON_ID (ADMIN_USER), not the consultation's provider
     const otherProviderUser = { id: OTHER_PERSON_ID, email: 'other@clinic.com', role: 'provider' };
     const app = buildTestApp({ user: otherProviderUser as any });
     const res = await app.request(`/emr/consultations/${consultation.id}`, {
@@ -668,7 +684,9 @@ describe('finalizeConsultation handler', () => {
     expect(res.status).toBe(404);
   });
 
-  test('wrong provider → 403', async () => {
+  test('V-EMR-OWN / V-EMR-AUTH: non-owning provider finalize → 403', async () => {
+    // V-EMR-OWN + V-EMR-AUTH: finalize is provider:owner — only the authoring
+    // provider may finalize. A different provider → ForbiddenError.
     const consultation = await seedDraftConsultation();
     const otherProviderUser = { id: OTHER_PERSON_ID, email: 'other@clinic.com', role: 'provider' };
     const app = buildTestApp({ user: otherProviderUser as any });

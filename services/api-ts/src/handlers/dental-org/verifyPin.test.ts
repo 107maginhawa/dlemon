@@ -188,7 +188,7 @@ describe('verifyPin handler', () => {
     expect(body.failedAttempts).toBe(1);
   });
 
-  test('returns 429 when member is locked out', async () => {
+  test('BR-016b: returns 429 when member is locked out (5 failed attempts)', async () => {
     const membershipRepo = await seedAll();
     const member = await seedMember(membershipRepo);
     const pinHash = await Bun.password.hash('123456');
@@ -210,7 +210,7 @@ describe('verifyPin handler', () => {
     expect(body.lockedUntil).not.toBeNull();
   });
 
-  test('FR9.3: returns 429 with 5-minute lockout after 10 failed attempts', async () => {
+  test('BR-016b / FR9.3: returns 429 with 5-minute lockout after 10 failed attempts', async () => {
     const membershipRepo = await seedAll();
     const member = await seedMember(membershipRepo);
     const pinHash = await Bun.password.hash('123456');
@@ -235,7 +235,7 @@ describe('verifyPin handler', () => {
     expect(lockedUntilTime).toBeGreaterThan(Date.now() + 4 * 60 * 1000);
   });
 
-  test('resets failed attempts on successful PIN verification', async () => {
+  test('BR-016b: resets failed attempts on successful PIN verification', async () => {
     const membershipRepo = await seedAll();
     const member = await seedMember(membershipRepo);
     const pinHash = await Bun.password.hash('654321');

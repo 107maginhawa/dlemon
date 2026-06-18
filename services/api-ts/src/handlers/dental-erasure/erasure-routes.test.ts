@@ -3,6 +3,12 @@
  * handler wiring (mirrors the manual dental-route registration in app.ts), per
  * the "tests must hit real route wiring" rule. Covers the full request →
  * approve/reject lifecycle, admin RBAC, validation, and 404s.
+ *
+ * BR coverage (negative paths in-file: 403 non-admin, 404 unknown id, 400 missing reason):
+ *   - V-DG-002-LH: legal hold on approve → request rejected, subject kept (never anonymized).
+ *   - V-DG-002-AN: approve anonymizes the subject in place; the only hard delete is the S3 radiograph.
+ *   - V-DG-002-AU: every transition is audited via the append-only sink (see erasure-service.test.ts for trail-survives-erasure).
+ *   - EM-DG-RBAC: every erasure endpoint is platform-admin-only; a non-admin caller → 403.
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
@@ -77,7 +83,7 @@ describe('erasure HTTP routes (V-DG-002)', () => {
 
   const reqBody = { subjectPersonId: PID, tenantId: TENANT, reason: 'GDPR Art.17 request' };
 
-  test('request → approve anonymizes the subject and walks the full lifecycle', async () => {
+  test('V-DG-002-AN: request → approve anonymizes the subject and walks the full lifecycle', async () => {
     const app = makeApp(db, ADMIN);
 
     const created = await app.request('/dental/erasure-requests', J(reqBody));
@@ -103,7 +109,7 @@ describe('erasure HTTP routes (V-DG-002)', () => {
     expect(p!.firstName).toBe(ERASED_MARKER);
   });
 
-  test('legal hold on approve blocks anonymization (request rejected, subject kept)', async () => {
+  test('V-DG-002-LH: legal hold on approve blocks anonymization (request rejected, subject kept)', async () => {
     const app = makeApp(db, ADMIN);
     const created = await app.request('/dental/erasure-requests', J(reqBody));
     const reqRow = (await created.json()) as { id: string };
@@ -126,7 +132,7 @@ describe('erasure HTTP routes (V-DG-002)', () => {
     expect(((await rejected.json()) as any).status).toBe('rejected');
   });
 
-  test('non-admin is forbidden (403)', async () => {
+  test('EM-DG-RBAC: non-admin is forbidden (403)', async () => {
     const app = makeApp(db, NON_ADMIN);
     const res = await app.request('/dental/erasure-requests', J(reqBody));
     expect(res.status).toBe(403);
