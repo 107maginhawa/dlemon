@@ -12,6 +12,7 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
+import { usePatientBalance } from '../hooks/use-patient-balance';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
@@ -169,8 +170,13 @@ function OverviewTab({ patientId }: { patientId: string }) {
 
 function PaymentTab({ patientId, branchId }: { patientId: string; branchId: string | null }) {
   const { invoices, isLoading, error } = usePatientBilling({ patientId, branchId });
-
-  const totalBalance = invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
+  // Authoritative outstanding balance (slice 1.6): server-computed over non-voided
+  // invoices, immune to invoice-list pagination. Fall back to the visible-rows sum
+  // only while the balance endpoint is still loading.
+  const { balance } = usePatientBalance({ patientId });
+  const totalBalance =
+    balance?.outstandingBalanceCents ??
+    invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -252,7 +258,10 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
           {totalBalance > 0 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
               <span className="text-sm font-semibold">Outstanding Balance</span>
-              <span className="text-sm font-bold text-destructive">
+              <span
+                className="text-sm font-bold text-destructive"
+                data-testid="patient-outstanding-balance"
+              >
                 {CURRENCY_SYMBOL}{formatCents(totalBalance)}
               </span>
             </div>

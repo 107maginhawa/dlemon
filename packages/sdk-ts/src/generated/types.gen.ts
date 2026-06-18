@@ -59058,8 +59058,13 @@ export type Patient = {
 
 export type PatientBalanceResponse = {
     patientId: Uuid;
-    balanceCents: number;
-    overdueInvoices: number;
+    totalBilledCents: number;
+    totalPaidCents: number;
+    outstandingBalanceCents: number;
+    overdueAmountCents: number;
+    invoiceCount: number;
+    overdueInvoiceCount: number;
+    activePaymentPlanCount: number;
 };
 
 /**

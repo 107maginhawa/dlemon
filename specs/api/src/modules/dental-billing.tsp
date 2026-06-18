@@ -286,10 +286,19 @@ model ApplyDentalDiscountRequest {
 // Response Models (Billing Extras)
 // ---------------------------------------------------------------------------
 
+// Wire shape matches the tested `getPatientBalance` handler (FR4.4): authoritative
+// server-computed aggregates over the patient's non-voided invoices + active plans.
+// (Previously drifted to a stale {balanceCents, overdueInvoices} — corrected so the
+// SDK type reflects what the handler actually emits.)
 model PatientBalanceResponse {
   patientId: UUID;
-  balanceCents: int32;
-  overdueInvoices: int32;
+  totalBilledCents: int32;
+  totalPaidCents: int32;
+  outstandingBalanceCents: int32;
+  overdueAmountCents: int32;
+  invoiceCount: int32;
+  overdueInvoiceCount: int32;
+  activePaymentPlanCount: int32;
 }
 
 model CollectionsSummaryResponse {
