@@ -96,6 +96,19 @@ export async function acceptTreatmentPlan(ctx: BaseContext) {
 
   const body = await ctx.req.json().catch(() => ({})) as { consentFormId?: string };
 
+  // Validate the consent form (if supplied) BEFORE creating the append-only
+  // version, so an invalid consentFormId is rejected without orphaning a version
+  // row. (createSnapshotVersion is deliberately NOT wrapped in a tx — its
+  // version-collision retry loop can't recover inside an aborted PG transaction.)
+  const { consentForms } = await import('../../dental-clinical/repos/consent-form.schema');
+  if (body.consentFormId) {
+    const [form] = await db
+      .select({ id: consentForms.id })
+      .from(consentForms)
+      .where(and(eq(consentForms.id, body.consentFormId), eq(consentForms.patientId, patientId)));
+    if (!form) throw new NotFoundError('Consent form not found for this patient');
+  }
+
   const snapshot = await buildLivePlan(db as unknown as NodePgDatabase, patientId);
 
   const row = await createSnapshotVersion(
@@ -107,14 +120,8 @@ export async function acceptTreatmentPlan(ctx: BaseContext) {
     { patientId, createdBy: user.id, snapshot },
   ) as typeof treatmentPlanVersions.$inferSelect;
 
-  // Link consent form if provided
+  // Link the validated consent form to the new version.
   if (body.consentFormId) {
-    const { consentForms } = await import('../../dental-clinical/repos/consent-form.schema');
-    const [form] = await db
-      .select({ id: consentForms.id })
-      .from(consentForms)
-      .where(and(eq(consentForms.id, body.consentFormId), eq(consentForms.patientId, patientId)));
-    if (!form) throw new NotFoundError('Consent form not found for this patient');
     await db
       .update(consentForms)
       .set({ acceptedPlanVersionId: row.id, updatedBy: user.id })

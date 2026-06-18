@@ -10,7 +10,7 @@
 
 // Migrated off the bespoke raw-handler mount to the shared validator-mounting harness.
 import { describe, test, expect, afterEach, beforeAll } from 'bun:test';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
 import { buildTestApp } from '@/tests/helpers/test-app';
 
@@ -180,6 +180,66 @@ describe('acceptTreatmentPlan', () => {
       .from(treatmentPlanVersions)
       .where(sql`patient_id = ${ARCHIVED_PATIENT_ID}::uuid`);
     expect(versions).toHaveLength(0);
+  });
+
+  test('invalid consentFormId returns 404 and creates no version row', async () => {
+    const app = buildTestApp({ db, user: TEST_USER });
+    const { treatmentPlanVersions } = await import('./repos/treatment-plan-version.schema');
+
+    const before = await db
+      .select({ id: treatmentPlanVersions.id })
+      .from(treatmentPlanVersions)
+      .where(sql`patient_id = ${PATIENT_ID}::uuid`);
+
+    const res = await app.request(
+      `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consentFormId: '00000000-0000-4000-8000-0000000c0ffe' }),
+      },
+    );
+    expect(res.status).toBe(404);
+
+    // Validation must fire BEFORE createSnapshotVersion — no orphan version.
+    const after = await db
+      .select({ id: treatmentPlanVersions.id })
+      .from(treatmentPlanVersions)
+      .where(sql`patient_id = ${PATIENT_ID}::uuid`);
+    expect(after).toHaveLength(before.length);
+  });
+
+  test('valid consentFormId links the new version to the form (happy path preserved)', async () => {
+    const app = buildTestApp({ db, user: TEST_USER });
+    const { consentForms } = await import('../dental-clinical/repos/consent-form.schema');
+    const consentId = 'f6000000-0000-4000-8000-00000000c0de';
+    await db.insert(consentForms).values({
+      id: consentId, visitId: VISIT_ID, patientId: PATIENT_ID,
+      templateId: 'tpl-accept', templateName: 'Plan Acceptance',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+
+    try {
+      const res = await app.request(
+        `/dental/patients/${PATIENT_ID}/treatment-plan/accept?branchId=${BRANCH_ID}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ consentFormId: consentId }),
+        },
+      );
+      expect(res.status).toBe(201);
+      const version = await res.json() as { id: string };
+
+      const [cf] = await db
+        .select({ link: consentForms.acceptedPlanVersionId })
+        .from(consentForms)
+        .where(eq(consentForms.id, consentId));
+      expect(cf!.link).toBe(version.id);
+    } finally {
+      // Drop the FK link before afterEach deletes the version row.
+      await db.delete(consentForms).where(eq(consentForms.id, consentId));
+    }
   });
 });
 
