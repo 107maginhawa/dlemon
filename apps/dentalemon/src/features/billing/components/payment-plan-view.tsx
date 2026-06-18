@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getDentalPaymentPlanOptions } from '@monobase/sdk-ts/generated/react-query';
 import { Skeleton } from '@monobase/ui';
 import { formatCents } from '@/lib/format-currency';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -146,6 +147,7 @@ function formatInstallmentStatus(status: string): string {
 // ---------------------------------------------------------------------------
 
 export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewProps) {
+  useSheetA11y({ open, onClose });
   const planQuery = useQuery({
     ...getDentalPaymentPlanOptions({ path: { invoiceId } }),
     enabled: open && !!invoiceId,

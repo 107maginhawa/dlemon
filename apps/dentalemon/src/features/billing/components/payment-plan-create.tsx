@@ -13,6 +13,7 @@ import { createDentalPaymentPlanMutation } from '@monobase/sdk-ts/generated/reac
 import type { PlanFrequency } from '@monobase/sdk-ts/generated';
 import { getErrorMessage } from '@/lib/error-toast';
 import { formatCents } from '@/lib/format-currency';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 const FREQUENCIES: { value: PlanFrequency; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -42,6 +43,7 @@ export interface PaymentPlanCreateProps {
 }
 
 export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, onClose, onCreated }: PaymentPlanCreateProps) {
+  useSheetA11y({ open, onClose });
   const [installments, setInstallments] = useState('6');
   const [frequency, setFrequency] = useState<PlanFrequency>('monthly');
   const [startDate, setStartDate] = useState('');

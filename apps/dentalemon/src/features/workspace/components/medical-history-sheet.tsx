@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { MedicalHistoryForm } from './medical-history-form';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 export interface MedicalHistorySheetProps {
   patientId: string;
@@ -15,6 +16,7 @@ export interface MedicalHistorySheetProps {
 }
 
 export function MedicalHistorySheet({ patientId, open, onClose }: MedicalHistorySheetProps) {
+  useSheetA11y({ open, onClose });
   if (!open) return null;
 
   return (

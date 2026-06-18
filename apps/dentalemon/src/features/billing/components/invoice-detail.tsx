@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { toast } from 'sonner';
 import { toastError } from '@/lib/error-toast';
 import {
@@ -61,6 +62,7 @@ export interface InvoiceDetailProps {
 }
 
 export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true }: InvoiceDetailProps) {
+  useSheetA11y({ open, onClose });
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');

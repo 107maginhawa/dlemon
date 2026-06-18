@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { toastError } from '@/lib/error-toast';
 import { importPmdMutation, mergeImportedPmdSafetyFloorMutation } from '@monobase/sdk-ts/generated/react-query';
 import { medicalHistoryKey } from '@/features/workspace/hooks/use-medical-history';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 interface SafetyFloorPreview {
   conditions: string[];
@@ -40,6 +41,7 @@ export interface PMDImportProps {
 type Step = 'form' | 'preview' | 'done';
 
 export function PMDImport({ patientId, open, onClose, onImported }: PMDImportProps) {
+  useSheetA11y({ open, onClose });
   const [step, setStep] = useState<Step>('form');
   const [sourceFacility, setSourceFacility] = useState('');
   const [sourceReference, setSourceReference] = useState('');

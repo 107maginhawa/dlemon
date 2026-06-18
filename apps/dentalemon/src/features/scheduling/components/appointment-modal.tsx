@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button, Checkbox, Input, Textarea } from '@monobase/ui';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import {
   createAppointment,
   updateAppointment,
@@ -102,6 +103,7 @@ export function extractDoubleBookingWarning(appointment: unknown): boolean {
 }
 
 export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
+  useSheetA11y({ open, onClose });
   const storeBranchId = useOrgContextStore((s) => s.branchId) ?? '';
   const [patientId, setPatientId] = useState('');
   const [dentistMemberId, setDentistMemberId] = useState('');
