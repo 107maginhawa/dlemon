@@ -308,6 +308,30 @@ describe('listConsentForms handler', () => {
     expect(body.data).toHaveLength(1);
     expect(body.pagination.totalCount).toBe(1);
   });
+
+  test('respects limit/offset and reports the full total', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    for (let i = 0; i < 3; i++) {
+      await app.request(`/dental/visits/${visit.id}/consents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: PATIENT_ID,
+          templateId: `tpl-page-${i}`,
+          templateName: `Consent ${i}`,
+        }),
+      });
+    }
+
+    const res = await app.request(`/dental/visits/${visit.id}/consents?limit=2&offset=0`);
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data).toHaveLength(2);
+    expect(body.pagination.totalCount).toBe(3);
+  });
 });
 
 // ---------------------------------------------------------------------------

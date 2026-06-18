@@ -28,13 +28,6 @@ export class ConsentFormRepository extends DatabaseRepository<ConsentForm, NewCo
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
-  override async findMany(filters?: ConsentFormFilters): Promise<ConsentForm[]> {
-    const where = this.buildWhereConditions(filters);
-    return where
-      ? await this.db.select().from(consentForms).where(where)
-      : await this.db.select().from(consentForms);
-  }
-
   override async findOneById(id: string): Promise<ConsentForm | null> {
     const [row] = await this.db.select().from(consentForms).where(eq(consentForms.id, id));
     return row ?? null;

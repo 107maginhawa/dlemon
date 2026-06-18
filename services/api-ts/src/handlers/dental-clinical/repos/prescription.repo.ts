@@ -36,13 +36,6 @@ export class PrescriptionRepository extends DatabaseRepository<Prescription, New
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
-  override async findMany(filters?: PrescriptionFilters): Promise<Prescription[]> {
-    const where = this.buildWhereConditions(filters);
-    return where
-      ? await this.db.select().from(prescriptions).where(where)
-      : await this.db.select().from(prescriptions);
-  }
-
   override async findOneById(id: string): Promise<Prescription | null> {
     const [row] = await this.db.select().from(prescriptions).where(eq(prescriptions.id, id));
     return row ?? null;

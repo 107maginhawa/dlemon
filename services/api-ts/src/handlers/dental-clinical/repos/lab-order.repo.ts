@@ -37,13 +37,6 @@ export class LabOrderRepository extends DatabaseRepository<LabOrder, NewLabOrder
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
-  override async findMany(filters?: LabOrderFilters): Promise<LabOrder[]> {
-    const where = this.buildWhereConditions(filters);
-    return where
-      ? await this.db.select().from(labOrders).where(where)
-      : await this.db.select().from(labOrders);
-  }
-
   override async findOneById(id: string): Promise<LabOrder | null> {
     const [row] = await this.db.select().from(labOrders).where(eq(labOrders.id, id));
     return row ?? null;
