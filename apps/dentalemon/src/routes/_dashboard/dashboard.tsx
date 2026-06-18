@@ -12,7 +12,7 @@ function DashboardPage() {
   const role = (useOrgContextStore((s) => s.role) ?? 'dentist_owner') as DentalRole
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1600px] mx-auto">
       <MorningBriefing role={role} branchId={branchId} />
     </div>
   )

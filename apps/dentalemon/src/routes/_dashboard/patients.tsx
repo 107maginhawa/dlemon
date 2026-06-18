@@ -101,7 +101,7 @@ function PatientsPage() {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-4">
+    <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Patients</h1>

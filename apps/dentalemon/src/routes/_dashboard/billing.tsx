@@ -56,7 +56,7 @@ function BillingPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-[17px] font-semibold tracking-tight">Billing</h1>
         <div

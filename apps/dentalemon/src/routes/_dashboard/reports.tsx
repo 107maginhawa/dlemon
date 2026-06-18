@@ -36,7 +36,7 @@ function ReportsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1600px] mx-auto">
       {/* Tab navigation */}
       <div role="tablist" aria-label="Reports" className="flex items-center gap-1 mb-6 border-b border-border">
         {TABS.map((tab) => (
