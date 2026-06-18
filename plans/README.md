@@ -30,7 +30,7 @@ GREEN, before merge** (these touch patient clinical data).
 |------|-------|----------|--------|------|--------------|--------|
 | 005 | Extract `parseUserRoles` helper (dedupe 16 inline role splits) | P2 | S | LOW | no | DONE (advisor/005) — 15 sites (plan miscounted its own 15-file list as 16); helper at handlers/shared, 4 tests pass, tsc 0, lint 346w |
 | 006 | Push dental-clinical list pagination into the DB (7 repos + handlers) | P2 | M | MED | no | DONE (advisor/006) — 7 overrides deleted, 6 handlers→count+findMany(pagination); consent-refusal handler left as-is (no slice, just override dropped); 185 affected tests pass, tsc 0, lint 346w |
-| 007 | Native git pre-commit hook (typecheck + lint, no new dep) | P3 | S | LOW | no | TODO |
+| 007 | Native git pre-commit hook (typecheck + lint, no new dep) | P3 | S | LOW | no | DONE (advisor/007) — .githooks/pre-commit + prepare→core.hooksPath, no dep; bad-path (TS2322) blocks commit, good-path allows; hook ran live on its own commit |
 | 008 | Surface calibration-save failures in imaging workspace (toast) | P3 | S | LOW | no | TODO |
 | 009 | Make carry-over treatment writes atomic via `withTenantTx` | P2 | M | MED | **yes** | TODO |
 | 010 | acceptTreatmentPlan — validate consent form before snapshotting | P2 | S | LOW | **yes** | TODO |
