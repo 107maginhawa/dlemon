@@ -183,14 +183,33 @@
   }
 }
 
-/* iPad / touch: force >=16px on form fields so iOS Safari does not auto-zoom
-   on focus. Scoped to coarse pointers — desktop (fine pointer) keeps its
-   tighter md:text-sm sizing. Covers shared <Input> and all raw <input>s. */
+/* iPad / touch tuning — scoped to coarse pointers so desktop (fine pointer,
+   mouse) keeps its tighter density. Validated on real iPad recommended. */
 @media (pointer: coarse) {
+  /* >=16px on form fields so iOS Safari does not auto-zoom on focus.
+     Covers the shared <Input> and all raw <input>s. */
   input:not([type="checkbox"]):not([type="radio"]),
   textarea,
   select {
     font-size: 16px;
+  }
+
+  /* Apple HIG 44px minimum touch target for interactive controls. */
+  button:not(:disabled),
+  [role="button"],
+  [role="tab"],
+  [role="switch"],
+  [role="menuitem"],
+  select,
+  summary {
+    min-height: 44px;
+  }
+
+  /* Icon-only buttons need width too (e.g. 28px bell/toolbar icons). */
+  button:has(> svg:only-child),
+  a:has(> svg:only-child),
+  [role="button"]:has(> svg:only-child) {
+    min-width: 44px;
   }
 }
 
