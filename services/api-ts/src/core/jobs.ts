@@ -83,6 +83,39 @@ export interface JobHealth {
 }
 
 // ============================================================================
+// pg-boss Tuning Helper
+// ============================================================================
+
+/**
+ * Resolve pg-boss constructor tuning values based on the runtime environment.
+ *
+ * Test runs (NODE_ENV=test) need fast cleanup/expiry so the contract and
+ * integration suites don't wait minutes per scenario. Production must use
+ * sane long-horizon values — the slot generator schedules work on a 30-day
+ * horizon and would otherwise be force-expired at 5 minutes.
+ */
+export function resolvePgBossTuning(nodeEnv: string | undefined) {
+  const isTest = nodeEnv === 'test';
+  return isTest
+    ? {
+        deleteAfterDays: 1,
+        archiveCompletedAfterSeconds: 300, // 5 min — fast test loop
+        retryLimit: 2,
+        retryDelay: 5,
+        expireInMinutes: 5,
+        maintenanceIntervalSeconds: 10,
+      }
+    : {
+        deleteAfterDays: 30,
+        archiveCompletedAfterSeconds: 12 * 60 * 60, // 12 h
+        retryLimit: 3,
+        retryDelay: 30,
+        expireInMinutes: 15,
+        maintenanceIntervalSeconds: 120,
+      };
+}
+
+// ============================================================================
 // pg-boss Implementation
 // ============================================================================
 
@@ -120,28 +153,18 @@ class PgBossScheduler implements JobScheduler {
       }
     };
 
+    // Select pg-boss tuning values for the current runtime environment.
+    // Test runs keep fast values so the contract/integration suites stay quick;
+    // everything else uses production-safe long-horizon defaults.
+    const bossTuning = resolvePgBossTuning(process.env['NODE_ENV']);
+
     // Initialize pg-boss with the adapter
     this.boss = new PgBoss({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pg-boss db adapter type is not publicly exported
       db: pgBossDb as any,
-      
-      // pg-boss configuration
       schema: 'pgboss', // Isolate pg-boss tables in their own schema
-      deleteAfterDays: 1, // Faster cleanup for tests
-      archiveCompletedAfterSeconds: 300, // Archive after 5 minutes for tests
-      
-      // Retry configuration
-      retryLimit: 2, // Fewer retries for faster tests
-      retryDelay: 5, // Shorter delay for tests
       retryBackoff: true, // exponential backoff
-      
-      // Job expiration
-      expireInMinutes: 5, // Shorter expiration for tests
-      
-      // Maintenance configuration (faster for tests)
-      maintenanceIntervalSeconds: 10 // More frequent maintenance
-      
-      // Worker configuration - noScheduling and noSupervisor removed as they don't exist in ConstructorOptions
+      ...bossTuning,
     });
   }
   
