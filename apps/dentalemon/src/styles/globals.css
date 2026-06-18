@@ -4,6 +4,9 @@
 @import "@daveyplate/better-auth-ui/css";
 
 @custom-variant dark (&:is(.dark *));
+/* Touch-only styling hook: true on any device with a touch surface (incl.
+   docked iPad with a trackpad). Use `coarse:` for 44px touch targets etc. */
+@custom-variant coarse (@media (any-pointer: coarse));
 
 @tailwind base;
 @tailwind components;
@@ -183,33 +186,19 @@
   }
 }
 
-/* iPad / touch tuning — scoped to coarse pointers so desktop (fine pointer,
-   mouse) keeps its tighter density. Validated on real iPad recommended. */
-@media (pointer: coarse) {
+/* iPad / touch tuning. Uses (any-pointer: coarse) — true whenever a touch
+   surface exists, even on a docked iPad whose PRIMARY pointer is the
+   trackpad (pointer: fine). Desktop with mouse only stays unaffected.
+   NOTE: 44px touch targets are applied per-component (shared Button), not
+   as a blanket rule here — a blanket min-height breaks switches, calendar
+   chips, toolbar buttons, and text-link buttons. */
+@media (any-pointer: coarse) {
   /* >=16px on form fields so iOS Safari does not auto-zoom on focus.
      Covers the shared <Input> and all raw <input>s. */
   input:not([type="checkbox"]):not([type="radio"]),
   textarea,
   select {
     font-size: 16px;
-  }
-
-  /* Apple HIG 44px minimum touch target for interactive controls. */
-  button:not(:disabled),
-  [role="button"],
-  [role="tab"],
-  [role="switch"],
-  [role="menuitem"],
-  select,
-  summary {
-    min-height: 44px;
-  }
-
-  /* Icon-only buttons need width too (e.g. 28px bell/toolbar icons). */
-  button:has(> svg:only-child),
-  a:has(> svg:only-child),
-  [role="button"]:has(> svg:only-child) {
-    min-width: 44px;
   }
 }
 
