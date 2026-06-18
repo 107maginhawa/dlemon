@@ -100,6 +100,8 @@ model DentalInvoice {
   totalCents: int32;
   paidCents: int32;
   balanceCents: int32;
+  /** BR-048: per-invoice payment-terms override (days); resolves to dueDate at issue. */
+  paymentTermsDays?: int32;
   dueDate?: utcDateTime;
   issuedAt?: utcDateTime;
   paidAt?: utcDateTime;
@@ -211,6 +213,10 @@ model CreateDentalInvoiceRequest {
   dentistMemberId: UUID;
   taxRate?: float32;
   dueDate?: utcDateTime;
+
+  /** BR-048: optional per-invoice payment-terms override (days, 0–365). When set
+   *  and no explicit dueDate is given, dueDate = issuedAt + this at issue. */
+  paymentTermsDays?: int32;
 
   /** GAP-001: optional client-generated id for offline-first idempotent sync */
   localId?: string;

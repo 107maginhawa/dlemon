@@ -53,6 +53,19 @@ export async function getBranchFeeOverrides(
   return settings.feeSchedule ?? {};
 }
 
+/**
+ * BR-048: the clinic-wide default payment terms (days) from branch settings.
+ * Lowest-precedence fallback at invoice issue. Null when unset (→ due on receipt).
+ */
+export async function getBranchDefaultPaymentTermsDays(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<number | null> {
+  const branch = await new BranchRepository(db).findOneById(branchId);
+  const settings = (branch?.settings ?? {}) as { defaultPaymentTermsDays?: number };
+  return settings.defaultPaymentTermsDays ?? null;
+}
+
 export async function getActiveMembershipId(
   db: DatabaseInstance,
   personId: string,

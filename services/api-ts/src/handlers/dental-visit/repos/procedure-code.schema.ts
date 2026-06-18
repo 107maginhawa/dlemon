@@ -7,6 +7,9 @@ export const dentalProcedureCodes = pgTable('dental_procedure_code', {
   description: text('description').notNull(),
   category: text('category').notNull(),
   defaultFeePhp: integer('default_fee_php').notNull().default(0),
+  // BR-048: per-procedure payment terms (days). Optional; when an invoice has no
+  // override, the MAX of its line-item service terms applies at issue.
+  paymentTermsDays: integer('payment_terms_days'),
   active: boolean('active').notNull().default(true),
 }, (table) => ({
   cdtCodeIdx: index('dental_procedure_code_cdt_idx').on(table.cdtCode),

@@ -38,6 +38,10 @@ export interface BranchSettings {
   dentistSpecialty?: string;
   // FR8.3: Treatment fee schedule (map cdtCode → price in cents)
   feeSchedule?: Record<string, number>;
+  // BR-048: clinic-wide default payment terms (days). Lowest-precedence fallback
+  // when an invoice has no override and its services carry no terms. 0 = due on
+  // receipt. Stored here (JSONB) to avoid a config table/migration.
+  defaultPaymentTermsDays?: number;
   // FR8.7: Visit notes format toggle
   visitNotesFormat?: 'structured' | 'freetext';
   // FR8.8: Locale settings

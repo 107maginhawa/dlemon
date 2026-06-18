@@ -1947,6 +1947,11 @@ export type CreateDentalInvoiceRequest = {
     taxRate?: number;
     dueDate?: Date;
     /**
+     * BR-048: optional per-invoice payment-terms override (days, 0–365). When set
+     * and no explicit dueDate is given, dueDate = issuedAt + this at issue.
+     */
+    paymentTermsDays?: number;
+    /**
      * GAP-001: optional client-generated id for offline-first idempotent sync
      */
     localId?: string;
@@ -3771,6 +3776,10 @@ export type DentalInvoice = {
     totalCents: number;
     paidCents: number;
     balanceCents: number;
+    /**
+     * BR-048: per-invoice payment-terms override (days); resolves to dueDate at issue.
+     */
+    paymentTermsDays?: number;
     dueDate?: Date;
     issuedAt?: Date;
     paidAt?: Date;

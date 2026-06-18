@@ -972,6 +972,7 @@ export const CreateDentalInvoiceRequestSchema = z.object({
   dentistMemberId: UUIDSchema,
   taxRate: z.number().optional(),
   dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
+  paymentTermsDays: z.number().int().optional(),
   localId: z.string().optional()
 });
 
@@ -2082,6 +2083,7 @@ export const DentalInvoiceSchema = z.object({
   totalCents: z.number().int(),
   paidCents: z.number().int(),
   balanceCents: z.number().int(),
+  paymentTermsDays: z.number().int().optional(),
   dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   issuedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   paidAt: z.string().datetime().transform((str) => new Date(str)).optional(),
@@ -18472,8 +18474,13 @@ export const PatientSchema = z.object({
 
 export const PatientBalanceResponseSchema = z.object({
   patientId: UUIDSchema,
-  balanceCents: z.number().int(),
-  overdueInvoices: z.number().int()
+  totalBilledCents: z.number().int(),
+  totalPaidCents: z.number().int(),
+  outstandingBalanceCents: z.number().int(),
+  overdueAmountCents: z.number().int(),
+  invoiceCount: z.number().int(),
+  overdueInvoiceCount: z.number().int(),
+  activePaymentPlanCount: z.number().int()
 });
 
 export const PatientCareRecordBundleSchema = z.object({

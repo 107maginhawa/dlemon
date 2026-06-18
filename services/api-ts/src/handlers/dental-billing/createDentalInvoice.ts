@@ -110,6 +110,8 @@ export async function createDentalInvoice(
       taxRate: taxRate.toString(),
       totalCents,
       balanceCents: totalCents,
+      // BR-048: per-invoice payment-terms override (resolved to a dueDate at issue).
+      paymentTermsDays: body.paymentTermsDays ?? undefined,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
       // GAP-001: persist optional client-generated id for offline-first idempotent sync.
       localId: body.localId,

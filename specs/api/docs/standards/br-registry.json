@@ -204,6 +204,14 @@
           "source": "getArAging.ts, getCollectionsSummary.ts, getPayerArAging.ts, listInsuranceClaims.ts, generateStatementBatch.ts (getActiveBranchIdsForPerson → inArray scoping); org-billing.facade.ts getActiveBranchIdsForPerson",
           "test": "dental-billing.cross-tenant-reports.test.ts (ORG_A caller omitting branchId excludes ORG_B claims/invoices/payments/balances on all 5 endpoints)",
           "notes": "Found + fixed 2026-06-08 (dental-billing audit). Same class as V-PAT-002 / V-VIS-011 (caller-supplied branchId not an auth boundary) but the stronger 'omitted → unscoped' variant."
+        },
+        {
+          "id": "BR-048",
+          "description": "An invoice's dueDate derives from payment terms (in days) at issue, UNLESS the caller supplied an explicit dueDate at create (that wins). Precedence: per-invoice override (paymentTermsDays) → MAX of the line-item service terms (dental_procedure_code.paymentTermsDays keyed by line cdtCode) → clinic default (branch settings defaultPaymentTermsDays) → 0. dueDate = issuedAt + resolvedDays. Terms are bounded 0–365; Net-0 = due on receipt.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "issueDentalInvoice.ts (resolve + apply at issue), dental-billing/utils/payment-terms.ts (resolvePaymentTermsDays + dueDateFromTerms, pure), DentalInvoiceRepository.issue/getLineItemCdtCodes, visit-billing.facade.getProcedureTermsForCdtCodes, org-billing.facade.getBranchDefaultPaymentTermsDays; columns dental_invoice.payment_terms_days + dental_procedure_code.payment_terms_days (migration 0109)",
+          "test": "dental-billing/utils/payment-terms.test.ts (precedence + bounds, 9 cases); dental-billing.payment-terms.test.ts (E2E issue: clinic default, invoice override wins, service terms MAX, caller-dueDate preserved, due-on-receipt)"
         }
       ]
     },
