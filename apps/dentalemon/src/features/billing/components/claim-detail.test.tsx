@@ -140,3 +140,49 @@ describe('ClaimDetail line editor', () => {
     expect(sink.body).toMatchObject({ billedAmountCents: 4500 });
   });
 });
+
+// ── Coverage estimate (roadmap Phase 1b · sub-slice D) ──────────────────────
+describe('ClaimDetail coverage estimate', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+    cleanup();
+  });
+
+  test('estimating coverage POSTs the claim lines and renders the split', async () => {
+    let estimateUrl = '';
+    let estimateBody: unknown = null;
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : (init?.method ?? 'GET');
+      if (url.includes('/estimate')) {
+        estimateUrl = url;
+        const raw = req instanceof Request ? await req.text() : (init?.body as string);
+        estimateBody = raw ? JSON.parse(raw) : null;
+        return jsonResponse({ estimatedCoveredCents: 5000, estimatedPatientPortionCents: 3000, estimatedBilledCents: 8000, perLine: [], cappedByAnnualLimit: false, uncoveredProcedures: [] });
+      }
+      void method;
+      return jsonResponse(CLAIM);
+    });
+
+    const qc = freshClient();
+    render(<ClaimDetail claimId="claim-1" open onClose={() => {}} />, { wrapper: makeWrapper(qc) });
+
+    await waitFor(() => expect(screen.getByTestId('estimate-coverage-btn')).toBeDefined());
+    fireEvent.click(screen.getByTestId('estimate-coverage-btn'));
+
+    await waitFor(() => expect(estimateUrl).toContain('/dental/billing/estimate'));
+    expect(estimateBody).toMatchObject({
+      patientId: 'p1',
+      insuranceProfileId: 'ip1',
+      lines: [
+        { cdtCode: 'D1110', billedAmountCents: 5000 },
+        { cdtCode: 'D0220', billedAmountCents: 3000 },
+      ],
+    });
+
+    const panel = await screen.findByTestId('coverage-estimate');
+    expect(panel.textContent).toContain('₱50.00'); // covered
+    expect(panel.textContent).toContain('₱30.00'); // patient portion
+  });
+});

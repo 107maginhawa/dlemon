@@ -102,5 +102,10 @@ test.describe('Insurance claims: file a claim from the worklist (slice 1b.A)', (
     await page.getByTestId('add-line-submit').click();
     await expect(page.getByTestId('claim-detail')).toContainText('D0220');
     await expect(page.getByTestId('claim-detail')).toContainText('Periapical X-ray');
+
+    // Slice 1b.D — estimate coverage for the claim's lines (read-only split).
+    await page.getByTestId('estimate-coverage-btn').click();
+    await expect(page.getByTestId('coverage-estimate')).toBeVisible();
+    await expect(page.getByTestId('coverage-estimate')).toContainText('HMO covers');
   });
 });

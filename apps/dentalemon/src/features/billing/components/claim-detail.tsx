@@ -10,12 +10,13 @@
 
 import React, { useState } from 'react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { useClaimDetail, useClaimLineMutations } from '../hooks/use-insurance-claims';
+import { useClaimDetail, useClaimLineMutations, useCoverageEstimate } from '../hooks/use-insurance-claims';
 import {
   formatPeso,
   claimStatusClass,
   CLAIM_STATUS_LABELS,
   claimOutstandingCents,
+  coverageSplitLabel,
   isClaimEditable,
 } from './insurance.helpers';
 
@@ -43,6 +44,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
   useSheetA11y({ open, onClose });
   const { claim, isLoading } = useClaimDetail(open ? claimId : null);
   const { addLine, updateLine, isMutating } = useClaimLineMutations(claimId, branchId);
+  const { estimate, result: estimateResult, isEstimating } = useCoverageEstimate();
 
   // Add-line form
   const [newCdt, setNewCdt] = useState('');
@@ -74,6 +76,16 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
   async function handleSaveLine(lineId: string) {
     await updateLine({ lineId, billedAmountCents: pesoToCents(editBilled), description: editDescription });
     setEditingId(null);
+  }
+
+  async function handleEstimate() {
+    if (!claim) return;
+    await estimate({
+      patientId: claim.patientId,
+      insuranceProfileId: claim.insuranceProfileId,
+      authorizationId: claim.authorizationId ?? undefined,
+      lines: claim.lines.map((l) => ({ cdtCode: l.cdtCode, description: l.description, billedAmountCents: l.billedAmountCents })),
+    });
   }
 
   return (
@@ -206,6 +218,31 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                   </div>
                 )}
               </section>
+
+              {/* Coverage estimate (read-only; HMO-covered vs patient split) */}
+              {claim.lines.length > 0 && (
+                <section className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Coverage estimate</span>
+                    <button type="button" onClick={handleEstimate} disabled={isEstimating} data-testid="estimate-coverage-btn" className="h-8 px-3 rounded-lg bg-secondary/60 text-xs font-medium hover:bg-secondary disabled:opacity-50">
+                      {isEstimating ? 'Estimating…' : estimateResult ? 'Re-estimate' : 'Estimate coverage'}
+                    </button>
+                  </div>
+                  {estimateResult && (
+                    <div className="rounded-xl border border-border px-3 py-2.5 flex flex-col gap-1" data-testid="coverage-estimate">
+                      <div className="text-sm font-medium">
+                        {coverageSplitLabel(estimateResult.estimatedCoveredCents, estimateResult.estimatedPatientPortionCents)}
+                      </div>
+                      {estimateResult.cappedByAnnualLimit && (
+                        <div className="text-xs text-amber-700">Capped by remaining annual limit.</div>
+                      )}
+                      {estimateResult.uncoveredProcedures.length > 0 && (
+                        <div className="text-xs text-muted-foreground">No coverage: {estimateResult.uncoveredProcedures.join(', ')}</div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
             </>
           )}
         </div>
