@@ -212,6 +212,14 @@
           "status": "implemented",
           "source": "issueDentalInvoice.ts (resolve + apply at issue), dental-billing/utils/payment-terms.ts (resolvePaymentTermsDays + dueDateFromTerms, pure), DentalInvoiceRepository.issue/getLineItemCdtCodes, visit-billing.facade.getProcedureTermsForCdtCodes, org-billing.facade.getBranchDefaultPaymentTermsDays; columns dental_invoice.payment_terms_days + dental_procedure_code.payment_terms_days (migration 0109)",
           "test": "dental-billing/utils/payment-terms.test.ts (precedence + bounds, 9 cases); dental-billing.payment-terms.test.ts (E2E issue: clinic default, invoice override wins, service terms MAX, caller-dueDate preserved, due-on-receipt)"
+        },
+        {
+          "id": "BR-049",
+          "description": "The daily status sweep (cron dental-billing.status-sweep, 02:00 UTC) auto-transitions issued/partial invoices to `overdue` where dueDate <= now AND balanceCents > 0. Each transition is audited (action 'invoice.overdue', actor = system BILLING_SYSTEM_ACTOR, targetType dental_invoice). Idempotent: the status filter excludes already-overdue/paid/voided rows, so a re-run flips nothing and writes no further audit row. Terminal (voided/paid/uncollectible) invoices are never touched.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/jobs/index.ts (registerDentalBillingJobs status-sweep + per-invoice audit, BILLING_SYSTEM_ACTOR), DentalInvoiceRepository.markOverdueInvoices (returns affected {id,branchId}, gt(balanceCents,0) guard), org-billing.facade.getBranchOrgId (tenant resolution)",
+          "test": "dental-billing/jobs/jobs.test.ts (sweep flips past-due issued→overdue; idempotent second run; writes one invoice.overdue audit row per flip w/ actor=system, no further row on re-run); dental-billing.invoice-lifecycle.test.ts (FR4.1b: paid/voided/future-due never flipped)"
         }
       ]
     },

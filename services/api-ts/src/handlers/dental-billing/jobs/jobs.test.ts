@@ -11,14 +11,15 @@
  */
 
 import { describe, test, expect, beforeAll, afterEach, mock } from 'bun:test';
-import { sql } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
 import type { JobScheduler, JobHandler, JobContext } from '@/core/jobs';
-import { registerDentalBillingJobs } from './index';
+import { registerDentalBillingJobs, BILLING_SYSTEM_ACTOR } from './index';
 import { DentalInvoiceRepository } from '../repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from '../repos/dental-payment-plan.repo';
 import { dentalInvoices } from '../repos/dental-invoice.schema';
 import { dentalPaymentPlans, dentalPaymentPlanInstallments } from '../repos/dental-payment-plan.schema';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 const noopLogger = { info() {}, warn() {}, error() {}, debug() {}, child() { return noopLogger; } } as any;
@@ -47,6 +48,8 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  // dental_audit_log is append-only (row UPDATE/DELETE blocked); reset via TRUNCATE.
+  await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
   await db.execute(sql`DELETE FROM dental_payment_plan_installment`);
   await db.execute(sql`DELETE FROM dental_payment_plan`);
   await db.execute(sql`DELETE FROM dental_invoice`);
@@ -134,6 +137,37 @@ describe('dental-billing status sweep handler — overdue invoices (FIX-001)', (
 
     const updated = await invoiceRepo.findOneById(invoice.id);
     expect(updated!.status).toBe('overdue');
+  });
+});
+
+describe('dental-billing status sweep — overdue audit trail (BR-049)', () => {
+  async function overdueAuditRows(invoiceId: string) {
+    return db.select().from(dentalAuditLog).where(
+      and(eq(dentalAuditLog.targetId, invoiceId), eq(dentalAuditLog.action, 'invoice.overdue')),
+    );
+  }
+
+  test('writes one invoice.overdue audit row (actor=system) per flipped invoice', async () => {
+    const invoice = await seedIssuedInvoicePastDue();
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const rows = await overdueAuditRows(invoice.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.actorId).toBe(BILLING_SYSTEM_ACTOR);
+    expect(rows[0]!.targetType).toBe('dental_invoice');
+    expect(rows[0]!.branchId).toBe(BRANCH_ID);
+    expect(rows[0]!.tenantId).toBe(ORG_ID);
+  });
+
+  test('idempotent: a second sweep writes no further overdue audit row', async () => {
+    const invoice = await seedIssuedInvoicePastDue();
+    const { handler } = captureHandler();
+    await handler(makeContext());
+    await handler(makeContext());
+
+    const rows = await overdueAuditRows(invoice.id);
+    expect(rows).toHaveLength(1); // only the first transition is audited
   });
 });
 

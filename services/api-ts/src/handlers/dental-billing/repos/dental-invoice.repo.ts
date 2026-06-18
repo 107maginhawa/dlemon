@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { eq, and, sql, lte, inArray } from 'drizzle-orm';
+import { eq, and, sql, lte, gt, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import {
@@ -288,18 +288,24 @@ export class DentalInvoiceRepository {
    * FR4.1b: Mark issued/partial invoices past their due date as overdue.
    * Returns the count of invoices transitioned to overdue.
    */
-  async markOverdueInvoices(asOf: Date = new Date()): Promise<number> {
-    const result = await this.db
+  /**
+   * BR-049: flip issued/partial invoices past their due date (with a balance)
+   * to `overdue`. Returns the affected rows so the caller can audit each
+   * transition. Idempotent — already-overdue/paid/voided rows are excluded by
+   * the status filter, so a re-run flips (and returns) nothing.
+   */
+  async markOverdueInvoices(asOf: Date = new Date()): Promise<Array<{ id: string; branchId: string }>> {
+    return this.db
       .update(dentalInvoices)
       .set({ status: 'overdue', updatedAt: new Date() })
       .where(
         and(
           inArray(dentalInvoices.status, ['issued', 'partial']),
           lte(dentalInvoices.dueDate, asOf),
+          gt(dentalInvoices.balanceCents, 0),
         )
       )
-      .returning({ id: dentalInvoices.id });
-    return result.length;
+      .returning({ id: dentalInvoices.id, branchId: dentalInvoices.branchId });
   }
 
   /**
