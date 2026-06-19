@@ -16,6 +16,8 @@
  * than a typed query.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import {
   getTreatmentPlan,
   acceptTreatmentPlan,
@@ -107,9 +109,15 @@ export function useTreatmentPlan({ patientId, branchId }: UseTreatmentPlanOption
       });
       return data;
     },
+    // ISSUE-008 (QA 2026-06-20): accept previously gave no feedback — the modal
+    // stayed open with the button re-enabled, so users re-clicked and each click
+    // POSTed another acceptance snapshot. A success toast confirms the write;
+    // surfacing failures stops the (previously silent) error path.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      toast.success('Treatment plan accepted');
     },
+    onError: (err) => toastError(err, 'Could not accept treatment plan'),
   });
 
   const declineMutation = useMutation({
