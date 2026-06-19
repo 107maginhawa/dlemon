@@ -553,3 +553,27 @@ jsonpath "$.patientId" == "{{patient_id}}"
 jsonpath "$.sent" isBoolean
 jsonpath "$.outstandingBalanceCents" isInteger
 jsonpath "$.channels" isCollection
+
+
+# Phase 2.4 (BR-051): log a collections outreach note, then read the worklist.
+POST {{api}}/dental/billing/collections/notes
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "note": "Called patient re: outstanding balance, left voicemail",
+  "contactChannel": "phone"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.id" exists
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.contactChannel" == "phone"
+
+
+GET {{api}}/dental/billing/collections/worklist?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.rows" isCollection
+jsonpath "$.asOf" exists

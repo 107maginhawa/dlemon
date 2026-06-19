@@ -691,10 +691,41 @@ export const CheckInResponseSchema = z.object({
 
 export const ClaimLineStatusSchema = z.enum(["pending", "covered", "partial", "disallowed"]);
 
+export const CollectionContactChannelSchema = z.enum(["phone", "email", "sms", "in-person", "other"]);
+
+export const CollectionNoteSchema = z.object({
+  id: UUIDSchema,
+  patientId: UUIDSchema,
+  invoiceId: UUIDSchema.optional(),
+  branchId: UUIDSchema,
+  note: z.string(),
+  contactChannel: z.string(),
+  contactedAt: z.string().datetime().transform((str) => new Date(str)),
+  createdByMemberId: UUIDSchema.optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
 export const CollectionsSummaryResponseSchema = z.object({
   totalCollectedCents: z.number().int(),
   period: z.string(),
   invoiceCount: z.number().int()
+});
+
+export const CollectionsWorklistRowSchema = z.object({
+  patientId: UUIDSchema,
+  patientName: z.string(),
+  totalOverdueCents: z.number().int(),
+  oldestDaysOverdue: z.number().int(),
+  openInvoiceCount: z.number().int(),
+  hasActivePlan: z.boolean(),
+  lastContactedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  lastContactChannel: z.string().optional(),
+  noteCount: z.number().int()
+});
+
+export const CollectionsWorklistResponseSchema = z.object({
+  asOf: z.string().datetime().transform((str) => new Date(str)),
+  rows: z.array(CollectionsWorklistRowSchema)
 });
 
 export const CompletePerioChartRequestSchema = z.object({
@@ -894,6 +925,15 @@ export const CreateChatRoomRequestSchema = z.object({
   admins: z.array(UUIDSchema).optional(),
   context: z.string().uuid().optional(),
   upsert: z.boolean().optional()
+});
+
+export const CreateCollectionNoteRequestSchema = z.object({
+  patientId: UUIDSchema,
+  invoiceId: z.string().uuid().optional(),
+  branchId: z.string().uuid().optional(),
+  note: z.string().min(1),
+  contactChannel: CollectionContactChannelSchema,
+  contactedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
 export const CreateConsentFormRequestSchema = z.object({
@@ -19113,6 +19153,17 @@ export const ScheduleExceptionCreateRequestSchema = z.object({
 }).optional()
 });
 
+export const SendPatientStatementRequestSchema = z.object({
+  branchId: z.string().uuid().optional()
+});
+
+export const SendPatientStatementResponseSchema = z.object({
+  patientId: UUIDSchema,
+  sent: z.boolean(),
+  outstandingBalanceCents: z.number().int(),
+  channels: z.array(z.string())
+});
+
 export const SendTextMessageRequestSchema = z.object({
   messageType: z.enum(["text"]),
   message: z.string().max(5000)
@@ -20305,6 +20356,11 @@ export type GetArAgingQuery = z.infer<typeof GetArAgingQuery>;
 
 export const GetArAgingResponse = ArAgingResponseSchema;
 
+export const CreateCollectionNoteBody = CreateCollectionNoteRequestSchema;
+export type CreateCollectionNoteBody = z.infer<typeof CreateCollectionNoteBody>;
+
+export const CreateCollectionNoteResponse = CollectionNoteSchema;
+
 export const GetCollectionsSummaryQuery = z.object({
   branchId: UUIDSchema.optional(),
   period: z.string().optional(),
@@ -20312,6 +20368,14 @@ export const GetCollectionsSummaryQuery = z.object({
 export type GetCollectionsSummaryQuery = z.infer<typeof GetCollectionsSummaryQuery>;
 
 export const GetCollectionsSummaryResponse = CollectionsSummaryResponseSchema;
+
+export const GetCollectionsWorklistQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  asOf: z.string().datetime().transform((str) => new Date(str)).optional(),
+});
+export type GetCollectionsWorklistQuery = z.infer<typeof GetCollectionsWorklistQuery>;
+
+export const GetCollectionsWorklistResponse = CollectionsWorklistResponseSchema;
 
 export const EstimateClaimCoverageBody = CoverageEstimateRequestSchema;
 export type EstimateClaimCoverageBody = z.infer<typeof EstimateClaimCoverageBody>;
@@ -20456,6 +20520,16 @@ export const GetPatientBalanceParams = z.object({
 export type GetPatientBalanceParams = z.infer<typeof GetPatientBalanceParams>;
 
 export const GetPatientBalanceResponse = PatientBalanceResponseSchema;
+
+export const SendPatientStatementParams = z.object({
+  patientId: UUIDSchema,
+});
+export type SendPatientStatementParams = z.infer<typeof SendPatientStatementParams>;
+
+export const SendPatientStatementBody = SendPatientStatementRequestSchema;
+export type SendPatientStatementBody = z.infer<typeof SendPatientStatementBody>;
+
+export const SendPatientStatementResponse = SendPatientStatementResponseSchema;
 
 export const GenerateStatementBatchBody = GenerateStatementBatchRequestSchema;
 export type GenerateStatementBatchBody = z.infer<typeof GenerateStatementBatchBody>;

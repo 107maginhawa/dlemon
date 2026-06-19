@@ -423,6 +423,61 @@ model GenerateStatementBatchResponse {
   statements: PatientStatement[];
 }
 
+// ---------------------------------------------------------------------------
+// Phase 2.4: Collections worklist + outreach log (BR-051)
+// ---------------------------------------------------------------------------
+
+/** Channel a collections contact was made on. */
+enum CollectionContactChannel {
+  phone,
+  email,
+  sms,
+  in_person: "in-person",
+  other,
+}
+
+model CreateCollectionNoteRequest {
+  patientId: UUID;
+  /** Optional specific invoice the contact concerned. */
+  invoiceId?: UUID;
+  /** Explicit branch (asserts membership); omitted uses the patient's branch. */
+  branchId?: UUID;
+  @minLength(1) note: string;
+  contactChannel: CollectionContactChannel;
+  /** When the patient was contacted; defaults to now. */
+  contactedAt?: utcDateTime;
+}
+
+model CollectionNote {
+  id: UUID;
+  patientId: UUID;
+  invoiceId?: UUID;
+  branchId: UUID;
+  note: string;
+  contactChannel: string;
+  contactedAt: utcDateTime;
+  createdByMemberId?: UUID;
+  createdAt: utcDateTime;
+}
+
+/** One actionable overdue-patient row for the collections worklist. */
+model CollectionsWorklistRow {
+  patientId: UUID;
+  patientName: string;
+  totalOverdueCents: int32;
+  oldestDaysOverdue: int32;
+  openInvoiceCount: int32;
+  hasActivePlan: boolean;
+  lastContactedAt?: utcDateTime;
+  lastContactChannel?: string;
+  noteCount: int32;
+}
+
+model CollectionsWorklistResponse {
+  asOf: utcDateTime;
+  rows: CollectionsWorklistRow[];
+}
+
 /** BR-050: manual dunning nudge — send a patient their current statement now. */
 model SendPatientStatementRequest {
   /** Explicit branch (asserts membership); omitted scopes to the caller's branches. */
@@ -1035,6 +1090,36 @@ namespace DentalBillingModule {
       @query asOf?: utcDateTime
     ): ApiOkResponse<ArAgingResponse>
       | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 2.4: collections worklist — overdue patients enriched with last
+    // contact + open-invoice/plan state, branch-scoped (EM-BIL-002).
+    @get
+    @route("/collections/worklist")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getCollectionsWorklist")
+    getCollectionsWorklist(
+      @query branchId?: UUID,
+      @query asOf?: utcDateTime
+    ): ApiOkResponse<CollectionsWorklistResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 2.4: log a collections outreach attempt (audited, append-only).
+    @post
+    @route("/collections/notes")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createCollectionNote")
+    createCollectionNote(
+      @body body: CreateCollectionNoteRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body body: CollectionNote;
+    }
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
     // P2-14: batch patient statements run.

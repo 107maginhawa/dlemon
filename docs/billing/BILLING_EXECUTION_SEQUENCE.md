@@ -22,7 +22,8 @@ Last updated: 2026-06-19.
 | 2.1 | FE back-fill: per-service catalog terms · per-invoice override at create | ⬜ deferred | backend already supports both |
 | 2.3 | a dunning reminder engine (job + reminder_log, BR-050) | ✅ done | `6e78fa26` |
 | 2.3 | b manual statement/send endpoint + cadence config panel + send button FE | ✅ done | `pending-commit` |
-| 2.4 | collections worklist | ⬜ pending | |
+| 2.4 | a backend: worklist GET + collection-note POST (audited, BR-051) | ✅ done | `pending-commit` |
+| 2.4 | b FE: collections worklist tab + log-call action | ⬜ pending | next |
 | 3.1 | AR KPI dashboard | ⬜ pending | |
 | 3.2 | patient statement / ledger | ⬜ pending | |
 | 4.1 | patient credit ledger | ⬜ pending | |

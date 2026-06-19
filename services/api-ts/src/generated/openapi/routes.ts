@@ -494,11 +494,25 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getArAging as unknown as Handler
   );
 
+  // createCollectionNote
+  app.post('/dental/billing/collections/notes',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreateCollectionNoteBody, validationErrorHandler),
+    registry.createCollectionNote as unknown as Handler
+  );
+
   // getCollectionsSummary
   app.get('/dental/billing/collections/summary',
     authMiddleware({ roles: ["user"] }),
     zValidator('query', validators.GetCollectionsSummaryQuery, validationErrorHandler),
     registry.getCollectionsSummary as unknown as Handler
+  );
+
+  // getCollectionsWorklist
+  app.get('/dental/billing/collections/worklist',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetCollectionsWorklistQuery, validationErrorHandler),
+    registry.getCollectionsWorklist as unknown as Handler
   );
 
   // estimateClaimCoverage
@@ -609,6 +623,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetPatientBalanceParams, validationErrorHandler),
     registry.getPatientBalance as unknown as Handler
+  );
+
+  // sendPatientStatement
+  app.post('/dental/billing/patients/:patientId/statement/send',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.SendPatientStatementParams, validationErrorHandler),
+    zValidator('json', validators.SendPatientStatementBody, validationErrorHandler),
+    registry.sendPatientStatement as unknown as Handler
   );
 
   // generateStatementBatch

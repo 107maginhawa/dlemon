@@ -70,6 +70,7 @@ import { updateQueueItemStatus } from '../../handlers/dental-scheduling/updateQu
 import { getAuditEvents } from '../../handlers/dental-audit/getAuditEvents';
 import { addInsuranceClaimLine } from '../../handlers/dental-billing/addInsuranceClaimLine';
 import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
+import { createCollectionNote } from '../../handlers/dental-billing/createCollectionNote';
 import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
 import { createDentalPaymentPlan } from '../../handlers/dental-billing/createDentalPaymentPlan';
 import { createInsuranceClaim } from '../../handlers/dental-billing/createInsuranceClaim';
@@ -77,6 +78,7 @@ import { estimateClaimCoverage } from '../../handlers/dental-billing/estimateCla
 import { generateStatementBatch } from '../../handlers/dental-billing/generateStatementBatch';
 import { getArAging } from '../../handlers/dental-billing/getArAging';
 import { getCollectionsSummary } from '../../handlers/dental-billing/getCollectionsSummary';
+import { getCollectionsWorklist } from '../../handlers/dental-billing/getCollectionsWorklist';
 import { getDentalInvoice } from '../../handlers/dental-billing/getDentalInvoice';
 import { getDentalPaymentPlan } from '../../handlers/dental-billing/getDentalPaymentPlan';
 import { getDentalPaymentReceipt } from '../../handlers/dental-billing/getDentalPaymentReceipt';
@@ -90,6 +92,7 @@ import { listInsuranceClaims } from '../../handlers/dental-billing/listInsurance
 import { markUncollectible } from '../../handlers/dental-billing/markUncollectible';
 import { recordClaimRemittance } from '../../handlers/dental-billing/recordClaimRemittance';
 import { recordDentalPayment } from '../../handlers/dental-billing/recordDentalPayment';
+import { sendPatientStatement } from '../../handlers/dental-billing/sendPatientStatement';
 import { updateInsuranceClaimLine } from '../../handlers/dental-billing/updateInsuranceClaimLine';
 import { updateInsuranceClaimStatus } from '../../handlers/dental-billing/updateInsuranceClaimStatus';
 import { voidDentalInvoice } from '../../handlers/dental-billing/voidDentalInvoice';
@@ -457,6 +460,7 @@ export const registry = {
   // Dental-billing handlers
   addInsuranceClaimLine,
   applyDentalDiscount,
+  createCollectionNote,
   createDentalInvoice,
   createDentalPaymentPlan,
   createInsuranceClaim,
@@ -464,6 +468,7 @@ export const registry = {
   generateStatementBatch,
   getArAging,
   getCollectionsSummary,
+  getCollectionsWorklist,
   getDentalInvoice,
   getDentalPaymentPlan,
   getDentalPaymentReceipt,
@@ -477,6 +482,7 @@ export const registry = {
   markUncollectible,
   recordClaimRemittance,
   recordDentalPayment,
+  sendPatientStatement,
   updateInsuranceClaimLine,
   updateInsuranceClaimStatus,
   voidDentalInvoice,
