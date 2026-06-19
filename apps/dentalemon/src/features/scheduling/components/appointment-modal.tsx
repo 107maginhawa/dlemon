@@ -41,9 +41,17 @@ export function validateAppointmentForm(form: {
   serviceType: string;
   date: string;
   time: string;
+  /** Provider/dentist member id — required by the create API (providerId: UUIDSchema). */
+  dentistMemberId?: string;
+  /** Only the create path sends providerId; the edit body omits it, so don't require it there. */
+  requireProvider?: boolean;
 }): string[] {
   const errors: string[] = [];
   if (!form.patientId.trim()) errors.push('Patient ID is required');
+  // The dentist is required by the backend (providerId must be a UUID). Without
+  // this check the form submitted providerId:'' and the API 400'd with only a
+  // generic "Failed to create appointment" — no hint the dentist was missing.
+  if (form.requireProvider && !form.dentistMemberId?.trim()) errors.push('Dentist is required');
   if (!form.serviceType.trim()) errors.push('Service type is required');
   if (!form.date.trim() || !form.time.trim()) errors.push('Scheduled date and time are required');
   return errors;
@@ -145,7 +153,14 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   }
 
   async function handleSave() {
-    const errs = validateAppointmentForm({ patientId, serviceType, date, time });
+    const errs = validateAppointmentForm({
+      patientId,
+      serviceType,
+      date,
+      time,
+      dentistMemberId,
+      requireProvider: !appointmentId,
+    });
     if (errs.length > 0) {
       setErrors(errs);
       return;
