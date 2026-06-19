@@ -19,7 +19,10 @@ import { DentalInvoiceRepository } from '../repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from '../repos/dental-payment-plan.repo';
 import { dentalInvoices } from '../repos/dental-invoice.schema';
 import { dentalPaymentPlans, dentalPaymentPlanInstallments } from '../repos/dental-payment-plan.schema';
+import { dentalBillingReminderLog } from '../repos/dental-billing-reminder-log.schema';
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
+import { notifications } from '@/handlers/notifs/repos/notification.schema';
+import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 const noopLogger = { info() {}, warn() {}, error() {}, debug() {}, child() { return noopLogger; } } as any;
@@ -50,22 +53,26 @@ beforeAll(async () => {
 afterEach(async () => {
   // dental_audit_log is append-only (row UPDATE/DELETE blocked); reset via TRUNCATE.
   await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
+  await db.execute(sql`DELETE FROM dental_billing_reminder_log`);
+  await db.execute(sql`DELETE FROM notification`);
   await db.execute(sql`DELETE FROM dental_payment_plan_installment`);
   await db.execute(sql`DELETE FROM dental_payment_plan`);
   await db.execute(sql`DELETE FROM dental_invoice`);
+  // Reset branch settings any reminder-cadence test mutated.
+  await db.update(dentalBranches).set({ settings: {} }).where(eq(dentalBranches.id, BRANCH_ID));
 });
 
 const DAY = 24 * 60 * 60 * 1000;
 
-async function seedIssuedInvoicePastDue() {
+async function seedIssuedInvoicePastDue(daysOverdue = 1, balanceCents = 10000) {
   const invoiceRepo = new DentalInvoiceRepository(db);
   const invoiceNumber = await invoiceRepo.generateInvoiceNumber();
   const [row] = await db.insert(dentalInvoices).values({
     id: crypto.randomUUID(),
     visitId: VISIT_ID, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID,
     invoiceNumber, status: 'issued', subtotalCents: 10000, discountCents: 0, taxCents: 0,
-    taxRate: '0', totalCents: 10000, paidCents: 0, balanceCents: 10000,
-    issuedAt: new Date(), dueDate: new Date(Date.now() - DAY),
+    taxRate: '0', totalCents: 10000, paidCents: 10000 - balanceCents, balanceCents,
+    issuedAt: new Date(Date.now() - daysOverdue * DAY - DAY), dueDate: new Date(Date.now() - daysOverdue * DAY),
     createdBy: STAFF.id, updatedBy: STAFF.id,
   }).returning();
   return row!;
@@ -203,5 +210,80 @@ describe('dental-billing status sweep handler — plan Behind (FIX-002)', () => 
 
     const updated = await planRepo.findOneById(plan!.id);
     expect(updated!.status).toBe('on_track');
+  });
+});
+
+describe('dental-billing status sweep — dunning reminders (BR-050)', () => {
+  async function reminderRows(invoiceId: string) {
+    return db.select().from(dentalBillingReminderLog)
+      .where(eq(dentalBillingReminderLog.invoiceId, invoiceId));
+  }
+  async function billingNotifs(invoiceId: string) {
+    return db.select().from(notifications).where(
+      and(eq(notifications.relatedEntity, invoiceId), eq(notifications.type, 'billing')),
+    );
+  }
+
+  test('fires the first offset (default [3,7,14]) and logs one row + enqueues billing notifs', async () => {
+    const invoice = await seedIssuedInvoicePastDue(4); // 4 days overdue → offset 3 only
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const rows = await reminderRows(invoice.id);
+    expect(rows.map((r) => r.offsetDay)).toEqual([3]);
+    expect(rows[0]!.status).toBe('sent');
+    expect(rows[0]!.branchId).toBe(BRANCH_ID);
+
+    const notifs = await billingNotifs(invoice.id);
+    expect(notifs.length).toBeGreaterThanOrEqual(1);
+    expect(notifs.every((n) => n.recipient === PERSON_ID)).toBe(true);
+    expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['email', 'push']));
+  });
+
+  test('idempotent: a second sweep writes no further reminder row for the same offset', async () => {
+    const invoice = await seedIssuedInvoicePastDue(4);
+    const { handler } = captureHandler();
+    await handler(makeContext());
+    await handler(makeContext());
+
+    const rows = await reminderRows(invoice.id);
+    expect(rows.map((r) => r.offsetDay)).toEqual([3]);
+  });
+
+  test('fires every elapsed offset: 8 days overdue → offsets 3 and 7, not 14', async () => {
+    const invoice = await seedIssuedInvoicePastDue(8);
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const rows = await reminderRows(invoice.id);
+    expect(rows.map((r) => r.offsetDay).sort((a, b) => a - b)).toEqual([3, 7]);
+  });
+
+  test('does not remind before the first offset (2 days overdue, default [3,…])', async () => {
+    const invoice = await seedIssuedInvoicePastDue(2);
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    expect(await reminderRows(invoice.id)).toHaveLength(0);
+    expect(await billingNotifs(invoice.id)).toHaveLength(0);
+  });
+
+  test('respects branch-configured offsets', async () => {
+    await db.update(dentalBranches).set({ settings: { billingReminderOffsetDays: [5] } })
+      .where(eq(dentalBranches.id, BRANCH_ID));
+    const invoice = await seedIssuedInvoicePastDue(6); // ≥5
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const rows = await reminderRows(invoice.id);
+    expect(rows.map((r) => r.offsetDay)).toEqual([5]);
+  });
+
+  test('never reminds a zero-balance invoice (settled — markOverdue skips it)', async () => {
+    const invoice = await seedIssuedInvoicePastDue(10, 0); // balance 0
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    expect(await reminderRows(invoice.id)).toHaveLength(0);
   });
 });

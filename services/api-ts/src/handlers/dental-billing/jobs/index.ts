@@ -55,8 +55,12 @@ export function registerDentalBillingJobs(scheduler: JobScheduler): void {
 
       const plansChanged = await planRepo.reevaluateActivePlanStatuses();
 
+      // BR-050: after the overdue flip, fire dunning reminders for overdue invoices.
+      const { runDunningSweep } = await import('./dunning');
+      const { remindersSent } = await runDunningSweep(db, logger);
+
       logger.info(
-        { jobId, overdueCount: overdue.length, plansChanged },
+        { jobId, overdueCount: overdue.length, plansChanged, remindersSent },
         'dental-billing status sweep completed',
       );
     } catch (error) {

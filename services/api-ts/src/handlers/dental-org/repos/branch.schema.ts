@@ -42,6 +42,10 @@ export interface BranchSettings {
   // when an invoice has no override and its services carry no terms. 0 = due on
   // receipt. Stored here (JSONB) to avoid a config table/migration.
   defaultPaymentTermsDays?: number;
+  // BR-050: dunning cadence — days past due at which to send payment reminders
+  // (e.g. [3, 7, 14]). Stored here (JSONB) to avoid a config table/migration; a
+  // hardcoded default applies when absent. Reminders go out on email + push.
+  billingReminderOffsetDays?: number[];
   // FR8.7: Visit notes format toggle
   visitNotesFormat?: 'structured' | 'freetext';
   // FR8.8: Locale settings

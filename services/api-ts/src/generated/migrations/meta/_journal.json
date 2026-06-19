@@ -771,6 +771,13 @@
       "when": 1781820438635,
       "tag": "0109_right_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1781827739891,
+      "tag": "0110_shiny_sumo",
+      "breakpoints": true
     }
   ]
 }
