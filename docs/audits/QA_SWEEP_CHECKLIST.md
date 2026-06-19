@@ -40,17 +40,17 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 
 ## Module checklists
 
-### Auth & session
-- [x] ✅ email/password sign-in · PIN select + entry · land on dashboard
-- [ ] ⬜ sign out → returns to sign-in
-- [ ] ⬜ magic link / email code / passkey sign-in
-- [ ] ⬜ forgot password · sign up
+### Auth & session — **swept live 2026-06-20** ✅ clean
+- [x] ✅ email/password sign-in · PIN select + entry · land on dashboard · wrong password → "Invalid email or password" toast (password cleared)
+- [x] ✅ sign out → returns to `/auth/sign-in`
+- [x] ✅ magic link (`/auth/magic-link` → "Check your email for the magic link") · email code (`/auth/email-otp` → "Verify code" entry + "check your email") · passkey (button present, no crash; WebAuthn not drivable headless — no authenticator)
+- [x] ✅ forgot password (empty → "Email is invalid"; valid → "Check your email for the password reset link") · sign up (renders Name/Email/Password; email-format validation blocks)
 - [x] ✅ PIN inactivity lock + refresh-clears-PIN (by design — `pin-session.ts`)
 
-### Dashboard
+### Dashboard — **quick-actions swept live 2026-06-20** ✅ clean
 - [x] ✅ load + KPIs + seeded data + console clean
-- [ ] ⬜ quick actions (New Patient / New Appointment / Open Workspace) navigate correctly
-- [ ] ⬜ "View all" / "Details" / "Manage" / "Open Calendar" links
+- [x] ✅ quick actions: New Patient → `/patients` · New Appointment → `/calendar` · Open Workspace → `/patients` (picker) — all navigate
+- [x] ✅ links: Today's Schedule "View all" → `/calendar` · Daily Collections "Details" → `/billing` · Overdue Alerts "View all" → `/billing` · Pending Treatments "View all" → `/patients` · Payment Plans "Manage" → `/billing` · Tomorrow Preview "Open Calendar" → `/calendar` — all navigate correctly
 
 ### Patients — list
 - [x] ✅ list load · search
@@ -60,18 +60,15 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [ ] ⬜ find-duplicates panel → review & merge
 - [x] ✅ register patient (ISSUE-001)
 
-### Patients — profile/record
-- [ ] 🟢 edit demographics (validation static — drive live)
-- [ ] ⬜ contacts add/edit/delete
-- [ ] ⬜ household add/remove member
-- [ ] ⬜ recalls create/update/dispatch
-- [ ] ⬜ follow-up notes
-- [ ] ⬜ communication consent toggle
-- [ ] ⬜ insurance profiles · conditions
-- [ ] ⬜ merge / unmerge duplicates (data: survivor correctness)
-- [ ] 🟢 credits add/apply
-- [ ] ⬜ deactivate · patient statement · care-record/PMD export · erasure request
-- [ ] 🟢 archive / restore (refresh ✅; drive live)
+### Patients — profile/record — **profile surface swept live 2026-06-20**
+- [x] ✅ edit demographics — **live**: first-name-required + email-format validation enforced (form stays open, no save); valid save persists; **fixed ISSUE-015** (phone with spaces silently 400'd — now normalized to E.164 + clear guidance)
+- [x] ✅ follow-up notes — min-length gate (5 chars → Add disabled) + add persists in Follow-up Log
+- [x] ✅ Payment History tab renders (invoices + Outstanding Balance ₱) · Household section renders ("not linked" state)
+- [ ] 🟢 contacts add/edit/delete · household add/remove · recalls create/update/dispatch · communication consent toggle · insurance profiles · conditions · credits add/apply — **workspace/list-resident** (patient sub-nav `Imaging/Perio/Recalls/Plans/Export` + `_dashboard/patients.tsx`), not on the profile page; overlap the Workspace batch; chart-cell/signature parts headless-limited
+- [ ] 🟢 merge / unmerge duplicates — patients-list find-duplicates panel (not profile detail)
+- [ ] 🟢 archive / restore — patients-**list** bulk action (no profile-page control; refresh ✅ prior); deactivate/statement/PMD export/erasure are list/workspace/platform-admin surfaces
+
+**Patients-detail finding (2026-06-20):** **fixed ISSUE-015** — Edit Patient Details phone validation allowed spaces but server requires strict E.164 → natural PH numbers 400'd with a generic "Could not save changes". Now normalized to E.164 on submit + regression test.
 
 ### Calendar / scheduling — **swept live 2026-06-20**
 - [x] ✅ day view load · cancel (ISSUE-002) · create validation (ISSUE-005)
@@ -126,23 +123,26 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ each report type renders with data (Revenue: billed/collected/outstanding KPIs + invoices; Treatment: 27 CDT codes/104 tx/₱725k; Patient: 22 active + reg dates)
 - [ ] 🟢 filters (date range present) · export (Export CSV present — not driven)
 
-### Settings
-- [ ] 🟢 clinic info save → persists on reload
-- [ ] 🟢 working hours (validation: start<end confirmed) — drive live
-- [ ] 🟢 fee schedule (min=0, cents — confirmed) — drive live
-- [ ] ⬜ payment terms · tax/VAT · BIR receipt details · reminder cadence · locale · notifications
-- [ ] 🟢 consent form templates · treatment templates (create/update/delete)
-- [ ] ⬜ audit log view · postop templates
-- [ ] 🟢 data erasure
+### Settings — **swept live 2026-06-20**
+- [x] ✅ clinic info save → **persists** (DB JSONB `branch.settings`) + required-field validation. Nit: form doesn't default from existing branch name/address (separate store) — first-run empty.
+- [x] ✅ working hours load (seeded) + **start<end validation** (DB unchanged on invalid save)
+- [x] ✅ fee schedule — negative price rejected (server: `priceCents >=0`) · valid edit **persists** (per-branch override in `branch.settings.feeSchedule`, catalog defaults in `dental_procedure_code`)
+- [x] ✅ payment terms (Net 30 → `defaultPaymentTermsDays`) · tax/VAT (toggle → `taxMode`, restored) · reminder cadence (render) · locale (render) · notifications (toggle → `notificationPreferences`) — all save+persist. BIR receipt details saved with clinic info (`tin`/`registeredName`/`businessStyle`).
+- [x] ✅ consent form templates **CRUD** (create/edit/soft-delete all persist) · treatment templates create (w/ items array, centavos) + soft-delete ✅ — **fixed ISSUE-006** (seed non-idempotency: 66 dupes from 22 reseeds; now reuses by name)
+- [x] ✅ audit log view (live events incl. this session's settings writes) + event-type filter works · ⬜ postop templates (no UI surface found)
+- [x] ✅ data erasure — informational by design (platform-admin operated; no destructive clinic-role form)
 
-### Staff
-- [ ] ⬜ member list
-- [ ] 🟢 create member · 🟢 permissions update
-- [ ] ⬜ update member · deactivate · set/reset PIN
+**Settings-batch findings (2026-06-20):** ISSUE-006 consent/treatment template duplication **FIXED** (`scripts/seed-demo.ts` now idempotent). Existing 66 dev-DB dupes clear on next `bun run db:reseed` (bulk DB cleanup declined as out-of-scope/destructive).
 
-### Case presentation
-- [ ] 🟢 create · accept / reject · accept treatment option (pending guards + errors OK)
-- [ ] ⬜ viewer / presentation mode
+### Staff — **swept live 2026-06-20** ✅ clean
+- [x] ✅ member list (Ana Santos staff_full + Dr. Reyes owner; owner shows "cannot deactivate" gate)
+- [x] ✅ create member (PIN-mismatch validation ✅ · Dentist-Owner role disabled "already assigned" ✅ · list refreshes) · permissions update (role change staff_full→staff_scheduling persists)
+- [x] ✅ update member (name + role persist) · deactivate (status→inactive) · reset PIN (argon2 hash changes)
+
+### Case presentation — **swept live 2026-06-20**
+- [x] ✅ viewer / presentation mode — accepted presentation shows signed-acceptance read-back (signer + timestamp + phased ₱); draft shows interactive patient surface ("Diego, here is your treatment plan", phases, options A/B, name + signature)
+- [x] ✅ accept gate (name + signature both required; Accept disabled w/o signature — canvas headless-limited) · reject/decline drivable (reason popover → confirm) · accept treatment option (option-group A/B "Recommended" badge renders) · 🟢 create (Present-to-patient button gated to `presented`-status plan; no presented plan in seed to drive — FSM exercised via seed draft/accepted/rejected rows)
+- **fixed ISSUE-014** — accept/decline failures were **swallowed** (panel `void reject()`, hook no error state). Declining an already-approved plan 422'd silently with zero patient feedback. Now surfaces a patient-facing error banner + regression test. Same family as ISSUE-013.
 
 ### Imaging / Ceph — 🚫 blocked (MinIO down; bring up `infra:up`)
 - [ ] 🚫 upload image
@@ -166,13 +166,15 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 
 ---
 
-## Cross-cutting (run against every module)
-- [ ] ⬜ **Role: Staff (Ana Santos)** — re-run key flows; verify permission gates (cancel, export, billing are owner/staff_full only)
-- [ ] ⬜ Empty states (no patients / no appointments / no invoices)
-- [ ] ⬜ Loading + error states (network failure surfaced)
+## Cross-cutting (run against every module) — **swept live 2026-06-20**
+- [x] ✅ **Role: Staff (Ana Santos, staff_full)** — sidebar correctly hides Reports/Staff/Settings (admin gated); **fixed ISSUE-016** (patient CSV export was shown to staff + 403'd silently — now owner-gated + surfaced). ⚠ **ISSUE-017 (flagged, not fixed):** sidebar footer shows the Better-Auth account name "Dr. Maria Reyes" even when the **Ana Santos** profile is active (role IS Ana's). Root: `app-sidebar.tsx` uses `session.user.name`; org-context store has only `memberId`/`role`, not the member displayName. Fix = plumb active member name through org-context (touches PIN-select + store + sidebar — deferred for design confirmation).
+- [ ] 🟢 Empty states — not driven (seed is data-rich); spot-checked: notifications "all caught up", portal/public-booking graceful states ✅ (prior)
+- [x] ✅ Loading + error states — error surfacing exercised throughout; **3 swallowed-error bugs found+fixed** this batch set (ISSUE-013-family): 014 case-presentation accept/decline, 015 patient phone 400, 016 export 403
 - [x] ✅ Console errors per page (breadth sweep — clean except OneSignal/runtime-config dev noise)
-- [ ] ⬜ Responsive / iPad (calendar + tables; known prior iPad overflow fix)
-- [ ] ⬜ Accessibility pass (landmarks, focus, labels)
+- [x] ✅ Responsive / iPad — calendar **clean** at 768px portrait (no h-overflow). ⚠ **ISSUE-018 (flagged, not fixed):** billing invoices table overflows at iPad-portrait 768px (Status column clipped, whole page widens to 1024) because the sidebar does **not** auto-collapse at exactly 768px (manually collapsing it → fits). Root = global shadcn sidebar mobile breakpoint (`<768` excludes 768px tablets); fix is a tablet-UX design decision (collapse ≤1024 or shrink inset) — deferred.
+- [x] 🟢 Accessibility — `main` + single `h1` landmarks present; **gaps:** sidebar nav has no `role=navigation`/`<nav>` (0 found) and ~6 icon-only buttons lack `aria-label`. Minor; noted for an a11y pass.
+
+**Cross-cutting findings (2026-06-20):** **fixed ISSUE-016** (export gate + swallowed 403). **Flagged (need design/arch decision, not fixed):** ISSUE-017 sidebar shows account name not active member profile · ISSUE-018 iPad-portrait 768px sidebar non-collapse → billing table overflow · a11y nav-landmark + icon-button-label gaps.
 
 ## Known non-bugs / by-design (don't re-file)
 - PIN clears on refresh — intentional kiosk security (`pin-session.ts`).
