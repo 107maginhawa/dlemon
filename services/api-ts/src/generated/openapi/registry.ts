@@ -77,6 +77,7 @@ import { createInsuranceClaim } from '../../handlers/dental-billing/createInsura
 import { estimateClaimCoverage } from '../../handlers/dental-billing/estimateClaimCoverage';
 import { generateStatementBatch } from '../../handlers/dental-billing/generateStatementBatch';
 import { getArAging } from '../../handlers/dental-billing/getArAging';
+import { getCollectionsKpis } from '../../handlers/dental-billing/getCollectionsKpis';
 import { getCollectionsSummary } from '../../handlers/dental-billing/getCollectionsSummary';
 import { getCollectionsWorklist } from '../../handlers/dental-billing/getCollectionsWorklist';
 import { getDentalInvoice } from '../../handlers/dental-billing/getDentalInvoice';
@@ -467,6 +468,7 @@ export const registry = {
   estimateClaimCoverage,
   generateStatementBatch,
   getArAging,
+  getCollectionsKpis,
   getCollectionsSummary,
   getCollectionsWorklist,
   getDentalInvoice,

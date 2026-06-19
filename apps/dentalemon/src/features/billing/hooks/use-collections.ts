@@ -11,6 +11,7 @@ import {
   getArAgingQueryKey,
   getCollectionsWorklistOptions,
   getCollectionsWorklistQueryKey,
+  getCollectionsKpisOptions,
 } from '@monobase/sdk-ts/generated/react-query';
 import {
   generateStatementBatch,
@@ -19,6 +20,7 @@ import {
   type ArAgingResponse,
   type GenerateStatementBatchResponse,
   type CollectionsWorklistResponse,
+  type CollectionsKpiResponse,
   type CreateCollectionNoteRequest,
 } from '@monobase/sdk-ts/generated';
 
@@ -36,6 +38,7 @@ interface UseArAgingOptions {
 export type ArAgingData = ArAgingResponse;
 export type StatementBatchResult = GenerateStatementBatchResponse;
 export type CollectionsWorklist = CollectionsWorklistResponse;
+export type CollectionsKpis = CollectionsKpiResponse;
 
 export function useArAging({ branchId }: UseArAgingOptions) {
   const query = useQuery({
@@ -122,6 +125,23 @@ export function useCollectionsWorklist({ branchId }: UseArAgingOptions) {
 
   return {
     worklist: query.data ?? null,
+    isLoading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
+  };
+}
+
+/** Phase 3.1: AR KPI dashboard metrics (branch-scoped, read-only). */
+export function useCollectionsKpis({ branchId }: UseArAgingOptions) {
+  const query = useQuery({
+    ...getCollectionsKpisOptions({ query: { branchId: branchId ?? undefined } }),
+    enabled: Boolean(branchId),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    kpis: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error as Error | null,
     refetch: query.refetch,

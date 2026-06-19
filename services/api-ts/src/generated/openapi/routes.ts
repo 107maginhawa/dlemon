@@ -494,6 +494,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getArAging as unknown as Handler
   );
 
+  // getCollectionsKpis
+  app.get('/dental/billing/collections/kpis',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetCollectionsKpisQuery, validationErrorHandler),
+    registry.getCollectionsKpis as unknown as Handler
+  );
+
   // createCollectionNote
   app.post('/dental/billing/collections/notes',
     authMiddleware({ roles: ["user"] }),

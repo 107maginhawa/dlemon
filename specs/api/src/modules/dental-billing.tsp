@@ -478,6 +478,32 @@ model CollectionsWorklistResponse {
   rows: CollectionsWorklistRow[];
 }
 
+// ---------------------------------------------------------------------------
+// Phase 3.1: AR KPI dashboard (read-only analytics)
+// ---------------------------------------------------------------------------
+
+model AgingBucketPoint {
+  /** current | days30 | days60 | days90Plus */
+  bucket: string;
+  amountCents: int32;
+}
+
+model CollectionsKpiResponse {
+  asOf: utcDateTime;
+  /** Active receivables (non-voided, non-uncollectible balance). */
+  outstandingArCents: int32;
+  /** Balance on invoices written off as uncollectible. */
+  writeOffCents: int32;
+  billedTotalCents: int32;
+  collectedTotalCents: int32;
+  /** collectedTotal / billedTotal, 0..1. */
+  collectionRate: float32;
+  /** Days Sales Outstanding (approx: AR / avg daily billing). */
+  dsoDays: int32;
+  /** Current AR aging breakdown for the dashboard chart. */
+  agingSeries: AgingBucketPoint[];
+}
+
 /** BR-050: manual dunning nudge — send a patient their current statement now. */
 model SendPatientStatementRequest {
   /** Explicit branch (asserts membership); omitted scopes to the caller's branches. */
@@ -1089,6 +1115,19 @@ namespace DentalBillingModule {
       @query branchId?: UUID,
       @query asOf?: utcDateTime
     ): ApiOkResponse<ArAgingResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 3.1: AR KPI dashboard — DSO, collection rate, write-offs, AR + aging.
+    @get
+    @route("/collections/kpis")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getCollectionsKpis")
+    getCollectionsKpis(
+      @query branchId?: UUID,
+      @query asOf?: utcDateTime
+    ): ApiOkResponse<CollectionsKpiResponse>
       | ApiBadRequestResponse
       | ApiUnauthorizedResponse;
 

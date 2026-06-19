@@ -9,6 +9,7 @@
 import React, { useState } from 'react';
 import { useArAging, useStatementBatch, useSendStatement } from '../hooks/use-collections';
 import { CollectionsWorklist } from './collections-worklist';
+import { CollectionsKpis } from './collections-kpis';
 import { ListErrorState } from '@/components/list-error-state';
 import {
   formatCents,
@@ -25,7 +26,7 @@ export interface CollectionsViewProps {
 }
 
 export function CollectionsView({ branchId }: CollectionsViewProps) {
-  const [tab, setTab] = useState<'aging' | 'worklist'>('aging');
+  const [tab, setTab] = useState<'aging' | 'worklist' | 'metrics'>('aging');
   const { aging, isLoading, error, refetch } = useArAging({ branchId });
   const { generate, isGenerating, result } = useStatementBatch({ branchId });
   const { send, sendingPatientId, lastSent } = useSendStatement({ branchId });
@@ -53,7 +54,7 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
     <div className="flex flex-col gap-4" data-testid="collections-view">
       {/* Aging ↔ Worklist tabs */}
       <div className="flex gap-1 p-1 bg-secondary/50 rounded-xl w-fit" role="tablist">
-        {(['aging', 'worklist'] as const).map((t) => (
+        {(['aging', 'worklist', 'metrics'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -63,13 +64,15 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
             data-testid={`collections-tab-${t}`}
             className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring outline-none ${tab === t ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            {t === 'aging' ? 'Aging' : 'Worklist'}
+            {t === 'aging' ? 'Aging' : t === 'worklist' ? 'Worklist' : 'Metrics'}
           </button>
         ))}
       </div>
 
       {tab === 'worklist' ? (
         <CollectionsWorklist branchId={branchId} />
+      ) : tab === 'metrics' ? (
+        <CollectionsKpis branchId={branchId} />
       ) : (
       <>
       {/* Summary cards: one per aging bucket + total */}

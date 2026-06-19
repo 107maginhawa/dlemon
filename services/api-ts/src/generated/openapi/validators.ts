@@ -92,6 +92,11 @@ export const AddressPatchInputSchema = z.object({
 }), z.null()]).optional()
 });
 
+export const AgingBucketPointSchema = z.object({
+  bucket: z.string(),
+  amountCents: z.number().int()
+});
+
 export const AmendmentSchema = z.object({
   id: UUIDSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
@@ -703,6 +708,17 @@ export const CollectionNoteSchema = z.object({
   contactedAt: z.string().datetime().transform((str) => new Date(str)),
   createdByMemberId: UUIDSchema.optional(),
   createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const CollectionsKpiResponseSchema = z.object({
+  asOf: z.string().datetime().transform((str) => new Date(str)),
+  outstandingArCents: z.number().int(),
+  writeOffCents: z.number().int(),
+  billedTotalCents: z.number().int(),
+  collectedTotalCents: z.number().int(),
+  collectionRate: z.number(),
+  dsoDays: z.number().int(),
+  agingSeries: z.array(AgingBucketPointSchema)
 });
 
 export const CollectionsSummaryResponseSchema = z.object({
@@ -20355,6 +20371,14 @@ export const GetArAgingQuery = z.object({
 export type GetArAgingQuery = z.infer<typeof GetArAgingQuery>;
 
 export const GetArAgingResponse = ArAgingResponseSchema;
+
+export const GetCollectionsKpisQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  asOf: z.string().datetime().transform((str) => new Date(str)).optional(),
+});
+export type GetCollectionsKpisQuery = z.infer<typeof GetCollectionsKpisQuery>;
+
+export const GetCollectionsKpisResponse = CollectionsKpiResponseSchema;
 
 export const CreateCollectionNoteBody = CreateCollectionNoteRequestSchema;
 export type CreateCollectionNoteBody = z.infer<typeof CreateCollectionNoteBody>;

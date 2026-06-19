@@ -577,3 +577,15 @@ HTTP 200
 [Asserts]
 jsonpath "$.rows" isCollection
 jsonpath "$.asOf" exists
+
+
+# Phase 3.1: AR KPI dashboard — DSO, collection rate, write-off, AR + aging.
+GET {{api}}/dental/billing/collections/kpis?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.outstandingArCents" isInteger
+jsonpath "$.billedTotalCents" isInteger
+jsonpath "$.collectionRate" exists
+jsonpath "$.dsoDays" isInteger
+jsonpath "$.agingSeries" count == 4

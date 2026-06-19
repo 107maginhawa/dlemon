@@ -102,6 +102,14 @@ export type AddressPatchInput = {
     } | null;
 };
 
+export type AgingBucketPoint = {
+    /**
+     * current | days30 | days60 | days90Plus
+     */
+    bucket: string;
+    amountCents: number;
+};
+
 export type Amendment = {
     id: Uuid;
     createdAt: Date;
@@ -1292,6 +1300,32 @@ export type CollectionNote = {
     contactedAt: Date;
     createdByMemberId?: Uuid;
     createdAt: Date;
+};
+
+export type CollectionsKpiResponse = {
+    asOf: Date;
+    /**
+     * Active receivables (non-voided, non-uncollectible balance).
+     */
+    outstandingArCents: number;
+    /**
+     * Balance on invoices written off as uncollectible.
+     */
+    writeOffCents: number;
+    billedTotalCents: number;
+    collectedTotalCents: number;
+    /**
+     * collectedTotal / billedTotal, 0..1.
+     */
+    collectionRate: number;
+    /**
+     * Days Sales Outstanding (approx: AR / avg daily billing).
+     */
+    dsoDays: number;
+    /**
+     * Current AR aging breakdown for the dashboard chart.
+     */
+    agingSeries: Array<AgingBucketPoint>;
 };
 
 export type CollectionsSummaryResponse = {
@@ -65476,6 +65510,38 @@ export type GetArAgingResponses = {
 };
 
 export type GetArAgingResponse = GetArAgingResponses[keyof GetArAgingResponses];
+
+export type GetCollectionsKpisData = {
+    body?: never;
+    path?: never;
+    query?: {
+        branchId?: Uuid;
+        asOf?: Date;
+    };
+    url: '/dental/billing/collections/kpis';
+};
+
+export type GetCollectionsKpisErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type GetCollectionsKpisError = GetCollectionsKpisErrors[keyof GetCollectionsKpisErrors];
+
+export type GetCollectionsKpisResponses = {
+    /**
+     * Success response with data
+     */
+    200: CollectionsKpiResponse;
+};
+
+export type GetCollectionsKpisResponse = GetCollectionsKpisResponses[keyof GetCollectionsKpisResponses];
 
 export type CreateCollectionNoteData = {
     body: CreateCollectionNoteRequest;

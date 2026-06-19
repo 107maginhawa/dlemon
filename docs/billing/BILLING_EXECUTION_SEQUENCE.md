@@ -24,7 +24,7 @@ Last updated: 2026-06-19.
 | 2.3 | b manual statement/send endpoint + cadence config panel + send button FE | ✅ done | `pending-commit` |
 | 2.4 | a backend: worklist GET + collection-note POST (audited, BR-051) | ✅ done | `(prev commit)` |
 | 2.4 | b FE: collections worklist tab + log-call action | ✅ done | `pending-commit` |
-| 3.1 | AR KPI dashboard | ⬜ pending | |
+| 3.1 | AR KPI dashboard (DSO/rate/write-off/AR + aging chart) | ✅ done | `pending-commit` |
 | 3.2 | patient statement / ledger | ⬜ pending | |
 | 4.1 | patient credit ledger | ⬜ pending | |
 | 4.2 | dental refunds | ⬜ pending | |
