@@ -125,8 +125,12 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
 
   function handleTabChange(tab: FilterTab) {
     setActiveTab(tab);
-    // Invalidate so switching tabs always fetches fresh data
-    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    // Invalidate so switching tabs always fetches fresh data. The list query is
+    // the generated SDK's (key [{ _id: 'listDentalInvoices', … }]); the literal
+    // ['invoices'] key never matched it. Match by _id.
+    queryClient.invalidateQueries({
+      predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalInvoices',
+    });
   }
 
   const summary = summarizeInvoices(invoices);

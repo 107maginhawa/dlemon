@@ -99,7 +99,13 @@ function CalendarPage() {
   const { appointments, isLoading, error, refetch } = useAppointments({ date: selectedDate, view, branchId });
 
   function invalidateAppointments() {
-    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    // The appointments list comes from the generated SDK (useAppointments →
+    // listAppointmentsOptions), whose key is [{ _id: 'listAppointments', … }].
+    // A literal ['appointments'] key never matched it, so the calendar silently
+    // stayed stale after create/edit/cancel/walk-in. Match the SDK key by _id.
+    queryClient.invalidateQueries({
+      predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listAppointments',
+    });
   }
 
   function handlePrev() {
