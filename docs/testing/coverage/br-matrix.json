@@ -106,9 +106,9 @@
     "key": "dental-billing::BR-010",
     "brId": "BR-010",
     "module": "dental-billing",
-    "type": "calculation-stub",
+    "type": "business-logic",
     "derivedSeverity": "P2",
-    "status": "partial",
+    "status": "implemented",
     "guardTyped": false,
     "corporaHit": [
       "api-unit"
@@ -192,6 +192,160 @@
       "app-unit",
       "e2e",
       "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-048",
+    "brId": "BR-048",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-049",
+    "brId": "BR-049",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-050",
+    "brId": "BR-050",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e",
+      "hurl"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-051",
+    "brId": "BR-051",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e",
+      "hurl"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-052",
+    "brId": "BR-052",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "e2e",
+      "hurl"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-053",
+    "brId": "BR-053",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit",
+      "e2e"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-054",
+    "brId": "BR-054",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-055",
+    "brId": "BR-055",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit",
+      "app-unit"
+    ],
+    "hasNegativePath": false,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-056",
+    "brId": "BR-056",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
+  },
+  {
+    "key": "dental-billing::BR-057",
+    "brId": "BR-057",
+    "module": "dental-billing",
+    "type": "business-logic",
+    "derivedSeverity": "P2",
+    "status": "implemented",
+    "guardTyped": false,
+    "corporaHit": [
+      "api-unit"
     ],
     "hasNegativePath": true,
     "coverageState": "FULLY_COVERED"

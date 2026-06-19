@@ -20,11 +20,11 @@ Computed coverage of the 122 business rules in `specs/api/docs/standards/br-regi
 
 | Metric | Count |
 |--------|------:|
-| Total BRs | 122 |
+| Total BRs | 132 |
 | P0 | 48 |
 | P1 | 36 |
-| P2 | 38 |
-| FULLY_COVERED | 108 |
+| P2 | 48 |
+| FULLY_COVERED | 118 |
 | POSITIVE_ONLY | 1 |
 | UNTESTED | 13 |
 | **P0 gate failures** | **0** |
@@ -44,12 +44,22 @@ _None — every P0 business rule is fully covered._
 | `V-AUD-007 / EM-AUD-008` | dental-audit | reliability | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-AUD-NEW-B / WF-028` | dental-audit | compliance | P0 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-009` | dental-billing | validation | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
-| `BR-010` | dental-billing | calculation-stub | P2 | partial | api-unit | ✓ | FULLY_COVERED |
+| `BR-010` | dental-billing | business-logic | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-011` | dental-billing | lifecycle-guard | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-012` | dental-billing | state-machine | P1 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-013` | dental-billing | state-machine | P1 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-014` | dental-billing | lifecycle-guard | P2 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-015` | dental-billing | validation | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
+| `BR-048` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e | — | FULLY_COVERED |
+| `BR-049` | dental-billing | business-logic | P2 | implemented | api-unit | — | FULLY_COVERED |
+| `BR-050` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | — | FULLY_COVERED |
+| `BR-051` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | — | FULLY_COVERED |
+| `BR-052` | dental-billing | business-logic | P2 | implemented | api-unit, e2e, hurl | ✓ | FULLY_COVERED |
+| `BR-053` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
+| `BR-054` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit | — | FULLY_COVERED |
+| `BR-055` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit | — | FULLY_COVERED |
+| `BR-056` | dental-billing | business-logic | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `BR-057` | dental-billing | business-logic | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `EM-BIL-002` | dental-billing | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-014` | dental-clinical | compliance | P0 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-015` | dental-clinical | validation | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |

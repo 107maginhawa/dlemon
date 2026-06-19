@@ -268,6 +268,22 @@
           "status": "implemented",
           "source": "dental-billing/getDentalPaymentReceipt.ts (getBranchBirInfo → clinic block + tax breakdown + orNumber + taxStatement), dental-org/repos/org-billing.facade.ts getBranchBirInfo, specs/api dental-billing.tsp (DentalPaymentReceiptClinic/Tax + response fields), apps/dentalemon billing/components/payment-receipt.tsx (BIR header + VAT breakdown + statement) + settings/components/clinic-settings.tsx (registeredName/businessStyle/tin inputs) || TEST: services/api-ts/src/handlers/dental-billing/dental-billing.receipt-bir.test.ts:78; apps/dentalemon/src/features/billing/components/payment-receipt.test.tsx:110; apps/dentalemon/src/features/settings/components/clinic-settings.bir.test.tsx:47",
           "test": "dental-billing.receipt-bir.test.ts (BIR header + OR number; non-VAT statement + zero VAT; VAT-registered 12% breakout) + payment-receipt.test.tsx (renders header/TIN, non-VAT statement, VAT breakdown) + clinic-settings.bir.test.tsx (saves registeredName/businessStyle/tin)"
+        },
+        {
+          "id": "BR-056",
+          "description": "HMO LOA validity gate: a claim cannot be filed against an expired or invalid Letter of Authorization. When createInsuranceClaim is given an authorizationId, the referenced coverage_authorization is rejected (422 LOA_EXPIRED) if its status is 'expired' or 'denied', OR its validUntil date is in the past (server clock). A 'requested' (pending) LOA is allowed but applies no coverage. Reuses the existing dental_coverage_authorization (P1-26) entity — no new schema.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/createInsuranceClaim.ts (LOA_EXPIRED gate on status expired/denied or validUntil < today), dental-patient/repos/insurance-billing.facade.ts getCoverageAuthorizationForBilling (now selects validUntil) || TEST: services/api-ts/src/handlers/dental-billing/dental-insurance-claim.test.ts:350; services/api-ts/src/handlers/dental-billing/dental-insurance-claim.test.ts:363",
+          "test": "dental-insurance-claim.test.ts (BR-056: claim vs LOA past validUntil → 422 LOA_EXPIRED; claim vs LOA status=expired with future validUntil → 422 LOA_EXPIRED)"
+        },
+        {
+          "id": "BR-057",
+          "description": "HMO LOA coverage cap + copay split on claim creation: when an approved/partial LOA backs the claim, the covered amount is capped at the LOA approved amount (per-procedure coveredProcedures or blanket approvedAmountCents, also bounded by the profile annual limit) via the pure estimateCoverage engine, and the patient copay = billed − covered. The claim persists approvedAmountCents = covered (claim ≤ approved) and patientPortionCents = copay; per-line approvedAmountCents + status (covered/partial/disallowed) are set to match. Without an approved LOA the patient owes the full billed amount (legacy default). Matches the pre-treatment estimateClaimCoverage output.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/createInsuranceClaim.ts (estimateCoverage → claimApprovedCents/claimPatientPortionCents + per-line coverage), dental-billing/utils/coverage-estimate.ts (pure cap/copay engine, reused) || TEST: services/api-ts/src/handlers/dental-billing/dental-insurance-claim.test.ts:383; services/api-ts/src/handlers/dental-billing/dental-insurance-claim.test.ts:384",
+          "test": "dental-insurance-claim.test.ts (BR-057: billed 300000 vs LOA approved 200000 → claim approvedAmountCents 200000 capped, patientPortionCents 100000 copay; under-cap billed 100000 → covered 100000, copay 0)"
         }
       ]
     },

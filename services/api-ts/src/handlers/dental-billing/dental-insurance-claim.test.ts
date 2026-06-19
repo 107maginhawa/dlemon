@@ -325,6 +325,80 @@ describe('coverage authorization (LOA)', () => {
   });
 });
 
+describe('LOA gates on claim creation (BR-056, BR-057)', () => {
+  // One-shot LOA create with explicit status / amount / validity.
+  async function makeLoa(app: ReturnType<typeof buildApp>, profileId: string, fields: Record<string, unknown>) {
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/authorizations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ insuranceProfileId: profileId, ...fields }),
+    });
+    expect(res.status).toBe(201);
+    return await res.json() as any;
+  }
+  const PAST = '2000-01-01';
+  const FUTURE = '2999-12-31';
+
+  test('BR-056: claim against an LOA past its validUntil is rejected (422 LOA_EXPIRED)', async () => {
+    const app = buildApp(TEST_USER);
+    const profileId = await makeProfile(app);
+    const loa = await makeLoa(app, profileId, { status: 'approved', approvedAmountCents: 500000, validUntil: PAST });
+    const res = await app.request('/dental/billing/claims', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, insuranceProfileId: profileId, authorizationId: loa.id, lines: [{ cdtCode: 'D1', description: 'x', billedAmountCents: 100000 }] }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('LOA_EXPIRED');
+  });
+
+  test('BR-056: claim against an LOA with status expired is rejected (422 LOA_EXPIRED)', async () => {
+    const app = buildApp(TEST_USER);
+    const profileId = await makeProfile(app);
+    // validUntil in the FUTURE proves the STATUS (not the date) drives the rejection.
+    const loa = await makeLoa(app, profileId, { status: 'expired', validUntil: FUTURE });
+    const res = await app.request('/dental/billing/claims', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, insuranceProfileId: profileId, authorizationId: loa.id, lines: [{ cdtCode: 'D1', description: 'x', billedAmountCents: 100000 }] }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('LOA_EXPIRED');
+  });
+
+  test('BR-057: claim covered amount is capped at the LOA approved amount; copay = billed − covered', async () => {
+    const app = buildApp(TEST_USER);
+    const profileId = await makeProfile(app);
+    const loa = await makeLoa(app, profileId, { status: 'approved', approvedAmountCents: 200000, validUntil: FUTURE });
+    const res = await app.request('/dental/billing/claims', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, insuranceProfileId: profileId, authorizationId: loa.id,
+        lines: [
+          { cdtCode: 'D1', description: 'a', billedAmountCents: 100000 },
+          { cdtCode: 'D2', description: 'b', billedAmountCents: 200000 },
+        ],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.billedAmountCents).toBe(300000);
+    expect(body.approvedAmountCents).toBe(200000); // capped at LOA approved (claim ≤ approved)
+    expect(body.patientPortionCents).toBe(100000); // copay = 300000 − 200000
+  });
+
+  test('BR-057: under the LOA cap the full billed amount is covered (copay 0)', async () => {
+    const app = buildApp(TEST_USER);
+    const profileId = await makeProfile(app);
+    const loa = await makeLoa(app, profileId, { status: 'approved', approvedAmountCents: 500000, validUntil: FUTURE });
+    const res = await app.request('/dental/billing/claims', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, insuranceProfileId: profileId, authorizationId: loa.id, lines: [{ cdtCode: 'D1', description: 'a', billedAmountCents: 100000 }] }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.approvedAmountCents).toBe(100000); // covered ≤ both billed and approved
+    expect(body.patientPortionCents).toBe(0);
+  });
+});
+
 describe('PH negatives', () => {
   test('PhilHealth profile is recordable (no eClaims path needed)', async () => {
     const app = buildApp(TEST_USER);
