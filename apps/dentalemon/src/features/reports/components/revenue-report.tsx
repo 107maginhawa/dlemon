@@ -3,6 +3,7 @@ import { Skeleton } from '@monobase/ui';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useInvoices } from '@/features/billing/hooks/use-invoices';
 import { InvoiceDetailSheet } from './invoice-detail-sheet';
+import { csvAmount } from '../lib/csv';
 
 export interface RevenueReportProps {
   branchId: string;
@@ -55,8 +56,10 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   function handleExportCSV() {
+    // ISSUE-021: money columns are decimal pesos (centavos/100), NOT raw centavos —
+    // a raw-cents export read 100× too large when opened in a spreadsheet.
     const header = 'Date,Billed,Collected,Outstanding';
-    const rows = dailyData.map(d => `${d.date},${d.billed},${d.collected},${d.billed - d.collected}`);
+    const rows = dailyData.map(d => `${d.date},${csvAmount(d.billed)},${csvAmount(d.collected)},${csvAmount(d.billed - d.collected)}`);
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
