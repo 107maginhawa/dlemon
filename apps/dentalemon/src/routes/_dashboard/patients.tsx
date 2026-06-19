@@ -96,8 +96,14 @@ function PatientsPage() {
     }
 
     setShowRegistration(false);
-    // Invalidate the patients query so the list refreshes
-    queryClient.invalidateQueries({ queryKey: ['dental-patients'] });
+    // Invalidate the patients list so the new patient appears immediately.
+    // The list query comes from the generated SDK, whose key is
+    // [{ _id: 'listDentalPatients', ... }] — a literal ['dental-patients']
+    // key never matched it, so the list silently stayed stale after a create.
+    // Match the same predicate the archive/restore/update hooks use.
+    queryClient.invalidateQueries({
+      predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
+    });
   }
 
   return (
