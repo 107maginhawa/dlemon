@@ -29,7 +29,7 @@ Last updated: 2026-06-19.
 | 4.1 | a backend: credit ledger + apply-credit (atomic, BR-052) | ✅ done | `pending-commit` |
 | 4.1 | b FE: credit balance + add/apply actions in profile | ✅ done | `pending-commit` |
 | 4.2 | a backend: refund payment (atomic, owner-only, BR-053) | ✅ done | `pending-commit` |
-| 4.2 | b FE: refund action on payment rows | ⬜ pending | next |
+| 4.2 | b FE: refund action on payment rows | ✅ done | `pending-commit` |
 | 7.x | Stripe online pay · tax activation · multi-currency/EDI | ⏸ trigger-only | build on demand, not scheduled |
 
 ---

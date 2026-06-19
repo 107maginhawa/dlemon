@@ -60997,6 +60997,35 @@ export type RecurrencePattern = {
  */
 export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+export type RefundPaymentRequest = {
+    /**
+     * Amount to refund (1 .. remaining refundable on the payment).
+     */
+    amountCents: number;
+    reason: string;
+    /**
+     * When true, book the refund to patient credit instead of cash-out.
+     */
+    bookAsCredit?: boolean;
+};
+
+export type RefundPaymentResponse = {
+    refundId: Uuid;
+    paymentId: Uuid;
+    invoiceId: Uuid;
+    amountCents: number;
+    /**
+     * Invoice balance after reversing the refunded amount.
+     */
+    invoiceBalanceCents: number;
+    invoiceStatus: string;
+    bookedAsCredit: boolean;
+    /**
+     * Patient credit balance after the refund (only meaningful when booked as credit).
+     */
+    creditBalanceCents: number;
+};
+
 /**
  * Request to refund a payment
  */
@@ -66397,6 +66426,45 @@ export type SendPatientStatementResponses = {
 };
 
 export type SendPatientStatementResponse2 = SendPatientStatementResponses[keyof SendPatientStatementResponses];
+
+export type RefundDentalPaymentData = {
+    body: RefundPaymentRequest;
+    path: {
+        paymentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/payments/{paymentId}/refund';
+};
+
+export type RefundDentalPaymentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type RefundDentalPaymentError = RefundDentalPaymentErrors[keyof RefundDentalPaymentErrors];
+
+export type RefundDentalPaymentResponses = {
+    /**
+     * Success response with data
+     */
+    200: RefundPaymentResponse;
+};
+
+export type RefundDentalPaymentResponse = RefundDentalPaymentResponses[keyof RefundDentalPaymentResponses];
 
 export type GenerateStatementBatchData = {
     body: GenerateStatementBatchRequest;

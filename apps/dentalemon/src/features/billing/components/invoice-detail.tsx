@@ -21,6 +21,7 @@ import {
   recordDentalPaymentMutation,
   applyDentalDiscountMutation,
   voidDentalPaymentMutation,
+  refundDentalPaymentMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import {
   type InvoiceData,
@@ -84,6 +85,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
   const [paymentVoidReason, setPaymentVoidReason] = useState('');
   const [paymentVoidError, setPaymentVoidError] = useState<string | null>(null);
+  // BR-053: per-payment refund (owner-only, reason-required, optional book-as-credit).
+  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(null);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundAsCredit, setRefundAsCredit] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   // FIX-005: payment-plan create dialog open state.
   const [showPlanCreate, setShowPlanCreate] = useState(false);
 
@@ -245,6 +252,35 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       setPaymentVoidError(err instanceof Error ? err.message : 'Failed');
     },
   });
+
+  // POST /payments/{paymentId}/refund (BR-053) — owner-only, reverses the
+  // refunded amount from the invoice; invalidate for the corrected balance.
+  const refundMutation = useMutation({
+    ...refundDentalPaymentMutation(),
+    onSuccess: () => {
+      setRefundingPaymentId(null);
+      setRefundAmount('');
+      setRefundReason('');
+      setRefundAsCredit(false);
+      setRefundError(null);
+      invalidateInvoice();
+      onUpdated?.();
+      toast.success('Payment refunded');
+    },
+    onError: (err) => {
+      setRefundError(err instanceof Error ? err.message : 'Failed');
+    },
+  });
+
+  function handleRefundPayment() {
+    if (!refundingPaymentId) return;
+    const amountCents = Math.round((Number(refundAmount) || 0) * 100);
+    const reason = refundReason.trim();
+    if (amountCents <= 0) { setRefundError('Enter a refund amount greater than zero.'); return; }
+    if (reason.length < 3) { setRefundError('Enter a refund reason (at least 3 characters).'); return; }
+    setRefundError(null);
+    refundMutation.mutate({ path: { paymentId: refundingPaymentId }, body: { amountCents, reason, bookAsCredit: refundAsCredit } });
+  }
 
   const saving =
     issueMutation.isPending ||
@@ -517,6 +553,18 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   Void
                                 </button>
                               )}
+                              {/* BR-053: refund is owner-only (same gate as void) on a non-void payment. */}
+                              {canVoidPmt && !pmt.isVoid && (
+                                <button
+                                  type="button"
+                                  data-testid={`refund-payment-${pmt.id}`}
+                                  disabled={saving}
+                                  onClick={() => { setRefundingPaymentId(pmt.id); setRefundAmount((pmt.amountCents / 100).toFixed(2)); setRefundReason(''); setRefundAsCredit(false); setRefundError(null); }}
+                                  className="text-xs text-foreground/70 hover:text-foreground transition-colors disabled:opacity-50"
+                                >
+                                  Refund
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -649,6 +697,34 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                     <button type="button" onClick={() => { setVoidingPaymentId(null); setPaymentVoidReason(''); setPaymentVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
                     <button type="button" data-testid="confirm-payment-void" onClick={handleVoidPayment} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
                       {saving ? 'Voiding...' : 'Confirm Void'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* BR-053: per-payment refund form — owner-only, reason-required. */}
+              {refundingPaymentId && (
+                <div className="rounded-xl border border-border p-4 flex flex-col gap-3" data-testid="refund-payment-form">
+                  <h4 className="text-sm font-semibold">Refund Payment</h4>
+                  {refundError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{refundError}</div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="refund-amount">Amount *</label>
+                    <input id="refund-amount" data-testid="refund-amount" type="number" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder="0.00" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="refund-reason">Reason *</label>
+                    <input id="refund-reason" data-testid="refund-reason" type="text" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. Treatment cancelled" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" data-testid="refund-as-credit" checked={refundAsCredit} onChange={(e) => setRefundAsCredit(e.target.checked)} className="h-4 w-4 rounded border-border" />
+                    Book as patient credit instead of cash refund
+                  </label>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setRefundingPaymentId(null); setRefundError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" data-testid="confirm-payment-refund" onClick={handleRefundPayment} disabled={saving || refundMutation.isPending} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
+                      {refundMutation.isPending ? 'Refunding...' : 'Confirm Refund'}
                     </button>
                   </div>
                 </div>
