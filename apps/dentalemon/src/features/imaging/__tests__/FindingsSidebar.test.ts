@@ -146,6 +146,36 @@ describe('FindingsSidebar', () => {
     await waitFor(() => expect(screen.getByText('confirmed')).not.toBeNull());
   });
 
+  // Regression: ISSUE-026 — findings create/update/delete failures were swallowed.
+  // The hook exposes `mutationError` "for visible error UI" but FindingsSidebar only
+  // logged to console → a 402/403 tier-block, 422, 5xx or network blip left the user
+  // with no feedback (form stays filled, inviting a re-click). The banner must show.
+  // Found by /qa on 2026-06-20
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('ISSUE-026: surfaces an error banner when Add Finding fails', async () => {
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const method = req instanceof Request ? req.method : (init?.method ?? 'GET');
+      if (method === 'POST') {
+        return jsonResponse({ message: 'Imaging add-on required', code: 'FORBIDDEN' }, 403);
+      }
+      return jsonResponse({ items: [] });
+    });
+
+    const user = userEvent.setup();
+    render(React.createElement(FindingsSidebar, DEFAULT_PROPS), { wrapper: makeWrapper() });
+
+    // Select a type so "Add Finding" enables, then submit.
+    await waitFor(() => expect(screen.getByRole('button', { name: /Add Finding/i })).not.toBeNull());
+    const chips = screen.getAllByRole('button').filter(
+      (b) => b.textContent === 'Caries' && b.getAttribute('type') === 'button',
+    );
+    await user.click(chips[0]!);
+    await user.click(screen.getByRole('button', { name: /Add Finding/i }));
+
+    // Before the fix this was silent; now an alert banner renders the failure.
+    await waitFor(() => expect(screen.getByRole('alert')).not.toBeNull());
+  });
+
   test('delete button calls DELETE on correct finding id', async () => {
     let deleteUrl = '';
 
