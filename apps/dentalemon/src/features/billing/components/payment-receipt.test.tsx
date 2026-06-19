@@ -25,6 +25,10 @@ function receiptBody(overrides: Record<string, any> = {}) {
     payment: { id: PAYMENT_ID, amountCents: 50000, method: 'cash', recordedAt: '2031-07-15T09:00:00.000Z', notes: null },
     invoice: { id: INVOICE_ID, invoiceNumber: 'INV-2026-0009', totalCents: 120000, paidCents: 50000, balanceCents: 70000, status: 'partial' },
     patient: { id: 'patient-1', name: 'Maria Santos' },
+    orNumber: 'RCT-2026-0001',
+    clinic: { registeredName: 'Dela Cruz Dental Clinic', businessStyle: 'Dentalemon', tin: '123-456-789-000', address: '12 Mabini St', isVatRegistered: false },
+    tax: { vatRate: 0, vatableCents: 0, vatExemptCents: 120000, zeroRatedCents: 0, vatCents: 0 },
+    taxStatement: 'Non-VAT registered. THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.',
     generatedAt: '2026-02-02T10:00:00.000Z',
     ...overrides,
   };
@@ -93,6 +97,34 @@ describe('PaymentReceipt — renders the receipt artifact', () => {
     renderReceipt();
     await waitFor(() => expect(screen.getByText('RCT-2026-0001')).toBeDefined());
     expect(screen.queryByTestId('receipt-void-watermark')).toBeNull();
+  });
+});
+
+describe('PaymentReceipt — BIR fields + wording (BR-055)', () => {
+  test('renders the BIR clinic header: registered name, business style, TIN', async () => {
+    renderReceipt();
+    await waitFor(() => expect(screen.getByText('Dela Cruz Dental Clinic')).toBeDefined());
+    expect(screen.getByText(/Dentalemon/)).toBeDefined();
+    expect(screen.getByText(/123-456-789-000/)).toBeDefined();
+  });
+
+  test('non-VAT receipt shows the BIR non-VAT statement', async () => {
+    renderReceipt();
+    await waitFor(() => expect(screen.getByText('RCT-2026-0001')).toBeDefined());
+    expect(screen.getByText(/NOT VALID FOR CLAIM OF INPUT TAX/i)).toBeDefined();
+  });
+
+  test('VAT-registered receipt shows the VAT breakdown (VATable + VAT amount)', async () => {
+    body = receiptBody({
+      clinic: { registeredName: 'VAT Clinic', businessStyle: 'Dentalemon', tin: '999-888-777-000', address: 'QC', isVatRegistered: true },
+      tax: { vatRate: 0.12, vatableCents: 107143, vatExemptCents: 0, zeroRatedCents: 0, vatCents: 12857 },
+      taxStatement: 'VAT-registered. Price is VAT-inclusive; VAT is shown above.',
+    });
+    renderReceipt();
+    await waitFor(() => expect(screen.getByText('RCT-2026-0001')).toBeDefined());
+    expect(screen.getByTestId('receipt-vat-amount').textContent).toMatch(/128\.57/); // ₱12,857 cents
+    expect(screen.getByText(/VAT-registered/i)).toBeDefined();
+    expect(screen.queryByText(/NOT VALID FOR CLAIM OF INPUT TAX/i)).toBeNull();
   });
 });
 

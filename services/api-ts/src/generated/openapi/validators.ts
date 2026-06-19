@@ -3642,6 +3642,14 @@ export const DentalPaymentPlanSchema = z.object({
   installments: z.array(DentalPaymentPlanInstallmentSchema)
 });
 
+export const DentalPaymentReceiptClinicSchema = z.object({
+  registeredName: z.union([z.string(), z.null()]),
+  businessStyle: z.union([z.string(), z.null()]),
+  tin: z.union([z.string(), z.null()]),
+  address: z.union([z.string(), z.null()]),
+  isVatRegistered: z.boolean()
+});
+
 export const DentalPaymentReceiptInvoiceSchema = z.object({
   id: UUIDSchema,
   invoiceNumber: z.string(),
@@ -3664,6 +3672,14 @@ export const DentalPaymentReceiptPaymentSchema = z.object({
   notes: z.union([z.string(), z.null()])
 });
 
+export const DentalPaymentReceiptTaxSchema = z.object({
+  vatRate: z.number(),
+  vatableCents: z.number().int(),
+  vatExemptCents: z.number().int(),
+  zeroRatedCents: z.number().int(),
+  vatCents: z.number().int()
+});
+
 export const DentalPaymentReceiptResponseSchema = z.object({
   receiptNumber: z.string(),
   isVoid: z.boolean(),
@@ -3672,6 +3688,10 @@ export const DentalPaymentReceiptResponseSchema = z.object({
   payment: DentalPaymentReceiptPaymentSchema,
   invoice: DentalPaymentReceiptInvoiceSchema,
   patient: DentalPaymentReceiptPatientSchema,
+  orNumber: z.string(),
+  clinic: DentalPaymentReceiptClinicSchema,
+  tax: DentalPaymentReceiptTaxSchema,
+  taxStatement: z.string(),
   generatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 

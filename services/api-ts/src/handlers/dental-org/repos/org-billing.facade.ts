@@ -79,6 +79,29 @@ export async function getBranchTaxConfig(
   return { taxMode: settings.taxMode ?? 'non_vat', vatRate: settings.vatRate ?? 12 };
 }
 
+/**
+ * BR-055: the per-branch BIR receipt header (PH). Registered name, business
+ * style, TIN, address from branch settings + the VAT-registration flag. Null
+ * fields are simply not yet configured.
+ */
+export async function getBranchBirInfo(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<{ registeredName: string | null; businessStyle: string | null; tin: string | null; address: string | null; isVatRegistered: boolean }> {
+  const branch = await new BranchRepository(db).findOneById(branchId);
+  const s = (branch?.settings ?? {}) as {
+    registeredName?: string; businessStyle?: string; tin?: string; clinicAddress?: string;
+    taxMode?: 'non_vat' | 'vat_registered';
+  };
+  return {
+    registeredName: s.registeredName ?? branch?.name ?? null,
+    businessStyle: s.businessStyle ?? null,
+    tin: s.tin ?? null,
+    address: s.clinicAddress ?? null,
+    isVatRegistered: s.taxMode === 'vat_registered',
+  };
+}
+
 export async function getActiveMembershipId(
   db: DatabaseInstance,
   personId: string,

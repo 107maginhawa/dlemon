@@ -260,6 +260,14 @@
           "status": "implemented",
           "source": "dental-billing/createDentalInvoice.ts (getBranchTaxConfig → computeInvoiceTax, replaces the old hardcoded taxRate=0), dental-billing/utils/tax.ts (pure computeInvoiceTax), dental-org/repos/org-billing.facade.ts getBranchTaxConfig, dental-org/repos/branch.schema.ts BranchSettings.taxMode/vatRate (JSONB, no migration), apps/dentalemon settings/components/tax-mode-settings.tsx (Settings → Tax panel) || TEST: services/api-ts/src/handlers/dental-billing/utils/tax.test.ts:13; services/api-ts/src/handlers/dental-billing/dental-billing.invoice-tax.test.ts:84; apps/dentalemon/src/features/settings/components/tax-mode-settings.test.tsx:55",
           "test": "tax.test.ts (carve math: non_vat 0; vat_registered 12% inclusive carve; custom rate; zero subtotal) + dental-billing.invoice-tax.test.ts (non_vat→0 total=subtotal; vat_registered→12% carve total unchanged; branch-derived not caller-derived) + tax-mode-settings.test.tsx (panel reads/writes taxMode)"
+        },
+        {
+          "id": "BR-055",
+          "description": "PH BIR receipt: the payment receipt (the Official Receipt, issued on payment) carries the BIR-required header from branch settings (registeredName, businessStyle, TIN, address), the OR number (= payment.receiptNumber), a VAT breakdown, and the correct statement. Non-VAT clinic → VAT fields 0, full gross as vatExempt, statement 'THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX'. VAT-registered → VATable + 12% VAT broken out (from the invoice's BR-054 tax fields). Fields/wording only — ATP/CAS e-accreditation is OUT OF SCOPE.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/getDentalPaymentReceipt.ts (getBranchBirInfo → clinic block + tax breakdown + orNumber + taxStatement), dental-org/repos/org-billing.facade.ts getBranchBirInfo, specs/api dental-billing.tsp (DentalPaymentReceiptClinic/Tax + response fields), apps/dentalemon billing/components/payment-receipt.tsx (BIR header + VAT breakdown + statement) + settings/components/clinic-settings.tsx (registeredName/businessStyle/tin inputs) || TEST: services/api-ts/src/handlers/dental-billing/dental-billing.receipt-bir.test.ts:78; apps/dentalemon/src/features/billing/components/payment-receipt.test.tsx:110; apps/dentalemon/src/features/settings/components/clinic-settings.bir.test.tsx:47",
+          "test": "dental-billing.receipt-bir.test.ts (BIR header + OR number; non-VAT statement + zero VAT; VAT-registered 12% breakout) + payment-receipt.test.tsx (renders header/TIN, non-VAT statement, VAT breakdown) + clinic-settings.bir.test.tsx (saves registeredName/businessStyle/tin)"
         }
       ]
     },

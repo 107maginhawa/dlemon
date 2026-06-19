@@ -8199,6 +8199,14 @@ export type DentalPaymentPlanInstallment = {
     status: InstallmentStatus;
 };
 
+export type DentalPaymentReceiptClinic = {
+    registeredName: string | null;
+    businessStyle: string | null;
+    tin: string | null;
+    address: string | null;
+    isVatRegistered: boolean;
+};
+
 export type DentalPaymentReceiptInvoice = {
     id: Uuid;
     invoiceNumber: string;
@@ -8229,7 +8237,19 @@ export type DentalPaymentReceiptResponse = {
     payment: DentalPaymentReceiptPayment;
     invoice: DentalPaymentReceiptInvoice;
     patient: DentalPaymentReceiptPatient;
+    orNumber: string;
+    clinic: DentalPaymentReceiptClinic;
+    tax: DentalPaymentReceiptTax;
+    taxStatement: string;
     generatedAt: Date;
+};
+
+export type DentalPaymentReceiptTax = {
+    vatRate: number;
+    vatableCents: number;
+    vatExemptCents: number;
+    zeroRatedCents: number;
+    vatCents: number;
 };
 
 /**

@@ -60,10 +60,25 @@ export function PaymentReceipt({ invoiceId, paymentId, onPrint }: PaymentReceipt
           </div>
         )}
 
-        {/* Header */}
+        {/* BIR header (BR-055) */}
         <div className="text-center">
-          <h2 className="text-base font-bold">Official Receipt</h2>
-          <p className="text-xs text-muted-foreground">{receipt.receiptNumber}</p>
+          {receipt.clinic?.registeredName && (
+            <p className="text-sm font-bold">{receipt.clinic.registeredName}</p>
+          )}
+          {receipt.clinic?.businessStyle && (
+            <p className="text-xs text-muted-foreground">{receipt.clinic.businessStyle}</p>
+          )}
+          {receipt.clinic?.address && (
+            <p className="text-xs text-muted-foreground">{receipt.clinic.address}</p>
+          )}
+          {receipt.clinic?.tin && (
+            <p className="text-xs text-muted-foreground">
+              TIN: {receipt.clinic.tin}
+              {receipt.clinic.isVatRegistered ? ' (VAT Reg.)' : ' (Non-VAT)'}
+            </p>
+          )}
+          <h2 className="text-base font-bold mt-1">Official Receipt</h2>
+          <p className="text-xs text-muted-foreground">OR No. <span>{receipt.orNumber ?? receipt.receiptNumber}</span></p>
         </div>
 
         <div className="border-t border-dashed border-border" />
@@ -95,7 +110,27 @@ export function PaymentReceipt({ invoiceId, paymentId, onPrint }: PaymentReceipt
           </div>
         )}
 
+        {/* VAT breakdown (BR-055) — only for VAT-registered clinics */}
+        {receipt.clinic?.isVatRegistered && receipt.tax && (
+          <>
+            <div className="border-t border-dashed border-border" />
+            <div className="flex flex-col gap-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">VATable Sales</span>
+                <span className="tabular-nums">{formatCents(receipt.tax.vatableCents)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">VAT ({Math.round(receipt.tax.vatRate * 100)}%)</span>
+                <span data-testid="receipt-vat-amount" className="tabular-nums">{formatCents(receipt.tax.vatCents)}</span>
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="border-t border-dashed border-border" />
+        {receipt.taxStatement && (
+          <p className="text-center text-xs font-medium text-muted-foreground">{receipt.taxStatement}</p>
+        )}
         <p className="text-center text-[10px] text-muted-foreground">
           Generated {fmtDate(receipt.generatedAt)}
         </p>

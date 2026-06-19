@@ -338,6 +338,26 @@ model DentalPaymentReceiptPatient {
   name: string;
 }
 
+// BR-055 (PH): BIR-required receipt header from branch settings. Null fields are
+// simply not yet configured by the clinic.
+model DentalPaymentReceiptClinic {
+  registeredName: string | null;
+  businessStyle: string | null;
+  tin: string | null;
+  address: string | null;
+  isVatRegistered: boolean;
+}
+
+// BR-055 (PH): VAT breakdown on the receipt. For a non-VAT clinic all VAT fields
+// are 0 and vatExemptCents carries the full gross.
+model DentalPaymentReceiptTax {
+  vatRate: float32;
+  vatableCents: int32;
+  vatExemptCents: int32;
+  zeroRatedCents: int32;
+  vatCents: int32;
+}
+
 model DentalPaymentReceiptResponse {
   receiptNumber: string;
   isVoid: boolean;
@@ -346,6 +366,11 @@ model DentalPaymentReceiptResponse {
   payment: DentalPaymentReceiptPayment;
   invoice: DentalPaymentReceiptInvoice;
   patient: DentalPaymentReceiptPatient;
+  // BR-055 (PH): BIR official-receipt fields.
+  orNumber: string;
+  clinic: DentalPaymentReceiptClinic;
+  tax: DentalPaymentReceiptTax;
+  taxStatement: string;
   generatedAt: utcDateTime;
 }
 

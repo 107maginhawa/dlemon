@@ -32,6 +32,10 @@ export interface BranchSettings {
   // BR-054: PH tax mode. non_vat (default) → no invoice tax; vat_registered → 12% VAT.
   taxMode?: 'non_vat' | 'vat_registered';
   vatRate?: number;
+  // BR-055: BIR receipt header fields (PH).
+  registeredName?: string;
+  businessStyle?: string;
+  tin?: string;
   // Locale
   locale?: string;
   currency?: string;
