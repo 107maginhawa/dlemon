@@ -550,6 +550,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getDentalInvoice as unknown as Handler
   );
 
+  // applyCreditToInvoice
+  app.post('/dental/billing/invoices/:invoiceId/apply-credit',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ApplyCreditToInvoiceParams, validationErrorHandler),
+    zValidator('json', validators.ApplyCreditToInvoiceBody, validationErrorHandler),
+    registry.applyCreditToInvoice as unknown as Handler
+  );
+
   // applyDentalDiscount
   app.post('/dental/billing/invoices/:invoiceId/discount',
     authMiddleware({ roles: ["user"] }),
@@ -630,6 +638,21 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetPatientBalanceParams, validationErrorHandler),
     registry.getPatientBalance as unknown as Handler
+  );
+
+  // getPatientCredits
+  app.get('/dental/billing/patients/:patientId/credits',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetPatientCreditsParams, validationErrorHandler),
+    registry.getPatientCredits as unknown as Handler
+  );
+
+  // addPatientCredit
+  app.post('/dental/billing/patients/:patientId/credits',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.AddPatientCreditParams, validationErrorHandler),
+    zValidator('json', validators.AddPatientCreditBody, validationErrorHandler),
+    registry.addPatientCredit as unknown as Handler
   );
 
   // sendPatientStatement

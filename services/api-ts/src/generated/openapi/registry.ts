@@ -69,6 +69,8 @@ import { updateAppointment } from '../../handlers/dental-scheduling/updateAppoin
 import { updateQueueItemStatus } from '../../handlers/dental-scheduling/updateQueueItemStatus';
 import { getAuditEvents } from '../../handlers/dental-audit/getAuditEvents';
 import { addInsuranceClaimLine } from '../../handlers/dental-billing/addInsuranceClaimLine';
+import { addPatientCredit } from '../../handlers/dental-billing/addPatientCredit';
+import { applyCreditToInvoice } from '../../handlers/dental-billing/applyCreditToInvoice';
 import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
 import { createCollectionNote } from '../../handlers/dental-billing/createCollectionNote';
 import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
@@ -85,6 +87,7 @@ import { getDentalPaymentPlan } from '../../handlers/dental-billing/getDentalPay
 import { getDentalPaymentReceipt } from '../../handlers/dental-billing/getDentalPaymentReceipt';
 import { getInsuranceClaim } from '../../handlers/dental-billing/getInsuranceClaim';
 import { getPatientBalance } from '../../handlers/dental-billing/getPatientBalance';
+import { getPatientCredits } from '../../handlers/dental-billing/getPatientCredits';
 import { getPayerArAging } from '../../handlers/dental-billing/getPayerArAging';
 import { issueDentalInvoice } from '../../handlers/dental-billing/issueDentalInvoice';
 import { listDentalInvoices } from '../../handlers/dental-billing/listDentalInvoices';
@@ -460,6 +463,8 @@ export const registry = {
 
   // Dental-billing handlers
   addInsuranceClaimLine,
+  addPatientCredit,
+  applyCreditToInvoice,
   applyDentalDiscount,
   createCollectionNote,
   createDentalInvoice,
@@ -476,6 +481,7 @@ export const registry = {
   getDentalPaymentReceipt,
   getInsuranceClaim,
   getPatientBalance,
+  getPatientCredits,
   getPayerArAging,
   issueDentalInvoice,
   listDentalInvoices,

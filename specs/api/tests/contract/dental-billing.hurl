@@ -589,3 +589,29 @@ jsonpath "$.billedTotalCents" isInteger
 jsonpath "$.collectionRate" exists
 jsonpath "$.dsoDays" isInteger
 jsonpath "$.agingSeries" count == 4
+
+
+# Phase 4.1 (BR-052): patient credit ledger. Add a credit, then read the balance.
+# (apply-credit happy + BR-052 caps are integration-tested in
+#  dental-billing.patient-credits.test.ts — 7 cases incl. atomic rollback.)
+POST {{api}}/dental/billing/patients/{{patient_id}}/credits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "amountCents": 5000,
+  "source": "manual",
+  "note": "Goodwill credit"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.id" exists
+jsonpath "$.amountCents" == 5000
+jsonpath "$.source" == "manual"
+
+
+GET {{api}}/dental/billing/patients/{{patient_id}}/credits
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.balanceCents" == 5000
+jsonpath "$.credits" isCollection

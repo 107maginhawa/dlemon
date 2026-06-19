@@ -26,7 +26,8 @@ Last updated: 2026-06-19.
 | 2.4 | b FE: collections worklist tab + log-call action | ✅ done | `pending-commit` |
 | 3.1 | AR KPI dashboard (DSO/rate/write-off/AR + aging chart) | ✅ done | `pending-commit` |
 | 3.2 | patient statement / ledger (FE — endpoint pre-existed FR2.21) | ✅ done | `pending-commit` |
-| 4.1 | patient credit ledger | ⬜ pending | |
+| 4.1 | a backend: credit ledger + apply-credit (atomic, BR-052) | ✅ done | `pending-commit` |
+| 4.1 | b FE: credit balance + add/apply actions in profile | ⬜ pending | next |
 | 4.2 | dental refunds | ⬜ pending | |
 | 7.x | Stripe online pay · tax activation · multi-currency/EDI | ⏸ trigger-only | build on demand, not scheduled |
 

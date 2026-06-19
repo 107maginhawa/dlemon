@@ -479,6 +479,53 @@ model CollectionsWorklistResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4.1: Patient credit ledger (BR-052)
+// ---------------------------------------------------------------------------
+
+model PatientCredit {
+  id: UUID;
+  patientId: UUID;
+  branchId: UUID;
+  /** Signed: > 0 adds credit, < 0 consumes it. */
+  amountCents: int32;
+  source: string;
+  invoiceId?: UUID;
+  note?: string;
+  createdAt: utcDateTime;
+}
+
+model AddPatientCreditRequest {
+  /** Amount to add (must be > 0). */
+  @minValue(1) amountCents: int32;
+  /** manual | overpayment | refund */
+  source: string;
+  branchId?: UUID;
+  note?: string;
+}
+
+model PatientCreditLedgerResponse {
+  patientId: UUID;
+  /** Available credit = sum of the ledger. */
+  balanceCents: int32;
+  credits: PatientCredit[];
+}
+
+model ApplyCreditRequest {
+  /** Amount of credit to apply to the invoice (must be > 0). */
+  @minValue(1) amountCents: int32;
+}
+
+model ApplyCreditResponse {
+  invoiceId: UUID;
+  appliedCents: int32;
+  /** Invoice balance after applying the credit. */
+  invoiceBalanceCents: int32;
+  invoiceStatus: string;
+  /** Patient's remaining available credit after the draw. */
+  remainingCreditCents: int32;
+}
+
+// ---------------------------------------------------------------------------
 // Phase 3.1: AR KPI dashboard (read-only analytics)
 // ---------------------------------------------------------------------------
 
@@ -1116,6 +1163,47 @@ namespace DentalBillingModule {
       @query asOf?: utcDateTime
     ): ApiOkResponse<ArAgingResponse>
       | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 4.1: patient credit ledger (BR-052).
+    @get
+    @route("/patients/{patientId}/credits")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getPatientCredits")
+    getPatientCredits(
+      @path patientId: UUID
+    ): ApiOkResponse<PatientCreditLedgerResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/patients/{patientId}/credits")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("addPatientCredit")
+    addPatientCredit(
+      @path patientId: UUID,
+      @body body: AddPatientCreditRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body body: PatientCredit;
+    }
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/invoices/{invoiceId}/apply-credit")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("applyCreditToInvoice")
+    applyCreditToInvoice(
+      @path invoiceId: UUID,
+      @body body: ApplyCreditRequest
+    ): ApiOkResponse<ApplyCreditResponse>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
     // Phase 3.1: AR KPI dashboard — DSO, collection rate, write-offs, AR + aging.

@@ -236,6 +236,14 @@
           "status": "implemented",
           "source": "dental-billing/getCollectionsWorklist.ts (overdue aggregation over getOutstandingInvoicesForAging + invoiceAgeDays, note + active-plan enrichment), dental-billing/createCollectionNote.ts (audited create, getActiveMembershipId stamp), DentalCollectionNoteRepository.create/findLatestByPatients/listByPatient, dental_collection_note table (migration 0111), patient-billing.facade.getActivePaymentPlanPatientIds",
           "test": "dental-billing.collections-worklist.test.ts (overdue patient surfaced w/ overdue total + open count + oldest days; settled patient absent; createCollectionNote persists audited note then enriches worklist noteCount/lastContactChannel; unknown patient 404); contract dental-billing.hurl (notes 201 + worklist 200); FE collections-worklist.test.tsx + use-collections.test.ts (useCollectionsWorklist/useLogCollectionNote) + e2e collections-worklist.spec.ts (Worklist tab renders live)"
+        },
+        {
+          "id": "BR-052",
+          "description": "Patient credit ledger: dental_patient_credit is an append-only signed ledger (positive adds credit, negative consumes it); a patient's available credit = SUM(amountCents), never negative. applyCreditToInvoice draws credit against an invoice ATOMICALLY (withTenantTx): the available-credit read, the invoice paid/balance update (DentalInvoiceRepository.addPayment — same primitive as a cash payment), and the consuming (negative) ledger row commit together. Apply amount must be > 0, <= invoice.balanceCents, AND <= available credit (BR-052), else 422 with NO mutation (atomic rollback). Voided/settled (balance 0) invoices reject. Both add-credit and apply are audited (patient_credit.added, invoice.credit_applied).",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/addPatientCredit.ts, getPatientCredits.ts, applyCreditToInvoice.ts (withTenantTx atomic draw, BusinessLogicError 422 caps), DentalPatientCreditRepository.create/listByPatient/getBalance, dental_patient_credit table (migration 0112), DentalInvoiceRepository.addPayment",
+          "test": "dental-billing.patient-credits.test.ts (add+balance; apply reduces balance + remaining credit; full-balance→paid; apply>invoice-balance→422 untouched; apply>available-credit→422 untouched; voided→422; no-credit→422 — 7 cases); contract dental-billing.hurl (credits 201 + ledger 200)"
         }
       ]
     },

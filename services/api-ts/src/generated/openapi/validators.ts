@@ -64,6 +64,13 @@ export const AcceptTreatmentPlanRequestSchema = z.object({
   consentFormId: UUIDSchema.optional()
 });
 
+export const AddPatientCreditRequestSchema = z.object({
+  amountCents: z.number().int().gte(1),
+  source: z.string(),
+  branchId: UUIDSchema.optional(),
+  note: z.string().optional()
+});
+
 export const AddressSchema = z.object({
   street1: z.string().min(1).max(100),
   street2: z.string().max(100).optional(),
@@ -109,6 +116,18 @@ export const AmendmentSchema = z.object({
   originalRecordId: UUIDSchema,
   reason: z.string(),
   content: z.string()
+});
+
+export const ApplyCreditRequestSchema = z.object({
+  amountCents: z.number().int().gte(1)
+});
+
+export const ApplyCreditResponseSchema = z.object({
+  invoiceId: UUIDSchema,
+  appliedCents: z.number().int(),
+  invoiceBalanceCents: z.number().int(),
+  invoiceStatus: z.string(),
+  remainingCreditCents: z.number().int()
 });
 
 export const ApplyDentalDiscountRequestSchema = z.object({
@@ -18557,6 +18576,23 @@ export const PatientConditionEntrySchema = z.object({
   priceCents: z.number().int().optional()
 });
 
+export const PatientCreditSchema = z.object({
+  id: UUIDSchema,
+  patientId: UUIDSchema,
+  branchId: UUIDSchema,
+  amountCents: z.number().int(),
+  source: z.string(),
+  invoiceId: UUIDSchema.optional(),
+  note: z.string().optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const PatientCreditLedgerResponseSchema = z.object({
+  patientId: UUIDSchema,
+  balanceCents: z.number().int(),
+  credits: z.array(PatientCreditSchema)
+});
+
 export const PatientLinkTypeSchema = z.enum(["replaced-by", "replaces", "refer", "seealso"]);
 
 export const PatientMergeRequestSchema = z.object({
@@ -20439,6 +20475,16 @@ export type GetDentalInvoiceParams = z.infer<typeof GetDentalInvoiceParams>;
 
 export const GetDentalInvoiceResponse = DentalInvoiceSchema;
 
+export const ApplyCreditToInvoiceParams = z.object({
+  invoiceId: UUIDSchema,
+});
+export type ApplyCreditToInvoiceParams = z.infer<typeof ApplyCreditToInvoiceParams>;
+
+export const ApplyCreditToInvoiceBody = ApplyCreditRequestSchema;
+export type ApplyCreditToInvoiceBody = z.infer<typeof ApplyCreditToInvoiceBody>;
+
+export const ApplyCreditToInvoiceResponse = ApplyCreditResponseSchema;
+
 export const ApplyDentalDiscountParams = z.object({
   invoiceId: UUIDSchema,
 });
@@ -20544,6 +20590,23 @@ export const GetPatientBalanceParams = z.object({
 export type GetPatientBalanceParams = z.infer<typeof GetPatientBalanceParams>;
 
 export const GetPatientBalanceResponse = PatientBalanceResponseSchema;
+
+export const GetPatientCreditsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type GetPatientCreditsParams = z.infer<typeof GetPatientCreditsParams>;
+
+export const GetPatientCreditsResponse = PatientCreditLedgerResponseSchema;
+
+export const AddPatientCreditParams = z.object({
+  patientId: UUIDSchema,
+});
+export type AddPatientCreditParams = z.infer<typeof AddPatientCreditParams>;
+
+export const AddPatientCreditBody = AddPatientCreditRequestSchema;
+export type AddPatientCreditBody = z.infer<typeof AddPatientCreditBody>;
+
+export const AddPatientCreditResponse = PatientCreditSchema;
 
 export const SendPatientStatementParams = z.object({
   patientId: UUIDSchema,
