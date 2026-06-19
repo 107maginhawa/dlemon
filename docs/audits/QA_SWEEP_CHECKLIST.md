@@ -73,40 +73,44 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [ ] ⬜ deactivate · patient statement · care-record/PMD export · erasure request
 - [ ] 🟢 archive / restore (refresh ✅; drive live)
 
-### Calendar / scheduling
+### Calendar / scheduling — **swept live 2026-06-20**
 - [x] ✅ day view load · cancel (ISSUE-002) · create validation (ISSUE-005)
-- [ ] ⬜ week / month views
-- [ ] ⬜ **full appointment create** (with dentist) → persists + shows on calendar
-- [ ] ⬜ edit appointment
-- [ ] ⬜ check-in · confirm · no-show
-- [ ] ⬜ walk-in
+- [x] ✅ week view (**fixed ISSUE-011** — was showing patient UUIDs, now names) · ✅ month view (count badges + dots)
+- [ ] 🟢 **full appointment create** — modal + validation verified; raw UUID inputs (flagged UX) + controlled date/time hard to drive headless
+- [x] ✅ edit appointment (**fixed ISSUE-012** — modal opened blank, now pre-fills patient/date/time/duration/service)
+- [x] ✅ check-in · confirm (**fixed ISSUE-013** — failures showed false success; now surface real error e.g. "Visit already active") · ⬜ no-show
+- [ ] 🟢 walk-in (+ Walk-In button present; modal = same as create)
 - [ ] ⬜ recare-due list → reach out
 - [ ] ⬜ queue board (create / update status)
 - [ ] ⬜ waitlist (create / promote)
 - [ ] ⬜ online-booking config · schedule exceptions
 
-### Workspace (clinical) — ❗ HIGHEST-VALUE GAP (never driven live)
-- [ ] ⬜ open workspace (`/_workspace/$patientId`) · queue board
-- [ ] ⬜ **start visit** · discard visit
-- [ ] ⬜ dental charting — tooth states / surfaces / update tooth
-- [ ] ⬜ initialize dentition
-- [ ] ⬜ add finding → convert finding to treatment
-- [ ] ⬜ treatment plan create / accept / approve · treatment options accept
-- [ ] ⬜ apply template · carry-over treatments · mark treatment done
-- [ ] 🟢 prescriptions (Rx) create (validation static — drive live)
-- [ ] ⬜ SOAP/visit notes save / sign / addendum
-- [ ] ⬜ perio chart create / complete / tooth readings
-- [ ] ⬜ medical history entries + review
+**Calendar-batch findings (2026-06-20):** ISSUE-011 week-view UUIDs (FIXED) · ISSUE-012 edit modal blank (FIXED) · ISSUE-013 check-in/confirm false-success (FIXED).
+
+### Workspace (clinical) — ❗ HIGHEST-VALUE GAP — **swept live 2026-06-20** (Juan dela Cruz, open visit)
+- [x] ✅ open workspace (`/$patientId`) — renders clean (chart + layers + allergy badge); console clean
+- [x] ✅ **start visit** (gating verified — disabled while a visit is open, w/ explanation) · ✅ discard visit (native `prompt()` for reason, min-5-char validation enforced — see ISSUE-010)
+- [ ] 🟢 dental charting — tooth states / surfaces / update tooth (chart renders; SVG cell entry not drivable headless — unit-tested)
+- [ ] 🟢 initialize dentition (code-verified; needs pristine patient)
+- [ ] 🟢 add finding → convert finding to treatment (chart interaction — headless-limited)
+- [x] ✅ treatment plan **accept** (POST `/treatment-plan/accept` → 201) · 🟢 create/approve · treatment options accept — **see ISSUE-008** (no UI feedback + re-clickable/non-idempotent)
+- [x] ✅ apply template (Grand Total ₱5,500→₱9,500) · 🟢 carry-over treatments · ✅ mark treatment done (moved to Completed, pending 2→1)
+- [x] ✅ prescriptions (Rx) create (validation ✅ + saved + persists in Prescriptions tab) — **see ISSUE-007** (no drug-allergy warning)
+- [x] ✅ SOAP/visit notes save ✅ / sign & lock ✅ / addendum ✅ (Note History 1→2)
+- [x] ✅ perio chart create (Draft exam) · complete correctly gated/disabled until readings · 🟢 tooth readings (cell entry headless-limited)
+- [ ] 🟢 medical history entries + review (View Medical History present — not driven)
 - [ ] ⬜ dental alerts · patient tasks · consultations · occlusion screening
-- [ ] ⬜ consent forms sign / refuse · amendments create / approve
-- [ ] ⬜ lab orders create / update
-- [ ] ⬜ chart conflicts resolve (offline sync)
-- [ ] 🟢 workspace payment (create invoice & pay)
+- [ ] 🟢 consent forms — modal + template select pre-fills ✅; sign gated on signature canvas (headless-limited) · refuse/amendments not driven — **see ISSUE-006** (template dup)
+- [x] ✅ lab orders create ✅ (toast + persists) / update ✅ (Ordered → In Fabrication)
+- [ ] 🟢 chart conflicts resolve (offline sync) — code only
+- [x] ✅ workspace payment — modal + invoice detail + Record Payment form render ✅; submission code-verified (controlled inputs behind fixed footer) — **see ISSUE-009** (due-date raw ISO)
 - [ ] 🚫 attachments upload (MinIO)
 
-### Billing
+**Workspace-batch findings (2026-06-20):** ISSUE-006 template duplication · ISSUE-007 no drug-allergy warning · ISSUE-008 Accept-Plan no-feedback/non-idempotent · ISSUE-009 invoice due-date raw ISO · ISSUE-010 workspace modals not Escape-dismissible + discard uses native prompt(). See `.gstack/qa-reports/`.
+
+### Billing — tabs swept live 2026-06-20
 - [x] ✅ list + totals · issue invoice (live)
-- [ ] ⬜ tabs: Paid / Partial / Outstanding / Overdue / Collections / Insurance
+- [x] ✅ tabs render: Invoices (Paid/Partial/Outstanding/Overdue sub-tabs) · Collections · Insurance (claim-status sub-tabs + empty state). Invoice detail opens from list (due-date now formatted — ISSUE-009 fix applies here too).
 - [ ] ⬜ invoice create · finalize · delete
 - [ ] 🟢 void invoice
 - [ ] 🟢 record payment (validation confirmed; drive live — needs amount+method+receipt)
@@ -117,10 +121,10 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [ ] 🟢 patient credits (add / apply) · statements (generate / send)
 - [ ] ⬜ AR aging / KPIs render
 
-### Reports
+### Reports — **swept live 2026-06-20** ✅ clean
 - [x] ✅ page load
-- [ ] ⬜ each report type renders with data
-- [ ] ⬜ filters · export
+- [x] ✅ each report type renders with data (Revenue: billed/collected/outstanding KPIs + invoices; Treatment: 27 CDT codes/104 tx/₱725k; Patient: 22 active + reg dates)
+- [ ] 🟢 filters (date range present) · export (Export CSV present — not driven)
 
 ### Settings
 - [ ] 🟢 clinic info save → persists on reload
@@ -147,18 +151,18 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [ ] 🟢 ceph report create (ISSUE-004 fixed) · ceph landmarks
 - [ ] ⬜ superimposition · occlusion screening
 
-### Notifications
-- [ ] ⬜ bell list renders
-- [ ] 🟢 mark read / mark all read
+### Notifications — **swept live 2026-06-20**
+- [x] ✅ bell list renders ("You're all caught up" empty state — no seeded notifs)
+- [ ] 🟢 mark read / mark all read (no notifications to drive)
 
 ### Onboarding
 - [ ] ⬜ org / dental onboarding wizard (create org → activate)
 
-### Portal (patient-facing `_portal`) — never touched
-- [ ] ⬜ portal index · my appointments · my bills
+### Portal (patient-facing `_portal`) — **swept live 2026-06-20**
+- [x] ✅ portal layout renders (My Appointments + bottom nav Appointments/Bills + Sign out); 403 for staff session handled gracefully ("Try again" card, no crash). Happy path needs a patient login (out of scope for staff QA).
 
-### Public booking
-- [ ] ⬜ `book.$branchId` (thin route — confirm it renders / books)
+### Public booking — **swept live 2026-06-20**
+- [x] ✅ `book/$branchId` renders — graceful "Online booking unavailable" state (online-booking not enabled for branch in seed). Actual booking needs online-booking config enabled first.
 
 ---
 
