@@ -27,6 +27,8 @@ export interface BranchSettings {
   feeSchedule?: Record<string, number>;
   // BR-048: clinic-wide default payment terms (days). Feeds dueDate at issue.
   defaultPaymentTermsDays?: number;
+  // BR-050: dunning reminder cadence — days-past-due offsets for the sweep.
+  billingReminderOffsetDays?: number[];
   // Locale
   locale?: string;
   currency?: string;

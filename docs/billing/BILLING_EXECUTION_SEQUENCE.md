@@ -20,8 +20,8 @@ Last updated: 2026-06-19.
 | 2.1 | a backend (terms→dueDate, BR-048) · b clinic-default settings FE | ✅ done | `c05b74a5` `5468dda0` |
 | 2.2 | auto-overdue sweep + audit (BR-049) | ✅ done | `13f2e0d5` |
 | 2.1 | FE back-fill: per-service catalog terms · per-invoice override at create | ⬜ deferred | backend already supports both |
-| 2.3 | a dunning reminder engine (job + reminder_log, BR-050) | ✅ done | `pending-commit` |
-| 2.3 | b manual statement/send endpoint + cadence config panel + send button FE | ⬜ pending | next |
+| 2.3 | a dunning reminder engine (job + reminder_log, BR-050) | ✅ done | `6e78fa26` |
+| 2.3 | b manual statement/send endpoint + cadence config panel + send button FE | ✅ done | `pending-commit` |
 | 2.4 | collections worklist | ⬜ pending | |
 | 3.1 | AR KPI dashboard | ⬜ pending | |
 | 3.2 | patient statement / ledger | ⬜ pending | |

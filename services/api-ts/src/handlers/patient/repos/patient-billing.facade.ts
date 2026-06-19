@@ -37,9 +37,9 @@ export async function getPatientWithPersonForInvoice(
 export async function getPatientBranchForBilling(
   db: DatabaseInstance,
   patientId: string,
-): Promise<{ id: string; preferredBranchId: string | null } | null> {
+): Promise<{ id: string; preferredBranchId: string | null; person: string | null } | null> {
   const [row] = await db
-    .select({ id: patients.id, preferredBranchId: patients.preferredBranchId })
+    .select({ id: patients.id, preferredBranchId: patients.preferredBranchId, person: patients.person })
     .from(patients)
     .where(eq(patients.id, patientId))
     .limit(1);

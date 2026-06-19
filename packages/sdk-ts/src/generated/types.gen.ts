@@ -61110,6 +61110,29 @@ export type ScheduleExceptionCreateRequest = {
 };
 
 /**
+ * BR-050: manual dunning nudge — send a patient their current statement now.
+ */
+export type SendPatientStatementRequest = {
+    /**
+     * Explicit branch (asserts membership); omitted scopes to the caller's branches.
+     */
+    branchId?: string;
+};
+
+export type SendPatientStatementResponse = {
+    patientId: Uuid;
+    /**
+     * Whether a statement notification was enqueued (false when balance is zero).
+     */
+    sent: boolean;
+    outstandingBalanceCents: number;
+    /**
+     * Channels the statement was enqueued on (e.g. ["email","push"]).
+     */
+    channels: Array<string>;
+};
+
+/**
  * Send text message request
  */
 export type SendTextMessageRequest = {
@@ -65999,6 +66022,37 @@ export type GetPatientBalanceResponses = {
 };
 
 export type GetPatientBalanceResponse = GetPatientBalanceResponses[keyof GetPatientBalanceResponses];
+
+export type SendPatientStatementData = {
+    body: SendPatientStatementRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/patients/{patientId}/statement/send';
+};
+
+export type SendPatientStatementErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type SendPatientStatementError = SendPatientStatementErrors[keyof SendPatientStatementErrors];
+
+export type SendPatientStatementResponses = {
+    /**
+     * Success response with data
+     */
+    200: SendPatientStatementResponse;
+};
+
+export type SendPatientStatementResponse2 = SendPatientStatementResponses[keyof SendPatientStatementResponses];
 
 export type GenerateStatementBatchData = {
     body: GenerateStatementBatchRequest;

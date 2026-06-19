@@ -10,8 +10,8 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { useArAging, useStatementBatch } from './use-collections';
-import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
+import { useArAging, useStatementBatch, useSendStatement } from './use-collections';
+import { freshClient, freshClientWithMutations, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
 const originalFetch = global.fetch;
@@ -98,5 +98,29 @@ describe('useStatementBatch — real API shape (contract regression)', () => {
     expect(result.current.result!.statementCount).toBe(2);
     expect(result.current.result!.totalBalanceCents).toBe(3920000);
     expect(result.current.result!.statements[0]!.statementNumber).toBe('STMT-2026-0001');
+  });
+});
+
+describe('useSendStatement — manual statement send (BR-050)', () => {
+  const PATIENT = 'b1d6663a-e2c1-4c91-82fc-65a74574ac50';
+
+  test('POSTs to /patients/:id/statement/send and returns the patientId + outcome', async () => {
+    const calls: Array<{ url: string; method: string }> = [];
+    global.fetch = mock((input: Request | string | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+      calls.push({ url, method });
+      return jsonResponse({ patientId: PATIENT, sent: true, outstandingBalanceCents: 3000, channels: ['email', 'push'] });
+    }) as typeof fetch;
+
+    const qc = freshClientWithMutations();
+    const { result } = renderHook(() => useSendStatement({ branchId: BRANCH }), { wrapper: makeWrapper(qc) });
+    const out = await result.current.send(PATIENT);
+
+    expect(out.patientId).toBe(PATIENT);
+    expect(out.sent).toBe(true);
+    expect(out.channels).toEqual(['email', 'push']);
+    const sendCall = calls.find((c) => c.method === 'POST' && c.url.includes(`/patients/${PATIENT}/statement/send`));
+    expect(sendCall).toBeDefined();
   });
 });

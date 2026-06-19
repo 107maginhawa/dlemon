@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getArAgingOptions, getArAgingQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import {
   generateStatementBatch,
+  sendPatientStatement,
   type ArAgingResponse,
   type GenerateStatementBatchResponse,
 } from '@monobase/sdk-ts/generated';
@@ -67,6 +68,36 @@ export function useStatementBatch({ branchId }: UseArAgingOptions) {
     generate: mutation.mutateAsync,
     isGenerating: mutation.isPending,
     result: mutation.data ?? null,
+    error: mutation.error as Error | null,
+  };
+}
+
+/**
+ * BR-050: manual "send statement" — enqueue a patient's current statement
+ * (email + push). Tracks which patient is sending so a per-row button can show
+ * its own pending/sent state. Invalidates aging on success.
+ */
+export function useSendStatement({ branchId }: UseArAgingOptions) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (patientId: string) => {
+      const { data } = await sendPatientStatement({
+        path: { patientId },
+        body: { branchId: branchId ?? undefined },
+        throwOnError: true,
+      });
+      return data; // { patientId, sent, outstandingBalanceCents, channels }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getArAgingQueryKey({ query: { branchId: branchId ?? undefined } }) });
+    },
+  });
+
+  return {
+    send: mutation.mutateAsync,
+    sendingPatientId: mutation.isPending ? mutation.variables ?? null : null,
+    lastSent: mutation.data ?? null,
     error: mutation.error as Error | null,
   };
 }

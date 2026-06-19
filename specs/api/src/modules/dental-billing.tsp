@@ -423,6 +423,21 @@ model GenerateStatementBatchResponse {
   statements: PatientStatement[];
 }
 
+/** BR-050: manual dunning nudge — send a patient their current statement now. */
+model SendPatientStatementRequest {
+  /** Explicit branch (asserts membership); omitted scopes to the caller's branches. */
+  branchId?: UUID;
+}
+
+model SendPatientStatementResponse {
+  patientId: UUID;
+  /** Whether a statement notification was enqueued (false when balance is zero). */
+  sent: boolean;
+  outstandingBalanceCents: int32;
+  /** Channels the statement was enqueued on (e.g. ["email","push"]). */
+  channels: string[];
+}
+
 // ---------------------------------------------------------------------------
 // P1-26: Insurance / Revenue-Cycle (PH HMO) — invoice-anchored multi-line claim,
 // remittance posting, coverage estimate, AR-by-payer aging.
@@ -970,6 +985,19 @@ namespace DentalBillingModule {
     getPatientBalance(
       @path patientId: UUID
     ): ApiOkResponse<PatientBalanceResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // BR-050: manual statement send (collections "send statement" action).
+    @post
+    @route("/patients/{patientId}/statement/send")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("sendPatientStatement")
+    sendPatientStatement(
+      @path patientId: UUID,
+      @body body: SendPatientStatementRequest
+    ): ApiOkResponse<SendPatientStatementResponse>
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 

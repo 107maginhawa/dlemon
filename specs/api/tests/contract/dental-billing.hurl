@@ -539,3 +539,17 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "voided"
 jsonpath "$.voidedAt" != null
+
+
+# BR-050: manual statement send — returns the patient's outstanding balance and
+# whether a billing notification was enqueued (email + push).
+POST {{api}}/dental/billing/patients/{{patient_id}}/statement/send
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.sent" isBoolean
+jsonpath "$.outstandingBalanceCents" isInteger
+jsonpath "$.channels" isCollection

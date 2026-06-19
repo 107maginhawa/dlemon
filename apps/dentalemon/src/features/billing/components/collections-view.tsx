@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { useArAging, useStatementBatch } from '../hooks/use-collections';
+import { useArAging, useStatementBatch, useSendStatement } from '../hooks/use-collections';
 import { ListErrorState } from '@/components/list-error-state';
 import {
   formatCents,
@@ -26,6 +26,7 @@ export interface CollectionsViewProps {
 export function CollectionsView({ branchId }: CollectionsViewProps) {
   const { aging, isLoading, error, refetch } = useArAging({ branchId });
   const { generate, isGenerating, result } = useStatementBatch({ branchId });
+  const { send, sendingPatientId, lastSent } = useSendStatement({ branchId });
 
   const summary = aging?.summary;
   const patients = aging?.patients ?? [];
@@ -35,6 +36,14 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
       await generate(undefined);
     } catch {
       // Surfaced via mutation error; cache invalidation only runs onSuccess.
+    }
+  }
+
+  async function handleSend(patientId: string) {
+    try {
+      await send(patientId);
+    } catch {
+      // Surfaced via mutation error.
     }
   }
 
@@ -100,18 +109,19 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
                   <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">61–90</th>
                   <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">90+</th>
                   <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Total</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pr-5">Oldest</th>
+                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Oldest</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pr-5">Statement</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading aging…</td>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading aging…</td>
                   </tr>
                 )}
                 {!isLoading && patients.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-muted-foreground">
                       No outstanding balances.
                     </td>
                   </tr>
@@ -125,8 +135,23 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
                       <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatCents(p.days60Cents)}</td>
                       <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-semibold text-red-700">{formatCents(p.days90PlusCents)}</td>
                       <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-bold">{formatCents(p.totalOutstandingCents)}</td>
-                      <td className={`px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right pr-5 ${agingRiskClass(agingRisk(p.oldestInvoiceDays))}`}>
+                      <td className={`px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right ${agingRiskClass(agingRisk(p.oldestInvoiceDays))}`}>
                         {p.oldestInvoiceDays}d
+                      </td>
+                      <td className="px-4 py-0 h-12 align-middle text-right pr-5">
+                        <button
+                          type="button"
+                          onClick={() => handleSend(p.patientId)}
+                          disabled={sendingPatientId === p.patientId}
+                          className="h-8 px-3 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none"
+                          data-testid={`send-statement-${p.patientId}`}
+                        >
+                          {sendingPatientId === p.patientId
+                            ? 'Sending…'
+                            : lastSent?.patientId === p.patientId
+                              ? 'Sent ✓'
+                              : 'Send'}
+                        </button>
                       </td>
                     </tr>
                   ))}
