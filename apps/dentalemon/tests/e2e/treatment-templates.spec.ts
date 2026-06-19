@@ -28,7 +28,7 @@ test.describe('Treatment Templates (#13 — create + apply)', () => {
 
     // 1. Create a treatment template via the Settings UI (Slice 1).
     await spaNavigate(page, '/settings');
-    await page.getByRole('button', { name: 'Treatment Templates' }).click();
+    await page.getByRole('tab', { name: 'Treatment Templates' }).click();
     await page.getByRole('button', { name: /add template/i }).click();
     await page.getByLabel(/template name/i).fill(TEMPLATE_NAME);
     await page.getByLabel(/item 1 cdt code/i).fill(ITEM_CDT);

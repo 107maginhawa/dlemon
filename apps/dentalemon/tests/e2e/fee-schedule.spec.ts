@@ -16,7 +16,9 @@ test.describe('Fee Schedule', () => {
     await signUpOnboardAndUnlock(page, { tier: 'clinic', label: 'Fee' });
 
     await spaNavigate(page, '/settings');
-    await page.getByRole('button', { name: 'Fee Schedule' }).click();
+    // Settings panel switcher renders role="tab" in a tablist (settings-page.tsx
+    // a11y refactor); the native <button> takes the explicit tab role.
+    await page.getByRole('tab', { name: 'Fee Schedule' }).click();
 
     // Catalog (seeded on server boot) renders editable price rows. D1110 is a
     // canonical procedure code.
@@ -39,7 +41,7 @@ test.describe('Fee Schedule', () => {
 
     // Reload and confirm the value reads back from the canonical store.
     await spaNavigate(page, '/settings');
-    await page.getByRole('button', { name: 'Fee Schedule' }).click();
+    await page.getByRole('tab', { name: 'Fee Schedule' }).click();
     const reloaded = page.getByLabel('Price for D1110');
     await expect(reloaded).toBeVisible({ timeout: 15000 });
     await expect(reloaded).toHaveValue('777');

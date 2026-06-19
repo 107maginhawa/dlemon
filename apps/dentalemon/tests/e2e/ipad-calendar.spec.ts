@@ -69,16 +69,24 @@ test.describe('iPad calendar layout', () => {
 
     await spaNavigate(page, '/calendar');
 
-    // At least one day-of-week header or time label should be present
-    const dayHeader = await page
-      .locator(':text("Mon"), :text("Tue"), :text("Wed"), :text("Thursday"), :text("Monday"), [data-testid="day-header"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
+    // Web-first wait: the appointments query loads async (a one-shot isVisible()
+    // races the loading skeleton). Wait for the grid root (carries role="main")
+    // before asserting on its contents — this is the same hardening the
+    // "calendar grid is visible" test uses, applied here to kill the timing flake.
+    const grid = page
+      .locator('[data-testid="calendar-day"], [data-testid="calendar-week"], [data-testid="calendar-month"]')
+      .first();
+    await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    // Tolerate empty state — the page itself should load without error
-    const pageLoaded = await page.locator('main, [role="main"]').first().isVisible().catch(() => false);
-    expect(pageLoaded || dayHeader).toBe(true);
+    // The day view renders an hour rail of time labels (7 AM … 9 PM); week/month
+    // render day-of-week headers. At least one header/time label must be present —
+    // assert against the grid that just rendered, not the loading skeleton.
+    const header = grid
+      .locator(
+        ':text("AM"), :text("PM"), :text("Mon"), :text("Tue"), :text("Wed"), :text("Thursday"), :text("Monday"), [data-testid="day-header"]',
+      )
+      .first();
+    await expect(header).toBeVisible({ timeout: 15_000 });
   });
 
   test('no horizontal scroll at iPad width', async ({ page }) => {

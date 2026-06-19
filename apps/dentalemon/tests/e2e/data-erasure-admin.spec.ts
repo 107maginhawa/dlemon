@@ -53,8 +53,10 @@ test.describe('Data Erasure admin queue', () => {
     await unlockWorkspace(page, PIN);
     await spaNavigate(page, '/settings');
 
-    // Open the Data Erasure panel (platform-admin gated).
-    await page.getByRole('button', { name: 'Data Erasure', exact: true }).click();
+    // Open the Data Erasure panel (platform-admin gated). The settings switcher
+    // is an ARIA tablist (a11y Batch 1 / commit 2b6e8087: button->role="tab"),
+    // so the panel switch resolves by role 'tab', not 'button'.
+    await page.getByRole('tab', { name: 'Data Erasure', exact: true }).click();
     await expect(page.getByTestId('data-erasure-table')).toBeVisible({ timeout: 15_000 });
 
     // Scope to THIS run's subject — the platform-wide queue may carry other rows.
