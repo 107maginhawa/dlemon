@@ -69,6 +69,9 @@ export async function createInsuranceClaim(ctx: HandlerContext): Promise<Respons
     auth = await getCoverageAuthorizationForBilling(db, body.authorizationId, body.patientId);
     if (!auth) throw new BusinessLogicError('Coverage authorization not found for this patient');
     // BR-056: an expired / denied / past-validity LOA cannot back a new claim.
+    // validUntil is a DATE column → a 'YYYY-MM-DD' string; ISO-date lexicographic
+    // compare is chronologically correct. `< today` is INCLUSIVE of the validUntil
+    // day (an LOA is still valid ON its validUntil date) — do not change to `<=`.
     const today = new Date().toISOString().slice(0, 10);
     const expired = auth.status === 'expired' || auth.status === 'denied'
       || (auth.validUntil != null && auth.validUntil < today);
@@ -132,6 +135,11 @@ export async function createInsuranceClaim(ctx: HandlerContext): Promise<Respons
       approvedAmountCents: p.coveredCents,
       status: p.coveredCents === 0 ? 'disallowed' : (p.coveredCents >= p.billedAmountCents ? 'covered' : 'partial'),
     }));
+  } else if (auth) {
+    // A referenced-but-not-yet-approved LOA (e.g. 'requested') backs the claim but
+    // applies NO coverage — the patient owes the full billed amount until the LOA
+    // is approved. Log it so billing staff know coverage was deferred, not lost.
+    logger?.warn({ action: 'createInsuranceClaim', authorizationId: body.authorizationId, loaStatus: auth.status }, 'Claim references an unapproved LOA — no coverage applied');
   }
 
   // RLS P1b activation: route the claim insert (+ its lines) through a single
@@ -158,19 +166,24 @@ export async function createInsuranceClaim(ctx: HandlerContext): Promise<Respons
       updatedBy: user.id,
     });
 
-    const lineRows: NewDentalInsuranceClaimLine[] = lineInputs.map((l, i) => ({
-      claimId: createdClaim.id,
-      treatmentId: l.treatmentId ?? null,
-      invoiceLineItemId: l.invoiceLineItemId ?? null,
-      cdtCode: l.cdtCode,
-      description: l.description,
-      billedAmountCents: Math.max(0, l.billedAmountCents),
-      approvedAmountCents: lineCoverage ? lineCoverage[i]!.approvedAmountCents : null,
-      paidAmountCents: 0,
-      status: lineCoverage ? lineCoverage[i]!.status : 'pending',
-      createdBy: user.id,
-      updatedBy: user.id,
-    }));
+    const lineRows: NewDentalInsuranceClaimLine[] = lineInputs.map((l, i) => {
+      // lineCoverage (when set) is est.perLine, built by mapping the SAME lineInputs
+      // array, so index i always aligns; fall back explicitly rather than assert.
+      const cov = lineCoverage?.[i];
+      return {
+        claimId: createdClaim.id,
+        treatmentId: l.treatmentId ?? null,
+        invoiceLineItemId: l.invoiceLineItemId ?? null,
+        cdtCode: l.cdtCode,
+        description: l.description,
+        billedAmountCents: Math.max(0, l.billedAmountCents),
+        approvedAmountCents: cov ? cov.approvedAmountCents : null,
+        paidAmountCents: 0,
+        status: cov ? cov.status : 'pending',
+        createdBy: user.id,
+        updatedBy: user.id,
+      };
+    });
     const createdLines = await txClaimRepo.createLines(lineRows);
     return { claim: createdClaim, lines: createdLines };
   });

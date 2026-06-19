@@ -119,7 +119,14 @@ export class DentalInsuranceClaimRepository {
     const approved = lines.some((l) => l.approvedAmountCents != null)
       ? lines.reduce((s, l) => s + (l.approvedAmountCents ?? 0), 0)
       : claim.approvedAmountCents;
-    const patientPortion = Math.max(0, billed - (claim.paidByPayerCents ?? 0) - (claim.disallowedCents ?? 0));
+    // Patient portion = billed − what the payer covers. Once the payer has settled
+    // (paid and/or disallowed > 0) those amounts are authoritative; before that, the
+    // LOA-approved cap is the expected coverage, so the copay stays billed − approved
+    // (BR-057/058) instead of collapsing to the full billed on a draft line edit.
+    const settled = (claim.paidByPayerCents ?? 0) + (claim.disallowedCents ?? 0);
+    const patientPortion = settled > 0
+      ? Math.max(0, billed - settled)
+      : Math.max(0, billed - (approved ?? 0));
     const [row] = await this.db
       .update(dentalInsuranceClaims)
       .set({ billedAmountCents: billed, approvedAmountCents: approved ?? null, patientPortionCents: patientPortion, updatedAt: new Date() })

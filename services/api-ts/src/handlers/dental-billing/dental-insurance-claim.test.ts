@@ -397,6 +397,34 @@ describe('LOA gates on claim creation (BR-056, BR-057)', () => {
     expect(body.approvedAmountCents).toBe(100000); // covered ≤ both billed and approved
     expect(body.patientPortionCents).toBe(0);
   });
+
+  test('BR-057: adding a line to an LOA-backed draft preserves the copay split (recalc keeps the approved cap)', async () => {
+    const app = buildApp(TEST_USER);
+    const profileId = await makeProfile(app);
+    const loa = await makeLoa(app, profileId, { status: 'approved', approvedAmountCents: 200000, validUntil: FUTURE });
+    const claim = await (await app.request('/dental/billing/claims', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID, insuranceProfileId: profileId, authorizationId: loa.id,
+        lines: [
+          { cdtCode: 'D1', description: 'a', billedAmountCents: 100000 },
+          { cdtCode: 'D2', description: 'b', billedAmountCents: 200000 },
+        ],
+      }),
+    })).json() as any;
+    expect(claim.patientPortionCents).toBe(100000); // copay at creation (billed 300000 − approved 200000)
+
+    // Add a third, uncovered line. recalculateBilled must NOT reset the copay to the
+    // full billed amount — pre-settlement the patient still owes billed − approved.
+    await app.request(`/dental/billing/claims/${claim.id}/lines`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cdtCode: 'D3', description: 'c', billedAmountCents: 50000 }),
+    });
+    const after = await (await app.request(`/dental/billing/claims/${claim.id}`)).json() as any;
+    expect(after.billedAmountCents).toBe(350000);
+    expect(after.approvedAmountCents).toBe(200000); // LOA cap preserved across the line edit
+    expect(after.patientPortionCents).toBe(150000); // 100000 copay + 50000 new uncovered, NOT 350000
+  });
 });
 
 describe('PH negatives', () => {
