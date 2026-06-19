@@ -262,7 +262,7 @@ describe('createConsultation handler', () => {
     expect(body.provider).toBe(PROVIDER_ID);
   });
 
-  test('duplicate context → ≥400 (CONSULTATION_EXISTS)', async () => {
+  test('duplicate context → ≥400 (CONSULTATION_EXISTS) [V-EMR-CTX]', async () => {
     await seedDraftConsultation({ context: 'unique-context-abc' });
     const app = buildTestApp({ user: PROVIDER_USER });
     const res = await app.request('/emr/consultations', {

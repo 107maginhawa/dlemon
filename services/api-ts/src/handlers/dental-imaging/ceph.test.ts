@@ -587,7 +587,7 @@ describe('BR-030 recompute-on-write', () => {
 // ---------------------------------------------------------------------------
 
 describe('CIMG-13 PATCH landmark', () => {
-  test('returns 200 with full {items, analysis} state (client reconciles out-of-order responses)', async () => {
+  test('returns 200 with full {items, analysis} state (client reconciles out-of-order responses) [CIMG-013]', async () => {
     const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
     const db = makeCephDb();
     const app = buildCephApp(CephMgmt_updateCephLandmark as any, {
@@ -625,7 +625,7 @@ describe('CIMG-13 PATCH landmark', () => {
 // ---------------------------------------------------------------------------
 
 describe('CIMG-14 lock matrix', () => {
-  test('PATCH x coordinate on locked landmark → 422 LANDMARK_LOCKED', async () => {
+  test('PATCH x coordinate on locked landmark → 422 LANDMARK_LOCKED [CIMG-014]', async () => {
     const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
     const lockedLandmark = { ...MOCK_LANDMARK, status: 'locked' as const };
     const db = makeCephDb({ landmark: lockedLandmark });
@@ -642,7 +642,7 @@ describe('CIMG-14 lock matrix', () => {
     expect(body.code).toBe('LANDMARK_LOCKED');
   });
 
-  test('PATCH y coordinate on locked landmark → 422 LANDMARK_LOCKED', async () => {
+  test('PATCH y coordinate on locked landmark → 422 LANDMARK_LOCKED [CIMG-014]', async () => {
     const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
     const lockedLandmark = { ...MOCK_LANDMARK, status: 'locked' as const };
     const db = makeCephDb({ landmark: lockedLandmark });
@@ -659,7 +659,7 @@ describe('CIMG-14 lock matrix', () => {
     expect(body.code).toBe('LANDMARK_LOCKED');
   });
 
-  test('DELETE locked landmark → 422 LANDMARK_LOCKED', async () => {
+  test('DELETE locked landmark → 422 LANDMARK_LOCKED [CIMG-014]', async () => {
     const { CephMgmt_deleteCephLandmark } = await import('./CephMgmt_deleteCephLandmark');
     const lockedLandmark = { ...MOCK_LANDMARK, status: 'locked' as const };
     const db = makeCephDb({ landmark: lockedLandmark });
@@ -689,7 +689,7 @@ describe('CIMG-14 lock matrix', () => {
 
 // @CIMG-009
 describe('Invalid status transition', () => {
-  test('PATCH placed → locked skips confirmed → 422 INVALID_STATUS_TRANSITION', async () => {
+  test('PATCH placed → locked skips confirmed → 422 INVALID_STATUS_TRANSITION [CIMG-005]', async () => {
     const { CephMgmt_updateCephLandmark } = await import('./CephMgmt_updateCephLandmark');
     // placed → locked is invalid; placed → confirmed is valid
     const placedLandmark = { ...MOCK_LANDMARK, status: 'placed' as const };
@@ -777,7 +777,7 @@ const SN_LANDMARKS = (['S', 'N'] as const).map((code, i) => ({
 }));
 
 describe('CIMG-15 recompute idempotent', () => {
-  test('POST recompute returns 200 with analysis object (not {items, analysis})', async () => {
+  test('POST recompute returns 200 with analysis object (not {items, analysis}) [CIMG-015]', async () => {
     const { CephMgmt_recomputeCephAnalysis } = await import('./CephMgmt_recomputeCephAnalysis');
     // V-IMG-004: seed S+N reference landmarks and a calibrated image so the
     // precondition gates pass and the analysis can be computed.
@@ -875,7 +875,7 @@ describe('D-I immutability', () => {
 // ---------------------------------------------------------------------------
 
 describe('CIMG-11 report assembly', () => {
-  test('createCephReport returns 201 with {id, imageId, version, snapshot, createdAt}', async () => {
+  test('createCephReport returns 201 with {id, imageId, version, snapshot, createdAt} [CIMG-011]', async () => {
     const { CephMgmt_createCephReport } = await import('./CephMgmt_createCephReport');
     const db = makeCephDb({ landmarks: GATE_LANDMARKS, reportVersion: 0 });
     const app = buildCephApp(CephMgmt_createCephReport as any, {

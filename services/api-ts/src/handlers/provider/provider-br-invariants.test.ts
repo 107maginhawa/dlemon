@@ -30,6 +30,7 @@ import { openTestTx } from '@/core/test-tx';
 import { buildTestApp } from '@/tests/helpers/test-app';
 import { persons } from '@/handlers/person/repos/person.schema';
 import { providers } from '@/handlers/provider/repos/provider.schema';
+import { practitioners } from '@/handlers/provider/repos/practitioner.schema';
 import { user as userTable } from '@/generated/better-auth/schema';
 
 // ── Fixed IDs (namespace: provider-br) ───────────────────────────────────────
@@ -214,5 +215,49 @@ describe('V-PROV-003 — practitioner writes admin/credentialing role-gated', ()
     const app = buildTestApp({ db, user: PATIENT_USER });
     const res = await app.request(`/providers/practitioners/${PRACTITIONER_ID}`, { method: 'DELETE' });
     expect(res.status).toBe(403);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V-PROV-004 — deactivate is a SOFT delete (records retained); missing id → 404
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('V-PROV-004 — deactivate is a soft-delete, records retained', () => {
+  const ADMIN_USER = { id: PROVIDER_USER_ID, email: 'admin@clinic.test', role: 'admin' };
+  const MISSING_ID = 'ed000000-0000-4000-8000-0000000bdead';
+
+  test('admin DELETE /providers/practitioners/:id → 204 and the row is RETAINED with active=false + deactivatedAt', async () => {
+    // Seed a live practitioner on the pre-existing provider.
+    await db.insert(practitioners).values({
+      id: PRACTITIONER_ID,
+      providerId: EXISTING_PROVIDER_ID,
+      active: true,
+      name: [{ family: 'Cruz', given: ['Jose'] }],
+    } as never);
+
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request(`/providers/practitioners/${PRACTITIONER_ID}`, { method: 'DELETE' });
+    expect(res.status).toBe(204);
+
+    // SOFT delete: the row survives (not hard-deleted) with active=false + a deactivatedAt stamp.
+    const [row] = await db
+      .select({ active: practitioners.active, deactivatedAt: practitioners.deactivatedAt })
+      .from(practitioners)
+      .where(eq(practitioners.id, PRACTITIONER_ID));
+    expect(row).toBeDefined();
+    expect(row?.active).toBe(false);
+    expect(row?.deactivatedAt).not.toBeNull();
+  });
+
+  test('admin DELETE a non-existent practitioner → 404 (never a silent 204)', async () => {
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request(`/providers/practitioners/${MISSING_ID}`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
+  });
+
+  test('admin DELETE a non-existent practitioner-role → 404 (same soft-delete contract)', async () => {
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request(`/providers/practitioner-roles/${MISSING_ID}`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
   });
 });

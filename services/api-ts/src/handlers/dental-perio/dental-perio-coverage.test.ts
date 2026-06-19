@@ -313,7 +313,7 @@ describe('upsertToothReading', () => {
   // PUTs ONE site per keystroke. A single-site patch must MERGE — it must not null
   // out the other sites already saved on the tooth. Before the fix, the 2nd patch
   // (depthBC) wiped depthBM back to null, so the red-line never rendered.
-  test('preserves previously-entered sites across single-site patches (no data loss)', async () => {
+  test('preserves previously-entered sites across single-site patches (no data loss) [BR-P06]', async () => {
     const chartId = await getChartId();
     const app = buildApp(TEST_USER);
     const first = await app.request(`/dental/perio-charts/${chartId}/readings/17`, {
@@ -674,7 +674,7 @@ describe('completePerioChart — 2017 staging/grading (P1-6)', () => {
     }).onConflictDoNothing();
   });
 
-  test('returns computed Stage III + Grade C + generalized extent', async () => {
+  test('returns computed Stage III + Grade C + generalized extent [V-PER-STAGING]', async () => {
     const app = buildApp(TEST_USER);
     // One advanced interdental site (PD 6 + 2mm recession at BM → CAL 8, furcation II)
     // plus 15 involved teeth (PD 5 → involved) → ≥30% involvement → generalized.

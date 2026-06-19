@@ -359,7 +359,7 @@ describe('importPatients — role gating (owner-only bulk import)', () => {
 });
 
 describe('importPatients — ingestion safety (untrusted external input → 4xx, never 500)', () => {
-  test('malformed JSON body → 400 (not a 500/crash)', async () => {
+  test('malformed JSON body → 400 (not a 500/crash) [V-XRI-002]', async () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/patients/import', {
       method: 'POST',

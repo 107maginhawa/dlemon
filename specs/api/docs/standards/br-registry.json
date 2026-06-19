@@ -501,10 +501,10 @@
         },
         {
           "id": "BR-P03",
-          "description": "Probing depths must be integers 0-20mm per site; recession -5..20mm. Out of range → 422 INVALID_DEPTH.",
+          "description": "Probing depths must be integers 0-20mm per site; recession -5..20mm. Out of range → refused. At the PUT route the generated zod schema (@minValue/@maxValue/int) refuses out-of-range input with 400 FIRST; assertValidDepths' 422 INVALID_DEPTH is the defensive second wall and is exercised at the unit level. Coverage = POSITIVE_ONLY by design: the refusal is proven by the validator unit test, but the matrix's HTTP negative-path heuristic (403/409/422) does not credit the route's 400, and crediting it via an unrelated 422 in the same file would be inaccurate.",
           "type": "validation",
           "status": "implemented",
-          "source": "utils/perio-validation.ts assertValidDepths; perio-validation.test.ts"
+          "source": "utils/perio-validation.ts assertValidDepths (422 INVALID_DEPTH defensive wall); routes enforce range via generated zod (400) || TEST: services/api-ts/src/handlers/dental-perio/utils/perio-validation.test.ts:30 (asserts INVALID_DEPTH for >20mm / negative / non-integer / recession out of range)"
         },
         {
           "id": "BR-P04",
@@ -1142,7 +1142,7 @@
           "description": "DELETE /providers/practitioners/{id} and /providers/practitioner-roles/{id} are SOFT deletes — they set active=false + deactivatedAt=now() and return 204; the row is retained for audit and legal purposes (FHIR active flag). A non-existent id → 404.",
           "type": "state-guard",
           "status": "implemented",
-          "source": "deactivatePractitioner.ts:30-43 (404 if missing; deactivateById sets active=false/deactivatedAt); practitioner.repo.ts:54-59 || TEST: services/api-ts/src/handlers/provider/repos/practitioner.repo.test.ts:191 (partial: repo-level soft-delete asserted; handler 404-on-missing/204 path untested)",
+          "source": "deactivatePractitioner.ts:30-43 (404 if missing; deactivateById sets active=false/deactivatedAt); deactivatePractitionerRole.ts (same contract); practitioner.repo.ts:54-59 || TEST: services/api-ts/src/handlers/provider/provider-br-invariants.test.ts (V-PROV-004 block: admin DELETE → 204 + row retained active=false/deactivatedAt; missing practitioner → 404; missing practitioner-role → 404)",
           "tests": [
             "practitioner.repo.test.ts (deactivateById sets active=false and deactivatedAt not null)",
             "provider.hurl (DELETE practitioner/role → 204)"

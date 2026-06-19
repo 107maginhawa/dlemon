@@ -528,7 +528,7 @@ describe('importPMD handler', () => {
   });
 
   // EF-PMD-006: Checksum mismatch test cases
-  test('returns 422 CHECKSUM_MISMATCH when provided checksum does not match content [EF-PMD-006]', async () => {
+  test('returns 422 CHECKSUM_MISMATCH when provided checksum does not match content [EF-PMD-006] [EF-PMD-001]', async () => {
     const app = buildTestApp(TEST_USER);
     const content = JSON.stringify({ teeth: [], prescriptions: [] });
     const wrongChecksum = 'sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

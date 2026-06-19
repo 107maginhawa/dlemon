@@ -654,7 +654,7 @@ describe('cancelAppointment handler', () => {
     expect(updated!.cancelledAt).not.toBeNull();
   });
 
-  test('V-SCH-003: returns 422 when reason is missing/too short', async () => {
+  test('V-SCH-003 / BR-SCH-003: returns 422 when reason is missing/too short', async () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 

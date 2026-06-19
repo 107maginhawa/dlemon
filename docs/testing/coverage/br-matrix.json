@@ -865,9 +865,11 @@
     "derivedSeverity": "P1",
     "status": "implemented",
     "guardTyped": true,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-imaging::CIMG-006",
@@ -947,9 +949,11 @@
     "derivedSeverity": "P2",
     "status": "implemented",
     "guardTyped": false,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-imaging::CIMG-012",
@@ -973,9 +977,11 @@
     "derivedSeverity": "P2",
     "status": "implemented",
     "guardTyped": false,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-imaging::CIMG-014",
@@ -985,9 +991,11 @@
     "derivedSeverity": "P1",
     "status": "implemented",
     "guardTyped": true,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-imaging::CIMG-015",
@@ -997,9 +1005,11 @@
     "derivedSeverity": "P2",
     "status": "implemented",
     "guardTyped": false,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-org::BR-016",
@@ -1199,9 +1209,11 @@
     "derivedSeverity": "P1",
     "status": "implemented",
     "guardTyped": false,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-perio::BR-P07",
@@ -1240,9 +1252,11 @@
     "derivedSeverity": "P2",
     "status": "implemented",
     "guardTyped": false,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-pmd::BR-021",
@@ -1281,9 +1295,11 @@
     "derivedSeverity": "P1",
     "status": "implemented",
     "guardTyped": false,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-pmd::EF-PMD-005",
@@ -1463,9 +1479,11 @@
     "derivedSeverity": "P2",
     "status": "implemented",
     "guardTyped": true,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "dental-scheduling::BR-SCH-004",
@@ -1681,9 +1699,11 @@
     "derivedSeverity": "P1",
     "status": "implemented",
     "guardTyped": true,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "emr-consultation::V-EMR-OWN (ownership self-scope — headline isolation invariant)",
@@ -1805,9 +1825,11 @@
     "derivedSeverity": "P2",
     "status": "implemented",
     "guardTyped": true,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   },
   {
     "key": "external-records-import::V-XRI-003 (FHIR/CDA/PDF EMR-import bridge is FUTURE-PHASE — not built)",
@@ -1885,8 +1907,10 @@
     "derivedSeverity": "P1",
     "status": "implemented",
     "guardTyped": true,
-    "corporaHit": [],
-    "hasNegativePath": false,
-    "coverageState": "UNTESTED"
+    "corporaHit": [
+      "api-unit"
+    ],
+    "hasNegativePath": true,
+    "coverageState": "FULLY_COVERED"
   }
 ]
