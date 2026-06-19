@@ -7,6 +7,7 @@
  * Wireframe: docs/prd/context/wireframes/patient-profile.html
  */
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
@@ -19,6 +20,7 @@ import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
 import { PatientEditForm } from './patient-edit-form';
 import { PatientStatement } from './patient-statement';
+import { PatientCredits } from './patient-credits';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -175,12 +177,17 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
   // invoices, immune to invoice-list pagination. Fall back to the visible-rows sum
   // only while the balance endpoint is still loading.
   const { balance } = usePatientBalance({ patientId });
+  const queryClient = useQueryClient();
   const totalBalance =
     balance?.outstandingBalanceCents ??
     invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
   const [showStatement, setShowStatement] = useState(false);
+  const outstandingInvoices = invoices
+    .filter((inv) => inv.status !== 'voided' && (inv.balanceCents ?? 0) > 0)
+    .map((inv) => ({ id: inv.id, invoiceNumber: inv.invoiceNumber, balanceCents: inv.balanceCents }));
 
   return (
+    <>
     <div className="rounded-xl border border-border bg-card">
       {showStatement && (
         <PatientStatement patientId={patientId} branchId={branchId} onClose={() => setShowStatement(false)} />
@@ -284,6 +291,12 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
         </>
       )}
     </div>
+    <PatientCredits
+      patientId={patientId}
+      outstandingInvoices={outstandingInvoices}
+      onChanged={() => { void queryClient.invalidateQueries(); }}
+    />
+    </>
   );
 }
 

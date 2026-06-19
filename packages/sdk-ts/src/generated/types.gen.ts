@@ -8,6 +8,19 @@ export type AcceptTreatmentPlanRequest = {
     consentFormId?: Uuid;
 };
 
+export type AddPatientCreditRequest = {
+    /**
+     * Amount to add (must be > 0).
+     */
+    amountCents: number;
+    /**
+     * manual | overpayment | refund
+     */
+    source: string;
+    branchId?: Uuid;
+    note?: string;
+};
+
 /**
  * Physical mailing address
  */
@@ -122,6 +135,27 @@ export type Amendment = {
     originalRecordId: Uuid;
     reason: string;
     content: string;
+};
+
+export type ApplyCreditRequest = {
+    /**
+     * Amount of credit to apply to the invoice (must be > 0).
+     */
+    amountCents: number;
+};
+
+export type ApplyCreditResponse = {
+    invoiceId: Uuid;
+    appliedCents: number;
+    /**
+     * Invoice balance after applying the credit.
+     */
+    invoiceBalanceCents: number;
+    invoiceStatus: string;
+    /**
+     * Patient's remaining available credit after the draw.
+     */
+    remainingCreditCents: number;
 };
 
 export type ApplyDentalDiscountRequest = {
@@ -59232,6 +59266,29 @@ export type PatientConditionEntry = {
     priceCents?: number;
 };
 
+export type PatientCredit = {
+    id: Uuid;
+    patientId: Uuid;
+    branchId: Uuid;
+    /**
+     * Signed: > 0 adds credit, < 0 consumes it.
+     */
+    amountCents: number;
+    source: string;
+    invoiceId?: Uuid;
+    note?: string;
+    createdAt: Date;
+};
+
+export type PatientCreditLedgerResponse = {
+    patientId: Uuid;
+    /**
+     * Available credit = sum of the ledger.
+     */
+    balanceCents: number;
+    credits: Array<PatientCredit>;
+};
+
 /**
  * Link to another patient resource that concerns the same actual patient
  */
@@ -65796,6 +65853,41 @@ export type GetDentalInvoiceResponses = {
 
 export type GetDentalInvoiceResponse = GetDentalInvoiceResponses[keyof GetDentalInvoiceResponses];
 
+export type ApplyCreditToInvoiceData = {
+    body: ApplyCreditRequest;
+    path: {
+        invoiceId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/invoices/{invoiceId}/apply-credit';
+};
+
+export type ApplyCreditToInvoiceErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ApplyCreditToInvoiceError = ApplyCreditToInvoiceErrors[keyof ApplyCreditToInvoiceErrors];
+
+export type ApplyCreditToInvoiceResponses = {
+    /**
+     * Success response with data
+     */
+    200: ApplyCreditResponse;
+};
+
+export type ApplyCreditToInvoiceResponse = ApplyCreditToInvoiceResponses[keyof ApplyCreditToInvoiceResponses];
+
 export type ApplyDentalDiscountData = {
     body: ApplyDentalDiscountRequest;
     path: {
@@ -66208,6 +66300,72 @@ export type GetPatientBalanceResponses = {
 };
 
 export type GetPatientBalanceResponse = GetPatientBalanceResponses[keyof GetPatientBalanceResponses];
+
+export type GetPatientCreditsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/patients/{patientId}/credits';
+};
+
+export type GetPatientCreditsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetPatientCreditsError = GetPatientCreditsErrors[keyof GetPatientCreditsErrors];
+
+export type GetPatientCreditsResponses = {
+    /**
+     * Success response with data
+     */
+    200: PatientCreditLedgerResponse;
+};
+
+export type GetPatientCreditsResponse = GetPatientCreditsResponses[keyof GetPatientCreditsResponses];
+
+export type AddPatientCreditData = {
+    body: AddPatientCreditRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/patients/{patientId}/credits';
+};
+
+export type AddPatientCreditErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type AddPatientCreditError = AddPatientCreditErrors[keyof AddPatientCreditErrors];
+
+export type AddPatientCreditResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: PatientCredit;
+};
+
+export type AddPatientCreditResponse = AddPatientCreditResponses[keyof AddPatientCreditResponses];
 
 export type SendPatientStatementData = {
     body: SendPatientStatementRequest;
