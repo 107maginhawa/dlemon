@@ -84,6 +84,8 @@ function CalendarPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
   const [editAppointmentId, setEditAppointmentId] = useState<string | undefined>();
+  // ISSUE-012: hold the appointment being edited so the modal can pre-populate.
+  const [editAppointment, setEditAppointment] = useState<Appointment | null>(null);
   const [showRecare, setShowRecare] = useState(false);
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
   const role = useOrgContextStore((s) => s.role);
@@ -138,18 +140,21 @@ function CalendarPage() {
 
   function handleSlotClick(_time: string) {
     setEditAppointmentId(undefined);
+    setEditAppointment(null);
     setModalInitialDate(selectedDate);
     setModalOpen(true);
   }
 
   function handleNewAppointment(_walkIn = false) {
     setEditAppointmentId(undefined);
+    setEditAppointment(null);
     setModalInitialDate(selectedDate);
     setModalOpen(true);
   }
 
   function handleAppointmentClick(appointment: Appointment) {
     setEditAppointmentId(appointment.id);
+    setEditAppointment(appointment);
     setModalInitialDate(undefined);
     setModalOpen(true);
   }
@@ -405,10 +410,11 @@ function CalendarPage() {
       {/* Appointment modal — create or edit */}
       <AppointmentModal
         open={modalOpen}
-        onClose={() => { setModalOpen(false); setEditAppointmentId(undefined); }}
+        onClose={() => { setModalOpen(false); setEditAppointmentId(undefined); setEditAppointment(null); }}
         onSaved={handleSaved}
         initialDate={modalInitialDate}
         appointmentId={editAppointmentId}
+        appointment={editAppointment ?? undefined}
       />
 
       {/* FR3.4: reason-gated cancellation dialog */}

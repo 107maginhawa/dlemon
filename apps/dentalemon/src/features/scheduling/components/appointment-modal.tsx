@@ -34,6 +34,19 @@ export interface AppointmentModalProps {
   onSaved?: (appointment: unknown) => void;
   initialDate?: string;
   appointmentId?: string;
+  /**
+   * ISSUE-012: the existing appointment being edited. When provided, the form
+   * pre-populates from it on open (the modal previously opened blank in edit
+   * mode). Optional so the create path is unaffected.
+   */
+  appointment?: {
+    patientId: string;
+    dentistMemberId?: string;
+    scheduledAt: string;
+    durationMinutes: number;
+    serviceType: string;
+    notes?: string;
+  };
 }
 
 export function validateAppointmentForm(form: {
@@ -75,6 +88,24 @@ export function buildTimeRange(date: string, time: string, durationMinutes: numb
   return { startAt: start.toISOString(), endAt: end.toISOString() };
 }
 
+/**
+ * Split an appointment's ISO `scheduledAt` back into the local date (YYYY-MM-DD)
+ * and time (HH:MM) used by the form's date/time inputs. Uses LOCAL getters to
+ * mirror buildTimeRange (which interprets date+time as local wall-clock) so the
+ * value round-trips and matches the calendar's local-time chips. ISSUE-012 (QA
+ * 2026-06-20): the edit modal never populated, so this is what feeds the
+ * pre-fill effect.
+ */
+export function splitScheduledAt(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: '', time: '' };
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
 export function buildAppointmentPayload(form: {
   patientId: string;
   dentistMemberId: string;
@@ -110,7 +141,7 @@ export function extractDoubleBookingWarning(appointment: unknown): boolean {
   return Array.isArray(warnings) && warnings.includes('DOUBLE_BOOKING');
 }
 
-export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
+export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId, appointment }: AppointmentModalProps) {
   useSheetA11y({ open, onClose });
   const storeBranchId = useOrgContextStore((s) => s.branchId) ?? '';
   const [patientId, setPatientId] = useState('');
@@ -134,6 +165,21 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   useEffect(() => {
     if (open) setBranchId(storeBranchId);
   }, [open, storeBranchId]);
+
+  // ISSUE-012 (QA 2026-06-20): pre-populate the form from the appointment being
+  // edited. Previously the edit modal opened blank, forcing the scheduler to
+  // re-enter every field (and tripping the "Patient ID is required" guard).
+  useEffect(() => {
+    if (!open || !appointment) return;
+    const { date: d, time: t } = splitScheduledAt(appointment.scheduledAt);
+    setPatientId(appointment.patientId);
+    setDentistMemberId(appointment.dentistMemberId ?? '');
+    setDate(d);
+    setTime(t);
+    setDurationMinutes(appointment.durationMinutes || 30);
+    setServiceType(appointment.serviceType as VisitType);
+    setNotes(appointment.notes ?? '');
+  }, [open, appointment]);
 
   if (!open) return null;
 
