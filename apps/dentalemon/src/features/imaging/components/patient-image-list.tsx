@@ -133,7 +133,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
               value={linkTypeFilter}
               onChange={(e) => setLinkTypeFilter(e.target.value as '' | ImageLinkType)}
               data-testid="filter-link-type"
-              className="rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-600"
+              className="rounded border border-zinc-200 min-h-[40px] px-2 py-1.5 text-zinc-600"
             >
               <option value="">All links</option>
               {(Object.keys(LINK_TYPE_LABELS) as ImageLinkType[]).map((lt) => (
@@ -146,7 +146,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
               data-testid="filter-tag"
-              className="ml-auto rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-600"
+              className="ml-auto rounded border border-zinc-200 min-h-[40px] px-2 py-1.5 text-zinc-600"
             >
               <option value="">All tags</option>
               {availableTags.map((t) => (
@@ -198,7 +198,19 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     className="shrink-0 accent-lemon"
                     data-testid={`select-image-${item.id}`}
                   />
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelectImage?.(item)}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Select image: ${item.fileName}`}
+                    className="flex-1 min-w-0 cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => onSelectImage?.(item)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onSelectImage?.(item)
+                      }
+                    }}
+                  >
                     <p className="text-sm text-zinc-900 truncate">{item.fileName}</p>
                     <p className="text-xs text-zinc-400 capitalize">
                       {item.modality.replace('_', ' ')}

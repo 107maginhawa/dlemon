@@ -6,8 +6,11 @@
 
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { importPmdMutation, mergeImportedPmdSafetyFloorMutation } from '@monobase/sdk-ts/generated/react-query';
 import { medicalHistoryKey } from '@/features/workspace/hooks/use-medical-history';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 interface SafetyFloorPreview {
   conditions: string[];
@@ -38,6 +41,7 @@ export interface PMDImportProps {
 type Step = 'form' | 'preview' | 'done';
 
 export function PMDImport({ patientId, open, onClose, onImported }: PMDImportProps) {
+  useSheetA11y({ open, onClose });
   const [step, setStep] = useState<Step>('form');
   const [sourceFacility, setSourceFacility] = useState('');
   const [sourceReference, setSourceReference] = useState('');
@@ -87,8 +91,10 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
           content: content.trim(),
         },
       });
-    } catch {
+      toast.success('PMD imported');
+    } catch (err) {
       setErrors(['Failed to import PMD']);
+      toastError(err, 'Could not import PMD');
       setStep('form');
       setSaving(false);
       return;
@@ -106,10 +112,12 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
       await queryClient.invalidateQueries({ queryKey: medicalHistoryKey(patientId) });
       setStep('done');
       onImported?.();
-    } catch {
+      toast.success('Safety Floor updated');
+    } catch (err) {
       // The record imported but the safety-floor merge failed; be honest about it.
       // The imported PMD persists and can be merged later from the imported record.
       setErrors(['PMD imported, but updating the Safety Floor failed. Please try again from the imported record.']);
+      toastError(err, 'PMD imported, but updating the Safety Floor failed');
       setStep('form');
       onImported?.();
     } finally {
@@ -174,7 +182,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   value={sourceFacility}
                   onChange={e => setSourceFacility(e.target.value)}
                   placeholder="e.g. City Dental Clinic"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -187,7 +195,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   value={sourceReference}
                   onChange={e => setSourceReference(e.target.value)}
                   placeholder="e.g. REF-2025-001"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -201,7 +209,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   onChange={e => setSourceDescription(e.target.value)}
                   maxLength={200}
                   placeholder="e.g. Open Dental v21.1, Dentrix G7"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Originating system — required for data-provenance audit trail.</p>
               </div>
@@ -215,7 +223,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
                   onChange={e => setContent(e.target.value)}
                   placeholder='{"conditions":["I10"],"medications":["Amoxicillin"],"allergies":[]}'
                   rows={5}
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
             </>

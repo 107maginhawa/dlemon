@@ -56,7 +56,7 @@ function BillingPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-[17px] font-semibold tracking-tight">Billing</h1>
         <div
@@ -71,7 +71,7 @@ function BillingPage() {
               role="tab"
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`h-[30px] px-3.5 rounded-lg text-[13px] font-medium tracking-tight transition-colors ${
+              className={`h-[44px] flex items-center justify-center px-3.5 rounded-lg text-[13px] font-medium tracking-tight transition-colors ${
                 tab === t
                   ? 'bg-background shadow-sm font-semibold text-foreground'
                   : 'text-muted-foreground hover:text-foreground'

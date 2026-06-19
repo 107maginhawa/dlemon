@@ -51,12 +51,12 @@ function formatCents(cents: number): string {
 
 function statusConfig(status: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
-    draft: { label: 'Draft', className: 'bg-gray-100 text-gray-600' },
-    issued: { label: 'Issued', className: 'bg-blue-100 text-blue-700' },
-    partial: { label: 'Partial', className: 'bg-orange-100 text-orange-700' },
-    paid: { label: 'Paid', className: 'bg-green-100 text-green-700' },
-    overdue: { label: 'Overdue', className: 'bg-red-100 text-red-600' },
-    voided: { label: 'Voided', className: 'bg-gray-100 text-gray-500' },
+    draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
+    issued: { label: 'Issued', className: 'bg-info/15 text-info-foreground' },
+    partial: { label: 'Partial', className: 'bg-warning/15 text-warning-foreground' },
+    paid: { label: 'Paid', className: 'bg-success/15 text-success-foreground' },
+    overdue: { label: 'Overdue', className: 'bg-destructive/15 text-destructive-emphasis' },
+    voided: { label: 'Voided', className: 'bg-muted text-muted-foreground' },
   };
   return map[status] ?? { label: status, className: 'bg-muted text-muted-foreground' };
 }
@@ -80,15 +80,19 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
           {item.toothNumber && <span>T{item.toothNumber}</span>}
         </p>
       </div>
-      <div className="text-right">
+      <div
+        className="text-right"
+        role="img"
+        aria-label={isDone ? 'Status: completed' : 'Status: pending'}
+      >
         {isDone ? (
-          <CheckCircle2 className="ml-auto h-4 w-4 text-green-500" />
+          <CheckCircle2 className="ml-auto h-5 w-5 text-success" />
         ) : (
-          <Clock className="ml-auto h-4 w-4 text-muted-foreground/50" />
+          <Clock className="ml-auto h-5 w-5 text-muted-foreground" />
         )}
       </div>
       <div className="text-right">
-        <span className={`text-[11px] font-medium ${isDone ? 'text-green-600' : 'text-muted-foreground'}`}>
+        <span className={`text-[11px] font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
           {isDone ? 'Done' : 'Pending'}
         </span>
       </div>

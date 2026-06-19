@@ -15,6 +15,7 @@ import {
   Button, Input, Label, Badge, Skeleton, Logo,
 } from '@monobase/ui'
 import { Calendar, Clock, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react'
+import { toastError } from '@/lib/error-toast'
 import {
   useBookingConfig, useAvailability, useCreateHold, useCreateBooking,
   useBookingWizard, type VisitType, type SelectedSlot,
@@ -136,6 +137,7 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                     <Button
                       key={vt}
                       type="button"
+                      className="h-11"
                       variant={wiz.visitType === vt ? 'default' : 'outline'}
                       onClick={() => wiz.setVisitType(vt as VisitType)}
                       data-testid={`visit-type-${vt}`}
@@ -151,6 +153,7 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                 <div className="grid gap-2">
                   <Button
                     type="button"
+                    className="h-11"
                     variant={!wiz.providerId ? 'default' : 'outline'}
                     onClick={() => wiz.setProviderId(undefined)}
                     data-testid="provider-any"
@@ -161,6 +164,7 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                     <Button
                       key={p.providerId}
                       type="button"
+                      className="h-11"
                       variant={wiz.providerId === p.providerId ? 'default' : 'outline'}
                       onClick={() => wiz.setProviderId(p.providerId)}
                       data-testid={`provider-${p.providerId}`}
@@ -210,7 +214,7 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                       <Button
                         key={`${s.providerId}-${s.startAt.toISOString()}`}
                         type="button"
-                        size="sm"
+                        className="h-11"
                         variant={wiz.selectedSlot?.startAt.getTime() === s.startAt.getTime() && wiz.selectedSlot?.providerId === s.providerId ? 'default' : 'outline'}
                         onClick={() => wiz.setSelectedSlot(s)}
                         data-testid="slot-option"
@@ -236,8 +240,9 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                       })
                       wiz.setSessionToken(hold.sessionToken)
                       wiz.setStep('details')
-                    } catch {
+                    } catch (err) {
                       // Slot was taken between render and hold — refresh availability.
+                      toastError(err, "Couldn't hold that time slot. Please pick another.")
                       wiz.setSelectedSlot(undefined)
                       void availabilityQuery.refetch()
                     }
@@ -270,8 +275,9 @@ export function BookingWizard({ branchId }: { branchId: string }) {
                   })
                   wiz.setConfirmation({ confirmationCode: res.confirmationCode, startAt: res.startAt })
                   wiz.setStep('confirmed')
-                } catch {
+                } catch (err) {
                   // 409 SLOT_TAKEN → bounce back to the grid and re-fetch.
+                  toastError(err, 'Booking failed. Please try again.')
                   wiz.setStep('slot')
                   wiz.setSelectedSlot(undefined)
                   void availabilityQuery.refetch()
@@ -299,7 +305,7 @@ function Shell({ children, branchName }: { children: React.ReactNode; branchName
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="ghost" size="sm" onClick={onClick} className="-ml-2" data-testid="back">
+    <Button variant="ghost" onClick={onClick} className="h-11 -ml-2" data-testid="back">
       <ArrowLeft className="mr-1 size-4" /> Back
     </Button>
   )
@@ -349,7 +355,7 @@ function ContactForm({ slot, submitting, error, onBack, onSubmit }: {
       }}
     >
       <BackButton onClick={onBack} />
-      <div className="rounded-md bg-accent p-3 text-sm text-accent-foreground">
+      <div className="rounded-md border-l-4 border-primary bg-primary/10 p-3 text-sm font-semibold text-foreground">
         {formatDayKey(slot.startAt)} at {formatTime(slot.startAt)}
       </div>
       <div className="space-y-2">

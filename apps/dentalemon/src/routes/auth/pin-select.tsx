@@ -9,7 +9,8 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
-import { Skeleton } from '@monobase/ui';
+import { Button, Skeleton } from '@monobase/ui';
+import { RefreshCw } from 'lucide-react';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { composeGuards, requireAuth } from '@/lib/guards';
@@ -85,13 +86,10 @@ export function PinSelect({ members, onSelect, isLoading = false, isError = fals
         <div data-testid="pin-select-error" className="flex flex-col items-center gap-3">
           <p className="text-sm text-destructive">Failed to load staff members.</p>
           {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="h-9 px-4 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCw className="h-4 w-4" />
               Retry
-            </button>
+            </Button>
           )}
         </div>
       ) : members.length === 0 ? (

@@ -112,6 +112,9 @@ function OnboardingPage() {
   const totalSteps = 2
 
   const handlePersonalInfoSubmit = (data: PersonalInfo) => {
+    // Idempotent guard: only advance from Step 1. A rapid double-submit (e.g. a
+    // double-tap on a slow iPad before React re-renders the step away) is a no-op.
+    if (currentStep !== 1) return
     setFormData(prev => ({ ...prev, personal: data }))
     setCurrentStep(2)
   }
@@ -214,13 +217,13 @@ function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <Logo variant="horizontal" size="xl" />
+            <Logo variant="horizontal" size="xl" alt="Dentalemon" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome to Monobase</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome to Dentalemon</h1>
           <p className="text-gray-600 mt-2">Let's set up your profile</p>
         </div>
 
@@ -276,6 +279,12 @@ function OnboardingPage() {
                   type="submit"
                   form="step-1-form"
                   className="ml-auto"
+                  // Step 1 advance is synchronous (handlePersonalInfoSubmit just
+                  // stashes form data + bumps the step — no async/mutation), so
+                  // there's no pending state to read. Disable once we've advanced
+                  // past Step 1 to belt-and-braces the synchronous double-advance
+                  // (paired with the idempotency guard in handlePersonalInfoSubmit).
+                  disabled={currentStep !== 1}
                   onClick={() => {
                     // Trigger form submission for current step
                     const forms = document.querySelectorAll('form')

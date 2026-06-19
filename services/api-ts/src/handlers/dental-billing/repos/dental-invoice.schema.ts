@@ -36,6 +36,9 @@ export const dentalInvoices = pgTable('dental_invoice', {
   balanceCents: integer('balance_cents').notNull().default(0),
   discountReason: text('discount_reason'),
   discountedBy: uuid('discounted_by'),
+  // BR-048: per-invoice payment-terms override (days). When set, wins over
+  // service/clinic terms at issue. dueDate is computed = issuedAt + terms.
+  paymentTermsDays: integer('payment_terms_days'),
   dueDate: timestamp('due_date', { withTimezone: true }),
   issuedAt: timestamp('issued_at', { withTimezone: true }),
   paidAt: timestamp('paid_at', { withTimezone: true }),

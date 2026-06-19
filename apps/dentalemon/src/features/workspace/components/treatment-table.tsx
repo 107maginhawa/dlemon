@@ -14,6 +14,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Check, ChevronRight, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from '@monobase/ui';
 import type { Treatment } from '@/features/workspace/hooks/use-treatments';
 import type { TreatmentPlanItem } from '@/features/workspace/hooks/use-treatment-plan';
 import type { VisitCard } from '@/features/workspace/components/timeline-carousel';
@@ -36,6 +38,10 @@ interface TreatmentTableProps {
   selectedTooth?: number | null;
   /** P0-D: clear the tooth scope (show all teeth again). */
   onClearToothFilter?: () => void;
+  /** While the parent is still fetching treatments, render a table-shaped skeleton
+   *  (header strip + rows) instead of collapsing to an empty box — keeps the layout
+   *  footprint stable so content arriving does not shift the page (reduce CLS). */
+  isLoading?: boolean;
 }
 
 function formatDate(iso: string) {
@@ -81,6 +87,7 @@ export function TreatmentTable({
   readOnly: readOnlyProp = false,
   selectedTooth = null,
   onClearToothFilter,
+  isLoading = false,
 }: TreatmentTableProps) {
   // P0-D: scope the whole table to the selected tooth. Every downstream
   // computation (body rows, completed count, subtotals, grand total) reads these
@@ -144,6 +151,37 @@ export function TreatmentTable({
   useEffect(() => {
     setShowCompleted(false);
   }, [visitId]);
+
+  // While the parent is fetching, hold the table's footprint with a header strip +
+  // ~5 row skeletons inside the SAME wrapper/grid as the loaded table, so content
+  // arriving does not collapse-then-jump the layout (reduce CLS).
+  if (isLoading) {
+    return (
+      <div
+        data-testid="treatment-table-loading"
+        className="border border-border/50 rounded-lg overflow-hidden bg-card mx-4 my-3"
+      >
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border/50">
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div className="px-4 py-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 border-t border-border/40 py-3 first:border-t-0"
+            >
+              <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" />
+              <Skeleton className="h-4 w-8 flex-shrink-0" />
+              <Skeleton className="h-4 w-12 flex-shrink-0" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-4 w-10 flex-shrink-0" />
+              <Skeleton className="ml-auto h-4 w-16 flex-shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const hasRows = nativeTreatments.length > 0 || carriedOverItems.length > 0;
   const completedCount = nativeTreatments.filter(
@@ -279,7 +317,7 @@ export function TreatmentTable({
                   onClick={() => onSelectTreatment?.(t.id)}
                   className={[
                     'border-t border-border/40 transition-colors',
-                    isSelected ? 'bg-[#F2F2F7]' : 'hover:bg-lemon/10',
+                    isSelected ? 'bg-muted' : 'hover:bg-lemon/10',
                     onSelectTreatment ? 'cursor-pointer' : '',
                   ].join(' ')}
                 >
@@ -327,7 +365,7 @@ export function TreatmentTable({
                             setMarkDoneErrorId(t.id);
                             markDone(t.id, t.visitId, t.status as Parameters<typeof markDone>[2]);
                           }}
-                          className="text-xs text-primary hover:underline disabled:opacity-50"
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-xs text-primary hover:underline disabled:opacity-50"
                         >
                           Mark Done
                         </button>
@@ -412,10 +450,13 @@ export function TreatmentTable({
                             const parsed = parseFloat(draftPrice);
                             if (!isNaN(parsed) && parsed >= 0) {
                               const cents = Math.round(parsed * 100);
-                              updateMutation.mutate({
-                                path: { visitId, treatmentId: t.id },
-                                body: { priceCents: cents },
-                              });
+                              updateMutation.mutate(
+                                {
+                                  path: { visitId, treatmentId: t.id },
+                                  body: { priceCents: cents },
+                                },
+                                { onSuccess: () => toast.success('Price updated') },
+                              );
                             }
                           }
                           setEditingPriceId(null);
@@ -424,7 +465,7 @@ export function TreatmentTable({
                           if (e.key === 'Escape') setEditingPriceId(null);
                         }}
                         aria-label={`Edit price for treatment ${t.description ?? ''}`}
-                        className="w-20 text-right border border-border rounded px-1 text-sm bg-background focus:border-lemon outline-none"
+                        className="w-20 text-right border border-border rounded px-1 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                       />
                     ) : (
                       <button
@@ -435,7 +476,7 @@ export function TreatmentTable({
                           setEditingPriceId(t.id);
                           setDraftPrice(String(t.priceAmount ?? 0));
                         }}
-                        className="tabular-nums hover:underline disabled:cursor-default"
+                        className="tabular-nums rounded px-1 hover:underline hover:bg-primary/10 focus:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:bg-transparent"
                       >
                         {CURRENCY_SYMBOL}
                         {(t.priceAmount ?? 0).toLocaleString(APP_LOCALE)}
@@ -467,7 +508,7 @@ export function TreatmentTable({
                           }
                         }}
                         placeholder="Add notes…"
-                        className={`w-full text-sm border border-border rounded px-2 py-1.5 resize-none bg-background focus:border-lemon outline-none ${readOnly ? 'opacity-70 cursor-default' : ''}`}
+                        className={`w-full text-sm border border-border rounded px-2 py-1.5 resize-none bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none ${readOnly ? 'opacity-70 cursor-default' : ''}`}
                       />
                     </td>
                   </tr>

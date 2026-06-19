@@ -33,6 +33,7 @@ export function useMyAppointments() {
     appointments: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error as Error | null,
+    refetch: query.refetch,
   };
 }
 
@@ -42,6 +43,7 @@ export function useMyInvoices() {
     invoices: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error as Error | null,
+    refetch: query.refetch,
   };
 }
 

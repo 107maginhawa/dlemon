@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { eq, and, sql, lte, inArray } from 'drizzle-orm';
+import { eq, and, sql, lte, gt, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import {
@@ -18,6 +18,7 @@ import {
   type NewDentalInvoiceLineItem,
 } from './dental-invoice.schema';
 import { applyDiscountRate, applyTaxRate } from '../utils/rounding';
+import { dueDateFromTerms } from '../utils/payment-terms';
 
 export interface InvoiceFilters {
   patientId?: string;
@@ -100,6 +101,16 @@ export class DentalInvoiceRepository {
     return { invoice, lineItems };
   }
 
+  /** BR-048: the distinct, non-null CDT codes on an invoice's line items —
+   *  used to look up per-procedure payment terms at issue. */
+  async getLineItemCdtCodes(invoiceId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ cdtCode: dentalInvoiceLineItems.cdtCode })
+      .from(dentalInvoiceLineItems)
+      .where(eq(dentalInvoiceLineItems.invoiceId, invoiceId));
+    return [...new Set(rows.map((r) => r.cdtCode).filter((c): c is string => c != null))];
+  }
+
   async findMany(filters?: InvoiceFilters): Promise<DentalInvoice[]> {
     const conditions = [];
     if (filters?.patientId) conditions.push(eq(dentalInvoices.patientId, filters.patientId));
@@ -112,15 +123,21 @@ export class DentalInvoiceRepository {
   }
 
   /**
-   * Issue an invoice: draft -> issued, set issuedAt
+   * Issue an invoice: draft -> issued, set issuedAt.
+   *
+   * BR-048: when `termsDays` is supplied (the handler resolved it because the
+   * invoice carried no caller-supplied dueDate), dueDate = issuedAt + termsDays.
+   * A null/omitted termsDays leaves dueDate untouched (caller-supplied wins).
    */
-  async issue(invoiceId: string): Promise<DentalInvoice | null> {
+  async issue(invoiceId: string, opts?: { termsDays?: number | null }): Promise<DentalInvoice | null> {
+    const issuedAt = new Date();
     const [updated] = await this.db
       .update(dentalInvoices)
       .set({
         status: 'issued',
-        issuedAt: new Date(),
-        updatedAt: new Date(),
+        issuedAt,
+        updatedAt: issuedAt,
+        ...(opts?.termsDays != null && { dueDate: dueDateFromTerms(issuedAt, opts.termsDays) }),
       })
       .where(and(eq(dentalInvoices.id, invoiceId), eq(dentalInvoices.status, 'draft')))
       .returning();
@@ -271,18 +288,24 @@ export class DentalInvoiceRepository {
    * FR4.1b: Mark issued/partial invoices past their due date as overdue.
    * Returns the count of invoices transitioned to overdue.
    */
-  async markOverdueInvoices(asOf: Date = new Date()): Promise<number> {
-    const result = await this.db
+  /**
+   * BR-049: flip issued/partial invoices past their due date (with a balance)
+   * to `overdue`. Returns the affected rows so the caller can audit each
+   * transition. Idempotent — already-overdue/paid/voided rows are excluded by
+   * the status filter, so a re-run flips (and returns) nothing.
+   */
+  async markOverdueInvoices(asOf: Date = new Date()): Promise<Array<{ id: string; branchId: string }>> {
+    return this.db
       .update(dentalInvoices)
       .set({ status: 'overdue', updatedAt: new Date() })
       .where(
         and(
           inArray(dentalInvoices.status, ['issued', 'partial']),
           lte(dentalInvoices.dueDate, asOf),
+          gt(dentalInvoices.balanceCents, 0),
         )
       )
-      .returning({ id: dentalInvoices.id });
-    return result.length;
+      .returning({ id: dentalInvoices.id, branchId: dentalInvoices.branchId });
   }
 
   /**

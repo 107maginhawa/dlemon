@@ -175,7 +175,7 @@ describe('InvoiceDetail — apply discount (owner-only)', () => {
       // Coherence: after the refetch the rendered Discount + Total reflect the
       // server response (₱250.00 off → ₱2,250.00 total), not an optimistic guess.
       await waitFor(() => expect(screen.getByText('-₱250.00')).not.toBeNull());
-      await waitFor(() => expect(screen.getAllByText('₱2250.00').length).toBeGreaterThan(0));
+      await waitFor(() => expect(screen.getAllByText('₱2,250.00').length).toBeGreaterThan(0));
       expect((onUpdated as any).mock.calls.length).toBeGreaterThanOrEqual(1);
     } finally {
       f.restore();

@@ -6,6 +6,8 @@ import { useMeasurements } from '../hooks/use-measurements'
 import { MeasurementToolbar, type ToolMode } from './measurement-toolbar'
 import { AnnotationToolbar } from './annotation-toolbar'
 import { CalibrationDialog } from './calibration-dialog'
+import { AnnotationInputDialog } from './annotation-input-dialog'
+import type { Point } from './imaging-workspace.handlers'
 import { FindingsSidebar } from './FindingsSidebar'
 import { CephWorkspacePanel } from './CephWorkspacePanel'
 import { CephLandmarkLayer } from './CephLandmarkLayer'
@@ -18,12 +20,15 @@ import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
 import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
 import { BRAND_GOLD } from '@/constants/brand'
+import { toast } from 'sonner'
+import { toastError } from '@/lib/error-toast'
 import { imagingMgmtUpdateImageCalibration } from '@monobase/sdk-ts/generated'
 import {
   processToolClick,
   buildLabelMeasurement,
   buildToothMeasurement,
   buildCalibrationRequest,
+  confirmCalibrationSave,
 } from './imaging-workspace.handlers'
 
 interface ImagingWorkspaceProps {
@@ -79,6 +84,9 @@ export function ImagingWorkspace({
   }
 
   const [drawPoints, setDrawPoints] = useState<{ x: number; y: number }[]>([])
+  // Pending annotation captured by the styled input dialog (replaces window.prompt).
+  // Holds the click point + which kind of input we're collecting; null = closed.
+  const [pendingAnnotation, setPendingAnnotation] = useState<{ kind: 'label' | 'tooth'; point: Point } | null>(null)
   const [calibrationOpen, setCalibrationOpen] = useState(false)
   const [calibrationPixelDist, setCalibrationPixelDist] = useState(0)
   const [internalPixelSpacingMm, setInternalPixelSpacingMm] = useState<number | null>(null)
@@ -272,32 +280,57 @@ export function ImagingWorkspace({
           setCalibrationOpen(true)
           return
         case 'commit':
-          createMeasurement.mutate(action.input)
+          createMeasurement.mutate(action.input, {
+            onSuccess: () => toast.success('Measurement saved'),
+            onError: (err) => toastError(err, 'Could not save measurement.'),
+          })
           setDrawPoints([])
           onMeasurementSaved?.()
           return
-        case 'promptLabel': {
-          const text = window.prompt('Label text (max 200 chars):')
-          const input = text == null ? null : buildLabelMeasurement(action.point, text)
-          if (!input) { setDrawPoints([]); return }
-          createMeasurement.mutate(input)
-          setDrawPoints([])
-          onMeasurementSaved?.()
+        case 'promptLabel':
+          setPendingAnnotation({ kind: 'label', point: action.point })
           return
-        }
-        case 'promptTooth': {
-          const raw = window.prompt('Tooth number (1–32):')
-          const input = raw == null ? null : buildToothMeasurement(action.point, raw)
-          if (!input) { setDrawPoints([]); return }
-          createMeasurement.mutate(input)
-          setDrawPoints([])
-          onMeasurementSaved?.()
+        case 'promptTooth':
+          setPendingAnnotation({ kind: 'tooth', point: action.point })
           return
-        }
       }
     },
     [toolMode, drawPoints, pixelSpacingMm, createMeasurement, onMeasurementSaved],
   )
+
+  // Confirm handler for the annotation input dialog. Builds the measurement from
+  // the pending point + raw input exactly as the old window.prompt path did, then
+  // commits with the same toasts. Validation lives both inline in the dialog
+  // (tooth range / inline error) and in build*Measurement (the final guard — an
+  // empty label or out-of-range tooth returns null → no commit), which matches
+  // the prior behaviour. On success or a null build it closes + clears points.
+  const handleAnnotationConfirm = useCallback(
+    (raw: string) => {
+      if (!pendingAnnotation) return
+      const { kind, point } = pendingAnnotation
+      const input =
+        kind === 'label' ? buildLabelMeasurement(point, raw) : buildToothMeasurement(point, raw)
+      setPendingAnnotation(null)
+      if (!input) {
+        setDrawPoints([])
+        return
+      }
+      createMeasurement.mutate(input, {
+        onSuccess: () => toast.success('Measurement saved'),
+        onError: (err) => toastError(err, 'Could not save measurement.'),
+      })
+      setDrawPoints([])
+      onMeasurementSaved?.()
+    },
+    [pendingAnnotation, createMeasurement, onMeasurementSaved],
+  )
+
+  // Cancel mirrors the prior `text == null` branch of window.prompt: clear the
+  // in-progress draw points and close the dialog without committing.
+  const handleAnnotationCancel = useCallback(() => {
+    setPendingAnnotation(null)
+    setDrawPoints([])
+  }, [])
 
   const handleCalibrationConfirm = useCallback(
     async (actualMm: number) => {
@@ -305,21 +338,27 @@ export function ImagingWorkspace({
       // drawPoints still holds the two calibration points the operator drew.
       const req = buildCalibrationRequest({ points: drawPoints, actualMm })
       if (!req) return
-      await imagingMgmtUpdateImageCalibration({
-        path: { imageId },
-        body: {
-          pixelSpacingMm: req.pixelSpacingMm,
-          pointA: req.pointA,
-          pointB: req.pointB,
-          knownDistanceMm: req.knownDistanceMm,
+      await confirmCalibrationSave({
+        save: () =>
+          imagingMgmtUpdateImageCalibration({
+            path: { imageId },
+            body: {
+              pixelSpacingMm: req.pixelSpacingMm,
+              pointA: req.pointA,
+              pointB: req.pointB,
+              knownDistanceMm: req.knownDistanceMm,
+            },
+            throwOnError: true,
+          }),
+        onError: (err) => toastError(err, 'Could not save calibration.'),
+        onSuccess: () => {
+          setInternalPixelSpacingMm(req.pixelSpacingMm)
+          onCalibrationSaved?.(req.pixelSpacingMm)
+          setCalibrationOpen(false)
+          setDrawPoints([])
+          setToolMode('none')
         },
-        throwOnError: true,
       })
-      setInternalPixelSpacingMm(req.pixelSpacingMm)
-      onCalibrationSaved?.(req.pixelSpacingMm)
-      setCalibrationOpen(false)
-      setDrawPoints([])
-      setToolMode('none')
     },
     [drawPoints, imageId, onCalibrationSaved],
   )
@@ -378,9 +417,9 @@ export function ImagingWorkspace({
     <div ref={containerRef} className={`relative flex flex-col bg-black ${className ?? ''}`}>
       {/* Viewer toolbar */}
       <div className="flex items-center gap-2 p-2 bg-zinc-900" data-testid="imaging-toolbar">
-        <button onClick={() => rotate(-1)} aria-label="Rotate counter-clockwise" className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↺ CCW</button>
-        <button onClick={() => rotate(1)} aria-label="Rotate clockwise" className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">↻ CW</button>
-        <button onClick={flip} aria-label="Flip image" className="px-2 py-1 text-xs text-white bg-zinc-700 rounded">⇆ Flip</button>
+        <button onClick={() => rotate(-1)} aria-label="Rotate counter-clockwise" className="min-h-[40px] px-2.5 py-1.5 text-xs text-white bg-zinc-700 rounded">↺ CCW</button>
+        <button onClick={() => rotate(1)} aria-label="Rotate clockwise" className="min-h-[40px] px-2.5 py-1.5 text-xs text-white bg-zinc-700 rounded">↻ CW</button>
+        <button onClick={flip} aria-label="Flip image" className="min-h-[40px] px-2.5 py-1.5 text-xs text-white bg-zinc-700 rounded">⇆ Flip</button>
         <label className="text-xs text-zinc-300">
           Brightness
           <input type="range" min={0} max={200} value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} className="ml-1 w-20" data-testid="brightness-control" aria-label="Brightness" />
@@ -406,7 +445,7 @@ export function ImagingWorkspace({
             Ceph
           </button>
         )}
-        <button onClick={fullscreen} aria-label="Fullscreen" data-testid="fullscreen-btn" className="ml-auto px-2 py-1 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
+        <button onClick={fullscreen} aria-label="Fullscreen" data-testid="fullscreen-btn" className="ml-auto min-h-[40px] px-2.5 py-1.5 text-xs text-white bg-zinc-700 rounded">⛶ Fullscreen</button>
       </div>
 
       <MeasurementToolbar toolMode={toolMode} onToolChange={setToolMode} isCalibrated={isCalibrated} modality={modality} onRequestCalibrate={() => setToolMode('calibration')} />
@@ -524,6 +563,13 @@ export function ImagingWorkspace({
         pixelDistance={calibrationPixelDist}
         onConfirm={(mm) => void handleCalibrationConfirm(mm)}
         onCancel={() => { setCalibrationOpen(false); setDrawPoints([]) }}
+      />
+
+      <AnnotationInputDialog
+        open={pendingAnnotation !== null}
+        kind={pendingAnnotation?.kind ?? 'label'}
+        onConfirm={handleAnnotationConfirm}
+        onCancel={handleAnnotationCancel}
       />
     </div>
   )

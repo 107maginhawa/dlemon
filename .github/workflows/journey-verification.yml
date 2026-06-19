@@ -1,0 +1,148 @@
+name: Journey Verification
+
+# Per-PR REAL-STACK functional gate (VERIFICATION_HARDENING.md P2-D). Boots the
+# real stack ONCE (postgres + api-ts), then runs the clinical Journey Harness a
+# single time against a freshly reseeded DB. This is the non-skippable proof that
+# the curated must-never-break flows actually work for a user END-TO-END — the
+# layer the "New Visit broke while CI was green" incident proved was missing
+# (every other gate is computed/structural and skip-tolerant).
+#
+# Each journey is also graded by the P2-A error-surface firewall
+# (apps/dentalemon/tests/e2e/journeys/_journey-helpers.ts): an unexpected error
+# toast, pageerror, console error, or 4xx/5xx during a success path FAILS that
+# journey. The same proven boot recipe as journey-stability.yml; that one banks
+# the 20× stability budget on demand, this one is the per-PR single-shot gate.
+#
+# ⚠ NOT YET a REQUIRED branch-protection check — adding it to the required set is
+# a GitHub-settings action a code agent cannot perform (VERIFICATION_HARDENING.md
+# P2 step 3 / ⚠ HUMAN). Make it required once it is green on main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
+
+jobs:
+  journey-verification:
+    name: Journey Harness (real stack, Set A once)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: monobase
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monobase"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/monobase
+      PORT: 7213
+      API_URL: http://localhost:7213
+      AUTH_SECRET: journey-verification-secret-do-not-use-in-prod
+      # Admin-allowlisted owner the org-onboarding journey (J18) signs up as.
+      AUTH_ADMIN_EMAILS: admin@monobase.com
+      # Minimal storage config so api-ts boots. No MinIO is provisioned → the ceph
+      # journeys (B01–B04) record SKIPPED (honest environment skip, tolerated).
+      STORAGE_PROVIDER: minio
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_BUCKET: monobase-files
+      STORAGE_ACCESS_KEY_ID: minioadmin
+      STORAGE_SECRET_ACCESS_KEY: minioadmin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: cd apps/dentalemon && bunx playwright install --with-deps chromium
+
+      - name: Build the OpenAPI spec
+        run: cd specs/api && bun run build
+
+      - name: Generate API codegen
+        run: cd services/api-ts && bun run generate
+
+      - name: Boot api-ts (auto-migrates on start)
+        run: |
+          cd services/api-ts
+          bun dev > /tmp/api-journey.log 2>&1 &
+          echo $! > /tmp/api-journey.pid
+
+      - name: Wait for /livez
+        run: |
+          for i in {1..60}; do
+            curl -fsS "$API_URL/livez" && break || sleep 1
+          done
+          curl -fsS "$API_URL/livez" || { echo "api-ts never became ready"; tail -100 /tmp/api-journey.log; exit 1; }
+
+      # The runner reseeds the demo DB, then runs the journey suite once. It exits
+      # non-zero if any PASS-expected journey regresses to BROKEN/ERROR or any
+      # journey trips the P2-A error-surface firewall. The Playwright webServer
+      # boots the Vite frontend and reuses the api-ts booted above.
+      - name: Run the journey harness (reseed + Set A once)
+        run: bun apps/dentalemon/scripts/run-journey-harness.ts
+
+      - name: Upload journey artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: journey-verification-results
+          path: |
+            apps/dentalemon/journey-results.json
+            apps/dentalemon/.journey-tmp/
+            apps/dentalemon/test-results/
+          retention-days: 14
+
+      - name: api-ts logs (always)
+        if: always()
+        run: tail -200 /tmp/api-journey.log || true
+
+      - name: Stop api-ts
+        if: always()
+        run: kill "$(cat /tmp/api-journey.pid)" || true
+
+  # UA_KG_UPGRADE.md U3 — ADVISORY review radar. Maps the PR's changed files to
+  # the domain-graph business flows they touch, then flags any flow with NO
+  # covering goal-state journey. Lightweight (no stack, no deps — reads committed
+  # JSON + the harness roster). NEVER blocks: the script exits 0 and the step is
+  # continue-on-error. Output lands in the PR check summary as a visible note.
+  kg-review-radar:
+    name: KG review radar (advisory — flows ↔ journeys)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Map changed flows to journey coverage (advisory)
+        continue-on-error: true
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE="${{ github.event.pull_request.base.sha }}"
+          {
+            echo "## understand-anything review radar (advisory)"
+            echo ''
+            echo '```'
+            bun scripts/kg-review-radar.ts --base="$BASE"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

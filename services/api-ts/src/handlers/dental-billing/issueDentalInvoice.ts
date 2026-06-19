@@ -17,6 +17,9 @@ import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/err
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { withTenantTx } from '@/core/tenant-tx';
+import { resolvePaymentTermsDays } from './utils/payment-terms';
+import { getProcedureTermsForCdtCodes } from '@/handlers/dental-visit/repos/visit-billing.facade';
+import { getBranchDefaultPaymentTermsDays } from '@/handlers/dental-org/repos/org-billing.facade';
 
 export async function issueDentalInvoice(
   ctx: ValidatedContext<never, never, IssueDentalInvoiceParams>
@@ -38,11 +41,26 @@ export async function issueDentalInvoice(
     throw new BusinessLogicError('Only draft invoices can be issued', 'INVALID_STATUS');
   }
 
+  // BR-048: derive dueDate from payment terms at issue, UNLESS the caller already
+  // supplied an explicit dueDate at create (that wins). Precedence:
+  // invoice override → MAX of line-item service terms → clinic default → 0.
+  let termsDays: number | undefined;
+  if (!invoice.dueDate) {
+    const cdtCodes = await repo.getLineItemCdtCodes(invoiceId);
+    const serviceTermsDays = await getProcedureTermsForCdtCodes(db, cdtCodes);
+    const clinicDefaultDays = await getBranchDefaultPaymentTermsDays(db, invoice.branchId);
+    termsDays = resolvePaymentTermsDays({
+      invoiceOverrideDays: invoice.paymentTermsDays,
+      serviceTermsDays,
+      clinicDefaultDays,
+    });
+  }
+
   // RLS P1b activation: route the dental_invoice write through withTenantTx so
   // the app_rls policy enforces the branch scope as a second wall. Entity
   // fetch + authz above stay on db to preserve the exact 403/404 behavior.
   const issued = await withTenantTx(db, { branchIds: [invoice.branchId] }, (tx) =>
-    new DentalInvoiceRepository(tx).issue(invoiceId),
+    new DentalInvoiceRepository(tx).issue(invoiceId, { termsDays }),
   );
 
   ctx.get('logger')?.info(

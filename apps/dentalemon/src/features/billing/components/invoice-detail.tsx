@@ -9,6 +9,9 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import {
   getDentalInvoiceOptions,
   getDentalInvoiceQueryKey,
@@ -18,6 +21,7 @@ import {
   recordDentalPaymentMutation,
   applyDentalDiscountMutation,
   voidDentalPaymentMutation,
+  refundDentalPaymentMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import {
   type InvoiceData,
@@ -27,6 +31,7 @@ import {
   formatCents, getStatusBadgeClass, formatStatus,
   PAYMENT_METHODS, METHOD_LABELS,
 } from './invoice-detail.helpers';
+import { Skeleton } from '@monobase/ui';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canApplyDiscount, canVoidPayment, type DentalRole } from '@/lib/rbac';
 import { PaymentReceipt } from './payment-receipt';
@@ -58,6 +63,7 @@ export interface InvoiceDetailProps {
 }
 
 export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true }: InvoiceDetailProps) {
+  useSheetA11y({ open, onClose });
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -79,6 +85,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
   const [paymentVoidReason, setPaymentVoidReason] = useState('');
   const [paymentVoidError, setPaymentVoidError] = useState<string | null>(null);
+  // BR-053: per-payment refund (owner-only, reason-required, optional book-as-credit).
+  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(null);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundAsCredit, setRefundAsCredit] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   // FIX-005: payment-plan create dialog open state.
   const [showPlanCreate, setShowPlanCreate] = useState(false);
 
@@ -193,9 +205,11 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       setReceiptNumber('');
       invalidateInvoice();
       onUpdated?.();
+      toast.success('Payment recorded');
     },
     onError: (err) => {
       setPaymentErrors([err instanceof Error ? err.message : 'Failed']);
+      toastError(err, 'Could not record payment');
     },
   });
 
@@ -238,6 +252,35 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       setPaymentVoidError(err instanceof Error ? err.message : 'Failed');
     },
   });
+
+  // POST /payments/{paymentId}/refund (BR-053) — owner-only, reverses the
+  // refunded amount from the invoice; invalidate for the corrected balance.
+  const refundMutation = useMutation({
+    ...refundDentalPaymentMutation(),
+    onSuccess: () => {
+      setRefundingPaymentId(null);
+      setRefundAmount('');
+      setRefundReason('');
+      setRefundAsCredit(false);
+      setRefundError(null);
+      invalidateInvoice();
+      onUpdated?.();
+      toast.success('Payment refunded');
+    },
+    onError: (err) => {
+      setRefundError(err instanceof Error ? err.message : 'Failed');
+    },
+  });
+
+  function handleRefundPayment() {
+    if (!refundingPaymentId) return;
+    const amountCents = Math.round((Number(refundAmount) || 0) * 100);
+    const reason = refundReason.trim();
+    if (amountCents <= 0) { setRefundError('Enter a refund amount greater than zero.'); return; }
+    if (reason.length < 3) { setRefundError('Enter a refund reason (at least 3 characters).'); return; }
+    setRefundError(null);
+    refundMutation.mutate({ path: { paymentId: refundingPaymentId }, body: { amountCents, reason, bookAsCredit: refundAsCredit } });
+  }
 
   const saving =
     issueMutation.isPending ||
@@ -343,14 +386,37 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           <h2 className="text-[17px] font-semibold tracking-tight">
             {invoice ? `Invoice ${invoice.invoiceNumber}` : 'Invoice Detail'}
           </h2>
-          <button type="button" onClick={handleClose} aria-label="Close" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">
+          <button type="button" onClick={handleClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">
             ✕
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
-          {loading && <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>}
+          {loading && (
+            <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading invoice">
+              {/* Invoice info header */}
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-20 rounded-md" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <Skeleton className="h-3 w-12 ml-auto" />
+                  <Skeleton className="h-4 w-28 ml-auto" />
+                </div>
+              </div>
+              {/* Line item rows */}
+              <div className="flex flex-col gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-12 rounded-xl" />
+                ))}
+              </div>
+              {/* Totals */}
+              <Skeleton className="h-24 rounded-xl" />
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{error}</div>
           )}
@@ -403,7 +469,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                         <td className="px-3 py-2.5 text-xs text-muted-foreground">{idx + 1}</td>
                         <td className="px-3 py-2.5 text-[13px] font-medium">{item.description}</td>
                         <td className="px-3 py-2.5">
-                          {item.cdtCode && <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">{item.cdtCode}</span>}
+                          {item.cdtCode && <span className="text-[11px] font-semibold text-info-foreground bg-info/15 px-1.5 py-0.5 rounded">{item.cdtCode}</span>}
                         </td>
                         <td className="px-3 py-2.5 text-[13px] text-muted-foreground">{item.toothNumber ? `#${item.toothNumber}` : '--'}</td>
                         <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(item.priceCents)}</td>
@@ -421,7 +487,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   {invoice.discountCents > 0 && (
                     <div className="flex justify-between text-[13px]">
                       <span className="text-muted-foreground">Discount</span>
-                      <span className="font-medium tabular-nums text-green-700">-{formatCents(invoice.discountCents)}</span>
+                      <span className="font-medium tabular-nums text-success-foreground">-{formatCents(invoice.discountCents)}</span>
                     </div>
                   )}
                   {invoice.taxCents > 0 && (
@@ -487,6 +553,18 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   Void
                                 </button>
                               )}
+                              {/* BR-053: refund is owner-only (same gate as void) on a non-void payment. */}
+                              {canVoidPmt && !pmt.isVoid && (
+                                <button
+                                  type="button"
+                                  data-testid={`refund-payment-${pmt.id}`}
+                                  disabled={saving}
+                                  onClick={() => { setRefundingPaymentId(pmt.id); setRefundAmount((pmt.amountCents / 100).toFixed(2)); setRefundReason(''); setRefundAsCredit(false); setRefundError(null); }}
+                                  className="text-xs text-foreground/70 hover:text-foreground transition-colors disabled:opacity-50"
+                                >
+                                  Refund
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -496,7 +574,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                 )}
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
                   <span className="text-sm font-semibold text-muted-foreground">Balance Remaining</span>
-                  <span className={`text-2xl font-bold tabular-nums ${invoice.balanceCents > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                  <span className={`text-2xl font-bold tabular-nums ${invoice.balanceCents > 0 ? 'text-destructive-emphasis' : 'text-success-foreground'}`}>
                     {formatCents(invoice.balanceCents)}
                   </span>
                 </div>
@@ -513,7 +591,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   )}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pay-amount">Amount *</label>
-                    <input id="pay-amount" type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} placeholder="0.00" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                    <input id="pay-amount" type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} placeholder="0.00" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Method *</label>
@@ -528,7 +606,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="pay-receipt">Receipt # *</label>
-                    <input id="pay-receipt" type="text" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="e.g. R-A-0001" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                    <input id="pay-receipt" type="text" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="e.g. R-A-0001" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowPaymentForm(false); setPaymentErrors([]); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
@@ -548,7 +626,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   )}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="void-reason">Reason *</label>
-                    <input id="void-reason" type="text" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder="e.g. Duplicate invoice" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                    <input id="void-reason" type="text" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder="e.g. Duplicate invoice" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowVoidForm(false); setVoidReason(''); setVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
@@ -589,11 +667,11 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   )}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="discount-rate">Discount %</label>
-                    <input id="discount-rate" type="number" step="0.01" min="0" max="100" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} placeholder="e.g. 20" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                    <input id="discount-rate" type="number" step="0.01" min="0" max="100" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} placeholder="e.g. 20" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="discount-reason">Discount reason *</label>
-                    <input id="discount-reason" type="text" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="e.g. Senior citizen discount" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                    <input id="discount-reason" type="text" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="e.g. Senior citizen discount" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowDiscountForm(false); setDiscountErrors([]); setDiscountRate(''); setDiscountReason(''); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
@@ -613,12 +691,40 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   )}
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="payment-void-reason">Void reason *</label>
-                    <input id="payment-void-reason" type="text" value={paymentVoidReason} onChange={(e) => setPaymentVoidReason(e.target.value)} placeholder="e.g. Posted in error" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+                    <input id="payment-void-reason" type="text" value={paymentVoidReason} onChange={(e) => setPaymentVoidReason(e.target.value)} placeholder="e.g. Posted in error" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setVoidingPaymentId(null); setPaymentVoidReason(''); setPaymentVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
                     <button type="button" data-testid="confirm-payment-void" onClick={handleVoidPayment} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
                       {saving ? 'Voiding...' : 'Confirm Void'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* BR-053: per-payment refund form — owner-only, reason-required. */}
+              {refundingPaymentId && (
+                <div className="rounded-xl border border-border p-4 flex flex-col gap-3" data-testid="refund-payment-form">
+                  <h4 className="text-sm font-semibold">Refund Payment</h4>
+                  {refundError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{refundError}</div>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="refund-amount">Amount *</label>
+                    <input id="refund-amount" data-testid="refund-amount" type="number" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder="0.00" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="refund-reason">Reason *</label>
+                    <input id="refund-reason" data-testid="refund-reason" type="text" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. Treatment cancelled" className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" data-testid="refund-as-credit" checked={refundAsCredit} onChange={(e) => setRefundAsCredit(e.target.checked)} className="h-4 w-4 rounded border-border" />
+                    Book as patient credit instead of cash refund
+                  </label>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setRefundingPaymentId(null); setRefundError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
+                    <button type="button" data-testid="confirm-payment-refund" onClick={handleRefundPayment} disabled={saving || refundMutation.isPending} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
+                      {refundMutation.isPending ? 'Refunding...' : 'Confirm Refund'}
                     </button>
                   </div>
                 </div>

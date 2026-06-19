@@ -16,7 +16,7 @@ import {
 
 describe('formatCents', () => {
   test('renders ₱ with two decimals', () => {
-    expect(formatCents(123456)).toBe('₱1234.56');
+    expect(formatCents(123456)).toBe('₱1,234.56');
     expect(formatCents(0)).toBe('₱0.00');
   });
 });
@@ -60,7 +60,7 @@ describe('bucketPct', () => {
 describe('summarizeBatch', () => {
   test('pluralizes and includes total', () => {
     expect(summarizeBatch(1, 5000)).toBe('Generated 1 statement · ₱50.00 outstanding');
-    expect(summarizeBatch(3, 700000)).toBe('Generated 3 statements · ₱7000.00 outstanding');
+    expect(summarizeBatch(3, 700000)).toBe('Generated 3 statements · ₱7,000.00 outstanding');
   });
 });
 

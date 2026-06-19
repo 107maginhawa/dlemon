@@ -11,7 +11,12 @@ import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
 import { getPatientWithPersonForInvoice } from '@/handlers/patient/repos/patient-billing.facade';
+import { getBranchBirInfo } from '@/handlers/dental-org/repos/org-billing.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
+
+// BR-055 (PH): the BIR-required non-VAT statement.
+const NON_VAT_STATEMENT = 'Non-VAT registered. THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.';
+const VAT_STATEMENT = 'VAT-registered. Price is VAT-inclusive; VAT is shown above.';
 
 export async function getDentalPaymentReceipt(ctx: BaseContext) {
   const user = ctx.get('user');
@@ -44,6 +49,26 @@ export async function getDentalPaymentReceipt(ctx: BaseContext) {
     ? [patientRow.firstName, patientRow.lastName].filter(Boolean).join(' ')
     : 'Unknown Patient';
 
+  // BR-055 (PH): BIR receipt header + VAT breakdown. The VAT amounts are derived
+  // from the invoice's stored tax fields (BR-054); a non-VAT clinic shows the
+  // full gross as VAT-exempt with the BIR non-VAT statement.
+  const bir = await getBranchBirInfo(db, invoice.branchId);
+  const tax = bir.isVatRegistered
+    ? {
+        vatRate: Number(invoice.taxRate),
+        vatableCents: invoice.totalCents - invoice.taxCents,
+        vatExemptCents: 0,
+        zeroRatedCents: 0,
+        vatCents: invoice.taxCents,
+      }
+    : {
+        vatRate: 0,
+        vatableCents: 0,
+        vatExemptCents: invoice.totalCents,
+        zeroRatedCents: 0,
+        vatCents: 0,
+      };
+
   logger?.info({ action: 'getDentalPaymentReceipt', invoiceId, paymentId }, 'Receipt generated');
 
   return ctx.json({
@@ -70,6 +95,17 @@ export async function getDentalPaymentReceipt(ctx: BaseContext) {
       id: invoice.patientId,
       name: patientName,
     },
+    // BR-055 (PH): BIR official-receipt fields.
+    orNumber: payment.receiptNumber,
+    clinic: {
+      registeredName: bir.registeredName,
+      businessStyle: bir.businessStyle,
+      tin: bir.tin,
+      address: bir.address,
+      isVatRegistered: bir.isVatRegistered,
+    },
+    tax,
+    taxStatement: bir.isVatRegistered ? VAT_STATEMENT : NON_VAT_STATEMENT,
     generatedAt: new Date().toISOString(),
   }, 200);
 }

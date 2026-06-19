@@ -301,7 +301,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           {step === 'patient' && (
             <Button type="button" variant="ghost" onClick={handleSkipPatient} disabled={saving} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50">Skip for now</Button>
           )}
-          <Button type="button" variant="ghost" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
+          <Button type="button" variant="lemon" onClick={handleNext} disabled={saving} className="flex-1 h-11 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
             {saving ? 'Setting up...' : isLast ? 'Get Started' : 'Next'}
           </Button>
         </div>

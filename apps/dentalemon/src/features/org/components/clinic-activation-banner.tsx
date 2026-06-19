@@ -10,7 +10,9 @@
 
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { activateOrganizationMutation } from '@monobase/sdk-ts/generated/react-query';
+import { toastError } from '@/lib/error-toast';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 export function ClinicActivationBanner() {
@@ -22,7 +24,10 @@ export function ClinicActivationBanner() {
 
   const activateMut = useMutation({
     ...activateOrganizationMutation(),
-    onSuccess: () => setContext({ orgStatus: 'live' }),
+    onSuccess: () => {
+      setContext({ orgStatus: 'live' });
+      toast.success('Clinic activated');
+    },
   });
 
   // Only the owner of a still-provisional clinic sees the activation CTA.
@@ -34,6 +39,7 @@ export function ClinicActivationBanner() {
       await activateMut.mutateAsync({ path: { id: orgId! } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not activate the clinic. Please try again.');
+      toastError(e, 'Could not activate the clinic. Please try again.');
     }
   }
 

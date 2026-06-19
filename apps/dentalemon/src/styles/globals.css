@@ -4,6 +4,9 @@
 @import "@daveyplate/better-auth-ui/css";
 
 @custom-variant dark (&:is(.dark *));
+/* Touch-only styling hook: true on any device with a touch surface (incl.
+   docked iPad with a trackpad). Use `coarse:` for 44px touch targets etc. */
+@custom-variant coarse (@media (any-pointer: coarse));
 
 @tailwind base;
 @tailwind components;
@@ -58,6 +61,13 @@
     --dental-implant: #007AFF;
     --dental-extracted: #111111;
     --dental-watchlist: #fef9c3;
+    --dental-watchlist-foreground: #713f12; /* AA-readable on the pale-yellow watchlist fill */
+
+    /* Treatment-plan phase accents (categorical; no semantic-token home) */
+    --phase-1: #DC2626;
+    --phase-2: #EA580C;
+    --phase-3: #7C3AED;
+    --phase-4: #059669;
 
     /* Semantic */
     --success: #34C759;
@@ -149,6 +159,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-variant-numeric: tabular-nums;
+    /* Stop the whole page rubber-banding / scroll-chaining on iPad. */
+    overscroll-behavior: contain;
+  }
+
+  /* The app has its own pressed states; suppress the iOS grey tap flash. */
+  a, button, [role="button"], [role="tab"], [role="switch"], [role="menuitem"], summary, label {
+    -webkit-tap-highlight-color: transparent;
   }
 
   .hairline {
@@ -174,6 +191,31 @@
     @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
     --tw-ring-color: rgba(255, 233, 125, 0.35);
   }
+}
+
+/* iPad / touch tuning. Uses (any-pointer: coarse) — true whenever a touch
+   surface exists, even on a docked iPad whose PRIMARY pointer is the
+   trackpad (pointer: fine). Desktop with mouse only stays unaffected.
+   NOTE: 44px touch targets are applied per-component (shared Button), not
+   as a blanket rule here — a blanket min-height breaks switches, calendar
+   chips, toolbar buttons, and text-link buttons. */
+@media (any-pointer: coarse) {
+  /* >=16px on form fields so iOS Safari does not auto-zoom on focus.
+     Covers the shared <Input> and all raw <input>s. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* iPad safe area: with viewport-fit=cover the layout extends under the home
+   indicator. Lift slide-up sheet panels (the bottom-anchored action bars) above
+   it. env() resolves to 0 on devices without insets, so this is a no-op on
+   desktop and non-notch devices. The .rounded-t-2xl.shadow-2xl pair is unique
+   to these sheet panels (flex-col, no existing bottom padding → additive). */
+.rounded-t-2xl.shadow-2xl {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Reduced motion — disable animations, flatten carousel */

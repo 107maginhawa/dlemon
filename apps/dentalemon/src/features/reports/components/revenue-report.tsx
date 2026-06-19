@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Skeleton } from '@monobase/ui';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useInvoices } from '@/features/billing/hooks/use-invoices';
 import { InvoiceDetailSheet } from './invoice-detail-sheet';
@@ -79,14 +80,35 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
           <input type="date" aria-label="End date" value={endDate} onChange={e => setEndDate(e.target.value)}
             className="h-9 rounded-lg border border-border px-3 text-sm bg-background" />
           <button type="button" onClick={handleExportCSV}
-            className="h-9 px-4 rounded-lg border border-border text-sm hover:bg-secondary transition-colors">
+            className="h-11 px-4 rounded-lg border border-border text-sm hover:bg-secondary transition-colors">
             Export CSV
           </button>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <>
+          {/* Summary cards skeleton — matches the 4-up card grid below */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="rounded-xl border border-border p-4">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-32 mt-2" />
+              </div>
+            ))}
+          </div>
+          {/* Table skeleton — header row + rows */}
+          <div className="rounded-xl border border-border">
+            <div className="px-4 py-3 border-b">
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="flex flex-col gap-3 p-4">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-5 w-full" />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -96,11 +118,11 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Collected</p>
-              <p className="text-2xl font-bold mt-1 text-green-600">{formatCents(totalCollected)}</p>
+              <p className="text-2xl font-bold mt-1 text-success-foreground">{formatCents(totalCollected)}</p>
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Outstanding</p>
-              <p className="text-2xl font-bold mt-1 text-red-600">{formatCents(totalOutstanding)}</p>
+              <p className="text-2xl font-bold mt-1 text-destructive-emphasis">{formatCents(totalOutstanding)}</p>
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Collection Rate</p>
@@ -126,8 +148,8 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                   <tr key={d.date} className="border-b last:border-0">
                     <td className="px-4 py-2.5">{d.date}</td>
                     <td className="px-4 py-2.5 text-right">{formatCents(d.billed)}</td>
-                    <td className="px-4 py-2.5 text-right text-green-600">{formatCents(d.collected)}</td>
-                    <td className="px-4 py-2.5 text-right text-red-600">{formatCents(d.billed - d.collected)}</td>
+                    <td className="px-4 py-2.5 text-right text-success-foreground">{formatCents(d.collected)}</td>
+                    <td className="px-4 py-2.5 text-right text-destructive-emphasis">{formatCents(d.billed - d.collected)}</td>
                   </tr>
                 ))}
                 {dailyData.length === 0 && (
@@ -157,8 +179,17 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                 {invoices.map(inv => (
                   <tr
                     key={inv.id}
-                    className="border-b last:border-0 cursor-pointer hover:bg-secondary/50 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open invoice ${inv.invoiceNumber}`}
+                    className="border-b last:border-0 cursor-pointer hover:bg-secondary/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     onClick={() => setSelectedInvoiceId(inv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedInvoiceId(inv.id)
+                      }
+                    }}
                   >
                     <td className="px-4 py-2.5 font-medium text-primary" data-testid="revenue-invoice-number">
                       {inv.invoiceNumber}
@@ -170,10 +201,10 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
                       {inv.status}
                     </td>
                     <td className="px-4 py-2.5 text-right">{formatCents(inv.totalCents)}</td>
-                    <td className="px-4 py-2.5 text-right text-green-600 hidden sm:table-cell">
+                    <td className="px-4 py-2.5 text-right text-success-foreground hidden sm:table-cell">
                       {formatCents(inv.paidCents)}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-red-600">
+                    <td className="px-4 py-2.5 text-right text-destructive-emphasis">
                       {formatCents(inv.balanceCents)}
                     </td>
                   </tr>

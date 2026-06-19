@@ -155,7 +155,7 @@ export function CasePresentationView({
       {decided ? (
         <div
           className={`rounded-xl px-4 py-3 text-sm font-semibold ${
-            accepted ? 'bg-green-100 text-green-800' : 'bg-red-50 text-red-700'
+            accepted ? 'bg-success/15 text-success-foreground' : 'bg-destructive/15 text-destructive-emphasis'
           }`}
           data-testid="decision-banner"
         >
@@ -169,7 +169,7 @@ export function CasePresentationView({
               <button
                 type="button"
                 data-testid="reject-btn"
-                className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                className="h-11 rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Decline this plan
               </button>
@@ -187,7 +187,7 @@ export function CasePresentationView({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Want to think it over"
                 rows={3}
-                className="w-full resize-none rounded-xl border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-lemon"
+                className="w-full resize-none rounded-xl border border-border bg-background px-2 py-1.5 text-sm outline-none focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring"
               />
               <button
                 type="button"
@@ -197,7 +197,7 @@ export function CasePresentationView({
                   onReject({ rejectionReason: reason.trim() || undefined });
                   setRejectOpen(false);
                 }}
-                className="mt-2 w-full rounded-xl bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
+                className="mt-2 min-h-[44px] w-full rounded-xl bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Confirm decline
               </button>

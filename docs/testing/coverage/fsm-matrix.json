@@ -127,7 +127,9 @@
     "from": "completed",
     "to": "checked_in",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts",
+    "evidenceLine": 108
   },
   {
     "fsm": "Appointment",
@@ -345,7 +347,9 @@
     "from": "confirmed",
     "to": "not_placed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts",
+    "evidenceLine": 84
   },
   {
     "fsm": "CephLandmark",
@@ -376,7 +380,9 @@
     "from": "locked",
     "to": "not_placed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts",
+    "evidenceLine": 87
   },
   {
     "fsm": "CephLandmark",
@@ -396,7 +402,9 @@
     "from": "not_placed",
     "to": "confirmed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts",
+    "evidenceLine": 90
   },
   {
     "fsm": "CephLandmark",
@@ -405,7 +413,9 @@
     "from": "not_placed",
     "to": "locked",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts",
+    "evidenceLine": 93
   },
   {
     "fsm": "CephLandmark",
@@ -445,7 +455,9 @@
     "from": "placed",
     "to": "not_placed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts",
+    "evidenceLine": 96
   },
   {
     "fsm": "Finding",
@@ -661,7 +673,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts",
-    "evidenceLine": 797
+    "evidenceLine": 821
   },
   {
     "fsm": "LabOrder",
@@ -725,7 +737,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts",
-    "evidenceLine": 826
+    "evidenceLine": 850
   },
   {
     "fsm": "PaymentPlan",
@@ -954,7 +966,9 @@
     "from": "declined",
     "to": "performed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 87
   },
   {
     "fsm": "Treatment",
@@ -974,7 +988,9 @@
     "from": "declined",
     "to": "verified",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 90
   },
   {
     "fsm": "Treatment",
@@ -1027,7 +1043,9 @@
     "from": "diagnosed",
     "to": "verified",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 93
   },
   {
     "fsm": "Treatment",
@@ -1058,7 +1076,9 @@
     "from": "dismissed",
     "to": "performed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 96
   },
   {
     "fsm": "Treatment",
@@ -1089,7 +1109,9 @@
     "from": "performed",
     "to": "declined",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 99
   },
   {
     "fsm": "Treatment",
@@ -1195,7 +1217,9 @@
     "from": "verified",
     "to": "declined",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 102
   },
   {
     "fsm": "Treatment",
@@ -1204,7 +1228,9 @@
     "from": "verified",
     "to": "diagnosed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts",
+    "evidenceLine": 105
   },
   {
     "fsm": "Treatment",
@@ -1277,7 +1303,9 @@
     "from": "active",
     "to": "locked",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 81
   },
   {
     "fsm": "Visit",
@@ -1308,7 +1336,9 @@
     "from": "completed",
     "to": "draft",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 84
   },
   {
     "fsm": "Visit",
@@ -1348,7 +1378,9 @@
     "from": "discarded",
     "to": "draft",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 87
   },
   {
     "fsm": "Visit",
@@ -1357,7 +1389,9 @@
     "from": "discarded",
     "to": "locked",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 90
   },
   {
     "fsm": "Visit",
@@ -1377,7 +1411,9 @@
     "from": "draft",
     "to": "completed",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 93
   },
   {
     "fsm": "Visit",
@@ -1386,7 +1422,9 @@
     "from": "draft",
     "to": "discarded",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 96
   },
   {
     "fsm": "Visit",
@@ -1395,7 +1433,9 @@
     "from": "draft",
     "to": "locked",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 99
   },
   {
     "fsm": "Visit",
@@ -1404,7 +1444,9 @@
     "from": "locked",
     "to": "active",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 102
   },
   {
     "fsm": "Visit",
@@ -1424,7 +1466,9 @@
     "from": "locked",
     "to": "discarded",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 105
   },
   {
     "fsm": "Visit",
@@ -1433,6 +1477,8 @@
     "from": "locked",
     "to": "draft",
     "legal": false,
-    "coveredByTest": false
+    "coveredByTest": true,
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts",
+    "evidenceLine": 108
   }
 ]

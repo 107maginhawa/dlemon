@@ -494,11 +494,32 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.getArAging as unknown as Handler
   );
 
+  // getCollectionsKpis
+  app.get('/dental/billing/collections/kpis',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetCollectionsKpisQuery, validationErrorHandler),
+    registry.getCollectionsKpis as unknown as Handler
+  );
+
+  // createCollectionNote
+  app.post('/dental/billing/collections/notes',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreateCollectionNoteBody, validationErrorHandler),
+    registry.createCollectionNote as unknown as Handler
+  );
+
   // getCollectionsSummary
   app.get('/dental/billing/collections/summary',
     authMiddleware({ roles: ["user"] }),
     zValidator('query', validators.GetCollectionsSummaryQuery, validationErrorHandler),
     registry.getCollectionsSummary as unknown as Handler
+  );
+
+  // getCollectionsWorklist
+  app.get('/dental/billing/collections/worklist',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('query', validators.GetCollectionsWorklistQuery, validationErrorHandler),
+    registry.getCollectionsWorklist as unknown as Handler
   );
 
   // estimateClaimCoverage
@@ -527,6 +548,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetDentalInvoiceParams, validationErrorHandler),
     registry.getDentalInvoice as unknown as Handler
+  );
+
+  // applyCreditToInvoice
+  app.post('/dental/billing/invoices/:invoiceId/apply-credit',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.ApplyCreditToInvoiceParams, validationErrorHandler),
+    zValidator('json', validators.ApplyCreditToInvoiceBody, validationErrorHandler),
+    registry.applyCreditToInvoice as unknown as Handler
   );
 
   // applyDentalDiscount
@@ -609,6 +638,37 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     authMiddleware({ roles: ["user"] }),
     zValidator('param', validators.GetPatientBalanceParams, validationErrorHandler),
     registry.getPatientBalance as unknown as Handler
+  );
+
+  // getPatientCredits
+  app.get('/dental/billing/patients/:patientId/credits',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.GetPatientCreditsParams, validationErrorHandler),
+    registry.getPatientCredits as unknown as Handler
+  );
+
+  // addPatientCredit
+  app.post('/dental/billing/patients/:patientId/credits',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.AddPatientCreditParams, validationErrorHandler),
+    zValidator('json', validators.AddPatientCreditBody, validationErrorHandler),
+    registry.addPatientCredit as unknown as Handler
+  );
+
+  // sendPatientStatement
+  app.post('/dental/billing/patients/:patientId/statement/send',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.SendPatientStatementParams, validationErrorHandler),
+    zValidator('json', validators.SendPatientStatementBody, validationErrorHandler),
+    registry.sendPatientStatement as unknown as Handler
+  );
+
+  // refundDentalPayment
+  app.post('/dental/billing/payments/:paymentId/refund',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RefundDentalPaymentParams, validationErrorHandler),
+    zValidator('json', validators.RefundDentalPaymentBody, validationErrorHandler),
+    registry.refundDentalPayment as unknown as Handler
   );
 
   // generateStatementBatch

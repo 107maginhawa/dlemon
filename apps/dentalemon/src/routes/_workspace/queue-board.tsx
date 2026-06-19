@@ -25,7 +25,7 @@ function QueueBoardPage() {
           type="button"
           onClick={() => navigate({ to: '/' })}
           aria-label="Back"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>

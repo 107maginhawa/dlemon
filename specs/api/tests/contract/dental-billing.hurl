@@ -539,3 +539,79 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "voided"
 jsonpath "$.voidedAt" != null
+
+
+# BR-050: manual statement send — returns the patient's outstanding balance and
+# whether a billing notification was enqueued (email + push).
+POST {{api}}/dental/billing/patients/{{patient_id}}/statement/send
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.sent" isBoolean
+jsonpath "$.outstandingBalanceCents" isInteger
+jsonpath "$.channels" isCollection
+
+
+# Phase 2.4 (BR-051): log a collections outreach note, then read the worklist.
+POST {{api}}/dental/billing/collections/notes
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "note": "Called patient re: outstanding balance, left voicemail",
+  "contactChannel": "phone"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.id" exists
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.contactChannel" == "phone"
+
+
+GET {{api}}/dental/billing/collections/worklist?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.rows" isCollection
+jsonpath "$.asOf" exists
+
+
+# Phase 3.1: AR KPI dashboard — DSO, collection rate, write-off, AR + aging.
+GET {{api}}/dental/billing/collections/kpis?branchId={{branch_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.outstandingArCents" isInteger
+jsonpath "$.billedTotalCents" isInteger
+jsonpath "$.collectionRate" exists
+jsonpath "$.dsoDays" isInteger
+jsonpath "$.agingSeries" count == 4
+
+
+# Phase 4.1 (BR-052): patient credit ledger. Add a credit, then read the balance.
+# (apply-credit happy + BR-052 caps are integration-tested in
+#  dental-billing.patient-credits.test.ts — 7 cases incl. atomic rollback.)
+POST {{api}}/dental/billing/patients/{{patient_id}}/credits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "amountCents": 5000,
+  "source": "manual",
+  "note": "Goodwill credit"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.id" exists
+jsonpath "$.amountCents" == 5000
+jsonpath "$.source" == "manual"
+
+
+GET {{api}}/dental/billing/patients/{{patient_id}}/credits
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.balanceCents" == 5000
+jsonpath "$.credits" isCollection

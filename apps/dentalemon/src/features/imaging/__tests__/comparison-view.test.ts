@@ -32,7 +32,7 @@ type BlobOrNull = Blob | null;
  * Create a fake IndexedDB that returns a given blob for ALL get() calls.
  * Pass null to simulate cache miss. Pass a never-resolving signal to simulate loading.
  */
-function createFakeIndexedDB(resolveWith: BlobOrNull | 'hang') {
+function createFakeIndexedDB(resolveWith: BlobOrNull | 'hang' | 'reject-open') {
   const fakeDB = {
     transaction(_storeNames: string | string[], _mode = 'readonly') {
       const tx: Record<string, unknown> = {
@@ -80,10 +80,14 @@ function createFakeIndexedDB(resolveWith: BlobOrNull | 'hang') {
     open(_name: string, _version?: number) {
       const req: Record<string, unknown> = {
         result: fakeDB,
-        error: null,
+        error: new Error('blocked'),
       };
       queueMicrotask(() => {
-        if (typeof req.onsuccess === 'function') {
+        if (resolveWith === 'reject-open') {
+          if (typeof req.onerror === 'function') {
+            (req.onerror as () => void)();
+          }
+        } else if (typeof req.onsuccess === 'function') {
           (req.onsuccess as () => void)();
         }
       });
@@ -166,6 +170,16 @@ describe('ComparisonView', () => {
     // Return null from cache → both panes show offline message
     (globalThis as Record<string, unknown>).indexedDB =
       createFakeIndexedDB(null) as unknown as IDBFactory;
+
+    renderCV({ imageA: IMAGE_A, imageB: IMAGE_B });
+    await waitFor(() => {
+      expect(screen.getAllByText(/not available offline/i).length).toBe(2);
+    });
+  });
+
+  test('shows offline message when IndexedDB cannot be opened (no infinite skeleton)', async () => {
+    (globalThis as Record<string, unknown>).indexedDB =
+      createFakeIndexedDB('reject-open') as unknown as IDBFactory;
 
     renderCV({ imageA: IMAGE_A, imageB: IMAGE_B });
     await waitFor(() => {

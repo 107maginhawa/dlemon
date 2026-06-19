@@ -1,0 +1,8 @@
+#!/bin/sh
+# Pre-commit gate: fast local mirror of the CI typecheck + lint gates.
+# Bypass with `git commit --no-verify` when intentionally committing WIP.
+set -e
+echo "pre-commit: typecheck…"
+bun run typecheck
+echo "pre-commit: lint…"
+bun run lint

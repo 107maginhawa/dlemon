@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button, Checkbox, Input, Textarea } from '@monobase/ui';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import {
   createAppointment,
   updateAppointment,
@@ -17,6 +18,8 @@ import {
   type UpdateAppointmentRequest,
 } from '@monobase/sdk-ts/generated';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 
 export const DURATION_OPTIONS = [
   { value: 30, label: '30 min' },
@@ -100,6 +103,7 @@ export function extractDoubleBookingWarning(appointment: unknown): boolean {
 }
 
 export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
+  useSheetA11y({ open, onClose });
   const storeBranchId = useOrgContextStore((s) => s.branchId) ?? '';
   const [patientId, setPatientId] = useState('');
   const [dentistMemberId, setDentistMemberId] = useState('');
@@ -192,7 +196,11 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
         return;
       }
       onSaved?.(appointment);
+      toast.success(appointmentId ? 'Appointment rescheduled' : 'Appointment saved');
       handleClose();
+    } catch (err) {
+      toastError(err, appointmentId ? 'Could not reschedule the appointment. Please try again.' : 'Could not save the appointment. Please try again.');
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -260,7 +268,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               value={patientId}
               onChange={e => setPatientId(e.target.value)}
               placeholder="Enter patient ID"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -275,7 +283,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               value={dentistMemberId}
               onChange={e => setDentistMemberId(e.target.value)}
               placeholder="Enter dentist member ID"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -289,7 +297,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               type="text"
               value={branchId}
               onChange={e => setBranchId(e.target.value)}
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -306,7 +314,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
               />
             </div>
             <div className="flex-1">
@@ -318,7 +326,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                 type="time"
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
               />
             </div>
           </div>
@@ -336,7 +344,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
                   variant="ghost"
                   onClick={() => setDurationMinutes(opt.value)}
                   aria-pressed={durationMinutes === opt.value}
-                  className={`flex-1 h-9 px-0 text-[13px] font-medium rounded-lg transition-colors ${
+                  className={`flex-1 h-11 px-0 text-[13px] font-medium rounded-lg transition-colors ${
                     durationMinutes === opt.value
                       ? 'bg-lemon text-lemon-foreground font-semibold hover:bg-lemon'
                       : 'text-muted-foreground hover:bg-background'
@@ -360,7 +368,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               id="appt-procedure"
               value={serviceType}
               onChange={e => setServiceType(e.target.value as VisitType)}
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             >
               <option value="" disabled>Select a service type…</option>
               {VISIT_TYPE_OPTIONS.map(opt => (
@@ -380,7 +388,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
               onChange={e => setNotes(e.target.value)}
               placeholder="Any notes or special instructions..."
               rows={3}
-              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
+              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
             />
           </div>
 

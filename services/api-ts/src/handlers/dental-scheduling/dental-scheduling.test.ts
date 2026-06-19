@@ -654,7 +654,7 @@ describe('cancelAppointment handler', () => {
     expect(updated!.cancelledAt).not.toBeNull();
   });
 
-  test('V-SCH-003: returns 422 when reason is missing/too short', async () => {
+  test('V-SCH-003 / BR-SCH-003: returns 422 when reason is missing/too short', async () => {
     const appt = await seedAppointment();
     const app = buildTestApp(TEST_USER);
 
@@ -750,6 +750,11 @@ describe('EC7: max one active visit per patient', () => {
     expect(body.error).toMatch(/visit already active/i);
   });
 
+  // WFG-002 (VERIFICATION_HARDENING.md P5): check-in is atomic — checkInAppointment
+  // wraps check-in + createVisit + linkVisit in one withTenantTx (checkInAppointment.ts),
+  // so a failure cannot leave an orphan/half-checked-in appointment. This is that
+  // gap's enforcing regression test: when the visit cannot be created the appointment
+  // stays `scheduled`, never stuck in `checked_in` with no visit.
   test('appointment stays in scheduled status when check-in fails due to existing visit (race condition fix)', async () => {
     const appt1 = await seedAppointment();
     const app = buildTestApp(TEST_USER);

@@ -8,6 +8,19 @@ export type AcceptTreatmentPlanRequest = {
     consentFormId?: Uuid;
 };
 
+export type AddPatientCreditRequest = {
+    /**
+     * Amount to add (must be > 0).
+     */
+    amountCents: number;
+    /**
+     * manual | overpayment | refund
+     */
+    source: string;
+    branchId?: Uuid;
+    note?: string;
+};
+
 /**
  * Physical mailing address
  */
@@ -102,6 +115,14 @@ export type AddressPatchInput = {
     } | null;
 };
 
+export type AgingBucketPoint = {
+    /**
+     * current | days30 | days60 | days90Plus
+     */
+    bucket: string;
+    amountCents: number;
+};
+
 export type Amendment = {
     id: Uuid;
     createdAt: Date;
@@ -114,6 +135,27 @@ export type Amendment = {
     originalRecordId: Uuid;
     reason: string;
     content: string;
+};
+
+export type ApplyCreditRequest = {
+    /**
+     * Amount of credit to apply to the invoice (must be > 0).
+     */
+    amountCents: number;
+};
+
+export type ApplyCreditResponse = {
+    invoiceId: Uuid;
+    appliedCents: number;
+    /**
+     * Invoice balance after applying the credit.
+     */
+    invoiceBalanceCents: number;
+    invoiceStatus: string;
+    /**
+     * Patient's remaining available credit after the draw.
+     */
+    remainingCreditCents: number;
 };
 
 export type ApplyDentalDiscountRequest = {
@@ -1277,10 +1319,73 @@ export type CheckInResponse = {
  */
 export type ClaimLineStatus = 'pending' | 'covered' | 'partial' | 'disallowed';
 
+/**
+ * Channel a collections contact was made on.
+ */
+export type CollectionContactChannel = 'phone' | 'email' | 'sms' | 'in-person' | 'other';
+
+export type CollectionNote = {
+    id: Uuid;
+    patientId: Uuid;
+    invoiceId?: Uuid;
+    branchId: Uuid;
+    note: string;
+    contactChannel: string;
+    contactedAt: Date;
+    createdByMemberId?: Uuid;
+    createdAt: Date;
+};
+
+export type CollectionsKpiResponse = {
+    asOf: Date;
+    /**
+     * Active receivables (non-voided, non-uncollectible balance).
+     */
+    outstandingArCents: number;
+    /**
+     * Balance on invoices written off as uncollectible.
+     */
+    writeOffCents: number;
+    billedTotalCents: number;
+    collectedTotalCents: number;
+    /**
+     * collectedTotal / billedTotal, 0..1.
+     */
+    collectionRate: number;
+    /**
+     * Days Sales Outstanding (approx: AR / avg daily billing).
+     */
+    dsoDays: number;
+    /**
+     * Current AR aging breakdown for the dashboard chart.
+     */
+    agingSeries: Array<AgingBucketPoint>;
+};
+
 export type CollectionsSummaryResponse = {
     totalCollectedCents: number;
     period: string;
     invoiceCount: number;
+};
+
+export type CollectionsWorklistResponse = {
+    asOf: Date;
+    rows: Array<CollectionsWorklistRow>;
+};
+
+/**
+ * One actionable overdue-patient row for the collections worklist.
+ */
+export type CollectionsWorklistRow = {
+    patientId: Uuid;
+    patientName: string;
+    totalOverdueCents: number;
+    oldestDaysOverdue: number;
+    openInvoiceCount: number;
+    hasActivePlan: boolean;
+    lastContactedAt?: Date;
+    lastContactChannel?: string;
+    noteCount: number;
 };
 
 /**
@@ -1759,6 +1864,24 @@ export type CreateChatRoomRequest = {
     upsert?: boolean;
 };
 
+export type CreateCollectionNoteRequest = {
+    patientId: Uuid;
+    /**
+     * Optional specific invoice the contact concerned.
+     */
+    invoiceId?: string;
+    /**
+     * Explicit branch (asserts membership); omitted uses the patient's branch.
+     */
+    branchId?: string;
+    note: string;
+    contactChannel: CollectionContactChannel;
+    /**
+     * When the patient was contacted; defaults to now.
+     */
+    contactedAt?: Date;
+};
+
 export type CreateConsentFormRequest = {
     visitId: Uuid;
     patientId: Uuid;
@@ -1946,6 +2069,11 @@ export type CreateDentalInvoiceRequest = {
     dentistMemberId: Uuid;
     taxRate?: number;
     dueDate?: Date;
+    /**
+     * BR-048: optional per-invoice payment-terms override (days, 0–365). When set
+     * and no explicit dueDate is given, dueDate = issuedAt + this at issue.
+     */
+    paymentTermsDays?: number;
     /**
      * GAP-001: optional client-generated id for offline-first idempotent sync
      */
@@ -3771,6 +3899,10 @@ export type DentalInvoice = {
     totalCents: number;
     paidCents: number;
     balanceCents: number;
+    /**
+     * BR-048: per-invoice payment-terms override (days); resolves to dueDate at issue.
+     */
+    paymentTermsDays?: number;
     dueDate?: Date;
     issuedAt?: Date;
     paidAt?: Date;
@@ -8067,6 +8199,14 @@ export type DentalPaymentPlanInstallment = {
     status: InstallmentStatus;
 };
 
+export type DentalPaymentReceiptClinic = {
+    registeredName: string | null;
+    businessStyle: string | null;
+    tin: string | null;
+    address: string | null;
+    isVatRegistered: boolean;
+};
+
 export type DentalPaymentReceiptInvoice = {
     id: Uuid;
     invoiceNumber: string;
@@ -8097,7 +8237,19 @@ export type DentalPaymentReceiptResponse = {
     payment: DentalPaymentReceiptPayment;
     invoice: DentalPaymentReceiptInvoice;
     patient: DentalPaymentReceiptPatient;
+    orNumber: string;
+    clinic: DentalPaymentReceiptClinic;
+    tax: DentalPaymentReceiptTax;
+    taxStatement: string;
     generatedAt: Date;
+};
+
+export type DentalPaymentReceiptTax = {
+    vatRate: number;
+    vatableCents: number;
+    vatExemptCents: number;
+    zeroRatedCents: number;
+    vatCents: number;
 };
 
 /**
@@ -59058,8 +59210,13 @@ export type Patient = {
 
 export type PatientBalanceResponse = {
     patientId: Uuid;
-    balanceCents: number;
-    overdueInvoices: number;
+    totalBilledCents: number;
+    totalPaidCents: number;
+    outstandingBalanceCents: number;
+    overdueAmountCents: number;
+    invoiceCount: number;
+    overdueInvoiceCount: number;
+    activePaymentPlanCount: number;
 };
 
 /**
@@ -59127,6 +59284,29 @@ export type PatientConditionEntry = {
     cdtCode?: string;
     description?: string;
     priceCents?: number;
+};
+
+export type PatientCredit = {
+    id: Uuid;
+    patientId: Uuid;
+    branchId: Uuid;
+    /**
+     * Signed: > 0 adds credit, < 0 consumes it.
+     */
+    amountCents: number;
+    source: string;
+    invoiceId?: Uuid;
+    note?: string;
+    createdAt: Date;
+};
+
+export type PatientCreditLedgerResponse = {
+    patientId: Uuid;
+    /**
+     * Available credit = sum of the ledger.
+     */
+    balanceCents: number;
+    credits: Array<PatientCredit>;
 };
 
 /**
@@ -60837,6 +61017,35 @@ export type RecurrencePattern = {
  */
 export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+export type RefundPaymentRequest = {
+    /**
+     * Amount to refund (1 .. remaining refundable on the payment).
+     */
+    amountCents: number;
+    reason: string;
+    /**
+     * When true, book the refund to patient credit instead of cash-out.
+     */
+    bookAsCredit?: boolean;
+};
+
+export type RefundPaymentResponse = {
+    refundId: Uuid;
+    paymentId: Uuid;
+    invoiceId: Uuid;
+    amountCents: number;
+    /**
+     * Invoice balance after reversing the refunded amount.
+     */
+    invoiceBalanceCents: number;
+    invoiceStatus: string;
+    bookedAsCredit: boolean;
+    /**
+     * Patient credit balance after the refund (only meaningful when booked as credit).
+     */
+    creditBalanceCents: number;
+};
+
 /**
  * Request to refund a payment
  */
@@ -61093,6 +61302,29 @@ export type ScheduleExceptionCreateRequest = {
          */
         maxOccurrences?: number;
     };
+};
+
+/**
+ * BR-050: manual dunning nudge — send a patient their current statement now.
+ */
+export type SendPatientStatementRequest = {
+    /**
+     * Explicit branch (asserts membership); omitted scopes to the caller's branches.
+     */
+    branchId?: string;
+};
+
+export type SendPatientStatementResponse = {
+    patientId: Uuid;
+    /**
+     * Whether a statement notification was enqueued (false when balance is zero).
+     */
+    sent: boolean;
+    outstandingBalanceCents: number;
+    /**
+     * Channels the statement was enqueued on (e.g. ["email","push"]).
+     */
+    channels: Array<string>;
 };
 
 /**
@@ -65385,6 +65617,71 @@ export type GetArAgingResponses = {
 
 export type GetArAgingResponse = GetArAgingResponses[keyof GetArAgingResponses];
 
+export type GetCollectionsKpisData = {
+    body?: never;
+    path?: never;
+    query?: {
+        branchId?: Uuid;
+        asOf?: Date;
+    };
+    url: '/dental/billing/collections/kpis';
+};
+
+export type GetCollectionsKpisErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type GetCollectionsKpisError = GetCollectionsKpisErrors[keyof GetCollectionsKpisErrors];
+
+export type GetCollectionsKpisResponses = {
+    /**
+     * Success response with data
+     */
+    200: CollectionsKpiResponse;
+};
+
+export type GetCollectionsKpisResponse = GetCollectionsKpisResponses[keyof GetCollectionsKpisResponses];
+
+export type CreateCollectionNoteData = {
+    body: CreateCollectionNoteRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/billing/collections/notes';
+};
+
+export type CreateCollectionNoteErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateCollectionNoteError = CreateCollectionNoteErrors[keyof CreateCollectionNoteErrors];
+
+export type CreateCollectionNoteResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: CollectionNote;
+};
+
+export type CreateCollectionNoteResponse = CreateCollectionNoteResponses[keyof CreateCollectionNoteResponses];
+
 export type GetCollectionsSummaryData = {
     body?: never;
     path?: never;
@@ -65412,6 +65709,38 @@ export type GetCollectionsSummaryResponses = {
 };
 
 export type GetCollectionsSummaryResponse = GetCollectionsSummaryResponses[keyof GetCollectionsSummaryResponses];
+
+export type GetCollectionsWorklistData = {
+    body?: never;
+    path?: never;
+    query?: {
+        branchId?: Uuid;
+        asOf?: Date;
+    };
+    url: '/dental/billing/collections/worklist';
+};
+
+export type GetCollectionsWorklistErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type GetCollectionsWorklistError = GetCollectionsWorklistErrors[keyof GetCollectionsWorklistErrors];
+
+export type GetCollectionsWorklistResponses = {
+    /**
+     * Success response with data
+     */
+    200: CollectionsWorklistResponse;
+};
+
+export type GetCollectionsWorklistResponse = GetCollectionsWorklistResponses[keyof GetCollectionsWorklistResponses];
 
 export type EstimateClaimCoverageData = {
     body: CoverageEstimateRequest;
@@ -65572,6 +65901,41 @@ export type GetDentalInvoiceResponses = {
 };
 
 export type GetDentalInvoiceResponse = GetDentalInvoiceResponses[keyof GetDentalInvoiceResponses];
+
+export type ApplyCreditToInvoiceData = {
+    body: ApplyCreditRequest;
+    path: {
+        invoiceId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/invoices/{invoiceId}/apply-credit';
+};
+
+export type ApplyCreditToInvoiceErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type ApplyCreditToInvoiceError = ApplyCreditToInvoiceErrors[keyof ApplyCreditToInvoiceErrors];
+
+export type ApplyCreditToInvoiceResponses = {
+    /**
+     * Success response with data
+     */
+    200: ApplyCreditResponse;
+};
+
+export type ApplyCreditToInvoiceResponse = ApplyCreditToInvoiceResponses[keyof ApplyCreditToInvoiceResponses];
 
 export type ApplyDentalDiscountData = {
     body: ApplyDentalDiscountRequest;
@@ -65985,6 +66349,142 @@ export type GetPatientBalanceResponses = {
 };
 
 export type GetPatientBalanceResponse = GetPatientBalanceResponses[keyof GetPatientBalanceResponses];
+
+export type GetPatientCreditsData = {
+    body?: never;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/patients/{patientId}/credits';
+};
+
+export type GetPatientCreditsErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type GetPatientCreditsError = GetPatientCreditsErrors[keyof GetPatientCreditsErrors];
+
+export type GetPatientCreditsResponses = {
+    /**
+     * Success response with data
+     */
+    200: PatientCreditLedgerResponse;
+};
+
+export type GetPatientCreditsResponse = GetPatientCreditsResponses[keyof GetPatientCreditsResponses];
+
+export type AddPatientCreditData = {
+    body: AddPatientCreditRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/patients/{patientId}/credits';
+};
+
+export type AddPatientCreditErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type AddPatientCreditError = AddPatientCreditErrors[keyof AddPatientCreditErrors];
+
+export type AddPatientCreditResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: PatientCredit;
+};
+
+export type AddPatientCreditResponse = AddPatientCreditResponses[keyof AddPatientCreditResponses];
+
+export type SendPatientStatementData = {
+    body: SendPatientStatementRequest;
+    path: {
+        patientId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/patients/{patientId}/statement/send';
+};
+
+export type SendPatientStatementErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type SendPatientStatementError = SendPatientStatementErrors[keyof SendPatientStatementErrors];
+
+export type SendPatientStatementResponses = {
+    /**
+     * Success response with data
+     */
+    200: SendPatientStatementResponse;
+};
+
+export type SendPatientStatementResponse2 = SendPatientStatementResponses[keyof SendPatientStatementResponses];
+
+export type RefundDentalPaymentData = {
+    body: RefundPaymentRequest;
+    path: {
+        paymentId: Uuid;
+    };
+    query?: never;
+    url: '/dental/billing/payments/{paymentId}/refund';
+};
+
+export type RefundDentalPaymentErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Forbidden access response
+     */
+    403: AuthorizationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type RefundDentalPaymentError = RefundDentalPaymentErrors[keyof RefundDentalPaymentErrors];
+
+export type RefundDentalPaymentResponses = {
+    /**
+     * Success response with data
+     */
+    200: RefundPaymentResponse;
+};
+
+export type RefundDentalPaymentResponse = RefundDentalPaymentResponses[keyof RefundDentalPaymentResponses];
 
 export type GenerateStatementBatchData = {
     body: GenerateStatementBatchRequest;

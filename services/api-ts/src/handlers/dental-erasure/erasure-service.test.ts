@@ -98,7 +98,7 @@ describe('erasure workflow service', () => {
     expect(p!.firstName).toBe('Jane');
   });
 
-  test('the erasure audit trail SURVIVES the anonymization it records (DATA_GOVERNANCE §3 "audit preserved")', async () => {
+  test('V-DG-002-AU: the erasure audit trail SURVIVES the anonymization it records (DATA_GOVERNANCE §3 "audit preserved")', async () => {
     // Headline compliance invariant: erasing a subject must NOT delete the audit
     // trail of the erasure. The engine writes to dental_audit_log (no FK to person,
     // anonymize-not-delete), so the row must persist after the subject is gone.

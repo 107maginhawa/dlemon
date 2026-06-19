@@ -125,7 +125,7 @@ Workflows directly described or implied by FR/AC clauses in PRD v3:
 | Op | Who | WF-ID | Key Rules |
 |----|-----|-------|-----------|
 | Create (draft) | System (check-in), Dentist | WF-007 | BR-001 (no concurrent active) |
-| Create (from workspace +) | Dentist | WF-045 [INFERRED] | BR-005 (auto-discard if empty) |
+| Create (from workspace +, two-step `POST draft → PATCH active`) | Dentist | WF-045 | BR-005 (auto-discard if empty); detail in §7 WF-045 |
 | Read (workspace) | Dentist, Staff Full | WF-008 | BR-016 (branch access) |
 | Read (folder list / carousel) | Dentist, Staff Full | WF-034 | BR-016 |
 | Update (add chart entry) | Dentist | WF-009 | BR-003 (immutable after completed) |
@@ -448,6 +448,30 @@ Applied to the 10 highest-impact core workflows:
 | **Partial failure** | Appointment created, visit draft fails → orphan appointment. **Gap WFG-002** |
 | **Offline** | Cadence CRDT handles; visit draft stored locally, synced on reconnect |
 
+### WF-045: Start new visit from workspace (the "New Visit +" affordance)
+
+The clinician-initiated counterpart to WF-007. Affordance: `new-visit-btn` in the
+workspace `timeline-carousel`, gated DISABLED whenever the patient already has an open
+(`draft` or `active`) visit. Unlike WF-007 (a single backend create), the workspace flow
+is a **two-step, client-orchestrated** sequence in
+`apps/dentalemon/src/features/workspace/hooks/use-create-visit.ts`:
+
+1. `POST /dental/visits` → creates the visit in `draft` (201).
+2. `PATCH /dental/visits/:id {status:'active'}` → transitions `draft → active` (2xx), so
+   the started visit is chartable AND completable through the UI (Complete-visit is gated
+   on `status === 'active'`; a stranded `draft` has no UI affordance to activate).
+
+The user-visible goal state is **one `active` visit**, not merely "a row exists". If
+**either** step fails the user sees the toast *"Failed to create visit. Please try again."*
+
+| Scenario | Behavior |
+|----------|---------|
+| **Timeout (step 1)** | No visit created; idempotent retry safe |
+| **Step-1 ok, step-2 (activate) fails** | Stranded `draft` + error toast; visit is non-chartable, non-completable. **Gap WFG-015** (sibling of WFG-002) |
+| **Retry / concurrent** | BR-001: gate disables New Visit once any open visit exists; a racing second create is blocked 409 |
+| **Already open visit** | New Visit disabled (gate) — precondition for the flow is zero open visits |
+| **Offline** | Cadence CRDT handles draft; the activate PATCH must still land to reach the goal state |
+
 ### WF-013: Create invoice
 
 | Scenario | Behavior |
@@ -612,6 +636,7 @@ Applied to the 10 highest-impact core workflows:
 |--------|------|-------------|--------|-----------|
 | WFG-001 | Missing workflow | BR-005 auto-discard has no enforcing workflow or implementation | MEDIUM — empty visits pollute history | BR-005 |
 | WFG-002 | Missing error path | Check-in partial failure (appointment created, visit draft fails) — no recovery path | HIGH — data inconsistency | BR-004 |
+| WFG-015 | Missing error path | WF-045 step-2 partial failure: `POST draft` succeeds but `PATCH {status:'active'}` fails → stranded `draft` + "Failed to create visit" toast; visit is non-chartable/non-completable. Sibling of WFG-002. Currently works on the live stack (P0); the happy-path goal state is enforced by hardened J21 (P3, asserts both calls + `active`). The recovery path for the stranded draft remains undefined. | HIGH — silent broken core flow | BR-002, BR-005 |
 | WFG-003 | Missing error path | BR-001 concurrent visit conflict — client recovery UX undefined | MEDIUM | BR-001 |
 | WFG-004 | Missing error path | Concurrent invoice creation for same visit — two invoices possible | HIGH — billing integrity | BR-009, BR-012 |
 | WFG-005 | SLA undefined | PMD generation SLA unspecified — sync or async unclear | MEDIUM — UX impact | BR-021 |

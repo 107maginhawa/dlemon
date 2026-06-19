@@ -164,7 +164,12 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-40 flex items-end"
+      role="dialog"
+      aria-modal="true"
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
+    >
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       <div
@@ -216,7 +221,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="e.g. Dr. Maria Santos"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -299,7 +304,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="Enter 6-digit PIN"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tracking-widest"
             />
           </div>
 
@@ -315,7 +320,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
               value={confirmPin}
               onChange={e => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="Re-enter 6-digit PIN"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tracking-widest"
             />
           </div>
         </div>

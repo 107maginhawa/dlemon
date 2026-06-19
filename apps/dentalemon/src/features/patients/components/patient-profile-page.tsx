@@ -7,16 +7,20 @@
  * Wireframe: docs/prd/context/wireframes/patient-profile.html
  */
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
+import { usePatientBalance } from '../hooks/use-patient-balance';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
 import { PatientEditForm } from './patient-edit-form';
+import { PatientStatement } from './patient-statement';
+import { PatientCredits } from './patient-credits';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -47,9 +51,9 @@ function formatCents(cents: number): string {
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
-    active: 'bg-green-100 text-green-800',
+    active: 'bg-success/15 text-success-foreground',
     archived: 'bg-muted text-muted-foreground',
-    'in-session': 'bg-teal-100 text-teal-800',
+    'in-session': 'bg-info/15 text-info-foreground',
   };
   const label: Record<string, string> = {
     active: 'Active',
@@ -84,7 +88,7 @@ function TabButton({
       onClick={onClick}
       style={active ? { borderBottomColor: BRAND_GOLD, color: BRAND_GOLD_TEXT } : undefined}
       className={[
-        'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+        'px-4 py-3 min-h-[44px] text-sm font-medium border-b-2 -mb-px transition-colors',
         active
           ? 'border-lemon text-lemon-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
@@ -148,9 +152,9 @@ function OverviewTab({ patientId }: { patientId: string }) {
                   className={[
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap',
                     v.status === 'completed' || v.status === 'locked'
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-success/15 text-success-foreground'
                       : v.status === 'active'
-                      ? 'bg-teal-100 text-teal-800'
+                      ? 'bg-info/15 text-info-foreground'
                       : 'bg-muted text-muted-foreground',
                   ].join(' ')}
                 >
@@ -169,16 +173,40 @@ function OverviewTab({ patientId }: { patientId: string }) {
 
 function PaymentTab({ patientId, branchId }: { patientId: string; branchId: string | null }) {
   const { invoices, isLoading, error } = usePatientBilling({ patientId, branchId });
-
-  const totalBalance = invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
+  // Authoritative outstanding balance (slice 1.6): server-computed over non-voided
+  // invoices, immune to invoice-list pagination. Fall back to the visible-rows sum
+  // only while the balance endpoint is still loading.
+  const { balance } = usePatientBalance({ patientId });
+  const queryClient = useQueryClient();
+  const totalBalance =
+    balance?.outstandingBalanceCents ??
+    invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
+  const [showStatement, setShowStatement] = useState(false);
+  const outstandingInvoices = invoices
+    .filter((inv) => inv.status !== 'voided' && (inv.balanceCents ?? 0) > 0)
+    .map((inv) => ({ id: inv.id, invoiceNumber: inv.invoiceNumber, balanceCents: inv.balanceCents }));
 
   return (
+    <>
     <div className="rounded-xl border border-border bg-card">
+      {showStatement && (
+        <PatientStatement patientId={patientId} branchId={branchId} onClose={() => setShowStatement(false)} />
+      )}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h3 className="text-sm font-semibold">Payment History</h3>
-        {invoices.length > 0 && (
-          <span className="text-xs text-muted-foreground">{invoices.length} transactions</span>
-        )}
+        <div className="flex items-center gap-3">
+          {invoices.length > 0 && (
+            <span className="text-xs text-muted-foreground">{invoices.length} transactions</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowStatement(true)}
+            data-testid="view-statement-btn"
+            className="h-8 px-3 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-colors focus-visible:ring-2 focus-visible:ring-ring outline-none"
+          >
+            Statement
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -234,11 +262,11 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
                   className={[
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
                     inv.status === 'paid'
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-success/15 text-success-foreground'
                       : // 'pending' was never a real DentalInvoiceStatus (draft|issued|
                         // partial|paid|overdue|voided) → this branch was always false.
                         inv.status === 'issued' || inv.status === 'partial' || inv.status === 'overdue'
-                      ? 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-warning/15 text-warning-foreground'
                       : 'bg-muted text-muted-foreground',
                   ].join(' ')}
                 >
@@ -252,7 +280,10 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
           {totalBalance > 0 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
               <span className="text-sm font-semibold">Outstanding Balance</span>
-              <span className="text-sm font-bold text-destructive">
+              <span
+                className="text-sm font-bold text-destructive"
+                data-testid="patient-outstanding-balance"
+              >
                 {CURRENCY_SYMBOL}{formatCents(totalBalance)}
               </span>
             </div>
@@ -260,6 +291,12 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
         </>
       )}
     </div>
+    <PatientCredits
+      patientId={patientId}
+      outstandingInvoices={outstandingInvoices}
+      onChanged={() => { void queryClient.invalidateQueries(); }}
+    />
+    </>
   );
 }
 

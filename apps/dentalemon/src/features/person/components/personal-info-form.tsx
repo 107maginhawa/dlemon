@@ -47,6 +47,12 @@ interface PersonalInfoFormProps {
    * Member since date for avatar section
    */
   memberSince?: Date | string | number
+  /**
+   * External loading state (e.g. a parent mutation that resolves after onSubmit).
+   * OR-ed into the submit button's disabled state so the button stays disabled
+   * until the parent's async work settles.
+   */
+  isLoading?: boolean
 }
 
 export function PersonalInfoForm({
@@ -60,7 +66,8 @@ export function PersonalInfoForm({
   formId,
   showAvatar = mode === 'edit',
   onAvatarUpload,
-  memberSince
+  memberSince,
+  isLoading = false
 }: PersonalInfoFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -219,9 +226,10 @@ export function PersonalInfoForm({
                     type="button"
                     size="icon"
                     variant="secondary"
-                    className="h-8 w-8 rounded-full"
+                    className="h-10 w-10 rounded-full"
                     onClick={handleAvatarClick}
                     disabled={isUploadingAvatar}
+                    aria-label={isUploadingAvatar ? 'Uploading photo…' : 'Change avatar photo'}
                   >
                     {isUploadingAvatar ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -234,9 +242,10 @@ export function PersonalInfoForm({
                       type="button"
                       size="icon"
                       variant="destructive"
-                      className="h-8 w-8 rounded-full"
+                      className="h-10 w-10 rounded-full"
                       onClick={handleRemoveAvatar}
                       disabled={isUploadingAvatar}
+                      aria-label="Remove avatar photo"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -398,8 +407,11 @@ export function PersonalInfoForm({
                 Cancel
               </Button>
             )}
-            <Button type="submit">
-              {getDefaultSubmitText()}
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isUploadingAvatar || isLoading}
+            >
+              {form.formState.isSubmitting ? 'Saving…' : getDefaultSubmitText()}
             </Button>
           </div>
         )}

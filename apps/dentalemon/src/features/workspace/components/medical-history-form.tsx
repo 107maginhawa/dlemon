@@ -11,6 +11,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { Skeleton } from '@monobase/ui';
+import { toastError } from '@/lib/error-toast';
 import {
   useMedicalHistory,
   useMedicalHistoryMutations,
@@ -172,16 +175,28 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
     entryType: 'condition' | 'medication' | 'allergy',
   ) {
     const existing = findEntryByCode(entries, entryType, preset);
-    if (existing) {
-      await toggleEntry({ entryId: existing.id, active: !existing.active });
-    } else {
-      await addEntry({
-        patientId,
-        entryType,
-        displayName: preset.label,
-        codeSystem: preset.codeSystem,
-        code: preset.code,
-      });
+    // Resulting active state after this toggle (drives the allergy confirmation toast).
+    const willBeActive = existing ? !existing.active : true;
+    try {
+      if (existing) {
+        await toggleEntry({ entryId: existing.id, active: !existing.active });
+      } else {
+        await addEntry({
+          patientId,
+          entryType,
+          displayName: preset.label,
+          codeSystem: preset.codeSystem,
+          code: preset.code,
+        });
+      }
+      // Allergies are safety-critical — confirm the change so it is never silent.
+      if (entryType === 'allergy') {
+        toast.success(`${willBeActive ? 'Added' : 'Removed'}: ${preset.label}`);
+      }
+    } catch (err) {
+      if (entryType === 'allergy') {
+        toastError(err, `Could not update allergy: ${preset.label}`);
+      }
     }
   }
 
@@ -250,9 +265,24 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
   }
 
   if (isLoading) {
+    // Mirror the loaded layout's footprint (stacked section cards: a header strip
+    // over a few rows) so swapping skeleton → content does not shift layout.
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-5 h-5 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin" />
+      <div data-testid="medical-history-loading" className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto pb-24">
+            {[0, 1, 2].map((section) => (
+              <div key={section} className="mt-4 rounded-xl border border-border overflow-hidden">
+                <Skeleton className="h-9 w-full rounded-none" />
+                <div className="flex flex-col gap-3 px-4 py-3">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-5 w-3/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -337,7 +367,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={`h-8 px-3.5 rounded-md text-sm font-medium transition-colors ${
+            className={`h-10 px-3.5 rounded-md text-sm font-medium transition-colors ${
               value === opt.value
                 ? 'bg-background text-foreground shadow-sm font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
@@ -389,7 +419,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
                   value={asaClass}
                   onChange={(e) => setAsaClass(e.target.value as AsaClassification | '')}
                   aria-label="ASA Physical Status classification"
-                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-10 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 >
                   <option value="">Not classified</option>
                   {ASA_OPTIONS.map((o) => (
@@ -457,7 +487,7 @@ export function MedicalHistoryForm({ patientId }: MedicalHistoryFormProps) {
               value={surgicalHistory}
               onChange={(e) => setSurgicalHistory(e.target.value)}
               placeholder="Describe any past surgeries, procedures, or hospitalizations…"
-              className="w-full min-h-[80px] px-4 py-3 text-sm bg-background resize-y outline-none placeholder:text-muted-foreground"
+              className="w-full min-h-[80px] px-4 py-3 text-sm bg-background resize-y outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground"
               data-testid="surgical-history-textarea"
             />
           </div>

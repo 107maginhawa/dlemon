@@ -30,13 +30,6 @@ export class AmendmentRepository extends DatabaseRepository<Amendment, NewAmendm
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
-  override async findMany(filters?: AmendmentFilters): Promise<Amendment[]> {
-    const where = this.buildWhereConditions(filters);
-    return where
-      ? await this.db.select().from(amendments).where(where)
-      : await this.db.select().from(amendments);
-  }
-
   override async findOneById(id: string): Promise<Amendment | null> {
     const [row] = await this.db.select().from(amendments).where(eq(amendments.id, id));
     return row ?? null;

@@ -100,6 +100,8 @@ model DentalInvoice {
   totalCents: int32;
   paidCents: int32;
   balanceCents: int32;
+  /** BR-048: per-invoice payment-terms override (days); resolves to dueDate at issue. */
+  paymentTermsDays?: int32;
   dueDate?: utcDateTime;
   issuedAt?: utcDateTime;
   paidAt?: utcDateTime;
@@ -212,6 +214,10 @@ model CreateDentalInvoiceRequest {
   taxRate?: float32;
   dueDate?: utcDateTime;
 
+  /** BR-048: optional per-invoice payment-terms override (days, 0–365). When set
+   *  and no explicit dueDate is given, dueDate = issuedAt + this at issue. */
+  paymentTermsDays?: int32;
+
   /** GAP-001: optional client-generated id for offline-first idempotent sync */
   localId?: string;
 }
@@ -286,10 +292,19 @@ model ApplyDentalDiscountRequest {
 // Response Models (Billing Extras)
 // ---------------------------------------------------------------------------
 
+// Wire shape matches the tested `getPatientBalance` handler (FR4.4): authoritative
+// server-computed aggregates over the patient's non-voided invoices + active plans.
+// (Previously drifted to a stale {balanceCents, overdueInvoices} — corrected so the
+// SDK type reflects what the handler actually emits.)
 model PatientBalanceResponse {
   patientId: UUID;
-  balanceCents: int32;
-  overdueInvoices: int32;
+  totalBilledCents: int32;
+  totalPaidCents: int32;
+  outstandingBalanceCents: int32;
+  overdueAmountCents: int32;
+  invoiceCount: int32;
+  overdueInvoiceCount: int32;
+  activePaymentPlanCount: int32;
 }
 
 model CollectionsSummaryResponse {
@@ -323,6 +338,26 @@ model DentalPaymentReceiptPatient {
   name: string;
 }
 
+// BR-055 (PH): BIR-required receipt header from branch settings. Null fields are
+// simply not yet configured by the clinic.
+model DentalPaymentReceiptClinic {
+  registeredName: string | null;
+  businessStyle: string | null;
+  tin: string | null;
+  address: string | null;
+  isVatRegistered: boolean;
+}
+
+// BR-055 (PH): VAT breakdown on the receipt. For a non-VAT clinic all VAT fields
+// are 0 and vatExemptCents carries the full gross.
+model DentalPaymentReceiptTax {
+  vatRate: float32;
+  vatableCents: int32;
+  vatExemptCents: int32;
+  zeroRatedCents: int32;
+  vatCents: int32;
+}
+
 model DentalPaymentReceiptResponse {
   receiptNumber: string;
   isVoid: boolean;
@@ -331,6 +366,11 @@ model DentalPaymentReceiptResponse {
   payment: DentalPaymentReceiptPayment;
   invoice: DentalPaymentReceiptInvoice;
   patient: DentalPaymentReceiptPatient;
+  // BR-055 (PH): BIR official-receipt fields.
+  orNumber: string;
+  clinic: DentalPaymentReceiptClinic;
+  tax: DentalPaymentReceiptTax;
+  taxStatement: string;
   generatedAt: utcDateTime;
 }
 
@@ -406,6 +446,174 @@ model GenerateStatementBatchResponse {
   statementCount: int32;
   totalBalanceCents: int32;
   statements: PatientStatement[];
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2.4: Collections worklist + outreach log (BR-051)
+// ---------------------------------------------------------------------------
+
+/** Channel a collections contact was made on. */
+enum CollectionContactChannel {
+  phone,
+  email,
+  sms,
+  in_person: "in-person",
+  other,
+}
+
+model CreateCollectionNoteRequest {
+  patientId: UUID;
+  /** Optional specific invoice the contact concerned. */
+  invoiceId?: UUID;
+  /** Explicit branch (asserts membership); omitted uses the patient's branch. */
+  branchId?: UUID;
+  @minLength(1) note: string;
+  contactChannel: CollectionContactChannel;
+  /** When the patient was contacted; defaults to now. */
+  contactedAt?: utcDateTime;
+}
+
+model CollectionNote {
+  id: UUID;
+  patientId: UUID;
+  invoiceId?: UUID;
+  branchId: UUID;
+  note: string;
+  contactChannel: string;
+  contactedAt: utcDateTime;
+  createdByMemberId?: UUID;
+  createdAt: utcDateTime;
+}
+
+/** One actionable overdue-patient row for the collections worklist. */
+model CollectionsWorklistRow {
+  patientId: UUID;
+  patientName: string;
+  totalOverdueCents: int32;
+  oldestDaysOverdue: int32;
+  openInvoiceCount: int32;
+  hasActivePlan: boolean;
+  lastContactedAt?: utcDateTime;
+  lastContactChannel?: string;
+  noteCount: int32;
+}
+
+model CollectionsWorklistResponse {
+  asOf: utcDateTime;
+  rows: CollectionsWorklistRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4.2: Payment refunds (BR-053)
+// ---------------------------------------------------------------------------
+
+model RefundPaymentRequest {
+  /** Amount to refund (1 .. remaining refundable on the payment). */
+  @minValue(1) amountCents: int32;
+  @minLength(3) reason: string;
+  /** When true, book the refund to patient credit instead of cash-out. */
+  bookAsCredit?: boolean;
+}
+
+model RefundPaymentResponse {
+  refundId: UUID;
+  paymentId: UUID;
+  invoiceId: UUID;
+  amountCents: int32;
+  /** Invoice balance after reversing the refunded amount. */
+  invoiceBalanceCents: int32;
+  invoiceStatus: string;
+  bookedAsCredit: boolean;
+  /** Patient credit balance after the refund (only meaningful when booked as credit). */
+  creditBalanceCents: int32;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4.1: Patient credit ledger (BR-052)
+// ---------------------------------------------------------------------------
+
+model PatientCredit {
+  id: UUID;
+  patientId: UUID;
+  branchId: UUID;
+  /** Signed: > 0 adds credit, < 0 consumes it. */
+  amountCents: int32;
+  source: string;
+  invoiceId?: UUID;
+  note?: string;
+  createdAt: utcDateTime;
+}
+
+model AddPatientCreditRequest {
+  /** Amount to add (must be > 0). */
+  @minValue(1) amountCents: int32;
+  /** manual | overpayment | refund */
+  source: string;
+  branchId?: UUID;
+  note?: string;
+}
+
+model PatientCreditLedgerResponse {
+  patientId: UUID;
+  /** Available credit = sum of the ledger. */
+  balanceCents: int32;
+  credits: PatientCredit[];
+}
+
+model ApplyCreditRequest {
+  /** Amount of credit to apply to the invoice (must be > 0). */
+  @minValue(1) amountCents: int32;
+}
+
+model ApplyCreditResponse {
+  invoiceId: UUID;
+  appliedCents: int32;
+  /** Invoice balance after applying the credit. */
+  invoiceBalanceCents: int32;
+  invoiceStatus: string;
+  /** Patient's remaining available credit after the draw. */
+  remainingCreditCents: int32;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3.1: AR KPI dashboard (read-only analytics)
+// ---------------------------------------------------------------------------
+
+model AgingBucketPoint {
+  /** current | days30 | days60 | days90Plus */
+  bucket: string;
+  amountCents: int32;
+}
+
+model CollectionsKpiResponse {
+  asOf: utcDateTime;
+  /** Active receivables (non-voided, non-uncollectible balance). */
+  outstandingArCents: int32;
+  /** Balance on invoices written off as uncollectible. */
+  writeOffCents: int32;
+  billedTotalCents: int32;
+  collectedTotalCents: int32;
+  /** collectedTotal / billedTotal, 0..1. */
+  collectionRate: float32;
+  /** Days Sales Outstanding (approx: AR / avg daily billing). */
+  dsoDays: int32;
+  /** Current AR aging breakdown for the dashboard chart. */
+  agingSeries: AgingBucketPoint[];
+}
+
+/** BR-050: manual dunning nudge — send a patient their current statement now. */
+model SendPatientStatementRequest {
+  /** Explicit branch (asserts membership); omitted scopes to the caller's branches. */
+  branchId?: UUID;
+}
+
+model SendPatientStatementResponse {
+  patientId: UUID;
+  /** Whether a statement notification was enqueued (false when balance is zero). */
+  sent: boolean;
+  outstandingBalanceCents: int32;
+  /** Channels the statement was enqueued on (e.g. ["email","push"]). */
+  channels: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -958,6 +1166,19 @@ namespace DentalBillingModule {
       | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
+    // BR-050: manual statement send (collections "send statement" action).
+    @post
+    @route("/patients/{patientId}/statement/send")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("sendPatientStatement")
+    sendPatientStatement(
+      @path patientId: UUID,
+      @body body: SendPatientStatementRequest
+    ): ApiOkResponse<SendPatientStatementResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
     @get
     @route("/collections/summary")
     @useAuth(bearerAuth)
@@ -992,6 +1213,105 @@ namespace DentalBillingModule {
       @query asOf?: utcDateTime
     ): ApiOkResponse<ArAgingResponse>
       | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 4.2: refund a payment (BR-053) — owner-only, reason-required.
+    @post
+    @route("/payments/{paymentId}/refund")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("refundDentalPayment")
+    refundDentalPayment(
+      @path paymentId: UUID,
+      @body body: RefundPaymentRequest
+    ): ApiOkResponse<RefundPaymentResponse>
+      | ApiBadRequestResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 4.1: patient credit ledger (BR-052).
+    @get
+    @route("/patients/{patientId}/credits")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getPatientCredits")
+    getPatientCredits(
+      @path patientId: UUID
+    ): ApiOkResponse<PatientCreditLedgerResponse>
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/patients/{patientId}/credits")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("addPatientCredit")
+    addPatientCredit(
+      @path patientId: UUID,
+      @body body: AddPatientCreditRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body body: PatientCredit;
+    }
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    @post
+    @route("/invoices/{invoiceId}/apply-credit")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("applyCreditToInvoice")
+    applyCreditToInvoice(
+      @path invoiceId: UUID,
+      @body body: ApplyCreditRequest
+    ): ApiOkResponse<ApplyCreditResponse>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 3.1: AR KPI dashboard — DSO, collection rate, write-offs, AR + aging.
+    @get
+    @route("/collections/kpis")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getCollectionsKpis")
+    getCollectionsKpis(
+      @query branchId?: UUID,
+      @query asOf?: utcDateTime
+    ): ApiOkResponse<CollectionsKpiResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 2.4: collections worklist — overdue patients enriched with last
+    // contact + open-invoice/plan state, branch-scoped (EM-BIL-002).
+    @get
+    @route("/collections/worklist")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("getCollectionsWorklist")
+    getCollectionsWorklist(
+      @query branchId?: UUID,
+      @query asOf?: utcDateTime
+    ): ApiOkResponse<CollectionsWorklistResponse>
+      | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 2.4: log a collections outreach attempt (audited, append-only).
+    @post
+    @route("/collections/notes")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createCollectionNote")
+    createCollectionNote(
+      @body body: CreateCollectionNoteRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body body: CollectionNote;
+    }
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
     // P2-14: batch patient statements run.

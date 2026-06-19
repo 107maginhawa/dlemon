@@ -12,6 +12,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { PatientList } from '@/features/patients/components/patient-list';
 import { PatientRegistrationModal } from '@/features/patients/components/patient-registration-modal';
 import { PatientFilterTabs, type PatientFilter } from '@/features/patients/components/patient-filter-tabs';
@@ -81,7 +82,7 @@ function PatientsPage() {
     if (!res.ok) {
       const err = await res.json().catch(() => null);
       const message = err?.message ?? `Registration failed (${res.status})`;
-      alert(message);
+      toast.error(message);
       return;
     }
 
@@ -100,7 +101,7 @@ function PatientsPage() {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-4">
+    <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Patients</h1>
@@ -111,7 +112,7 @@ function PatientsPage() {
             className={[
               'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
               showDuplicates
-                ? 'border-lemon bg-[#FFF9DB] text-lemon-foreground'
+                ? 'border-lemon bg-accent text-lemon-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground',
             ].join(' ')}
             data-testid="find-duplicates-btn"

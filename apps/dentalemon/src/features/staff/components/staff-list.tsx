@@ -215,7 +215,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
                       <button
                         type="button"
                         onClick={() => setEditingMember(member)}
-                        className="text-xs text-foreground/70 hover:text-foreground transition-colors mr-3"
+                        className="text-xs text-foreground/70 hover:text-foreground transition-colors mr-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         Edit
                       </button>
@@ -225,7 +225,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
                         type="button"
                         onClick={() => handleDeactivate(member.id)}
                         disabled={deactivateConfirming === member.id}
-                        className="text-xs text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+                        className="text-xs text-destructive-emphasis hover:text-destructive transition-colors disabled:opacity-50 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {deactivateConfirming === member.id ? 'Deactivating…' : 'Deactivate'}
                       </button>

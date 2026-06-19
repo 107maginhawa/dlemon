@@ -37,8 +37,8 @@ describe('getThumbnailPipClass', () => {
     expect(getThumbnailPipClass('missing' as ToothState)).toBe('bg-dental-missing/50');
   });
 
-  test('implant → bg-[#007AFF]', () => {
-    expect(getThumbnailPipClass('implant' as ToothState)).toBe('bg-[#007AFF]');
+  test('implant → bg-dental-implant', () => {
+    expect(getThumbnailPipClass('implant' as ToothState)).toBe('bg-dental-implant');
   });
 
   test('watchlist → bg-dental-crown/50', () => {

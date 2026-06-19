@@ -212,13 +212,13 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
                 className={[
                   'text-xs px-2 py-0.5 rounded-full border transition-colors',
                   selected?.code === entry.code
-                    ? 'bg-lemon border-[#c8b800] text-foreground font-semibold'
+                    ? 'bg-lemon border-lemon-accent text-foreground font-semibold'
                     : 'border-border hover:bg-secondary',
                 ].join(' ')}
               >
                 {entry.code}
                 {favorites.includes(entry.code) && (
-                  <span className="ml-0.5 text-[#c8b800]">★</span>
+                  <span className="ml-0.5 text-lemon-accent">★</span>
                 )}
               </button>
             ))}
@@ -242,7 +242,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
             className={[
               'whitespace-nowrap text-[10px] font-medium px-2 py-1 rounded-md border transition-colors shrink-0',
               activeSpecialty === id
-                ? 'bg-lemon border-[#c8b800] text-foreground'
+                ? 'bg-lemon border-lemon-accent text-foreground'
                 : 'border-border hover:bg-secondary text-muted-foreground',
             ].join(' ')}
           >
@@ -266,7 +266,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
             className={[
               'flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
               selected?.code === entry.code
-                ? 'border-[#c8b800] bg-lemon-soft'
+                ? 'border-lemon-accent bg-lemon-soft'
                 : 'border-border hover:bg-secondary',
             ].join(' ')}
             role="option"
@@ -284,7 +284,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); toggleFavorite(entry.code); }}
-                className="text-[#c8b800] hover:text-[#a08800] shrink-0 mt-0.5"
+                className="text-lemon-accent hover:text-[#a08800] shrink-0 mt-0.5"
                 aria-label={favorites.includes(entry.code) ? 'Remove from favorites' : 'Add to favorites'}
               >
                 {favorites.includes(entry.code) ? '★' : '☆'}
@@ -296,7 +296,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
 
       {/* Selected code detail */}
       {selected && (
-        <div className="flex flex-col gap-2 rounded-xl border border-[#c8b800] bg-[rgba(255,233,125,0.08)] p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-lemon-accent bg-lemon/10 p-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono font-bold">{selected.code}</span>
             <span className="text-xs text-muted-foreground flex-1 truncate">{selected.description}</span>
@@ -335,7 +335,7 @@ export function CdtCodeBrowser({ onSelect, initialCode }: CdtCodeBrowserProps) {
             type="button"
             data-testid="cdt-continue-btn"
             onClick={handleContinue}
-            className="w-full rounded-lg bg-lemon border border-[#c8b800] text-foreground font-semibold text-sm py-2 hover:bg-lemon-hover transition-colors"
+            className="w-full rounded-lg bg-lemon border border-lemon-accent text-foreground font-semibold text-sm py-2 hover:bg-lemon-hover transition-colors"
           >
             Continue
           </button>

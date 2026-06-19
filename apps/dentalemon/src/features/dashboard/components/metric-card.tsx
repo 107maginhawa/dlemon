@@ -19,15 +19,15 @@ export interface MetricCardProps {
 
 const ACCENT_VALUE_CLASS: Record<string, string> = {
   lemon: 'text-lemon-foreground',
-  red: 'text-red-500',
-  green: 'text-green-600',
-  amber: 'text-amber-600',
+  red: 'text-destructive-emphasis',
+  green: 'text-success-foreground',
+  amber: 'text-warning-foreground',
 };
 
 function getTrendClass(trend: string): string {
-  if (trend.startsWith('+')) return 'bg-green-100 text-green-700';
-  if (trend.startsWith('-')) return 'bg-red-100 text-red-700';
-  return 'bg-gray-100 text-gray-500';
+  if (trend.startsWith('+')) return 'bg-success/15 text-success-foreground';
+  if (trend.startsWith('-')) return 'bg-destructive/15 text-destructive-emphasis';
+  return 'bg-muted text-muted-foreground';
 }
 
 export function MetricCard({

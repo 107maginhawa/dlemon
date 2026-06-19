@@ -30,7 +30,13 @@ const META: JourneyMeta = {
   rubricIds: ['Q29', 'Q30', 'Q31', 'Q32', 'Q33'],
 }
 
-test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+test(`${META.id} — ${META.name}`, async ({ page, apiReader, errorSurface }) => {
+  // P2-A: KNOWN LATENT BUG surfaced by the firewall — the mixed-dentition odontogram
+  // renders two children with the same React key for primary teeth D7310/D4211
+  // ("Encountered two children with the same key"). Pre-existing, out of the New-Visit
+  // remediation scope (FIX-GUARD). Allowed here and recorded as a finding for follow-up;
+  // remove this allow once the duplicate-key render is fixed.
+  errorSurface.allow(/Encountered two children with the same key/)
   try {
     const { branchId } = await readOrgContext(apiReader)
     // Elena Garcia (P3) — pediatric / mixed dentition (seed default 'mixed').

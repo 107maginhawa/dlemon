@@ -404,8 +404,8 @@ describe('RBAC — PATCH {status:cancelled}: scheduling/associate excluded (pari
 // EM-SCH-001 — non-dental-role user (no branch membership) cannot book
 // ---------------------------------------------------------------------------
 
-describe('RBAC — POST appointment: user with no branch membership blocked [EM-SCH-001]', () => {
-  test('authenticated user with no dental branch membership POST appointment → 403', async () => {
+describe('RBAC — POST appointment: user with no branch membership blocked [EM-SCH-001] [BR-SCH-001]', () => {
+  test('BR-SCH-001: authenticated user with no dental branch membership POST appointment → 403', async () => {
     await ensureOrg();
     const app = makeApp(USER_NO_MEMBERSHIP);
     const res = await app.request(

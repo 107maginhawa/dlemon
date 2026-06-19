@@ -28,7 +28,11 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
     if (!ctx) return;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1a1a1a';
+    // Ink follows the theme foreground so the signature stays visible in dark
+    // mode (the canvas bg is bg-muted/30, which is dark when the theme is). Falls
+    // back to near-black when the CSS var is unavailable (e.g. happy-dom tests).
+    const fg = getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim();
+    ctx.strokeStyle = fg ? `hsl(${fg})` : '#1a1a1a';
   }, []);
 
   function pos(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -87,7 +91,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
         disabled={submitted}
         onChange={(e) => setSignerName(e.target.value)}
         placeholder="Full name (patient or guardian)"
-        className="mb-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-lemon disabled:opacity-60"
+        className="mb-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
       />
       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Signature
@@ -109,7 +113,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
           type="button"
           onClick={clear}
           disabled={submitted}
-          className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
           Clear
         </button>
@@ -118,7 +122,7 @@ export function SignaturePad({ isSubmitting, submitted, onAccept }: SignaturePad
           data-testid="accept-sign-btn"
           disabled={!canSubmit}
           onClick={submit}
-          className="flex-1 rounded-xl bg-lemon px-3 py-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="h-11 flex-1 rounded-xl bg-lemon px-3 py-3 text-sm font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitted ? 'Accepted' : isSubmitting ? 'Submitting…' : 'Accept & Sign'}
         </button>

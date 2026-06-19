@@ -69,7 +69,13 @@ const EXPECTED: Record<
   // J21 — the curated "must-never-break" New-Visit create flow (the incident).
   // Hard-asserts POST /dental/visits → 201 on Diego (the clean-state seed patient);
   // closes the silent-skip J01 carried. Listed after J10 to keep Set A grouped.
-  J21: { name: 'Start a new clinical visit (New Visit → 201)', set: 'A', expected: 'PASS', rubricIds: ['WF-VIS-001'] },
+  J21: { name: 'Start a new clinical visit (New Visit → 201)', set: 'A', expected: 'PASS', rubricIds: ['WF-045'] },
+  // J22 — the closing half of the encounter (UA_KG_UPGRADE triage gap): completing a
+  // visit gates billing, yet had no journey while J21 covered only starting one.
+  // Drives active → pre-completion checklist → PATCH completed; asserts the goal state
+  // (completed) via an independent read. Consent + notes are seeded as the real
+  // backend completion preconditions (VISIT_CONSENT_REQUIRED / WF-012, BR-002).
+  J22: { name: 'Complete a clinical visit (active → checklist → completed)', set: 'A', expected: 'PASS', rubricIds: ['WF-012'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },

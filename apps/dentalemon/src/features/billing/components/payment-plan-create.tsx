@@ -12,10 +12,8 @@ import { useMutation } from '@tanstack/react-query';
 import { createDentalPaymentPlanMutation } from '@monobase/sdk-ts/generated/react-query';
 import type { PlanFrequency } from '@monobase/sdk-ts/generated';
 import { getErrorMessage } from '@/lib/error-toast';
-
-function formatCents(cents: number): string {
-  return `₱${(cents / 100).toFixed(2)}`;
-}
+import { formatCents } from '@/lib/format-currency';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 const FREQUENCIES: { value: PlanFrequency; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -45,6 +43,7 @@ export interface PaymentPlanCreateProps {
 }
 
 export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, onClose, onCreated }: PaymentPlanCreateProps) {
+  useSheetA11y({ open, onClose });
   const [installments, setInstallments] = useState('6');
   const [frequency, setFrequency] = useState<PlanFrequency>('monthly');
   const [startDate, setStartDate] = useState('');
@@ -88,7 +87,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
       <div data-testid="payment-plan-create" className="relative w-full max-w-[440px] bg-background rounded-2xl shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 h-[52px] border-b flex-shrink-0">
           <h2 className="text-[17px] font-semibold tracking-tight">Create Payment Plan</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">✕</button>
         </div>
 
         <div className="px-5 py-5 flex flex-col gap-4">
@@ -106,7 +105,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="plan-installments">Number of installments *</label>
-            <input id="plan-installments" type="number" min="2" max="24" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+            <input id="plan-installments" type="number" min="2" max="24" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
           </div>
 
           <div>
@@ -123,7 +122,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block" htmlFor="plan-start-date">Start date *</label>
-            <input id="plan-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none" />
+            <input id="plan-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none" />
           </div>
 
           {perInstallment > 0 && (

@@ -12,8 +12,24 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@monobase/ui';
 import { PatientFolderCard, type PatientCardData } from './patient-folder-card';
 import { ListErrorState } from '@/components/list-error-state';
+
+/** Pending confirmation for a destructive patient action. */
+type ConfirmState =
+  | { kind: 'archive'; id: string; name: string }
+  | { kind: 'restore'; id: string; name: string }
+  | { kind: 'bulk'; count: number };
 
 interface PatientListProps {
   patients: PatientCardData[];
@@ -63,6 +79,7 @@ export function PatientList({
   onRetry,
 }: PatientListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
   const filtered = searchQuery
     ? patients.filter((p) =>
@@ -93,17 +110,7 @@ export function PatientList({
   const handleArchive = useCallback(
     (patientId: string, displayName: string) => {
       if (!onArchive) return;
-      const confirmed = window.confirm(
-        `Archive patient "${displayName}"? They will be moved to the archived list.`,
-      );
-      if (confirmed) {
-        onArchive(patientId);
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(patientId);
-          return next;
-        });
-      }
+      setConfirm({ kind: 'archive', id: patientId, name: displayName });
     },
     [onArchive],
   );
@@ -111,26 +118,54 @@ export function PatientList({
   const handleRestore = useCallback(
     (patientId: string, displayName: string) => {
       if (!onRestore) return;
-      const confirmed = window.confirm(
-        `Restore patient "${displayName}"? They will be moved back to the active list.`,
-      );
-      if (confirmed) {
-        onRestore(patientId);
-      }
+      setConfirm({ kind: 'restore', id: patientId, name: displayName });
     },
     [onRestore],
   );
 
   const handleBulkArchive = useCallback(() => {
     if (!onBulkArchive || selectedIds.size === 0) return;
-    const confirmed = window.confirm(
-      `Archive ${selectedIds.size} selected patient(s)?`,
-    );
-    if (confirmed) {
-      onBulkArchive(Array.from(selectedIds));
-      setSelectedIds(new Set());
+    setConfirm({ kind: 'bulk', count: selectedIds.size });
+  }, [onBulkArchive, selectedIds.size]);
+
+  // The real action behind a confirmed dialog, dispatched by kind.
+  const runConfirmedAction = useCallback(() => {
+    if (!confirm) return;
+    if (confirm.kind === 'archive') {
+      onArchive?.(confirm.id);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(confirm.id);
+        return next;
+      });
+    } else if (confirm.kind === 'restore') {
+      onRestore?.(confirm.id);
+    } else if (confirm.kind === 'bulk') {
+      if (onBulkArchive) {
+        onBulkArchive(Array.from(selectedIds));
+        setSelectedIds(new Set());
+      }
     }
-  }, [onBulkArchive, selectedIds]);
+    setConfirm(null);
+  }, [confirm, onArchive, onRestore, onBulkArchive, selectedIds]);
+
+  // Title/description copy derived from the pending confirmation kind.
+  const confirmCopy = confirm
+    ? confirm.kind === 'archive'
+      ? {
+          title: 'Archive patient?',
+          description: `Archive patient "${confirm.name}"? They will be moved to the archived list.`,
+        }
+      : confirm.kind === 'restore'
+        ? {
+            title: 'Restore patient?',
+            description: `Restore patient "${confirm.name}"? They will be moved back to the active list.`,
+          }
+        : {
+            title: `Archive ${confirm.count} patients?`,
+            description: `Archive ${confirm.count} selected patient(s)?`,
+          }
+    : null;
 
   const showArchiveActions = activeFilter === 'active' || activeFilter === 'all';
   const showRestoreActions = activeFilter === 'archived';
@@ -278,6 +313,34 @@ export function PatientList({
           ))}
         </div>
       )}
+
+      {/* Confirmation dialog — replaces native window.confirm for archive/restore/bulk */}
+      <AlertDialog
+        open={!!confirm}
+        onOpenChange={(open) => {
+          if (!open) setConfirm(null);
+        }}
+      >
+        <AlertDialogContent data-testid="patient-confirm-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmCopy?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmCopy?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="patient-confirm-cancel">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="patient-confirm-action"
+              onClick={runConfirmedAction}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

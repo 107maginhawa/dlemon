@@ -7,7 +7,7 @@
  * Phase 1 is read-only: NO online payment action (deferred — needs a
  * payments-vendor + PHI-scope product decision). We never imply payability.
  */
-import { Badge, Card, CardContent, Skeleton } from '@monobase/ui';
+import { Badge, Button, Card, CardContent, Skeleton } from '@monobase/ui';
 import { Receipt } from 'lucide-react';
 import { formatCents } from '@/lib/format-currency';
 import { useMyInvoices, useMyBalance, type MyInvoice } from '../hooks/use-my-portal';
@@ -86,7 +86,7 @@ export function InvoiceCard({ invoice }: { invoice: MyInvoice }) {
 // ---------------------------------------------------------------------------
 
 export function MyInvoicesView() {
-  const { invoices, isLoading, error } = useMyInvoices();
+  const { invoices, isLoading, error, refetch } = useMyInvoices();
   const { balance } = useMyBalance();
 
   return (
@@ -100,13 +100,16 @@ export function MyInvoicesView() {
       {isLoading ? (
         <div className="space-y-3" data-testid="portal-invoices-loading">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[88px] w-full rounded-xl" />
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       ) : error ? (
         <Card>
-          <CardContent className="p-6 text-center text-sm text-destructive" role="alert">
-            We couldn’t load your bills. Please try again later.
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center text-sm text-destructive">
+            <p role="alert">We couldn’t load your bills. Please try again later.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
           </CardContent>
         </Card>
       ) : invoices.length === 0 ? (

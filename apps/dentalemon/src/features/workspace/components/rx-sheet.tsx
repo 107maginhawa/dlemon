@@ -16,6 +16,8 @@
 
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import {
   createPrescription,
@@ -264,8 +266,11 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
         return;
       }
 
+      toast.success('Prescription saved');
       onSaved?.();
       onClose();
+    } catch (err) {
+      toastError(err, 'Could not save the prescription');
     } finally {
       setSaving(false);
     }
@@ -274,6 +279,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
   function handleAcknowledge() {
     setAllergyConflicts([]);
     setDrugInteractions([]);
+    toast.success('Prescription saved');
     onSaved?.();
     onClose();
   }
@@ -435,7 +441,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                   onChange={e => setDrugName(e.target.value)}
                   placeholder="e.g. Amoxicillin"
                   aria-label="Drug name"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
 
@@ -450,7 +456,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                   value={rxNormCode}
                   onChange={e => setRxNormCode(e.target.value)}
                   placeholder="e.g. 723"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
 
@@ -467,7 +473,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                     onChange={e => setDosage(e.target.value)}
                     placeholder="e.g. 500mg"
                     aria-label="Dosage"
-                    className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   />
                 </div>
                 <div className="flex-1">
@@ -479,7 +485,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                     value={frequency}
                     onChange={e => setFrequency(e.target.value)}
                     aria-label="Frequency selection"
-                    className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   >
                     <option value="">Select…</option>
                     {FREQUENCY_OPTIONS.map(f => (
@@ -500,7 +506,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                   value={duration}
                   onChange={e => setDuration(e.target.value)}
                   placeholder="e.g. 7 days"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
 
@@ -515,7 +521,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                   value={quantity}
                   onChange={e => setQuantity(e.target.value)}
                   placeholder="e.g. 21 tablets"
-                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
 
@@ -530,7 +536,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                   onChange={e => setInstructions(e.target.value)}
                   placeholder="Prescription instructions…"
                   rows={2}
-                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
 
@@ -562,7 +568,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                     value={controlledSubstanceSchedule}
                     onChange={e => setControlledSubstanceSchedule(e.target.value as ControlledSubstanceSchedule)}
                     aria-label="Controlled-substance schedule"
-                    className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                    className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                   >
                     {SCHEDULE_OPTIONS.map(s => (
                       <option key={s.value} value={s.value}>{s.label}</option>
@@ -583,7 +589,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                       onChange={e => setPrescriberDea(e.target.value)}
                       placeholder="e.g. AB1234567"
                       aria-label="Prescriber DEA number"
-                      className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                      className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                     />
                   </div>
                   <div className="flex-1">
@@ -597,7 +603,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                       onChange={e => setPrescriberNpi(e.target.value)}
                       placeholder="10-digit NPI"
                       aria-label="Prescriber NPI"
-                      className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+                      className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                     />
                   </div>
                 </div>

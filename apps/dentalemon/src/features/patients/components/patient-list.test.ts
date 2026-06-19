@@ -6,10 +6,22 @@
  */
 
 import { describe, test, expect, afterEach, mock } from 'bun:test';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { PatientList } from './patient-list';
+
+/** Click the Confirm action inside the AlertDialog. */
+async function clickConfirm(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await screen.findByRole('alertdialog');
+  await user.click(within(dialog).getByTestId('patient-confirm-action'));
+}
+
+/** Click the Cancel button inside the AlertDialog. */
+async function clickCancel(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await screen.findByRole('alertdialog');
+  await user.click(within(dialog).getByTestId('patient-confirm-cancel'));
+}
 
 afterEach(cleanup);
 
@@ -119,11 +131,9 @@ describe('PatientList — archive actions', () => {
     expect(screen.getByTestId('archive-btn-p2')).not.toBeNull();
   });
 
-  test('archive button calls onArchive after confirm', async () => {
+  test('archive button opens confirm dialog; confirming calls onArchive', async () => {
     const user = userEvent.setup();
     const onArchive = mock(() => {});
-    const confirmMock = mock(() => true);
-    window.confirm = confirmMock;
 
     render(
       React.createElement(PatientList, {
@@ -135,15 +145,22 @@ describe('PatientList — archive actions', () => {
       }),
     );
 
+    // No dialog until the action is triggered.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+
     await user.click(screen.getByTestId('archive-btn-p1'));
-    expect(confirmMock).toHaveBeenCalled();
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Archive patient?')).not.toBeNull();
+    expect(onArchive).not.toHaveBeenCalled(); // not yet — dialog only opened
+
+    await clickConfirm(user);
     expect(onArchive).toHaveBeenCalledWith('p1');
   });
 
-  test('archive button does NOT call onArchive when confirm is cancelled', async () => {
+  test('archive button does NOT call onArchive when dialog is cancelled', async () => {
     const user = userEvent.setup();
     const onArchive = mock(() => {});
-    window.confirm = mock(() => false);
 
     render(
       React.createElement(PatientList, {
@@ -156,7 +173,11 @@ describe('PatientList — archive actions', () => {
     );
 
     await user.click(screen.getByTestId('archive-btn-p1'));
+    await clickCancel(user);
+
     expect(onArchive).not.toHaveBeenCalled();
+    // Dialog is dismissed after cancel.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 });
 
@@ -174,10 +195,9 @@ describe('PatientList — restore actions', () => {
     expect(screen.getByTestId('restore-btn-p4')).not.toBeNull();
   });
 
-  test('restore button calls onRestore after confirm', async () => {
+  test('restore button opens confirm dialog; confirming calls onRestore', async () => {
     const user = userEvent.setup();
     const onRestore = mock(() => {});
-    window.confirm = mock(() => true);
 
     render(
       React.createElement(PatientList, {
@@ -190,7 +210,33 @@ describe('PatientList — restore actions', () => {
     );
 
     await user.click(screen.getByTestId('restore-btn-p4'));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Restore patient?')).not.toBeNull();
+    expect(onRestore).not.toHaveBeenCalled();
+
+    await clickConfirm(user);
     expect(onRestore).toHaveBeenCalledWith('p4');
+  });
+
+  test('restore button does NOT call onRestore when dialog is cancelled', async () => {
+    const user = userEvent.setup();
+    const onRestore = mock(() => {});
+
+    render(
+      React.createElement(PatientList, {
+        patients: archivedPatients,
+        onSelect: () => {},
+        searchQuery: '',
+        activeFilter: 'archived',
+        onRestore,
+      }),
+    );
+
+    await user.click(screen.getByTestId('restore-btn-p4'));
+    await clickCancel(user);
+
+    expect(onRestore).not.toHaveBeenCalled();
   });
 });
 
@@ -244,10 +290,9 @@ describe('PatientList — bulk select', () => {
     expect(screen.getByTestId('bulk-archive-btn').textContent).toContain('1');
   });
 
-  test('bulk archive button calls onBulkArchive with selected IDs', async () => {
+  test('bulk archive opens confirm dialog; confirming calls onBulkArchive with selected IDs', async () => {
     const user = userEvent.setup();
     const onBulkArchive = mock(() => {});
-    window.confirm = mock(() => true);
 
     render(
       React.createElement(PatientList, {
@@ -266,9 +311,38 @@ describe('PatientList — bulk select', () => {
     if (cb2) await user.click(cb2);
 
     await user.click(screen.getByTestId('bulk-archive-btn'));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Archive 2 patients?')).not.toBeNull();
+    expect(onBulkArchive).not.toHaveBeenCalled();
+
+    await clickConfirm(user);
     expect(onBulkArchive).toHaveBeenCalled();
     const calledWith = (onBulkArchive as any).mock.calls[0][0] as string[];
     expect(calledWith.sort()).toEqual(['p1', 'p2']);
+  });
+
+  test('bulk archive does NOT call onBulkArchive when dialog is cancelled', async () => {
+    const user = userEvent.setup();
+    const onBulkArchive = mock(() => {});
+
+    render(
+      React.createElement(PatientList, {
+        patients,
+        onSelect: () => {},
+        searchQuery: '',
+        activeFilter: 'active',
+        onBulkArchive,
+      }),
+    );
+
+    const cb1 = screen.getByTestId('select-patient-p1').querySelector('input');
+    if (cb1) await user.click(cb1);
+
+    await user.click(screen.getByTestId('bulk-archive-btn'));
+    await clickCancel(user);
+
+    expect(onBulkArchive).not.toHaveBeenCalled();
   });
 });
 

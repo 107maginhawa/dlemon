@@ -304,8 +304,14 @@ describe('POST /dental/patients/import — CSV via { csv } field through the rea
 // These were previously UNPINNED (all happy-path tests used a matching-branch owner).
 // ---------------------------------------------------------------------------
 
-describe('importPatients — cross-tenant isolation (V-PAT-002 lens)', () => {
-  test('403 when importing into a branch the caller is NOT a member of', async () => {
+// V-XRI-001 — bulk patient import is cross-tenant isolated: the handler calls
+// assertBranchRole(user, row.branchId, ['dentist_owner']) for EVERY unique
+// branchId BEFORE the all-or-nothing tx, so a caller who is not an active
+// dentist_owner of a named branch is 403'd and ZERO rows are written (no patient
+// can be smuggled into another org's branch). The two tests below assert exactly
+// that: the 403 refusal AND countPatientsInBranch == 0.
+describe('V-XRI-001 — importPatients cross-tenant isolation (V-PAT-002 lens)', () => {
+  test('V-XRI-001: 403 when importing into a branch the caller is NOT a member of', async () => {
     // TEST_USER is owner of BRANCH_ID but has NO membership in OTHER_BRANCH_ID.
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/patients/import', {
@@ -353,7 +359,7 @@ describe('importPatients — role gating (owner-only bulk import)', () => {
 });
 
 describe('importPatients — ingestion safety (untrusted external input → 4xx, never 500)', () => {
-  test('malformed JSON body → 400 (not a 500/crash)', async () => {
+  test('malformed JSON body → 400 (not a 500/crash) [V-XRI-002]', async () => {
     const app = buildTestApp(TEST_USER);
     const res = await app.request('/dental/patients/import', {
       method: 'POST',

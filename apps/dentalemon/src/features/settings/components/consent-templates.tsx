@@ -135,7 +135,7 @@ export function ConsentTemplates() {
               value={editor.name}
               onChange={(e) => setEditor({ ...editor, name: e.target.value })}
               placeholder="e.g. Tooth Extraction Consent"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
           <div>
@@ -148,7 +148,7 @@ export function ConsentTemplates() {
               onChange={(e) => setEditor({ ...editor, body: e.target.value })}
               rows={5}
               placeholder="The consent text the patient reads and signs…"
-              className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-y"
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-y"
             />
           </div>
           <label className="flex items-center gap-2 text-sm">

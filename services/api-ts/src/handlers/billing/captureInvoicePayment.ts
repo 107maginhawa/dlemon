@@ -1,3 +1,4 @@
+import { parseUserRoles } from '@/handlers/shared/parse-user-roles';
 import {
   ForbiddenError,
   NotFoundError,
@@ -53,7 +54,7 @@ export async function captureInvoicePayment(
 
   // Authorization check: provider:owner or admin
   const user = session.user;
-  const userRoles = user.role ? user.role.split(',').map(r => r.trim()) : [];
+  const userRoles = parseUserRoles(user);
   const isAdmin = userRoles.includes('admin');
 
   if (!isAdmin) {

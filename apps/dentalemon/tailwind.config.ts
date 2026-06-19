@@ -35,6 +35,9 @@ const config: Config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          // AA-dark red for destructive TEXT on a light tint (status badges).
+          // `foreground` is white (text ON a red fill); this is its inverse.
+          emphasis: "#b91c1c",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -58,17 +61,28 @@ const config: Config = {
           foreground: "#4A4018",
           soft: "rgba(255,233,125,0.15)",
           focus: "rgba(255,233,125,0.35)",
+          // Darker lemon for emphasis/selection accents (e.g. CDT-code selected
+          // borders & star). AA-readable as a border/icon, not as body text.
+          accent: "#C8B800",
         },
         dental: {
+          healthy: "var(--dental-healthy)",
           caries: "var(--dental-caries)",
           fractured: "var(--dental-fractured)",
           filled: "var(--dental-filled)",
           crown: "var(--dental-crown)",
           missing: "var(--dental-missing)",
+          implant: "var(--dental-implant)",
+          extracted: "var(--dental-extracted)",
+          watchlist: "var(--dental-watchlist)",
+          "watchlist-foreground": "var(--dental-watchlist-foreground)",
         },
-        success: "#34C759",
-        warning: "#FF9500",
-        info: "#5AC8FA",
+        // DEFAULT = the Apple mid-tone FILL color (backgrounds, dots, icons).
+        // foreground = AA-readable dark shade for TEXT on a light tint (status
+        // badges): mid-tones fail ~1.7-2:1 as text, so never use the DEFAULT for text.
+        success: { DEFAULT: "#34C759", foreground: "#15803d" },
+        warning: { DEFAULT: "#FF9500", foreground: "#b45309" },
+        info: { DEFAULT: "#5AC8FA", foreground: "#0369a1" },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

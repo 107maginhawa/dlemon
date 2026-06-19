@@ -6,8 +6,10 @@
  * that triggers a batch statement run for the active branch.
  */
 
-import React from 'react';
-import { useArAging, useStatementBatch } from '../hooks/use-collections';
+import React, { useState } from 'react';
+import { useArAging, useStatementBatch, useSendStatement } from '../hooks/use-collections';
+import { CollectionsWorklist } from './collections-worklist';
+import { CollectionsKpis } from './collections-kpis';
 import { ListErrorState } from '@/components/list-error-state';
 import {
   formatCents,
@@ -24,8 +26,10 @@ export interface CollectionsViewProps {
 }
 
 export function CollectionsView({ branchId }: CollectionsViewProps) {
+  const [tab, setTab] = useState<'aging' | 'worklist' | 'metrics'>('aging');
   const { aging, isLoading, error, refetch } = useArAging({ branchId });
   const { generate, isGenerating, result } = useStatementBatch({ branchId });
+  const { send, sendingPatientId, lastSent } = useSendStatement({ branchId });
 
   const summary = aging?.summary;
   const patients = aging?.patients ?? [];
@@ -38,8 +42,39 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
     }
   }
 
+  async function handleSend(patientId: string) {
+    try {
+      await send(patientId);
+    } catch {
+      // Surfaced via mutation error.
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4" data-testid="collections-view">
+      {/* Aging ↔ Worklist tabs */}
+      <div className="flex gap-1 p-1 bg-secondary/50 rounded-xl w-fit" role="tablist">
+        {(['aging', 'worklist', 'metrics'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            data-testid={`collections-tab-${t}`}
+            className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring outline-none ${tab === t ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {t === 'aging' ? 'Aging' : t === 'worklist' ? 'Worklist' : 'Metrics'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'worklist' ? (
+        <CollectionsWorklist branchId={branchId} />
+      ) : tab === 'metrics' ? (
+        <CollectionsKpis branchId={branchId} />
+      ) : (
+      <>
       {/* Summary cards: one per aging bucket + total */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {AGING_BUCKETS.map((b) => {
@@ -100,18 +135,19 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
                   <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">61–90</th>
                   <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">90+</th>
                   <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Total</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pr-5">Oldest</th>
+                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Oldest</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pr-5">Statement</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading aging…</td>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading aging…</td>
                   </tr>
                 )}
                 {!isLoading && patients.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-muted-foreground">
                       No outstanding balances.
                     </td>
                   </tr>
@@ -125,8 +161,23 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
                       <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatCents(p.days60Cents)}</td>
                       <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-semibold text-red-700">{formatCents(p.days90PlusCents)}</td>
                       <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-bold">{formatCents(p.totalOutstandingCents)}</td>
-                      <td className={`px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right pr-5 ${agingRiskClass(agingRisk(p.oldestInvoiceDays))}`}>
+                      <td className={`px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right ${agingRiskClass(agingRisk(p.oldestInvoiceDays))}`}>
                         {p.oldestInvoiceDays}d
+                      </td>
+                      <td className="px-4 py-0 h-12 align-middle text-right pr-5">
+                        <button
+                          type="button"
+                          onClick={() => handleSend(p.patientId)}
+                          disabled={sendingPatientId === p.patientId}
+                          className="h-8 px-3 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none"
+                          data-testid={`send-statement-${p.patientId}`}
+                        >
+                          {sendingPatientId === p.patientId
+                            ? 'Sending…'
+                            : lastSent?.patientId === p.patientId
+                              ? 'Sent ✓'
+                              : 'Send'}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -134,6 +185,8 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

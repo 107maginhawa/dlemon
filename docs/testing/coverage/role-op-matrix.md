@@ -8,11 +8,11 @@ Computed comparison of what each handler *enforces* via `assertBranchRole(...)` 
 
 | Metric | Count |
 |--------|------:|
-| Operations with a role gate | 111 |
+| Operations with a role gate | 112 |
 | Joined to the spec matrix | 28 |
 | **Drift (code ≠ spec)** | **0** |
 | Dynamic (computed) gates | 6 |
-| Gated but unmapped to spec | 83 |
+| Gated but unmapped to spec | 84 |
 
 ## DRIFT
 
@@ -109,6 +109,7 @@ _No drift detected._
 | `recordConsentRefusal` | dental-clinical | POST | `/dental/visits/{visitId}/consent-refusals` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `recordDentalPayment` | dental-billing | POST | `/dental/billing/invoices/{invoiceId}/payments` | dentist_owner, dentist_associate, staff_full | dentist_owner, dentist_associate, staff_full |  |
 | `recordMedicalHistoryReview` | dental-clinical | POST | `/dental/clinical/medical-history-review` | dentist_owner, dentist_associate, staff_full | — (unmapped) |  |
+| `refundDentalPayment` | dental-billing | POST | `/dental/billing/payments/{paymentId}/refund` | dentist_owner | — (unmapped) |  |
 | `rejectCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations/{presentationId}/reject` | dentist_owner, dentist_associate, treatment_coordinator, staff_full, front_desk, dental_assistant | — (unmapped) |  |
 | `resolveChartConflict` | dental-visit | POST | `/dental/visits/{visitId}/chart/resolve-conflict` | dentist_owner, dentist_associate, hygienist | — (unmapped) |  |
 | `restoreDentalPatient` | dental-patient | POST | `/dental/patients/{id}/restore` | dentist_owner | — (unmapped) |  |

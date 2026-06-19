@@ -155,7 +155,9 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       await page.waitForLoadState('networkidle')
 
       // Open the owner-only Audit Log panel (pinAuth 'dentist' === dentist_owner).
-      await page.getByRole('button', { name: 'Audit Log', exact: true }).click()
+      // Settings navigation is a tablist (the ux-ui-polish batch moved the panels
+      // behind role="tab"); the audit viewer opens from the "Audit Log" tab.
+      await page.getByRole('tab', { name: 'Audit Log', exact: true }).click()
       const auditPanel = page.getByTestId('audit-log-panel')
       await expect(auditPanel, 'owner must reach the Audit Log viewer').toBeVisible({
         timeout: 15_000,

@@ -16,6 +16,7 @@
  */
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useSession } from '@monobase/sdk-ts/react/hooks/use-auth';
 import {
   listErasureRequestsOptions,
@@ -27,6 +28,7 @@ import type {
   DentalErasureModuleErasureRequest as ErasureRequest,
   DentalErasureModuleErasureRequestStatus as ErasureStatus,
 } from '@monobase/sdk-ts/generated';
+import { toastError } from '@/lib/error-toast';
 import { APP_LOCALE } from '@/constants/brand';
 
 const STATUS_FILTERS: { value: '' | ErasureStatus; label: string }[] = [
@@ -230,8 +232,22 @@ export function DataErasure() {
   // refetches the active view after an approve/reject regardless of the filter.
   const invalidate = () => queryClient.invalidateQueries({ queryKey: listErasureRequestsQueryKey() });
 
-  const approve = useMutation({ ...approveErasureMutation(), onSuccess: invalidate });
-  const reject = useMutation({ ...rejectErasureMutation(), onSuccess: invalidate });
+  const approve = useMutation({
+    ...approveErasureMutation(),
+    onSuccess: () => {
+      invalidate();
+      toast.success('Erasure request approved');
+    },
+    onError: (err) => toastError(err, 'Could not approve the erasure request. Please try again.'),
+  });
+  const reject = useMutation({
+    ...rejectErasureMutation(),
+    onSuccess: () => {
+      invalidate();
+      toast.success('Erasure request rejected');
+    },
+    onError: (err) => toastError(err, 'Could not reject the erasure request. Please try again.'),
+  });
 
   const data = listQuery.data as { data?: ErasureRequest[] } | undefined;
   const requests = data?.data ?? [];

@@ -26,14 +26,13 @@ export async function listLabOrders(ctx: HandlerContext) {
 
   const repo = new LabOrderRepository(db);
 
-  const items = await repo.findMany({ visitId });
   const { limit, offset } = parsePagination(ctx.req.query(), { limit: 50 });
-  const totalCount = items.length;
-  const page = items.slice(offset, offset + limit);
+  const totalCount = await repo.count({ visitId });
+  const page = await repo.findMany({ visitId }, { pagination: { limit, offset } });
 
   const audit = ctx.get('audit');
   if (audit?.logEvent) {
-    await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'lab-order', resource: visitId, description: 'Lab orders listed for visit', details: { resultCount: items.length }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
+    await audit.logEvent({ eventType: 'data-access', category: 'clinical', action: 'read', outcome: 'success', user: user.id, userType: 'client', resourceType: 'lab-order', resource: visitId, description: 'Lab orders listed for visit', details: { resultCount: totalCount }, ipAddress: ctx.req.header('x-forwarded-for'), userAgent: ctx.req.header('user-agent'), request: ctx.req.header('x-request-id') }, user.id);
   }
 
   return ctx.json({ data: page, pagination: buildPaginationMeta(page, totalCount, limit, offset) });

@@ -6,6 +6,7 @@
  * tokenized access in this pass.
  */
 import React from 'react';
+import { Skeleton } from '@monobase/ui';
 import { useCasePresentation } from './use-case-presentation';
 import { CasePresentationView } from './case-presentation-view';
 import { AcceptedPlanViewer } from './accepted-plan-viewer';
@@ -20,7 +21,21 @@ export function CasePresentationPanel({ patientId, presentationId }: CasePresent
     useCasePresentation(patientId, presentationId);
 
   if (isLoading) {
-    return <p className="p-8 text-center text-sm text-muted-foreground">Loading your plan…</p>;
+    // Hold the plan view's footprint: a title/header block, then stacked plan-item
+    // blocks, so the content doesn't pop in and shift the layout (reduce CLS).
+    return (
+      <div data-testid="case-presentation-loading" className="p-8 flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-7 w-1/2" />
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
   }
   if (isError || !aggregate) {
     return (

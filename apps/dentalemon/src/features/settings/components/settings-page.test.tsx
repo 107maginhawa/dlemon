@@ -37,25 +37,25 @@ describe('SettingsPage — panel registry (FIX-003)', () => {
   test('renders a tab for every registered panel including the 5 originals', () => {
     renderPage();
     for (const label of ['Clinic', 'Working Hours', 'Fee Schedule', 'Locale', 'Notifications']) {
-      expect(screen.getByRole('button', { name: label })).toBeDefined();
+      expect(screen.getByRole('tab', { name: label })).toBeDefined();
     }
   });
 
   test('registry includes the new Consent Forms panel', () => {
     expect(SETTINGS_PANELS.some(p => /consent/i.test(p.label))).toBe(true);
     renderPage();
-    expect(screen.getByRole('button', { name: /consent forms/i })).toBeDefined();
+    expect(screen.getByRole('tab', { name: /consent forms/i })).toBeDefined();
   });
 
   test('selecting the Consent Forms tab mounts the consent panel', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /consent forms/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /consent forms/i }));
     await waitFor(() => expect(screen.getByTestId('consent-templates-panel')).toBeDefined());
   });
 
   test('non-settings role sees the access-denied message, no tabs', () => {
     renderPage('staff_scheduling');
     expect(screen.getByText(/do not have access to settings/i)).toBeDefined();
-    expect(screen.queryByRole('button', { name: 'Clinic' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Clinic' })).toBeNull();
   });
 });

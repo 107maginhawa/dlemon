@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Skeleton } from '@monobase/ui';
 import type { PerioChart } from '@monobase/sdk-ts/generated';
 import { usePerioHistory } from '@/features/workspace/hooks/use-perio-history';
 import {
@@ -33,7 +34,7 @@ function fmtValue(key: 'bop' | 'meanDepth' | 'deepPockets', v: number | null): s
 function DeltaBadge({ delta }: { delta: MetricDelta | null }) {
   if (!delta || delta.dir === 'flat') return null;
   const Icon = delta.dir === 'down' ? ChevronDown : ChevronUp;
-  const cls = delta.better ? 'text-emerald-600' : 'text-destructive';
+  const cls = delta.better ? 'text-success-foreground' : 'text-destructive-emphasis';
   return (
     <span className={`ml-1 inline-flex items-center text-[11px] font-medium ${cls}`}>
       <Icon className="h-3 w-3" />
@@ -72,10 +73,10 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
         </h3>
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr>
-              <th className="border-b px-2 py-1.5 text-left font-medium text-muted-foreground">Metric</th>
+            <tr className="bg-muted/30 font-semibold">
+              <th className="border-b px-3 py-2 text-left font-medium text-muted-foreground">Metric</th>
               {charts.map((c) => (
-                <th key={c.id} className="border-b px-2 py-1.5 text-right font-medium">
+                <th key={c.id} className="border-b px-3 py-2 text-right font-medium">
                   {examDateLabel(c)}
                 </th>
               ))}
@@ -85,9 +86,9 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             {/* FIX-003: the persisted AAP/EFP staging trajectory (diagnosis of record)
                 per exam. Legacy charts with no persisted stage show an em-dash. */}
             <tr data-testid="summary-row-stage">
-              <td className="border-b px-2 py-1.5 text-left text-muted-foreground">AAP/EFP stage</td>
+              <td className="border-b px-3 py-2 text-left text-muted-foreground">AAP/EFP stage</td>
               {stagingCells.map((cell, i) => (
-                <td key={i} className="border-b px-2 py-1.5 text-right">
+                <td key={i} className="border-b px-3 py-2 text-right">
                   {cell.stage ? (
                     <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                       {formatStage(cell.stage)}
@@ -101,9 +102,9 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             </tr>
             {summary.map((row) => (
               <tr key={row.key} data-testid={`summary-row-${row.key}`}>
-                <td className="border-b px-2 py-1.5 text-left text-muted-foreground">{row.label}</td>
+                <td className="border-b px-3 py-2 text-left text-muted-foreground">{row.label}</td>
                 {row.values.map((v, i) => (
-                  <td key={i} className="border-b px-2 py-1.5 text-right tabular-nums">
+                  <td key={i} className="border-b px-3 py-2 text-right tabular-nums">
                     {fmtValue(row.key, v)}
                     <DeltaBadge delta={row.deltas[i] ?? null} />
                   </td>
@@ -122,10 +123,10 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
         <div className="overflow-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr>
-                <th className="border-b px-2 py-1.5 text-left font-medium text-muted-foreground">Tooth</th>
+              <tr className="bg-muted/30 font-semibold">
+                <th className="border-b px-3 py-2 text-left font-medium text-muted-foreground">Tooth</th>
                 {charts.map((c) => (
-                  <th key={c.id} className="border-b px-2 py-1.5 text-right font-medium">
+                  <th key={c.id} className="border-b px-3 py-2 text-right font-medium">
                     {examDateLabel(c)}
                   </th>
                 ))}
@@ -134,12 +135,12 @@ export function PerioComparisonView({ charts }: { charts: PerioChart[] }) {
             <tbody>
               {toothRows.map((row) => (
                 <tr key={row.toothNumber} data-testid={`tooth-row-${row.toothNumber}`}>
-                  <td className="border-b px-2 py-1.5 text-left font-medium tabular-nums">{row.toothNumber}</td>
+                  <td className="border-b px-3 py-2 text-left font-medium tabular-nums">{row.toothNumber}</td>
                   {row.maxPd.map((v, i) => (
                     <td
                       key={i}
                       data-worse={row.worse[i] ? 'true' : undefined}
-                      className={`border-b px-2 py-1.5 text-right tabular-nums ${
+                      className={`border-b px-3 py-2 text-right tabular-nums ${
                         row.worse[i] ? 'font-semibold text-destructive' : ''
                       }`}
                     >
@@ -160,7 +161,22 @@ export function PerioComparison({ patientId, enabled = true }: { patientId: stri
   const { charts, isLoading, isError } = usePerioHistory({ patientId, enabled });
 
   if (isLoading) {
-    return <p className="py-12 text-center text-sm text-muted-foreground">Loading perio history…</p>;
+    // Mirror the two-section comparison footprint (section heading + a few metric
+    // rows each) so the trend tables don't pop in and shift the layout.
+    return (
+      <div data-testid="perio-comparison-loading" className="flex flex-col gap-6">
+        {[0, 1].map((section) => (
+          <section key={section}>
+            <Skeleton className="mb-2 h-3 w-48" />
+            <div className="flex flex-col gap-1.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-full" />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
   }
   if (isError) {
     return (

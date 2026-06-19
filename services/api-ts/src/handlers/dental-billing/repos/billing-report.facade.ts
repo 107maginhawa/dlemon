@@ -59,6 +59,39 @@ export async function getOutstandingInvoicesForAging(
 }
 
 /**
+ * Phase 3.1: non-voided invoice financials for the KPI dashboard (no patient
+ * join — KPIs are aggregate). EM-BIL-002: `allowedBranchIds` scopes to the
+ * caller's branches when no `branchId` is supplied (empty array → zero rows).
+ */
+export async function getInvoicesForKpis(
+  db: DatabaseInstance,
+  branchId?: string,
+  allowedBranchIds?: string[],
+) {
+  const conditions: SQL<unknown>[] = [ne(dentalInvoices.status, 'voided')];
+  if (branchId) {
+    conditions.push(eq(dentalInvoices.branchId, branchId));
+  } else if (allowedBranchIds) {
+    conditions.push(
+      allowedBranchIds.length > 0 ? inArray(dentalInvoices.branchId, allowedBranchIds) : sql`false`,
+    );
+  }
+
+  return db
+    .select({
+      totalCents: dentalInvoices.totalCents,
+      paidCents: dentalInvoices.paidCents,
+      balanceCents: dentalInvoices.balanceCents,
+      status: dentalInvoices.status,
+      dueDate: dentalInvoices.dueDate,
+      issuedAt: dentalInvoices.issuedAt,
+      createdAt: dentalInvoices.createdAt,
+    })
+    .from(dentalInvoices)
+    .where(and(...conditions));
+}
+
+/**
  * Invoice rows + patient name for a statement batch (optional branch / patient filters).
  *
  * EM-BIL-002: `allowedBranchIds` scopes the result to the caller's own

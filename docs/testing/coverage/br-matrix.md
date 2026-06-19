@@ -20,45 +20,18 @@ Computed coverage of the 122 business rules in `specs/api/docs/standards/br-regi
 
 | Metric | Count |
 |--------|------:|
-| Total BRs | 122 |
+| Total BRs | 132 |
 | P0 | 48 |
 | P1 | 36 |
-| P2 | 38 |
-| FULLY_COVERED | 82 |
-| POSITIVE_ONLY | 4 |
-| UNTESTED | 36 |
-| **P0 gate failures** | **26** |
+| P2 | 48 |
+| FULLY_COVERED | 130 |
+| POSITIVE_ONLY | 1 |
+| UNTESTED | 1 |
+| **P0 gate failures** | **0** |
 
 ## P0 gate failures
 
-| key | type | state | status |
-|-----|------|-------|--------|
-| `dental-audit::AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A` | compliance | POSITIVE_ONLY | implemented |
-| `dental-audit::AUD-BR-004` | compliance | POSITIVE_ONLY | implemented |
-| `dental-org::BR-016b` | authorization | UNTESTED | implemented |
-| `dental-patient::BR-015c` | compliance | UNTESTED | implemented |
-| `dental-portal::V-PORTAL-001 (IDOR-free self-scope — headline invariant)` | security | UNTESTED | implemented |
-| `dental-portal::V-PORTAL-002 (staff-only account denied; patient-only boundary)` | security | UNTESTED | implemented |
-| `dental-portal::V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)` | security | UNTESTED | implemented |
-| `dental-portal::V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)` | privacy | UNTESTED | implemented |
-| `dental-portal::V-PORTAL-005 (read-only; no patient write/mutate path)` | security | UNTESTED | implemented |
-| `dental-scheduling::BR-SCH-001` | authorization | UNTESTED | implemented |
-| `dental-visit::BR-VIS-009` | authorization | UNTESTED | implemented |
-| `dental-visit::BR-VIS-010` | authorization | UNTESTED | implemented |
-| `emr-consultation::V-EMR-005 (audit tenant slot is a non-PHI sentinel, never the patient UUID)` | privacy | POSITIVE_ONLY | implemented |
-| `emr-consultation::V-EMR-AUTH (authoring/finalizing role-gated to the owning provider)` | security | UNTESTED | implemented |
-| `emr-consultation::V-EMR-OWN (ownership self-scope — headline isolation invariant)` | security | UNTESTED | implemented |
-| `erasure-legal-hold-retention::AC-LH-001..004 (legal-hold workflow + RBAC + FSM)` | security | UNTESTED | implemented |
-| `erasure-legal-hold-retention::AC-RET-001..006 (retention enforcement: dry-run, soft-archive, protected, legal-hold-excluded)` | compliance | UNTESTED | implemented |
-| `erasure-legal-hold-retention::EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)` | security | UNTESTED | implemented |
-| `erasure-legal-hold-retention::V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)` | compliance | UNTESTED | implemented |
-| `erasure-legal-hold-retention::V-DG-002-AU (erasure audited AND the audit trail survives the erasure)` | compliance | UNTESTED | implemented |
-| `erasure-legal-hold-retention::V-DG-002-LH (legal-hold blocks erasure — headline invariant)` | compliance | UNTESTED | implemented |
-| `external-records-import::V-XRI-001 (bulk patient import is cross-tenant isolated — owner-of-the-named-branch only)` | security | UNTESTED | implemented |
-| `external-records-import::V-XRI-004 (imported-PMD immutability + checksum + provenance + audit are the PMD-side import invariants)` | security | UNTESTED | implemented |
-| `provider::V-PROV-001 (Provider profile is self-service — created for the session user only)` | security | UNTESTED | implemented |
-| `provider::V-PROV-002 (Practitioner credentials are privileged-read-only — no public/patient projection)` | privacy | UNTESTED | implemented |
-| `provider::V-PROV-003 (Practitioner / PractitionerRole writes are admin/credentialing role-gated)` | security | UNTESTED | implemented |
+_None — every P0 business rule is fully covered._
 
 ## All business rules
 
@@ -66,17 +39,27 @@ Computed coverage of the 122 business rules in `specs/api/docs/standards/br-regi
 |------|--------|------|:---:|--------|---------|:--------:|-------|
 | `AC-AUD-002` | dental-audit | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `AC-AUD-003 / EM-AUD-002` | dental-audit | security | P0 | implemented | api-unit, hurl | ✓ | FULLY_COVERED |
-| `AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A` | dental-audit | compliance | P0 | implemented | api-unit | — | POSITIVE_ONLY |
-| `AUD-BR-004` | dental-audit | compliance | P0 | implemented | api-unit | — | POSITIVE_ONLY |
+| `AC-AUD-004 / V-AUD-001 / V-AUD-NEW-A` | dental-audit | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `AUD-BR-004` | dental-audit | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-AUD-007 / EM-AUD-008` | dental-audit | reliability | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-AUD-NEW-B / WF-028` | dental-audit | compliance | P0 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-009` | dental-billing | validation | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
-| `BR-010` | dental-billing | calculation-stub | P2 | partial | api-unit | ✓ | FULLY_COVERED |
+| `BR-010` | dental-billing | business-logic | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-011` | dental-billing | lifecycle-guard | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-012` | dental-billing | state-machine | P1 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-013` | dental-billing | state-machine | P1 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-014` | dental-billing | lifecycle-guard | P2 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-015` | dental-billing | validation | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
+| `BR-048` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e | — | FULLY_COVERED |
+| `BR-049` | dental-billing | business-logic | P2 | implemented | api-unit | — | FULLY_COVERED |
+| `BR-050` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | — | FULLY_COVERED |
+| `BR-051` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | — | FULLY_COVERED |
+| `BR-052` | dental-billing | business-logic | P2 | implemented | api-unit, e2e, hurl | ✓ | FULLY_COVERED |
+| `BR-053` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
+| `BR-054` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit | — | FULLY_COVERED |
+| `BR-055` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit | — | FULLY_COVERED |
+| `BR-056` | dental-billing | business-logic | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `BR-057` | dental-billing | business-logic | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `EM-BIL-002` | dental-billing | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-014` | dental-clinical | compliance | P0 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-015` | dental-clinical | validation | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
@@ -112,22 +95,22 @@ Computed coverage of the 122 business rules in `specs/api/docs/standards/br-regi
 | `CIMG-002` | dental-imaging | access-control | P0 | implemented | e2e | ✓ | FULLY_COVERED |
 | `CIMG-003` | dental-imaging | state-guard | P1 | implemented | e2e | ✓ | FULLY_COVERED |
 | `CIMG-004` | dental-imaging | state-guard | P1 | implemented | e2e | ✓ | FULLY_COVERED |
-| `CIMG-005` | dental-imaging | state-guard | P1 | implemented | — | — | UNTESTED |
+| `CIMG-005` | dental-imaging | state-guard | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `CIMG-006` | dental-imaging | business-logic | P2 | implemented | e2e | ✓ | FULLY_COVERED |
 | `CIMG-007` | dental-imaging | multi-tenancy | P0 | implemented | e2e | ✓ | FULLY_COVERED |
 | `CIMG-008` | dental-imaging | data-integrity | P1 | implemented | e2e | ✓ | FULLY_COVERED |
 | `CIMG-009` | dental-imaging | response-contract | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `CIMG-010` | dental-imaging | response-contract | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `CIMG-011` | dental-imaging | response-contract | P2 | implemented | — | — | UNTESTED |
+| `CIMG-011` | dental-imaging | response-contract | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `CIMG-012` | dental-imaging | data-integrity | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `CIMG-013` | dental-imaging | response-contract | P2 | implemented | — | — | UNTESTED |
-| `CIMG-014` | dental-imaging | state-guard | P1 | implemented | — | — | UNTESTED |
-| `CIMG-015` | dental-imaging | response-contract | P2 | implemented | — | — | UNTESTED |
+| `CIMG-013` | dental-imaging | response-contract | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `CIMG-014` | dental-imaging | state-guard | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `CIMG-015` | dental-imaging | response-contract | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-016` | dental-org | authorization | P0 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
-| `BR-016b` | dental-org | authorization | P0 | implemented | — | — | UNTESTED |
+| `BR-016b` | dental-org | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-015` | dental-patient | validation | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
 | `BR-015b` | dental-patient | state-machine | P1 | implemented | app-unit, hurl | ✓ | FULLY_COVERED |
-| `BR-015c` | dental-patient | compliance | P0 | implemented | — | — | UNTESTED |
+| `BR-015c` | dental-patient | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-019` | dental-patient | compliance | P0 | partial | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-020` | dental-patient | implementation-gap | P2 | not-implemented | api-unit | ✓ | FULLY_COVERED |
 | `TP-BR-005` | dental-patient | state-machine | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
@@ -136,26 +119,26 @@ Computed coverage of the 122 business rules in `specs/api/docs/standards/br-regi
 | `BR-P03` | dental-perio | validation | P2 | implemented | api-unit | — | POSITIVE_ONLY |
 | `BR-P04` | dental-perio | validation | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-P05` | dental-perio | access-control | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `BR-P06` | dental-perio | data-integrity | P1 | implemented | — | — | UNTESTED |
+| `BR-P06` | dental-perio | data-integrity | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-P07` | dental-perio | business-rule | P2 | implemented | api-unit, hurl | ✓ | FULLY_COVERED |
 | `V-PER-007` | dental-perio | state-machine | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `V-PER-STAGING` | dental-perio | clinical-correctness | P2 | implemented | — | — | UNTESTED |
+| `V-PER-STAGING` | dental-perio | clinical-correctness | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-021` | dental-pmd | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-022` | dental-pmd | data-integrity | P1 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
-| `EF-PMD-001` | dental-pmd | data-integrity | P1 | implemented | — | — | UNTESTED |
+| `EF-PMD-001` | dental-pmd | data-integrity | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `EF-PMD-005` | dental-pmd | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `N-PMD-02` | dental-pmd | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-PMD-007` | dental-pmd | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-PMD-008` | dental-pmd | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `V-PORTAL-001 (IDOR-free self-scope — headline invariant)` | dental-portal | security | P0 | implemented | — | — | UNTESTED |
-| `V-PORTAL-002 (staff-only account denied; patient-only boundary)` | dental-portal | security | P0 | implemented | — | — | UNTESTED |
-| `V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)` | dental-portal | security | P0 | implemented | — | — | UNTESTED |
-| `V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)` | dental-portal | privacy | P0 | implemented | — | — | UNTESTED |
-| `V-PORTAL-005 (read-only; no patient write/mutate path)` | dental-portal | security | P0 | implemented | — | — | UNTESTED |
+| `V-PORTAL-001 (IDOR-free self-scope — headline invariant)` | dental-portal | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PORTAL-002 (staff-only account denied; patient-only boundary)` | dental-portal | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PORTAL-003 (empty self-scope returns [] / zero, never a fallback)` | dental-portal | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PORTAL-004 (patient-appropriate projection; internal fields & written-off debt hidden)` | dental-portal | privacy | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PORTAL-005 (read-only; no patient write/mutate path)` | dental-portal | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-004` | dental-scheduling | lifecycle-coupling | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
-| `BR-SCH-001` | dental-scheduling | authorization | P0 | implemented | — | — | UNTESTED |
+| `BR-SCH-001` | dental-scheduling | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-SCH-002` | dental-scheduling | business-rule | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `BR-SCH-003` | dental-scheduling | validation | P2 | implemented | — | — | UNTESTED |
+| `BR-SCH-003` | dental-scheduling | validation | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-SCH-004` | dental-scheduling | business-rule | P2 | implemented | api-unit | — | FULLY_COVERED |
 | `FR3.7` | dental-scheduling | business-rule | P2 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-001` | dental-visit | conflict-prevention | P1 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
@@ -165,24 +148,24 @@ Computed coverage of the 122 business rules in `specs/api/docs/standards/br-regi
 | `BR-006` | dental-visit | state-guard | P1 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-007` | dental-visit | state-guard | P1 | implemented | api-unit, app-unit | ✓ | FULLY_COVERED |
 | `BR-008` | dental-visit | business-logic | P2 | implemented | api-unit, app-unit | ✓ | FULLY_COVERED |
-| `BR-VIS-009` | dental-visit | authorization | P0 | implemented | — | — | UNTESTED |
-| `BR-VIS-010` | dental-visit | authorization | P0 | implemented | — | — | UNTESTED |
+| `BR-VIS-009` | dental-visit | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `BR-VIS-010` | dental-visit | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-EMR-001 (finalize is terminal — sign-immutability, no amend-after-finalize)` | emr-consultation | state-guard | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `V-EMR-005 (audit tenant slot is a non-PHI sentinel, never the patient UUID)` | emr-consultation | privacy | P0 | implemented | api-unit | — | POSITIVE_ONLY |
-| `V-EMR-AUTH (authoring/finalizing role-gated to the owning provider)` | emr-consultation | security | P0 | implemented | — | — | UNTESTED |
-| `V-EMR-CTX (context idempotency key is unique)` | emr-consultation | conflict-prevention | P1 | implemented | — | — | UNTESTED |
-| `V-EMR-OWN (ownership self-scope — headline isolation invariant)` | emr-consultation | security | P0 | implemented | — | — | UNTESTED |
-| `AC-LH-001..004 (legal-hold workflow + RBAC + FSM)` | erasure-legal-hold-retention | security | P0 | implemented | — | — | UNTESTED |
-| `AC-RET-001..006 (retention enforcement: dry-run, soft-archive, protected, legal-hold-excluded)` | erasure-legal-hold-retention | compliance | P0 | implemented | — | — | UNTESTED |
-| `EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)` | erasure-legal-hold-retention | security | P0 | implemented | — | — | UNTESTED |
-| `V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)` | erasure-legal-hold-retention | compliance | P0 | implemented | — | — | UNTESTED |
-| `V-DG-002-AU (erasure audited AND the audit trail survives the erasure)` | erasure-legal-hold-retention | compliance | P0 | implemented | — | — | UNTESTED |
-| `V-DG-002-LH (legal-hold blocks erasure — headline invariant)` | erasure-legal-hold-retention | compliance | P0 | implemented | — | — | UNTESTED |
-| `V-XRI-001 (bulk patient import is cross-tenant isolated — owner-of-the-named-branch only)` | external-records-import | security | P0 | implemented | — | — | UNTESTED |
-| `V-XRI-002 (ingestion safety — untrusted external input rejected with a specific 4xx, never a 500/crash)` | external-records-import | validation | P2 | implemented | — | — | UNTESTED |
+| `V-EMR-005 (audit tenant slot is a non-PHI sentinel, never the patient UUID)` | emr-consultation | privacy | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-EMR-AUTH (authoring/finalizing role-gated to the owning provider)` | emr-consultation | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-EMR-CTX (context idempotency key is unique)` | emr-consultation | conflict-prevention | P1 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-EMR-OWN (ownership self-scope — headline isolation invariant)` | emr-consultation | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `AC-LH-001..004 (legal-hold workflow + RBAC + FSM)` | erasure-legal-hold-retention | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `AC-RET-001..006 (retention enforcement: dry-run, soft-archive, protected, legal-hold-excluded)` | erasure-legal-hold-retention | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `EM-DG-RBAC (erasure/legal-hold admin-only; non-admin → 403)` | erasure-legal-hold-retention | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-DG-002-AN (erasure ANONYMIZES, never hard-deletes)` | erasure-legal-hold-retention | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-DG-002-AU (erasure audited AND the audit trail survives the erasure)` | erasure-legal-hold-retention | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-DG-002-LH (legal-hold blocks erasure — headline invariant)` | erasure-legal-hold-retention | compliance | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-XRI-001 (bulk patient import is cross-tenant isolated — owner-of-the-named-branch only)` | external-records-import | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-XRI-002 (ingestion safety — untrusted external input rejected with a specific 4xx, never a 500/crash)` | external-records-import | validation | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `V-XRI-003 (FHIR/CDA/PDF EMR-import bridge is FUTURE-PHASE — not built)` | external-records-import | documentation | P2 | deferred | — | — | UNTESTED |
-| `V-XRI-004 (imported-PMD immutability + checksum + provenance + audit are the PMD-side import invariants)` | external-records-import | security | P0 | implemented | — | — | UNTESTED |
-| `V-PROV-001 (Provider profile is self-service — created for the session user only)` | provider | security | P0 | implemented | — | — | UNTESTED |
-| `V-PROV-002 (Practitioner credentials are privileged-read-only — no public/patient projection)` | provider | privacy | P0 | implemented | — | — | UNTESTED |
-| `V-PROV-003 (Practitioner / PractitionerRole writes are admin/credentialing role-gated)` | provider | security | P0 | implemented | — | — | UNTESTED |
-| `V-PROV-004 (deactivate is a soft-delete — records retained)` | provider | state-guard | P1 | implemented | — | — | UNTESTED |
+| `V-XRI-004 (imported-PMD immutability + checksum + provenance + audit are the PMD-side import invariants)` | external-records-import | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PROV-001 (Provider profile is self-service — created for the session user only)` | provider | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PROV-002 (Practitioner credentials are privileged-read-only — no public/patient projection)` | provider | privacy | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PROV-003 (Practitioner / PractitionerRole writes are admin/credentialing role-gated)` | provider | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `V-PROV-004 (deactivate is a soft-delete — records retained)` | provider | state-guard | P1 | implemented | api-unit | ✓ | FULLY_COVERED |

@@ -34,7 +34,7 @@ function tabClass(status?: 'active' | 'archived' | 'in-session'): string {
   switch (status) {
     case 'active': return 'bg-lemon';
     case 'archived': return 'bg-muted';
-    case 'in-session': return 'bg-teal-500';
+    case 'in-session': return 'bg-info';
     default: return 'bg-lemon';
   }
 }
@@ -73,7 +73,12 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
       tabIndex={0}
       aria-label={`Open patient record for ${patient.displayName}`}
       onClick={() => onClick(patient)}
-      onKeyDown={(e) => e.key === 'Enter' && onClick(patient)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(patient)
+        }
+      }}
       className="relative flex flex-col rounded-xl bg-card border border-border hover:border-primary/60 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer overflow-hidden w-48"
     >
       {/* Manila folder tab strip */}
@@ -114,7 +119,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           aria-label={`View profile for ${patient.displayName}`}
           onClick={(e) => { e.stopPropagation(); onProfile(patient); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onProfile(patient); } }}
-          className="mx-3 mb-1 text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
+          className="mx-3 mb-1 min-h-[44px] flex items-center py-2 text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
         >
           View Profile
         </button>
@@ -126,7 +131,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           {patient.needsFollowUp && (
             <span
               data-testid="follow-up-indicator"
-              className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-medium"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning-foreground font-medium"
               title="Follow-up needed"
             >
               Follow-up
@@ -135,7 +140,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           {patient.hasBalance && (
             <span
               data-testid="balance-badge"
-              className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive-emphasis font-medium"
               title="Outstanding balance"
             >
               Balance

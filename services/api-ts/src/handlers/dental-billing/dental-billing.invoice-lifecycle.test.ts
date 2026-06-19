@@ -115,8 +115,8 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
     const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     await seedInvoice({ status: 'issued', dueDate: pastDate });
 
-    const count = await invoiceRepo.markOverdueInvoices();
-    expect(count).toBeGreaterThanOrEqual(1);
+    const flipped = await invoiceRepo.markOverdueInvoices();
+    expect(flipped.length).toBeGreaterThanOrEqual(1);
 
     const invoices = await invoiceRepo.findMany({ patientId: PATIENT_ID });
     const overdue = invoices.find(i => i.status === 'overdue');
@@ -128,8 +128,8 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
     const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // wall-clock offset required for DB overdue/date-range comparison
     await seedInvoice({ status: 'partial', paidCents: 3000, balanceCents: 7000, dueDate: pastDate });
 
-    const count = await invoiceRepo.markOverdueInvoices();
-    expect(count).toBeGreaterThanOrEqual(1);
+    const flipped = await invoiceRepo.markOverdueInvoices();
+    expect(flipped.length).toBeGreaterThanOrEqual(1);
   });
 
   test('does NOT transition paid invoices', async () => {
@@ -176,11 +176,11 @@ describe('FR4.1b: markOverdueInvoices — overdue auto-transition', () => {
     const paid = await seedInvoice({ status: 'paid', paidCents: 10000, balanceCents: 0, dueDate: pastDate });
     const voided = await seedInvoice({ status: 'voided', balanceCents: 10000, dueDate: pastDate });
 
-    const firstCount = await invoiceRepo.markOverdueInvoices();
-    expect(firstCount).toBeGreaterThanOrEqual(1);
+    const firstFlipped = await invoiceRepo.markOverdueInvoices();
+    expect(firstFlipped.length).toBeGreaterThanOrEqual(1);
 
-    const secondCount = await invoiceRepo.markOverdueInvoices();
-    expect(secondCount).toBe(0); // no further transitions
+    const secondFlipped = await invoiceRepo.markOverdueInvoices();
+    expect(secondFlipped.length).toBe(0); // no further transitions
 
     expect((await invoiceRepo.findOneById(paid.id))!.status).toBe('paid');
     expect((await invoiceRepo.findOneById(voided.id))!.status).toBe('voided');

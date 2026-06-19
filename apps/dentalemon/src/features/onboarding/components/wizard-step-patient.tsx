@@ -29,7 +29,7 @@ export function PatientStep({
           onChange={e => onPatientNameChange(e.target.value)}
           placeholder="Juan dela Cruz"
           aria-label="Full Name"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
       </div>
       <div>
@@ -41,7 +41,7 @@ export function PatientStep({
           value={birthDate}
           onChange={e => onBirthDateChange(e.target.value)}
           aria-label="Date of Birth"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
       </div>
       <div>
@@ -51,7 +51,7 @@ export function PatientStep({
         <Select value={gender} onValueChange={onGenderChange}>
           <SelectTrigger
             aria-label="Gender"
-            className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+            className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
           >
             <SelectValue />
           </SelectTrigger>
@@ -71,7 +71,7 @@ export function PatientStep({
           value={patientPhone}
           onChange={e => onPatientPhoneChange(e.target.value)}
           aria-label="Patient Phone"
-          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
       </div>
     </>

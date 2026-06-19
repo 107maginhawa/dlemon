@@ -115,7 +115,7 @@ export function NotificationSettings() {
         </div>
       )}
       {isSuccess && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+        <div className="rounded-lg bg-success/10 border border-success/30 px-3 py-2 text-sm text-success-foreground">
           Notification settings saved
         </div>
       )}
@@ -132,6 +132,8 @@ export function NotificationSettings() {
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={prefs[item.key]}
                 onClick={() => handleToggle(item.key)}
                 className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs[item.key] ? 'bg-lemon' : 'bg-secondary'}`}
                 aria-label={`Toggle ${item.label}`}
@@ -157,6 +159,8 @@ export function NotificationSettings() {
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={prefs[item.key]}
                 onClick={() => handleToggle(item.key)}
                 className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs[item.key] ? 'bg-lemon' : 'bg-secondary'}`}
                 aria-label={`Toggle ${item.label}`}

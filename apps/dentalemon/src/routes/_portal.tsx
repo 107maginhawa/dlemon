@@ -66,7 +66,7 @@ function PortalLayout() {
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-10 border-t bg-background"
+        className="fixed inset-x-0 bottom-0 z-10 border-t bg-background pb-[env(safe-area-inset-bottom)]"
         aria-label="Patient portal sections"
       >
         <div className="mx-auto flex max-w-md items-stretch">
@@ -76,7 +76,7 @@ function PortalLayout() {
               <Link
                 key={to}
                 to={to}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors ${
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
                   active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
                 aria-current={active ? 'page' : undefined}

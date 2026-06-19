@@ -29,10 +29,18 @@ export function PerioBopDot({ tooth, site, active, readOnly = false, onToggle }:
       disabled={readOnly}
       onClick={onToggle}
       className={cn(
-        'mx-auto flex h-3 w-3 items-center justify-center rounded-full border transition-colors',
-        active ? 'bg-destructive border-destructive' : 'bg-transparent border-muted-foreground/40',
-        readOnly ? 'cursor-default' : 'cursor-pointer hover:border-destructive/70',
+        'group mx-auto flex min-h-[24px] min-w-[24px] items-center justify-center',
+        readOnly ? 'cursor-default' : 'cursor-pointer',
       )}
-    />
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          'flex h-3 w-3 items-center justify-center rounded-full border transition-colors',
+          active ? 'bg-destructive border-destructive' : 'bg-transparent border-muted-foreground/40',
+          readOnly ? '' : 'group-hover:border-destructive/70',
+        )}
+      />
+    </button>
   );
 }

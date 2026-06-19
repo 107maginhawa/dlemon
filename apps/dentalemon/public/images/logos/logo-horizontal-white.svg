@@ -1,8 +1,12 @@
-<svg width="200" height="48" viewBox="0 0 200 48" xmlns="http://www.w3.org/2000/svg">
-  <!-- Modern hexagon icon in light blue for dark theme -->
-  <path d="M18 8L28 14V26L18 32L8 26V14L18 8Z" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"/>
-  <text x="18" y="27" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" text-anchor="middle">M</text>
-
-  <!-- MONOBASE text in white -->
-  <text x="42" y="30" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff" letter-spacing="0.5">MONOBASE</text>
+<svg width="210" height="48" viewBox="0 0 210 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dentalemon">
+  <!-- Lemon mark (gold reads on dark surfaces) -->
+  <g>
+    <ellipse cx="20" cy="27" rx="13" ry="11" fill="#FFE97D" stroke="#E0C84B" stroke-width="1.5"/>
+    <ellipse cx="15" cy="22" rx="4.5" ry="3" fill="#FFF4C2" opacity="0.85"/>
+    <!-- leaf -->
+    <path d="M27 14 C32 8 39 8 41 11 C38 17 30 18 27 14 Z" fill="#8BC34A"/>
+    <path d="M28 14 C31 13 34 12 39 11" stroke="#6BA336" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- Wordmark in white for dark backgrounds -->
+  <text x="46" y="33" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="-0.4" fill="#FFFFFF">Dentalemon</text>
 </svg>

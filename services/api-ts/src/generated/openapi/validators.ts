@@ -64,6 +64,13 @@ export const AcceptTreatmentPlanRequestSchema = z.object({
   consentFormId: UUIDSchema.optional()
 });
 
+export const AddPatientCreditRequestSchema = z.object({
+  amountCents: z.number().int().gte(1),
+  source: z.string(),
+  branchId: UUIDSchema.optional(),
+  note: z.string().optional()
+});
+
 export const AddressSchema = z.object({
   street1: z.string().min(1).max(100),
   street2: z.string().max(100).optional(),
@@ -92,6 +99,11 @@ export const AddressPatchInputSchema = z.object({
 }), z.null()]).optional()
 });
 
+export const AgingBucketPointSchema = z.object({
+  bucket: z.string(),
+  amountCents: z.number().int()
+});
+
 export const AmendmentSchema = z.object({
   id: UUIDSchema,
   createdAt: z.string().datetime().transform((str) => new Date(str)),
@@ -104,6 +116,18 @@ export const AmendmentSchema = z.object({
   originalRecordId: UUIDSchema,
   reason: z.string(),
   content: z.string()
+});
+
+export const ApplyCreditRequestSchema = z.object({
+  amountCents: z.number().int().gte(1)
+});
+
+export const ApplyCreditResponseSchema = z.object({
+  invoiceId: UUIDSchema,
+  appliedCents: z.number().int(),
+  invoiceBalanceCents: z.number().int(),
+  invoiceStatus: z.string(),
+  remainingCreditCents: z.number().int()
 });
 
 export const ApplyDentalDiscountRequestSchema = z.object({
@@ -691,10 +715,52 @@ export const CheckInResponseSchema = z.object({
 
 export const ClaimLineStatusSchema = z.enum(["pending", "covered", "partial", "disallowed"]);
 
+export const CollectionContactChannelSchema = z.enum(["phone", "email", "sms", "in-person", "other"]);
+
+export const CollectionNoteSchema = z.object({
+  id: UUIDSchema,
+  patientId: UUIDSchema,
+  invoiceId: UUIDSchema.optional(),
+  branchId: UUIDSchema,
+  note: z.string(),
+  contactChannel: z.string(),
+  contactedAt: z.string().datetime().transform((str) => new Date(str)),
+  createdByMemberId: UUIDSchema.optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const CollectionsKpiResponseSchema = z.object({
+  asOf: z.string().datetime().transform((str) => new Date(str)),
+  outstandingArCents: z.number().int(),
+  writeOffCents: z.number().int(),
+  billedTotalCents: z.number().int(),
+  collectedTotalCents: z.number().int(),
+  collectionRate: z.number(),
+  dsoDays: z.number().int(),
+  agingSeries: z.array(AgingBucketPointSchema)
+});
+
 export const CollectionsSummaryResponseSchema = z.object({
   totalCollectedCents: z.number().int(),
   period: z.string(),
   invoiceCount: z.number().int()
+});
+
+export const CollectionsWorklistRowSchema = z.object({
+  patientId: UUIDSchema,
+  patientName: z.string(),
+  totalOverdueCents: z.number().int(),
+  oldestDaysOverdue: z.number().int(),
+  openInvoiceCount: z.number().int(),
+  hasActivePlan: z.boolean(),
+  lastContactedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  lastContactChannel: z.string().optional(),
+  noteCount: z.number().int()
+});
+
+export const CollectionsWorklistResponseSchema = z.object({
+  asOf: z.string().datetime().transform((str) => new Date(str)),
+  rows: z.array(CollectionsWorklistRowSchema)
 });
 
 export const CompletePerioChartRequestSchema = z.object({
@@ -896,6 +962,15 @@ export const CreateChatRoomRequestSchema = z.object({
   upsert: z.boolean().optional()
 });
 
+export const CreateCollectionNoteRequestSchema = z.object({
+  patientId: UUIDSchema,
+  invoiceId: z.string().uuid().optional(),
+  branchId: z.string().uuid().optional(),
+  note: z.string().min(1),
+  contactChannel: CollectionContactChannelSchema,
+  contactedAt: z.string().datetime().transform((str) => new Date(str)).optional()
+});
+
 export const CreateConsentFormRequestSchema = z.object({
   visitId: UUIDSchema,
   patientId: UUIDSchema,
@@ -972,6 +1047,7 @@ export const CreateDentalInvoiceRequestSchema = z.object({
   dentistMemberId: UUIDSchema,
   taxRate: z.number().optional(),
   dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
+  paymentTermsDays: z.number().int().optional(),
   localId: z.string().optional()
 });
 
@@ -2082,6 +2158,7 @@ export const DentalInvoiceSchema = z.object({
   totalCents: z.number().int(),
   paidCents: z.number().int(),
   balanceCents: z.number().int(),
+  paymentTermsDays: z.number().int().optional(),
   dueDate: z.string().datetime().transform((str) => new Date(str)).optional(),
   issuedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   paidAt: z.string().datetime().transform((str) => new Date(str)).optional(),
@@ -3565,6 +3642,14 @@ export const DentalPaymentPlanSchema = z.object({
   installments: z.array(DentalPaymentPlanInstallmentSchema)
 });
 
+export const DentalPaymentReceiptClinicSchema = z.object({
+  registeredName: z.union([z.string(), z.null()]),
+  businessStyle: z.union([z.string(), z.null()]),
+  tin: z.union([z.string(), z.null()]),
+  address: z.union([z.string(), z.null()]),
+  isVatRegistered: z.boolean()
+});
+
 export const DentalPaymentReceiptInvoiceSchema = z.object({
   id: UUIDSchema,
   invoiceNumber: z.string(),
@@ -3587,6 +3672,14 @@ export const DentalPaymentReceiptPaymentSchema = z.object({
   notes: z.union([z.string(), z.null()])
 });
 
+export const DentalPaymentReceiptTaxSchema = z.object({
+  vatRate: z.number(),
+  vatableCents: z.number().int(),
+  vatExemptCents: z.number().int(),
+  zeroRatedCents: z.number().int(),
+  vatCents: z.number().int()
+});
+
 export const DentalPaymentReceiptResponseSchema = z.object({
   receiptNumber: z.string(),
   isVoid: z.boolean(),
@@ -3595,6 +3688,10 @@ export const DentalPaymentReceiptResponseSchema = z.object({
   payment: DentalPaymentReceiptPaymentSchema,
   invoice: DentalPaymentReceiptInvoiceSchema,
   patient: DentalPaymentReceiptPatientSchema,
+  orNumber: z.string(),
+  clinic: DentalPaymentReceiptClinicSchema,
+  tax: DentalPaymentReceiptTaxSchema,
+  taxStatement: z.string(),
   generatedAt: z.string().datetime().transform((str) => new Date(str))
 });
 
@@ -18472,8 +18569,13 @@ export const PatientSchema = z.object({
 
 export const PatientBalanceResponseSchema = z.object({
   patientId: UUIDSchema,
-  balanceCents: z.number().int(),
-  overdueInvoices: z.number().int()
+  totalBilledCents: z.number().int(),
+  totalPaidCents: z.number().int(),
+  outstandingBalanceCents: z.number().int(),
+  overdueAmountCents: z.number().int(),
+  invoiceCount: z.number().int(),
+  overdueInvoiceCount: z.number().int(),
+  activePaymentPlanCount: z.number().int()
 });
 
 export const PatientCareRecordBundleSchema = z.object({
@@ -18492,6 +18594,23 @@ export const PatientConditionEntrySchema = z.object({
   cdtCode: z.string().optional(),
   description: z.string().optional(),
   priceCents: z.number().int().optional()
+});
+
+export const PatientCreditSchema = z.object({
+  id: UUIDSchema,
+  patientId: UUIDSchema,
+  branchId: UUIDSchema,
+  amountCents: z.number().int(),
+  source: z.string(),
+  invoiceId: UUIDSchema.optional(),
+  note: z.string().optional(),
+  createdAt: z.string().datetime().transform((str) => new Date(str))
+});
+
+export const PatientCreditLedgerResponseSchema = z.object({
+  patientId: UUIDSchema,
+  balanceCents: z.number().int(),
+  credits: z.array(PatientCreditSchema)
 });
 
 export const PatientLinkTypeSchema = z.enum(["replaced-by", "replaces", "refer", "seealso"]);
@@ -19030,6 +19149,23 @@ export const RecurrencePatternSchema = z.object({
 
 export const RecurrenceTypeSchema = z.enum(["daily", "weekly", "monthly", "yearly"]);
 
+export const RefundPaymentRequestSchema = z.object({
+  amountCents: z.number().int().gte(1),
+  reason: z.string().min(3),
+  bookAsCredit: z.boolean().optional()
+});
+
+export const RefundPaymentResponseSchema = z.object({
+  refundId: UUIDSchema,
+  paymentId: UUIDSchema,
+  invoiceId: UUIDSchema,
+  amountCents: z.number().int(),
+  invoiceBalanceCents: z.number().int(),
+  invoiceStatus: z.string(),
+  bookedAsCredit: z.boolean(),
+  creditBalanceCents: z.number().int()
+});
+
 export const RefundRequestSchema = z.object({
   amount: z.number().int().gte(0).optional(),
   reason: z.string().max(500).optional(),
@@ -19104,6 +19240,17 @@ export const ScheduleExceptionCreateRequestSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(val => { const parsed = new Date(val + "T00:00:00Z"); return !isNaN(parsed.getTime()) && parsed.toISOString().split("T")[0] === val; }, { message: "Invalid calendar date" }).optional(),
   maxOccurrences: z.number().int().gte(1).optional()
 }).optional()
+});
+
+export const SendPatientStatementRequestSchema = z.object({
+  branchId: z.string().uuid().optional()
+});
+
+export const SendPatientStatementResponseSchema = z.object({
+  patientId: UUIDSchema,
+  sent: z.boolean(),
+  outstandingBalanceCents: z.number().int(),
+  channels: z.array(z.string())
 });
 
 export const SendTextMessageRequestSchema = z.object({
@@ -20298,6 +20445,19 @@ export type GetArAgingQuery = z.infer<typeof GetArAgingQuery>;
 
 export const GetArAgingResponse = ArAgingResponseSchema;
 
+export const GetCollectionsKpisQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  asOf: z.string().datetime().transform((str) => new Date(str)).optional(),
+});
+export type GetCollectionsKpisQuery = z.infer<typeof GetCollectionsKpisQuery>;
+
+export const GetCollectionsKpisResponse = CollectionsKpiResponseSchema;
+
+export const CreateCollectionNoteBody = CreateCollectionNoteRequestSchema;
+export type CreateCollectionNoteBody = z.infer<typeof CreateCollectionNoteBody>;
+
+export const CreateCollectionNoteResponse = CollectionNoteSchema;
+
 export const GetCollectionsSummaryQuery = z.object({
   branchId: UUIDSchema.optional(),
   period: z.string().optional(),
@@ -20305,6 +20465,14 @@ export const GetCollectionsSummaryQuery = z.object({
 export type GetCollectionsSummaryQuery = z.infer<typeof GetCollectionsSummaryQuery>;
 
 export const GetCollectionsSummaryResponse = CollectionsSummaryResponseSchema;
+
+export const GetCollectionsWorklistQuery = z.object({
+  branchId: UUIDSchema.optional(),
+  asOf: z.string().datetime().transform((str) => new Date(str)).optional(),
+});
+export type GetCollectionsWorklistQuery = z.infer<typeof GetCollectionsWorklistQuery>;
+
+export const GetCollectionsWorklistResponse = CollectionsWorklistResponseSchema;
 
 export const EstimateClaimCoverageBody = CoverageEstimateRequestSchema;
 export type EstimateClaimCoverageBody = z.infer<typeof EstimateClaimCoverageBody>;
@@ -20343,6 +20511,16 @@ export const GetDentalInvoiceParams = z.object({
 export type GetDentalInvoiceParams = z.infer<typeof GetDentalInvoiceParams>;
 
 export const GetDentalInvoiceResponse = DentalInvoiceSchema;
+
+export const ApplyCreditToInvoiceParams = z.object({
+  invoiceId: UUIDSchema,
+});
+export type ApplyCreditToInvoiceParams = z.infer<typeof ApplyCreditToInvoiceParams>;
+
+export const ApplyCreditToInvoiceBody = ApplyCreditRequestSchema;
+export type ApplyCreditToInvoiceBody = z.infer<typeof ApplyCreditToInvoiceBody>;
+
+export const ApplyCreditToInvoiceResponse = ApplyCreditResponseSchema;
 
 export const ApplyDentalDiscountParams = z.object({
   invoiceId: UUIDSchema,
@@ -20449,6 +20627,43 @@ export const GetPatientBalanceParams = z.object({
 export type GetPatientBalanceParams = z.infer<typeof GetPatientBalanceParams>;
 
 export const GetPatientBalanceResponse = PatientBalanceResponseSchema;
+
+export const GetPatientCreditsParams = z.object({
+  patientId: UUIDSchema,
+});
+export type GetPatientCreditsParams = z.infer<typeof GetPatientCreditsParams>;
+
+export const GetPatientCreditsResponse = PatientCreditLedgerResponseSchema;
+
+export const AddPatientCreditParams = z.object({
+  patientId: UUIDSchema,
+});
+export type AddPatientCreditParams = z.infer<typeof AddPatientCreditParams>;
+
+export const AddPatientCreditBody = AddPatientCreditRequestSchema;
+export type AddPatientCreditBody = z.infer<typeof AddPatientCreditBody>;
+
+export const AddPatientCreditResponse = PatientCreditSchema;
+
+export const SendPatientStatementParams = z.object({
+  patientId: UUIDSchema,
+});
+export type SendPatientStatementParams = z.infer<typeof SendPatientStatementParams>;
+
+export const SendPatientStatementBody = SendPatientStatementRequestSchema;
+export type SendPatientStatementBody = z.infer<typeof SendPatientStatementBody>;
+
+export const SendPatientStatementResponse = SendPatientStatementResponseSchema;
+
+export const RefundDentalPaymentParams = z.object({
+  paymentId: UUIDSchema,
+});
+export type RefundDentalPaymentParams = z.infer<typeof RefundDentalPaymentParams>;
+
+export const RefundDentalPaymentBody = RefundPaymentRequestSchema;
+export type RefundDentalPaymentBody = z.infer<typeof RefundDentalPaymentBody>;
+
+export const RefundDentalPaymentResponse = RefundPaymentResponseSchema;
 
 export const GenerateStatementBatchBody = GenerateStatementBatchRequestSchema;
 export type GenerateStatementBatchBody = z.infer<typeof GenerateStatementBatchBody>;

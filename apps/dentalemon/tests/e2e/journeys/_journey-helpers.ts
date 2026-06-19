@@ -110,6 +110,55 @@ export interface JourneyMeta {
   rubricIds: string[]
 }
 
+/**
+ * P2-A — the no-silent-error-surface firewall (docs/testing/VERIFICATION_HARDENING.md).
+ *
+ * An author-blind, outcome-based oracle wired into EVERY journey via an auto-fixture.
+ * It collects four error-surface buckets while the journey runs and, in teardown,
+ * fails the test if any non-allowed surface fired during a success-path flow:
+ *
+ *   1. visible error toast  — `[data-sonner-toast][data-type="error"]`  (THE New-Visit
+ *      catcher: "Failed to create visit. Please try again.")
+ *   2. uncaught page error   — `page.on('pageerror')`
+ *   3. failed app response   — any `/dental/*` or `/auth/*` response with `status >= 400`
+ *   4. console error         — `console.error` / `m.type()==='error'`
+ *
+ * Default = ZERO tolerance, with two calibrated exceptions baked in so a HEALTHY app
+ * stays green (these are routine "nothing here yet" reads, NOT failures):
+ *   - HTTP status 404 and 204 are allowed by default (empty-state reads: a brand-new
+ *     visit's `…/chart` 404, `…/pmd` 204, empty note history, etc.). A real failure
+ *     surfaces as a toast and/or a non-404 4xx/5xx (400/401/403/405/409/422/5xx), which
+ *     stay violations.
+ *   - the browser's generic "Failed to load resource: the server responded with a
+ *     status of N" console line is dropped (it is a pure echo of bucket 3).
+ *
+ * Legitimately-negative journeys (J08 informed-refusal, B01 ceph tier-gate, the ceph
+ * locked-landmark specs, …) declare their specific expected error via the escape hatch
+ * returned to the test: `errorSurface.allowStatus(409)`, `errorSurface.allow(/already exists/i)`,
+ * `errorSurface.allowUrl(/\/ceph\//)`. Anything not explicitly allowed fails the journey.
+ *
+ * Set `ERRORSURFACE_REPORT=1` to COLLECT-AND-LOG without failing (used to calibrate the
+ * allow-lists); unset (the default) ENFORCES.
+ */
+export interface ErrorSurface {
+  /** Allow toast / console / pageerror text matching this pattern. */
+  allow(pattern: RegExp): void
+  /** Allow an app response with this HTTP status (optionally only on matching URLs). */
+  allowStatus(status: number, urlPattern?: RegExp): void
+  /** Allow ANY >=400 app response whose URL matches this pattern. */
+  allowUrl(pattern: RegExp): void
+}
+
+// Statuses that are routine empty-state reads in this app, not failures.
+const DEFAULT_ALLOWED_STATUSES = new Set([204, 404])
+// The chrome generic resource-load echo of a 4xx/5xx — redundant with bucket 3.
+const GENERIC_RESOURCE_LOAD_RE = /Failed to load resource: the server responded with a status of/i
+// Third-party / framework console noise that is benign in the test env and not the
+// app's own code. Calibrated empirically (ERRORSURFACE_REPORT=1) across all journeys:
+//   - OneSignal web SDK fails to init against the test AppID ("AppID doesn't match
+//     existing apps") on every page — a CDN script, not dentalemon code.
+const DEFAULT_BENIGN_CONSOLE: RegExp[] = [/\[onesignal\]/i, /OneSignalSDK/i]
+
 type Fixtures = {
   /**
    * Independent-read API client. Authenticated with its OWN seed-owner session.
@@ -117,6 +166,11 @@ type Fixtures = {
    * is an Anti-Cheating Rule 1/3 violation.
    */
   apiReader: APIRequestContext
+  /**
+   * P2-A error-surface firewall (auto). Present on every journey; see ErrorSurface.
+   * Reference it in a journey only to declare an expected (allowed) error.
+   */
+  errorSurface: ErrorSurface
 }
 
 export const test = base.extend<Fixtures>({
@@ -139,6 +193,115 @@ export const test = base.extend<Fixtures>({
     await use(withCoverageRecorder(ctx))
     await ctx.dispose()
   },
+
+  // Auto-fixture: runs for EVERY journey whether or not the spec references it.
+  errorSurface: [
+    async ({ page }, use, testInfo) => {
+      const toastErrors: string[] = []
+      const pageErrors: string[] = []
+      const consoleErrors: string[] = []
+      const httpErrors: Array<{ method: string; url: string; status: number }> = []
+
+      const allowedText: RegExp[] = []
+      const allowedUrls: RegExp[] = []
+      const allowedStatuses: Array<{ status: number; urlPattern?: RegExp }> = []
+
+      // Toasts: navigation-proof. exposeFunction binding survives navigations;
+      // addInitScript re-installs the MutationObserver on every document.
+      await page.exposeFunction('__recordErrorToast', (text: string) => {
+        toastErrors.push((text ?? '').trim())
+      })
+      await page.addInitScript(() => {
+        const SEL = '[data-sonner-toast][data-type="error"]'
+        const seen = new WeakSet<Element>()
+        const emit = (el: Element) => {
+          if (seen.has(el)) return
+          seen.add(el)
+          // @ts-expect-error injected binding
+          window.__recordErrorToast?.(el.textContent || '')
+        }
+        const scan = (root: ParentNode) => {
+          // @ts-expect-error DOM
+          if (root.matches?.(SEL)) emit(root as Element)
+          root.querySelectorAll?.(SEL).forEach(emit)
+        }
+        const obs = new MutationObserver((muts) => {
+          for (const m of muts)
+            for (const n of m.addedNodes) if (n.nodeType === 1) scan(n as Element)
+        })
+        const start = () => obs.observe(document.documentElement, { childList: true, subtree: true })
+        if (document.documentElement) start()
+        else document.addEventListener('DOMContentLoaded', start)
+      })
+
+      page.on('pageerror', (err) => pageErrors.push(err.message))
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') consoleErrors.push(msg.text())
+      })
+      page.on('response', (resp) => {
+        const url = resp.url()
+        const status = resp.status()
+        if (status >= 400 && (url.includes('/dental/') || url.includes('/auth/'))) {
+          httpErrors.push({ method: resp.request().method(), url, status })
+        }
+      })
+
+      const surface: ErrorSurface = {
+        allow: (pattern) => allowedText.push(pattern),
+        allowStatus: (status, urlPattern) => allowedStatuses.push({ status, urlPattern }),
+        allowUrl: (pattern) => allowedUrls.push(pattern),
+      }
+
+      await use(surface)
+
+      // ── Teardown: grade the surfaces (after the journey's own asserts) ──
+      const textAllowed = (t: string) => allowedText.some((re) => re.test(t))
+      const httpAllowed = (e: { url: string; status: number }) => {
+        if (DEFAULT_ALLOWED_STATUSES.has(e.status)) return true
+        if (allowedUrls.some((re) => re.test(e.url))) return true
+        return allowedStatuses.some(
+          (a) => a.status === e.status && (!a.urlPattern || a.urlPattern.test(e.url)),
+        )
+      }
+
+      const toastViolations = toastErrors.filter((t) => t && !textAllowed(t))
+      const pageErrViolations = pageErrors.filter((t) => !textAllowed(t))
+      const consoleViolations = consoleErrors
+        .filter((t) => !GENERIC_RESOURCE_LOAD_RE.test(t))
+        .filter((t) => !DEFAULT_BENIGN_CONSOLE.some((re) => re.test(t)))
+        .filter((t) => !textAllowed(t))
+      const httpViolations = httpErrors.filter((e) => !httpAllowed(e))
+
+      const lines: string[] = []
+      if (toastViolations.length) lines.push(`error toast(s): ${JSON.stringify(toastViolations)}`)
+      if (pageErrViolations.length) lines.push(`pageerror(s): ${JSON.stringify(pageErrViolations)}`)
+      if (consoleViolations.length)
+        lines.push(`console.error(s): ${JSON.stringify(consoleViolations)}`)
+      if (httpViolations.length)
+        lines.push(
+          `failed app response(s): ${JSON.stringify(
+            httpViolations.map((e) => `${e.method} ${e.status} ${e.url}`),
+          )}`,
+        )
+
+      if (process.env.ERRORSURFACE_REPORT) {
+        if (lines.length) {
+          // eslint-disable-next-line no-console
+          console.log(`[ERRORSURFACE ${testInfo.title}]\n  ${lines.join('\n  ')}`)
+        }
+        return
+      }
+
+      if (lines.length) {
+        throw new Error(
+          `Error-surface firewall (P2-A): unexpected error surface during a success-path ` +
+            `journey. If this is expected, declare it via errorSurface.allow*/allowStatus/allowUrl.\n` +
+            `  ${lines.join('\n  ')}`,
+        )
+      }
+    },
+    { auto: true },
+  ],
 })
 
 // ── Coverage recorder (env-gated, STRICT no-op unless COVERAGE_RECORD is set) ──

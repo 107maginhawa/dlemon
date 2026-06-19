@@ -6,9 +6,10 @@
  * imports only this file, never the underlying repos directly.
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, inArray, isNotNull, and } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalVisits } from './visit.schema';
+import { dentalProcedureCodes } from './procedure-code.schema';
 import { TreatmentRepository } from './treatment.repo';
 import type { DentalTreatment } from './treatment.schema';
 
@@ -31,6 +32,23 @@ export async function getVisitForBilling(
 
 export async function getTreatmentsForInvoice(db: DatabaseInstance, visitId: string): Promise<DentalTreatment[]> {
   return new TreatmentRepository(db).findByVisit(visitId);
+}
+
+/**
+ * BR-048: per-procedure payment terms (days) for a set of CDT codes. Returns
+ * only the non-null terms so the caller can take their MAX. Empty input or no
+ * configured terms yields an empty array (→ falls through to the clinic default).
+ */
+export async function getProcedureTermsForCdtCodes(
+  db: DatabaseInstance,
+  cdtCodes: string[],
+): Promise<number[]> {
+  if (cdtCodes.length === 0) return [];
+  const rows = await db
+    .select({ termsDays: dentalProcedureCodes.paymentTermsDays })
+    .from(dentalProcedureCodes)
+    .where(and(inArray(dentalProcedureCodes.cdtCode, cdtCodes), isNotNull(dentalProcedureCodes.paymentTermsDays)));
+  return rows.map((r) => r.termsDays).filter((d): d is number => d != null);
 }
 
 export async function markTreatmentsAsBilled(

@@ -110,7 +110,10 @@ export function CephReportView({ snapshot, version, imageUrl, revisionOf, revisi
   const uncalibrated = snapshot.uncalibrated ?? false
   const placedCodes = Object.keys(snapshot.landmarks)
   // Natural image dimensions (captured on load) so the SVG tracing overlay aligns.
-  const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null)
+  // Seeded with a sensible 3:4 default so the overlay renders immediately rather
+  // than flashing invisible for the 1–2s until the radiograph's onLoad fires; the
+  // real natural size replaces it on load.
+  const [imgDims, setImgDims] = useState<{ w: number; h: number }>({ w: 1024, h: 1280 })
 
   return (
     <div className="bg-white text-zinc-900 min-h-screen p-8 font-sans print:p-4">
@@ -179,7 +182,7 @@ export function CephReportView({ snapshot, version, imageUrl, revisionOf, revisi
             <img
               src={imageUrl}
               alt="Cephalometric radiograph with landmark tracing"
-              className="max-w-full max-h-[480px] border border-zinc-300"
+              className="max-w-full max-h-[480px] aspect-[3/4] border border-zinc-300"
               onLoad={(e) =>
                 setImgDims({
                   w: e.currentTarget.naturalWidth,

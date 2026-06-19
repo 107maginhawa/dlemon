@@ -41,21 +41,21 @@ export function AcceptedPlanViewer({ aggregate }: { aggregate: CasePresentationA
         <div
           data-testid="accepted-plan-record"
           className={`flex flex-col gap-1 rounded-xl border p-4 ${
-            accepted ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+            accepted ? 'border-success/30 bg-success/15' : 'border-destructive/30 bg-destructive/15'
           }`}
         >
           <div className="flex items-center gap-2">
             {accepted ? (
-              <CheckCircle2 className="h-5 w-5 text-green-700" />
+              <CheckCircle2 className="h-5 w-5 text-success-foreground" />
             ) : (
-              <X className="h-5 w-5 text-red-700" />
+              <X className="h-5 w-5 text-destructive-emphasis" />
             )}
-            <span className={`text-sm font-semibold ${accepted ? 'text-green-800' : 'text-red-800'}`}>
+            <span className={`text-sm font-semibold ${accepted ? 'text-success-foreground' : 'text-destructive-emphasis'}`}>
               {accepted ? 'Signed acceptance' : 'Plan declined'}
             </span>
           </div>
           {accepted ? (
-            <p className="text-sm text-green-900">
+            <p className="text-sm text-success-foreground">
               Accepted by{' '}
               <span data-testid="signer-name" className="font-medium">
                 {presentation.signerName ?? '—'}
@@ -67,7 +67,7 @@ export function AcceptedPlanViewer({ aggregate }: { aggregate: CasePresentationA
               .
             </p>
           ) : (
-            <p className="text-sm text-red-900">
+            <p className="text-sm text-destructive-emphasis">
               Declined on{' '}
               <span data-testid="decision-timestamp" className="font-medium">
                 {fmtDateTime(presentation.decisionAt)}

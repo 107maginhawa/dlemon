@@ -7,7 +7,7 @@ import { useSaveChart } from './use-save-chart';
 import { freshClientWithMutations as freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 
 const _toastError = mock(() => {});
-mock.module('sonner', () => ({ toast: { error: _toastError } }));
+mock.module('sonner', () => ({ toast: { error: _toastError, success: mock(() => {}) } }));
 
 afterEach(cleanup);
 

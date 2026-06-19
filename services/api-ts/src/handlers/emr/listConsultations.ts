@@ -1,3 +1,4 @@
+import { parseUserRoles } from '@/handlers/shared/parse-user-roles';
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
@@ -61,7 +62,7 @@ export async function listConsultations(ctx: HandlerContext) {
 
   // Apply role-based access control per TypeSpec
   // Providers see only their own consultations, patients see their own consultations, admins see all
-  const userRoles = user.role ? user.role.split(',').map(r => r.trim()) : [];
+  const userRoles = parseUserRoles(user);
   const isAdmin = userRoles.includes('admin');
   const isProvider = userRoles.includes('provider');
   const isPatient = userRoles.includes('patient');

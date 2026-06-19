@@ -28,7 +28,7 @@ function CasePresentationPage() {
           type="button"
           data-testid="case-presentation-back-btn"
           onClick={() => navigate({ to: '/$patientId', params: { patientId } })}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to workspace

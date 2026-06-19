@@ -1,3 +1,4 @@
+import { parseUserRoles } from '@/handlers/shared/parse-user-roles';
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
@@ -64,7 +65,7 @@ export async function listEMRPatients(ctx: HandlerContext) {
 
   // MODULE_SPEC §6 (List EMR patients): roles = provider (own), admin (all) (V-EMR-C-002).
   // Admins list patients across all providers; providers are scoped to their own.
-  const userRoles = user.role ? user.role.split(',').map((r) => r.trim()) : [];
+  const userRoles = parseUserRoles(user);
   const isAdmin = userRoles.includes('admin');
 
   // Resolve provider entity ID from person ID. Required for the non-admin provider

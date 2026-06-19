@@ -25,11 +25,6 @@ export class AttachmentRepository extends DatabaseRepository<DentalAttachment, N
     return and(...conditions);
   }
 
-  override async findMany(filters?: AttachmentFilters): Promise<DentalAttachment[]> {
-    const where = this.buildWhereConditions(filters);
-    return await this.db.select().from(dentalAttachments).where(where);
-  }
-
   override async findOneById(id: string): Promise<DentalAttachment | null> {
     const [row] = await this.db
       .select()

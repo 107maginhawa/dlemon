@@ -1,0 +1,222 @@
+/**
+ * markInvoiceUncollectible handler tests
+ *
+ * Covers:
+ *   1. Intent cancelled when stripePaymentIntentId + stripeAccountId present
+ *   2. No cancel call when invoice has no stripePaymentIntentId
+ *   3. logAuditEvent is called with action 'invoice.mark_uncollectible'
+ *   4. cancel failure is non-fatal — handler still returns 200 and writes audit
+ *   5. has stripePaymentIntentId but no stripeAccountId — skips cancel, returns 200
+ */
+
+import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { buildTestApp as buildHarnessApp } from '@/tests/helpers/test-app';
+
+const INVOICE_ID    = 'f1000000-0000-1000-8000-000000000001';
+const MERCHANT_ID   = 'b1000000-0000-1000-8000-000000000001';
+const CUSTOMER_ID   = 'a1000000-0000-1000-8000-000000000001';
+const INTENT_ID     = 'pi_test_intent_123';
+const STRIPE_ACCT   = 'acct_test_stripe_456';
+
+// ─── repo mocks (must be declared before import of handler) ──────────────────
+
+const mockFindOneById          = mock(() => Promise.resolve(null as any));
+const mockUpdateStatus         = mock(() => Promise.resolve());
+const mockFindOneWithLineItems = mock(() => Promise.resolve(null as any));
+const mockMerchantFindByPerson = mock(() => Promise.resolve(null as any));
+
+mock.module('@/handlers/billing/repos/billing.repo', () => ({
+  InvoiceRepository: class {
+    findOneById          = mockFindOneById;
+    updateStatus         = mockUpdateStatus;
+    findOneWithLineItems = mockFindOneWithLineItems;
+  },
+  MerchantAccountRepository: class {
+    findByPerson = mockMerchantFindByPerson;
+  },
+}));
+
+mock.module('@/handlers/person/repos/person-billing.facade', () => ({
+  findBillingParty: mock(() => Promise.resolve({ id: MERCHANT_ID })),
+}));
+
+// ─── audit-logger mock ───────────────────────────────────────────────────────
+
+const mockLogAuditEvent = mock(() => Promise.resolve());
+mock.module('@/core/audit-logger', () => ({
+  logAuditEvent: mockLogAuditEvent,
+}));
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function makeInvoice(opts: { stripePaymentIntentId?: string } = {}) {
+  return {
+    id: INVOICE_ID,
+    invoiceNumber: 'INV-2026-000099',
+    merchant: MERCHANT_ID,
+    customer: CUSTOMER_ID,
+    status: 'open',
+    paymentStatus: 'requires_capture',
+    subtotal: 10000,
+    tax: null,
+    total: 10000,
+    currency: 'USD',
+    paymentCaptureMethod: 'manual',
+    paymentDueAt: null,
+    paidAt: null,
+    paidBy: null,
+    voidedAt: null,
+    voidedBy: null,
+    voidThresholdMinutes: null,
+    authorizedAt: null,
+    authorizedBy: null,
+    context: null,
+    metadata: opts.stripePaymentIntentId
+      ? { stripePaymentIntentId: opts.stripePaymentIntentId }
+      : null,
+    lineItems: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+function makeMerchantAccount(opts: { stripeAccountId?: string } = {}) {
+  return {
+    id: 'mac-1',
+    personId: MERCHANT_ID,
+    metadata: opts.stripeAccountId ? { stripeAccountId: opts.stripeAccountId } : null,
+  };
+}
+
+function buildApp(opts: {
+  billing?: object;
+  notifs?: object;
+} = {}) {
+  return buildHarnessApp({
+    db: {} as any,
+    // The handler authorizes by merchantPerson.id === user.id; findBillingParty
+    // returns { id: MERCHANT_ID }, so the session user must match.
+    user: { id: MERCHANT_ID },
+    services: {
+      ...(opts.billing ? { billing: opts.billing as any } : {}),
+      ...(opts.notifs  ? { notifs:   opts.notifs  as any } : {}),
+    },
+  });
+}
+
+// ─── tests ───────────────────────────────────────────────────────────────────
+
+describe('markInvoiceUncollectible handler', () => {
+  const cancelPaymentIntent = mock(() => Promise.resolve({ id: 'pi_canceled' }));
+
+  beforeEach(() => {
+    mockFindOneById.mockClear();
+    mockUpdateStatus.mockClear();
+    mockFindOneWithLineItems.mockClear();
+    mockMerchantFindByPerson.mockClear();
+    mockLogAuditEvent.mockClear();
+    cancelPaymentIntent.mockClear();
+
+    // Default: invoice exists, merchant lookup returns same person, invoice-with-items returns full object
+    mockFindOneById.mockImplementation(() =>
+      Promise.resolve(makeInvoice({ stripePaymentIntentId: INTENT_ID }))
+    );
+    mockFindOneWithLineItems.mockImplementation(() =>
+      Promise.resolve(makeInvoice({ stripePaymentIntentId: INTENT_ID }))
+    );
+    mockMerchantFindByPerson.mockImplementation(() =>
+      Promise.resolve(makeMerchantAccount({ stripeAccountId: STRIPE_ACCT }))
+    );
+  });
+
+  test('cancels payment intent when stripePaymentIntentId and stripeAccountId present', async () => {
+    const app = buildApp({ billing: { cancelPaymentIntent } });
+
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(cancelPaymentIntent).toHaveBeenCalledTimes(1);
+    const [intentId, acctId, reason] = cancelPaymentIntent.mock.calls[0] as any[];
+    expect(intentId).toBe(INTENT_ID);
+    expect(acctId).toBe(STRIPE_ACCT);
+    expect(reason).toBe('Marked uncollectible');
+  });
+
+  test('does not call cancelPaymentIntent when invoice has no stripePaymentIntentId', async () => {
+    // Override to invoice with no stripe intent
+    mockFindOneById.mockImplementation(() =>
+      Promise.resolve(makeInvoice())  // no stripePaymentIntentId
+    );
+    mockFindOneWithLineItems.mockImplementation(() =>
+      Promise.resolve(makeInvoice())
+    );
+
+    const app = buildApp({ billing: { cancelPaymentIntent } });
+
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(cancelPaymentIntent).not.toHaveBeenCalled();
+  });
+
+  test('logAuditEvent is called with action invoice.mark_uncollectible', async () => {
+    const app = buildApp({ billing: { cancelPaymentIntent } });
+
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockLogAuditEvent).toHaveBeenCalledTimes(1);
+    const [_db, _logger, event, opts] = mockLogAuditEvent.mock.calls[0] as any[];
+    expect(event.action).toBe('invoice.mark_uncollectible');
+    expect(event.resourceType).toBe('invoice');
+    expect(event.resourceId).toBe(INVOICE_ID);
+    expect(event.before).toEqual({ status: 'open' });
+    expect(event.after).toEqual({ status: 'uncollectible' });
+    expect(opts?.failClosed).toBe(true);
+  });
+
+  test('cancel failure is non-fatal — returns 200 and still writes audit row', async () => {
+    const failingCancel = mock(() => Promise.reject(new Error('Stripe error')));
+    const app = buildApp({ billing: { cancelPaymentIntent: failingCancel } });
+
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    // The failing cancel was tried
+    expect(failingCancel).toHaveBeenCalledTimes(1);
+    // Audit was still written despite the cancel failure
+    expect(mockLogAuditEvent).toHaveBeenCalledTimes(1);
+    const [_db, _logger, event] = mockLogAuditEvent.mock.calls[0] as any[];
+    expect(event.action).toBe('invoice.mark_uncollectible');
+  });
+
+  test('has stripePaymentIntentId but merchant has no stripeAccountId — skips cancel, still returns 200 and writes audit', async () => {
+    // Merchant account exists but has no stripeAccountId in metadata
+    mockMerchantFindByPerson.mockImplementation(() =>
+      Promise.resolve(makeMerchantAccount())  // no stripeAccountId
+    );
+
+    const app = buildApp({ billing: { cancelPaymentIntent } });
+
+    const res = await app.request(`/billing/invoices/${INVOICE_ID}/mark-uncollectible`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    // cancelPaymentIntent must NOT have been called
+    expect(cancelPaymentIntent).not.toHaveBeenCalled();
+    // Audit row must still be written
+    expect(mockLogAuditEvent).toHaveBeenCalledTimes(1);
+    const [_db, _logger, event] = mockLogAuditEvent.mock.calls[0] as any[];
+    expect(event.action).toBe('invoice.mark_uncollectible');
+    expect(event.resourceId).toBe(INVOICE_ID);
+  });
+});

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'bun:test'
-import { buildCalibrationRequest } from './imaging-workspace.handlers'
+import { describe, it, expect, mock } from 'bun:test'
+import { buildCalibrationRequest, confirmCalibrationSave } from './imaging-workspace.handlers'
 
 describe('buildCalibrationRequest (G6 versioned calibration)', () => {
   it('threads the 2 ruler points + known distance and derives pixelSpacingMm', () => {
@@ -35,5 +35,35 @@ describe('buildCalibrationRequest (G6 versioned calibration)', () => {
     expect(
       buildCalibrationRequest({ points: [{ x: 0, y: 0 }, { x: 100, y: 0 }], actualMm: 0 }),
     ).toBeNull()
+  })
+})
+
+describe('confirmCalibrationSave (failure surfacing)', () => {
+  it('on save failure: routes the error to onError and skips onSuccess (dialog stays open)', async () => {
+    const onError = mock((_err: unknown) => {})
+    const onSuccess = mock(() => {})
+
+    await confirmCalibrationSave({
+      save: () => Promise.reject(new Error('boom')),
+      onError,
+      onSuccess,
+    })
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('on success: runs onSuccess and not onError', async () => {
+    const onError = mock((_err: unknown) => {})
+    const onSuccess = mock(() => {})
+
+    await confirmCalibrationSave({
+      save: () => Promise.resolve(),
+      onError,
+      onSuccess,
+    })
+
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
   })
 })

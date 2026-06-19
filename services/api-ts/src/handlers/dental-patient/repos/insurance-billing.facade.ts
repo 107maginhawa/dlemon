@@ -26,6 +26,7 @@ export interface CoverageAuthorizationSummary {
   patientId: string;
   insuranceProfileId: string;
   status: string;
+  validUntil: string | null;
   approvedAmountCents: number | null;
   coveredProcedures: Array<{ cdtCode: string; approvedAmountCents?: number; note?: string }> | null;
 }
@@ -98,6 +99,7 @@ export async function getCoverageAuthorizationForBilling(
       patientId: dentalCoverageAuthorizations.patientId,
       insuranceProfileId: dentalCoverageAuthorizations.insuranceProfileId,
       status: dentalCoverageAuthorizations.status,
+      validUntil: dentalCoverageAuthorizations.validUntil,
       approvedAmountCents: dentalCoverageAuthorizations.approvedAmountCents,
       coveredProcedures: dentalCoverageAuthorizations.coveredProcedures,
     })

@@ -171,7 +171,12 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-40 flex items-end"
+      role="dialog"
+      aria-modal="true"
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
+    >
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       <div
@@ -222,7 +227,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
               type="text"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -269,7 +274,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
               value={licenseNumber}
               onChange={e => setLicenseNumber(e.target.value)}
               placeholder="e.g. PRC-12345"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -285,7 +290,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
               value={npi}
               onChange={e => setNpi(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="10-digit National Provider Identifier"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -299,7 +304,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
               value={credentialType}
               onChange={e => setCredentialType(e.target.value)}
               placeholder="e.g. DDS, DMD, RDH"
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
             />
           </div>
 
@@ -338,7 +343,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
                 value={newPin}
                 onChange={e => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinResetDone(false); }}
                 placeholder="New 6-digit PIN"
-                className="flex-1 h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none tracking-widest"
+                className="flex-1 h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tracking-widest"
               />
               <button
                 type="button"

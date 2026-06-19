@@ -5,12 +5,15 @@ interface LogoProps {
   variant?: 'horizontal' | 'vertical'
   size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
+  /** Accessible name for the logo image. Each app serves its own SVG asset. */
+  alt?: string
 }
 
 export function Logo({
   variant = 'horizontal',
   size = 'md',
-  className
+  className,
+  alt = 'Monobase'
 }: LogoProps) {
   const { theme } = useTheme()
 
@@ -29,7 +32,7 @@ export function Logo({
   return (
     <img
       src={logoSrc}
-      alt="Monobase"
+      alt={alt}
       className={cn(
         'object-contain',
         sizeClasses[size],

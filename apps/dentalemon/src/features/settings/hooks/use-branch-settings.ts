@@ -25,6 +25,17 @@ export interface BranchSettings {
   dentistLicenseNumber?: string;
   // Fee schedule
   feeSchedule?: Record<string, number>;
+  // BR-048: clinic-wide default payment terms (days). Feeds dueDate at issue.
+  defaultPaymentTermsDays?: number;
+  // BR-050: dunning reminder cadence — days-past-due offsets for the sweep.
+  billingReminderOffsetDays?: number[];
+  // BR-054: PH tax mode. non_vat (default) → no invoice tax; vat_registered → 12% VAT.
+  taxMode?: 'non_vat' | 'vat_registered';
+  vatRate?: number;
+  // BR-055: BIR receipt header fields (PH).
+  registeredName?: string;
+  businessStyle?: string;
+  tin?: string;
   // Locale
   locale?: string;
   currency?: string;

@@ -92,20 +92,29 @@ export function PerioChartGrid({
     return (
       <div className="flex flex-col gap-1">
         <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {arch.map((tooth) => (
-            <PerioToothColumn
-              key={tooth}
-              tooth={tooth}
-              reading={readingByTooth.get(tooth)}
-              threshold={threshold}
-              readOnly={readOnly}
-              onPatch={(patch) => onPatchTooth(tooth, patch)}
-              onAdvance={advance}
-              registerCellRef={registerCellRef}
-              activeSite={activeCell?.tooth === tooth ? activeCell.site : null}
-            />
-          ))}
+        {/* Horizontal scroll affordance for narrow viewports (iPad): a thin scrollbar
+            plus a subtle right-edge fade hinting there is more chart off-screen. */}
+        <div className="relative">
+          <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:thin]">
+            {arch.map((tooth) => (
+              <PerioToothColumn
+                key={tooth}
+                tooth={tooth}
+                reading={readingByTooth.get(tooth)}
+                threshold={threshold}
+                readOnly={readOnly}
+                onPatch={(patch) => onPatchTooth(tooth, patch)}
+                onAdvance={advance}
+                registerCellRef={registerCellRef}
+                activeSite={activeCell?.tooth === tooth ? activeCell.site : null}
+              />
+            ))}
+          </div>
+          {/* Right-edge scroll-shadow: hints the matrix scrolls horizontally. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent"
+          />
         </div>
       </div>
     );

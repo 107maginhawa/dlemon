@@ -13,6 +13,10 @@ export function ClinicSettings() {
   const [email, setEmail] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
+  // BR-055: BIR receipt header
+  const [registeredName, setRegisteredName] = useState('');
+  const [businessStyle, setBusinessStyle] = useState('');
+  const [tin, setTin] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Populate form when settings load
@@ -24,6 +28,9 @@ export function ClinicSettings() {
     setEmail(settings.clinicEmail ?? '');
     setLogoUrl(settings.logoUrl ?? '');
     setLicenseNumber(settings.dentistLicenseNumber ?? '');
+    setRegisteredName(settings.registeredName ?? '');
+    setBusinessStyle(settings.businessStyle ?? '');
+    setTin(settings.tin ?? '');
   }, [settings]);
 
   function validate(): string[] {
@@ -51,13 +58,16 @@ export function ClinicSettings() {
         clinicEmail: email.trim() || undefined,
         logoUrl: logoUrl.trim() || undefined,
         dentistLicenseNumber: licenseNumber.trim() || undefined,
+        registeredName: registeredName.trim() || undefined,
+        businessStyle: businessStyle.trim() || undefined,
+        tin: tin.trim() || undefined,
       });
     } catch {
       // error is exposed via saveError
     }
   }
 
-  const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus:border-lemon outline-none';
+  const inputClass = 'w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none';
   const labelClass = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block';
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading...</div>;
@@ -76,7 +86,7 @@ export function ClinicSettings() {
         </div>
       )}
       {isSuccess && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">Settings saved</div>
+        <div className="rounded-lg bg-success/10 border border-success/30 px-3 py-2 text-sm text-success-foreground">Settings saved</div>
       )}
       <div><label className={labelClass}>Clinic Name *</label><input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} /></div>
       <div><label className={labelClass}>Address *</label><input type="text" value={address} onChange={e => setAddress(e.target.value)} className={inputClass} /></div>
@@ -84,10 +94,21 @@ export function ClinicSettings() {
       <div><label className={labelClass}>Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} /></div>
       <div><label className={labelClass}>Logo URL</label><input type="text" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} className={inputClass} /></div>
       <div><label className={labelClass}>License Number</label><input type="text" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} className={inputClass} /></div>
+
+      <div className="border-t border-border pt-4">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">BIR receipt details (PH)</p>
+        <div className="flex flex-col gap-4">
+          <div><label className={labelClass}>Registered Name</label><input type="text" data-testid="clinic-registered-name" value={registeredName} onChange={e => setRegisteredName(e.target.value)} placeholder="Legal name as registered with BIR" className={inputClass} /></div>
+          <div><label className={labelClass}>Business Style</label><input type="text" data-testid="clinic-business-style" value={businessStyle} onChange={e => setBusinessStyle(e.target.value)} placeholder="Trade name / DBA" className={inputClass} /></div>
+          <div><label className={labelClass}>TIN</label><input type="text" data-testid="clinic-tin" value={tin} onChange={e => setTin(e.target.value)} placeholder="000-000-000-000" className={inputClass} /></div>
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={handleSave}
         disabled={isPending}
+        data-testid="save-clinic-settings"
         className="h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-60"
       >
         {isPending ? 'Saving…' : 'Save Settings'}

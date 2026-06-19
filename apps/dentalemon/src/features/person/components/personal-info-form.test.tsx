@@ -96,8 +96,8 @@ describe('PersonalInfoForm', () => {
       />
     )
 
-    // Should show avatar with camera button
-    expect(screen.getByRole('button', { name: '' })).not.toBeNull() // Camera icon button
+    // Should show avatar with camera button (now has an accessible label)
+    expect(screen.getByRole('button', { name: /change avatar photo/i })).not.toBeNull()
   })
 
   test('pre-fills form fields in create mode when defaultValues are provided', async () => {

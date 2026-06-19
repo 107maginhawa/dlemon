@@ -74,14 +74,14 @@ const STATUS_DISPLAY: Record<TreatmentPlanStatus, string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<TreatmentPlanStatus, string> = {
-  draft: 'bg-gray-100 text-gray-600',
-  presented: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-700',
-  scheduled: 'bg-blue-50 text-blue-700',
-  partially_completed: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-50 text-green-500',
-  cancelled: 'bg-red-50 text-red-400',
+  draft: 'bg-muted text-muted-foreground',
+  presented: 'bg-warning/15 text-warning-foreground',
+  approved: 'bg-success/15 text-success-foreground',
+  rejected: 'bg-destructive/15 text-destructive-emphasis',
+  scheduled: 'bg-info/15 text-info-foreground',
+  partially_completed: 'bg-info/15 text-info-foreground',
+  completed: 'bg-success/15 text-success-foreground',
+  cancelled: 'bg-destructive/15 text-destructive-emphasis',
 };
 
 // ---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting }: PlanRo
               onClick={() => onUpdate(plan.id, { status: next })}
               className={`rounded px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
                 next === 'cancelled' || next === 'rejected'
-                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  ? 'bg-destructive/10 text-destructive-emphasis hover:bg-destructive/15'
                   : 'bg-muted hover:bg-muted/80 text-foreground'
               }`}
             >
@@ -193,12 +193,12 @@ function OptionGroupCard({ patientId, optionGroupId }: { patientId: string; opti
                   </span>
                 )}
                 {isAccepted && (
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                  <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success-foreground">
                     Accepted
                   </span>
                 )}
                 {isDeclined && (
-                  <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+                  <span className="inline-flex items-center rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive-emphasis">
                     Declined
                   </span>
                 )}
@@ -286,7 +286,7 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
             type="button"
             onClick={onClose}
             aria-label="Close treatment plans"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>

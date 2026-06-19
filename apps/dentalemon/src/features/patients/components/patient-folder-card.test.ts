@@ -111,12 +111,12 @@ describe('PatientFolderCard', () => {
     expect(tab.className).toContain('bg-muted');
   });
 
-  test('folder tab is bg-teal-500 for in-session status', () => {
+  test('folder tab is bg-info for in-session status', () => {
     render(React.createElement(PatientFolderCard, {
       patient: { ...basePatient, status: 'in-session' as const },
       onClick: () => {},
     }));
     const tab = screen.getByTestId('folder-tab');
-    expect(tab.className).toContain('bg-teal-500');
+    expect(tab.className).toContain('bg-info');
   });
 });

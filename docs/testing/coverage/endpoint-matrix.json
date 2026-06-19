@@ -669,11 +669,37 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
+  },
+  {
+    "operationId": "addPatientCredit",
+    "method": "POST",
+    "path": "/dental/billing/patients/{patientId}/credits",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
+  },
+  {
+    "operationId": "applyCreditToInvoice",
+    "method": "POST",
+    "path": "/dental/billing/invoices/{invoiceId}/apply-credit",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": false,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "gap"
   },
   {
     "operationId": "applyDentalDiscount",
@@ -1066,6 +1092,19 @@
     "disposition": "orphan"
   },
   {
+    "operationId": "createCollectionNote",
+    "method": "POST",
+    "path": "/dental/billing/collections/notes",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
+  },
+  {
     "operationId": "createConsentForm",
     "method": "POST",
     "path": "/dental/visits/{visitId}/consents",
@@ -1241,11 +1280,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "createInsuranceProfile",
@@ -2132,6 +2171,19 @@
     "disposition": "orphan"
   },
   {
+    "operationId": "getCollectionsKpis",
+    "method": "GET",
+    "path": "/dental/billing/collections/kpis",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
+  },
+  {
     "operationId": "getCollectionsSummary",
     "method": "GET",
     "path": "/dental/billing/collections/summary",
@@ -2143,6 +2195,19 @@
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
+  },
+  {
+    "operationId": "getCollectionsWorklist",
+    "method": "GET",
+    "path": "/dental/billing/collections/worklist",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
   },
   {
     "operationId": "getConsultation",
@@ -2229,11 +2294,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "getDentalPaymentPlan",
@@ -2398,11 +2463,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "getInvoice",
@@ -2541,11 +2606,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "getPatientCommunicationConsent",
@@ -2559,6 +2624,19 @@
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
+  },
+  {
+    "operationId": "getPatientCredits",
+    "method": "GET",
+    "path": "/dental/billing/patients/{patientId}/credits",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
   },
   {
     "operationId": "getPatientHousehold",
@@ -3529,11 +3607,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "listPatientRecalls",
@@ -3991,6 +4069,19 @@
     "disposition": "orphan"
   },
   {
+    "operationId": "refundDentalPayment",
+    "method": "POST",
+    "path": "/dental/billing/payments/{paymentId}/refund",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": false,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "gap"
+  },
+  {
     "operationId": "refundInvoicePayment",
     "method": "POST",
     "path": "/billing/invoices/{invoice}/refund",
@@ -4158,6 +4249,19 @@
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
+  },
+  {
+    "operationId": "sendPatientStatement",
+    "method": "POST",
+    "path": "/dental/billing/patients/{patientId}/statement/send",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
   },
   {
     "operationId": "setSecurityQuestion",
@@ -4413,11 +4517,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "updateInsuranceClaimStatus",

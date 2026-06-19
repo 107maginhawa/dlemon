@@ -196,6 +196,7 @@ export function AddressForm({
                           variant="outline"
                           role="combobox"
                           aria-expanded={open}
+                          aria-required={required}
                           className={cn(
                             "w-full justify-between",
                             !field.value && "text-muted-foreground"

@@ -25,6 +25,8 @@ import {
   type DentalImagingModuleImagingLink,
 } from '@monobase/sdk-ts/generated'
 import { logger } from '@/lib/logger'
+import { toast } from 'sonner'
+import { toastError } from '@/lib/error-toast'
 
 export type ImageLinkType = DentalImagingModuleImagingLink['linkType']
 export type ImageModality = DentalImagingModuleModalityEnum
@@ -92,7 +94,11 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
       if (!data || 'error' in data) throw new Error('Unexpected error response from updateImageMetadata')
       return data
     },
-    onError: (e) => logger.error('image-library', 'updateMetadata failed', e),
+    onSuccess: () => toast.success('Image updated'),
+    onError: (e) => {
+      logger.error('image-library', 'updateMetadata failed', e)
+      toastError(e, 'Could not update the image.')
+    },
     onSettled: () => invalidateList(),
   })
 
@@ -106,7 +112,11 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
       if (!data || 'error' in data) throw new Error('Unexpected error response from updateImageModality')
       return data
     },
-    onError: (e) => logger.error('image-library', 'updateModality failed', e),
+    onSuccess: () => toast.success('Image type updated'),
+    onError: (e) => {
+      logger.error('image-library', 'updateModality failed', e)
+      toastError(e, 'Could not update the image type.')
+    },
     onSettled: () => invalidateList(),
   })
 
@@ -116,7 +126,11 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
     mutationFn: async ({ imageId }: { imageId: string }): Promise<void> => {
       await imagingMgmtDeleteImage({ path: { imageId }, throwOnError: true })
     },
-    onError: (e) => logger.error('image-library', 'deleteImage failed', e),
+    onSuccess: () => toast.success('Image deleted'),
+    onError: (e) => {
+      logger.error('image-library', 'deleteImage failed', e)
+      toastError(e, 'Could not delete the image.')
+    },
     onSettled: () => invalidateList(),
   })
 
@@ -130,7 +144,11 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
       if (!data || 'error' in data) throw new Error('Unexpected error response from createImageLink')
       return toLinkView(data)
     },
-    onError: (e) => logger.error('image-library', 'createLink failed', e),
+    onSuccess: () => toast.success('Image linked'),
+    onError: (e) => {
+      logger.error('image-library', 'createLink failed', e)
+      toastError(e, 'Could not link the image.')
+    },
     onSettled: (_data, _err, vars) => {
       invalidateList()
       invalidateLinks(vars.imageId)
@@ -141,7 +159,11 @@ export function useImageLibrary({ patientId, branchId }: UseImageLibraryArgs) {
     mutationFn: async ({ linkId }: { linkId: string; imageId?: string }): Promise<void> => {
       await imagingMgmtDeleteImageLink({ path: { linkId }, throwOnError: true })
     },
-    onError: (e) => logger.error('image-library', 'deleteLink failed', e),
+    onSuccess: () => toast.success('Link removed'),
+    onError: (e) => {
+      logger.error('image-library', 'deleteLink failed', e)
+      toastError(e, 'Could not remove the link.')
+    },
     onSettled: (_data, _err, vars) => {
       invalidateList()
       if (vars.imageId) invalidateLinks(vars.imageId)

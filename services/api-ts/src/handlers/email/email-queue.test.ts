@@ -173,11 +173,12 @@ describe('listEmailQueueItems', () => {
     expect(body.code).toBe('FORBIDDEN');
   });
 
-  test('no user → 500 (user undefined crash before role check)', async () => {
-    // When no user is set in context, user.role access throws TypeError → 500
+  test('no user → 403 (no roles, denied gracefully — no crash)', async () => {
+    // No user in context → parseUserRoles yields no roles → the role gate denies
+    // with 403 (previously this crashed with a 500 on user.role.split of undefined).
     const app = buildTestApp(undefined);
     const res = await app.request('/email/queue');
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(403);
   });
 
   test('happy path empty → 200 with items array', async () => {
@@ -372,10 +373,10 @@ describe('retryEmailQueueItem', () => {
     expect(body.code).toBe('FORBIDDEN');
   });
 
-  test('no user → 500 (user undefined crash before role check)', async () => {
+  test('no user → 403 (no roles, denied gracefully — no crash)', async () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/email/queue/${QUEUE_ID_FAILED}/retry`, { method: 'POST' });
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(403);
   });
 
   test('item not found → 404 NOT_FOUND', async () => {

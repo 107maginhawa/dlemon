@@ -8,6 +8,26 @@
 
 import { describe, test, expect } from 'bun:test';
 import type { JobScheduler, JobHandler, JobContext, JobHealth } from './jobs';
+import { resolvePgBossTuning } from './jobs';
+
+describe('resolvePgBossTuning', () => {
+  test('test env uses fast cleanup/expiry', () => {
+    const t = resolvePgBossTuning('test');
+    expect(t.expireInMinutes).toBe(5);
+    expect(t.deleteAfterDays).toBe(1);
+  });
+
+  test('production uses long-horizon retention/expiry (regression: slot generator must not be expired at 5 min)', () => {
+    const t = resolvePgBossTuning('production');
+    expect(t.expireInMinutes).toBeGreaterThanOrEqual(15);
+    expect(t.deleteAfterDays).toBeGreaterThanOrEqual(30);
+  });
+
+  test('undefined NODE_ENV is treated as non-test (production defaults)', () => {
+    const t = resolvePgBossTuning(undefined);
+    expect(t.deleteAfterDays).toBeGreaterThanOrEqual(30);
+  });
+});
 
 describe('JobScheduler interface', () => {
   test('JobHandler type accepts valid async function', () => {

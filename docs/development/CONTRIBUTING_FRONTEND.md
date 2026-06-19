@@ -182,6 +182,35 @@ A passing `expect(onSave).toHaveBeenCalled()` does not prove anything persisted.
 Reference: `treatment-plan-tab.test.ts`. A disabled control must carry a visible
 reason (`title` / `aria-describedby`), as `MeasurementToolbar` does.
 
+You can grade an outgoing request body against the OpenAPI contract (not a hand
+mock) with `validateRequestBody()` from `src/test-utils/spec-request-validator.ts`
+(catches a missing required field / wrong enum / wrong type). See
+`spec-request-validator.test.ts`.
+
+## Definition of Done for a user journey (the 4 clauses)
+
+> The standard the "New Visit broke while CI was green" incident produced
+> (`docs/testing/VERIFICATION_HARDENING.md`). Binding rubric:
+> `docs/audits/JOURNEY_HARNESS_CONTRACT.md`. The reference implementation is **J21**
+> (`tests/e2e/journeys/21-new-visit-create.journey.spec.ts`).
+
+Every critical user journey (and any new clinical flow) MUST assert all four. The
+failure mode they prevent: a flow whose first step succeeds while its goal step
+silently strands the user (the New-Visit `POST draft → PATCH active` incident).
+
+1. **No silent error surface.** No unexpected error toast
+   (`[data-sonner-toast][data-type="error"]`), `console.error`, `pageerror`, or
+   `/dental/*`·`/auth/*` 4xx/5xx during a success path. Enforced automatically by the
+   `errorSurface` auto-fixture in `tests/e2e/journeys/_journey-helpers.ts`; a
+   legitimately-negative flow declares its expected error
+   (`errorSurface.allowStatus/allow/allowUrl`) rather than loosening the default.
+2. **Goal state, not existence.** Assert the clinically meaningful END state (e.g. a
+   visit is `active`/chartable; a treatment is `performed`), never "a row exists".
+3. **Every step succeeded.** In a multi-step / client-orchestrated flow, assert that
+   *each* network call returned success (2xx) — not just the first.
+4. **Independent read confirms the goal.** Verify the goal via a SEPARATE API session
+   (`apiReader`) reading durable persistence, not the UI you just drove.
+
 ## Hook Architecture Patterns
 
 ### Domain-Based Hook Organization

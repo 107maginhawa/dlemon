@@ -1,5 +1,9 @@
 /**
  * Legal-hold HTTP route tests — real route + zValidator + handler wiring.
+ *
+ * BR coverage (negative paths in-file: 403 non-admin, 400 missing name):
+ *   - AC-LH-001..004: place/list/release workflow; created 'active'; release terminal.
+ *   - EM-DG-RBAC: place/list/release are platform-admin-only; a non-admin caller → 403.
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
@@ -51,7 +55,7 @@ describe('legal-hold HTTP routes', () => {
 
   afterEach(() => teardown());
 
-  test('place → list → release lifecycle (admin)', async () => {
+  test('AC-LH-001..004: place → list → release lifecycle (admin)', async () => {
     const app = makeApp(db, ADMIN);
     const placed = await app.request('/dental/legal-holds', J(holdBody));
     expect(placed.status).toBe(201);
@@ -67,7 +71,7 @@ describe('legal-hold HTTP routes', () => {
     expect(((await released.json()) as any).status).toBe('released');
   });
 
-  test('non-admin forbidden (403)', async () => {
+  test('EM-DG-RBAC: non-admin forbidden (403)', async () => {
     const app = makeApp(db, STAFF);
     const res = await app.request('/dental/legal-holds', J(holdBody));
     expect(res.status).toBe(403);

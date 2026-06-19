@@ -16,6 +16,9 @@ import type { ComponentType } from 'react';
 import { ClinicSettings } from './components/clinic-settings';
 import { WorkingHours } from './components/working-hours';
 import { FeeSchedule } from './components/fee-schedule';
+import { PaymentTermsSettings } from './components/payment-terms-settings';
+import { TaxModeSettings } from './components/tax-mode-settings';
+import { ReminderCadenceSettings } from './components/reminder-cadence-settings';
 import { LocaleSettings } from './components/locale-settings';
 import { NotificationSettings } from './components/notification-settings';
 import { ConsentTemplates } from './components/consent-templates';
@@ -33,6 +36,9 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   { key: 'clinic', label: 'Clinic', Component: ClinicSettings },
   { key: 'hours', label: 'Working Hours', Component: WorkingHours },
   { key: 'fees', label: 'Fee Schedule', Component: FeeSchedule },
+  { key: 'payment-terms', label: 'Payment Terms', Component: PaymentTermsSettings },
+  { key: 'tax-mode', label: 'Tax (VAT)', Component: TaxModeSettings },
+  { key: 'reminder-cadence', label: 'Reminder Cadence', Component: ReminderCadenceSettings },
   { key: 'locale', label: 'Locale', Component: LocaleSettings },
   { key: 'notifications', label: 'Notifications', Component: NotificationSettings },
   { key: 'consent', label: 'Consent Forms', Component: ConsentTemplates },

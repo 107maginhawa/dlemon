@@ -69,19 +69,25 @@ import { updateAppointment } from '../../handlers/dental-scheduling/updateAppoin
 import { updateQueueItemStatus } from '../../handlers/dental-scheduling/updateQueueItemStatus';
 import { getAuditEvents } from '../../handlers/dental-audit/getAuditEvents';
 import { addInsuranceClaimLine } from '../../handlers/dental-billing/addInsuranceClaimLine';
+import { addPatientCredit } from '../../handlers/dental-billing/addPatientCredit';
+import { applyCreditToInvoice } from '../../handlers/dental-billing/applyCreditToInvoice';
 import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
+import { createCollectionNote } from '../../handlers/dental-billing/createCollectionNote';
 import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
 import { createDentalPaymentPlan } from '../../handlers/dental-billing/createDentalPaymentPlan';
 import { createInsuranceClaim } from '../../handlers/dental-billing/createInsuranceClaim';
 import { estimateClaimCoverage } from '../../handlers/dental-billing/estimateClaimCoverage';
 import { generateStatementBatch } from '../../handlers/dental-billing/generateStatementBatch';
 import { getArAging } from '../../handlers/dental-billing/getArAging';
+import { getCollectionsKpis } from '../../handlers/dental-billing/getCollectionsKpis';
 import { getCollectionsSummary } from '../../handlers/dental-billing/getCollectionsSummary';
+import { getCollectionsWorklist } from '../../handlers/dental-billing/getCollectionsWorklist';
 import { getDentalInvoice } from '../../handlers/dental-billing/getDentalInvoice';
 import { getDentalPaymentPlan } from '../../handlers/dental-billing/getDentalPaymentPlan';
 import { getDentalPaymentReceipt } from '../../handlers/dental-billing/getDentalPaymentReceipt';
 import { getInsuranceClaim } from '../../handlers/dental-billing/getInsuranceClaim';
 import { getPatientBalance } from '../../handlers/dental-billing/getPatientBalance';
+import { getPatientCredits } from '../../handlers/dental-billing/getPatientCredits';
 import { getPayerArAging } from '../../handlers/dental-billing/getPayerArAging';
 import { issueDentalInvoice } from '../../handlers/dental-billing/issueDentalInvoice';
 import { listDentalInvoices } from '../../handlers/dental-billing/listDentalInvoices';
@@ -90,6 +96,8 @@ import { listInsuranceClaims } from '../../handlers/dental-billing/listInsurance
 import { markUncollectible } from '../../handlers/dental-billing/markUncollectible';
 import { recordClaimRemittance } from '../../handlers/dental-billing/recordClaimRemittance';
 import { recordDentalPayment } from '../../handlers/dental-billing/recordDentalPayment';
+import { refundDentalPayment } from '../../handlers/dental-billing/refundDentalPayment';
+import { sendPatientStatement } from '../../handlers/dental-billing/sendPatientStatement';
 import { updateInsuranceClaimLine } from '../../handlers/dental-billing/updateInsuranceClaimLine';
 import { updateInsuranceClaimStatus } from '../../handlers/dental-billing/updateInsuranceClaimStatus';
 import { voidDentalInvoice } from '../../handlers/dental-billing/voidDentalInvoice';
@@ -456,19 +464,25 @@ export const registry = {
 
   // Dental-billing handlers
   addInsuranceClaimLine,
+  addPatientCredit,
+  applyCreditToInvoice,
   applyDentalDiscount,
+  createCollectionNote,
   createDentalInvoice,
   createDentalPaymentPlan,
   createInsuranceClaim,
   estimateClaimCoverage,
   generateStatementBatch,
   getArAging,
+  getCollectionsKpis,
   getCollectionsSummary,
+  getCollectionsWorklist,
   getDentalInvoice,
   getDentalPaymentPlan,
   getDentalPaymentReceipt,
   getInsuranceClaim,
   getPatientBalance,
+  getPatientCredits,
   getPayerArAging,
   issueDentalInvoice,
   listDentalInvoices,
@@ -477,6 +491,8 @@ export const registry = {
   markUncollectible,
   recordClaimRemittance,
   recordDentalPayment,
+  refundDentalPayment,
+  sendPatientStatement,
   updateInsuranceClaimLine,
   updateInsuranceClaimStatus,
   voidDentalInvoice,

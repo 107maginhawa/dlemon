@@ -13,8 +13,11 @@ import {
 import type { ValidatedContext } from '@/types/app';
 import type { MarkInvoiceUncollectibleParams } from '@/generated/openapi/validators';
 import type { Session } from '@/types/auth';
-import { InvoiceRepository } from './repos/billing.repo';
+import type { NotificationService } from '@/core/notifs';
+import { InvoiceRepository, MerchantAccountRepository } from './repos/billing.repo';
 import { findBillingParty } from '../person/repos/person-billing.facade';
+import type { InvoiceMetadata, MerchantMetadata } from './billing.types';
+import { logAuditEvent } from '@/core/audit-logger';
 
 /**
  * markInvoiceUncollectible
@@ -29,6 +32,8 @@ export async function markInvoiceUncollectible(
 ): Promise<Response> {
   const database = ctx.get('database');
   const logger = ctx.get('logger');
+  const billing = ctx.get('billing');
+  const notifs = ctx.get('notifs') as NotificationService | undefined;
 
   // Get authenticated session (guaranteed by middleware)
   const session = ctx.get('session') as Session;
@@ -90,11 +95,53 @@ export async function markInvoiceUncollectible(
   if (!invoiceWithItems) throw new NotFoundError('Invoice not found after update');
   const updatedInvoice = invoiceWithItems;
 
-  // TODO: Trigger any necessary cleanup:
-  // - Cancel pending payment intents
-  // - Update accounting records
-  // - Send notifications
-  // - Create audit log entries
+  // 1) Cancel an orphaned Stripe authorization, if one exists (best-effort —
+  //    mirrors voidInvoice). An uncollectible invoice should not leave an
+  //    authorization hold on the customer's card.
+  const invoiceMeta = invoice.metadata as InvoiceMetadata | undefined;
+  const stripePaymentIntentId = invoiceMeta?.stripePaymentIntentId;
+  if (stripePaymentIntentId) {
+    try {
+      const merchantAccountRepo = new MerchantAccountRepository(database, logger);
+      const merchantAccount = await merchantAccountRepo.findByPerson(invoice.merchant);
+      const merchantMeta = merchantAccount?.metadata as MerchantMetadata | undefined;
+      if (merchantMeta?.stripeAccountId) {
+        await billing.cancelPaymentIntent(stripePaymentIntentId, merchantMeta.stripeAccountId, 'Marked uncollectible');
+      } else {
+        logger.warn({ invoiceId, stripePaymentIntentId }, 'Skipping intent cancel: merchant has no stripeAccountId');
+      }
+    } catch (err) {
+      // Non-fatal: the invoice is already uncollectible. Log and continue —
+      // the audit row below records the write-off regardless.
+      logger.warn({ err, invoiceId, stripePaymentIntentId }, 'Failed to cancel payment intent on uncollectible');
+    }
+  }
+
+  // 2) Audit the write-off (fail-closed: a financial state change must not
+  //    commit without an audit row). Accounting-system reconciliation is
+  //    deferred — no accounting subsystem exists in this codebase yet.
+  await logAuditEvent(database, logger, {
+    personId: user.id,
+    tenantId: updatedInvoice.merchant,
+    eventType: 'data-modification',
+    actorRole: 'provider',
+    action: 'invoice.mark_uncollectible',
+    resourceType: 'invoice',
+    resourceId: invoiceId,
+    before: { status: 'open' },
+    after: { status: 'uncollectible' },
+  }, { failClosed: true });
+
+  // 3) Notify the customer (best-effort, non-blocking).
+  notifs?.createNotification({
+    recipient: updatedInvoice.customer,
+    type: 'billing',
+    channel: 'in-app',
+    title: 'Invoice written off',
+    message: `Invoice ${updatedInvoice.invoiceNumber} has been marked uncollectible`,
+    relatedEntityType: 'invoice',
+    relatedEntity: updatedInvoice.id,
+  }).catch(() => {/* non-blocking */});
 
   logger.info({
     invoiceId,

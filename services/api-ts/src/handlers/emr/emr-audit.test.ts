@@ -47,8 +47,10 @@ import { EMR_AUDIT_TENANT_SENTINEL } from './emr-audit';
 
 const PROVIDER_PERSON_ID = 'ea000000-0000-4000-8000-000000000001';
 const PATIENT_PERSON_ID  = 'ea000000-0000-4000-8000-000000000002';
+const OTHER_PERSON_ID    = 'ea000000-0000-4000-8000-000000000003';
 const PROVIDER_ID        = 'ea000000-0000-4000-8000-000000000004';
 const PATIENT_ID         = 'ea000000-0000-4000-8000-000000000005';
+const OTHER_PROVIDER_ID  = 'ea000000-0000-4000-8000-000000000006';
 
 const PROVIDER_USER = { id: PROVIDER_PERSON_ID, email: 'provider@clinic.com', role: 'provider' };
 const PATIENT_USER  = { id: PATIENT_PERSON_ID,  email: 'patient@clinic.com',  role: 'patient' };
@@ -71,10 +73,12 @@ beforeEach(async () => {
   await db.insert(persons).values([
     { id: PROVIDER_PERSON_ID, firstName: 'Provider', lastName: 'Test' },
     { id: PATIENT_PERSON_ID,  firstName: 'Patient',  lastName: 'Test' },
+    { id: OTHER_PERSON_ID,    firstName: 'Other',    lastName: 'Test' },
   ]).onConflictDoNothing();
 
   await db.insert(providers).values([
-    { id: PROVIDER_ID, person: PROVIDER_PERSON_ID, providerType: 'dentist' },
+    { id: PROVIDER_ID,       person: PROVIDER_PERSON_ID, providerType: 'dentist' },
+    { id: OTHER_PROVIDER_ID, person: OTHER_PERSON_ID,    providerType: 'dentist' },
   ]).onConflictDoNothing();
 
   await db.insert(patients).values([
@@ -316,5 +320,54 @@ describe('EMR PHI audit logging — listEMRPatients', () => {
     expect(row.tenantId).toBe(EMR_AUDIT_TENANT_SENTINEL);
     const meta = row.metadata as Record<string, unknown>;
     expect(meta['resultCount']).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V-EMR-005 — failure path: a refused write must not leak the patient UUID into
+// the audit log either. The positive tests above prove the sentinel is used on
+// success; this pins the NEGATIVE path (403) — proving the patient UUID never
+// reaches the append-only audit log's tenant slot via ANY code path, including
+// a rejected authorization (V-EMR-AUTH wrong-provider create).
+// ---------------------------------------------------------------------------
+
+describe('V-EMR-005 — audit tenant slot never the patient UUID (failure path)', () => {
+  test('wrong-provider create → 403, and NO audit row carries the patient UUID', async () => {
+    // PROVIDER_USER is linked to PROVIDER_ID but the body claims OTHER_PROVIDER_ID
+    // → ForbiddenError (V-EMR-AUTH). The handler throws BEFORE logAuditEvent.
+    const app = buildTestApp({ user: PROVIDER_USER });
+    const res = await app.request('/emr/consultations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient: PATIENT_ID,
+        provider: OTHER_PROVIDER_ID,
+        chiefComplaint: 'Tooth pain',
+      }),
+    });
+    expect(res.status).toBe(403);
+
+    // V-EMR-005: scan EVERY audit row written in this tx — the patient UUID must
+    // NEVER appear in the tenantId slot (the PHI-leak this sentinel exists to
+    // prevent). A regression that fell back to the patient UUID would surface here.
+    const allRows = await db.select().from(dentalAuditLog);
+    for (const row of allRows) {
+      expect(row.tenantId).not.toBe(PATIENT_ID);
+    }
+  });
+
+  test('successful create still uses the sentinel, never the patient UUID', async () => {
+    // Pin the positive twin alongside the failure path so both branches assert
+    // the same V-EMR-005 invariant in one referencing file.
+    const app = buildTestApp({ user: PROVIDER_USER });
+    const res = await app.request('/emr/consultations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient: PATIENT_ID, provider: PROVIDER_ID }),
+    });
+    expect(res.status).toBe(201);
+    const row = await latestAuditRow('emr.consultation.create');
+    expect(row.tenantId).toBe(EMR_AUDIT_TENANT_SENTINEL);
+    expect(row.tenantId).not.toBe(PATIENT_ID);
   });
 });

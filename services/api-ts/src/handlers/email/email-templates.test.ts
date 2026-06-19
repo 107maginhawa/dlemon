@@ -151,15 +151,16 @@ describe('createEmailTemplate', () => {
     expect(body.code).toBe('FORBIDDEN');
   });
 
-  test('no user → 500 (user undefined crash before role check)', async () => {
-    // When no user is set in context, user.role access throws TypeError → 500
+  test('no user → 403 (no roles, denied gracefully — no crash)', async () => {
+    // No user in context → parseUserRoles yields no roles → the role gate denies
+    // with 403 (previously this crashed with a 500 on user.role.split of undefined).
     const app = buildTestApp(undefined);
     const res = await app.request('/email/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'x', subject: 'x', bodyHtml: '<p>x</p>', variables: [] }),
     });
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(403);
   });
 
   test('missing name → 400 (zValidator catches required field)', async () => {

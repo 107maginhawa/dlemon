@@ -22,7 +22,7 @@ import { TreatmentTable } from './treatment-table';
 import { useUpdateTreatment } from '../hooks/use-update-treatment';
 
 const _toastError = mock(() => {});
-mock.module('sonner', () => ({ toast: { error: _toastError } }));
+mock.module('sonner', () => ({ toast: { error: _toastError, success: mock(() => {}) } }));
 
 function makeWrapper() {
   return makeWrapperBase(freshClientWithMutations());

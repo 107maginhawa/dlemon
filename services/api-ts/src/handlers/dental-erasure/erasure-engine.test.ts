@@ -36,7 +36,7 @@ function auditSpy() {
 }
 
 describe('anonymizeSubject — safety invariants', () => {
-  test('DRY-RUN by default: targets are never called; reports an audit event', async () => {
+  test('V-DG-002-AN: DRY-RUN by default: targets are never called; reports an audit event', async () => {
     const person = makeTarget('person');
     const patient = makeTarget('patient');
     const { audit, events } = auditSpy();
@@ -74,7 +74,7 @@ describe('anonymizeSubject — safety invariants', () => {
     expect(events[0].metadata.totalAnonymized).toBe(3);
   });
 
-  test('LEGAL-HOLD blocks erasure: no target is touched, refusal is audited', async () => {
+  test('V-DG-002-LH: LEGAL-HOLD blocks erasure: no target is touched, refusal is audited', async () => {
     const person = makeTarget('person');
     const { audit, events } = auditSpy();
 
@@ -92,7 +92,7 @@ describe('anonymizeSubject — safety invariants', () => {
     expect(events[0].action).toBe('erasure.blocked_legal_hold');
   });
 
-  test('idempotent: targets reporting 0 (already anonymized) → noop, still audited', async () => {
+  test('V-DG-002-AN idempotent / V-DG-002-AU appended: targets reporting 0 (already anonymized) → noop, still audited', async () => {
     const person = makeTarget('person', 0);
     const { audit, events } = auditSpy();
 

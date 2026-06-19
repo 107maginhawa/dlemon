@@ -7,6 +7,7 @@
 import React from 'react';
 import { AppointmentCard, type Appointment } from './appointment-card';
 import { computeAppointmentColumns, type AppointmentColumn } from '../utils/appointment-layout';
+import { activateOnKey } from '@/lib/a11y';
 
 /** Horizontal gutter (px) matching the legacy left-2/right-2 inset. */
 const COLUMN_GUTTER_PX = 8;
@@ -154,13 +155,14 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
               style={{ height: SLOT_HEIGHT_PX }}
             >
               <div
-                className="absolute inset-1.5 border-[1.5px] border-dashed border-border rounded-md flex items-center justify-center text-[11px] font-medium text-muted-foreground/40 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute inset-1.5 border-[1.5px] border-dashed border-border rounded-md flex items-center justify-center text-[11px] font-medium text-muted-foreground cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity"
                 role="button"
                 tabIndex={0}
                 aria-label={`Book ${formatSlotTime(slot.hour, slot.minute)} slot`}
                 onClick={() => onSlotClick(formatSlotTime(slot.hour, slot.minute))}
+                onKeyDown={activateOnKey(() => onSlotClick(formatSlotTime(slot.hour, slot.minute)))}
               >
-                + tap to book
+                + Book
               </div>
             </div>
           ))}

@@ -1,0 +1,2530 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "dentalemon",
+    "description": "Business domain / flow graph for the dentalemon dental clinic platform. Flows modeled as end-to-end FE↔BE user journeys (e.g. Start Visit = POST draft → PATCH active). Refreshed in UA_KG_UPGRADE U1; incrementally updated to add the patient follow-up-notes flow and refresh billing void/uncollectible/discount summaries.",
+    "analyzedAt": "2026-06-18T14:22:23.000Z",
+    "gitCommitHash": "a1aef9f4f98c9f93274b922a5e73d5b2457c1e3e"
+  },
+  "nodes": [
+    {
+      "id": "domain:patient-management",
+      "type": "domain",
+      "name": "Patient Management",
+      "summary": "Owns the patient record as the central PII safeguard: registration, demographics, households, duplicate detection/merge, recalls, insurance, and communication consent. Every clinical and billing flow resolves a patient here first.",
+      "tags": [
+        "patient",
+        "person",
+        "pii",
+        "registration",
+        "consent"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "Patient",
+          "Person",
+          "Household",
+          "RecallSchedule",
+          "InsurancePolicy",
+          "CommunicationConsent"
+        ],
+        "businessRules": [
+          "PII is never logged in plain text",
+          "Consent (marketing/sms/email/data-sharing) validated before outbound communication",
+          "Duplicate patients are surfaced and merged, never silently created",
+          "Patients are branch-scoped via preferred_branch_id (RLS)"
+        ],
+        "crossDomainInteractions": [
+          "Resolved by clinical-workspace before any visit",
+          "Provides balance/insurance context to billing",
+          "Provides recall targets to scheduling"
+        ]
+      }
+    },
+    {
+      "id": "domain:scheduling",
+      "type": "domain",
+      "name": "Scheduling & Front Office",
+      "summary": "Generic time-based scheduling specialized for the clinic: appointment booking, confirmation, check-in, cancellation, the chairside queue board, the waitlist, and patient-facing online booking. Drives the day's calendar and feeds patients into the clinical queue.",
+      "tags": [
+        "scheduling",
+        "appointments",
+        "calendar",
+        "queue",
+        "booking"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "Appointment",
+          "QueueItem",
+          "WaitlistEntry",
+          "BookingHold",
+          "OnlineBooking",
+          "WorkingHours",
+          "AvailabilitySlot"
+        ],
+        "businessRules": [
+          "Appointments must fall within configured working hours",
+          "Cancellation restricted to owner/staff_full roles (RLS-enforced)",
+          "Appointment FSM: scheduled -> confirmed -> checked-in / cancelled",
+          "Public online booking is rate-limited and slot-held before confirmation"
+        ],
+        "crossDomainInteractions": [
+          "Pulls recall-due patients from patient-management",
+          "Check-in feeds the clinical-workspace queue",
+          "Emits notifications via notifications domain"
+        ]
+      }
+    },
+    {
+      "id": "domain:clinical-workspace",
+      "type": "domain",
+      "name": "Clinical Workspace",
+      "summary": "The chairside clinical record: dental visits and their FSM, tooth-by-tooth dental charting, findings, treatments and treatment plans, periodontal exams, prescriptions, lab orders, consent capture, medical history, and the patient medical document (PMD). Local-first with offline conflict resolution.",
+      "tags": [
+        "clinical",
+        "visit",
+        "charting",
+        "perio",
+        "treatment",
+        "prescription"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "DentalVisit",
+          "DentalChart",
+          "DentalFinding",
+          "Treatment",
+          "TreatmentPlan",
+          "PerioChart",
+          "ToothReading",
+          "Prescription",
+          "LabOrder",
+          "ConsentForm",
+          "MedicalHistory",
+          "PMD"
+        ],
+        "businessRules": [
+          "A patient may have only one open (draft/active) visit at a time",
+          "Visit FSM: draft -> active -> completed; draft->completed is invalid",
+          "Chart save merges against a baseline to avoid offline data loss (LWW + conflict capture)",
+          "Perio chart must be completed before staging is finalized",
+          "Findings convert into proposed treatments"
+        ],
+        "crossDomainInteractions": [
+          "Resolves patient from patient-management",
+          "Treatments feed billing invoices",
+          "Treatment plans feed case-presentation",
+          "Findings/measurements link to imaging studies"
+        ]
+      }
+    },
+    {
+      "id": "domain:imaging",
+      "type": "domain",
+      "name": "Diagnostic Imaging",
+      "summary": "Capture, storage and analysis of dental imaging: intraoral/FMX uploads, DICOM/CBCT studies via presigned multipart upload, imaging findings and measurements, and cephalometric tracing (landmarks, angle analysis, superimposition, signed reports).",
+      "tags": [
+        "imaging",
+        "dicom",
+        "cbct",
+        "cephalometric",
+        "storage"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "ImagingStudy",
+          "Image",
+          "ImagingFinding",
+          "Measurement",
+          "CephLandmark",
+          "CephReport",
+          "CephSuperimposition"
+        ],
+        "businessRules": [
+          "Large studies upload via presigned multipart PUT (S3/MinIO), bypassing the auth cookie",
+          "Ceph reports pin analysis_type/norm_version/formula_version for reproducibility",
+          "Imaging findings can link to clinical findings"
+        ],
+        "crossDomainInteractions": [
+          "Studies attach to clinical visits/findings",
+          "Uses storage domain for binary persistence",
+          "Images referenced in case-presentation"
+        ]
+      }
+    },
+    {
+      "id": "domain:case-presentation",
+      "type": "domain",
+      "name": "Treatment Case Presentation",
+      "summary": "Presents an accepted treatment plan to the patient as a signed legal artifact: assembles plan + imaging context, captures the e-signature acceptance or rejection, and exposes the accepted plan read-only for the legal record.",
+      "tags": [
+        "case-presentation",
+        "treatment-plan",
+        "e-signature",
+        "consent"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entities": [
+          "CasePresentation",
+          "AcceptedPlan",
+          "SignatureArtifact"
+        ],
+        "businessRules": [
+          "Acceptance records signerName/decision/timestamp as an immutable artifact",
+          "A presentation decision is accepted or rejected, never silently changed"
+        ],
+        "crossDomainInteractions": [
+          "Consumes treatment plans from clinical-workspace",
+          "References imaging studies",
+          "Accepted plans drive billing"
+        ]
+      }
+    },
+    {
+      "id": "domain:billing",
+      "type": "domain",
+      "name": "Billing & Revenue Cycle",
+      "summary": "Invoice-based revenue cycle: build invoices from treatments, apply discounts, issue, record/void payments, void invoices, mark balances uncollectible (bad-debt write-off), generate receipts, payment plans, insurance claims with remittance, and accounts-receivable reporting (AR aging, collections, statements). The invoice detail view wires the void-payment, void-invoice, mark-uncollectible, and apply-discount handlers, each audited inside a tenant transaction.",
+      "tags": [
+        "billing",
+        "invoice",
+        "payment",
+        "insurance",
+        "claims",
+        "revenue"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "DentalInvoice",
+          "DentalPayment",
+          "PaymentReceipt",
+          "PaymentPlan",
+          "InsuranceClaim",
+          "ClaimLine",
+          "ArAging",
+          "StatementBatch"
+        ],
+        "businessRules": [
+          "Billing report endpoints must scope by branchId or leak cross-tenant money/PHI (EM-BIL-002)",
+          "Invoice FSM: draft -> issued; voids fail-closed",
+          "Payments and voids are auditable and reversible only via void, not delete",
+          "Patient balance derives from issued invoices minus payments"
+        ],
+        "crossDomainInteractions": [
+          "Invoices built from clinical-workspace treatments",
+          "Patient balance surfaced to patient-portal",
+          "Emits payment notifications via notifications"
+        ]
+      }
+    },
+    {
+      "id": "domain:organization-access",
+      "type": "domain",
+      "name": "Organization & Access Control",
+      "summary": "Tenant setup and security: organization/branch creation and activation, staff membership with PIN-based chairside auth, role-based permission grid, fee schedules, consent templates, and the dashboard summary. Establishes the multi-tenant, branch-scoped boundary all other domains enforce.",
+      "tags": [
+        "organization",
+        "rbac",
+        "auth",
+        "pin",
+        "tenant",
+        "fee-schedule"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "Organization",
+          "Branch",
+          "Member",
+          "PermissionGrid",
+          "FeeSchedule",
+          "ConsentTemplate",
+          "PinSession"
+        ],
+        "businessRules": [
+          "Every record is tenant/branch scoped and enforced via Postgres RLS",
+          "Chairside actions require a verified PIN session",
+          "Permissions are role-based; sensitive actions (cancellation, billing) gate on role",
+          "Org must be activated before product features unlock"
+        ],
+        "crossDomainInteractions": [
+          "Provides auth/branch context to all domains",
+          "Fee schedules feed billing invoice pricing",
+          "Consent templates feed clinical consent capture"
+        ]
+      }
+    },
+    {
+      "id": "domain:engagement",
+      "type": "domain",
+      "name": "Patient Engagement & Communications",
+      "summary": "Outbound and patient-facing engagement: multi-channel notifications (email + OneSignal push), transactional emails, NPS reviews, real-time chat/video comms, and the patient portal (appointments, bills, balance).",
+      "tags": [
+        "notifications",
+        "portal",
+        "communications",
+        "reviews",
+        "email"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entities": [
+          "Notification",
+          "PushSubscription",
+          "Review",
+          "ChatRoom",
+          "PortalSession"
+        ],
+        "businessRules": [
+          "Push uses external_id targeting against a single OneSignal app",
+          "Communication respects patient consent flags",
+          "Portal exposes only the patient's own appointments/invoices/balance"
+        ],
+        "crossDomainInteractions": [
+          "Notified by scheduling (appointment events) and billing (payment events)",
+          "Portal reads from scheduling and billing",
+          "Consent sourced from patient-management"
+        ]
+      }
+    },
+    {
+      "id": "flow:register-patient",
+      "type": "flow",
+      "name": "Register / Update Patient",
+      "summary": "Front office registers a new patient (or edits demographics), with duplicate detection surfacing potential matches before a new record is created.",
+      "tags": [
+        "patient",
+        "registration",
+        "demographics"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Patients route -> Patient Registration modal",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:resolve-duplicate-patients",
+      "type": "flow",
+      "name": "Detect & Merge Duplicate Patients",
+      "summary": "Surfaces candidate duplicate patients and lets staff merge them into a single record to preserve a single source of truth.",
+      "tags": [
+        "patient",
+        "duplicate",
+        "merge",
+        "data-quality"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Patient profile -> Duplicate Patients panel",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:patient-follow-up-notes",
+      "type": "flow",
+      "name": "Record Patient Follow-Up Notes",
+      "summary": "Staff view a patient's timestamped follow-up notes and append a new note from the patient profile; the note is persisted via the SDK and the notes list refreshes optimistically.",
+      "tags": [
+        "patient",
+        "notes",
+        "follow-up",
+        "engagement"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Patient profile -> Follow-Up Notes panel",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:schedule-appointment",
+      "type": "flow",
+      "name": "Schedule Appointment (Staff)",
+      "summary": "Staff create an appointment from the calendar, validated against working hours and availability, then confirm it.",
+      "tags": [
+        "scheduling",
+        "appointment",
+        "calendar"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "POST /dental/appointments (from /calendar)",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:check-in-and-queue",
+      "type": "flow",
+      "name": "Check-In & Queue",
+      "summary": "On arrival, staff check the patient in; the patient enters the chairside queue board where their status advances toward treatment.",
+      "tags": [
+        "scheduling",
+        "check-in",
+        "queue",
+        "front-office"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "POST /dental/appointments/:id/check-in -> queue board",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:online-booking",
+      "type": "flow",
+      "name": "Patient Online Booking",
+      "summary": "Public patient self-booking wizard: pick service/provider, see live availability, hold a slot, enter details, and confirm.",
+      "tags": [
+        "booking",
+        "public",
+        "self-service",
+        "wizard"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "/book/:branchId (public)",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:start-visit",
+      "type": "flow",
+      "name": "Start Clinical Visit",
+      "summary": "From the workspace, starting a visit is a frontend two-step: create a draft visit, then transition it to active so it is chartable and completable. The one-open-visit rule gates the New Visit affordance.",
+      "tags": [
+        "visit",
+        "workspace",
+        "fsm"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Workspace 'New Visit' (/_workspace/:patientId)",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:chart-dentition",
+      "type": "flow",
+      "name": "Chart Dentition & Record Findings",
+      "summary": "Clinician charts teeth surface-by-surface, records findings, and converts findings into proposed treatments; chart saves merge against a baseline with offline conflict handling.",
+      "tags": [
+        "charting",
+        "findings",
+        "treatment",
+        "offline"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "Workspace dental chart tab",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:perio-exam",
+      "type": "flow",
+      "name": "Periodontal Exam",
+      "summary": "Clinician creates a perio chart, records per-tooth probing readings, and completes the chart to lock staging; longitudinal comparison shows trend vs prior exams.",
+      "tags": [
+        "perio",
+        "exam",
+        "staging"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "Workspace perio overlay",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:complete-visit",
+      "type": "flow",
+      "name": "Complete Visit",
+      "summary": "Clinician runs the pre-completion checklist (medical history reviewed, consent captured), marks treatments done, then transitions the active visit to completed.",
+      "tags": [
+        "visit",
+        "completion",
+        "consent",
+        "checklist"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Workspace 'Complete visit'",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:capture-imaging",
+      "type": "flow",
+      "name": "Capture & Upload Imaging",
+      "summary": "Initiate an imaging study to get a presigned upload envelope, upload the file (single PUT or multipart for DICOM/CBCT) directly to storage, then finalize the study so it appears in the patient image library.",
+      "tags": [
+        "imaging",
+        "upload",
+        "dicom",
+        "storage"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "Imaging workspace upload",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:cephalometric-analysis",
+      "type": "flow",
+      "name": "Cephalometric Tracing & Report",
+      "summary": "Place/auto-detect landmarks on a ceph image, compute angle analysis, optionally superimpose against a prior tracing, and generate a version-pinned ceph report.",
+      "tags": [
+        "cephalometric",
+        "landmarks",
+        "analysis",
+        "report"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "/imaging-ceph-report/:imageId",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:present-treatment-plan",
+      "type": "flow",
+      "name": "Present & Accept Treatment Plan",
+      "summary": "Assemble a case presentation from a treatment plan and imaging, present it to the patient, and capture their e-signed acceptance or rejection as a legal artifact.",
+      "tags": [
+        "case-presentation",
+        "treatment-plan",
+        "e-signature"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "/_workspace/:patientId/case-presentation/:presentationId",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:invoice-and-collect-payment",
+      "type": "flow",
+      "name": "Invoice & Collect Payment",
+      "summary": "Build an invoice from treatments, optionally apply a discount, issue it, record a payment, and produce a receipt — the core revenue-cycle journey. From the invoice detail view, staff can also void a recorded payment or void the invoice itself (guarded against active payment plans), all audited and reversible only via void rather than delete.",
+      "tags": [
+        "billing",
+        "invoice",
+        "payment",
+        "receipt"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "Billing invoice detail (/billing)",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:insurance-claim",
+      "type": "flow",
+      "name": "Submit & Reconcile Insurance Claim",
+      "summary": "Create an insurance claim with claim lines, estimate coverage, track status through the claims worklist, and record remittance against the invoice.",
+      "tags": [
+        "insurance",
+        "claims",
+        "remittance",
+        "billing"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "Claims worklist (/billing)",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:payment-plan-and-collections",
+      "type": "flow",
+      "name": "Payment Plans & Collections",
+      "summary": "Set up a patient payment plan, monitor AR aging and the collections view, generate statement batches, and mark uncollectible balances. Marking an invoice uncollectible is a bad-debt write-off wired from the invoice detail view (gated by canMarkUncollectible) and audited inside a tenant transaction.",
+      "tags": [
+        "payment-plan",
+        "collections",
+        "ar-aging",
+        "billing"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Collections view / payment plan create",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:clinic-onboarding",
+      "type": "flow",
+      "name": "Clinic Onboarding",
+      "summary": "Multi-step wizard that bootstraps a new clinic: organization/clinic details, the first dentist, fee schedule defaults, and a first patient, then activates the organization.",
+      "tags": [
+        "onboarding",
+        "organization",
+        "activation",
+        "wizard"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "/dental-onboarding",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:pin-chairside-auth",
+      "type": "flow",
+      "name": "PIN Chairside Authentication",
+      "summary": "Staff select their member identity and enter a PIN to establish a chairside session that gates clinical workspace actions.",
+      "tags": [
+        "auth",
+        "pin",
+        "rbac",
+        "security"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "/auth/pin-select -> /auth/pin-entry/:memberId",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:manage-staff-permissions",
+      "type": "flow",
+      "name": "Manage Staff & Permissions",
+      "summary": "Owner manages staff membership and the role-based permission grid, and resets member PINs from the staff admin screen.",
+      "tags": [
+        "staff",
+        "permissions",
+        "rbac",
+        "admin"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "/staff",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "flow:patient-portal-access",
+      "type": "flow",
+      "name": "Patient Portal Access",
+      "summary": "Authenticated patient views their own upcoming appointments, invoices, and outstanding balance through the portal.",
+      "tags": [
+        "portal",
+        "patient",
+        "self-service"
+      ],
+      "complexity": "simple",
+      "domainMeta": {
+        "entryPoint": "/portal",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:notifications-and-recalls",
+      "type": "flow",
+      "name": "Notifications & Recalls",
+      "summary": "Patients opt into push, receive routed notifications, and recall-due patients are surfaced for re-engagement scheduling.",
+      "tags": [
+        "notifications",
+        "push",
+        "recalls",
+        "engagement"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "Notification bell / push opt-in prompt",
+        "entryType": "event"
+      }
+    },
+    {
+      "id": "step:register-patient:open-registration-modal",
+      "type": "step",
+      "name": "Open registration modal",
+      "summary": "Staff open the Patient Registration modal from the patients list to enter demographics.",
+      "tags": [
+        "frontend",
+        "registration"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-registration-modal.tsx"
+    },
+    {
+      "id": "step:register-patient:check-duplicates",
+      "type": "step",
+      "name": "Surface possible duplicates",
+      "summary": "As demographics are entered, candidate duplicate patients are surfaced to prevent creating a redundant record.",
+      "tags": [
+        "frontend",
+        "duplicate-detection"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-duplicate-patients.ts"
+    },
+    {
+      "id": "step:register-patient:submit-create",
+      "type": "step",
+      "name": "Create patient record",
+      "summary": "Submit the form to create the patient via the dental-patient identity handler.",
+      "tags": [
+        "backend",
+        "create",
+        "person"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-patient/identity"
+    },
+    {
+      "id": "step:register-patient:refresh-list",
+      "type": "step",
+      "name": "Invalidate & refresh patient list",
+      "summary": "On success the patients query is invalidated so the new patient appears.",
+      "tags": [
+        "frontend",
+        "tanstack-query"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patients.ts"
+    },
+    {
+      "id": "step:resolve-duplicate-patients:list-candidates",
+      "type": "step",
+      "name": "List duplicate candidates",
+      "summary": "The duplicate panel loads candidate matches for the current patient.",
+      "tags": [
+        "frontend"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/components/duplicate-patients-panel.tsx"
+    },
+    {
+      "id": "step:resolve-duplicate-patients:review",
+      "type": "step",
+      "name": "Review matches",
+      "summary": "Staff review demographic overlap to decide whether records are the same person.",
+      "tags": [
+        "frontend",
+        "manual"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-duplicate-patients.ts"
+    },
+    {
+      "id": "step:resolve-duplicate-patients:merge",
+      "type": "step",
+      "name": "Merge patient records",
+      "summary": "Confirmed duplicates are merged into a single canonical patient via the identity handler.",
+      "tags": [
+        "backend",
+        "merge"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-patient/identity"
+    },
+    {
+      "id": "step:patient-follow-up-notes:view-notes",
+      "type": "step",
+      "name": "View follow-up notes",
+      "summary": "The follow-up notes panel lists the patient's existing timestamped notes via the useFollowUpNotes query hook.",
+      "tags": [
+        "frontend",
+        "notes",
+        "data-fetching"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
+      "lineRange": [
+        30,
+        46
+      ]
+    },
+    {
+      "id": "step:patient-follow-up-notes:enter-note",
+      "type": "step",
+      "name": "Enter a new note",
+      "summary": "Staff type a follow-up note into the add-note form within the FollowUpNotes panel.",
+      "tags": [
+        "frontend",
+        "notes",
+        "form"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/patients/components/follow-up-notes.tsx",
+      "lineRange": [
+        30,
+        140
+      ]
+    },
+    {
+      "id": "step:patient-follow-up-notes:save-note",
+      "type": "step",
+      "name": "Append follow-up note",
+      "summary": "Submitting the form appends the note via the useAddFollowUpNote mutation hook (SDK), then invalidates the notes query so the new note appears.",
+      "tags": [
+        "frontend",
+        "notes",
+        "mutation"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-follow-up-notes.ts",
+      "lineRange": [
+        54,
+        78
+      ]
+    },
+    {
+      "id": "step:schedule-appointment:open-modal",
+      "type": "step",
+      "name": "Open appointment modal",
+      "summary": "Staff open the appointment modal from the calendar and pick patient, provider, and time.",
+      "tags": [
+        "frontend",
+        "calendar"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/scheduling/components/appointment-modal.tsx"
+    },
+    {
+      "id": "step:schedule-appointment:check-availability",
+      "type": "step",
+      "name": "Resolve availability & working hours",
+      "summary": "Availability is computed against configured working hours before the slot is offered.",
+      "tags": [
+        "backend",
+        "availability"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/availability.service.ts"
+    },
+    {
+      "id": "step:schedule-appointment:create",
+      "type": "step",
+      "name": "Create appointment",
+      "summary": "POST creates the appointment in the scheduled state.",
+      "tags": [
+        "backend",
+        "create",
+        "appointment"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/createAppointment.ts"
+    },
+    {
+      "id": "step:schedule-appointment:confirm",
+      "type": "step",
+      "name": "Confirm appointment",
+      "summary": "Staff confirm the appointment (scheduled -> confirmed) via the dedicated confirm endpoint.",
+      "tags": [
+        "backend",
+        "confirm",
+        "fsm"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/confirmAppointment.ts"
+    },
+    {
+      "id": "step:check-in-and-queue:check-in",
+      "type": "step",
+      "name": "Check in appointment",
+      "summary": "Staff check the patient in from the calendar, advancing the appointment FSM.",
+      "tags": [
+        "backend",
+        "check-in"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/checkInAppointment.ts"
+    },
+    {
+      "id": "step:check-in-and-queue:enter-queue",
+      "type": "step",
+      "name": "Enter chairside queue",
+      "summary": "Check-in creates/places a queue item; the queue board renders waiting patients.",
+      "tags": [
+        "backend",
+        "queue"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/createQueueItem.ts"
+    },
+    {
+      "id": "step:check-in-and-queue:view-queue-board",
+      "type": "step",
+      "name": "View & advance queue board",
+      "summary": "Staff view the queue board and advance item status as the patient moves through the visit.",
+      "tags": [
+        "frontend",
+        "queue"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/scheduling/components/queue-board.tsx"
+    },
+    {
+      "id": "step:online-booking:choose-service",
+      "type": "step",
+      "name": "Choose service & provider",
+      "summary": "Public booking wizard step 1: select visit type and provider.",
+      "tags": [
+        "frontend",
+        "public",
+        "wizard"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/booking/BookingWizard.tsx"
+    },
+    {
+      "id": "step:online-booking:load-availability",
+      "type": "step",
+      "name": "Load live availability",
+      "summary": "Fetch public availability for the chosen service to render the slot grid.",
+      "tags": [
+        "backend",
+        "availability",
+        "public"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/getPublicAvailability.ts"
+    },
+    {
+      "id": "step:online-booking:hold-slot",
+      "type": "step",
+      "name": "Hold a slot",
+      "summary": "Selecting a slot creates a short-lived booking hold to prevent double-booking.",
+      "tags": [
+        "backend",
+        "hold"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/createBookingHold.ts"
+    },
+    {
+      "id": "step:online-booking:enter-details",
+      "type": "step",
+      "name": "Enter contact details",
+      "summary": "Patient enters contact details in the wizard details step.",
+      "tags": [
+        "frontend",
+        "wizard"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/booking/use-online-booking.ts"
+    },
+    {
+      "id": "step:online-booking:confirm",
+      "type": "step",
+      "name": "Confirm booking",
+      "summary": "Submit the held slot to create the online booking; a confirmation code is returned (rate-limited).",
+      "tags": [
+        "backend",
+        "confirm",
+        "public"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-scheduling/createOnlineBooking.ts"
+    },
+    {
+      "id": "step:start-visit:click-new-visit",
+      "type": "step",
+      "name": "Click 'New Visit' (gated)",
+      "summary": "Workspace New Visit action; gated by the one-open-visit rule computed from the visit list.",
+      "tags": [
+        "frontend",
+        "workspace",
+        "gating"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/routes/_workspace/$patientId.tsx",
+      "lineRange": [
+        137,
+        224
+      ]
+    },
+    {
+      "id": "step:start-visit:create-draft",
+      "type": "step",
+      "name": "POST create draft visit",
+      "summary": "Frontend step 1: createDentalVisit creates the visit in draft state.",
+      "tags": [
+        "frontend",
+        "backend",
+        "create",
+        "fsm"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-create-visit.ts",
+      "lineRange": [
+        33,
+        35
+      ]
+    },
+    {
+      "id": "step:start-visit:patch-to-active",
+      "type": "step",
+      "name": "PATCH draft -> active",
+      "summary": "Frontend step 2: immediately updateDentalVisit to status='active' so the visit is chartable and completable (draft->completed is invalid).",
+      "tags": [
+        "frontend",
+        "backend",
+        "fsm"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-create-visit.ts",
+      "lineRange": [
+        37,
+        42
+      ]
+    },
+    {
+      "id": "step:start-visit:refresh-timeline",
+      "type": "step",
+      "name": "Refresh visit timeline",
+      "summary": "Invalidate listDentalVisits so the timeline shows the active visit.",
+      "tags": [
+        "frontend",
+        "tanstack-query"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-visits.ts"
+    },
+    {
+      "id": "step:chart-dentition:select-tooth",
+      "type": "step",
+      "name": "Select tooth & surfaces",
+      "summary": "Clinician selects a tooth and surfaces on the dental chart.",
+      "tags": [
+        "frontend",
+        "charting"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/workspace/components/dental-chart.tsx"
+    },
+    {
+      "id": "step:chart-dentition:record-finding",
+      "type": "step",
+      "name": "Record finding",
+      "summary": "Record a clinical finding for the selected tooth/surface.",
+      "tags": [
+        "backend",
+        "finding"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-visit/createDentalFinding.ts"
+    },
+    {
+      "id": "step:chart-dentition:convert-to-treatment",
+      "type": "step",
+      "name": "Convert finding to treatment",
+      "summary": "Convert a finding into a proposed treatment on the plan.",
+      "tags": [
+        "backend",
+        "treatment"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-visit/convertFindingToTreatment.ts"
+    },
+    {
+      "id": "step:chart-dentition:save-chart",
+      "type": "step",
+      "name": "Save chart (baseline merge)",
+      "summary": "Persist chart tooth data; the save merges against a baseline and captures offline conflicts.",
+      "tags": [
+        "frontend",
+        "backend",
+        "offline",
+        "conflict"
+      ],
+      "complexity": "complex",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-save-chart.ts"
+    },
+    {
+      "id": "step:chart-dentition:resolve-conflict",
+      "type": "step",
+      "name": "Resolve chart conflict",
+      "summary": "If an offline conflict was persisted, the conflict banner lets the clinician resolve it.",
+      "tags": [
+        "frontend",
+        "backend",
+        "conflict"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-visit/resolveChartConflict.ts"
+    },
+    {
+      "id": "step:perio-exam:create-chart",
+      "type": "step",
+      "name": "Create perio chart",
+      "summary": "Open a new periodontal chart for the visit.",
+      "tags": [
+        "backend",
+        "perio"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-perio/createPerioChart.ts"
+    },
+    {
+      "id": "step:perio-exam:record-readings",
+      "type": "step",
+      "name": "Record probing readings",
+      "summary": "Upsert per-tooth probing depth / BOP readings as the clinician probes.",
+      "tags": [
+        "frontend",
+        "backend",
+        "readings"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-perio/upsertToothReading.ts"
+    },
+    {
+      "id": "step:perio-exam:complete-chart",
+      "type": "step",
+      "name": "Complete perio chart",
+      "summary": "Complete the chart to lock staging; runs inside a transaction.",
+      "tags": [
+        "backend",
+        "perio",
+        "staging"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-perio/completePerioChart.ts"
+    },
+    {
+      "id": "step:perio-exam:compare-history",
+      "type": "step",
+      "name": "Compare with history",
+      "summary": "Toggle the current exam against prior exams to show longitudinal trend.",
+      "tags": [
+        "frontend",
+        "comparison"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-perio-history.ts"
+    },
+    {
+      "id": "step:complete-visit:review-medical-history",
+      "type": "step",
+      "name": "Review medical history",
+      "summary": "Pre-completion checklist requires the patient's medical history be reviewed.",
+      "tags": [
+        "frontend",
+        "checklist",
+        "medical-history"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-medical-history-review.ts"
+    },
+    {
+      "id": "step:complete-visit:capture-consent",
+      "type": "step",
+      "name": "Capture consent",
+      "summary": "Capture required consent (or record a refusal) before completing.",
+      "tags": [
+        "backend",
+        "consent"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-clinical/consent"
+    },
+    {
+      "id": "step:complete-visit:mark-treatments-done",
+      "type": "step",
+      "name": "Mark treatments done",
+      "summary": "Clinician marks performed treatments complete.",
+      "tags": [
+        "frontend",
+        "treatment"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-mark-treatment-done.ts"
+    },
+    {
+      "id": "step:complete-visit:patch-completed",
+      "type": "step",
+      "name": "PATCH active -> completed",
+      "summary": "Transition the active visit to completed via updateDentalVisit.",
+      "tags": [
+        "frontend",
+        "backend",
+        "fsm"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/workspace/hooks/use-update-visit.ts"
+    },
+    {
+      "id": "step:capture-imaging:initiate-study",
+      "type": "step",
+      "name": "Initiate study & get upload URL",
+      "summary": "Create the imaging study and receive the presigned upload envelope (single PUT or multipart).",
+      "tags": [
+        "backend",
+        "imaging",
+        "presign"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-imaging/createImagingStudy.ts"
+    },
+    {
+      "id": "step:capture-imaging:upload-binary",
+      "type": "step",
+      "name": "Upload binary to storage",
+      "summary": "Frontend PUTs the file (or each multipart part) directly to S3/MinIO presigned URLs, bypassing the auth cookie.",
+      "tags": [
+        "frontend",
+        "upload",
+        "storage"
+      ],
+      "complexity": "complex",
+      "filePath": "apps/dentalemon/src/features/imaging/hooks/use-imaging-upload.ts",
+      "lineRange": [
+        37,
+        100
+      ]
+    },
+    {
+      "id": "step:capture-imaging:finalize",
+      "type": "step",
+      "name": "Finalize study",
+      "summary": "Finalize the study (e.g. CBCT) so it appears in the library.",
+      "tags": [
+        "backend",
+        "imaging",
+        "finalize"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-imaging/finalizeCbctStudy.ts"
+    },
+    {
+      "id": "step:capture-imaging:view-library",
+      "type": "step",
+      "name": "View patient image library",
+      "summary": "Uploaded study appears in the patient image list / imaging workspace.",
+      "tags": [
+        "frontend",
+        "imaging"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/imaging/components/patient-image-list.tsx"
+    },
+    {
+      "id": "step:cephalometric-analysis:place-landmarks",
+      "type": "step",
+      "name": "Place / detect landmarks",
+      "summary": "Place landmarks manually or auto-detect, then batch-upsert them.",
+      "tags": [
+        "frontend",
+        "backend",
+        "landmarks"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-imaging/batchUpsertCephLandmarks.ts"
+    },
+    {
+      "id": "step:cephalometric-analysis:compute-analysis",
+      "type": "step",
+      "name": "Compute angle analysis",
+      "summary": "Compute cephalometric angle analysis from the landmarks.",
+      "tags": [
+        "backend",
+        "analysis"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-imaging/getCephAnalysis.ts"
+    },
+    {
+      "id": "step:cephalometric-analysis:superimpose",
+      "type": "step",
+      "name": "Superimpose tracings",
+      "summary": "Optionally superimpose against a prior tracing to show growth/change.",
+      "tags": [
+        "frontend",
+        "backend",
+        "superimposition"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-imaging/cephSuperimposition.ts"
+    },
+    {
+      "id": "step:cephalometric-analysis:generate-report",
+      "type": "step",
+      "name": "Generate ceph report",
+      "summary": "Generate a version-pinned ceph report (analysis_type/norm_version/formula_version pinned).",
+      "tags": [
+        "backend",
+        "report",
+        "reproducibility"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-imaging/createCephReport.ts"
+    },
+    {
+      "id": "step:present-treatment-plan:assemble",
+      "type": "step",
+      "name": "Assemble presentation",
+      "summary": "Aggregate the treatment plan and imaging refs into a case presentation.",
+      "tags": [
+        "backend",
+        "case-presentation"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-patient/case-presentation"
+    },
+    {
+      "id": "step:present-treatment-plan:present",
+      "type": "step",
+      "name": "Present to patient",
+      "summary": "Render the case presentation view to the patient at the chair.",
+      "tags": [
+        "frontend",
+        "presentation"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx"
+    },
+    {
+      "id": "step:present-treatment-plan:sign-accept",
+      "type": "step",
+      "name": "Capture e-signed decision",
+      "summary": "Patient accepts (e-signature) or rejects; the signed decision is persisted as a legal artifact.",
+      "tags": [
+        "frontend",
+        "backend",
+        "e-signature"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/case-presentation/use-case-presentation.ts",
+      "lineRange": [
+        151,
+        152
+      ]
+    },
+    {
+      "id": "step:present-treatment-plan:view-accepted",
+      "type": "step",
+      "name": "View accepted plan",
+      "summary": "The accepted plan (with signer artifact) is shown read-only.",
+      "tags": [
+        "frontend",
+        "legal-record"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx"
+    },
+    {
+      "id": "step:invoice-and-collect-payment:create-invoice",
+      "type": "step",
+      "name": "Create invoice from treatments",
+      "summary": "Build a draft invoice from the visit's treatments.",
+      "tags": [
+        "backend",
+        "invoice"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-billing/createDentalInvoice.ts"
+    },
+    {
+      "id": "step:invoice-and-collect-payment:apply-discount",
+      "type": "step",
+      "name": "Apply discount (optional)",
+      "summary": "Optionally apply a discount to the invoice.",
+      "tags": [
+        "backend",
+        "discount"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-billing/applyDentalDiscount.ts"
+    },
+    {
+      "id": "step:invoice-and-collect-payment:issue-invoice",
+      "type": "step",
+      "name": "Issue invoice",
+      "summary": "Issue the invoice (draft -> issued) from the invoice detail view.",
+      "tags": [
+        "frontend",
+        "backend",
+        "fsm"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "lineRange": [
+        143,
+        159
+      ]
+    },
+    {
+      "id": "step:invoice-and-collect-payment:record-payment",
+      "type": "step",
+      "name": "Record payment",
+      "summary": "Record a patient payment against the issued invoice.",
+      "tags": [
+        "frontend",
+        "backend",
+        "payment"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-billing/recordDentalPayment.ts"
+    },
+    {
+      "id": "step:invoice-and-collect-payment:issue-receipt",
+      "type": "step",
+      "name": "Produce receipt",
+      "summary": "Generate the payment receipt for the patient.",
+      "tags": [
+        "frontend",
+        "backend",
+        "receipt"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-billing/getDentalPaymentReceipt.ts"
+    },
+    {
+      "id": "step:insurance-claim:create-claim",
+      "type": "step",
+      "name": "Create insurance claim",
+      "summary": "Create a claim with claim lines from billable treatments.",
+      "tags": [
+        "backend",
+        "claims"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-billing/createInsuranceClaim.ts"
+    },
+    {
+      "id": "step:insurance-claim:estimate-coverage",
+      "type": "step",
+      "name": "Estimate coverage",
+      "summary": "Estimate payer coverage for the claim lines.",
+      "tags": [
+        "backend",
+        "estimate"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-billing/estimateClaimCoverage.ts"
+    },
+    {
+      "id": "step:insurance-claim:track-worklist",
+      "type": "step",
+      "name": "Track in claims worklist",
+      "summary": "Monitor and update claim status from the claims worklist UI.",
+      "tags": [
+        "frontend",
+        "claims"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.tsx"
+    },
+    {
+      "id": "step:insurance-claim:record-remittance",
+      "type": "step",
+      "name": "Record remittance",
+      "summary": "Record payer remittance against the claim and invoice.",
+      "tags": [
+        "backend",
+        "remittance"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-billing/recordClaimRemittance.ts"
+    },
+    {
+      "id": "step:payment-plan-and-collections:create-plan",
+      "type": "step",
+      "name": "Create payment plan",
+      "summary": "Set up an installment payment plan for the patient.",
+      "tags": [
+        "frontend",
+        "backend",
+        "payment-plan"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-billing/createDentalPaymentPlan.ts"
+    },
+    {
+      "id": "step:payment-plan-and-collections:view-ar-aging",
+      "type": "step",
+      "name": "Review AR aging & collections",
+      "summary": "Review accounts-receivable aging and the collections view (branch-scoped).",
+      "tags": [
+        "frontend",
+        "backend",
+        "ar-aging"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-view.tsx"
+    },
+    {
+      "id": "step:payment-plan-and-collections:generate-statements",
+      "type": "step",
+      "name": "Generate statement batch",
+      "summary": "Generate a batch of patient statements for outstanding balances.",
+      "tags": [
+        "backend",
+        "statements"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-billing/generateStatementBatch.ts"
+    },
+    {
+      "id": "step:payment-plan-and-collections:mark-uncollectible",
+      "type": "step",
+      "name": "Mark uncollectible",
+      "summary": "Mark a balance uncollectible when collection is abandoned.",
+      "tags": [
+        "backend",
+        "collections"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-billing/markUncollectible.ts"
+    },
+    {
+      "id": "step:clinic-onboarding:clinic-step",
+      "type": "step",
+      "name": "Enter clinic details",
+      "summary": "Wizard step: organization/clinic name and details.",
+      "tags": [
+        "frontend",
+        "wizard",
+        "organization"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/onboarding/components/wizard-step-clinic.tsx"
+    },
+    {
+      "id": "step:clinic-onboarding:dentist-step",
+      "type": "step",
+      "name": "Add first dentist",
+      "summary": "Wizard step: create the first dentist member.",
+      "tags": [
+        "frontend",
+        "wizard",
+        "member"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/features/onboarding/components/wizard-step-dentist.tsx"
+    },
+    {
+      "id": "step:clinic-onboarding:fees-step",
+      "type": "step",
+      "name": "Set fee schedule defaults",
+      "summary": "Wizard step: configure default fee schedule entries.",
+      "tags": [
+        "frontend",
+        "wizard",
+        "fee-schedule"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/onboarding/components/wizard-step-fees.tsx"
+    },
+    {
+      "id": "step:clinic-onboarding:submit-onboarding",
+      "type": "step",
+      "name": "Submit onboarding",
+      "summary": "Persist the onboarding (org, member, fees, first patient) via createOnboarding.",
+      "tags": [
+        "backend",
+        "onboarding"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-org/createOnboarding.ts"
+    },
+    {
+      "id": "step:clinic-onboarding:activate-org",
+      "type": "step",
+      "name": "Activate organization",
+      "summary": "Activate the organization so product features unlock.",
+      "tags": [
+        "backend",
+        "activation"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-org/activateOrganization.ts"
+    },
+    {
+      "id": "step:pin-chairside-auth:select-member",
+      "type": "step",
+      "name": "Select member",
+      "summary": "Staff pick their identity from the PIN select screen.",
+      "tags": [
+        "frontend",
+        "auth"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/routes/auth/pin-select.tsx"
+    },
+    {
+      "id": "step:pin-chairside-auth:enter-pin",
+      "type": "step",
+      "name": "Enter PIN",
+      "summary": "Staff enter their PIN to establish a chairside session.",
+      "tags": [
+        "frontend",
+        "pin"
+      ],
+      "complexity": "simple",
+      "filePath": "apps/dentalemon/src/routes/auth/pin-entry.$memberId.tsx"
+    },
+    {
+      "id": "step:pin-chairside-auth:verify-pin",
+      "type": "step",
+      "name": "Verify PIN",
+      "summary": "Backend verifies the PIN against the member record.",
+      "tags": [
+        "backend",
+        "pin",
+        "security"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-org/DentalMembershipManagement_verifyPin.ts"
+    },
+    {
+      "id": "step:pin-chairside-auth:establish-session",
+      "type": "step",
+      "name": "Establish PIN session",
+      "summary": "A PIN session is stored and gates workspace routes.",
+      "tags": [
+        "frontend",
+        "session"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/lib/pin-session.ts"
+    },
+    {
+      "id": "step:manage-staff-permissions:list-members",
+      "type": "step",
+      "name": "List staff members",
+      "summary": "Owner views staff on the staff admin screen.",
+      "tags": [
+        "frontend",
+        "staff"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-org/listMembers.ts"
+    },
+    {
+      "id": "step:manage-staff-permissions:edit-permissions",
+      "type": "step",
+      "name": "Edit permission grid",
+      "summary": "Owner updates the role-based permission grid.",
+      "tags": [
+        "frontend",
+        "backend",
+        "rbac"
+      ],
+      "complexity": "complex",
+      "filePath": "services/api-ts/src/handlers/dental-org/updatePermissions.ts"
+    },
+    {
+      "id": "step:manage-staff-permissions:reset-pin",
+      "type": "step",
+      "name": "Reset member PIN",
+      "summary": "Owner resets a member's PIN.",
+      "tags": [
+        "backend",
+        "pin"
+      ],
+      "complexity": "moderate",
+      "filePath": "services/api-ts/src/handlers/dental-org/resetMemberPin.ts"
+    },
+    {
+      "id": "step:patient-portal-access:view-appointments",
+      "type": "step",
+      "name": "View my appointments",
+      "summary": "Patient sees their own upcoming appointments in the portal.",
+      "tags": [
+        "frontend",
+        "backend",
+        "portal"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-portal/listMyAppointments.ts"
+    },
+    {
+      "id": "step:patient-portal-access:view-invoices",
+      "type": "step",
+      "name": "View my invoices",
+      "summary": "Patient sees their own invoices in the portal.",
+      "tags": [
+        "frontend",
+        "backend",
+        "portal"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-portal/listMyInvoices.ts"
+    },
+    {
+      "id": "step:patient-portal-access:view-balance",
+      "type": "step",
+      "name": "View my balance",
+      "summary": "Patient sees their outstanding balance in the portal.",
+      "tags": [
+        "frontend",
+        "backend",
+        "portal",
+        "balance"
+      ],
+      "complexity": "simple",
+      "filePath": "services/api-ts/src/handlers/dental-portal/getMyBalance.ts"
+    },
+    {
+      "id": "step:notifications-and-recalls:push-opt-in",
+      "type": "step",
+      "name": "Opt into push",
+      "summary": "Patient opts into push notifications (OneSignal external_id targeting).",
+      "tags": [
+        "frontend",
+        "push"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx"
+    },
+    {
+      "id": "step:notifications-and-recalls:route-notification",
+      "type": "step",
+      "name": "Route notification",
+      "summary": "Incoming notifications are routed to the correct destination/screen.",
+      "tags": [
+        "frontend",
+        "notifications",
+        "routing"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/notifications/lib/notification-routing.ts"
+    },
+    {
+      "id": "step:notifications-and-recalls:surface-recalls",
+      "type": "step",
+      "name": "Surface recall-due patients",
+      "summary": "Recall-due patients are surfaced for re-engagement scheduling.",
+      "tags": [
+        "frontend",
+        "backend",
+        "recalls"
+      ],
+      "complexity": "moderate",
+      "filePath": "apps/dentalemon/src/features/scheduling/hooks/use-recall-due-list.ts"
+    }
+  ],
+  "edges": [
+    {
+      "source": "domain:patient-management",
+      "target": "flow:register-patient",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:patient-management",
+      "target": "flow:resolve-duplicate-patients",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:patient-management",
+      "target": "flow:patient-follow-up-notes",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:scheduling",
+      "target": "flow:schedule-appointment",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:scheduling",
+      "target": "flow:check-in-and-queue",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:scheduling",
+      "target": "flow:online-booking",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "flow:start-visit",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "flow:chart-dentition",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "flow:perio-exam",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "flow:complete-visit",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:imaging",
+      "target": "flow:capture-imaging",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:imaging",
+      "target": "flow:cephalometric-analysis",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:case-presentation",
+      "target": "flow:present-treatment-plan",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:billing",
+      "target": "flow:invoice-and-collect-payment",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:billing",
+      "target": "flow:insurance-claim",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:billing",
+      "target": "flow:payment-plan-and-collections",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:organization-access",
+      "target": "flow:clinic-onboarding",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:organization-access",
+      "target": "flow:pin-chairside-auth",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:organization-access",
+      "target": "flow:manage-staff-permissions",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:engagement",
+      "target": "flow:patient-portal-access",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:engagement",
+      "target": "flow:notifications-and-recalls",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:register-patient",
+      "target": "step:register-patient:open-registration-modal",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:register-patient",
+      "target": "step:register-patient:check-duplicates",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:register-patient",
+      "target": "step:register-patient:submit-create",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:register-patient",
+      "target": "step:register-patient:refresh-list",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:resolve-duplicate-patients",
+      "target": "step:resolve-duplicate-patients:list-candidates",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:resolve-duplicate-patients",
+      "target": "step:resolve-duplicate-patients:review",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:resolve-duplicate-patients",
+      "target": "step:resolve-duplicate-patients:merge",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:patient-follow-up-notes",
+      "target": "step:patient-follow-up-notes:view-notes",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:patient-follow-up-notes",
+      "target": "step:patient-follow-up-notes:enter-note",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:patient-follow-up-notes",
+      "target": "step:patient-follow-up-notes:save-note",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:schedule-appointment",
+      "target": "step:schedule-appointment:open-modal",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:schedule-appointment",
+      "target": "step:schedule-appointment:check-availability",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:schedule-appointment",
+      "target": "step:schedule-appointment:create",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:schedule-appointment",
+      "target": "step:schedule-appointment:confirm",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:check-in-and-queue",
+      "target": "step:check-in-and-queue:check-in",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:check-in-and-queue",
+      "target": "step:check-in-and-queue:enter-queue",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:check-in-and-queue",
+      "target": "step:check-in-and-queue:view-queue-board",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:online-booking",
+      "target": "step:online-booking:choose-service",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:online-booking",
+      "target": "step:online-booking:load-availability",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:online-booking",
+      "target": "step:online-booking:hold-slot",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:online-booking",
+      "target": "step:online-booking:enter-details",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:online-booking",
+      "target": "step:online-booking:confirm",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:start-visit",
+      "target": "step:start-visit:click-new-visit",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:start-visit",
+      "target": "step:start-visit:create-draft",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:start-visit",
+      "target": "step:start-visit:patch-to-active",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:start-visit",
+      "target": "step:start-visit:refresh-timeline",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:chart-dentition",
+      "target": "step:chart-dentition:select-tooth",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:chart-dentition",
+      "target": "step:chart-dentition:record-finding",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:chart-dentition",
+      "target": "step:chart-dentition:convert-to-treatment",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:chart-dentition",
+      "target": "step:chart-dentition:save-chart",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:chart-dentition",
+      "target": "step:chart-dentition:resolve-conflict",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:perio-exam",
+      "target": "step:perio-exam:create-chart",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:perio-exam",
+      "target": "step:perio-exam:record-readings",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:perio-exam",
+      "target": "step:perio-exam:complete-chart",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:perio-exam",
+      "target": "step:perio-exam:compare-history",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:complete-visit",
+      "target": "step:complete-visit:review-medical-history",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:complete-visit",
+      "target": "step:complete-visit:capture-consent",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:complete-visit",
+      "target": "step:complete-visit:mark-treatments-done",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:complete-visit",
+      "target": "step:complete-visit:patch-completed",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:capture-imaging",
+      "target": "step:capture-imaging:initiate-study",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:capture-imaging",
+      "target": "step:capture-imaging:upload-binary",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:capture-imaging",
+      "target": "step:capture-imaging:finalize",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:capture-imaging",
+      "target": "step:capture-imaging:view-library",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:cephalometric-analysis",
+      "target": "step:cephalometric-analysis:place-landmarks",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:cephalometric-analysis",
+      "target": "step:cephalometric-analysis:compute-analysis",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:cephalometric-analysis",
+      "target": "step:cephalometric-analysis:superimpose",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:cephalometric-analysis",
+      "target": "step:cephalometric-analysis:generate-report",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:present-treatment-plan",
+      "target": "step:present-treatment-plan:assemble",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:present-treatment-plan",
+      "target": "step:present-treatment-plan:present",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:present-treatment-plan",
+      "target": "step:present-treatment-plan:sign-accept",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:present-treatment-plan",
+      "target": "step:present-treatment-plan:view-accepted",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:invoice-and-collect-payment",
+      "target": "step:invoice-and-collect-payment:create-invoice",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:invoice-and-collect-payment",
+      "target": "step:invoice-and-collect-payment:apply-discount",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:invoice-and-collect-payment",
+      "target": "step:invoice-and-collect-payment:issue-invoice",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:invoice-and-collect-payment",
+      "target": "step:invoice-and-collect-payment:record-payment",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:invoice-and-collect-payment",
+      "target": "step:invoice-and-collect-payment:issue-receipt",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:insurance-claim",
+      "target": "step:insurance-claim:create-claim",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:insurance-claim",
+      "target": "step:insurance-claim:estimate-coverage",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:insurance-claim",
+      "target": "step:insurance-claim:track-worklist",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:insurance-claim",
+      "target": "step:insurance-claim:record-remittance",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:payment-plan-and-collections",
+      "target": "step:payment-plan-and-collections:create-plan",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:payment-plan-and-collections",
+      "target": "step:payment-plan-and-collections:view-ar-aging",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:payment-plan-and-collections",
+      "target": "step:payment-plan-and-collections:generate-statements",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:payment-plan-and-collections",
+      "target": "step:payment-plan-and-collections:mark-uncollectible",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:clinic-onboarding",
+      "target": "step:clinic-onboarding:clinic-step",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:clinic-onboarding",
+      "target": "step:clinic-onboarding:dentist-step",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:clinic-onboarding",
+      "target": "step:clinic-onboarding:fees-step",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:clinic-onboarding",
+      "target": "step:clinic-onboarding:submit-onboarding",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:clinic-onboarding",
+      "target": "step:clinic-onboarding:activate-org",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:pin-chairside-auth",
+      "target": "step:pin-chairside-auth:select-member",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.25
+    },
+    {
+      "source": "flow:pin-chairside-auth",
+      "target": "step:pin-chairside-auth:enter-pin",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:pin-chairside-auth",
+      "target": "step:pin-chairside-auth:verify-pin",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.75
+    },
+    {
+      "source": "flow:pin-chairside-auth",
+      "target": "step:pin-chairside-auth:establish-session",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:manage-staff-permissions",
+      "target": "step:manage-staff-permissions:list-members",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:manage-staff-permissions",
+      "target": "step:manage-staff-permissions:edit-permissions",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:manage-staff-permissions",
+      "target": "step:manage-staff-permissions:reset-pin",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:patient-portal-access",
+      "target": "step:patient-portal-access:view-appointments",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:patient-portal-access",
+      "target": "step:patient-portal-access:view-invoices",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:patient-portal-access",
+      "target": "step:patient-portal-access:view-balance",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:notifications-and-recalls",
+      "target": "step:notifications-and-recalls:push-opt-in",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:notifications-and-recalls",
+      "target": "step:notifications-and-recalls:route-notification",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:notifications-and-recalls",
+      "target": "step:notifications-and-recalls:surface-recalls",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:scheduling",
+      "target": "domain:patient-management",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Scheduling resolves patients and pulls recall-due patients from patient-management.",
+      "weight": 0.6
+    },
+    {
+      "source": "domain:scheduling",
+      "target": "domain:clinical-workspace",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Appointment check-in feeds the patient into the clinical queue/workspace.",
+      "weight": 0.7
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "domain:patient-management",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Every visit resolves and reads the patient record before charting.",
+      "weight": 0.7
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "domain:imaging",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Clinical findings and visits link to imaging studies and measurements.",
+      "weight": 0.5
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "domain:case-presentation",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Treatment plans built in the workspace are presented for patient acceptance.",
+      "weight": 0.6
+    },
+    {
+      "source": "domain:clinical-workspace",
+      "target": "domain:billing",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Completed treatments become billable invoice line items.",
+      "weight": 0.7
+    },
+    {
+      "source": "domain:imaging",
+      "target": "domain:case-presentation",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Imaging studies are referenced in the case presentation.",
+      "weight": 0.4
+    },
+    {
+      "source": "domain:billing",
+      "target": "domain:patient-management",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Patient balance and insurance context are read from patient-management.",
+      "weight": 0.6
+    },
+    {
+      "source": "domain:organization-access",
+      "target": "domain:billing",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Fee schedules from org setup price billing invoices.",
+      "weight": 0.5
+    },
+    {
+      "source": "domain:organization-access",
+      "target": "domain:clinical-workspace",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "PIN sessions and RBAC gate clinical workspace actions; consent templates feed consent capture.",
+      "weight": 0.6
+    },
+    {
+      "source": "domain:scheduling",
+      "target": "domain:engagement",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Appointment events trigger notifications and the portal reads appointments.",
+      "weight": 0.5
+    },
+    {
+      "source": "domain:billing",
+      "target": "domain:engagement",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "Payment/invoice events drive notifications; the portal exposes invoices and balance.",
+      "weight": 0.5
+    }
+  ]
+}

@@ -22,8 +22,7 @@ export function YearSegmentControl({ years, selectedYear, onSelect }: YearSegmen
 
   return (
     <div
-      className="inline-flex items-center gap-1 p-1 rounded-full"
-      style={{ backgroundColor: '#F2F2F7' }}
+      className="inline-flex items-center gap-1.5 p-2.5 rounded-full bg-muted"
       role="group"
       aria-label="Filter visits by year"
     >

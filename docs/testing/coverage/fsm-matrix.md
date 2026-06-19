@@ -14,49 +14,25 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Illegal edges | 92 |
 | Legal covered | 37 |
 | **Legal uncovered** | **7** |
-| Illegal covered | 69 |
-| **Illegal uncovered (high-value)** | **23** |
+| Illegal covered | 92 |
+| **Illegal uncovered (high-value)** | **0** |
 
 ## Per-FSM coverage
 
 | FSM | edges | legal cov/total | illegal cov/total |
 |-----|------:|:---------------:|:-----------------:|
-| Appointment | 30 | 11/11 | 18/19 |
-| CephLandmark | 12 | 2/3 | 4/9 |
+| Appointment | 30 | 11/11 | 19/19 |
+| CephLandmark | 12 | 2/3 | 9/9 |
 | Finding | 6 | 3/3 | 3/3 |
 | LabOrder | 20 | 3/6 | 14/14 |
 | PaymentPlan | 12 | 6/6 | 6/6 |
 | Prescription | 6 | 2/2 | 4/4 |
-| Treatment | 30 | 8/9 | 14/21 |
-| Visit | 20 | 2/4 | 6/16 |
+| Treatment | 30 | 8/9 | 21/21 |
+| Visit | 20 | 2/4 | 16/16 |
 
 ## Uncovered ILLEGAL edges (high-value)
 
-| FSM | from | to |
-|-----|------|----|
-| Appointment | `completed` | `checked_in` |
-| CephLandmark | `confirmed` | `not_placed` |
-| CephLandmark | `locked` | `not_placed` |
-| CephLandmark | `not_placed` | `confirmed` |
-| CephLandmark | `not_placed` | `locked` |
-| CephLandmark | `placed` | `not_placed` |
-| Treatment | `declined` | `performed` |
-| Treatment | `declined` | `verified` |
-| Treatment | `diagnosed` | `verified` |
-| Treatment | `dismissed` | `performed` |
-| Treatment | `performed` | `declined` |
-| Treatment | `verified` | `declined` |
-| Treatment | `verified` | `diagnosed` |
-| Visit | `active` | `locked` |
-| Visit | `completed` | `draft` |
-| Visit | `discarded` | `draft` |
-| Visit | `discarded` | `locked` |
-| Visit | `draft` | `completed` |
-| Visit | `draft` | `discarded` |
-| Visit | `draft` | `locked` |
-| Visit | `locked` | `active` |
-| Visit | `locked` | `discarded` |
-| Visit | `locked` | `draft` |
+_None — every illegal transition has a rejection test._
 
 ## Full edge matrix
 
@@ -73,7 +49,7 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Appointment | `checked_in` | `no_show` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:92 |
 | Appointment | `checked_in` | `scheduled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:67 |
 | Appointment | `completed` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-scheduling-transitions.test.ts`:223 |
-| Appointment | `completed` | `checked_in` | ⛔ |   |  |
+| Appointment | `completed` | `checked_in` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:108 |
 | Appointment | `completed` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment-confirm.test.ts`:179 |
 | Appointment | `completed` | `no_show` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:85 |
 | Appointment | `completed` | `scheduled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:95 |
@@ -93,17 +69,17 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Appointment | `scheduled` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment-confirm.test.ts`:113 |
 | Appointment | `scheduled` | `no_show` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:71 |
 | CephLandmark | `confirmed` | `locked` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-auto-landmark.test.ts`:418 |
-| CephLandmark | `confirmed` | `not_placed` | ⛔ |   |  |
+| CephLandmark | `confirmed` | `not_placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:84 |
 | CephLandmark | `confirmed` | `placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:21 |
 | CephLandmark | `locked` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-auto-landmark.test.ts`:8 |
-| CephLandmark | `locked` | `not_placed` | ⛔ |   |  |
+| CephLandmark | `locked` | `not_placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:87 |
 | CephLandmark | `locked` | `placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:21 |
-| CephLandmark | `not_placed` | `confirmed` | ⛔ |   |  |
-| CephLandmark | `not_placed` | `locked` | ⛔ |   |  |
+| CephLandmark | `not_placed` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:90 |
+| CephLandmark | `not_placed` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:93 |
 | CephLandmark | `not_placed` | `placed` | ✅ |   |  |
 | CephLandmark | `placed` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:697 |
 | CephLandmark | `placed` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:21 |
-| CephLandmark | `placed` | `not_placed` | ⛔ |   |  |
+| CephLandmark | `placed` | `not_placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:96 |
 | Finding | `confirmed` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:73 |
 | Finding | `confirmed` | `resolved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:66 |
 | Finding | `draft` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:67 |
@@ -123,13 +99,13 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | LabOrder | `fitted` | `in_fabrication` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `fitted` | `ordered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `in_fabrication` | `cancelled` | ✅ |   |  |
-| LabOrder | `in_fabrication` | `delivered` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:797 |
+| LabOrder | `in_fabrication` | `delivered` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:821 |
 | LabOrder | `in_fabrication` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `in_fabrication` | `ordered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `ordered` | `cancelled` | ✅ |   |  |
 | LabOrder | `ordered` | `delivered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `ordered` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
-| LabOrder | `ordered` | `in_fabrication` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:826 |
+| LabOrder | `ordered` | `in_fabrication` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:850 |
 | PaymentPlan | `behind` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:13 |
 | PaymentPlan | `behind` | `defaulted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:12 |
 | PaymentPlan | `behind` | `on_track` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:9 |
@@ -150,20 +126,20 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Prescription | `pending` | `dispensed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.status.test.ts`:173 |
 | Treatment | `declined` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
 | Treatment | `declined` | `dismissed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
-| Treatment | `declined` | `performed` | ⛔ |   |  |
+| Treatment | `declined` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:87 |
 | Treatment | `declined` | `planned` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
-| Treatment | `declined` | `verified` | ⛔ |   |  |
+| Treatment | `declined` | `verified` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:90 |
 | Treatment | `diagnosed` | `declined` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/repos/treatment-decline.test.ts`:55 |
 | Treatment | `diagnosed` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:65 |
 | Treatment | `diagnosed` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.revenue-path-regression.test.ts`:10 |
 | Treatment | `diagnosed` | `planned` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.revenue-path-regression.test.ts`:164 |
-| Treatment | `diagnosed` | `verified` | ⛔ |   |  |
+| Treatment | `diagnosed` | `verified` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:93 |
 | Treatment | `dismissed` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
 | Treatment | `dismissed` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
-| Treatment | `dismissed` | `performed` | ⛔ |   |  |
+| Treatment | `dismissed` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:96 |
 | Treatment | `dismissed` | `planned` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:476 |
 | Treatment | `dismissed` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:836 |
-| Treatment | `performed` | `declined` | ⛔ |   |  |
+| Treatment | `performed` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:99 |
 | Treatment | `performed` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.revenue-path-regression.test.ts`:10 |
 | Treatment | `performed` | `dismissed` | ✅ |   |  |
 | Treatment | `performed` | `planned` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:348 |
@@ -173,28 +149,28 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Treatment | `planned` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:476 |
 | Treatment | `planned` | `performed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:348 |
 | Treatment | `planned` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:840 |
-| Treatment | `verified` | `declined` | ⛔ |   |  |
-| Treatment | `verified` | `diagnosed` | ⛔ |   |  |
+| Treatment | `verified` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:102 |
+| Treatment | `verified` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:105 |
 | Treatment | `verified` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:250 |
 | Treatment | `verified` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:215 |
 | Treatment | `verified` | `planned` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:840 |
 | Visit | `active` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.test.ts`:502 |
 | Visit | `active` | `discarded` | ✅ |   |  |
 | Visit | `active` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:350 |
-| Visit | `active` | `locked` | ⛔ |   |  |
+| Visit | `active` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:81 |
 | Visit | `completed` | `active` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/business-rules.test.ts`:244 |
 | Visit | `completed` | `discarded` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/business-rules.test.ts`:244 |
-| Visit | `completed` | `draft` | ⛔ |   |  |
+| Visit | `completed` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:84 |
 | Visit | `completed` | `locked` | ✅ |   |  |
 | Visit | `discarded` | `active` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/business-rules.test.ts`:238 |
 | Visit | `discarded` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/business-rules.test.ts`:244 |
-| Visit | `discarded` | `draft` | ⛔ |   |  |
-| Visit | `discarded` | `locked` | ⛔ |   |  |
+| Visit | `discarded` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:87 |
+| Visit | `discarded` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:90 |
 | Visit | `draft` | `active` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/createDentalVisit.idempotency.test.ts`:105 |
-| Visit | `draft` | `completed` | ⛔ |   |  |
-| Visit | `draft` | `discarded` | ⛔ |   |  |
-| Visit | `draft` | `locked` | ⛔ |   |  |
-| Visit | `locked` | `active` | ⛔ |   |  |
+| Visit | `draft` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:93 |
+| Visit | `draft` | `discarded` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:96 |
+| Visit | `draft` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:99 |
+| Visit | `locked` | `active` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:102 |
 | Visit | `locked` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.test.ts`:1126 |
-| Visit | `locked` | `discarded` | ⛔ |   |  |
-| Visit | `locked` | `draft` | ⛔ |   |  |
+| Visit | `locked` | `discarded` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:105 |
+| Visit | `locked` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:108 |

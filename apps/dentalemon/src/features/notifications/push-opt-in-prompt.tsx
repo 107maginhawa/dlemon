@@ -85,7 +85,7 @@ export function PushOptInPrompt({
       data-testid="push-opt-in"
       role="region"
       aria-label="Enable push notifications"
-      className="fixed bottom-4 right-4 z-40 w-80 max-w-[90vw] rounded-xl border border-border bg-background p-4 shadow-lg"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 w-80 max-w-[90vw] rounded-xl border border-border bg-background p-4 shadow-lg"
     >
       <div className="flex items-start gap-3">
         <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />

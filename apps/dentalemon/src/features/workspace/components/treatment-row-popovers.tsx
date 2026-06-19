@@ -45,14 +45,14 @@ export function DismissTreatmentPopover({
           onChange={(e) => onReasonChange(e.target.value)}
           minLength={3}
           placeholder="e.g. Patient declined"
-          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
         <button
           type="button"
           disabled={!reasonOk || isPending}
           onClick={() => { if (reasonOk) onConfirm(); }}
           aria-label="Confirm dismiss treatment"
-          className="mt-2 w-full rounded-xl bg-destructive/10 text-destructive text-sm py-1.5 font-medium disabled:opacity-50 hover:bg-destructive/20 transition-colors"
+          className="mt-2 w-full rounded-xl bg-destructive/10 text-destructive text-sm py-3 min-h-[44px] font-medium disabled:opacity-50 hover:bg-destructive/20 transition-colors"
         >
           Confirm Dismiss
         </button>
@@ -114,7 +114,7 @@ export function DeclineTreatmentPopover({
           onChange={(e) => onReasonChange(e.target.value)}
           minLength={3}
           placeholder="e.g. Cannot afford, prefers alternative"
-          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus:border-lemon outline-none"
+          className="w-full border border-border rounded-xl px-2 py-1.5 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
         />
         <button
           type="button"

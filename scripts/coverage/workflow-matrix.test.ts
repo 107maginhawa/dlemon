@@ -153,13 +153,13 @@ describe('parseGaps', () => {
     expect(gaps.has('WFG-014')).toBe(true);
   });
 
-  test('the real WORKFLOW_MAP has 14 WFG gaps', () => {
+  test('the real WORKFLOW_MAP has 15 WFG gaps', () => {
     const md = require('node:fs').readFileSync(
       require('node:path').join(__dirname, '../../docs/product/WORKFLOW_MAP.md'),
       'utf8',
     );
     const gaps = parseGaps(md);
-    expect(gaps.size).toBe(14);
+    expect(gaps.size).toBe(15);
   });
 });
 
@@ -339,7 +339,7 @@ describe('end-to-end against the real WORKFLOW_MAP', () => {
     const result = ratchet(gaps, allowlist);
     expect(result.newGaps.map((g) => g.id)).toEqual([]);
     expect(result.ok).toBe(true);
-    // sanity: the WORKFLOW_MAP gives us 84 WF + 14 WFG; the gate is non-trivial.
+    // sanity: the WORKFLOW_MAP gives us 85 WF + 15 WFG; the gate is non-trivial.
     expect(gaps.length).toBeGreaterThan(14);
     // every allowlist id should still correspond to a current gap (no rot).
     expect(result.resolved).toEqual([]);

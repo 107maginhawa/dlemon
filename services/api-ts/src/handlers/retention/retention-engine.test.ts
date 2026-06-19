@@ -1,10 +1,15 @@
 /**
- * Engine safety tests (V-DG-001). The destructive paths are covered hard:
- * dry-run default, legal-hold exemption, audit-never-purged, delete→archive
- * downgrade, period-boundary cutoff, and no-target handling.
+ * Engine safety tests (V-DG-001 / AC-RET-001..006). The destructive paths are
+ * covered hard: dry-run default, legal-hold exemption, audit-never-purged,
+ * delete→archive downgrade, period-boundary cutoff, and no-target handling.
  *
- * These are PURE: the db is opaque, targets are fakes with call spies, and the
- * audit writer is injected so we can assert exactly what would be persisted.
+ * AC-RET-001..006 hard invariants asserted here (refusals that hold regardless of
+ * policy data): DRY-RUN unless dryRun:false; 'audit'/protected target never read
+ * or actioned; 'retain' action refused; 'delete' DOWNGRADED to soft-archive (no
+ * hard-delete path); legal-held records always excluded — and `legalHoldExempt`
+ * is NEVER a bypass (the engine has no exemption escape hatch). The admin-gated
+ * negative path (non-admin → 403) for the retention enforcement-status read API
+ * lives in getRetentionStatus.test.ts.
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -118,7 +123,7 @@ describe('evaluateRetention — safety invariants', () => {
     expect(events[0].metadata.actionedCount).toBe(2);
   });
 
-  test('LEGAL-HOLD: held records are always excluded, even in live mode', async () => {
+  test('AC-RET-001..006 LEGAL-HOLD: held records are always excluded, even in live mode', async () => {
     const { target, calls } = makeTarget({
       entityType: 'attachment',
       candidates: [
@@ -140,6 +145,39 @@ describe('evaluateRetention — safety invariants', () => {
     expect(res[0]!.actionedCount).toBe(1);
     expect(calls.archive[0]).toEqual(['a']); // held records never passed to archive
     expect(events[0].metadata.legalHeldCount).toBe(2);
+  });
+
+  test('AC-RET-001..006: legalHoldExempt is NEVER a bypass — a held record is still excluded even when the policy sets legalHoldExempt:true', async () => {
+    // The registry claims `legalHoldExempt` can never be used to action a held
+    // record. The engine has NO exemption escape hatch (the legal-hold filter at
+    // retention-engine.ts is unconditional), so a malicious/mistaken policy flag
+    // must not flip a held candidate into the actioned set.
+    const { target, calls } = makeTarget({
+      entityType: 'attachment',
+      candidates: [
+        { id: 'free', legalHold: false },
+        { id: 'held', legalHold: true },
+      ],
+    });
+    const { audit, events } = auditSpy();
+
+    const res = await evaluateRetention(
+      {} as any,
+      noopLogger,
+      [policy({ legalHoldExempt: true, action: 'delete' })], // attempt to bypass + hard-delete
+      { dryRun: false, targets: { attachment: target }, audit },
+    );
+
+    // The held record is excluded regardless of the exempt flag; only the free
+    // record is actioned, and the action is the safe soft-archive downgrade.
+    expect(res[0]!.legalHeldCount).toBe(1);
+    expect(res[0]!.eligibleCount).toBe(1);
+    expect(res[0]!.actionedCount).toBe(1);
+    expect(res[0]!.effectiveAction).toBe('archive'); // delete DOWNGRADED, never hard-delete
+    expect(calls.archive[0]).toEqual(['free']); // 'held' never reaches a write path
+    expect(calls.archive[0]).not.toContain('held');
+    expect(events[0].action).toBe('retention.enforced');
+    expect(events[0].metadata.legalHeldCount).toBe(1);
   });
 
   test('AUDIT NEVER PURGED: a protected target is refused — never queried or actioned', async () => {

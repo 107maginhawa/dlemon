@@ -38,6 +38,19 @@ export interface BranchSettings {
   dentistSpecialty?: string;
   // FR8.3: Treatment fee schedule (map cdtCode → price in cents)
   feeSchedule?: Record<string, number>;
+  // BR-048: clinic-wide default payment terms (days). Lowest-precedence fallback
+  // when an invoice has no override and its services carry no terms. 0 = due on
+  // receipt. Stored here (JSONB) to avoid a config table/migration.
+  defaultPaymentTermsDays?: number;
+  // BR-050: dunning cadence — days past due at which to send payment reminders
+  // (e.g. [3, 7, 14]). Stored here (JSONB) to avoid a config table/migration; a
+  // hardcoded default applies when absent. Reminders go out on email + push.
+  billingReminderOffsetDays?: number[];
+  // BR-054: PH tax mode. 'non_vat' (default) → no invoice tax; 'vat_registered'
+  // → 12% VAT carved out of the (VAT-inclusive) gross. Server-derived, never
+  // caller-supplied. Stored here (JSONB) to avoid a config table/migration.
+  taxMode?: 'non_vat' | 'vat_registered';
+  vatRate?: number; // VAT percentage for vat_registered branches (default 12)
   // FR8.7: Visit notes format toggle
   visitNotesFormat?: 'structured' | 'freetext';
   // FR8.8: Locale settings

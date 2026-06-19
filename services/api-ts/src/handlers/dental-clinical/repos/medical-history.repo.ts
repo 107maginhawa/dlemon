@@ -33,13 +33,6 @@ export class MedicalHistoryRepository extends DatabaseRepository<MedicalHistoryE
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
-  override async findMany(filters?: MedicalHistoryFilters): Promise<MedicalHistoryEntry[]> {
-    const where = this.buildWhereConditions(filters);
-    return where
-      ? await this.db.select().from(medicalHistoryEntries).where(where)
-      : await this.db.select().from(medicalHistoryEntries);
-  }
-
   override async findOneById(id: string): Promise<MedicalHistoryEntry | null> {
     const [row] = await this.db.select().from(medicalHistoryEntries).where(eq(medicalHistoryEntries.id, id));
     return row ?? null;

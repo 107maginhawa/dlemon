@@ -17,7 +17,10 @@ import type { Appointment } from '../../features/scheduling/components/appointme
 import { CancelAppointmentDialog } from '../../features/scheduling/components/cancel-appointment-dialog';
 import { useAppointments } from '../../features/scheduling/hooks/use-appointments';
 import { ListErrorState } from '@/components/list-error-state';
+import { Skeleton } from '@monobase/ui';
 import { checkInAppointment, updateAppointment, confirmAppointment, cancelAppointment } from '@monobase/sdk-ts/generated';
+import { toast } from 'sonner';
+import { toastError } from '@/lib/error-toast';
 import { APP_LOCALE } from '@/constants/brand';
 import { RecallDueList } from '../../features/scheduling/components/recall-due-list';
 import type { RecallDueItem } from '../../features/scheduling/hooks/use-recall-due-list';
@@ -149,8 +152,9 @@ function CalendarPage() {
     try {
       await checkInAppointment({ path: { appointmentId } });
       invalidateAppointments();
-    } catch {
-      // Network error — ignore silently
+      toast.success('Patient checked in');
+    } catch (err) {
+      toastError(err, 'Check-in failed. Please try again.');
     }
   }
 
@@ -160,8 +164,9 @@ function CalendarPage() {
       // synchronously expires queued reminders). Falls back to no-op on error.
       await confirmAppointment({ path: { appointmentId } });
       invalidateAppointments();
-    } catch {
-      // Network error — ignore silently
+      toast.success('Appointment confirmed');
+    } catch (err) {
+      toastError(err, 'Could not confirm the appointment. Please try again.');
     }
   }
 
@@ -345,8 +350,15 @@ function CalendarPage() {
           />
         </div>
       ) : isLoading && appointments.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm" aria-label="Loading appointments">
-          Loading appointments…
+        <div className="flex-1 overflow-hidden p-4" aria-label="Loading appointments" aria-busy="true">
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="flex items-start gap-3">
+                <Skeleton className="h-4 w-12 mt-1 shrink-0" />
+                <Skeleton className="h-16 flex-1 rounded-xl" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : view === 'day' ? (
         <CalendarDay

@@ -44,11 +44,11 @@ const PHASE_SHORT_LABELS: Record<TreatmentPhase, string> = {
 };
 
 const PHASE_ACCENTS: Record<TreatmentPhase, string> = {
-  systemic: '#DC2626',
-  disease_control: '#EA580C',
-  re_evaluation: '#7C3AED',
+  systemic: 'var(--phase-1)',
+  disease_control: 'var(--phase-2)',
+  re_evaluation: 'var(--phase-3)',
   definitive: BRAND_GOLD_TEXT,
-  maintenance: '#059669',
+  maintenance: 'var(--phase-4)',
 };
 
 const PHASE_RANK = (p: TreatmentPhase | null | undefined): number =>

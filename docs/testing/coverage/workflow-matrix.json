@@ -1,12 +1,12 @@
 {
   "generatedBy": "scripts/coverage/workflow-matrix.ts",
   "totals": {
-    "workflows": 84,
+    "workflows": 85,
     "crossModule": 16,
-    "covered": 55,
+    "covered": 56,
     "gap": 27,
     "deferred": 2,
-    "wfgGaps": 14,
+    "wfgGaps": 15,
     "danglingSpecRefs": 0
   },
   "dangling": [],
@@ -354,6 +354,14 @@
       "name": "Patient consent at registration",
       "crossModule": false,
       "mappedSpec": "apps/dentalemon/tests/e2e/patient-registration.spec.ts",
+      "specExists": true,
+      "status": "covered"
+    },
+    {
+      "wfId": "WF-045",
+      "name": "Create (from workspace +, two-step `POST draft → PATCH active`)",
+      "crossModule": false,
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/21-new-visit-create.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },

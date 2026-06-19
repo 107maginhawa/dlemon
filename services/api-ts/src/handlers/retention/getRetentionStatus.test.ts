@@ -4,6 +4,10 @@
  * Proves the admin-only HTTP read surfaces the audit-derived enforcement status
  * (the `summarizeRetentionEnforcement` logic is unit-tested in retention-status.test.ts;
  * here we pin auth + wiring + the wire shape). RED before the handler is implemented.
+ *
+ * AC-RET-001..006: this is the read surface over retention enforcement state; the
+ * enforcement-status API is platform-admin-only — a non-admin caller → 403 (the
+ * engine-level enforcement invariants themselves are asserted in retention-engine.test.ts).
  */
 import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
@@ -75,7 +79,7 @@ describe('getRetentionStatus handler (FR8.14)', () => {
     expect(res.status).toBe(401);
   });
 
-  test('returns 403 when caller is not an admin', async () => {
+  test('AC-RET-001..006: returns 403 when caller is not an admin (enforcement-status read is admin-only)', async () => {
     const res = await makeApp(NON_ADMIN).request('/dental/retention-status');
     expect(res.status).toBe(403);
   });

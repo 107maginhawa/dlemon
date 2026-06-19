@@ -5,7 +5,7 @@
  * returns (date/time, type, status) — no staff fields. Honest empty + error
  * states; no actions in Phase 1.
  */
-import { Badge, Card, CardContent, Skeleton } from '@monobase/ui';
+import { Badge, Button, Card, CardContent, Skeleton } from '@monobase/ui';
 import { Calendar } from 'lucide-react';
 import { useMyAppointments, type MyAppointment } from '../hooks/use-my-portal';
 
@@ -80,7 +80,7 @@ export function AppointmentCard({ appointment }: { appointment: MyAppointment })
 // ---------------------------------------------------------------------------
 
 export function MyAppointmentsView() {
-  const { appointments, isLoading, error } = useMyAppointments();
+  const { appointments, isLoading, error, refetch } = useMyAppointments();
 
   return (
     <section className="space-y-3" aria-labelledby="portal-appointments-heading">
@@ -91,13 +91,16 @@ export function MyAppointmentsView() {
       {isLoading ? (
         <div className="space-y-3" data-testid="portal-appointments-loading">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[72px] w-full rounded-xl" />
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
           ))}
         </div>
       ) : error ? (
         <Card>
-          <CardContent className="p-6 text-center text-sm text-destructive" role="alert">
-            We couldn’t load your appointments. Please try again later.
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center text-sm text-destructive">
+            <p role="alert">We couldn’t load your appointments. Please try again later.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
           </CardContent>
         </Card>
       ) : appointments.length === 0 ? (

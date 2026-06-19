@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { Button, Input, Textarea } from '@monobase/ui';
+import { Button, Input, Textarea, Skeleton } from '@monobase/ui';
 import { useVisitNotes } from '../hooks/use-visit-notes';
 import { APP_LOCALE } from '@/constants/brand';
 import { useOrgContextStore } from '@/stores/org-context.store';
@@ -226,9 +226,9 @@ export function SoapNotesSheet({
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           {isLoading ? (
             <>
-              <div className="h-16 bg-muted animate-pulse rounded-xl" />
-              <div className="h-16 bg-muted animate-pulse rounded-xl" />
-              <div className="h-16 bg-muted animate-pulse rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
             </>
           ) : showAddendum ? (
             /* ── Addendum form ── */
@@ -249,7 +249,7 @@ export function SoapNotesSheet({
                   value={addendumForm.reason}
                   onChange={handleAddendumFieldChange('reason')}
                   placeholder="e.g. Correction, additional finding…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
               </div>
               <div>
@@ -265,7 +265,7 @@ export function SoapNotesSheet({
                   value={addendumForm.content}
                   onChange={handleAddendumFieldChange('content')}
                   placeholder="Addendum text…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none"
                 />
               </div>
             </>
@@ -287,7 +287,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('subjective')}
                   disabled={isLocked}
                   placeholder="Chief complaint and patient-reported symptoms…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -306,7 +306,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('objective')}
                   disabled={isLocked}
                   placeholder="Clinical findings, examination results…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -325,7 +325,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('assessment')}
                   disabled={isLocked}
                   placeholder="Diagnosis and clinical impression…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -344,7 +344,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('plan')}
                   disabled={isLocked}
                   placeholder="Treatment plan and next steps…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 
@@ -363,7 +363,7 @@ export function SoapNotesSheet({
                   onChange={handleFieldChange('notes')}
                   disabled={isLocked}
                   placeholder="Any additional observations or notes…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus:border-lemon outline-none resize-none disabled:opacity-60 disabled:bg-muted"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none resize-none disabled:opacity-60 disabled:bg-muted"
                 />
               </div>
 

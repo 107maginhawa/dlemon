@@ -71,6 +71,18 @@ export function PatientEditForm({
       setFieldError('First name is required');
       return false;
     }
+    // Email is optional; validate format only when provided.
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setFieldError('Please enter a valid email address');
+      return false;
+    }
+    // Phone is optional; when provided allow only digits, spaces, and a leading +.
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !/^\+?[\d\s]+$/.test(trimmedPhone)) {
+      setFieldError('Please enter a valid phone number');
+      return false;
+    }
     setFieldError(null);
     return true;
   }
@@ -226,7 +238,7 @@ export function PatientEditForm({
             <button
               type="submit"
               disabled={disabled || saving}
-              className="px-4 py-2 rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="px-4 py-2 min-h-[44px] rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save Changes'}
             </button>

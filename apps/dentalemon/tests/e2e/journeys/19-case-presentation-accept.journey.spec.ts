@@ -165,7 +165,13 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       )
       .catch(() => null)
     await view.getByTestId('accept-sign-btn').click()
-    await acceptPost
+    const acceptResp = await acceptPost
+    // DoD clause 3 — every step succeeded: the accept POST itself must be 2xx, not
+    // just "the UI flipped" (a failed accept would otherwise hide behind a stale view).
+    expect(
+      acceptResp?.ok(),
+      `accept POST /case-presentations/:id/accept must be 2xx (got ${acceptResp?.status() ?? 'no response'})`,
+    ).toBe(true)
 
     // UI flips to the read-only signed-acceptance record (FIX-002 viewer).
     await expect(
@@ -212,7 +218,12 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       )
       .catch(() => null)
     await page.getByTestId('reject-confirm-btn').click()
-    await rejectPost
+    const rejectResp = await rejectPost
+    // DoD clause 3 — every step succeeded: the reject POST itself must be 2xx.
+    expect(
+      rejectResp?.ok(),
+      `reject POST /case-presentations/:id/reject must be 2xx (got ${rejectResp?.status() ?? 'no response'})`,
+    ).toBe(true)
 
     // UI flips to the read-only record showing the decline.
     await expect(

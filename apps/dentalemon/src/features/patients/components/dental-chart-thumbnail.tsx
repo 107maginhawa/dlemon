@@ -29,7 +29,7 @@ export function getThumbnailPipClass(state: ToothState): string {
     case 'missing':
       return 'bg-dental-missing/50';
     case 'implant':
-      return 'bg-[#007AFF]';
+      return 'bg-dental-implant';
     case 'watchlist':
       return 'bg-dental-crown/50';
     default:

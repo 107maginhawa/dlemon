@@ -49,6 +49,28 @@ export function buildCalibrationRequest({
   }
 }
 
+/**
+ * Run a calibration save and branch on the outcome. On failure the error is
+ * routed to `onError` (a user-facing toast) and the function returns WITHOUT
+ * calling `onSuccess`, so the caller's success-only resets (closing the dialog,
+ * clearing draw points) never run and the operator can retry. Extracted from the
+ * ImagingWorkspace callback purely so the failure branch is unit-testable without
+ * rendering the canvas-heavy component.
+ */
+export async function confirmCalibrationSave(opts: {
+  save: () => Promise<unknown>
+  onError: (err: unknown) => void
+  onSuccess: () => void
+}): Promise<void> {
+  try {
+    await opts.save()
+  } catch (err) {
+    opts.onError(err)
+    return
+  }
+  opts.onSuccess()
+}
+
 export interface ProcessToolClickArgs {
   toolMode: ToolMode
   drawPoints: Point[]
