@@ -24,6 +24,7 @@ import {
   useRestorePatient,
   useBulkArchive,
   useExportPatients,
+  isPatientCollectionQuery,
 } from '@/features/patients/hooks/use-patient-actions';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
@@ -99,13 +100,14 @@ function PatientsPage() {
     }
 
     setShowRegistration(false);
-    // Invalidate the patients list so the new patient appears immediately.
-    // The list query comes from the generated SDK, whose key is
-    // [{ _id: 'listDentalPatients', ... }] — a literal ['dental-patients']
+    // Invalidate the patients list AND the duplicates panel so the new patient
+    // appears immediately. The list query comes from the generated SDK, whose
+    // key is [{ _id: 'listDentalPatients', ... }] — a literal ['dental-patients']
     // key never matched it, so the list silently stayed stale after a create.
-    // Match the same predicate the archive/restore/update hooks use.
+    // ISSUE-019: a create can also form a new duplicate group, so the
+    // Find-Duplicates panel (detectDuplicatePatients) must refresh too.
     queryClient.invalidateQueries({
-      predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
+      predicate: (q) => isPatientCollectionQuery(q.queryKey),
     });
   }
 
