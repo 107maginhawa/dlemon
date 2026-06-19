@@ -52,13 +52,15 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ quick actions: New Patient → `/patients` · New Appointment → `/calendar` · Open Workspace → `/patients` (picker) — all navigate
 - [x] ✅ links: Today's Schedule "View all" → `/calendar` · Daily Collections "Details" → `/billing` · Overdue Alerts "View all" → `/billing` · Pending Treatments "View all" → `/patients` · Payment Plans "Manage" → `/billing` · Tomorrow Preview "Open Calendar" → `/calendar` — all navigate correctly
 
-### Patients — list
+### Patients — list — **swept live 2026-06-20 (session 3)**
 - [x] ✅ list load · search
-- [ ] ⬜ filter tabs (All / Active / Needs Follow-Up / Archived)
-- [ ] ⬜ select-all + bulk archive
-- [ ] ⬜ export CSV (dentist-owner only)
-- [ ] ⬜ find-duplicates panel → review & merge
+- [x] ✅ filter tabs (All 22 / Active 22 / Needs Follow-Up 3 / Archived 0) — counts correct
+- [x] ✅ select-all + bulk archive — select-all cascades + "Archive Selected (N)" bulk bar; archive **confirm-gated** + list refresh; restore round-trip verified (Archived→Active)
+- [x] ✅ export CSV (dentist-owner only) — real `text/csv` Blob download, quote-escaped, owner-gated error surface (ISSUE-016 fix holds). Cols id/name/status/createdAt per FR2.13.
+- [x] ✅ find-duplicates panel — detection ✅ (strong name+DOB match); **fixed ISSUE-019** (panel showed 5-min-stale "no duplicates" after a create — patient writes didn't invalidate `detectDuplicatePatients`). ⚠ **flagged: merge UI missing** — "Review & merge" links to the patient profile, which has **no merge control**; `mergePatients` SDK is never called from the FE (backend endpoint exists, unused).
 - [x] ✅ register patient (ISSUE-001)
+
+**Patients-list findings (2026-06-20 s3):** **fixed ISSUE-019** (duplicates-query stale cache, same family as 001/002/003 — `isPatientCollectionQuery` predicate now invalidates list + duplicates across create/archive/restore/bulk/update; +4 regression tests; reproduced + GREEN-verified live). **Flagged (feature gap, not fixed): merge UI absent** — review-&-merge is a dead-end; needs design (primary selection + field conflict resolution).
 
 ### Patients — profile/record — **profile surface swept live 2026-06-20**
 - [x] ✅ edit demographics — **live**: first-name-required + email-format validation enforced (form stays open, no save); valid save persists; **fixed ISSUE-015** (phone with spaces silently 400'd — now normalized to E.164 + clear guidance)
@@ -77,12 +79,12 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ edit appointment (**fixed ISSUE-012** — modal opened blank, now pre-fills patient/date/time/duration/service)
 - [x] ✅ check-in · confirm (**fixed ISSUE-013** — failures showed false success; now surface real error e.g. "Visit already active") · ⬜ no-show
 - [ ] 🟢 walk-in (+ Walk-In button present; modal = same as create)
-- [ ] ⬜ recare-due list → reach out
-- [ ] ⬜ queue board (create / update status)
-- [ ] ⬜ waitlist (create / promote)
-- [ ] ⬜ online-booking config · schedule exceptions
+- [x] ✅ recare-due list — opens, `GET /recalls/due` 200, "No recalls are due 🎉" empty state (no recall entities seeded; reach-out needs a due recall)
+- [x] ⚠ queue board — page renders (`/queue-board`, FSM columns Waiting→Called→In Progress→Completed, auto-refresh 15s, empty state). **GAP (ISSUE-020): no FE way to populate it** — `createQueueItem` (`POST /appointments/{id}/queue-item`) is never called from the FE, check-in doesn't enqueue, seed has no queue items. Update-status FSM is wired (`use-queue-board` + tests) but unreachable without items.
+- [x] ⚠ waitlist — **GAP (ISSUE-020): no staff UI** — `createWaitlistEntry`/`promoteWaitlistEntry` exist server-side but are only referenced by the public `BookingWizard`; no staff waitlist management surface.
+- [x] ⚠ online-booking config — **GAP (ISSUE-020): no staff config UI** — `createOnlineBooking` only used in the public `/book/$branchId` wizard; no staff surface to enable/configure online booking (this is why the public booking page shows "unavailable"). Schedule exceptions: no UI surface found either.
 
-**Calendar-batch findings (2026-06-20):** ISSUE-011 week-view UUIDs (FIXED) · ISSUE-012 edit modal blank (FIXED) · ISSUE-013 check-in/confirm false-success (FIXED).
+**Calendar-batch findings (2026-06-20):** ISSUE-011/012/013 (FIXED, s1). **s3: ISSUE-020 (flagged, feature gaps — backend present, staff UI missing):** queue board unpopulatable from FE · no waitlist UI · no online-booking-config UI · no schedule-exceptions UI. All need product/design decisions (where these surfaces live + how items are created), not atomic QA fixes. Recare-due renders clean.
 
 ### Workspace (clinical) — ❗ HIGHEST-VALUE GAP — **swept live 2026-06-20** (Juan dela Cruz, open visit)
 - [x] ✅ open workspace (`/$patientId`) — renders clean (chart + layers + allergy badge); console clean
@@ -105,23 +107,29 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 
 **Workspace-batch findings (2026-06-20):** ISSUE-006 template duplication · ISSUE-007 no drug-allergy warning · ISSUE-008 Accept-Plan no-feedback/non-idempotent · ISSUE-009 invoice due-date raw ISO · ISSUE-010 workspace modals not Escape-dismissible + discard uses native prompt(). See `.gstack/qa-reports/`.
 
-### Billing — tabs swept live 2026-06-20
+### Billing — **live writes swept 2026-06-20 (session 3)** ✅ clean (no bugs)
 - [x] ✅ list + totals · issue invoice (live)
-- [x] ✅ tabs render: Invoices (Paid/Partial/Outstanding/Overdue sub-tabs) · Collections · Insurance (claim-status sub-tabs + empty state). Invoice detail opens from list (due-date now formatted — ISSUE-009 fix applies here too).
-- [ ] ⬜ invoice create · finalize · delete
-- [ ] 🟢 void invoice
-- [ ] 🟢 record payment (validation confirmed; drive live — needs amount+method+receipt)
-- [ ] 🟢 void payment · refund payment · apply discount
-- [ ] 🟢 payment plans create / view
-- [ ] 🟢 insurance claims (draft / status / lines / remittance / coverage estimate)
-- [ ] 🟢 collections (notes / worklist / mark-uncollectible)
-- [ ] 🟢 patient credits (add / apply) · statements (generate / send)
-- [ ] ⬜ AR aging / KPIs render
+- [x] ✅ tabs render: Invoices (Paid/Partial/Outstanding/Overdue/Voided sub-tabs) · Collections (Aging/Worklist/Metrics) · Insurance (claim-status sub-tabs). Invoice detail due-date formatted (ISSUE-009 fix holds).
+- [x] ✅ **finalize** (Issue Invoice → Draft→Issued, `PATCH /issue` 200) · invoice create = workspace per-visit flow (no billing-page create button); **delete = intentionally not surfaced** (void is the audit-safe equivalent — `deleteInvoice` SDK exists, never called from FE; by design)
+- [x] ✅ **void invoice** (reason form → `POST /void` 200 → Voided)
+- [x] ✅ **record payment** (amount+Cash+receipt → `POST /payments` 201 → Paid, balance ₱0)
+- [x] ✅ **void payment** (per-row, reason → `POST /payments/{id}/void` 200) · **refund payment** (owner, amount+reason+book-as-credit → `POST /refund` 200; **credit created** — verified via `/credits` source:"refund" ₱720) · **apply discount** (owner, 10% → Subtotal ₱800 − ₱80 = ₱720, math correct)
+- [x] ✅ **payment plans create** (`POST /plan` 201) + **view** (Monthly, 6×₱400=₱2,400 installment schedule 7/1–12/1 all Pending, math correct)
+- [x] ✅ **mark uncollectible** (`POST /uncollectible` 200, write-off)
+- [x] 🟢 **insurance claims** — New Claim form + **prerequisite gating verified live** (correctly blocks: "no active insurance profile" / "no claimable invoice"). Full lifecycle (draft/lines/status/remittance/coverage) needs an insurance-profile + issued invoice — **no seed insurance profiles exist** (seed only has a comment), so lifecycle stays code-verified.
+- [x] ✅ **collections** — Log collection note (`POST /collections/notes` 201 → worklist Last-Contact "Never"→"Jun 20 · phone (1)") · worklist + Aging + Metrics render
+- [x] ✅ **patient credits apply** (`POST /apply-credit` 200, balance ₱720→₱0) · 🟢 add credit (controlled-input headless limit — same `usePatientCredits` hook as apply) · **statements send** (`POST /statement/send` 200, "Sent ✓") + **generate batch** (`POST /statements/batch` 200, "Generated 10 statements")
+- [x] ✅ AR aging / KPIs render (Invoices: Outstanding ₱208,050 / Collected ₱71,450 / Overdue ₱18,700 · Collections Aging buckets · Metrics: AR ₱204,470 / Collection Rate / DSO 15d)
 
-### Reports — **swept live 2026-06-20** ✅ clean
+**Billing-batch findings (2026-06-20 s3):** **0 bugs** — every money write (issue/discount/record/void-payment/refund+credit/void-invoice/uncollectible/plan/apply-credit/statement) works with correct math + status transitions + refresh. Demo invoices mutated by the sweep (E1C402B0 voided, 659B9798 voided, S0011 written-off, S0002 has a plan, Maria credits applied) — acceptable dev-DB QA churn, not restored.
+
+### Reports — **swept live 2026-06-20** (filters + export driven s3)
 - [x] ✅ page load
 - [x] ✅ each report type renders with data (Revenue: billed/collected/outstanding KPIs + invoices; Treatment: 27 CDT codes/104 tx/₱725k; Patient: 22 active + reg dates)
-- [ ] 🟢 filters (date range present) · export (Export CSV present — not driven)
+- [x] ✅ **date-range filter** — narrowing to a pre-seed window (05-01→05-15) correctly dropped Revenue KPIs to ₱0.00 (client-side re-filter works)
+- [x] ✅ **export CSV** — Revenue/Treatment/Patient all download real `text/csv`. **Fixed ISSUE-021** (Revenue + Treatment CSVs emitted **raw centavos** — ₱279,420.00 exported as "27942000", 100× too large for the accountant; now decimal pesos `279420.00` via shared `csvAmount` helper + 4 regression tests). Verified live.
+
+**Reports-batch findings (2026-06-20 s3):** **fixed ISSUE-021** (raw-centavos CSV money columns, Revenue+Treatment). Note: a `GET /dental/appointments?branchId` 400 seen in console was **self-inflicted** (my manual no-date probe), not a reports bug — fresh nav fires no appointments call.
 
 ### Settings — **swept live 2026-06-20**
 - [x] ✅ clinic info save → **persists** (DB JSONB `branch.settings`) + required-field validation. Nit: form doesn't default from existing branch name/address (separate store) — first-run empty.
@@ -155,8 +163,8 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ bell list renders ("You're all caught up" empty state — no seeded notifs)
 - [ ] 🟢 mark read / mark all read (no notifications to drive)
 
-### Onboarding
-- [ ] ⬜ org / dental onboarding wizard (create org → activate)
+### Onboarding — 🚫 not drivable headless (email-verification gate)
+- [ ] 🚫 org / dental onboarding wizard (create org → activate) — route guard is `composeGuards(requireAuth, requireEmailVerified, requireNoPerson)`. The demo account is **already onboarded** (`requireNoPerson` fails) **and** its email is unverified (`requireEmailVerified` → redirects to `/verify-email`, which renders correctly: "Verify Your Email" + Resend + Sign Out). Driving the wizard needs a **fresh account with a verified email** — and email verification needs the inbox token (no Mailpit access headless), same blocker class as magic-link/passkey. Wizard components (PersonalInfoForm + AddressForm + create-org) are code-verified; `createOnboarding` is exercised by the demo seed.
 
 ### Portal (patient-facing `_portal`) — **swept live 2026-06-20**
 - [x] ✅ portal layout renders (My Appointments + bottom nav Appointments/Bills + Sign out); 403 for staff session handled gracefully ("Try again" card, no crash). Happy path needs a patient login (out of scope for staff QA).
