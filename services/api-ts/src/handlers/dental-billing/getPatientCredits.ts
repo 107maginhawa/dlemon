@@ -26,6 +26,9 @@ export async function getPatientCredits(
   if (!patient) throw new NotFoundError('Patient');
   await assertPatientBranchAccess(db, user.id, patient.preferredBranchId);
 
+  // Credits are a patient-level wallet: the ledger + balance are intentionally
+  // patient-global (across branches), not branch-scoped. Branch authz above
+  // gates access; the wallet itself follows the patient.
   const repo = new DentalPatientCreditRepository(db);
   const [credits, balanceCents] = await Promise.all([
     repo.listByPatient(patientId),

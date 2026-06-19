@@ -286,4 +286,44 @@ describe('dental-billing status sweep — dunning reminders (BR-050)', () => {
 
     expect(await reminderRows(invoice.id)).toHaveLength(0);
   });
+
+  const HOUR = 60 * 60 * 1000;
+
+  test('reclaims a stale pending reminder (crashed prior sweep) and re-sends', async () => {
+    const invoice = await seedIssuedInvoicePastDue(4); // offset 3 elapsed
+    // Simulate a sweep that claimed offset 3 then crashed before dispatch:
+    // the row is stuck 'pending', sent_at well past the reclaim window.
+    await db.insert(dentalBillingReminderLog).values({
+      id: crypto.randomUUID(), invoiceId: invoice.id, branchId: BRANCH_ID,
+      offsetDay: 3, channel: '', status: 'pending',
+      sentAt: new Date(Date.now() - 2 * HOUR),
+      createdBy: STAFF.id, updatedBy: STAFF.id,
+    });
+
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const rows = await reminderRows(invoice.id);
+    expect(rows).toHaveLength(1); // reclaimed in place, not duplicated
+    expect(rows[0]!.status).toBe('sent');
+    expect((await billingNotifs(invoice.id)).length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('does NOT reclaim a fresh pending reminder (in-flight claim from a concurrent run)', async () => {
+    const invoice = await seedIssuedInvoicePastDue(4);
+    await db.insert(dentalBillingReminderLog).values({
+      id: crypto.randomUUID(), invoiceId: invoice.id, branchId: BRANCH_ID,
+      offsetDay: 3, channel: '', status: 'pending',
+      sentAt: new Date(), // fresh — inside the reclaim window
+      createdBy: STAFF.id, updatedBy: STAFF.id,
+    });
+
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const rows = await reminderRows(invoice.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.status).toBe('pending'); // left untouched
+    expect(await billingNotifs(invoice.id)).toHaveLength(0); // no duplicate send
+  });
 });

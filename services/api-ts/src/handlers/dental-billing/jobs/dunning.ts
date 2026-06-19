@@ -25,6 +25,9 @@ export const DEFAULT_REMINDER_OFFSET_DAYS = [3, 7, 14];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REMINDER_CHANNELS = ['email', 'push'] as const;
+// A 'pending' claim older than this is an orphan from a crashed sweep, safe to
+// reclaim. Enqueue takes milliseconds, so an hour clears any real in-flight run.
+const RECLAIM_STALE_MS = 60 * 60 * 1000;
 
 function resolveOffsets(settings: unknown): number[] {
   const configured = (settings as { billingReminderOffsetDays?: number[] })?.billingReminderOffsetDays;
@@ -86,8 +89,9 @@ export async function runDunningSweep(
         channel: '',
         status: 'pending',
         sentAt: asOf,
+        reclaimStaleBefore: new Date(asOf.getTime() - RECLAIM_STALE_MS),
       });
-      if (!claim) continue; // already reminded for this offset
+      if (!claim) continue; // already reminded for this offset (or freshly in flight)
 
       const sent: string[] = [];
       for (const channel of REMINDER_CHANNELS) {

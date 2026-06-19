@@ -24,7 +24,10 @@ export const dentalBillingReminderLog = pgTable('dental_billing_reminder_log', {
   // Comma-joined channels dispatched (e.g. "email,push").
   channel: text('channel').notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }).notNull(),
-  // 'sent' (at least one channel enqueued) | 'failed' (all dispatch failed).
+  // Lifecycle: 'pending' (slot claimed, dispatch in flight) → 'sent' (≥1 channel
+  // enqueued). A total dispatch failure releases (deletes) the row rather than
+  // persisting it, so 'failed' is never stored. A 'pending' row older than the
+  // dunning reclaim window is an orphan from a crashed sweep (see the repo).
   status: text('status').notNull(),
 }, (table) => ({
   // BR-050 idempotency: one reminder per invoice per offset, ever.
