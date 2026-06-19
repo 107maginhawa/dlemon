@@ -41,15 +41,13 @@ on:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    # 60m: Hurl (~15m) + the BLOCKING Schemathesis profile (~4–6m at
-    # max-examples=10) + the advisory shadow tail (capped at 4m below). On
-    # pathologically slow CI runners the total repeatedly brushed the earlier
-    # 25m/35m/45m caps and the JOB timed out *inside the shadow step* —
-    # cancelling the already-green blocking layers and failing this
-    # branch-protected check on a non-blocking tail (runs 27568003409 /
-    # 27570193106 / 27574721038). 60m removes the timeout risk even on a ~2×-slow
-    # runner; the blocking layers gate, the shadow's own 4m cap bounds the tail.
-    timeout-minutes: 60
+    # 35m budget: Hurl (~15m) + BLOCKING Schemathesis (~4–6m, max-examples=10) +
+    # the advisory shadow tail (its own 4m cap below) = ~25m, with headroom for a
+    # ~1.4×-slow runner. The old 60m ceiling existed only to mask the unbounded
+    # `bun audit` step that hung the whole job (removed above); with every step now
+    # individually bounded, a tighter job timeout means a real hang fails fast
+    # instead of cancelling the branch-protected `contract` check after an hour.
+    timeout-minutes: 35
 
     services:
       postgres:
@@ -122,11 +120,11 @@ jobs:
       - name: Install workspace deps
         run: bun install --frozen-lockfile
 
-      # Non-blocking until the ~35 existing dev-tool advisories are triaged.
-      # Flip continue-on-error to false once backlog is cleared (tracked follow-up).
-      - name: Security audit
-        continue-on-error: true
-        run: bun audit
+      # NOTE: `bun audit` runs in the dedicated, bounded "Security Audit" job in
+      # quality.yml — it is intentionally NOT duplicated here. The earlier copy had
+      # no timeout and, on a stalled registry call, hung for the full job budget;
+      # since every later step was skipped, the branch-protected `contract` check
+      # was cancelled on every run (e.g. 27817455193, 27820918486). Removed.
 
       - name: Build the OpenAPI spec
         run: cd specs/api && bun run build

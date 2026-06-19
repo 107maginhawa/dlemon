@@ -5,7 +5,9 @@
   "description": "Monobase Healthcare Application Platform - Universal Healthcare API",
   "type": "module",
   "workspaces": [
-    "apps/*",
+    "apps/account",
+    "apps/dentalemon",
+    "apps/sample-workspace",
     "packages/*",
     "services/*",
     "specs/*"
