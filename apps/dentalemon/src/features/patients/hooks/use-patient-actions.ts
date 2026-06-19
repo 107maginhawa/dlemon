@@ -17,6 +17,7 @@ import {
   updateDentalPatientMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import { exportDentalPatients } from '@monobase/sdk-ts/generated';
+import { toastError } from '@/lib/error-toast';
 
 // ─── useUpdatePatient (FR2.4) ───────────────────────────────────────────────
 
@@ -169,6 +170,12 @@ export function useExportPatients(branchId?: string) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       return data;
+    } catch (err) {
+      // Surface the failure instead of a silent no-op. Export is dentist_owner-only
+      // server-side (assertBranchRole), so a staff role 403s — without this the user
+      // clicked Export and saw nothing happen.
+      toastError(err, 'Could not export patients. You may not have permission to export.');
+      return undefined;
     } finally {
       setIsExporting(false);
     }

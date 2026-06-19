@@ -287,4 +287,33 @@ describe('useExportPatients', () => {
     expect(result.current.isExporting).toBe(false);
     expect(typeof result.current.exportPatients).toBe('function');
   });
+
+  // Regression: ISSUE-016 — export is dentist_owner-only server-side, so a staff
+  // role 403s. The hook had try/finally with no catch and the button's onClick was
+  // the raw async fn, so the throw became an unhandled rejection: the user clicked
+  // Export and saw nothing. Now the failure is caught + surfaced (toastError) and
+  // resolves to undefined. Found by /qa on 2026-06-20.
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('a failed export (403 for non-owner) is surfaced, not a silent throw', async () => {
+    global.fetch = mock(() => jsonResponse({ error: 'Forbidden' }, 403));
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useExportPatients('branch-xyz'), {
+      wrapper: makeWrapper(qc),
+    });
+
+    let outcome: unknown = 'unset';
+    let threw = false;
+    await act(async () => {
+      try {
+        outcome = await result.current.exportPatients();
+      } catch {
+        threw = true;
+      }
+    });
+
+    expect(threw).toBe(false); // before the fix the 403 propagated as an unhandled throw
+    expect(outcome).toBeUndefined();
+    expect(result.current.isExporting).toBe(false);
+  });
 });

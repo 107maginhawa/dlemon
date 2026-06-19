@@ -45,6 +45,9 @@ function PatientsPage() {
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
+  // Patient export is dentist_owner-only (server enforces via assertBranchRole);
+  // hide the button for other roles so staff aren't offered an action that always 403s.
+  const isOwner = useOrgContextStore((s) => s.role) === 'dentist_owner';
 
   const { archive, isPending: isArchivePending } = useArchivePatient();
   const { restore, isPending: isRestorePending } = useRestorePatient();
@@ -165,7 +168,7 @@ function PatientsPage() {
         onArchive={archive}
         onRestore={restore}
         onBulkArchive={bulkArchive}
-        onExport={exportPatients}
+        onExport={isOwner ? exportPatients : undefined}
         isActionPending={isArchivePending || isRestorePending || isBulkPending}
         isExporting={isExporting}
       />
