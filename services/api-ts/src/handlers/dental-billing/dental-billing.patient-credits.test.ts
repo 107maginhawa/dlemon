@@ -146,4 +146,15 @@ describe('patient credit ledger (BR-052)', () => {
     const invoice = await seedInvoice(4000, 0, 4000);
     expect((await applyCredit(invoice.id, 1000)).status).toBe(422);
   });
+
+  test('BR-052 concurrency: two simultaneous applies cannot over-draw the ledger', async () => {
+    await addCredit(5000);
+    const invoice = await seedInvoice(8000, 0, 8000);
+    // Both try to draw the full 5000; together that would over-draw. The
+    // per-patient advisory lock serializes them: exactly one wins.
+    const [a, b] = await Promise.all([applyCredit(invoice.id, 5000), applyCredit(invoice.id, 5000)]);
+    expect([a.status, b.status].sort()).toEqual([200, 422]);
+    const ledger = await app().request(`/dental/billing/patients/${PATIENT_ID}/credits`);
+    expect((await ledger.json() as { balanceCents: number }).balanceCents).toBe(0); // never negative
+  });
 });

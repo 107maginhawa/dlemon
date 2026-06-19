@@ -13,6 +13,7 @@
  * amount must be 1 .. (payment.amountCents − already-refunded).
  */
 
+import { sql } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
@@ -61,6 +62,25 @@ export async function refundDentalPayment(
     const refundRepo = new DentalPaymentRefundRepository(tx);
     const invoiceRepo = new DentalInvoiceRepository(tx);
     const creditRepo = new DentalPatientCreditRepository(tx);
+
+    // Serialize concurrent refunds of THIS payment: at READ COMMITTED two
+    // in-flight refunds could both read alreadyRefunded=0 and both pass the cap,
+    // committing refund rows that together exceed the payment. A per-payment
+    // advisory xact lock (released at commit) makes the refunded-total read +
+    // write atomic. classid 1002 namespaces refund locks.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1002, hashtext(${paymentId}))`);
+
+    // Re-read under the lock: a void (which also reverses the invoice) committed
+    // between the outer check and here must abort the refund — otherwise we double
+    // removePayment and commit a false refund record.
+    const livePayment = await new DentalPaymentRepository(tx).findOneById(paymentId);
+    if (!livePayment || livePayment.isVoid) {
+      throw new BusinessLogicError('Cannot refund a voided payment', 'PAYMENT_VOIDED');
+    }
+    const liveInvoice = await invoiceRepo.findOneById(payment.invoiceId);
+    if (liveInvoice?.status === 'voided') {
+      throw new BusinessLogicError('Cannot refund against a voided invoice', 'INVOICE_VOIDED');
+    }
 
     // BR-053: refund amount must fit within the un-refunded remainder.
     const alreadyRefunded = await refundRepo.totalRefundedForPayment(paymentId);

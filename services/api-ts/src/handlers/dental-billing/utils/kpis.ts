@@ -61,7 +61,7 @@ export function computeBillingKpis(invoices: KpiInvoice[], asOf: Date): BillingK
   }
 
   const collectionRate = billedTotalCents > 0
-    ? Number((collectedTotalCents / billedTotalCents).toFixed(4))
+    ? Math.min(1, Number((collectedTotalCents / billedTotalCents).toFixed(4)))
     : 0;
 
   // DSO ≈ AR / average daily billing over the active span.

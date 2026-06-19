@@ -145,4 +145,14 @@ describe('refundDentalPayment (BR-053)', () => {
     const { payment } = await seedPaidInvoice(3000, 3000, 'paid');
     expect((await refund(ASSOC, payment.id, 1000)).status).toBe(403);
   });
+
+  test('BR-053 concurrency: two simultaneous refunds cannot exceed the payment', async () => {
+    const { payment } = await seedPaidInvoice(5000, 5000, 'paid');
+    // Both try to refund the full 5000. The per-payment advisory lock serializes
+    // them: exactly one wins, and total refunds never exceed the payment.
+    const [a, b] = await Promise.all([refund(OWNER, payment.id, 5000), refund(OWNER, payment.id, 5000)]);
+    expect([a.status, b.status].sort()).toEqual([200, 422]);
+    const refunds = await db.select().from(dentalPaymentRefunds).where(eq(dentalPaymentRefunds.paymentId, payment.id));
+    expect(refunds.reduce((s, r) => s + r.amountCents, 0)).toBe(5000);
+  });
 });

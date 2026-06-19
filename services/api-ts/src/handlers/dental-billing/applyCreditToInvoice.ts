@@ -11,6 +11,7 @@
  * patient's available credit (read inside the transaction).
  */
 
+import { sql } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ValidationError } from '@/core/errors';
@@ -47,7 +48,16 @@ export async function applyCreditToInvoice(
     const invoiceRepo = new DentalInvoiceRepository(tx);
     const creditRepo = new DentalPatientCreditRepository(tx);
 
-    // Re-read inside the tx so balance + available credit are consistent.
+    // Serialize concurrent credit draws for THIS patient FIRST: at READ COMMITTED
+    // two in-flight applies could both read the same invoice balance + ledger
+    // balance and both consume, over-drawing the ledger or pushing paidCents past
+    // totalCents. A per-patient advisory xact lock (released at commit) — keyed on
+    // the immutable patientId — makes the invoice + credit re-reads below atomic.
+    // classid 1001 namespaces credit-apply locks. (Lock BEFORE the re-reads so the
+    // balance check can't use a stale pre-lock value.)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${invoice.patientId}))`);
+
+    // Re-read inside the tx + under the lock so balance + available credit are consistent.
     const live = await invoiceRepo.findOneById(invoiceId);
     if (!live) throw new NotFoundError('Invoice');
     if (live.balanceCents <= 0) {
