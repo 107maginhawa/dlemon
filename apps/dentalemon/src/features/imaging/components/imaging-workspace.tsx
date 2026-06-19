@@ -489,7 +489,13 @@ export function ImagingWorkspace({
                     key={m.id}
                     annotation={m}
                     pixelSpacingMm={pixelSpacingMm}
-                    onDelete={(id) => deleteMeasurement.mutate(id)}
+                    onDelete={(id) =>
+                      deleteMeasurement.mutate(id, {
+                        // ISSUE-027: createMeasurement toasts on failure but delete
+                        // was silent — a failed delete just reverted with no feedback.
+                        onError: (err) => toastError(err, 'Could not delete measurement.'),
+                      })
+                    }
                     onAnnotationClick={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
                   />
                 )
