@@ -1784,20 +1784,6 @@
       "complexity": "complex"
     },
     {
-      "id": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "type": "file",
-      "name": "patient-profile-page.tsx",
-      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "summary": "Top-level patient profile page composing overview, payment, and follow-up tabs plus edit and visit actions.",
-      "tags": [
-        "component",
-        "patients",
-        "page",
-        "tabs"
-      ],
-      "complexity": "complex"
-    },
-    {
       "id": "file:apps/dentalemon/src/features/patients/hooks/use-household.ts",
       "type": "file",
       "name": "use-household.ts",
@@ -2010,86 +1996,6 @@
       "lineRange": [
         50,
         250
-      ]
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PatientProfilePage",
-      "type": "function",
-      "name": "PatientProfilePage",
-      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "summary": "Patient profile page composing tabs and patient-level actions.",
-      "tags": [
-        "component",
-        "page"
-      ],
-      "complexity": "simple",
-      "lineRange": [
-        274,
-        478
-      ]
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:OverviewTab",
-      "type": "function",
-      "name": "OverviewTab",
-      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "summary": "Renders the patient overview tab with demographics and household.",
-      "tags": [
-        "component",
-        "tab"
-      ],
-      "complexity": "simple",
-      "lineRange": [
-        100,
-        166
-      ]
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PaymentTab",
-      "type": "function",
-      "name": "PaymentTab",
-      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "summary": "Renders the patient payment/billing tab.",
-      "tags": [
-        "component",
-        "tab"
-      ],
-      "complexity": "simple",
-      "lineRange": [
-        170,
-        264
-      ]
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:TabButton",
-      "type": "function",
-      "name": "TabButton",
-      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "summary": "Tab navigation button for the profile page.",
-      "tags": [
-        "component",
-        "navigation"
-      ],
-      "complexity": "simple",
-      "lineRange": [
-        68,
-        96
-      ]
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:statusBadge",
-      "type": "function",
-      "name": "statusBadge",
-      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "summary": "Maps patient status to a styled badge.",
-      "tags": [
-        "utility",
-        "ui"
-      ],
-      "complexity": "simple",
-      "lineRange": [
-        48,
-        64
       ]
     },
     {
@@ -5933,101 +5839,6 @@
       "complexity": "simple"
     },
     {
-      "id": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "type": "file",
-      "name": "claims-worklist.tsx",
-      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "summary": "Insurance claims worklist that lists claims by status, shows payer AR aging, and lets authorized users submit claims and record remittances.",
-      "tags": [
-        "component",
-        "billing",
-        "insurance",
-        "data-fetching"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
-      "type": "function",
-      "name": "ClaimsWorklist",
-      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "lineRange": [
-        39,
-        246
-      ],
-      "summary": "Claims worklist component wiring insurance-claim queries and mutations to a filterable table with submit and remittance actions.",
-      "tags": [
-        "component",
-        "billing",
-        "insurance",
-        "event-handler"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "type": "file",
-      "name": "collections-view.tsx",
-      "filePath": "apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "summary": "Collections dashboard rendering AR aging buckets and a per-patient outstanding-balance table, with statement batch generation.",
-      "tags": [
-        "component",
-        "billing",
-        "collections",
-        "data-fetching"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
-      "type": "function",
-      "name": "CollectionsView",
-      "filePath": "apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "lineRange": [
-        26,
-        140
-      ],
-      "summary": "Collections view component that fetches AR aging data and statement batches by branch and renders aging buckets and outstanding patient balances.",
-      "tags": [
-        "component",
-        "billing",
-        "collections",
-        "data-fetching"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "type": "file",
-      "name": "insurance.helpers.ts",
-      "filePath": "apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "summary": "Insurance-claim domain helpers: row mapping, claim status FSM, status labels/filters, guard predicates (canSubmit/canRecordRemittance), and currency/coverage formatting.",
-      "tags": [
-        "utility",
-        "billing",
-        "insurance",
-        "validation"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:claimStatusClass",
-      "type": "function",
-      "name": "claimStatusClass",
-      "filePath": "apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "lineRange": [
-        102,
-        119
-      ],
-      "summary": "Maps an insurance claim status to the Tailwind badge class used in the claims worklist.",
-      "tags": [
-        "billing",
-        "insurance",
-        "ui"
-      ],
-      "complexity": "simple"
-    },
-    {
       "id": "file:apps/dentalemon/src/features/billing/components/invoice-insurance-block.tsx",
       "type": "file",
       "name": "invoice-insurance-block.tsx",
@@ -6056,142 +5867,6 @@
         "billing",
         "insurance",
         "ui"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "type": "file",
-      "name": "use-collections.ts",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "summary": "TanStack Query hooks for the collections view: useArAging fetches AR aging by branch and useStatementBatch generates statement batches and invalidates aging.",
-      "tags": [
-        "hook",
-        "billing",
-        "collections",
-        "data-fetching"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
-      "type": "function",
-      "name": "useStatementBatch",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "lineRange": [
-        46,
-        72
-      ],
-      "summary": "Mutation hook that generates a statement batch for a branch and invalidates the AR aging query on success.",
-      "tags": [
-        "hook",
-        "billing",
-        "mutation",
-        "collections"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useArAging",
-      "type": "function",
-      "name": "useArAging",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "lineRange": [
-        30,
-        44
-      ],
-      "summary": "Query hook that fetches accounts-receivable aging data for the given branch.",
-      "tags": [
-        "hook",
-        "billing",
-        "data-fetching",
-        "collections"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "type": "file",
-      "name": "use-insurance-claims.ts",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "summary": "TanStack Query hooks for insurance claims: listing claims, payer AR aging, claim status/remittance mutations, coverage estimation, and patient coverage authorizations.",
-      "tags": [
-        "hook",
-        "billing",
-        "insurance",
-        "data-fetching"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
-      "type": "function",
-      "name": "useClaimMutations",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "lineRange": [
-        89,
-        143
-      ],
-      "summary": "Bundles claim status-update and remittance mutations with query invalidation for claims and payer AR aging.",
-      "tags": [
-        "hook",
-        "billing",
-        "insurance",
-        "mutation"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useAuthorizationMutations",
-      "type": "function",
-      "name": "useAuthorizationMutations",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "lineRange": [
-        187,
-        223
-      ],
-      "summary": "Create and status-update mutations for patient coverage authorizations, invalidating the authorizations query on success.",
-      "tags": [
-        "hook",
-        "billing",
-        "insurance",
-        "mutation"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:usePatientAuthorizations",
-      "type": "function",
-      "name": "usePatientAuthorizations",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "lineRange": [
-        172,
-        185
-      ],
-      "summary": "Query hook listing coverage authorizations for a given patient.",
-      "tags": [
-        "hook",
-        "billing",
-        "insurance",
-        "data-fetching"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useCoverageEstimate",
-      "type": "function",
-      "name": "useCoverageEstimate",
-      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "lineRange": [
-        155,
-        170
-      ],
-      "summary": "Mutation hook that estimates insurance coverage for a claim.",
-      "tags": [
-        "hook",
-        "billing",
-        "insurance",
-        "mutation"
       ],
       "complexity": "simple"
     },
@@ -9445,54 +9120,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "type": "file",
-      "name": "use-branch-settings.ts",
-      "filePath": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "summary": "Query and mutation hooks for reading and updating branch-level settings, with cache-key helpers and query invalidation.",
-      "tags": [
-        "hook",
-        "data-fetching",
-        "mutation",
-        "settings"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
-      "type": "function",
-      "name": "useBranchSettings",
-      "filePath": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "lineRange": [
-        57,
-        72
-      ],
-      "summary": "Query hook returning normalized branch settings for a given branch id.",
-      "tags": [
-        "hook",
-        "data-fetching",
-        "settings"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
-      "type": "function",
-      "name": "useUpdateBranchSettings",
-      "filePath": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "lineRange": [
-        74,
-        101
-      ],
-      "summary": "Mutation hook updating branch settings and invalidating the corresponding query cache on success.",
-      "tags": [
-        "hook",
-        "mutation",
-        "settings"
-      ],
-      "complexity": "moderate"
-    },
-    {
       "id": "file:apps/dentalemon/src/features/settings/hooks/use-consent-templates.ts",
       "type": "file",
       "name": "use-consent-templates.ts",
@@ -9585,20 +9212,6 @@
         "settings"
       ],
       "complexity": "moderate"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "type": "file",
-      "name": "settings-panels.tsx",
-      "filePath": "apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "summary": "Registry barrel mapping settings panel components into the SETTINGS_PANELS configuration consumed by the settings page.",
-      "tags": [
-        "barrel",
-        "settings",
-        "registry",
-        "configuration"
-      ],
-      "complexity": "simple"
     },
     {
       "id": "file:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx",
@@ -9932,37 +9545,6 @@
         "hook",
         "data-fetching",
         "portal"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "type": "file",
-      "name": "format-currency.ts",
-      "filePath": "apps/dentalemon/src/lib/format-currency.ts",
-      "summary": "Currency formatting helpers that render amounts using the configured brand locale and currency code, including a cents-to-display convenience function.",
-      "tags": [
-        "utility",
-        "currency",
-        "formatting",
-        "i18n"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
-      "type": "function",
-      "name": "formatCurrency",
-      "filePath": "apps/dentalemon/src/lib/format-currency.ts",
-      "lineRange": [
-        30,
-        37
-      ],
-      "summary": "Formats a numeric amount as a localized currency string using the configured locale and currency code.",
-      "tags": [
-        "utility",
-        "currency",
-        "formatting"
       ],
       "complexity": "simple"
     },
@@ -10670,38 +10252,6 @@
         "subscription"
       ],
       "complexity": "simple"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "type": "file",
-      "name": "push-opt-in-prompt.tsx",
-      "filePath": "apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "summary": "UI banner component prompting users to enable push notifications, with injectable dependencies for permission checks and a dismiss/enable flow backed by opt-in persistence.",
-      "tags": [
-        "component",
-        "notifications",
-        "permissions",
-        "event-handler"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
-      "type": "function",
-      "name": "PushOptInPrompt",
-      "filePath": "apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "lineRange": [
-        38,
-        120
-      ],
-      "summary": "Push opt-in prompt component that computes visibility from enabled/granted/dismissed state and handles enable and dismiss interactions.",
-      "tags": [
-        "component",
-        "notifications",
-        "event-handler",
-        "permissions"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "file:apps/dentalemon/src/hooks/use-onesignal.ts",
@@ -11516,37 +11066,6 @@
         "tooling"
       ],
       "complexity": "moderate"
-    },
-    {
-      "id": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "type": "file",
-      "name": "invoice-detail.tsx",
-      "filePath": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "summary": "Large invoice detail screen rendering line items, payments, and status with actions to issue, void, record payment, apply discounts, and create payment plans.",
-      "tags": [
-        "billing",
-        "component",
-        "api-handler",
-        "data-model"
-      ],
-      "complexity": "complex",
-      "languageNotes": "Single 650-line component; re-exports several helper predicates and the LineItem/Payment/InvoiceData types alongside the component."
-    },
-    {
-      "id": "function:apps/dentalemon/src/features/billing/components/invoice-detail.tsx:InvoiceDetail",
-      "type": "function",
-      "name": "InvoiceDetail",
-      "filePath": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "lineRange": [
-        63,
-        714
-      ],
-      "summary": "Invoice detail screen orchestrating line items, payments, status actions, discounts, and plan creation.",
-      "tags": [
-        "component",
-        "ui"
-      ],
-      "complexity": "complex"
     },
     {
       "id": "file:apps/dentalemon/src/features/billing/components/invoice-detail.helpers.ts",
@@ -12711,6 +12230,1338 @@
         "component",
         "ui",
         "branding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claim-create.test.tsx",
+      "type": "file",
+      "name": "claim-create.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-create.test.tsx",
+      "summary": "Unit test for the ClaimCreate sheet, stubbing fetch via a URL-routed mock to verify patient/insurance/invoice selection and claim filing.",
+      "tags": [
+        "test",
+        "billing",
+        "component-test",
+        "claims"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "type": "file",
+      "name": "claim-create.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "summary": "Sheet component for filing a new insurance claim: lets the user search a patient, pick an active insurance profile and claimable invoice, then submits via the claim mutations hook.",
+      "tags": [
+        "component",
+        "billing",
+        "claims",
+        "form",
+        "api-handler"
+      ],
+      "complexity": "complex",
+      "languageNotes": "React function component driven by TanStack Query hooks (usePatients, usePatientInsuranceProfiles, useClaimMutations) with local useState form state."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claim-detail.test.tsx",
+      "type": "file",
+      "name": "claim-detail.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-detail.test.tsx",
+      "summary": "Unit test for the ClaimDetail sheet that routes mocked fetch responses to verify claim line add/edit and coverage estimate flows.",
+      "tags": [
+        "test",
+        "billing",
+        "component-test",
+        "claims"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "type": "file",
+      "name": "claim-detail.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "summary": "Sheet component showing a single insurance claim's lines, billed/paid/outstanding totals, and editable line items with coverage estimation when the claim is editable.",
+      "tags": [
+        "component",
+        "billing",
+        "claims",
+        "api-handler"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses useClaimDetail, useClaimLineMutations and useCoverageEstimate hooks; peso<->cents conversion helpers handle currency formatting."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claims-worklist.create.test.tsx",
+      "type": "file",
+      "name": "claims-worklist.create.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.create.test.tsx",
+      "summary": "Unit test covering the claim-creation entry path from the claims worklist using an empty URL-routed fetch mock.",
+      "tags": [
+        "test",
+        "billing",
+        "component-test",
+        "claims"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claims-worklist.test.tsx",
+      "type": "file",
+      "name": "claims-worklist.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.test.tsx",
+      "summary": "Unit test for the ClaimsWorklist using a URL-keyed fetch mock and a fresh query client wrapper to render the worklist and verify claim rows.",
+      "tags": [
+        "test",
+        "billing",
+        "component-test",
+        "claims"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "type": "file",
+      "name": "claims-worklist.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "summary": "Primary insurance-claims worklist: lists claims with status filters and payer AR aging, supports submit/remittance actions, and opens the create and detail sheets.",
+      "tags": [
+        "component",
+        "billing",
+        "claims",
+        "worklist",
+        "api-handler"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Coordinates child sheets ClaimCreate and ClaimDetail; uses useInsuranceClaims, usePayerArAging and useClaimMutations for data and actions."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/collections-kpis.test.tsx",
+      "type": "file",
+      "name": "collections-kpis.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-kpis.test.tsx",
+      "summary": "Unit test rendering CollectionsKpis with a fresh query client wrapper to verify KPI card and aging-series output.",
+      "tags": [
+        "test",
+        "billing",
+        "component-test",
+        "collections"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "type": "file",
+      "name": "collections-kpis.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "summary": "KPI panel for collections, rendering summary cards and an AR aging series sourced from the useCollectionsKpis hook.",
+      "tags": [
+        "component",
+        "billing",
+        "collections",
+        "kpi"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "type": "file",
+      "name": "collections-view.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "summary": "Tabbed collections workspace (aging / worklist / metrics) that drives AR aging buckets, statement batch generation/sending, and embeds the collections KPI panel.",
+      "tags": [
+        "component",
+        "billing",
+        "collections",
+        "view",
+        "api-handler"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses useArAging, useStatementBatch and useSendStatement hooks; tab state via useState across three sub-views."
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/claim-create.tsx:ClaimCreate",
+      "type": "function",
+      "name": "ClaimCreate",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "lineRange": [
+        40,
+        223
+      ],
+      "summary": "Sheet component that handles patient search, insurance-profile and claimable-invoice selection, and submits a new claim, surfacing errors via getErrorMessage.",
+      "tags": [
+        "component",
+        "claims",
+        "form",
+        "billing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/claim-create.tsx:canFileClaim",
+      "type": "function",
+      "name": "canFileClaim",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "lineRange": [
+        33,
+        35
+      ],
+      "summary": "Predicate that returns whether the current selection (patient, insurance profile, invoice) is complete enough to file a claim.",
+      "tags": [
+        "validation",
+        "claims",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/claim-detail.tsx:ClaimDetail",
+      "type": "function",
+      "name": "ClaimDetail",
+      "filePath": "apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "lineRange": [
+        43,
+        257
+      ],
+      "summary": "Sheet component rendering a claim's totals and editable line items, supporting add/edit of lines and triggering coverage estimation when editable.",
+      "tags": [
+        "component",
+        "claims",
+        "billing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
+      "type": "function",
+      "name": "ClaimsWorklist",
+      "filePath": "apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "lineRange": [
+        41,
+        285
+      ],
+      "summary": "Insurance-claims worklist component with status filters, payer AR aging, submit/remittance actions, and modal create/detail sheets.",
+      "tags": [
+        "component",
+        "claims",
+        "worklist",
+        "billing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/collections-kpis.tsx:CollectionsKpis",
+      "type": "function",
+      "name": "CollectionsKpis",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "lineRange": [
+        20,
+        77
+      ],
+      "summary": "Renders collections KPI summary cards and an AR aging bar series from the useCollectionsKpis hook.",
+      "tags": [
+        "component",
+        "collections",
+        "kpi",
+        "billing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
+      "type": "function",
+      "name": "CollectionsView",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "lineRange": [
+        28,
+        193
+      ],
+      "summary": "Tabbed collections workspace component coordinating AR aging, statement batch generation/sending, and the embedded KPI panel.",
+      "tags": [
+        "component",
+        "collections",
+        "view",
+        "billing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/collections-worklist.test.tsx",
+      "type": "file",
+      "name": "collections-worklist.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-worklist.test.tsx",
+      "summary": "Unit test for the CollectionsWorklist component, rendering it through a TanStack Query test wrapper to verify worklist display and note-logging interactions.",
+      "tags": [
+        "test",
+        "billing",
+        "collections",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "type": "file",
+      "name": "collections-worklist.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "summary": "Collections worklist component that lists overdue patient balances with sortable columns and lets staff log collection notes and send statements via billing hooks.",
+      "tags": [
+        "component",
+        "billing",
+        "collections",
+        "api-handler"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "React function component driven by useCollectionsWorklist/useLogCollectionNote/useSendStatement TanStack Query hooks."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "type": "file",
+      "name": "insurance.helpers.ts",
+      "filePath": "apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "summary": "Pure helper module for insurance claims: row mapping, peso formatting, claim FSM transition predicates, status styling, and coverage-split label helpers.",
+      "tags": [
+        "utility",
+        "billing",
+        "insurance",
+        "validation"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Encodes the claim status FSM (CLAIM_FSM) and derives transition guards (canSubmitClaim, isClaimEditable, canRecordRemittance) from it."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/invoice-detail.payment-refund.test.tsx",
+      "type": "file",
+      "name": "invoice-detail.payment-refund.test.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/invoice-detail.payment-refund.test.tsx",
+      "summary": "Unit test for InvoiceDetail's payment-refund flow, installing a fetch mock that captures requests and serves invoice fixtures to assert refund request shaping.",
+      "tags": [
+        "test",
+        "billing",
+        "invoice",
+        "refund"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "type": "file",
+      "name": "invoice-detail.tsx",
+      "filePath": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "summary": "Large invoice detail sheet that renders line items and payments and orchestrates issue, void, mark-uncollectible, record-payment, discount, payment-void, and refund mutations with role-gated controls.",
+      "tags": [
+        "component",
+        "billing",
+        "invoice",
+        "api-handler"
+      ],
+      "complexity": "complex",
+      "languageNotes": "750 non-empty lines with many useState hooks and ~10 TanStack Query mutations; permission gating via canApplyDiscount/canVoidPayment from org context store."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/hooks/use-claim-lines.test.ts",
+      "type": "file",
+      "name": "use-claim-lines.test.ts",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-claim-lines.test.ts",
+      "summary": "Unit test covering the claim-line mutation hooks (add/update insurance claim lines) and their query invalidation behavior.",
+      "tags": [
+        "test",
+        "billing",
+        "insurance",
+        "hook"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/hooks/use-collections.test.ts",
+      "type": "file",
+      "name": "use-collections.test.ts",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.test.ts",
+      "summary": "Unit test for the collections hooks (AR aging, statement batch/send, worklist, KPIs, collection notes) verifying query options and mutation invalidation.",
+      "tags": [
+        "test",
+        "billing",
+        "collections",
+        "hook"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "type": "file",
+      "name": "use-collections.ts",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "summary": "TanStack Query hooks for the collections domain: AR aging queries, statement batch generation, statement sending, worklist, KPIs, and collection-note logging with cache invalidation.",
+      "tags": [
+        "hook",
+        "billing",
+        "collections",
+        "service"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Each hook wraps generated SDK query/mutation options and gates queries on Boolean(branchId)."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.create.test.ts",
+      "type": "file",
+      "name": "use-insurance-claims.create.test.ts",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.create.test.ts",
+      "summary": "Unit test for the insurance-claim creation mutation hook, asserting the SDK is called with the expected payload and caches are invalidated.",
+      "tags": [
+        "test",
+        "billing",
+        "insurance",
+        "hook"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "type": "file",
+      "name": "use-insurance-claims.ts",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "summary": "TanStack Query hooks for insurance claims: listing, payer AR aging, claim/line mutations, claim detail, patient insurance profiles, coverage estimation, and authorization management.",
+      "tags": [
+        "hook",
+        "billing",
+        "insurance",
+        "service"
+      ],
+      "complexity": "complex",
+      "languageNotes": "10 hooks wrapping generated SDK options/mutations with shared invalidate helpers across claims, payer AR aging, and coverage authorizations."
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/collections-worklist.tsx:CollectionsWorklist",
+      "type": "function",
+      "name": "CollectionsWorklist",
+      "filePath": "apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "lineRange": [
+        30,
+        184
+      ],
+      "summary": "Renders the sortable overdue-balance worklist and manages local UI state for the note-logging dialog (channel, note text) wired to the collection-note and statement hooks.",
+      "tags": [
+        "component",
+        "billing",
+        "collections"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:toInsuranceClaimRow",
+      "type": "function",
+      "name": "toInsuranceClaimRow",
+      "filePath": "apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "lineRange": [
+        40,
+        49
+      ],
+      "summary": "Maps a raw insurance claim DTO into a normalized claim row, stringifying identifier and label fields for table rendering.",
+      "tags": [
+        "utility",
+        "insurance",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:claimStatusClass",
+      "type": "function",
+      "name": "claimStatusClass",
+      "filePath": "apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "lineRange": [
+        108,
+        125
+      ],
+      "summary": "Returns the Tailwind badge class for a given claim status, mapping each FSM state to its visual treatment.",
+      "tags": [
+        "utility",
+        "insurance",
+        "styling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/components/invoice-detail.tsx:InvoiceDetail",
+      "type": "function",
+      "name": "InvoiceDetail",
+      "filePath": "apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "lineRange": [
+        65,
+        792
+      ],
+      "summary": "Invoice detail sheet component handling the full lifecycle of an invoice — issue, void, record/void/refund payment, discount, and mark-uncollectible — with permission gating and cache invalidation.",
+      "tags": [
+        "component",
+        "billing",
+        "invoice",
+        "api-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
+      "type": "function",
+      "name": "useStatementBatch",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "lineRange": [
+        59,
+        85
+      ],
+      "summary": "Mutation hook that generates a patient statement batch and invalidates AR aging queries on success.",
+      "tags": [
+        "hook",
+        "billing",
+        "collections"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useSendStatement",
+      "type": "function",
+      "name": "useSendStatement",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "lineRange": [
+        92,
+        115
+      ],
+      "summary": "Mutation hook that sends an individual patient statement and invalidates AR aging caches.",
+      "tags": [
+        "hook",
+        "billing",
+        "collections"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useLogCollectionNote",
+      "type": "function",
+      "name": "useLogCollectionNote",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "lineRange": [
+        152,
+        173
+      ],
+      "summary": "Mutation hook that records a collection note for a patient and invalidates the collections worklist query.",
+      "tags": [
+        "hook",
+        "billing",
+        "collections"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
+      "type": "function",
+      "name": "useClaimMutations",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "lineRange": [
+        97,
+        163
+      ],
+      "summary": "Bundles create/submit/update-status/record-remittance claim mutations with shared invalidation of claim list and payer AR aging caches.",
+      "tags": [
+        "hook",
+        "billing",
+        "insurance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimLineMutations",
+      "type": "function",
+      "name": "useClaimLineMutations",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "lineRange": [
+        185,
+        215
+      ],
+      "summary": "Mutation hook for adding and updating insurance claim lines, invalidating claim detail and list caches on success.",
+      "tags": [
+        "hook",
+        "billing",
+        "insurance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useAuthorizationMutations",
+      "type": "function",
+      "name": "useAuthorizationMutations",
+      "filePath": "apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "lineRange": [
+        274,
+        310
+      ],
+      "summary": "Mutation hook for creating and updating the status of coverage authorizations for a patient, invalidating the authorizations list.",
+      "tags": [
+        "hook",
+        "billing",
+        "insurance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "type": "file",
+      "name": "push-opt-in-prompt.tsx",
+      "filePath": "apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "summary": "React component that conditionally renders a banner prompting the user to enable push notifications, driven by OneSignal permission checks and a dismissal-tracking helper.",
+      "tags": [
+        "component",
+        "notifications",
+        "push",
+        "event-handler",
+        "react"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Props default to live OneSignal helpers, enabling dependency injection for testing."
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
+      "type": "function",
+      "name": "PushOptInPrompt",
+      "filePath": "apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "lineRange": [
+        38,
+        120
+      ],
+      "summary": "Computes visibility from OneSignal enablement, granted permission, and dismissal state, then renders enable/dismiss controls that request permission or persist a dismissal.",
+      "tags": [
+        "component",
+        "push",
+        "permission",
+        "event-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/components/patient-credits.test.tsx",
+      "type": "file",
+      "name": "patient-credits.test.tsx",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-credits.test.tsx",
+      "summary": "Unit test suite for the PatientCredits component, rendering it inside a mock query client and fetch wrapper to exercise add/apply credit flows.",
+      "tags": [
+        "test",
+        "patients",
+        "billing",
+        "react"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "type": "file",
+      "name": "patient-credits.tsx",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "summary": "Patient credit-ledger panel that displays the credit balance and lets staff add credit or apply existing credit to outstanding invoices via the usePatientCredits hook.",
+      "tags": [
+        "component",
+        "billing",
+        "patients",
+        "credit",
+        "react"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Money handled in integer cents with peso<->cents conversion helpers to avoid float rounding."
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-credits.tsx:PatientCredits",
+      "type": "function",
+      "name": "PatientCredits",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "lineRange": [
+        32,
+        150
+      ],
+      "summary": "Renders the patient credit balance with add-credit and apply-to-invoice forms, wiring local form state to the usePatientCredits mutations and firing onChanged on success.",
+      "tags": [
+        "component",
+        "billing",
+        "credit",
+        "form"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "type": "file",
+      "name": "patient-profile-page.tsx",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "summary": "Full patient profile page with tabbed overview, payment, and follow-up sections, surfacing visits, balances, invoices, statements, and credit management.",
+      "tags": [
+        "component",
+        "patients",
+        "page",
+        "billing",
+        "react"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Multiple sub-tab components (OverviewTab, PaymentTab, FollowupTab) co-located in one file; payment status badge logic uses canonical DentalInvoiceStatus values."
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PatientProfilePage",
+      "type": "function",
+      "name": "PatientProfilePage",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "lineRange": [
+        311,
+        515
+      ],
+      "summary": "Top-level page component that loads the patient profile, renders the header with avatar and status, and switches between overview/payment/follow-up tabs with an edit dialog.",
+      "tags": [
+        "component",
+        "page",
+        "patients",
+        "tabs"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:OverviewTab",
+      "type": "function",
+      "name": "OverviewTab",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "lineRange": [
+        104,
+        170
+      ],
+      "summary": "Overview tab listing the patient's recent visits with status badges, sourced from the org context and useVisits hook.",
+      "tags": [
+        "component",
+        "patients",
+        "visits"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PaymentTab",
+      "type": "function",
+      "name": "PaymentTab",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "lineRange": [
+        174,
+        301
+      ],
+      "summary": "Payment tab showing the patient's invoices, outstanding balance, statement trigger, and embedded credit panel, invalidating billing queries on change.",
+      "tags": [
+        "component",
+        "billing",
+        "invoices",
+        "patients"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:statusBadge",
+      "type": "function",
+      "name": "statusBadge",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "lineRange": [
+        52,
+        68
+      ],
+      "summary": "Maps a patient status string to a styled badge element for the profile header.",
+      "tags": [
+        "utility",
+        "ui",
+        "patients"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:TabButton",
+      "type": "function",
+      "name": "TabButton",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "lineRange": [
+        72,
+        100
+      ],
+      "summary": "Renders an accessible tab navigation button with active-state styling for the profile page tab bar.",
+      "tags": [
+        "component",
+        "ui",
+        "tabs"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/components/patient-statement.test.tsx",
+      "type": "file",
+      "name": "patient-statement.test.tsx",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-statement.test.tsx",
+      "summary": "Unit test suite for the PatientStatement component, rendering it with a mock query client and fetch responses to verify statement display and send behavior.",
+      "tags": [
+        "test",
+        "patients",
+        "billing",
+        "react"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "type": "file",
+      "name": "patient-statement.tsx",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "summary": "Printable patient statement panel listing invoices and payments with balance totals, and a send action that emails the statement to the patient.",
+      "tags": [
+        "component",
+        "billing",
+        "patients",
+        "statement",
+        "print"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Wraps content in a PrintableDocument primitive; money formatted from integer cents."
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/components/patient-statement.tsx:PatientStatement",
+      "type": "function",
+      "name": "PatientStatement",
+      "filePath": "apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "lineRange": [
+        28,
+        157
+      ],
+      "summary": "Fetches the patient statement, renders invoice and payment line items with totals inside a printable document, and exposes a send-statement action.",
+      "tags": [
+        "component",
+        "statement",
+        "billing",
+        "print"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.test.ts",
+      "type": "file",
+      "name": "use-patient-balance.test.ts",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-balance.test.ts",
+      "summary": "Unit tests for the usePatientBalance hook, using renderHook with a fetch mock to verify it returns the patient balance response.",
+      "tags": [
+        "test",
+        "hook",
+        "patients",
+        "billing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "type": "file",
+      "name": "use-patient-balance.ts",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "summary": "TanStack Query hook fetching a patient's outstanding balance via the generated SDK query options.",
+      "tags": [
+        "hook",
+        "patients",
+        "billing",
+        "data-fetching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts:usePatientBalance",
+      "type": "function",
+      "name": "usePatientBalance",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "lineRange": [
+        15,
+        26
+      ],
+      "summary": "Wraps useQuery with getPatientBalanceOptions to return the patient's balance for the given patientId.",
+      "tags": [
+        "hook",
+        "billing",
+        "data-fetching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+      "type": "file",
+      "name": "use-patient-credits.ts",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+      "summary": "TanStack Query hook bundling the patient credit-ledger query with add-credit and apply-credit mutations, invalidating related queries on success.",
+      "tags": [
+        "hook",
+        "patients",
+        "billing",
+        "credit",
+        "mutation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts:usePatientCredits",
+      "type": "function",
+      "name": "usePatientCredits",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+      "lineRange": [
+        15,
+        55
+      ],
+      "summary": "Returns the patient credit balance plus addCredit and applyCredit mutations that invalidate credit, balance, and billing query caches after committing.",
+      "tags": [
+        "hook",
+        "credit",
+        "mutation",
+        "billing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+      "type": "file",
+      "name": "use-patient-statement.ts",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+      "summary": "TanStack Query hook fetching a patient's billing statement, gated by an enabled flag and patientId.",
+      "tags": [
+        "hook",
+        "patients",
+        "billing",
+        "statement",
+        "data-fetching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts:usePatientStatement",
+      "type": "function",
+      "name": "usePatientStatement",
+      "filePath": "apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+      "lineRange": [
+        14,
+        27
+      ],
+      "summary": "Wraps useQuery with getDentalPatientStatementOptions, enabling the fetch only when a patientId is present and the enabled flag is set.",
+      "tags": [
+        "hook",
+        "statement",
+        "data-fetching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.test.tsx",
+      "type": "file",
+      "name": "payment-terms-settings.test.tsx",
+      "filePath": "apps/dentalemon/src/features/settings/components/payment-terms-settings.test.tsx",
+      "summary": "Unit tests for the PaymentTermsSettings panel, rendering it inside a mocked TanStack Query client and asserting branch-settings load/save behavior.",
+      "tags": [
+        "test",
+        "settings",
+        "component",
+        "react"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "type": "file",
+      "name": "payment-terms-settings.tsx",
+      "filePath": "apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "summary": "Settings panel letting clinics pick default invoice payment-term days (preset or custom), backed by branch-settings query/mutation hooks.",
+      "tags": [
+        "component",
+        "settings",
+        "billing",
+        "react",
+        "form"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.test.tsx",
+      "type": "file",
+      "name": "reminder-cadence-settings.test.tsx",
+      "filePath": "apps/dentalemon/src/features/settings/components/reminder-cadence-settings.test.tsx",
+      "summary": "Unit tests for the ReminderCadenceSettings panel, verifying offset-day selection toggling and persistence via mocked branch-settings mutations.",
+      "tags": [
+        "test",
+        "settings",
+        "component",
+        "react"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "type": "file",
+      "name": "reminder-cadence-settings.tsx",
+      "filePath": "apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "summary": "Settings panel for choosing appointment-reminder offset days as a multi-select, persisted to branch settings via query/mutation hooks.",
+      "tags": [
+        "component",
+        "settings",
+        "notifications",
+        "react",
+        "form"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "type": "file",
+      "name": "use-branch-settings.ts",
+      "filePath": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "summary": "TanStack Query hooks for reading and updating per-branch settings via the generated SDK, with cache-key helpers and query invalidation on mutation.",
+      "tags": [
+        "hook",
+        "settings",
+        "data-fetching",
+        "react-query",
+        "service"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Wraps generated SDK query/mutation options and re-exports a typed cache-key helper for invalidation."
+    },
+    {
+      "id": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
+      "type": "file",
+      "name": "settings-panels.tsx",
+      "filePath": "apps/dentalemon/src/features/settings/settings-panels.tsx",
+      "summary": "Registry mapping settings panel ids to their React components, aggregating all settings sub-panels for the settings screen.",
+      "tags": [
+        "barrel",
+        "settings",
+        "registry",
+        "react"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/src/lib/format-currency.ts",
+      "type": "file",
+      "name": "format-currency.ts",
+      "filePath": "apps/dentalemon/src/lib/format-currency.ts",
+      "summary": "Currency formatting helpers used across the billing UI, formatting major-unit amounts and cents into localized currency strings.",
+      "tags": [
+        "utility",
+        "formatting",
+        "billing",
+        "currency"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/claim-create.spec.ts",
+      "type": "file",
+      "name": "claim-create.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/claim-create.spec.ts",
+      "summary": "Playwright E2E test that seeds a fully claimable patient/visit/invoice via API and exercises the insurance claim creation flow in the UI.",
+      "tags": [
+        "test",
+        "e2e",
+        "playwright",
+        "billing",
+        "claims"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/collections-kpis.spec.ts",
+      "type": "file",
+      "name": "collections-kpis.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/collections-kpis.spec.ts",
+      "summary": "Playwright E2E smoke test asserting the collections KPIs view renders for an authenticated user.",
+      "tags": [
+        "test",
+        "e2e",
+        "playwright",
+        "billing",
+        "collections"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/collections-worklist.spec.ts",
+      "type": "file",
+      "name": "collections-worklist.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/collections-worklist.spec.ts",
+      "summary": "Playwright E2E smoke test asserting the collections worklist view renders for an authenticated user.",
+      "tags": [
+        "test",
+        "e2e",
+        "playwright",
+        "billing",
+        "collections"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx:PaymentTermsSettings",
+      "type": "function",
+      "name": "PaymentTermsSettings",
+      "filePath": "apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "lineRange": [
+        23,
+        103
+      ],
+      "summary": "React component rendering payment-term presets plus a custom-days input, syncing state from branch settings and saving via the update mutation.",
+      "tags": [
+        "component",
+        "settings",
+        "billing",
+        "react"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx:ReminderCadenceSettings",
+      "type": "function",
+      "name": "ReminderCadenceSettings",
+      "filePath": "apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "lineRange": [
+        16,
+        89
+      ],
+      "summary": "React component rendering selectable reminder offset-day options, deduping and sorting the selection before saving to branch settings.",
+      "tags": [
+        "component",
+        "settings",
+        "notifications",
+        "react"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
+      "type": "function",
+      "name": "useBranchSettings",
+      "filePath": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "lineRange": [
+        61,
+        76
+      ],
+      "summary": "Query hook that fetches branch settings for a branch id and normalizes the raw SDK response into a typed settings object.",
+      "tags": [
+        "hook",
+        "data-fetching",
+        "react-query",
+        "settings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
+      "type": "function",
+      "name": "useUpdateBranchSettings",
+      "filePath": "apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "lineRange": [
+        78,
+        105
+      ],
+      "summary": "Mutation hook that updates branch settings via the SDK and invalidates the branch-settings query cache on success.",
+      "tags": [
+        "hook",
+        "mutation",
+        "react-query",
+        "settings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
+      "type": "function",
+      "name": "formatCurrency",
+      "filePath": "apps/dentalemon/src/lib/format-currency.ts",
+      "lineRange": [
+        22,
+        29
+      ],
+      "summary": "Formats a major-unit numeric amount into a localized currency string.",
+      "tags": [
+        "utility",
+        "formatting",
+        "currency"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apps/dentalemon/tests/e2e/claim-create.spec.ts:seedClaimable",
+      "type": "function",
+      "name": "seedClaimable",
+      "filePath": "apps/dentalemon/tests/e2e/claim-create.spec.ts",
+      "lineRange": [
+        18,
+        60
+      ],
+      "summary": "Test helper that creates a patient, insurance profile, visit, consent, treatment, and issued invoice through the API to set up a claimable billing scenario.",
+      "tags": [
+        "test",
+        "e2e",
+        "fixture",
+        "billing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/patient-balance.spec.ts",
+      "type": "file",
+      "name": "patient-balance.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/patient-balance.spec.ts",
+      "summary": "Playwright E2E test that seeds a patient with an issued invoice via the API and verifies the patient balance is surfaced correctly in the dentalemon UI.",
+      "tags": [
+        "test",
+        "e2e",
+        "billing",
+        "patient-balance",
+        "playwright"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/tests/e2e/patient-balance.spec.ts:seedPatientWithIssuedInvoice",
+      "type": "function",
+      "name": "seedPatientWithIssuedInvoice",
+      "filePath": "apps/dentalemon/tests/e2e/patient-balance.spec.ts",
+      "lineRange": [
+        14,
+        55
+      ],
+      "summary": "Seeds a patient, visit, consent, treatment, and an issued invoice through the dental API (run in-page via page.evaluate) to set up the balance test fixture.",
+      "tags": [
+        "test-fixture",
+        "seeding",
+        "billing",
+        "api-driven",
+        "e2e"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/patient-credits.spec.ts",
+      "type": "file",
+      "name": "patient-credits.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/patient-credits.spec.ts",
+      "summary": "Playwright E2E test covering the patient credit ledger flow (add/apply credit) against a seeded patient with an issued invoice.",
+      "tags": [
+        "test",
+        "e2e",
+        "billing",
+        "patient-credit",
+        "playwright"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/tests/e2e/patient-credits.spec.ts:seedPatientWithIssuedInvoice",
+      "type": "function",
+      "name": "seedPatientWithIssuedInvoice",
+      "filePath": "apps/dentalemon/tests/e2e/patient-credits.spec.ts",
+      "lineRange": [
+        11,
+        40
+      ],
+      "summary": "Seeds a patient with a completed visit and issued invoice through the dental API to provide the fixture for patient-credit assertions.",
+      "tags": [
+        "test-fixture",
+        "seeding",
+        "billing",
+        "api-driven",
+        "e2e"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/patient-statement.spec.ts",
+      "type": "file",
+      "name": "patient-statement.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/patient-statement.spec.ts",
+      "summary": "Playwright E2E test validating the patient statement view renders the issued invoice and balance details for a seeded patient.",
+      "tags": [
+        "test",
+        "e2e",
+        "billing",
+        "patient-statement",
+        "playwright"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/tests/e2e/patient-statement.spec.ts:seedPatientWithIssuedInvoice",
+      "type": "function",
+      "name": "seedPatientWithIssuedInvoice",
+      "filePath": "apps/dentalemon/tests/e2e/patient-statement.spec.ts",
+      "lineRange": [
+        12,
+        48
+      ],
+      "summary": "Seeds a patient, visit, consent, treatment, and issued invoice via the dental API to back the patient-statement rendering assertions.",
+      "tags": [
+        "test-fixture",
+        "seeding",
+        "billing",
+        "api-driven",
+        "e2e"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/payment-refund.spec.ts",
+      "type": "file",
+      "name": "payment-refund.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/payment-refund.spec.ts",
+      "summary": "Playwright E2E test exercising the payment refund action (BR-053) on a seeded invoice that already has a recorded payment.",
+      "tags": [
+        "test",
+        "e2e",
+        "billing",
+        "payment-refund",
+        "playwright"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apps/dentalemon/tests/e2e/payment-refund.spec.ts:seedInvoiceWithPayment",
+      "type": "function",
+      "name": "seedInvoiceWithPayment",
+      "filePath": "apps/dentalemon/tests/e2e/payment-refund.spec.ts",
+      "lineRange": [
+        12,
+        44
+      ],
+      "summary": "Seeds a patient with an issued invoice and records a payment against it via the dental API, returning the IDs needed for refund assertions.",
+      "tags": [
+        "test-fixture",
+        "seeding",
+        "billing",
+        "payment",
+        "e2e"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/payment-terms-settings.spec.ts",
+      "type": "file",
+      "name": "payment-terms-settings.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/payment-terms-settings.spec.ts",
+      "summary": "Playwright E2E test verifying the payment-terms configuration settings screen loads and persists term values.",
+      "tags": [
+        "test",
+        "e2e",
+        "settings",
+        "billing",
+        "playwright"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:apps/dentalemon/tests/e2e/reminder-cadence-settings.spec.ts",
+      "type": "file",
+      "name": "reminder-cadence-settings.spec.ts",
+      "filePath": "apps/dentalemon/tests/e2e/reminder-cadence-settings.spec.ts",
+      "summary": "Playwright E2E test verifying the reminder-cadence (dunning) settings screen loads and saves notification cadence configuration.",
+      "tags": [
+        "test",
+        "e2e",
+        "settings",
+        "notifications",
+        "playwright"
       ],
       "complexity": "simple"
     }
@@ -14040,13 +14891,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:apps/dentalemon/src/routes/_dashboard/patients_/$patientId.tsx",
-      "target": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts",
       "target": "function:apps/dentalemon/src/features/billing/hooks/use-invoice-detail.ts:useInvoiceDetail",
       "type": "contains",
@@ -14171,48 +15015,6 @@
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PatientProfilePage",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PatientProfilePage",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:OverviewTab",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PaymentTab",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:TabButton",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:statusBadge",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
     },
     {
       "source": "file:apps/dentalemon/src/features/patients/hooks/use-household.ts",
@@ -14362,69 +15164,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/constants/brand.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/features/patients/components/follow-up-notes.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/features/patients/components/household-card.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/features/patients/components/patient-edit-form.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-billing.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/features/workspace/hooks/use-visits.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/hooks/use-patient-profile.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
-      "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:apps/dentalemon/src/features/reports/components/invoice-detail-sheet.tsx",
       "target": "file:apps/dentalemon/src/constants/brand.ts",
       "type": "imports",
@@ -14518,13 +15257,6 @@
     {
       "source": "file:apps/dentalemon/src/features/billing/components/payment-receipt.tsx",
       "target": "file:apps/dentalemon/src/features/billing/hooks/use-payment-receipt.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/payment-receipt.tsx",
-      "target": "file:apps/dentalemon/src/lib/format-currency.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -15232,13 +15964,6 @@
     {
       "source": "file:apps/dentalemon/src/features/workspace/components/treatment-plans-sheet.tsx",
       "target": "file:apps/dentalemon/src/hooks/use-sheet-a11y.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/workspace/components/treatment-plans-sheet.tsx",
-      "target": "file:apps/dentalemon/src/lib/format-currency.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -16162,13 +16887,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/workspace/components/workspace-payment-modal.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/workspace/components/workspace-payment-modal.tsx",
       "target": "file:apps/dentalemon/src/features/workspace/hooks/use-workspace-payment.ts",
       "type": "imports",
       "direction": "forward",
@@ -16656,13 +17374,6 @@
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/components/settings-page.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
     },
     {
       "source": "file:apps/dentalemon/src/features/settings/components/settings-page.tsx",
@@ -17681,13 +18392,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/routes/_workspace.tsx",
-      "target": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/routes/_workspace.tsx",
       "target": "file:apps/dentalemon/src/lib/guards.ts",
       "type": "imports",
       "direction": "forward",
@@ -17827,111 +18531,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "target": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "target": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "target": "file:apps/dentalemon/src/components/list-error-state.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "target": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "target": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "target": "file:apps/dentalemon/src/components/list-error-state.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/collections-view.helpers.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useArAging",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "target": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:claimStatusClass",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "target": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:claimStatusClass",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:apps/dentalemon/src/features/billing/components/invoice-insurance-block.tsx",
       "target": "function:apps/dentalemon/src/features/billing/components/invoice-insurance-block.tsx:InvoiceInsuranceBlock",
       "type": "contains",
@@ -17944,104 +18543,6 @@
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-insurance-block.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useArAging",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useArAging",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useAuthorizationMutations",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:usePatientAuthorizations",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useCoverageEstimate",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useAuthorizationMutations",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:usePatientAuthorizations",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useCoverageEstimate",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
-      "target": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
     },
     {
       "source": "file:apps/dentalemon/src/features/billing/hooks/use-invoices.ts",
@@ -19795,13 +20296,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/workspace/components/dental-chart.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/workspace/components/dental-chart.tsx",
       "target": "file:apps/dentalemon/src/features/workspace/components/dental-chart.helpers.ts",
       "type": "imports",
       "direction": "forward",
@@ -20383,13 +20877,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/settings/components/clinic-settings.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/components/clinic-settings.tsx",
       "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
       "type": "imports",
       "direction": "forward",
@@ -20406,20 +20893,6 @@
       "source": "file:apps/dentalemon/src/features/settings/components/clinic-settings.tsx",
       "target": "function:apps/dentalemon/src/features/settings/components/clinic-settings.tsx:ClinicSettings",
       "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/settings/components/clinic-settings.tsx:ClinicSettings",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/settings/components/clinic-settings.tsx:ClinicSettings",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
-      "type": "calls",
       "direction": "forward",
       "weight": 0.8
     },
@@ -20544,13 +21017,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/settings/components/locale-settings.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/components/locale-settings.tsx",
       "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
       "type": "imports",
       "direction": "forward",
@@ -20569,20 +21035,6 @@
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/settings/components/locale-settings.tsx:LocaleSettings",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/components/notification-settings.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
     },
     {
       "source": "file:apps/dentalemon/src/features/settings/components/notification-settings.tsx",
@@ -20609,13 +21061,6 @@
       "source": "file:apps/dentalemon/src/features/settings/components/notification-settings.tsx",
       "target": "function:apps/dentalemon/src/features/settings/components/notification-settings.tsx:NotificationSettings",
       "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/settings/components/notification-settings.tsx:NotificationSettings",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
-      "type": "calls",
       "direction": "forward",
       "weight": 0.8
     },
@@ -20690,34 +21135,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
-      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:apps/dentalemon/src/features/settings/hooks/use-consent-templates.ts",
       "target": "function:apps/dentalemon/src/features/settings/hooks/use-consent-templates.ts:useConsentTemplateMutations",
       "type": "contains",
@@ -20767,69 +21184,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/audit-log.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/clinic-settings.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/consent-templates.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/data-erasure.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/fee-schedule.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/locale-settings.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/notification-settings.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/treatment-templates.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
-      "target": "file:apps/dentalemon/src/features/settings/components/working-hours.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx",
       "target": "file:apps/dentalemon/src/constants/brand.ts",
       "type": "imports",
@@ -20845,13 +21199,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx",
-      "target": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx",
       "target": "function:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx:AcceptedPlanViewer",
       "type": "contains",
       "direction": "forward",
@@ -20861,13 +21208,6 @@
       "source": "file:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx",
       "target": "function:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx:AcceptedPlanViewer",
       "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/case-presentation/accepted-plan-viewer.tsx:AcceptedPlanViewer",
-      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
-      "type": "calls",
       "direction": "forward",
       "weight": 0.8
     },
@@ -20929,13 +21269,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx",
-      "target": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx",
       "target": "function:apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx:CasePresentationView",
       "type": "contains",
       "direction": "forward",
@@ -20945,13 +21278,6 @@
       "source": "file:apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx",
       "target": "function:apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx:CasePresentationView",
       "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/case-presentation/case-presentation-view.tsx:CasePresentationView",
-      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
-      "type": "calls",
       "direction": "forward",
       "weight": 0.8
     },
@@ -21055,13 +21381,6 @@
     },
     {
       "source": "file:apps/dentalemon/src/features/portal/components/my-invoices-view.tsx",
-      "target": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/portal/components/my-invoices-view.tsx",
       "target": "function:apps/dentalemon/src/features/portal/components/my-invoices-view.tsx:MyInvoicesView",
       "type": "contains",
       "direction": "forward",
@@ -21094,34 +21413,6 @@
       "type": "contains",
       "direction": "forward",
       "weight": 1
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/portal/components/my-invoices-view.tsx:InvoiceCard",
-      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "target": "file:apps/dentalemon/src/constants/brand.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/lib/format-currency.ts",
-      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:apps/dentalemon/src/routes/_portal/portal.appointments.tsx",
@@ -21698,48 +21989,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "target": "file:apps/dentalemon/src/features/notifications/lib/push-opt-in.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "target": "file:apps/dentalemon/src/features/notifications/onesignal.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "target": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
-      "target": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
-      "target": "function:apps/dentalemon/src/features/notifications/lib/push-opt-in.ts:markPushOptInDismissed",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
-      "target": "function:apps/dentalemon/src/features/notifications/onesignal.ts:requestNotificationPermission",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:apps/dentalemon/src/hooks/use-onesignal.ts",
       "target": "file:apps/dentalemon/src/features/notifications/onesignal.ts",
       "type": "imports",
@@ -22004,62 +22253,6 @@
       "type": "related",
       "direction": "forward",
       "weight": 0.5
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "function:apps/dentalemon/src/features/billing/components/invoice-detail.tsx:InvoiceDetail",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "function:apps/dentalemon/src/features/billing/components/invoice-detail.tsx:InvoiceDetail",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/invoice-detail.helpers.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/payment-plan-create.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/payment-receipt.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "file:apps/dentalemon/src/lib/error-toast.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "file:apps/dentalemon/src/lib/rbac.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
-      "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
     },
     {
       "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.helpers.ts",
@@ -22456,27 +22649,6 @@
     {
       "source": "file:apps/dentalemon/src/routes/_dashboard/billing.tsx",
       "target": "file:apps/dentalemon/src/features/billing/components/billing-list.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/routes/_dashboard/billing.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/routes/_dashboard/billing.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:apps/dentalemon/src/routes/_dashboard/billing.tsx",
-      "target": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -23208,6 +23380,867 @@
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claim-create.tsx:ClaimCreate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claim-create.tsx:ClaimCreate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claim-create.tsx:canFileClaim",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claim-create.tsx:canFileClaim",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claim-detail.tsx:ClaimDetail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claim-detail.tsx:ClaimDetail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/claims-worklist.tsx:ClaimsWorklist",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/collections-kpis.tsx:CollectionsKpis",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/collections-kpis.tsx:CollectionsKpis",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/collections-view.tsx:CollectionsView",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-view.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/claims-worklist.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/claims-worklist.create.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/claim-create.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/claim-detail.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/collections-kpis.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/claims-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/collections-worklist.tsx:CollectionsWorklist",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/collections-worklist.tsx:CollectionsWorklist",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/collections-worklist.test.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "target": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:toInsuranceClaimRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "target": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:toInsuranceClaimRow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "target": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:claimStatusClass",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/insurance.helpers.ts",
+      "target": "function:apps/dentalemon/src/features/billing/components/insurance.helpers.ts:claimStatusClass",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/invoice-detail.tsx:InvoiceDetail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "target": "function:apps/dentalemon/src/features/billing/components/invoice-detail.tsx:InvoiceDetail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/components/invoice-detail.payment-refund.test.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/components/invoice-detail.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useStatementBatch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useSendStatement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useSendStatement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useLogCollectionNote",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-collections.ts:useLogCollectionNote",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-collections.test.ts",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimMutations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimLineMutations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useClaimLineMutations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useAuthorizationMutations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "target": "function:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts:useAuthorizationMutations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.create.test.ts",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/billing/hooks/use-claim-lines.test.ts",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "target": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "target": "function:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx:PushOptInPrompt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "target": "file:apps/dentalemon/src/features/notifications/onesignal.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+      "target": "file:apps/dentalemon/src/features/notifications/lib/push-opt-in.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-credits.tsx:PatientCredits",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-credits.tsx:PatientCredits",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/patients/components/patient-credits.tsx:PatientCredits",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts:usePatientCredits",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-credits.test.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-credits.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PatientProfilePage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PatientProfilePage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:OverviewTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PaymentTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:statusBadge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:TabButton",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-billing.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-actions.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/follow-up-notes.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/household-card.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-edit-form.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/hooks/use-patient-profile.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx",
+      "target": "file:apps/dentalemon/src/features/workspace/hooks/use-visits.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/patients/components/patient-profile-page.tsx:PaymentTab",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts:usePatientBalance",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-statement.tsx:PatientStatement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "target": "function:apps/dentalemon/src/features/patients/components/patient-statement.tsx:PatientStatement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "target": "file:apps/dentalemon/src/features/billing/hooks/use-collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "target": "file:apps/dentalemon/src/components/print/printable-document.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/patients/components/patient-statement.tsx:PatientStatement",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts:usePatientStatement",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.test.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+      "target": "file:apps/dentalemon/src/features/patients/components/patient-statement.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts:usePatientBalance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts:usePatientBalance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.test.ts",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+      "target": "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts:usePatientCredits",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts:usePatientCredits",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts:usePatientStatement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+      "target": "function:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts:usePatientStatement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "target": "function:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx:PaymentTermsSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "target": "function:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx:PaymentTermsSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx:PaymentTermsSettings",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx:PaymentTermsSettings",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "target": "function:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx:ReminderCadenceSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "target": "function:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx:ReminderCadenceSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "target": "file:apps/dentalemon/src/stores/org-context.store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx:ReminderCadenceSettings",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx:ReminderCadenceSettings",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useBranchSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts",
+      "target": "function:apps/dentalemon/src/features/settings/hooks/use-branch-settings.ts:useUpdateBranchSettings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/settings-panels.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/lib/format-currency.ts",
+      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/lib/format-currency.ts",
+      "target": "function:apps/dentalemon/src/lib/format-currency.ts:formatCurrency",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apps/dentalemon/tests/e2e/claim-create.spec.ts",
+      "target": "function:apps/dentalemon/tests/e2e/claim-create.spec.ts:seedClaimable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.test.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.test.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx",
+      "target": "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apps/dentalemon/tests/e2e/patient-balance.spec.ts",
+      "target": "function:apps/dentalemon/tests/e2e/patient-balance.spec.ts:seedPatientWithIssuedInvoice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/tests/e2e/patient-credits.spec.ts",
+      "target": "function:apps/dentalemon/tests/e2e/patient-credits.spec.ts:seedPatientWithIssuedInvoice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/tests/e2e/patient-statement.spec.ts",
+      "target": "function:apps/dentalemon/tests/e2e/patient-statement.spec.ts:seedPatientWithIssuedInvoice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apps/dentalemon/tests/e2e/payment-refund.spec.ts",
+      "target": "function:apps/dentalemon/tests/e2e/payment-refund.spec.ts:seedInvoiceWithPayment",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
     }
   ],
   "layers": [
@@ -23258,7 +24291,16 @@
         "file:apps/dentalemon/src/components/datetime-filter.tsx",
         "file:apps/dentalemon/src/components/empty-state.tsx",
         "file:apps/dentalemon/index.html",
-        "file:apps/dentalemon/src/routes/_dashboard/billing.tsx"
+        "file:apps/dentalemon/src/routes/_dashboard/billing.tsx",
+        "file:apps/dentalemon/tests/e2e/claim-create.spec.ts",
+        "file:apps/dentalemon/tests/e2e/collections-kpis.spec.ts",
+        "file:apps/dentalemon/tests/e2e/collections-worklist.spec.ts",
+        "file:apps/dentalemon/tests/e2e/patient-balance.spec.ts",
+        "file:apps/dentalemon/tests/e2e/patient-credits.spec.ts",
+        "file:apps/dentalemon/tests/e2e/patient-statement.spec.ts",
+        "file:apps/dentalemon/tests/e2e/payment-refund.spec.ts",
+        "file:apps/dentalemon/tests/e2e/payment-terms-settings.spec.ts",
+        "file:apps/dentalemon/tests/e2e/reminder-cadence-settings.spec.ts"
       ]
     },
     {
@@ -23514,7 +24556,33 @@
         "file:apps/dentalemon/src/features/workspace/components/tooth-slideout.tsx",
         "file:apps/dentalemon/src/features/pmd/components/pmd-import.tsx",
         "file:apps/dentalemon/src/features/scheduling/components/appointment-modal.tsx",
-        "file:apps/dentalemon/src/features/scheduling/components/calendar-day.tsx"
+        "file:apps/dentalemon/src/features/scheduling/components/calendar-day.tsx",
+        "file:apps/dentalemon/src/features/billing/components/claim-create.test.tsx",
+        "file:apps/dentalemon/src/features/billing/components/claim-create.tsx",
+        "file:apps/dentalemon/src/features/billing/components/claim-detail.test.tsx",
+        "file:apps/dentalemon/src/features/billing/components/claim-detail.tsx",
+        "file:apps/dentalemon/src/features/billing/components/claims-worklist.create.test.tsx",
+        "file:apps/dentalemon/src/features/billing/components/claims-worklist.test.tsx",
+        "file:apps/dentalemon/src/features/billing/components/collections-kpis.test.tsx",
+        "file:apps/dentalemon/src/features/billing/components/collections-kpis.tsx",
+        "file:apps/dentalemon/src/features/billing/components/collections-worklist.test.tsx",
+        "file:apps/dentalemon/src/features/billing/components/collections-worklist.tsx",
+        "file:apps/dentalemon/src/features/billing/components/invoice-detail.payment-refund.test.tsx",
+        "file:apps/dentalemon/src/features/billing/hooks/use-claim-lines.test.ts",
+        "file:apps/dentalemon/src/features/billing/hooks/use-collections.test.ts",
+        "file:apps/dentalemon/src/features/billing/hooks/use-insurance-claims.create.test.ts",
+        "file:apps/dentalemon/src/features/patients/components/patient-credits.test.tsx",
+        "file:apps/dentalemon/src/features/patients/components/patient-credits.tsx",
+        "file:apps/dentalemon/src/features/patients/components/patient-statement.test.tsx",
+        "file:apps/dentalemon/src/features/patients/components/patient-statement.tsx",
+        "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.test.ts",
+        "file:apps/dentalemon/src/features/patients/hooks/use-patient-balance.ts",
+        "file:apps/dentalemon/src/features/patients/hooks/use-patient-credits.ts",
+        "file:apps/dentalemon/src/features/patients/hooks/use-patient-statement.ts",
+        "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.test.tsx",
+        "file:apps/dentalemon/src/features/settings/components/payment-terms-settings.tsx",
+        "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.test.tsx",
+        "file:apps/dentalemon/src/features/settings/components/reminder-cadence-settings.tsx"
       ]
     },
     {
