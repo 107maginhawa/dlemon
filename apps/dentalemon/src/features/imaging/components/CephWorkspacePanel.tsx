@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@monobase/ui'
 import { ANALYSIS_TYPES, NORM_POPULATIONS, DEFAULT_POPULATION, getPopulationLabel } from '@monobase/ceph-math'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cephMgmtCreateCephReport } from '@monobase/sdk-ts/generated'
 import { useOrgContextStore } from '@/stores/org-context.store'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
@@ -116,6 +116,7 @@ export function CephWorkspacePanel({
   const role = useOrgContextStore((s) => s.role)
   const canFinalize = role != null && CEPH_SIGNOFF_ROLES.includes(role)
 
+  const queryClient = useQueryClient()
   const createReport = useMutation({
     mutationFn: async () => {
       const { data } = await cephMgmtCreateCephReport({
@@ -130,6 +131,9 @@ export function CephWorkspacePanel({
     },
     onSuccess: (data) => {
       setCreatedVersion(data.version)
+      // Refresh the "latest report" query the superimposition/comparison view
+      // reads (use-ceph-superimposition.ts), else it shows the prior version.
+      queryClient.invalidateQueries({ queryKey: ['ceph-report-latest', imageId] })
     },
   })
 
