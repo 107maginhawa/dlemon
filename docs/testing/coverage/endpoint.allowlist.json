@@ -4,6 +4,14 @@
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/patients/{patientId}/treatment-options/{optionGroupId}/accept is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "addInsuranceClaimLine",
+    "reason": "Baseline gap seeded 2026-06-19: POST /dental/billing/claims/{claimId}/lines is FE-consumed (apps/dentalemon claim line editor) but has no contract/integration/journey test yet. Backend-tested at the handler level (dental-insurance-claim.test.ts); FE-consumed E2E pending."
+  },
+  {
+    "id": "applyCreditToInvoice",
+    "reason": "Baseline gap seeded 2026-06-19: POST /dental/billing/invoices/{invoiceId}/apply-credit is FE-consumed (apps/dentalemon patient-credit FE) but has no contract/integration/journey test yet. Backend-tested (dental-billing.patient-credits.test.ts); FE-consumed E2E pending."
+  },
+  {
     "id": "CephMgmt_deleteCephLandmark",
     "reason": "Baseline gap seeded 2026-06-15: DELETE /dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
@@ -52,6 +60,10 @@
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/patients/{patientId}/authorizations is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "listPatientInsuranceProfiles",
+    "reason": "Baseline gap seeded 2026-06-19: GET /dental/patients/{patientId}/insurance-profiles is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Read-only list; backend-exercised via dental-patient-insurance.test.ts."
+  },
+  {
     "id": "listPatientTreatmentPlans",
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/patients/{patientId}/treatment-plans is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
@@ -80,12 +92,20 @@
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/clinical/medical-history-review is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "refundDentalPayment",
+    "reason": "Baseline gap seeded 2026-06-19: POST /dental/billing/payments/{paymentId}/refund is FE-consumed (apps/dentalemon refund action) but has no contract/integration/journey test yet. Backend-tested (dental-billing.refunds.test.ts, BR-053); FE-consumed E2E pending."
+  },
+  {
     "id": "rejectCasePresentation",
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/patients/{patientId}/case-presentations/{presentationId}/reject is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
     "id": "updateFeeScheduleEntry",
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/fee-schedule/{cdt} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
+  },
+  {
+    "id": "updateInsuranceClaimLine",
+    "reason": "Baseline gap seeded 2026-06-19: PATCH /dental/billing/claims/{claimId}/lines/{lineId} is FE-consumed (apps/dentalemon claim line editor) but has no contract/integration/journey test yet. Backend-tested at the handler level; FE-consumed E2E pending."
   },
   {
     "id": "updateMember",

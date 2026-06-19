@@ -99,13 +99,13 @@ _None — every illegal transition has a rejection test._
 | LabOrder | `fitted` | `in_fabrication` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `fitted` | `ordered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `in_fabrication` | `cancelled` | ✅ |   |  |
-| LabOrder | `in_fabrication` | `delivered` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:797 |
+| LabOrder | `in_fabrication` | `delivered` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:821 |
 | LabOrder | `in_fabrication` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `in_fabrication` | `ordered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `ordered` | `cancelled` | ✅ |   |  |
 | LabOrder | `ordered` | `delivered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `ordered` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
-| LabOrder | `ordered` | `in_fabrication` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:826 |
+| LabOrder | `ordered` | `in_fabrication` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:850 |
 | PaymentPlan | `behind` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:13 |
 | PaymentPlan | `behind` | `defaulted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:12 |
 | PaymentPlan | `behind` | `on_track` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:9 |

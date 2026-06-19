@@ -1159,6 +1159,17 @@
     "drift": false
   },
   {
+    "operationId": "refundDentalPayment",
+    "method": "POST",
+    "path": "/dental/billing/payments/{paymentId}/refund",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
     "operationId": "rejectCasePresentation",
     "method": "POST",
     "path": "/dental/patients/{patientId}/case-presentations/{presentationId}/reject",
