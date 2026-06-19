@@ -165,8 +165,13 @@ export function useCasePresentation(patientId: string, presentationId: string) {
     accept: (input: { signerName: string; signatureData: string }) =>
       accept.mutateAsync({ path, body: input }),
     isAccepting: accept.isPending,
+    // Surface accept/reject failures (422 already-decided, FSM conflict, network, 5xx).
+    // A patient e-signing acceptance on the operatory iPad must never get a silent
+    // no-op — the decision is a legal record.
+    acceptError: accept.error as Error | null,
     reject: (input: { rejectionReason?: string }) =>
       reject.mutateAsync({ path, body: input }),
     isRejecting: reject.isPending,
+    rejectError: reject.error as Error | null,
   };
 }

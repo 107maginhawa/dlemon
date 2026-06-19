@@ -120,6 +120,39 @@ describe('CasePresentationView', () => {
     expect(btn.disabled).toBe(true);
   });
 
+  // Regression: ISSUE-014 — accept/reject failures were swallowed (panel did
+  // `void reject(input)`, hook exposed no error), so a patient on the operatory iPad
+  // got a silent no-op when an e-sign accept or decline 422'd (already-decided /
+  // plan-FSM conflict / network / 5xx). The decision is a legal record; failures must
+  // surface. Found by /qa on 2026-06-20.
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('surfaces an error when an accept/reject mutation fails (no silent no-op)', () => {
+    render(
+      <CasePresentationView
+        aggregate={makeAggregate()}
+        isAccepting={false}
+        isRejecting={false}
+        rejectError={new Error('Treatment plan cannot transition approved → rejected')}
+        onAccept={noop}
+        onReject={noop}
+      />,
+    );
+    expect(screen.getByTestId('decision-error').textContent).toContain('ask the front desk');
+  });
+
+  test('no error banner is shown when accept/reject have not failed', () => {
+    render(
+      <CasePresentationView
+        aggregate={makeAggregate()}
+        isAccepting={false}
+        isRejecting={false}
+        onAccept={noop}
+        onReject={noop}
+      />,
+    );
+    expect(screen.queryByTestId('decision-error')).toBeNull();
+  });
+
   test('decided presentation shows a decision banner and hides the CTAs', () => {
     render(
       <CasePresentationView

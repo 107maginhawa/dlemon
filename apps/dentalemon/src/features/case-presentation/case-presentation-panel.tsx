@@ -17,7 +17,7 @@ interface CasePresentationPanelProps {
 }
 
 export function CasePresentationPanel({ patientId, presentationId }: CasePresentationPanelProps) {
-  const { aggregate, isLoading, isError, accept, isAccepting, reject, isRejecting } =
+  const { aggregate, isLoading, isError, accept, isAccepting, acceptError, reject, isRejecting, rejectError } =
     useCasePresentation(patientId, presentationId);
 
   if (isLoading) {
@@ -58,8 +58,13 @@ export function CasePresentationPanel({ patientId, presentationId }: CasePresent
       aggregate={aggregate}
       isAccepting={isAccepting}
       isRejecting={isRejecting}
-      onAccept={(input) => { void accept(input); }}
-      onReject={(input) => { void reject(input); }}
+      acceptError={acceptError}
+      rejectError={rejectError}
+      // .catch swallows the rejection at the call site (the error is surfaced to the
+      // patient via accept/rejectError below) so it doesn't become an unhandled
+      // promise rejection.
+      onAccept={(input) => { accept(input).catch(() => {}); }}
+      onReject={(input) => { reject(input).catch(() => {}); }}
     />
   );
 }
