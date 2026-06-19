@@ -635,7 +635,15 @@ async function seed() {
     ]},
   ]
   const treatmentTemplateIds: string[] = []
+  // ISSUE-006: the create endpoint allows duplicate names, so an unconditional POST
+  // piled up a fresh copy of every template on each reseed (22 runs → 22 dupes).
+  // Reuse existing templates by name instead — matches the org/staff/patient
+  // idempotency above so `bun run db:reseed` stays clean.
+  const existingTplR = await get(`/dental/treatment-templates?branchId=${branch.id}`, cookie)
+  const existingTpls: any[] = existingTplR.data?.templates ?? existingTplR.data?.data ?? existingTplR.data ?? []
   for (const tpl of tplDefs) {
+    const found = Array.isArray(existingTpls) ? existingTpls.find((t: any) => t.name === tpl.name) : null
+    if (found?.id) { treatmentTemplateIds.push(found.id); log(`→ Existing template: ${tpl.name}`); continue }
     const r = await post('/dental/treatment-templates', tpl, cookie)
     if (r.ok) treatmentTemplateIds.push(r.data.id)
     log(r.ok ? `✓ Template: ${tpl.name}` : `⚠ Template: ${tpl.name} (${r.status})`)
@@ -648,7 +656,15 @@ async function seed() {
     'I consent to endodontic (root canal) treatment. A crown may be required afterwards.',
   ]
   const consentTemplateIds: string[] = []
+  // ISSUE-006: reuse existing consent templates by name on reseed (same fix as the
+  // treatment templates above — unconditional POST otherwise duplicates them).
+  const existingConsentR = await get(`/dental/branches/${branch.id}/consent-templates`, cookie)
+  const existingConsent: any[] = Array.isArray(existingConsentR.data)
+    ? existingConsentR.data
+    : (existingConsentR.data?.data ?? [])
   for (let i = 0; i < consentNames.length; i++) {
+    const existing = existingConsent.find((t: any) => t.name === consentNames[i])
+    if (existing?.id) { consentTemplateIds.push(existing.id); log(`→ Existing consent template: ${consentNames[i]}`); continue }
     // Contract (reconciled, AHA FIX-004): request = { name, body,
     // requiresWitnessSignature? }; create returns the bare created object.
     const r = await post(`/dental/branches/${branch.id}/consent-templates`, {
