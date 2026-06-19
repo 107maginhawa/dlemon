@@ -18,8 +18,10 @@
 import { describe, test, expect, beforeAll, afterEach, spyOn } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+import { CarryOverTreatmentsParams, CarryOverTreatmentsBody } from '@/generated/openapi/validators';
 import { carryOverTreatments } from './carryOverTreatments';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -83,7 +85,15 @@ function buildApp() {
     ctx.set('requestId', 'test-req');
     await next();
   });
-  app.post('/dental/visits/:visitId/carry-over', carryOverTreatments as any);
+  // Mount through the generated validators (param + json), same as the production
+  // route, so this exercises the real validator chain (test-harness ratchet).
+  const ve = (r: any, c: any) => { if (!r.success) return c.json({ error: 'Validation failed', issues: r.error.issues }, 400); };
+  app.post(
+    '/dental/visits/:visitId/carry-over',
+    zValidator('param', CarryOverTreatmentsParams, ve),
+    zValidator('json', CarryOverTreatmentsBody, ve),
+    carryOverTreatments as any,
+  );
   return app;
 }
 

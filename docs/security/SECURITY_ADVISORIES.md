@@ -1,6 +1,6 @@
 # Security Advisories — Accepted Baseline
 
-Last audited: 2026-06-16
+Last audited: 2026-06-19
 
 This document records known advisories that have been triaged and accepted as part of the operational risk baseline. Accepted advisories are re-evaluated on each `bun audit` run in CI.
 
@@ -28,6 +28,15 @@ This document records known advisories that have been triaged and accepted as pa
 > runtime path. `bun audit` is the live source of truth; this table is the
 > accepted subset.
 
+> **2026-06-19 re-audit.** Two newly-published advisories since 2026-06-16 (lockfile
+> unchanged): `dompurify` `GHSA-cmwh-pvxp-8882` (moderate, transitive via `@scalar`
+> docs UI — same surface as the existing dompurify rows) and `nodemailer`
+> `GHSA-p6gq-j5cr-w38f` (high). nodemailer is in the production email path, but the
+> only `sendMail` call (`core/email.ts`) uses `{from,to,subject,html,text,replyTo}`
+> exclusively — never the vulnerable `raw` option or path/URL attachments — so the
+> file-read/SSRF surface is unreachable. Both triaged + accepted below; the
+> nodemailer 8→9 major upgrade is deferred to a dedicated dependency PR.
+
 ## Accepted Advisories
 
 | ID | Package | Severity | Description | Rationale | Accepted |
@@ -44,6 +53,8 @@ This document records known advisories that have been triaged and accepted as pa
 | GHSA-vmf3-w455-68vh | tar <=7.5.15 | moderate | node-tar applies PAX size override to intermediary GNU long-name/long-link headers | Install/build-time archive extraction (transitive); not used to extract attacker-controlled tarballs at runtime. Upgrade tar ≥7.5.16 (tracked dep PR). | 2026-06-16 |
 | GHSA-vxr8-fq34-vvx9 | dompurify <3.4.9 | low | Trusted Types policy survives `clearConfig()` and can poison later sanitization | Transitive via `@scalar/api-reference` (the `/docs` UI — dev/docs tooling). Low severity, niche config interaction; the app does not call `clearConfig()` in a way that crosses trust boundaries. Upgrade dompurify ≥3.4.9 with the `@scalar` bump (tracked). | 2026-06-16 |
 | GHSA-gvmj-g25r-r7wr | dompurify >=3.0.0 <=3.4.7 | low | `SAFE_FOR_TEMPLATES` bypass — template expressions survive sanitization | Transitive via `@scalar/api-reference`. Low severity; only affects callers using `SAFE_FOR_TEMPLATES` mode, which this app does not. Upgrade dompurify ≥3.4.8 with the `@scalar` bump (tracked). | 2026-06-16 |
+| GHSA-cmwh-pvxp-8882 | dompurify <=3.4.10 | moderate | Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard | Transitive via `@scalar/api-reference` (the `/docs` UI — dev/docs tooling), same surface as the two dompurify rows above. The API does not sanitize attacker-controlled HTML through this dompurify instance at runtime. Upgrade dompurify ≥3.4.11 with the `@scalar` bump (tracked dep PR). | 2026-06-19 |
+| GHSA-p6gq-j5cr-w38f | nodemailer <=9.0.0 | high | Message-level `raw` option bypasses `disableFileAccess`/`disableUrlAccess`, enabling arbitrary file read + SSRF in the delivered message | nodemailer IS in the production email path (`core/email.ts`), but the single `sendMail` call passes only `{from,to,subject,html,text,replyTo}` — it never uses the `raw` message option nor `attachments` with `path`/`href`, so the vulnerable file-read/SSRF surface is unreachable from any caller. Upgrade to nodemailer ≥9.0.1 is a MAJOR bump (8→9) deferred to a dedicated dependency PR to avoid major-version churn in unrelated work. | 2026-06-19 |
 
 ## Rust (`cargo audit`) — Tracked Remediation (not yet accepted)
 
