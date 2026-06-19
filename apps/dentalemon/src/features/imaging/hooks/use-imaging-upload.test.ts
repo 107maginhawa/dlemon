@@ -147,9 +147,9 @@ describe('useImagingUpload — happy path', () => {
       await result.current.upload(makeFile('tooth.dcm', 2048), defaultOptions);
     });
 
-    // The SDK's jsonBodySerializer converts BigInt → string on the wire.
-    // file.size (number) is wrapped in BigInt() to satisfy the SDK type, so
-    // the serialized value is the string "2048" not the number 2048.
+    // ISSUE-025: `size` must reach the wire as a JSON number. The SDK's
+    // jsonBodySerializer stringifies bigint, but the server validates `size`
+    // as z.number() and 400s on a string — so the hook sends a plain number.
     expect(capturedBody).toMatchObject({
       patientId: 'p1',
       branchId: 'b1',
@@ -157,9 +157,48 @@ describe('useImagingUpload — happy path', () => {
       modality: 'xray',
       filename: 'tooth.dcm',
       mimeType: 'application/dicom',
-      size: '2048',
+      size: 2048,
       toothNumbers: [14],
     });
+  });
+
+  // Regression: ISSUE-025 — image upload sent `size` as BigInt, which the SDK
+  // serializes to a JSON string ("2048"); the server validates `size` as a
+  // number and 400s ("expected number, received string"), so every UI upload
+  // failed silently. The wire value must be a number, not a string.
+  // Found by /qa on 2026-06-20
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('ISSUE-025: serializes size as a JSON number, not a string', async () => {
+    let serializedBody: string | undefined;
+
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      const url = reqUrl(req);
+      if (url.includes('/dental/imaging/studies')) {
+        // Capture the RAW serialized JSON the SDK put on the wire.
+        if (req instanceof Request) serializedBody = await req.clone().text();
+        else if (typeof init?.body === 'string') serializedBody = init.body;
+        return jsonResponse({
+          study: { id: 'study-1' },
+          uploadUrl: 'https://s3.example.com/presigned',
+          uploadMethod: 'PUT',
+          fileId: 'file-1',
+        });
+      }
+      return jsonResponse({}, 200);
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useImagingUpload(), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await act(async () => {
+      await result.current.upload(makeFile('tooth.dcm', 2048), defaultOptions);
+    });
+
+    // Quoted string "2048" is the bug; bare 2048 is correct.
+    expect(serializedBody).toContain('"size":2048');
+    expect(serializedBody).not.toContain('"size":"2048"');
   });
 });
 

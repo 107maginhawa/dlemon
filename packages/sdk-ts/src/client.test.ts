@@ -51,6 +51,32 @@ describe('createClientConfig', () => {
     expect(typeof result.fetch).toBe('function');
   });
 
+  // Regression: ISSUE-025 — image/attachment/PMD uploads send size: BigInt(file.size).
+  // The generated default serializer stringifies every bigint, but the server validates
+  // int64 request fields as z.number().int() and 400s on a string ("expected number,
+  // received string") — so every UI upload failed silently. Safe int64 values must
+  // serialize as JSON numbers.
+  // Found by /qa on 2026-06-20
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('injects a bigint-safe body serializer (int64 → JSON number, not string)', () => {
+    const result = createClientConfig({}) as any;
+    const serialize = result.bodySerializer as (b: unknown) => string;
+    expect(typeof serialize).toBe('function');
+
+    // Safe int64 (file size) → bare number, NOT a quoted string.
+    expect(serialize({ size: BigInt(2048) })).toBe('{"size":2048}');
+    expect(serialize({ size: BigInt(0) })).toBe('{"size":0}');
+
+    // Mixed payload: non-bigint fields untouched.
+    expect(serialize({ filename: 'x.png', size: BigInt(1024) })).toBe(
+      '{"filename":"x.png","size":1024}',
+    );
+
+    // >2^53 falls back to string to preserve precision (unreachable for real files).
+    const huge = BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1);
+    expect(serialize({ size: huge })).toBe(`{"size":"${huge.toString()}"}`);
+  });
+
   test('preserves original config properties', () => {
     const result = createClientConfig({ headers: { 'X-Test': 'yes' }, timeout: 5000 }) as any;
     expect(result.headers).toEqual({ 'X-Test': 'yes' });
