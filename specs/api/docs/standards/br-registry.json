@@ -235,7 +235,7 @@
           "type": "business-logic",
           "status": "implemented",
           "source": "dental-billing/getCollectionsWorklist.ts (overdue aggregation over getOutstandingInvoicesForAging + invoiceAgeDays, note + active-plan enrichment), dental-billing/createCollectionNote.ts (audited create, getActiveMembershipId stamp), DentalCollectionNoteRepository.create/findLatestByPatients/listByPatient, dental_collection_note table (migration 0111), patient-billing.facade.getActivePaymentPlanPatientIds",
-          "test": "dental-billing.collections-worklist.test.ts (overdue patient surfaced w/ overdue total + open count + oldest days; settled patient absent; createCollectionNote persists audited note then enriches worklist noteCount/lastContactChannel; unknown patient 404); contract dental-billing.hurl (notes 201 + worklist 200)"
+          "test": "dental-billing.collections-worklist.test.ts (overdue patient surfaced w/ overdue total + open count + oldest days; settled patient absent; createCollectionNote persists audited note then enriches worklist noteCount/lastContactChannel; unknown patient 404); contract dental-billing.hurl (notes 201 + worklist 200); FE collections-worklist.test.tsx + use-collections.test.ts (useCollectionsWorklist/useLogCollectionNote) + e2e collections-worklist.spec.ts (Worklist tab renders live)"
         }
       ]
     },

@@ -6,8 +6,9 @@
  * that triggers a batch statement run for the active branch.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useArAging, useStatementBatch, useSendStatement } from '../hooks/use-collections';
+import { CollectionsWorklist } from './collections-worklist';
 import { ListErrorState } from '@/components/list-error-state';
 import {
   formatCents,
@@ -24,6 +25,7 @@ export interface CollectionsViewProps {
 }
 
 export function CollectionsView({ branchId }: CollectionsViewProps) {
+  const [tab, setTab] = useState<'aging' | 'worklist'>('aging');
   const { aging, isLoading, error, refetch } = useArAging({ branchId });
   const { generate, isGenerating, result } = useStatementBatch({ branchId });
   const { send, sendingPatientId, lastSent } = useSendStatement({ branchId });
@@ -49,6 +51,27 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
 
   return (
     <div className="flex flex-col gap-4" data-testid="collections-view">
+      {/* Aging ↔ Worklist tabs */}
+      <div className="flex gap-1 p-1 bg-secondary/50 rounded-xl w-fit" role="tablist">
+        {(['aging', 'worklist'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            data-testid={`collections-tab-${t}`}
+            className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring outline-none ${tab === t ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {t === 'aging' ? 'Aging' : 'Worklist'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'worklist' ? (
+        <CollectionsWorklist branchId={branchId} />
+      ) : (
+      <>
       {/* Summary cards: one per aging bucket + total */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {AGING_BUCKETS.map((b) => {
@@ -159,6 +182,8 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

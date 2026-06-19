@@ -10,7 +10,7 @@
  */
 import { describe, test, expect, afterEach, mock } from 'bun:test';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { useArAging, useStatementBatch, useSendStatement } from './use-collections';
+import { useArAging, useStatementBatch, useSendStatement, useCollectionsWorklist, useLogCollectionNote } from './use-collections';
 import { freshClient, freshClientWithMutations, makeWrapper, jsonResponse } from '@/test-utils';
 
 afterEach(cleanup);
@@ -122,5 +122,38 @@ describe('useSendStatement — manual statement send (BR-050)', () => {
     expect(out.channels).toEqual(['email', 'push']);
     const sendCall = calls.find((c) => c.method === 'POST' && c.url.includes(`/patients/${PATIENT}/statement/send`));
     expect(sendCall).toBeDefined();
+  });
+});
+
+describe('useCollectionsWorklist / useLogCollectionNote (BR-051)', () => {
+  const PATIENT = 'b1d6663a-e2c1-4c91-82fc-65a74574ac50';
+
+  test('worklist surfaces overdue rows; logNote POSTs to /collections/notes', async () => {
+    const realWorklist = {
+      asOf: '2026-06-19T00:00:00.000Z',
+      rows: [{
+        patientId: PATIENT, patientName: 'Sofia Cruz', totalOverdueCents: 300000,
+        oldestDaysOverdue: 47, openInvoiceCount: 2, hasActivePlan: false, noteCount: 0,
+      }],
+    };
+    const calls: Array<{ url: string; method: string }> = [];
+    global.fetch = mock((input: Request | string | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+      calls.push({ url, method });
+      if (method === 'POST') return jsonResponse({ id: 'n1', patientId: PATIENT, branchId: BRANCH, note: 'x', contactChannel: 'phone', contactedAt: '2026-06-19T00:00:00.000Z', createdAt: '2026-06-19T00:00:00.000Z' }, 201);
+      return jsonResponse(realWorklist);
+    }) as typeof fetch;
+
+    const qc = freshClientWithMutations();
+    const wl = renderHook(() => useCollectionsWorklist({ branchId: BRANCH }), { wrapper: makeWrapper(qc) });
+    await waitFor(() => expect(wl.result.current.worklist).not.toBeNull());
+    expect(wl.result.current.worklist!.rows[0]!.totalOverdueCents).toBe(300000);
+    expect(wl.result.current.worklist!.rows[0]!.oldestDaysOverdue).toBe(47);
+
+    const log = renderHook(() => useLogCollectionNote({ branchId: BRANCH }), { wrapper: makeWrapper(qc) });
+    await log.result.current.logNote({ patientId: PATIENT, note: 'Called', contactChannel: 'phone' });
+    const post = calls.find((c) => c.method === 'POST' && c.url.includes('/collections/notes'));
+    expect(post).toBeDefined();
   });
 });

@@ -1277,10 +1277,47 @@ export type CheckInResponse = {
  */
 export type ClaimLineStatus = 'pending' | 'covered' | 'partial' | 'disallowed';
 
+/**
+ * Channel a collections contact was made on.
+ */
+export type CollectionContactChannel = 'phone' | 'email' | 'sms' | 'in-person' | 'other';
+
+export type CollectionNote = {
+    id: Uuid;
+    patientId: Uuid;
+    invoiceId?: Uuid;
+    branchId: Uuid;
+    note: string;
+    contactChannel: string;
+    contactedAt: Date;
+    createdByMemberId?: Uuid;
+    createdAt: Date;
+};
+
 export type CollectionsSummaryResponse = {
     totalCollectedCents: number;
     period: string;
     invoiceCount: number;
+};
+
+export type CollectionsWorklistResponse = {
+    asOf: Date;
+    rows: Array<CollectionsWorklistRow>;
+};
+
+/**
+ * One actionable overdue-patient row for the collections worklist.
+ */
+export type CollectionsWorklistRow = {
+    patientId: Uuid;
+    patientName: string;
+    totalOverdueCents: number;
+    oldestDaysOverdue: number;
+    openInvoiceCount: number;
+    hasActivePlan: boolean;
+    lastContactedAt?: Date;
+    lastContactChannel?: string;
+    noteCount: number;
 };
 
 /**
@@ -1757,6 +1794,24 @@ export type CreateChatRoomRequest = {
      * If true, return existing room instead of error when unique constraint is hit
      */
     upsert?: boolean;
+};
+
+export type CreateCollectionNoteRequest = {
+    patientId: Uuid;
+    /**
+     * Optional specific invoice the contact concerned.
+     */
+    invoiceId?: string;
+    /**
+     * Explicit branch (asserts membership); omitted uses the patient's branch.
+     */
+    branchId?: string;
+    note: string;
+    contactChannel: CollectionContactChannel;
+    /**
+     * When the patient was contacted; defaults to now.
+     */
+    contactedAt?: Date;
 };
 
 export type CreateConsentFormRequest = {
@@ -65422,6 +65477,39 @@ export type GetArAgingResponses = {
 
 export type GetArAgingResponse = GetArAgingResponses[keyof GetArAgingResponses];
 
+export type CreateCollectionNoteData = {
+    body: CreateCollectionNoteRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/billing/collections/notes';
+};
+
+export type CreateCollectionNoteErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+};
+
+export type CreateCollectionNoteError = CreateCollectionNoteErrors[keyof CreateCollectionNoteErrors];
+
+export type CreateCollectionNoteResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: CollectionNote;
+};
+
+export type CreateCollectionNoteResponse = CreateCollectionNoteResponses[keyof CreateCollectionNoteResponses];
+
 export type GetCollectionsSummaryData = {
     body?: never;
     path?: never;
@@ -65449,6 +65537,38 @@ export type GetCollectionsSummaryResponses = {
 };
 
 export type GetCollectionsSummaryResponse = GetCollectionsSummaryResponses[keyof GetCollectionsSummaryResponses];
+
+export type GetCollectionsWorklistData = {
+    body?: never;
+    path?: never;
+    query?: {
+        branchId?: Uuid;
+        asOf?: Date;
+    };
+    url: '/dental/billing/collections/worklist';
+};
+
+export type GetCollectionsWorklistErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type GetCollectionsWorklistError = GetCollectionsWorklistErrors[keyof GetCollectionsWorklistErrors];
+
+export type GetCollectionsWorklistResponses = {
+    /**
+     * Success response with data
+     */
+    200: CollectionsWorklistResponse;
+};
+
+export type GetCollectionsWorklistResponse = GetCollectionsWorklistResponses[keyof GetCollectionsWorklistResponses];
 
 export type EstimateClaimCoverageData = {
     body: CoverageEstimateRequest;

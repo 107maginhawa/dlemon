@@ -6,12 +6,20 @@
  * statement run and invalidates the aging cache on success.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getArAgingOptions, getArAgingQueryKey } from '@monobase/sdk-ts/generated/react-query';
+import {
+  getArAgingOptions,
+  getArAgingQueryKey,
+  getCollectionsWorklistOptions,
+  getCollectionsWorklistQueryKey,
+} from '@monobase/sdk-ts/generated/react-query';
 import {
   generateStatementBatch,
   sendPatientStatement,
+  createCollectionNote,
   type ArAgingResponse,
   type GenerateStatementBatchResponse,
+  type CollectionsWorklistResponse,
+  type CreateCollectionNoteRequest,
 } from '@monobase/sdk-ts/generated';
 
 interface UseArAgingOptions {
@@ -27,6 +35,7 @@ interface UseArAgingOptions {
 // not treat it as a string.
 export type ArAgingData = ArAgingResponse;
 export type StatementBatchResult = GenerateStatementBatchResponse;
+export type CollectionsWorklist = CollectionsWorklistResponse;
 
 export function useArAging({ branchId }: UseArAgingOptions) {
   const query = useQuery({
@@ -98,6 +107,47 @@ export function useSendStatement({ branchId }: UseArAgingOptions) {
     send: mutation.mutateAsync,
     sendingPatientId: mutation.isPending ? mutation.variables ?? null : null,
     lastSent: mutation.data ?? null,
+    error: mutation.error as Error | null,
+  };
+}
+
+/** Phase 2.4: the actionable overdue-patient worklist (branch-scoped). */
+export function useCollectionsWorklist({ branchId }: UseArAgingOptions) {
+  const query = useQuery({
+    ...getCollectionsWorklistOptions({ query: { branchId: branchId ?? undefined } }),
+    enabled: Boolean(branchId),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+  return {
+    worklist: query.data ?? null,
+    isLoading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
+  };
+}
+
+/** Phase 2.4: log a collections outreach note; refreshes the worklist on success. */
+export function useLogCollectionNote({ branchId }: UseArAgingOptions) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (input: Omit<CreateCollectionNoteRequest, 'branchId'>) => {
+      const { data } = await createCollectionNote({
+        body: { ...input, branchId: branchId ?? undefined },
+        throwOnError: true,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getCollectionsWorklistQueryKey({ query: { branchId: branchId ?? undefined } }) });
+    },
+  });
+
+  return {
+    logNote: mutation.mutateAsync,
+    isLogging: mutation.isPending,
     error: mutation.error as Error | null,
   };
 }
