@@ -42,7 +42,9 @@ export {
   canIssue, canVoid, canRecord,
   showIssueButton, showVoidButton, showRecordButton,
   validatePaymentForm, buildPaymentPayload, calcChangeAmount,
+  formatInvoiceDate,
 } from './invoice-detail.helpers';
+import { formatInvoiceDate } from './invoice-detail.helpers';
 
 export interface InvoiceDetailProps {
   invoiceId: string;
@@ -440,13 +442,13 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   {invoice.visitDate && (
                     <div>
                       <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50 block">Visit Date</span>
-                      <span>{invoice.visitDate}</span>
+                      <span>{formatInvoiceDate(invoice.visitDate)}</span>
                     </div>
                   )}
                   {invoice.dueDate && (
                     <div>
                       <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50 block">Due Date</span>
-                      <span>{invoice.dueDate}</span>
+                      <span>{formatInvoiceDate(invoice.dueDate)}</span>
                     </div>
                   )}
                 </div>

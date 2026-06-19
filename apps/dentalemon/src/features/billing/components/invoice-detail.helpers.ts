@@ -183,6 +183,21 @@ export function formatStatus(status: string): string {
   return map[status] ?? status;
 }
 
+/**
+ * Format an invoice date string for display. The SDK serializes `dueDate` as a
+ * full ISO timestamp (`2026-06-19T16:05:51.990Z`) while `visitDate` is a
+ * calendar date (`2026-06-19`); both were rendered raw, leaking the timestamp
+ * to the UI (QA ISSUE-009). Date-only strings are parsed as local midnight to
+ * avoid the UTC-midnight timezone shift that would display the previous day.
+ * Falls back to the raw value if unparseable (never worse than before).
+ */
+export function formatInvoiceDate(value: string | undefined): string {
+  if (!value) return '';
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const d = dateOnly ? new Date(`${value}T00:00:00`) : new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+}
+
 export const PAYMENT_METHODS = ['cash', 'card', 'bank_transfer'] as const;
 export const METHOD_LABELS: Record<string, string> = {
   cash: 'Cash',
