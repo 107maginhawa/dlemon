@@ -149,11 +149,11 @@
         },
         {
           "id": "BR-010",
-          "description": "Tax is always 0. Fee schedule prices are pre-tax. taxRate is server-controlled (NOT caller-supplied — EM-BILL-001 privilege-escalation guard); per-country tax is a Phase-2 stub gated by dental_billing_tax_enabled.",
-          "type": "calculation-stub",
-          "status": "partial",
-          "source": "createDentalInvoice.ts:69-74 (taxRate/taxCents hardcoded 0, EM-BILL-001 comment — no TODO) || TEST: NONE — DRIFT RISK: no test asserts tax hardcoded 0/server-controlled; invoice-lifecycle.test.ts FR4.10 stores arbitrary taxRate=0.12 at repo level (opposite). Tied to PH-VAT localization (ADR-011 descope)",
-          "notes": "Registry reconciled 2026-06-08: prior source cited a 'TODO comment' that no longer exists; tax is hardcoded with the EM-BILL-001 server-control guard. AC-BIL-004 pins taxCents==0 in all responses."
+          "description": "Invoice tax is server-controlled (NOT caller-supplied — EM-BILL-001 privilege-escalation guard). SUPERSEDED by BR-054: tax is now derived from the per-branch taxMode (non_vat default → 0; vat_registered → 12% VAT carved out of the VAT-inclusive gross). The old 'always 0' hardcode is replaced by computeInvoiceTax(getBranchTaxConfig).",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "SUPERSEDED-BY BR-054. createDentalInvoice.ts (getBranchTaxConfig → computeInvoiceTax) || TEST: services/api-ts/src/handlers/dental-billing/dental-billing.invoice-tax.test.ts:113 (tax is branch-derived, not caller-derived)",
+          "notes": "2026-06-19: PH-VAT drift resolved. Was 'always 0' partial/NO_TEST; BR-054 makes tax branch-derived and adds the missing test (caller cannot influence tax). The earlier invoice-lifecycle FR4.10 repo test stores an arbitrary rate at the REPO layer only — the handler never accepts a caller rate."
         },
         {
           "id": "BR-011",
@@ -252,6 +252,14 @@
           "status": "implemented",
           "source": "dental-billing/refundDentalPayment.ts (assertBranchRole dentist_owner, withTenantTx removePayment+refund record+optional credit, BusinessLogicError 422 caps, payment.refunded audit), DentalPaymentRefundRepository.create/totalRefundedForPayment, dental_payment_refund table (migration 0113), DentalInvoiceRepository.removePayment, DentalPatientCreditRepository.create || TEST: services/api-ts/src/handlers/dental-billing/dental-billing.refunds.test.ts:87",
           "test": "dental-billing.refunds.test.ts (full refund re-opens invoice + records refund; partial + second refund capped at remainder + fully-refunded→422; refund-to-credit books patient credit; refund>paid→422 untouched; voided payment→422; voided invoice→422; non-owner associate→403 — 7 cases)"
+        },
+        {
+          "id": "BR-054",
+          "description": "Invoice tax is derived from the branch tax mode (PH), NEVER from the caller (resolves BR-010 / EM-BILL-001). Branch setting taxMode: 'non_vat' (default) → taxCents 0, total = subtotal; 'vat_registered' → 12% VAT (vatRate, default 12) carved OUT of the VAT-INCLUSIVE gross subtotal so total stays = subtotal and the VAT portion is reported in taxCents. Pure carve math: vat = round(subtotal * rate / (100 + rate)). Settable via the branch-settings PUT (free-form JSONB) and the Settings → Tax (VAT) panel.",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/createDentalInvoice.ts (getBranchTaxConfig → computeInvoiceTax, replaces the old hardcoded taxRate=0), dental-billing/utils/tax.ts (pure computeInvoiceTax), dental-org/repos/org-billing.facade.ts getBranchTaxConfig, dental-org/repos/branch.schema.ts BranchSettings.taxMode/vatRate (JSONB, no migration), apps/dentalemon settings/components/tax-mode-settings.tsx (Settings → Tax panel) || TEST: services/api-ts/src/handlers/dental-billing/utils/tax.test.ts:13; services/api-ts/src/handlers/dental-billing/dental-billing.invoice-tax.test.ts:84; apps/dentalemon/src/features/settings/components/tax-mode-settings.test.tsx:55",
+          "test": "tax.test.ts (carve math: non_vat 0; vat_registered 12% inclusive carve; custom rate; zero subtotal) + dental-billing.invoice-tax.test.ts (non_vat→0 total=subtotal; vat_registered→12% carve total unchanged; branch-derived not caller-derived) + tax-mode-settings.test.tsx (panel reads/writes taxMode)"
         }
       ]
     },

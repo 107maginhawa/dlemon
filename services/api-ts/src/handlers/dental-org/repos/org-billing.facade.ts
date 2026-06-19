@@ -66,6 +66,19 @@ export async function getBranchDefaultPaymentTermsDays(
   return settings.defaultPaymentTermsDays ?? null;
 }
 
+/**
+ * BR-054: the per-branch tax mode (PH). Drives invoice tax derivation.
+ * Defaults to non_vat (no tax) when unset. vatRate defaults to 12.
+ */
+export async function getBranchTaxConfig(
+  db: DatabaseInstance,
+  branchId: string,
+): Promise<{ taxMode: 'non_vat' | 'vat_registered'; vatRate: number }> {
+  const branch = await new BranchRepository(db).findOneById(branchId);
+  const settings = (branch?.settings ?? {}) as { taxMode?: 'non_vat' | 'vat_registered'; vatRate?: number };
+  return { taxMode: settings.taxMode ?? 'non_vat', vatRate: settings.vatRate ?? 12 };
+}
+
 export async function getActiveMembershipId(
   db: DatabaseInstance,
   personId: string,

@@ -29,6 +29,9 @@ export interface BranchSettings {
   defaultPaymentTermsDays?: number;
   // BR-050: dunning reminder cadence — days-past-due offsets for the sweep.
   billingReminderOffsetDays?: number[];
+  // BR-054: PH tax mode. non_vat (default) → no invoice tax; vat_registered → 12% VAT.
+  taxMode?: 'non_vat' | 'vat_registered';
+  vatRate?: number;
   // Locale
   locale?: string;
   currency?: string;

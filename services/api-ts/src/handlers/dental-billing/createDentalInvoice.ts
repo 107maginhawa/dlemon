@@ -13,7 +13,8 @@ import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { getTreatmentsForInvoice, markTreatmentsAsBilled } from '@/handlers/dental-visit/repos/visit-billing.facade';
 import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/consent-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
-import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { getBranchOrgId, getBranchTaxConfig } from '@/handlers/dental-org/repos/org-billing.facade';
+import { computeInvoiceTax } from './utils/tax';
 import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import type { JobScheduler } from '@/core/jobs';
@@ -33,6 +34,11 @@ export async function createDentalInvoice(
   // V-BIL-003: per ROLE_PERMISSION_MATRIX, create invoice = dentist_owner +
   // dentist_associate (own patients). staff_full is NOT permitted.
   await assertBranchRole(db, session.userId, body.branchId, ['dentist_owner', 'dentist_associate']);
+
+  // BR-054: tax is derived from the branch tax mode, never the caller. Read it
+  // here (on db) so the in-tx computation below stays a pure function of the
+  // resolved subtotal.
+  const taxConfig = await getBranchTaxConfig(db, body.branchId);
 
   // RLS P1b activation: route the idempotency reads, the consent/treatment
   // guards, and all writes (invoice + line items + mark-billed) through a SINGLE
@@ -88,11 +94,12 @@ export async function createDentalInvoice(
       throw new BusinessLogicError('Invoice total must be positive', 'INVALID_AMOUNT');
     }
 
-    // EM-BILL-001: taxRate must not be caller-controlled (privilege escalation —
-    // client could set 0% to avoid tax or inflate to overcharge). Hardcoded to 0
-    // until branch-level tax configuration is implemented.
-    const taxRate = 0;
-    const taxCents = 0;
+    // BR-054 / EM-BILL-001: taxRate must not be caller-controlled (privilege
+    // escalation). Derived from the branch tax mode. PH prices are VAT-inclusive,
+    // so VAT is carved OUT of the gross subtotal — total stays = subtotal.
+    const tax = computeInvoiceTax({ subtotalCents, taxMode: taxConfig.taxMode, vatRate: taxConfig.vatRate });
+    const taxRate = tax.taxRate;
+    const taxCents = tax.taxCents;
     const totalCents = subtotalCents;
 
     // Generate invoice number

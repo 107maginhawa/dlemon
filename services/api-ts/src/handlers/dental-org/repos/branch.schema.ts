@@ -46,6 +46,11 @@ export interface BranchSettings {
   // (e.g. [3, 7, 14]). Stored here (JSONB) to avoid a config table/migration; a
   // hardcoded default applies when absent. Reminders go out on email + push.
   billingReminderOffsetDays?: number[];
+  // BR-054: PH tax mode. 'non_vat' (default) → no invoice tax; 'vat_registered'
+  // → 12% VAT carved out of the (VAT-inclusive) gross. Server-derived, never
+  // caller-supplied. Stored here (JSONB) to avoid a config table/migration.
+  taxMode?: 'non_vat' | 'vat_registered';
+  vatRate?: number; // VAT percentage for vat_registered branches (default 12)
   // FR8.7: Visit notes format toggle
   visitNotesFormat?: 'structured' | 'freetext';
   // FR8.8: Locale settings
