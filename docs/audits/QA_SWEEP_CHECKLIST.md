@@ -66,7 +66,10 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ edit demographics — **live**: first-name-required + email-format validation enforced (form stays open, no save); valid save persists; **fixed ISSUE-015** (phone with spaces silently 400'd — now normalized to E.164 + clear guidance)
 - [x] ✅ follow-up notes — min-length gate (5 chars → Add disabled) + add persists in Follow-up Log
 - [x] ✅ Payment History tab renders (invoices + Outstanding Balance ₱) · Household section renders ("not linked" state)
-- [ ] 🟢 contacts add/edit/delete · household add/remove · recalls create/update/dispatch · communication consent toggle · insurance profiles · conditions · credits add/apply — **workspace/list-resident** (patient sub-nav `Imaging/Perio/Recalls/Plans/Export` + `_dashboard/patients.tsx`), not on the profile page; overlap the Workspace batch; chart-cell/signature parts headless-limited
+- [x] **contacts** = email/phone via Edit form only (covered s2 ISSUE-015); **no separate multi-contact/emergency-contact entity UI** (`person.contact` SDK only patches email/phone). · **recalls** create/dispatch ✅ **driven (s4)** (workspace Recalls sheet, see Calendar recare). · **credits add/apply** ✅ **driven (s4, fixed ISSUE-023)**.
+- [x] ⚠ **household add/remove/link — GAP (ISSUE-024)**: `HouseholdCard` is **read-only** ("not linked" / member summary); `createHousehold`/`addHouseholdMember`/`removeHouseholdMember` exist in the SDK with **zero FE call-sites**. No staff UI to form/link a household.
+- [x] ⚠ **insurance profiles — GAP (ISSUE-024)**: `createInsuranceProfile`/`updateInsuranceProfile` exist with **zero FE call-sites**; the claim flow assumes a profile already exists. Seeded one via API in s4 to drive the claim lifecycle (see Billing).
+- [x] ✅ **conditions** = the **medical-history form** (conditions/meds/allergies checkboxes + ASA) — **driven (s4)**, see Workspace.
 - [ ] 🟢 merge / unmerge duplicates — patients-list find-duplicates panel (not profile detail)
 - [ ] 🟢 archive / restore — patients-**list** bulk action (no profile-page control; refresh ✅ prior); deactivate/statement/PMD export/erasure are list/workspace/platform-admin surfaces
 
@@ -75,16 +78,16 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 ### Calendar / scheduling — **swept live 2026-06-20**
 - [x] ✅ day view load · cancel (ISSUE-002) · create validation (ISSUE-005)
 - [x] ✅ week view (**fixed ISSUE-011** — was showing patient UUIDs, now names) · ✅ month view (count badges + dots)
-- [ ] 🟢 **full appointment create** — modal + validation verified; raw UUID inputs (flagged UX) + controlled date/time hard to drive headless
+- [x] ✅ **full appointment create** — **driven end-to-end (s4)**: New-Appointment modal filled (patient UUID + dentist UUID + date + 15:00 + Emergency) → `POST` 201 → card "Diego Ramos, 3:00 PM, emergency, Scheduled" appears with Confirm/Check-In/Cancel. Closes the prior code-verified-only caveat (the date/time **textboxes accept `fill`** — not the controlled pickers we feared). Raw-UUID inputs still a flagged UX nit (needs picker).
 - [x] ✅ edit appointment (**fixed ISSUE-012** — modal opened blank, now pre-fills patient/date/time/duration/service)
-- [x] ✅ check-in · confirm (**fixed ISSUE-013** — failures showed false success; now surface real error e.g. "Visit already active") · ⬜ no-show
-- [ ] 🟢 walk-in (+ Walk-In button present; modal = same as create)
-- [x] ✅ recare-due list — opens, `GET /recalls/due` 200, "No recalls are due 🎉" empty state (no recall entities seeded; reach-out needs a due recall)
+- [x] ✅ check-in · confirm (**fixed ISSUE-013**) · ⚠ **no-show — GAP (ISSUE-024)**: backend FSM allows `scheduled/confirmed/checked_in → no_show` and the card renders a "No Show" badge, but **no FE action sets it** (zero call-sites write `no_show`; appointment-card only exposes Confirm/Check-In/Cancel). Morning-briefing even counts no-shows staff can't create.
+- [x] ✅ **walk-in — driven (s4)**: "+ Walk-In" opens the New-Appointment modal with NOTES prefilled "Walk-in appointment"; created live (Diego 3 PM emergency). Same create path as above.
+- [x] ✅ recare-due list — **fully driven (s4)**: created recalls in the workspace Recalls sheet (Check-up + Cleaning), dispatched (Mark Sent), and they propagate to Calendar → "Recare due" (badged Due/Reminded). **Drove "Reach out"** end-to-end (pending → 200 → Reminded). **Fixed ISSUE-022** — "Reach out" was offered on already-"Reminded" recalls where it PATCHes `sent→sent` (422, invalid FSM) and the bare `catch{}` swallowed it → silent no-op; now the button is suppressed for sent recalls + errors surface.
 - [x] ⚠ queue board — page renders (`/queue-board`, FSM columns Waiting→Called→In Progress→Completed, auto-refresh 15s, empty state). **GAP (ISSUE-020): no FE way to populate it** — `createQueueItem` (`POST /appointments/{id}/queue-item`) is never called from the FE, check-in doesn't enqueue, seed has no queue items. Update-status FSM is wired (`use-queue-board` + tests) but unreachable without items.
 - [x] ⚠ waitlist — **GAP (ISSUE-020): no staff UI** — `createWaitlistEntry`/`promoteWaitlistEntry` exist server-side but are only referenced by the public `BookingWizard`; no staff waitlist management surface.
 - [x] ⚠ online-booking config — **GAP (ISSUE-020): no staff config UI** — `createOnlineBooking` only used in the public `/book/$branchId` wizard; no staff surface to enable/configure online booking (this is why the public booking page shows "unavailable"). Schedule exceptions: no UI surface found either.
 
-**Calendar-batch findings (2026-06-20):** ISSUE-011/012/013 (FIXED, s1). **s3: ISSUE-020 (flagged, feature gaps — backend present, staff UI missing):** queue board unpopulatable from FE · no waitlist UI · no online-booking-config UI · no schedule-exceptions UI. All need product/design decisions (where these surfaces live + how items are created), not atomic QA fixes. Recare-due renders clean.
+**Calendar-batch findings (2026-06-20):** ISSUE-011/012/013 (FIXED, s1). **s3: ISSUE-020 (flagged gaps):** queue board unpopulatable · no waitlist UI · no online-booking-config UI · no schedule-exceptions UI. **s4: walk-in + full appointment create DRIVEN (works); recalls create/dispatch/recare-due/reach-out DRIVEN + fixed ISSUE-022; no-show is a backend-only gap (ISSUE-024).**
 
 ### Workspace (clinical) — ❗ HIGHEST-VALUE GAP — **swept live 2026-06-20** (Juan dela Cruz, open visit)
 - [x] ✅ open workspace (`/$patientId`) — renders clean (chart + layers + allergy badge); console clean
@@ -97,8 +100,8 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ prescriptions (Rx) create (validation ✅ + saved + persists in Prescriptions tab) — **see ISSUE-007** (no drug-allergy warning)
 - [x] ✅ SOAP/visit notes save ✅ / sign & lock ✅ / addendum ✅ (Note History 1→2)
 - [x] ✅ perio chart create (Draft exam) · complete correctly gated/disabled until readings · 🟢 tooth readings (cell entry headless-limited)
-- [ ] 🟢 medical history entries + review (View Medical History present — not driven)
-- [ ] ⬜ dental alerts · patient tasks · consultations · occlusion screening
+- [x] ✅ **medical history entries + review — driven (s4)**: conditions/meds/allergies checkboxes save **immediately on toggle** (Diabetes persisted); "Save Medical History" persists surgical/pregnancy/smoking/alcohol; ASA classification set; **review recorded** (Never reviewed → "Last reviewed 6/20/2026", due-badge clears). Form has good error handling (`toastError` on allergy, surfaced save errors). ⚠ **Access gate (note):** the sheet is reachable **only** via the SOAP-notes sheet's "View Medical History", which is **hidden when the note is locked** (and needs an open visit) → allergies/conditions/ASA are unreachable for a patient with a locked note / no active visit.
+- [x] ⚠ **dental alerts · patient tasks · consultations · occlusion screening — GAP (ISSUE-024)**: `createDentalAlert`/`createPatientTask`/`createConsultation`/`createOcclusionScreening` all exist in the SDK; **no FE file even references these nouns** (zero surface). Backend-only.
 - [ ] 🟢 consent forms — modal + template select pre-fills ✅; sign gated on signature canvas (headless-limited) · refuse/amendments not driven — **see ISSUE-006** (template dup)
 - [x] ✅ lab orders create ✅ (toast + persists) / update ✅ (Ordered → In Fabrication)
 - [ ] 🟢 chart conflicts resolve (offline sync) — code only
@@ -116,12 +119,21 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ **void payment** (per-row, reason → `POST /payments/{id}/void` 200) · **refund payment** (owner, amount+reason+book-as-credit → `POST /refund` 200; **credit created** — verified via `/credits` source:"refund" ₱720) · **apply discount** (owner, 10% → Subtotal ₱800 − ₱80 = ₱720, math correct)
 - [x] ✅ **payment plans create** (`POST /plan` 201) + **view** (Monthly, 6×₱400=₱2,400 installment schedule 7/1–12/1 all Pending, math correct)
 - [x] ✅ **mark uncollectible** (`POST /uncollectible` 200, write-off)
-- [x] 🟢 **insurance claims** — New Claim form + **prerequisite gating verified live** (correctly blocks: "no active insurance profile" / "no claimable invoice"). Full lifecycle (draft/lines/status/remittance/coverage) needs an insurance-profile + issued invoice — **no seed insurance profiles exist** (seed only has a comment), so lifecycle stays code-verified.
+- [x] ✅ **insurance claims — FULL lifecycle driven (s4)**: seeded a Maxicare HMO profile via API (no FE create surface — ISSUE-024) for Diego Ramos (issued INV-S0006, ₱12k). **File claim** → `POST /claims` 201, **line derived from invoice** (D3330 Root canal ₱12,000). **Coverage estimate** → `POST /estimate` 200 "HMO covers ₱12,000 · You pay ₱0". **Status** draft→ready→submitted (two `/status` 200). **Remittance** ₱10k paid + ₱2k disallowed → `POST /remittance` 201 → status **Paid**, outstanding ₱0. **0 bugs** — claim hooks use the good `throwOnError`+exposed-`error` pattern.
 - [x] ✅ **collections** — Log collection note (`POST /collections/notes` 201 → worklist Last-Contact "Never"→"Jun 20 · phone (1)") · worklist + Aging + Metrics render
-- [x] ✅ **patient credits apply** (`POST /apply-credit` 200, balance ₱720→₱0) · 🟢 add credit (controlled-input headless limit — same `usePatientCredits` hook as apply) · **statements send** (`POST /statement/send` 200, "Sent ✓") + **generate batch** (`POST /statements/batch` 200, "Generated 10 statements")
+- [x] ✅ **patient credits apply** (`POST /apply-credit` 200, balance ₱720→₱0) · **add credit — driven (s4) + fixed ISSUE-023** (add-credit failures were swallowed: hook never exposed `addError`, no add-error rendered → silent; reproduced live via ₱99,999,999 int4-overflow 500 → now shows "Internal server error", amount kept) · **statements send** (`POST /statement/send` 200) + **generate batch** (`POST /statements/batch` 200)
 - [x] ✅ AR aging / KPIs render (Invoices: Outstanding ₱208,050 / Collected ₱71,450 / Overdue ₱18,700 · Collections Aging buckets · Metrics: AR ₱204,470 / Collection Rate / DSO 15d)
 
-**Billing-batch findings (2026-06-20 s3):** **0 bugs** — every money write (issue/discount/record/void-payment/refund+credit/void-invoice/uncollectible/plan/apply-credit/statement) works with correct math + status transitions + refresh. Demo invoices mutated by the sweep (E1C402B0 voided, 659B9798 voided, S0011 written-off, S0002 has a plan, Maria credits applied) — acceptable dev-DB QA churn, not restored.
+**Billing-batch findings (2026-06-20 s3):** **0 bugs** — every money write works with correct math + status transitions + refresh. Demo invoices mutated by the sweep — acceptable dev-DB QA churn.
+**Billing-batch findings (2026-06-20 s4):** **insurance claim FULL lifecycle driven** (file→derived-line→coverage→status→remittance→Paid, 0 bugs). **Fixed ISSUE-023** (add-credit swallowed errors). Insurance-profile create has no FE surface (ISSUE-024) — seeded via API. Dev-DB churn: a Maxicare profile + claim CLM-2026-4A6CFF8D (Paid) on Diego Ramos; a walk-in appt (Diego 3 PM); 2 recalls on Juan dela Cruz; medical-history entries on Diego.
+
+### Feature-gap cluster — ISSUE-024 (flagged 2026-06-20 s4; extends ISSUE-020)
+Backend (SDK + handlers) complete, **no FE write surface** — each needs a product/design decision on where the surface lives, **not an atomic QA fix**:
+- **household** add/remove/link (`createHousehold`/`addHouseholdMember`/`removeHouseholdMember`) — card is read-only
+- **insurance profile** create/update (`createInsuranceProfile`/`updateInsuranceProfile`) — claim flow assumes one exists
+- **appointment no-show** (`no_show` is a valid FSM target; only displayed, never written)
+- **dental alerts** (`createDentalAlert`), **patient tasks** (`createPatientTask`), **consultations** (`createConsultation`), **occlusion screening** (`createOcclusionScreening`) — zero FE references
+- (prior ISSUE-020: queue board / waitlist / online-booking-config / schedule-exceptions; prior: duplicates **merge** UI)
 
 ### Reports — **swept live 2026-06-20** (filters + export driven s3)
 - [x] ✅ page load
