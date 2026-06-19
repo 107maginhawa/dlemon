@@ -368,8 +368,8 @@ describe('seedAllowlist', () => {
 describe('buildBrMatrix (real registry)', () => {
   const rows = buildBrMatrix();
 
-  test('produces one row per registry rule (122 total)', () => {
-    expect(rows.length).toBe(122);
+  test('produces one row per registry rule (128 total)', () => {
+    expect(rows.length).toBe(128);
   });
 
   test('every row has a unique module-qualified key', () => {
