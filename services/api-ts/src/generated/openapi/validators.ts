@@ -19129,6 +19129,23 @@ export const RecurrencePatternSchema = z.object({
 
 export const RecurrenceTypeSchema = z.enum(["daily", "weekly", "monthly", "yearly"]);
 
+export const RefundPaymentRequestSchema = z.object({
+  amountCents: z.number().int().gte(1),
+  reason: z.string().min(3),
+  bookAsCredit: z.boolean().optional()
+});
+
+export const RefundPaymentResponseSchema = z.object({
+  refundId: UUIDSchema,
+  paymentId: UUIDSchema,
+  invoiceId: UUIDSchema,
+  amountCents: z.number().int(),
+  invoiceBalanceCents: z.number().int(),
+  invoiceStatus: z.string(),
+  bookedAsCredit: z.boolean(),
+  creditBalanceCents: z.number().int()
+});
+
 export const RefundRequestSchema = z.object({
   amount: z.number().int().gte(0).optional(),
   reason: z.string().max(500).optional(),
@@ -20617,6 +20634,16 @@ export const SendPatientStatementBody = SendPatientStatementRequestSchema;
 export type SendPatientStatementBody = z.infer<typeof SendPatientStatementBody>;
 
 export const SendPatientStatementResponse = SendPatientStatementResponseSchema;
+
+export const RefundDentalPaymentParams = z.object({
+  paymentId: UUIDSchema,
+});
+export type RefundDentalPaymentParams = z.infer<typeof RefundDentalPaymentParams>;
+
+export const RefundDentalPaymentBody = RefundPaymentRequestSchema;
+export type RefundDentalPaymentBody = z.infer<typeof RefundDentalPaymentBody>;
+
+export const RefundDentalPaymentResponse = RefundPaymentResponseSchema;
 
 export const GenerateStatementBatchBody = GenerateStatementBatchRequestSchema;
 export type GenerateStatementBatchBody = z.infer<typeof GenerateStatementBatchBody>;

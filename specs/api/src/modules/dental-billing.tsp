@@ -479,6 +479,31 @@ model CollectionsWorklistResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4.2: Payment refunds (BR-053)
+// ---------------------------------------------------------------------------
+
+model RefundPaymentRequest {
+  /** Amount to refund (1 .. remaining refundable on the payment). */
+  @minValue(1) amountCents: int32;
+  @minLength(3) reason: string;
+  /** When true, book the refund to patient credit instead of cash-out. */
+  bookAsCredit?: boolean;
+}
+
+model RefundPaymentResponse {
+  refundId: UUID;
+  paymentId: UUID;
+  invoiceId: UUID;
+  amountCents: int32;
+  /** Invoice balance after reversing the refunded amount. */
+  invoiceBalanceCents: int32;
+  invoiceStatus: string;
+  bookedAsCredit: boolean;
+  /** Patient credit balance after the refund (only meaningful when booked as credit). */
+  creditBalanceCents: int32;
+}
+
+// ---------------------------------------------------------------------------
 // Phase 4.1: Patient credit ledger (BR-052)
 // ---------------------------------------------------------------------------
 
@@ -1163,6 +1188,21 @@ namespace DentalBillingModule {
       @query asOf?: utcDateTime
     ): ApiOkResponse<ArAgingResponse>
       | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // Phase 4.2: refund a payment (BR-053) — owner-only, reason-required.
+    @post
+    @route("/payments/{paymentId}/refund")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("refundDentalPayment")
+    refundDentalPayment(
+      @path paymentId: UUID,
+      @body body: RefundPaymentRequest
+    ): ApiOkResponse<RefundPaymentResponse>
+      | ApiBadRequestResponse
+      | ApiForbiddenResponse
+      | ApiNotFoundResponse
       | ApiUnauthorizedResponse;
 
     // Phase 4.1: patient credit ledger (BR-052).

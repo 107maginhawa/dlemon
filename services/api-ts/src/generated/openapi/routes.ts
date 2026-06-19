@@ -663,6 +663,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.sendPatientStatement as unknown as Handler
   );
 
+  // refundDentalPayment
+  app.post('/dental/billing/payments/:paymentId/refund',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('param', validators.RefundDentalPaymentParams, validationErrorHandler),
+    zValidator('json', validators.RefundDentalPaymentBody, validationErrorHandler),
+    registry.refundDentalPayment as unknown as Handler
+  );
+
   // generateStatementBatch
   app.post('/dental/billing/statements/batch',
     authMiddleware({ roles: ["user"] }),

@@ -244,6 +244,14 @@
           "status": "implemented",
           "source": "dental-billing/addPatientCredit.ts, getPatientCredits.ts, applyCreditToInvoice.ts (withTenantTx atomic draw, BusinessLogicError 422 caps), DentalPatientCreditRepository.create/listByPatient/getBalance, dental_patient_credit table (migration 0112), DentalInvoiceRepository.addPayment",
           "test": "dental-billing.patient-credits.test.ts (add+balance; apply reduces balance + remaining credit; full-balance→paid; apply>invoice-balance→422 untouched; apply>available-credit→422 untouched; voided→422; no-credit→422 — 7 cases); contract dental-billing.hurl (credits 201 + ledger 200)"
+        },
+        {
+          "id": "BR-053",
+          "description": "Payment refund (distinct from same-day void): POST /dental/billing/payments/:id/refund refunds a previously-recorded payment, partial or full. OWNER-ONLY (dentist_owner), reason-required. ATOMIC (withTenantTx): the refunded amount is reversed from the invoice (DentalInvoiceRepository.removePayment — paidCents down, balance up, status re-opened) and a dental_payment_refund record is written; when bookAsCredit, a positive patient-credit row (source 'refund') is also written (refund-to-credit, 4.1) instead of cash-out. BR-053: payment must be non-void; invoice must not be voided; amount 1 .. (payment.amountCents − already-refunded) — multi-refunds are capped at the un-refunded remainder, over-cap → 422 with no mutation. The synchronous 'payment.refunded' audit row IS the emitted event (ADR-006: no event bus).",
+          "type": "business-logic",
+          "status": "implemented",
+          "source": "dental-billing/refundDentalPayment.ts (assertBranchRole dentist_owner, withTenantTx removePayment+refund record+optional credit, BusinessLogicError 422 caps, payment.refunded audit), DentalPaymentRefundRepository.create/totalRefundedForPayment, dental_payment_refund table (migration 0113), DentalInvoiceRepository.removePayment, DentalPatientCreditRepository.create",
+          "test": "dental-billing.refunds.test.ts (full refund re-opens invoice + records refund; partial + second refund capped at remainder + fully-refunded→422; refund-to-credit books patient credit; refund>paid→422 untouched; voided payment→422; voided invoice→422; non-owner associate→403 — 7 cases)"
         }
       ]
     },

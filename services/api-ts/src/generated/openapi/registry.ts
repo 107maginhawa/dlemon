@@ -96,6 +96,7 @@ import { listInsuranceClaims } from '../../handlers/dental-billing/listInsurance
 import { markUncollectible } from '../../handlers/dental-billing/markUncollectible';
 import { recordClaimRemittance } from '../../handlers/dental-billing/recordClaimRemittance';
 import { recordDentalPayment } from '../../handlers/dental-billing/recordDentalPayment';
+import { refundDentalPayment } from '../../handlers/dental-billing/refundDentalPayment';
 import { sendPatientStatement } from '../../handlers/dental-billing/sendPatientStatement';
 import { updateInsuranceClaimLine } from '../../handlers/dental-billing/updateInsuranceClaimLine';
 import { updateInsuranceClaimStatus } from '../../handlers/dental-billing/updateInsuranceClaimStatus';
@@ -490,6 +491,7 @@ export const registry = {
   markUncollectible,
   recordClaimRemittance,
   recordDentalPayment,
+  refundDentalPayment,
   sendPatientStatement,
   updateInsuranceClaimLine,
   updateInsuranceClaimStatus,
