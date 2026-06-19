@@ -48,6 +48,7 @@ export function usePatientCredits(patientId: string) {
     isLoading: query.isLoading,
     addCredit: add.mutateAsync,
     isAdding: add.isPending,
+    addError: add.error as Error | null,
     applyCredit: apply.mutateAsync,
     isApplying: apply.isPending,
     applyError: apply.error as Error | null,

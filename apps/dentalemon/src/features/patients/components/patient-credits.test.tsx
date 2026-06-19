@@ -73,4 +73,31 @@ describe('PatientCredits', () => {
     expect(apply.url).toContain(`/invoices/${INVOICE}/apply-credit`);
     expect(apply.body.amountCents).toBe(5000);
   });
+
+  // Regression: ISSUE-023 — a failed Add credit (e.g. server 500 on an int4-overflow
+  // amount, or a transient network error) was swallowed: the hook never exposed
+  // addError and the component rendered no add-error, so the user saw nothing and
+  // could re-click (double-submit risk). Same family as ISSUE-022/013/014.
+  // Found by /qa on 2026-06-20.
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('a failed Add credit surfaces an error and keeps the amount (not swallowed)', async () => {
+    global.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : null;
+      const url = req ? req.url : String(input);
+      const method = (init?.method ?? req?.method ?? 'GET').toUpperCase();
+      if (method === 'POST' && url.includes('/credits') && !url.includes('apply')) {
+        return jsonResponse({ error: { message: 'Credit amount out of range' } }, 500);
+      }
+      return jsonResponse({ patientId: PATIENT, balanceCents: 7500, credits: [] });
+    }) as typeof fetch;
+
+    renderCredits();
+    fireEvent.change(screen.getByTestId('add-credit-amount'), { target: { value: '99999999' } });
+    fireEvent.click(screen.getByTestId('add-credit-btn'));
+
+    // The failure must be surfaced, never silent.
+    await waitFor(() => expect(screen.getByTestId('add-credit-error')).toBeTruthy());
+    // The amount must NOT be cleared — the credit was not added.
+    expect((screen.getByTestId('add-credit-amount') as HTMLInputElement).value).toBe('99999999');
+  });
 });
