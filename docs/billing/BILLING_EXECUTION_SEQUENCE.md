@@ -25,7 +25,7 @@ Last updated: 2026-06-19.
 | 2.4 | a backend: worklist GET + collection-note POST (audited, BR-051) | ✅ done | `(prev commit)` |
 | 2.4 | b FE: collections worklist tab + log-call action | ✅ done | `pending-commit` |
 | 3.1 | AR KPI dashboard (DSO/rate/write-off/AR + aging chart) | ✅ done | `pending-commit` |
-| 3.2 | patient statement / ledger | ⬜ pending | |
+| 3.2 | patient statement / ledger (FE — endpoint pre-existed FR2.21) | ✅ done | `pending-commit` |
 | 4.1 | patient credit ledger | ⬜ pending | |
 | 4.2 | dental refunds | ⬜ pending | |
 | 7.x | Stripe online pay · tax activation · multi-currency/EDI | ⏸ trigger-only | build on demand, not scheduled |

@@ -18,6 +18,7 @@ import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
 import { PatientEditForm } from './patient-edit-form';
+import { PatientStatement } from './patient-statement';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -177,14 +178,28 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
   const totalBalance =
     balance?.outstandingBalanceCents ??
     invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
+  const [showStatement, setShowStatement] = useState(false);
 
   return (
     <div className="rounded-xl border border-border bg-card">
+      {showStatement && (
+        <PatientStatement patientId={patientId} branchId={branchId} onClose={() => setShowStatement(false)} />
+      )}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h3 className="text-sm font-semibold">Payment History</h3>
-        {invoices.length > 0 && (
-          <span className="text-xs text-muted-foreground">{invoices.length} transactions</span>
-        )}
+        <div className="flex items-center gap-3">
+          {invoices.length > 0 && (
+            <span className="text-xs text-muted-foreground">{invoices.length} transactions</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowStatement(true)}
+            data-testid="view-statement-btn"
+            className="h-8 px-3 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-colors focus-visible:ring-2 focus-visible:ring-ring outline-none"
+          >
+            Statement
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
