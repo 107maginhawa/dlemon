@@ -161,7 +161,10 @@ function CalendarPage() {
 
   async function handleCheckIn(appointmentId: string) {
     try {
-      await checkInAppointment({ path: { appointmentId } });
+      // ISSUE-013 (QA 2026-06-20): without throwOnError the SDK resolves on a
+      // 409/500, the catch never fires, and we'd show a false "Patient checked
+      // in" toast while the appointment stays unchanged. Throw so failures surface.
+      await checkInAppointment({ path: { appointmentId }, throwOnError: true });
       invalidateAppointments();
       toast.success('Patient checked in');
     } catch (err) {
@@ -172,8 +175,9 @@ function CalendarPage() {
   async function handleConfirm(appointmentId: string) {
     try {
       // P1-24: dedicated staff-confirm endpoint (scheduled→confirmed, confirmedVia='staff',
-      // synchronously expires queued reminders). Falls back to no-op on error.
-      await confirmAppointment({ path: { appointmentId } });
+      // synchronously expires queued reminders).
+      // ISSUE-013: throwOnError so a failed confirm shows the error, not a false success.
+      await confirmAppointment({ path: { appointmentId }, throwOnError: true });
       invalidateAppointments();
       toast.success('Appointment confirmed');
     } catch (err) {
