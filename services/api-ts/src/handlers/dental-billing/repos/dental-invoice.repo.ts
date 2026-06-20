@@ -17,7 +17,7 @@ import {
   type DentalInvoiceLineItem,
   type NewDentalInvoiceLineItem,
 } from './dental-invoice.schema';
-import { applyDiscountRate, applyTaxRate } from '../utils/rounding';
+import { applyTaxRate } from '../utils/rounding';
 import { dueDateFromTerms } from '../utils/payment-terms';
 
 export interface InvoiceFilters {
@@ -256,6 +256,15 @@ export class DentalInvoiceRepository {
 
   /**
    * Apply a discount to an invoice. Recalculates totalCents and balanceCents.
+   *
+   * totalCents/taxCents derive only from subtotalCents (which a concurrent payment
+   * never touches) so they are safe to compute in JS. balanceCents and the paid-status
+   * flip, however, depend on paidCents — which a concurrent recordDentalPayment can
+   * change between this read and the UPDATE. Computing them in SQL from the LIVE
+   * paid_cents column (mirrors addPayment/removePayment) makes the UPDATE re-read the
+   * committed payment at write time, so a payment that lands mid-discount is never lost
+   * from the balance (no phantom debt). A bare JS `totalCents - invoice.paidCents` would
+   * write a stale constant and resurrect already-paid debt.
    */
   async applyDiscount(invoiceId: string, discountCents: number, taxRate: number, discountReason: string, discountedBy: string): Promise<DentalInvoice | null> {
     const invoice = await this.findOneById(invoiceId);
@@ -264,7 +273,6 @@ export class DentalInvoiceRepository {
     const afterDiscount = invoice.subtotalCents - discountCents;
     const taxCents = applyTaxRate(afterDiscount, taxRate);
     const totalCents = afterDiscount + taxCents;
-    const balanceCents = totalCents - invoice.paidCents;
 
     const [updated] = await this.db
       .update(dentalInvoices)
@@ -274,9 +282,18 @@ export class DentalInvoiceRepository {
         discountedBy,
         taxCents,
         totalCents,
-        balanceCents: Math.max(0, balanceCents),
+        balanceCents: sql`GREATEST(0, ${totalCents} - ${dentalInvoices.paidCents})`,
+        status: sql`CASE
+          WHEN ${totalCents} - ${dentalInvoices.paidCents} <= 0 AND ${dentalInvoices.paidCents} > 0 THEN 'paid'
+          ELSE ${dentalInvoices.status}
+        END`,
+        paidAt: sql`CASE
+          WHEN ${totalCents} - ${dentalInvoices.paidCents} <= 0 AND ${dentalInvoices.paidCents} > 0 THEN COALESCE(${dentalInvoices.paidAt}, NOW())
+          ELSE ${dentalInvoices.paidAt}
+        END`,
         updatedAt: new Date(),
-      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle cannot type sql<> literals mixed with column values in set()
+      } as any)
       .where(eq(dentalInvoices.id, invoiceId))
       .returning();
     return updated ?? null;
