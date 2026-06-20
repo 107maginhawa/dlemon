@@ -35,6 +35,16 @@ export async function getTreatmentsForInvoice(db: DatabaseInstance, visitId: str
 }
 
 /**
+ * WFG-004: locked (FOR UPDATE) read of a visit's treatments for the invoice-create
+ * path. MUST be called inside the create transaction so concurrent createDentalInvoice
+ * for the same visit serialize on the treatment rows (the loser then sees them billed
+ * and is rejected) — closing the double-billing race the plain read leaves open.
+ */
+export async function getTreatmentsForInvoiceLocked(db: DatabaseInstance, visitId: string): Promise<DentalTreatment[]> {
+  return new TreatmentRepository(db).findByVisitForUpdate(visitId);
+}
+
+/**
  * BR-048: per-procedure payment terms (days) for a set of CDT codes. Returns
  * only the non-null terms so the caller can take their MAX. Empty input or no
  * configured terms yields an empty array (→ falls through to the clinic default).

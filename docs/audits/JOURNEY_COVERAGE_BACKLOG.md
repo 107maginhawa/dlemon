@@ -29,7 +29,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 | JC-2 | Patient login proof — magic-link + passkey | WF-003 / 002 | **P0** | ✅ done (J24 + contract) |
 | JC-3 | Promote journeys to a required CI gate + honest tally | — | **P1** | ✅ done (gate+tally; ⚠ human: branch-protection) |
 | JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ✅ done (J25–J28) |
-| JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ⬜ pending |
+| JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ✅ done (real race fixed) |
 | JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ⬜ pending |
 | JC-7 | Real-binary storage round-trip (attachments / imaging via MinIO) | WF-039 / 098 / 099 | **P1** | ⬜ pending |
 | JC-8 | workflow-test-map.json honesty fixes | — | **P1** | ⬜ pending |
@@ -134,6 +134,19 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
   already-billed guard; only the sequential case is tested. Money-integrity hole.
 - **Fix:** adversarial concurrency test (two simultaneous creates → exactly one 201), mirroring the
   online-booking concurrency test already in dental-scheduling.
+- **✅ Result:** the race was **REAL** (confirmed RED: two concurrent creates both returned 201 →
+  **two invoices for one visit**, double-billing). Root cause: the S1-T7 already-billed guard is a
+  check-then-act — both transactions read `billedInvoiceId=null` under READ COMMITTED before either
+  commits `markTreatmentsAsBilled`. **Fixed** by reading the visit's treatments with a row-level
+  `FOR UPDATE` lock inside the create tx (`getTreatmentsForInvoiceLocked` → `findByVisitForUpdate`)
+  so concurrent creates serialize and the loser is rejected (422 `TREATMENT_ALREADY_BILLED`).
+  Guarded by `createDentalInvoice.concurrency.test.ts` (8-round adversarial; deterministic GREEN
+  with the lock, immediate RED without — proven by temporarily stripping the lock). WFG-004 moved
+  from open gap → RESOLVED in `workflow.allowlist.json`.
+- **Follow-up (ultracode sweep):** a risk-weighted adversarial sweep of sibling check-then-act /
+  concurrency races across the highest-blast-radius handlers (billing payments, visit lifecycle,
+  consent, scheduling, erasure, inventory, …) was launched alongside this fix; any confirmed
+  REAL_RACE findings are tracked for follow-up commits.
 
 ## JC-6 — De-aspirationalize "covered" journeys · P1
 

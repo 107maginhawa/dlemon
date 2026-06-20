@@ -10,7 +10,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
-import { getTreatmentsForInvoice, markTreatmentsAsBilled } from '@/handlers/dental-visit/repos/visit-billing.facade';
+import { getTreatmentsForInvoiceLocked, markTreatmentsAsBilled } from '@/handlers/dental-visit/repos/visit-billing.facade';
 import { hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/consent-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getBranchOrgId, getBranchTaxConfig } from '@/handlers/dental-org/repos/org-billing.facade';
@@ -70,8 +70,12 @@ export async function createDentalInvoice(
       throw new BusinessLogicError('Signed consent required before invoicing', 'CONSENT_REQUIRED');
     }
 
-    // Fetch performed/verified treatments for the visit
-    const treatments = await getTreatmentsForInvoice(tx, body.visitId);
+    // WFG-004: fetch the visit's treatments WITH a row-level FOR UPDATE lock (inside
+    // this tx). Two concurrent createDentalInvoice for the same visit now serialize
+    // here — the loser blocks until the winner commits its markTreatmentsAsBilled,
+    // then reads the billed rows and is rejected by the already-billed guard below
+    // (instead of both reading billedInvoiceId=null and each minting an invoice).
+    const treatments = await getTreatmentsForInvoiceLocked(tx, body.visitId);
     const billable = treatments.filter(t => t.status === 'performed' || t.status === 'verified');
 
     if (billable.length === 0) {
