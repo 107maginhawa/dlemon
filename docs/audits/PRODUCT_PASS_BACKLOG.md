@@ -27,7 +27,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-4 | **Online-booking** config (staff) | P1 | ✅ done (ISSUE-038) | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ✅ done (ISSUE-039) | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ✅ done (ISSUE-040) | ISSUE-024 |
-| PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | 🔨 in-progress (2/3: ISSUE-042,043 ✅; consultation descoped) | ISSUE-024 |
+| PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ✅ done (ISSUE-042,043,044; consultation descoped) | ISSUE-024 |
 | PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ✅ done (ISSUE-041) | ISSUE-010 tail |
 | PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ⬜ pending | ISSUE-018 |
 
@@ -191,10 +191,12 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
   (list + FSM buttons + add form) opened from a new **Tasks** trigger in the year-filter
   bar (beside Recalls). Live-verified create + Start transition. FE 2639/0; gates clean.
   Assignee picker scoped out (`assignedTo` nullable).
-- **Sub-slice 3 — Occlusion screening · ⬜ pending.** Create + list only (no HTTP
-  PATCH/single-GET exposed; `{data,pagination}` envelope). 9 clinical fields (Angle
-  class enum + overjet/overbite/crossbite/crowding/spacing/midline/notes), optional
-  `visitId`. Natural home: workspace exam area beside Perio.
+- **Sub-slice 3 — Occlusion screening · ✅ DONE (ISSUE-044).** Create + list only (no
+  HTTP PATCH/single-GET; `{data,pagination}` envelope). 9 clinical fields (Angle class
+  enum + overjet/overbite/crossbite/crowding/spacing/midline/notes). `OcclusionScreening
+  Sheet` (list + add form) opened from a new **Occlusion** trigger in the year-filter bar
+  beside Perio. Live-verified create. FE 2644/0; gates clean. `visitId` auto-link scoped
+  out (sheet is patient-scoped).
 - **Consultation · ❌ DESCOPED (user decision).** `createConsultation` is the frozen
   upstream **`/emr/consultations`** module (patient+provider, no branch/visit/tooth-
   chart) and duplicates the dental `dental_visit` + per-visit SOAP `VisitNotes` flow —

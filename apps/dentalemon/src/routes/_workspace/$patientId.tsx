@@ -57,6 +57,7 @@ import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
 import { DentalAlertsSheet } from '@/features/workspace/components/dental-alerts-sheet';
 import { TasksSheet } from '@/features/workspace/components/tasks-sheet';
+import { OcclusionScreeningSheet } from '@/features/workspace/components/occlusion-screening-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
 import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
@@ -99,6 +100,7 @@ function WorkspacePage() {
   const [recallsOpen, setRecallsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [occlusionOpen, setOcclusionOpen] = useState(false);
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
@@ -383,6 +385,16 @@ function WorkspacePage() {
           className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
         >
           Perio
+        </button>
+
+        {/* PP-7 (ISSUE-044): Occlusion screening tab trigger */}
+        <button
+          type="button"
+          data-testid="occlusion-tab-btn"
+          onClick={() => setOcclusionOpen(true)}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Occlusion
         </button>
 
         {/* B3: Recalls tab trigger */}
@@ -693,6 +705,13 @@ function WorkspacePage() {
         patientId={patientId}
         open={tasksOpen}
         onClose={() => setTasksOpen(false)}
+      />
+
+      {/* PP-7 (ISSUE-044): occlusion screening */}
+      <OcclusionScreeningSheet
+        patientId={patientId}
+        open={occlusionOpen}
+        onClose={() => setOcclusionOpen(false)}
       />
 
       {/* B4: TreatmentPlansSheet */}
