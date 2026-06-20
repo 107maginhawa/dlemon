@@ -27,7 +27,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-4 | **Online-booking** config (staff) | P1 | ✅ done (ISSUE-038) | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ✅ done (ISSUE-039) | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ✅ done (ISSUE-040) | ISSUE-024 |
-| PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | 🔨 in-progress (1/3: ISSUE-042 ✅; consultation descoped) | ISSUE-024 |
+| PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | 🔨 in-progress (2/3: ISSUE-042,043 ✅; consultation descoped) | ISSUE-024 |
 | PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ✅ done (ISSUE-041) | ISSUE-010 tail |
 | PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ⬜ pending | ISSUE-018 |
 
@@ -186,9 +186,11 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
   from a new top-bar **Alerts** button + active alerts as severity-coloured top-bar
   badges. Live-verified create + badge + deactivate. FE 2633/0; typecheck + lint + font
   ratchet clean.
-- **Sub-slice 2 — Patient tasks · ⬜ pending.** Full CRUD + FSM (open→in_progress→
-  done/cancelled), patient-scoped (`…/patients/:id/tasks`). Natural home: a workspace
-  sheet (mirror `RecallsSheet`). Follow-up/to-do list.
+- **Sub-slice 2 — Patient tasks · ✅ DONE (ISSUE-043).** Full CRUD + FSM (open→
+  in_progress→done/cancelled), patient-scoped (`…/patients/:id/tasks`). `TasksSheet`
+  (list + FSM buttons + add form) opened from a new **Tasks** trigger in the year-filter
+  bar (beside Recalls). Live-verified create + Start transition. FE 2639/0; gates clean.
+  Assignee picker scoped out (`assignedTo` nullable).
 - **Sub-slice 3 — Occlusion screening · ⬜ pending.** Create + list only (no HTTP
   PATCH/single-GET exposed; `{data,pagination}` envelope). 9 clinical fields (Angle
   class enum + overjet/overbite/crossbite/crowding/spacing/midline/notes), optional

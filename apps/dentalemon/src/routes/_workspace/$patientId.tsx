@@ -56,6 +56,7 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@/lib/rbac';
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
 import { DentalAlertsSheet } from '@/features/workspace/components/dental-alerts-sheet';
+import { TasksSheet } from '@/features/workspace/components/tasks-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
 import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
@@ -97,6 +98,7 @@ function WorkspacePage() {
   const [imagingOpen, setImagingOpen] = useState(false);
   const [recallsOpen, setRecallsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
@@ -393,6 +395,16 @@ function WorkspacePage() {
           Recalls
         </button>
 
+        {/* PP-7 (ISSUE-043): Tasks tab trigger */}
+        <button
+          type="button"
+          data-testid="tasks-tab-btn"
+          onClick={() => setTasksOpen(true)}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Tasks
+        </button>
+
         {/* B4: Treatment Plans tab trigger */}
         <button
           type="button"
@@ -674,6 +686,13 @@ function WorkspacePage() {
         patientId={patientId}
         open={alertsOpen}
         onClose={() => setAlertsOpen(false)}
+      />
+
+      {/* PP-7 (ISSUE-043): patient follow-up tasks */}
+      <TasksSheet
+        patientId={patientId}
+        open={tasksOpen}
+        onClose={() => setTasksOpen(false)}
       />
 
       {/* B4: TreatmentPlansSheet */}
