@@ -26,7 +26,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ✅ done (ISSUE-037) | ISSUE-020 |
 | PP-4 | **Online-booking** config (staff) | P1 | ✅ done (ISSUE-038) | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ✅ done (ISSUE-039) | ISSUE-020 |
-| PP-6 | **Household** add/remove/link | P2 | ⬜ pending | ISSUE-024 |
+| PP-6 | **Household** add/remove/link | P2 | ✅ done (ISSUE-040) | ISSUE-024 |
 | PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ⬜ pending | ISSUE-024 |
 | PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ⬜ pending | ISSUE-010 tail |
 | PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ⬜ pending | ISSUE-018 |
@@ -150,7 +150,19 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 - **Verify on pickup:** confirm endpoints + promote semantics (waitlist → appointment);
   decide placement (calendar panel vs route) at pickup.
 
-## PP-6 — Household add/remove/link  · P2
+## PP-6 — Household add/remove/link  · P2  — ✅ DONE (ISSUE-040)
+- **Outcome:** made the read-only `HouseholdCard` interactive. Empty state → "Create
+  household" (this patient becomes the guarantor; name input → `POST /dental/households`).
+  Existing household → "Add member" (patient search via `usePatients` → select →
+  relationship → `POST /households/:id/members`) + a "Remove" on each non-guarantor
+  member (`DELETE /households/:id/members/:patientId`; the guarantor has no Remove,
+  mirroring the backend `GUARANTOR_NOT_REMOVABLE` rule). `useHouseholdMutations`
+  invalidates the patient's household query so the card re-renders immediately.
+  Live-verified end-to-end (empty → created "Dela Cruz Family" → added Maria Santos as
+  spouse → removed her → back to guarantor-only). +14 unit assertions; FE suite 2621/0;
+  typecheck + lint clean. GOTCHA captured: `listDentalPatients` returns a `{data:[…]}`
+  envelope (SDK transformer does `data.data.map`) — the member-search test mock must
+  return that shape, not a bare array.
 - **Gap:** `HouseholdCard` is read-only; `createHousehold` / `addHouseholdMember` /
   `removeHouseholdMember` exist with zero FE call-sites.
 - **Proposed placement:** make the existing patient-profile Household card interactive.

@@ -6,8 +6,13 @@
  *
  * API: GET /dental/patients/:patientId/household
  */
-import { useQuery } from '@tanstack/react-query';
-import { getPatientHousehold } from '@monobase/sdk-ts/generated';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getPatientHousehold,
+  createHousehold,
+  addHouseholdMember,
+  removeHouseholdMember,
+} from '@monobase/sdk-ts/generated';
 import { getPatientHouseholdQueryKey } from '@monobase/sdk-ts/generated/react-query';
 import type { DentalPatientFinanceModuleHouseholdWithMembers } from '@monobase/sdk-ts/generated';
 
@@ -86,5 +91,50 @@ export function useHousehold({ patientId }: { patientId: string | null }) {
     data: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error,
+  };
+}
+
+// PP-6 (ISSUE-040): create a household / add / remove members. Every write
+// invalidates the patient's household query so the (now interactive) HouseholdCard
+// re-renders immediately.
+export function useHouseholdMutations(patientId: string | null) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    if (patientId) qc.invalidateQueries({ queryKey: getPatientHouseholdQueryKey({ path: { patientId } }) });
+  };
+
+  const create = useMutation({
+    mutationFn: async (args: { branchId: string; name: string; guarantorPatientId: string; notes?: string }) => {
+      const { data } = await createHousehold({ body: args, throwOnError: true });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addMember = useMutation({
+    mutationFn: async (args: { householdId: string; patientId: string; relationship?: string }) => {
+      const { data } = await addHouseholdMember({
+        path: { householdId: args.householdId },
+        body: { patientId: args.patientId, relationship: args.relationship },
+        throwOnError: true,
+      });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
+  const removeMember = useMutation({
+    mutationFn: async (args: { householdId: string; patientId: string }) => {
+      await removeHouseholdMember({ path: { householdId: args.householdId, patientId: args.patientId }, throwOnError: true });
+    },
+    onSuccess: invalidate,
+  });
+
+  return {
+    create: create.mutateAsync,
+    addMember: addMember.mutateAsync,
+    removeMember: removeMember.mutateAsync,
+    isSaving: create.isPending || addMember.isPending || removeMember.isPending,
+    error: (create.error ?? addMember.error ?? removeMember.error) as Error | null,
   };
 }
