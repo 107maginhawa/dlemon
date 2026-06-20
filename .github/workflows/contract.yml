@@ -194,7 +194,7 @@ jobs:
       # have no infra dependency so a failure here is a real contract regression.
       - name: Hurl contract — core (blocking)
         env:
-          CONTRACT_SKIP: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,billing-lifecycle
+          CONTRACT_SKIP: storage,dental-imaging,dental-assistant,auth-verification,auth-password-reset,auth-magic-link,billing-lifecycle
         run: bun run test:contract
 
       # Infra-gated MinIO (storage, dental-imaging, dental-assistant) — BLOCKING.
@@ -207,15 +207,15 @@ jobs:
           CONTRACT_ONLY: storage,dental-imaging,dental-assistant
         run: bun run test:contract
 
-      # Auth email round-trip (auth-verification, auth-password-reset) — BLOCKING.
-      # Runs against the SAME verification-OFF server booted above (Mailpit is
-      # provisioned, the email queue is drained every 1s). Drives signup→verify
-      # and request-reset→reset→sign-in through real emails caught by Mailpit.
-      # Verified end-to-end locally; see the header note for why verification-OFF
-      # is correct here (password-reset's final sign-in needs a session).
+      # Auth email round-trip (auth-verification, auth-password-reset, auth-magic-link)
+      # — BLOCKING. Runs against the SAME verification-OFF server booted above (Mailpit
+      # is provisioned, the email queue is drained every 1s). Drives signup→verify,
+      # request-reset→reset→sign-in, and magic-link request→verify→session through real
+      # emails caught by Mailpit. Verified end-to-end locally; see the header note for
+      # why verification-OFF is correct here (the final sign-in/session needs it).
       - name: Hurl contract — auth email round-trip (Mailpit, blocking)
         env:
-          CONTRACT_ONLY: auth-verification,auth-password-reset
+          CONTRACT_ONLY: auth-verification,auth-password-reset,auth-magic-link
         run: bun run test:contract
 
       # Stripe (billing-lifecycle) — NON-BLOCKING. Exercises Stripe Connect merchant

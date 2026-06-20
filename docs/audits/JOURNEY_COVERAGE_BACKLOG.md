@@ -26,7 +26,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 | # | Item | WFs | Priority | Status |
 |---|------|-----|----------|--------|
 | JC-1 | Continuous doctor-visit journey (chart-save + SOAP-save through real UI) | WF-074 / 009 / 011 | **P0** | ✅ done (J23) |
-| JC-2 | Patient login proof — magic-link + passkey | WF-003 / 002 | **P0** | ⬜ pending |
+| JC-2 | Patient login proof — magic-link + passkey | WF-003 / 002 | **P0** | ✅ done (J24 + contract) |
 | JC-3 | Promote journeys to a required CI gate + honest tally | — | **P1** | ⬜ pending |
 | JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ⬜ pending |
 | JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ⬜ pending |
@@ -76,6 +76,18 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
   authenticated → independent `/me/*` read). Add `WF-002`/`WF-003` entries to the coverage map.
 - **Acceptance:** magic-link sign-in proven end-to-end by a live journey + contract; passkey at
   least contract-proven. **If RED, fix the auth path.**
+- **✅ Result:** magic-link was **genuinely BROKEN** (RED → fixed at root cause). The
+  `auth.magic-link` email template was **missing from the initializer**, so the queue processor
+  threw `No active template found for tags: auth.magic-link` and the link was **never delivered —
+  patients silently locked out** (exactly the audit's prediction). Fix = add the `auth/magic-link`
+  template (`.html.hbs` + `.text.hbs` + initializer metadata). Now proven by **`auth-magic-link.hurl`**
+  (request → Mailpit → verify → independent `get-session` read) **+ live journey J24** (drives the
+  better-auth-ui magic-link UI → consumes the emailed link → independent session read; Set B /
+  skipAllowed since it needs Mailpit). Passkey contract-proven by **`auth-passkey.hurl`**
+  (registration-options mounted + session-gated + returns a WebAuthn challenge; full ceremony needs
+  a real authenticator). CI: `auth-magic-link` added to the core `CONTRACT_SKIP` + the Mailpit
+  `CONTRACT_ONLY` lane; `auth-passkey` runs in the Postgres-only core. Coverage map: WF-002 + WF-003
+  added (were absent).
 
 ## JC-3 — Make journeys a required CI gate + honest tally · P1
 

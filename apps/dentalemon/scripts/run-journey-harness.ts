@@ -94,6 +94,12 @@ const EXPECTED: Record<
   B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'PASS', rubricIds: ['CIMG-003'], skipAllowed: true },
   B03: { name: 'Locked landmark immutability', set: 'B', expected: 'PASS', rubricIds: ['CIMG-004'], skipAllowed: true },
   B04: { name: 'Report gate + immutable versioned snapshot', set: 'B', expected: 'PASS', rubricIds: ['CIMG-006', 'CIMG-008'], skipAllowed: true },
+  // J24 — JC-2: patient magic-link sign-in (WF-003, the sole patient login path).
+  // Drives the better-auth-ui magic-link flow through the DOM, consumes the emailed
+  // link via Mailpit, and independent-reads the durable session. Set B / skipAllowed:
+  // needs Mailpit (email transport), which the journey CI job lacks → honest SKIP
+  // there, like the ceph/MinIO journeys; runs to PASS where Mailpit is up.
+  J24: { name: 'Patient magic-link sign-in (request via UI → consume emailed link → session)', set: 'B', expected: 'PASS', rubricIds: ['WF-003'], skipAllowed: true },
   // J15 is Set B (sync-log lifecycle). It needs a seeded branch + a P10+ patient
   // but not MinIO; with the demo seed present it runs to PASS.
   J15: { name: 'Offline sync metadata — sync-log lifecycle + server-default syncStatus', set: 'B', expected: 'PASS', rubricIds: ['LF-BR-001', 'LF-BR-002', 'LF-BR-003', 'LF-BR-004'] },
