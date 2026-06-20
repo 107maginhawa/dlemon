@@ -31,7 +31,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 | JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ✅ done (J25–J28) |
 | JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ✅ done (real race fixed) |
 | JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ✅ done (J03·J29·J30·J17) |
-| JC-7 | Real-binary storage round-trip (attachments / imaging via MinIO) | WF-039 / 098 / 099 | **P1** | ⬜ pending |
+| JC-7 | Real-binary storage round-trip (attachments / imaging via MinIO) | WF-039 / 098 / 099 | **P1** | ✅ done (MinIO round-trip) |
 | JC-8 | workflow-test-map.json honesty fixes | — | **P1** | ✅ done (applied per-item) |
 | JC-9 | Product decisions: notifications, recall emails, EMR-import, bulk slots (NOT regressions) | WF-080·082·083·084·085 / 104 / 100 / 061 | P2 | ⏸ decision |
 
@@ -172,6 +172,12 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
   `filePath` strings; no test does a real MinIO PUT→GET→delete.
 - **Fix:** integration test that uploads a real binary to MinIO, GETs it, and asserts delete removes
   the row + object. (MinIO must be up — see `/readyz`.)
+- **✅ Result:** `storage-minio-roundtrip.test.ts` drives the real `S3StorageProvider` against a live
+  MinIO — presign PUT → upload real bytes → `verifyFileExists` true → presign GET → download and
+  assert the bytes round-trip UNCHANGED → `deleteFile` → `verifyFileExists` false. MinIO-gated
+  (`test.skipIf` on `healthCheck()`, honest environment-absence) like the ceph journeys; ran
+  non-vacuously locally (6 asserts). First test to do a real PUT→GET→delete (the handoffs were
+  previously stubbed with filePath strings).
 
 ## JC-8 — workflow-test-map.json honesty fixes · P1
 
