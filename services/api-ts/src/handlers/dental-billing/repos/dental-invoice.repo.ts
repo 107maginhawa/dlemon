@@ -187,9 +187,25 @@ export class DentalInvoiceRepository {
 
   /**
    * Add a payment amount to the invoice using atomic SQL arithmetic.
-   * Prevents concurrent payment race conditions by computing new totals in the DB.
+   *
+   * The arithmetic is race-safe (paid/balance computed in the DB), but the
+   * OVERPAYMENT guard (amount <= balance) lives in the handler against a value
+   * read BEFORE the tx — so two concurrent payments each <= balance but summing >
+   * balance both pass it and overpay (paid > total). With `guardBalance`, the
+   * UPDATE only applies when `balance_cents >= amount` AT WRITE TIME: under READ
+   * COMMITTED the losing concurrent write re-reads the committed row, sees the
+   * reduced balance, matches 0 rows, and returns null — the caller then rejects it
+   * (PAYMENT_EXCEEDS_BALANCE). Opt-in so the claim-remittance / credit-application
+   * callers (which clamp their own amounts) keep the unconditional behavior.
    */
-  async addPayment(invoiceId: string, amountCents: number): Promise<DentalInvoice | null> {
+  async addPayment(
+    invoiceId: string,
+    amountCents: number,
+    opts?: { guardBalance?: boolean },
+  ): Promise<DentalInvoice | null> {
+    const where = opts?.guardBalance
+      ? and(eq(dentalInvoices.id, invoiceId), sql`${dentalInvoices.balanceCents} >= ${amountCents}`)
+      : eq(dentalInvoices.id, invoiceId);
     const [updated] = await this.db
       .update(dentalInvoices)
       .set({
@@ -207,7 +223,7 @@ export class DentalInvoiceRepository {
         updatedAt: new Date(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle cannot type sql<> literals mixed with column values in set()
       } as any)
-      .where(eq(dentalInvoices.id, invoiceId))
+      .where(where)
       .returning();
     return updated ?? null;
   }

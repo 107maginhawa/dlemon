@@ -130,7 +130,20 @@ export async function recordDentalPayment(
       notes: body.notes,
       ...(paymentDate ? { createdAt: paymentDate } : {}),
     });
-    const txInvoice = await new DentalInvoiceRepository(tx).addPayment(invoiceId, body.amountCents);
+    // WFG-004-class: the overpayment guard above read balanceCents from the pre-tx
+    // fetch. Re-assert it ATOMICALLY at write time — addPayment only applies when
+    // balance_cents >= amount, so a concurrent payment that already consumed the
+    // balance makes this match 0 rows (null). Throw to abort the tx (rolling back the
+    // payment insert above) with the same 422 the non-concurrent guard returns.
+    const txInvoice = await new DentalInvoiceRepository(tx).addPayment(invoiceId, body.amountCents, {
+      guardBalance: true,
+    });
+    if (!txInvoice) {
+      throw new BusinessLogicError(
+        `Payment amount (${body.amountCents}) exceeds remaining balance`,
+        'PAYMENT_EXCEEDS_BALANCE',
+      );
+    }
     return { payment: txPayment, updatedInvoice: txInvoice };
   });
 
