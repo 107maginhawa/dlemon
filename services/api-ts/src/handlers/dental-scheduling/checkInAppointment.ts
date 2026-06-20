@@ -11,6 +11,7 @@
  * 5. Return { appointment, visitId }
  */
 
+import { sql } from 'drizzle-orm';
 import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
@@ -80,6 +81,21 @@ export async function checkInAppointment(ctx: HandlerContext) {
   // on db; notifs below stay on db.
   const result = await withTenantTx(db, { branchIds: [appointment.branchId] }, async (tx) => {
     const txAppointmentRepo = new DentalAppointmentRepository(tx);
+
+    // EC7 race: the in-progress-visit guard above read on db BEFORE the tx, so two
+    // concurrent check-ins for the same patient (two appointments) both saw none and would
+    // both create a draft visit (the unique index only covers status='active', not the
+    // 'draft' a fresh check-in creates). Serialize per patient with a patient-scoped
+    // advisory lock and re-assert the guard under it: the loser re-reads the winner's
+    // committed draft visit and aborts → exactly one in-progress visit per patient.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(2001, hashtext(${appointment.patientId}))`);
+    const racedVisit = await findInProgressVisitByPatient(tx, appointment.patientId);
+    if (racedVisit) {
+      throw new ConflictError(
+        'Visit already active for this patient. Complete or cancel the existing visit first.',
+        'CHECKIN_ACTIVE_VISIT',
+      );
+    }
 
     const checkedIn = await txAppointmentRepo.checkIn(appointmentId, user.id);
     if (!checkedIn) throw new ValidationError('Failed to check in appointment');
