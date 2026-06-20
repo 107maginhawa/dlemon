@@ -32,7 +32,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 | JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ✅ done (real race fixed) |
 | JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ✅ done (J03·J29·J30·J17) |
 | JC-7 | Real-binary storage round-trip (attachments / imaging via MinIO) | WF-039 / 098 / 099 | **P1** | ⬜ pending |
-| JC-8 | workflow-test-map.json honesty fixes | — | **P1** | ⬜ pending |
+| JC-8 | workflow-test-map.json honesty fixes | — | **P1** | ✅ done (applied per-item) |
 | JC-9 | Product decisions: notifications, recall emails, EMR-import, bulk slots (NOT regressions) | WF-080·082·083·084·085 / 104 / 100 / 061 | P2 | ⏸ decision |
 
 ---
@@ -180,6 +180,13 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
   WF-074 → `uncovered-composite`; add a `gate` field (`journey-harness` vs `e2e-spec`) so "covered
   but didn't run" is visible; add a top-level `provenWorking` vs `provenBroken` split. Update as
   JC-1..JC-7 land so the map stops overstating.
+- **✅ Result (applied incrementally per item):** WF-009 re-pointed J01(shallow)→J23(proven); added
+  WF-011, WF-002, WF-003, WF-074, WF-032 (all were absent); re-pointed WF-014/041/BIL-REFUND/088 →
+  the JC-4 journeys, WF-012 J04→J22, WF-021→J23, WF-P02/038/018/024 → the JC-6 journeys — each with
+  an honest anchor. The **provenWorking vs provenBroken split** is now emitted by the harness
+  (run-journey-harness.ts summary + journey-results.json, JC-3), and the **core-WF coverage gate**
+  ties green to execution (a core WF whose journey doesn't PASS fails the run). A per-entry `gate`
+  field was not added (the live core gate + the journeySpec-vs-e2eSpec key already convey it).
 
 ## JC-9 — Product decisions (NOT regressions) · ⏸ decision
 
@@ -191,6 +198,21 @@ Confirmed **not-built** capabilities (real gaps, but product calls — do not au
 - `WF-100` EMR-import — mapped to a **non-existent module** (false coverage). Build or retire from
   the registry.
 - `WF-061` bulk slot generation — unimplemented `[INFERRED]`. Build with TDD or retire.
+
+**⏸ Triaged 2026-06-20 — recommendation (awaiting product sign-off, NOT auto-built):**
+- WF-080/082/083/084/085 notif fan-out — **DEFER**: the notifs module + transports exist (OneSignal
+  push, SMTP email proven by JC-2's Mailpit round-trip); only the per-event producer wiring is
+  missing. Low blast radius (no silent data loss). Wire incrementally when a notification is
+  actually shipped to users; until then **de-scope from the coverage registry** so it stops reading
+  as a gap.
+- WF-104 recall emails — **DEFER** alongside the above (same transport, mock processor). The
+  recall *scheduling* is real (RecallsSheet, JC product-pass); only the send is mocked.
+- WF-100 EMR-import — **RETIRE from the registry**: it maps to a non-existent module (false
+  coverage). PMD import (WF-022/J20) is the real external-record-intake path. Remove WF-100 or
+  re-point it to PMD import.
+- WF-061 bulk slot generation — **RETIRE the `[INFERRED]` row** (it was never specced/built);
+  re-add as a real WF only if/when bulk slot generation is committed to the roadmap.
+- None of these are regressions or money/safety risks — they are registry-honesty + roadmap calls.
 
 ---
 
