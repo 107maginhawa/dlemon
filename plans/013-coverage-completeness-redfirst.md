@@ -134,6 +134,19 @@ journey harness green where touched. Commits end with:
   buildTestApp be-unit; e2e spec-index ~29% FP per LLM verify) — promote to blocking when
   detection hardened + branch protection on. (4) LAYER_POLICY.md = per-type×risk required-layer
   matrix + artifact map + ratchet table.
+- 2026-06-21: **Phase 3 burndown STARTED** (incremental per decision 2). Closed RED-first:
+  (1) `6ab9f3a9` br-003 — BR-003 blocks prescriptions on a locked/completed visit (clinical
+  safety; guard existed, untested; RED proven by disabling the guard). (2) `d2c10222`
+  uc-list-consent-refusals — listConsentRefusals is visit-scoped (RED proven by dropping the
+  visitId filter → cross-visit leak). Each: RED→GREEN→fresh-DB-clone no-regress→pre-commit gate
+  green. **Backlog refinement found during burndown:** op-export-dental-chart's CORE logic IS
+  tested (chart/chart-export.test.ts covers buildChartExport); only the handler glue (authz/404/
+  assembly) lacks a test → lower priority than the grep flagged. **REMAINING (16, scoped in
+  coverage-backlog.json):** 2 be-unit reads (dp-list-due-recalls, dp-list-coverage-authorizations)
+  + op-export-dental-chart handler-glue (low) + 13 e2e — the e2e bulk (7 patient-portal, 3 notifs,
+  2 billing inter-module, 1 comms-WS) needs the web app (:3003) + Playwright and is the next wave.
+  PRE-EXISTING (not mine): business-rules.test.ts BR-001 findInProgressByPatient fails on HEAD
+  (dental_branch seeding flake) — flag for a separate fix.
 
 ## CONTINUE PROMPT (paste into a fresh session to resume)
 
