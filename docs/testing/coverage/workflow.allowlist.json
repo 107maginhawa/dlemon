@@ -40,5 +40,27 @@
   { "id": "WF-EMRC-006", "reason": "emr-consultation platform module — covered by api-ts tests, not the dentalemon journey/e2e corpus." },
   { "id": "WF-P03", "reason": "Complete/lock perio chart — exercised within the perio journey (J03) but no dedicated WF-P03 lock-anchored spec; perio-charting.spec.ts covers the surface." },
   { "id": "WF-P04", "reason": "View perio chart (historical) — perio comparison/history surface tested in perio-charting.spec.ts; no dedicated WF-P04 anchor." },
-  { "id": "WF-P05", "reason": "DEFERRED (V2): printable/PDF perio export is not built — no server render, no @media print route, no Print button. Re-promote when the export ships." }
+  { "id": "WF-P05", "reason": "DEFERRED (V2): printable/PDF perio export is not built — no server render, no @media print route, no Print button. Re-promote when the export ships." },
+
+  { "id": "WF-047", "reason": "Newly-visible [INFERRED] §3 op-table flow (parser stopped dropping [INFERRED] cells 2026-06-21; always a gap, just invisible before). delete/discard — discardVisit be-unit covered (discardVisit.test.ts); no dedicated journey anchor." },
+  { "id": "WF-052", "reason": "[INFERRED] op: invoice issue — be-unit/contract covered in dental-billing; no dedicated journey anchor." },
+  { "id": "WF-053", "reason": "[INFERRED] op: mark invoice partial — be-unit covered (invoice FSM); no dedicated journey anchor." },
+  { "id": "WF-056", "reason": "[INFERRED] op: update patient demographics — exercised transitively in patient journeys; no dedicated demographics-update anchor." },
+  { "id": "WF-057", "reason": "[INFERRED] op: patient merge — BR-020, NOT implemented (= WFG-007); cannot be journey-locked until built." },
+  { "id": "WF-058", "reason": "[INFERRED] op: patient archive/delete — be-unit covered (archive guard); no dedicated journey anchor." },
+  { "id": "WF-060", "reason": "[INFERRED] op: appointment reschedule — be-unit/contract covered in dental-scheduling; no dedicated reschedule journey anchor." },
+  { "id": "WF-061", "reason": "[INFERRED] op: bulk slot generation — async pg-boss job (cf WF-103, G-001 not implemented); no UI surface to journey-lock." },
+  { "id": "WF-062", "reason": "[INFERRED] op: read (lifecycle) — be-unit covered; read-only, no dedicated journey anchor." },
+  { "id": "WF-063", "reason": "[INFERRED] op: appointment cancel (visit survives, BR-004) — same surface as WF-059; be-unit covered, no dedicated e2e anchor." },
+  { "id": "WF-065", "reason": "[INFERRED] op: modify before visit locked — be-unit covered (BR-003 immutability guard); no dedicated journey anchor." },
+  { "id": "WF-067", "reason": "[INFERRED] op: add images to study — exercised within imaging specs; no dedicated WF-067 anchor." },
+  { "id": "WF-068", "reason": "[INFERRED] op: read — be-unit covered; read-only, no dedicated journey anchor." },
+  { "id": "WF-069", "reason": "[INFERRED] op: create org — exercised via the onboarding flow; no dedicated WF-069 org-creation anchor." },
+  { "id": "WF-071", "reason": "[INFERRED] op: read org settings — be-unit covered; read-only, no dedicated journey anchor." },
+  { "id": "WF-072", "reason": "[INFERRED] op: membership remove — be-unit covered (dental-org); no dedicated journey anchor." },
+  { "id": "WF-082", "reason": "[INFERRED] notification: invoice sent — async notifs flow, §8 gap; not journey-locked." },
+  { "id": "WF-083", "reason": "[INFERRED] notification: invoice overdue — = WF-054/WFG-010, not implemented; not journey-locked." },
+  { "id": "WF-084", "reason": "[INFERRED] notification: PMD ready — = WFG-011, not implemented; not journey-locked." },
+  { "id": "WF-085", "reason": "[INFERRED] notification: lab order complete — = WFG-012, not implemented; not journey-locked." },
+  { "id": "WF-086", "reason": "[INFERRED] report read: appointment utilization — be-unit covered (reports); read-only, no dedicated journey anchor." }
 ]

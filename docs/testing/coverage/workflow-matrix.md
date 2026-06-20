@@ -8,12 +8,12 @@ Computed join of every workflow in `docs/product/WORKFLOW_MAP.md` against the jo
 
 | Metric | Count |
 |--------|------:|
-| Total workflows | 85 |
+| Total workflows | 108 |
 | Cross-module (§12) | 16 |
-| **Covered** (mapped + spec exists) | **59** |
-| Gap | 23 |
+| **Covered** (mapped + spec exists) | **61** |
+| Gap | 44 |
 | Deferred | 3 |
-| Allowlisted gaps | 41 |
+| Allowlisted gaps | 62 |
 | Dangling spec refs | 0 |
 
 ## Cross-module flows (§12)
@@ -88,18 +88,41 @@ The 16 inter-module handoffs — the highest-risk integration seams.
 | `WF-043` | Branch-scoped login (membership select) |  | — | — | gap |
 | `WF-044` | Patient consent at registration |  | `apps/dentalemon/tests/e2e/patient-registration.spec.ts` | ✅ | covered |
 | `WF-045` | Create (from workspace +, two-step `POST draft → PATCH active`) |  | `apps/dentalemon/tests/e2e/journeys/21-new-visit-create.journey.spec.ts` | ✅ | covered |
-| `WF-046` | Visit lock job |  | — | — | gap |
+| `WF-046` | Update (lock visit) |  | — | — | gap |
+| `WF-047` | Delete / Discard |  | — | — | gap |
 | `WF-048` | Update (plan) |  | `apps/dentalemon/tests/e2e/treatment-templates.spec.ts` | ✅ | covered |
 | `WF-049` | Update (verify) |  | — | — | gap |
 | `WF-050` | Dismiss |  | — | — | gap |
-| `WF-051` | Outstanding invoices list |  | `apps/dentalemon/tests/e2e/invoice-detail.spec.ts` | ✅ | covered |
-| `WF-054` | Invoice overdue job |  | — | — | gap |
-| `WF-059` | BR-004 |  | — | — | gap |
-| `WF-064` | Prescription history |  | `apps/dentalemon/tests/e2e/rx-lifecycle-ui.spec.ts` | ✅ | covered |
-| `WF-066` | PMD archive |  | `apps/dentalemon/tests/e2e/pmd-import.spec.ts` | ✅ | covered |
-| `WF-080` | Appointment notification |  | — | — | gap |
-| `WF-081` | Appointment reminder |  | — | — | gap |
-| `WF-087` | Imaging study |  | — | — | gap |
+| `WF-051` | Read (invoice detail) |  | `apps/dentalemon/tests/e2e/invoice-detail.spec.ts` | ✅ | covered |
+| `WF-052` | Issue |  | — | — | gap |
+| `WF-053` | Mark partial |  | — | — | gap |
+| `WF-054` | Mark overdue |  | — | — | gap |
+| `WF-055` | Read (profile) |  | `apps/dentalemon/tests/e2e/patient-profile.spec.ts` | ✅ | covered |
+| `WF-056` | Update (demographics) |  | — | — | gap |
+| `WF-057` | Merge |  | — | — | gap |
+| `WF-058` | Archive / delete |  | — | — | gap |
+| `WF-059` | Cancel |  | — | — | gap |
+| `WF-060` | Reschedule |  | — | — | gap |
+| `WF-061` | Bulk (slot generation) |  | — | — | gap |
+| `WF-062` | Read |  | — | — | gap |
+| `WF-063` | Cancel |  | — | — | gap |
+| `WF-064` | Read |  | `apps/dentalemon/tests/e2e/rx-lifecycle-ui.spec.ts` | ✅ | covered |
+| `WF-065` | Modify (before visit locked) |  | — | — | gap |
+| `WF-066` | Download |  | `apps/dentalemon/tests/e2e/pmd-import.spec.ts` | ✅ | covered |
+| `WF-067` | Add images to study |  | — | — | gap |
+| `WF-068` | Read |  | — | — | gap |
+| `WF-069` | Create org |  | — | — | gap |
+| `WF-070` | Create branch |  | `apps/dentalemon/tests/e2e/journeys/18-org-onboarding.journey.spec.ts` | ✅ | covered |
+| `WF-071` | Read (settings) |  | — | — | gap |
+| `WF-072` | Membership remove |  | — | — | gap |
+| `WF-080` | Appointment booked |  | — | — | gap |
+| `WF-081` | Appointment reminder (24h) |  | — | — | gap |
+| `WF-082` | Invoice sent |  | — | — | gap |
+| `WF-083` | Invoice overdue |  | — | — | gap |
+| `WF-084` | PMD ready |  | — | — | gap |
+| `WF-085` | Lab order complete |  | — | — | gap |
+| `WF-086` | Appointment utilization |  | — | — | gap |
+| `WF-087` | Imaging study list |  | — | — | gap |
 | `WF-088` | GDPR erasure |  | `apps/dentalemon/tests/e2e/journeys/28-data-erasure-approve.journey.spec.ts` | ✅ | covered |
 | `WF-089` | Check-in flow | 🔗 | `apps/dentalemon/tests/e2e/patient-checkin.spec.ts` | ✅ | covered |
 | `WF-090` | Visit → Invoice creation | 🔗 | `apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts` | ✅ | covered |

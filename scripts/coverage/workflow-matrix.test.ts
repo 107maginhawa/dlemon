@@ -91,6 +91,35 @@ describe('parseWorkflowTables', () => {
     const wfs = parseWorkflowTables(md);
     expect(wfs.get('WF-EMRC-004')?.name).toContain('STRUCK');
   });
+
+  test('parses a WF id cell carrying an [INFERRED]/[VERIFY] annotation suffix', () => {
+    // §3 op-tables put the WF id in column 3, frequently annotated, e.g.
+    // `| Read (profile) | All dental roles | WF-055 [INFERRED] | BR-016 |`.
+    // The annotation must NOT hide the workflow (the bug: the id cell was only
+    // accepted when it was *exactly* the id, so [INFERRED] rows were dropped —
+    // ~16 workflows were invisible to the ratchet).
+    const md = `
+| Op | Who | WF-ID | Linked BRs |
+|----|-----|-------|-----------|
+| Read (profile) | All dental roles | WF-055 [INFERRED] | BR-016 |
+| Update profile | Owner | WF-056 [VERIFY] | BR-016 |
+`;
+    const wfs = parseWorkflowTables(md);
+    expect(wfs.has('WF-055')).toBe(true);
+    expect(wfs.has('WF-056')).toBe(true);
+    expect(wfs.get('WF-055')?.name).toBe('Read (profile)');
+  });
+
+  test('still rejects a prose cell that merely mentions a WF id', () => {
+    // The annotation tolerance must not turn a prose mention into a row.
+    const md = `
+| Notes |
+|-------|
+| see WF-055 for the read path |
+`;
+    const wfs = parseWorkflowTables(md);
+    expect(wfs.has('WF-055')).toBe(false);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
