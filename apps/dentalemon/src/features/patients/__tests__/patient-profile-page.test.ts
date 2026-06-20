@@ -309,6 +309,47 @@ describe('PatientProfilePage', () => {
     expect(patchBody?.contactInfo?.phone).toBeUndefined();
   });
 
+  test('ISSUE-029: a genuine phone edit IS sent (normalized); email is not re-sent', async () => {
+    // Over-correction guard for ISSUE-029: the change-detection canonicalizes
+    // BOTH sides, so a real phone change must still transmit (normalized), while
+    // the untouched email must NOT be re-sent.
+    const user = userEvent.setup();
+    let patchBody: { contactInfo?: { email?: string; phone?: string } } | null = null;
+
+    global.fetch = mock(async (url: string | Request) => {
+      const req = url instanceof Request ? url : null;
+      const urlStr = req ? req.url : (url as string);
+      const method = req ? req.method : 'GET';
+      if (urlStr.includes('follow-up-notes')) return jsonResponse({ notes: [], total: 0 });
+      if (urlStr.includes('/visits')) return jsonResponse({ data: [], pagination: EMPTY_PAGINATION });
+      if (urlStr.includes('dental/invoices') || urlStr.includes('billing/invoices')) {
+        return jsonResponse({ data: [], total: 0 });
+      }
+      if (urlStr.includes('dental/patients')) {
+        if (method === 'PATCH' && req) {
+          patchBody = (await req.clone().json()) as typeof patchBody;
+          return jsonResponse(RAW_PROFILE);
+        }
+        return jsonResponse(RAW_PROFILE);
+      }
+      return jsonResponse({});
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('edit-patient-button')).not.toBeNull());
+    await user.click(screen.getByTestId('edit-patient-button'));
+    const phone = (await screen.findByLabelText(/phone/i)) as HTMLInputElement;
+    await user.clear(phone);
+    // Typed with display spaces; the form normalizes to E.164 before sending.
+    await user.type(phone, '+63 917 555 9999');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(patchBody?.contactInfo).toBeDefined());
+    expect(patchBody?.contactInfo?.phone).toBe('+639175559999');
+    // Untouched email is not resent (partial body) — same root cause, other field.
+    expect(patchBody?.contactInfo?.email).toBeUndefined();
+  });
+
   // ── Coherence oracle (workflow-verification backfill) ─────────────────────
   // Pins the summary-vs-body invariants the brief's COHERENCE ORACLE requires:
   // a displayed total/count must be explained by the rows actually rendered,

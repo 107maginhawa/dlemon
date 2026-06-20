@@ -53,7 +53,7 @@ const GENDER_OPTIONS: ReadonlyArray<readonly [string, string]> = [
  * usual visual separators so a natural "+63 917 555 1234" is accepted instead of
  * being silently 400'd by the server's stricter pattern (ISSUE-015).
  */
-function normalizePhone(raw: string): string {
+export function normalizePhone(raw: string): string {
   return raw.trim().replace(/[\s().-]/g, '');
 }
 
