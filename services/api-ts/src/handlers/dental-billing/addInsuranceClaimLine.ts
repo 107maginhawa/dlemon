@@ -48,6 +48,15 @@ export async function addInsuranceClaimLine(ctx: HandlerContext): Promise<Respon
   // the two writes stay atomic. Entity fetch + authz above stay on db.
   const line = await withTenantTx(db, { branchIds: [claim.branchId] }, async (tx) => {
     const txRepo = new DentalInsuranceClaimRepository(tx, logger);
+    // Serialize against a concurrent status transition: the pre-tx mutability check read
+    // claim.status outside the tx, so a claim submitted mid-flight could still gain a line
+    // (submitted is immutable). Lock the claim row FOR UPDATE and re-assert mutability
+    // against the committed status — the lock conflicts with updateInsuranceClaimStatus's
+    // UPDATE so whichever runs second sees the other's result.
+    const locked = await txRepo.lockClaim(claimId);
+    if (!locked || (locked.status !== 'draft' && locked.status !== 'ready')) {
+      throw new BusinessLogicError('Cannot add a line to a submitted claim', 'CLAIM_IMMUTABLE');
+    }
     const created = await txRepo.addLine({
       claimId,
       treatmentId: body.treatmentId ?? null,

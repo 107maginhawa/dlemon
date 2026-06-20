@@ -54,6 +54,22 @@ export class DentalInsuranceClaimRepository {
     return row ?? null;
   }
 
+  /**
+   * Lock the claim row FOR UPDATE and return it. Serializes concurrent claim
+   * mutations — line add/edit (recalculateBilled read-modify-writes the claim
+   * aggregate) and status transitions — on the claim row so a later writer re-reads
+   * the earlier writer's committed state instead of clobbering it with a stale
+   * snapshot. Must be the FIRST statement in the mutating withTenantTx.
+   */
+  async lockClaim(id: string): Promise<DentalInsuranceClaim | null> {
+    const [row] = await this.db
+      .select()
+      .from(dentalInsuranceClaims)
+      .where(eq(dentalInsuranceClaims.id, id))
+      .for('update');
+    return row ?? null;
+  }
+
   async findLines(claimId: string): Promise<DentalInsuranceClaimLine[]> {
     return this.db
       .select()
