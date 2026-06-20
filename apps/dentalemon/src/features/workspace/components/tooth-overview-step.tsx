@@ -189,6 +189,7 @@ export function ToothOverviewStep({
               <button
                 key={value}
                 type="button"
+                data-testid={`condition-${value}`}
                 onClick={() => onAssignCondition(value)}
                 disabled={!focusedSurface}
                 className={[

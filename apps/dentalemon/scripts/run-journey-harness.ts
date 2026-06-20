@@ -76,6 +76,12 @@ const EXPECTED: Record<
   // (completed) via an independent read. Consent + notes are seeded as the real
   // backend completion preconditions (VISIT_CONSENT_REQUIRED / WF-012, BR-002).
   J22: { name: 'Complete a clinical visit (active → checklist → completed)', set: 'A', expected: 'PASS', rubricIds: ['WF-012'] },
+  // J23 — JC-1 keystone: the continuous day-in-the-life visit (WF-074). Drives the two
+  // previously-unproven clinical AUTHORING acts through the real UI with an independent
+  // read-back each: charting a tooth condition + treatment (WF-009) and typing a fresh
+  // SOAP note (WF-011), then mark-performed → invoice → complete. This is the test that
+  // finally proves the chart-save / SOAP-save React paths persist (not just untested).
+  J23: { name: 'Dentist visit day-in-the-life (chart entry + SOAP note authored through UI → performed → invoice → complete)', set: 'A', expected: 'PASS', rubricIds: ['WF-074', 'WF-009', 'WF-011'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
