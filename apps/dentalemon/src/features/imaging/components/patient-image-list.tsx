@@ -265,19 +265,25 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                       Legacy
                     </span>
                   )}
-                  {/* G5: open the metadata/links editor for this image */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setEditingItem(item)
-                    }}
-                    data-testid={`edit-image-${item.id}`}
-                    aria-label={`Edit ${item.fileName}`}
-                    className="shrink-0 rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
-                  >
-                    Edit
-                  </button>
+                  {/* G5: open the metadata/links editor for this image.
+                      ISSUE-028: legacy images are `dental_attachment` rows, not
+                      `imaging_study_image` rows — the editor's PATCH /imaging/
+                      images/{id}/metadata 404s ("Image not found") for them. They
+                      carry no editable imaging metadata, so don't offer Edit. */}
+                  {item.source !== 'legacy' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingItem(item)
+                      }}
+                      data-testid={`edit-image-${item.id}`}
+                      aria-label={`Edit ${item.fileName}`}
+                      className="shrink-0 rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </li>
               ),
             )}

@@ -66,6 +66,35 @@ describe('PatientImageList', () => {
     await waitFor(() => expect(screen.getByText(/no images yet/i)).not.toBeNull());
   });
 
+  // Regression: ISSUE-028 — legacy attachment images (dental_attachment rows, source:
+  // 'legacy') appeared in the imaging library with an Edit button, but the metadata
+  // editor PATCHes /imaging/images/{id}/metadata which 404s ("Image not found") for
+  // them — they aren't imaging_study_image rows. Legacy images are read-only here.
+  // Found by /qa on 2026-06-20
+  // Report: .gstack/qa-reports/qa-report-localhost-2026-06-20.md
+  test('ISSUE-028: legacy images have no Edit button; imaging images do', async () => {
+    const full = (id: string, source: string) => ({
+      ...makeItem(id, 'other', source),
+      isVolume: false,
+      viewerKind: 'image',
+      frameCount: null,
+      isDiagnostic: true,
+      qualityStatus: 'ok',
+      retakeReason: null,
+      tags: [],
+      links: [],
+      downloadUrl: null,
+    });
+    global.fetch = mock(() =>
+      jsonResponse({ items: [full('leg-1', 'legacy'), full('img-1', 'imaging')], total: 2 }),
+    );
+    render(React.createElement(PatientImageList, DEFAULT_PROPS), { wrapper: makeWrapper() });
+
+    // Imaging image keeps its Edit affordance; legacy image does not.
+    await waitFor(() => expect(screen.getByTestId('edit-image-img-1')).not.toBeNull());
+    expect(screen.queryByTestId('edit-image-leg-1')).toBeNull();
+  });
+
   test('renders image items with modality badge', async () => {
     global.fetch = mock(() => jsonResponse({
       items: [makeItem('img-1', 'bitewing'), makeItem('img-2', 'panoramic')],
