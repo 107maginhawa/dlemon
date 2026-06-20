@@ -56,9 +56,24 @@ export async function markUncollectible(
   // RLS P1b activation: route the dental_invoice write through withTenantTx so
   // the app_rls policy enforces the branch scope as a second wall. Entity
   // fetch + authz above stay on db to preserve the exact 403/404 behavior.
-  const updated = await withTenantTx(db, { branchIds: [invoice.branchId] }, (tx) =>
-    new DentalInvoiceRepository(tx).markUncollectible(invoiceId),
-  );
+  const updated = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
+    const txRepo = new DentalInvoiceRepository(tx);
+    const row = await txRepo.markUncollectible(invoiceId);
+    // Lost the race: the status<>writable predicate matched 0 rows because a concurrent
+    // payment paid the invoice in full, or a concurrent write-off already ran. Reject
+    // with the code the non-concurrent guard would have returned for the committed state.
+    if (!row) {
+      const cur = await txRepo.findOneById(invoiceId);
+      if (cur?.status === 'uncollectible') {
+        throw new BusinessLogicError('Invoice is already uncollectible', 'ALREADY_UNCOLLECTIBLE');
+      }
+      throw new BusinessLogicError(
+        `Cannot mark a ${cur?.status ?? 'missing'} invoice uncollectible`,
+        'INVALID_STATUS_TRANSITION',
+      );
+    }
+    return row;
+  });
 
   const logger = ctx.get('logger');
   logger?.info(

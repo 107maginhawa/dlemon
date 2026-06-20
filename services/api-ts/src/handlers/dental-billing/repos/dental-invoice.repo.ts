@@ -175,7 +175,12 @@ export class DentalInvoiceRepository {
 
   /**
    * BR-013: write off an invoice — set status=uncollectible and uncollectibleAt.
-   * Terminal state; the handler guards the allowed source statuses.
+   * Terminal state.
+   *
+   * The `status IN (issued,partial,overdue)` predicate re-checks the allowed source
+   * status at WRITE time: a concurrent payment that paid the invoice in full (status→
+   * 'paid') or a repeat write-off makes this match 0 rows (null), and the caller rejects
+   * — so a fully-collected invoice can never be silently booked as bad debt.
    */
   async markUncollectible(invoiceId: string): Promise<DentalInvoice | null> {
     const [updated] = await this.db
@@ -185,7 +190,10 @@ export class DentalInvoiceRepository {
         uncollectibleAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(dentalInvoices.id, invoiceId))
+      .where(and(
+        eq(dentalInvoices.id, invoiceId),
+        inArray(dentalInvoices.status, ['issued', 'partial', 'overdue']),
+      ))
       .returning();
     return updated ?? null;
   }
