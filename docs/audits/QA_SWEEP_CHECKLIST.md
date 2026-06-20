@@ -129,6 +129,8 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 **Billing-batch findings (2026-06-20 s4):** **insurance claim FULL lifecycle driven** (file→derived-line→coverage→status→remittance→Paid, 0 bugs). **Fixed ISSUE-023** (add-credit swallowed errors). Insurance-profile create has no FE surface (ISSUE-024) — seeded via API. Dev-DB churn: a Maxicare profile + claim CLM-2026-4A6CFF8D (Paid) on Diego Ramos; a walk-in appt (Diego 3 PM); 2 recalls on Juan dela Cruz; medical-history entries on Diego.
 
 ### Feature-gap cluster — ISSUE-024 (flagged 2026-06-20 s4; extends ISSUE-020)
+> **➡️ Sequenced for the product pass in [`PRODUCT_PASS_BACKLOG.md`](./PRODUCT_PASS_BACKLOG.md)** (PP-1…PP-9). Work that file one item at a time, root-cause first.
+
 Backend (SDK + handlers) complete, **no FE write surface** — each needs a product/design decision on where the surface lives, **not an atomic QA fix**:
 - **household** add/remove/link (`createHousehold`/`addHouseholdMember`/`removeHouseholdMember`) — card is read-only
 - **insurance profile** create/update (`createInsuranceProfile`/`updateInsuranceProfile`) — claim flow assumes one exists
