@@ -21,7 +21,7 @@ slice, so they were deliberately deferred from the sweep.
 
 | # | Item | Tier | Status | Source |
 |---|------|------|--------|--------|
-| PP-1 | Appointment **no-show** action | P0 | ⬜ pending | ISSUE-024 |
+| PP-1 | Appointment **no-show** action | P0 | ✅ done (ISSUE-035) | ISSUE-024 |
 | PP-2 | **Insurance-profile** create/update | P0 | ⬜ pending | ISSUE-024 |
 | PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ⬜ pending | ISSUE-020 |
 | PP-4 | **Online-booking** config (staff) | P1 | ⬜ pending | ISSUE-020 |
@@ -35,7 +35,14 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 
 ---
 
-## PP-1 — Appointment no-show action  · P0
+## PP-1 — Appointment no-show action  · P0  — ✅ DONE (ISSUE-035)
+- **Outcome:** pure FE slice — the backend (`PATCH /dental/appointments/:id {status:'no_show'}`
+  → `markNoShow`), the FSM guards, and the SDK (`UpdateAppointmentRequest.status`) were all
+  already in place and backend-tested. Added a `canMarkNoShow` helper (mirrors the FSM, like
+  `canCancelStatus`) + a "No Show" hover button on `AppointmentCard`, threaded `onNoShow`
+  through `CalendarDay`, and a `handleNoShow` in `calendar.tsx` (`throwOnError` → invalidate +
+  toast, no swallow). Live-verified: scheduled appt → No Show → card flips + "Marked as no-show"
+  toast, no errors. +5 unit assertions; FE suite 2598/0; typecheck clean.
 - **Gap:** the appointment FSM already allows `scheduled/confirmed/checked_in → no_show`
   and the card renders a "No Show" badge, but **no FE action writes it**. The
   morning briefing even counts no-shows staff can't create.

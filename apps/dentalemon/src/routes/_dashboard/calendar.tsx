@@ -185,6 +185,19 @@ function CalendarPage() {
     }
   }
 
+  async function handleNoShow(appointment: Appointment) {
+    try {
+      // PP-1 (ISSUE-035): mark a no-show via the canonical PATCH status transition.
+      // throwOnError so a 403/409/422 surfaces instead of a false success toast
+      // (same swallowed-error guard as handleCheckIn/handleConfirm).
+      await updateAppointment({ path: { appointmentId: appointment.id }, body: { status: 'no_show' }, throwOnError: true });
+      invalidateAppointments();
+      toast.success('Marked as no-show');
+    } catch (err) {
+      toastError(err, 'Could not mark the appointment as no-show. Please try again.');
+    }
+  }
+
   function handleRequestCancel(appointment: Appointment) {
     setCancelError(null);
     setCancelTarget(appointment);
@@ -384,6 +397,7 @@ function CalendarPage() {
           onCheckIn={handleCheckIn}
           onConfirm={handleConfirm}
           onCancel={canCancel ? handleRequestCancel : undefined}
+          onNoShow={handleNoShow}
           onReschedule={handleReschedule}
         />
       ) : view === 'week' ? (

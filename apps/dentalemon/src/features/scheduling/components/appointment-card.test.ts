@@ -12,6 +12,7 @@ import {
   canCheckIn,
   canConfirm,
   canCancelStatus,
+  canMarkNoShow,
   type Appointment,
 } from './appointment-card';
 
@@ -94,6 +95,31 @@ describe('canCancelStatus — cancel eligibility (APPOINTMENT_TRANSITIONS)', () 
   test('terminal states are NOT cancellable', () => {
     expect(canCancelStatus('completed')).toBe(false);
     expect(canCancelStatus('cancelled')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// canMarkNoShow (PP-1 / ISSUE-035)
+// ---------------------------------------------------------------------------
+
+describe('canMarkNoShow — no-show eligibility (APPOINTMENT_TRANSITIONS)', () => {
+  test('states that can reach no_show are markable', () => {
+    expect(canMarkNoShow('scheduled')).toBe(true);
+    expect(canMarkNoShow('confirmed')).toBe(true);
+    expect(canMarkNoShow('checked_in')).toBe(true);
+  });
+
+  test('no_show itself is NOT re-markable (its only FSM transition is →completed)', () => {
+    expect(canMarkNoShow('no_show')).toBe(false);
+  });
+
+  test('terminal states are NOT markable', () => {
+    expect(canMarkNoShow('completed')).toBe(false);
+    expect(canMarkNoShow('cancelled')).toBe(false);
+  });
+
+  test('unknown status → false (safe default)', () => {
+    expect(canMarkNoShow('unknown_status')).toBe(false);
   });
 });
 
