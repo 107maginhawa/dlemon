@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { InvoiceDetail } from '@/features/billing/components/invoice-detail';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 
@@ -174,6 +175,9 @@ export function WorkspacePaymentModal({
     open ? patientId : null,
   );
   const createInvoice = useCreateInvoice(patientId);
+
+  // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
+  useSheetA11y({ open, onClose });
 
   const subtotalCents = lineItems.reduce((sum, item) => sum + item.priceCents, 0);
 

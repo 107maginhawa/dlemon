@@ -109,7 +109,7 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ attachments upload — **driven (s5, MinIO up)**: file → presigned MinIO PUT → complete →
   `POST /visits/{id}/attachments 201` → list refresh. Covered by the ISSUE-025 upload fix.
 
-**Workspace-batch findings (2026-06-20):** ISSUE-006 template duplication · ISSUE-007 no drug-allergy warning · ISSUE-008 Accept-Plan no-feedback/non-idempotent · ISSUE-009 invoice due-date raw ISO · ISSUE-010 workspace modals not Escape-dismissible + discard uses native prompt(). See `.gstack/qa-reports/`.
+**Workspace-batch findings (2026-06-20):** ISSUE-006 template duplication · ISSUE-007 no drug-allergy warning · ISSUE-008 Accept-Plan no-feedback/non-idempotent · ISSUE-009 invoice due-date raw ISO · **ISSUE-010 partially FIXED (s7)** — workspace modals not Escape-dismissible: most sheets already used `useSheetA11y` (Escape + focus-restore); the **4 hand-rolled overlays that still lacked it** are now wired (`workspace-imaging-overlay`, `workspace-payment-modal`, `carry-over-prompt`, and the inline Treatment Plan modal in `$patientId.tsx` — whose `×` was also the lone unlabeled icon button, now `aria-label`'d). +Escape regression test. **Still open (out of scope, flagged):** discard-visit uses a native `prompt()` for the reason (`$patientId.tsx:~242`). See `.gstack/qa-reports/`.
 
 ### Billing — **live writes swept 2026-06-20 (session 3)** ✅ clean (no bugs)
 - [x] ✅ list + totals · issue invoice (live)

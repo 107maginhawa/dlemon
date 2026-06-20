@@ -9,7 +9,7 @@
  */
 
 import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
@@ -35,6 +35,7 @@ import { YearSegmentControl } from '@/features/workspace/components/year-segment
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { usePreviousVisitDeferred } from '@/features/workspace/hooks/use-previous-visit-deferred';
@@ -100,6 +101,11 @@ function WorkspacePage() {
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
+
+  // ISSUE-010: the inline Treatment Plan modal is hand-rolled (not Radix) → wire
+  // Escape-to-dismiss + focus restore via the shared sheet-a11y hook (stable cb).
+  const closeTreatmentPlanSheet = useCallback(() => setTreatmentPlanSheetOpen(false), []);
+  useSheetA11y({ open: treatmentPlanSheetOpen, onClose: closeTreatmentPlanSheet });
 
   // prescriberMemberId for RxSheet (WBAR-02) — reactive selector
   const prescriberMemberId = useOrgContextStore(s => s.memberId) ?? '';
@@ -551,14 +557,14 @@ function WorkspacePage() {
 
       {/* Treatment Plan sheet (from top bar) */}
       {treatmentPlanSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setTreatmentPlanSheetOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={closeTreatmentPlanSheet}>
           <div
             className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[85vh] overflow-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <h2 className="text-sm font-semibold">Treatment Plan</h2>
-              <button type="button" onClick={() => setTreatmentPlanSheetOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors">×</button>
+              <button type="button" aria-label="Close treatment plan" onClick={closeTreatmentPlanSheet} className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors">×</button>
             </div>
             <TreatmentPlanTab patientId={patientId} branchId={branchId} />
           </div>

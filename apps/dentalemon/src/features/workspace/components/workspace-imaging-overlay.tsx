@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { X } from 'lucide-react';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { PatientImageList } from '@/features/imaging/components/patient-image-list';
 import { ImagingWorkspace } from '@/features/imaging/components/imaging-workspace';
 import { ComparisonView } from '@/features/imaging/components/comparison-view';
@@ -23,6 +24,15 @@ export function WorkspaceImagingOverlay({
   const [selectedImageItem, setSelectedImageItem] = useState<PatientImageItem | null>(null);
   const [comparisonItems, setComparisonItems] = useState<[PatientImageItem, PatientImageItem] | null>(null);
 
+  // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus
+  // restore. Reset local selection too, so Escape matches the × button's behavior.
+  const handleClose = useCallback(() => {
+    onClose();
+    setSelectedImageItem(null);
+    setComparisonItems(null);
+  }, [onClose]);
+  useSheetA11y({ open, onClose: handleClose });
+
   if (!open) return null;
 
   return (
@@ -31,7 +41,7 @@ export function WorkspaceImagingOverlay({
         <h2 className="text-sm font-semibold">Imaging</h2>
         <button
           type="button"
-          onClick={() => { onClose(); setSelectedImageItem(null); setComparisonItems(null); }}
+          onClick={handleClose}
           className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Close imaging"
         >

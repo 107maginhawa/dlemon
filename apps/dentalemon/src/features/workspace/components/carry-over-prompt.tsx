@@ -17,6 +17,7 @@
  */
 import React from 'react';
 import { useCarryOverTreatments } from '@/features/workspace/hooks/use-carry-over-treatments';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 interface CarryOverPromptProps {
   open: boolean;
@@ -38,6 +39,9 @@ export function CarryOverPrompt({
   onClose,
 }: CarryOverPromptProps) {
   const { carryOver, isPending } = useCarryOverTreatments({ visitId, patientId, branchId });
+
+  // ISSUE-010: hand-rolled overlay → Escape dismisses (maps to Skip) + focus restore.
+  useSheetA11y({ open, onClose });
 
   if (!open || !visitId || deferredIds.length === 0) return null;
 
