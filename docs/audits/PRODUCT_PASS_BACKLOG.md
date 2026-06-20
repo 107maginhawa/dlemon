@@ -24,7 +24,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-1 | Appointment **no-show** action | P0 | ✅ done (ISSUE-035) | ISSUE-024 |
 | PP-2 | **Insurance-profile** create/update | P0 | ✅ done (ISSUE-036) | ISSUE-024 |
 | PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ✅ done (ISSUE-037) | ISSUE-020 |
-| PP-4 | **Online-booking** config (staff) | P1 | ⬜ pending | ISSUE-020 |
+| PP-4 | **Online-booking** config (staff) | P1 | ✅ done (ISSUE-038) | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ⬜ pending | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ⬜ pending | ISSUE-024 |
 | PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ⬜ pending | ISSUE-024 |
@@ -106,7 +106,18 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 - **Acceptance:** checking a patient in (or the manual action) creates a queue item
   that appears on the board; status transitions Waiting→…→Completed drive correctly.
 
-## PP-4 — Online-booking config (staff)  · P1
+## PP-4 — Online-booking config (staff)  · P1  — ✅ DONE (ISSUE-038)
+- **Outcome:** FE-only slice — the per-branch policy lives in `settings.onlineBooking`
+  JSONB (`parseOnlineBookingConfig` defaults/validates it server-side) and the public
+  wizard's gate reads `config.enabled`; the owner-only `PUT /branches/:id/settings`
+  write path + the `useBranchSettings`/`useUpdateBranchSettings` hooks already existed.
+  Added an **OnlineBookingSettings** panel (registered in `settings-panels.tsx` as
+  "Online Booking") with the enable toggle + bookable visit types + lead-time/horizon/
+  slot-step + require-auth, saved via the shared branch-settings endpoint. Live-verified
+  the round-trip: `/book/$branchId` went from "Online booking unavailable" → after
+  enabling in Settings → bookable (Check-up / Recall-Hygiene / provider / times). +6
+  unit assertions; FE suite 2613/0; typecheck + lint clean. Schedule-exceptions +
+  provider allow-list (stays 'all') scoped out per the backlog's "separately if it balloons".
 - **Gap:** `createOnlineBooking` is only used by the public `/book/$branchId` wizard;
   there is **no staff surface** to enable/configure online booking — which is why the
   public page shows "Online booking unavailable." Schedule-exceptions UI also absent.
