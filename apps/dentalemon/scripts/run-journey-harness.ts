@@ -91,6 +91,12 @@ const EXPECTED: Record<
   // J29 / J30 — JC-6: de-aspirationalize "covered" — drive the real entity + read-back.
   J29: { name: 'File a clinical amendment on a completed visit tooth record (WF-038)', set: 'A', expected: 'PASS', rubricIds: ['WF-038'] },
   J30: { name: 'Consent gate blocks mark-performed without a signed consent (BR-014/WF-018)', set: 'A', expected: 'PASS', rubricIds: ['WF-018'] },
+  // J31 — WF-007: front-desk checks a patient in from the calendar appointment-card
+  // hover action → a draft clinical visit is created (the last tracked core
+  // doctor-visit gap). Drives the real hover→"Check In" on a freshly-seeded walk-in
+  // appointment and independent-reads the appointment (checked_in + visitId) and the
+  // created visit (draft) back.
+  J31: { name: 'Check a patient in from the calendar card → a draft visit is created', set: 'A', expected: 'PASS', rubricIds: ['WF-007'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
@@ -131,16 +137,16 @@ const CORE_DOCTOR_WFS: Record<string, { journeyId: string; label: string }> = {
   'WF-012': { journeyId: 'J22', label: 'Complete visit' },
   'WF-018': { journeyId: 'J19', label: 'Consent e-signature' },
   'WF-021': { journeyId: 'J23', label: 'PMD auto-generation' },
+  'WF-007': { journeyId: 'J31', label: 'Appointment check-in → visit' },
 }
 
 // Documented, tracked gaps — core WFs that genuinely lack a live journey yet. Listed
 // EXPLICITLY (mirroring skipAllowed) so the green never silently hides them: the gate
 // prints each as a tracked gap rather than failing, and removing one from here is the
 // signal that its journey now exists. Keep the reason current.
-const KNOWN_CORE_GAPS: Record<string, string> = {
-  'WF-007':
-    'Appointment check-in → visit. No live journey yet (the Check-In control is a calendar-card hover action); covered today only by patient-checkin.spec.ts (not in this harness). Tracked follow-up.',
-}
+// (Empty: WF-007 graduated to CORE_DOCTOR_WFS above once J31 began driving its real
+// calendar-card check-in flow.)
+const KNOWN_CORE_GAPS: Record<string, string> = {}
 
 interface JourneyResult {
   id: string
