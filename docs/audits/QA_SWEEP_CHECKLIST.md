@@ -178,8 +178,10 @@ Backend (SDK + handlers) complete, **no FE write surface** — each needs a prod
   didn't → added `toastError`).
 - [x] 🟢 ceph report create — version-pinning **code-verified intact** (`createCephReport` snapshot pins
   analysis_type/norm_population/norm_version/formula_version/calibration; ISSUE-004 fix holds). Creation
-  gated on confirmed landmarks (canvas-bound). ⚠ **ceph lock-all swallowed-error flagged**
-  (`CephWorkspacePanel.handleLockAll` doesn't render the hook's `mutationError`; canvas-bound).
+  gated on confirmed landmarks (canvas-bound). ✅ **fixed ISSUE-032** — ceph lock-all swallowed-error
+  (`CephWorkspacePanel.handleLockAll` fired `commitLandmark.mutate` in a loop but never read the
+  hook's already-exposed `mutationError` → a failed lock-all was silent). Now renders a
+  `role="alert"` banner (mirrors the ISSUE-026 FindingsSidebar fix) + component test on the 403 path.
 - [x] ✅ **attachments upload — driven** (`/storage/files/upload 201 → PUT 200 → complete 200 →
   /visits/{id}/attachments 201 → list refresh`); same ISSUE-025 fix covers it.
 - [ ] 🟢 superimposition · occlusion screening — superimposition canvas-bound (code-verify); occlusion
@@ -187,8 +189,9 @@ Backend (SDK + handlers) complete, **no FE write surface** — each needs a prod
 
 **Imaging-batch findings (2026-06-20 s5):** **fixed ISSUE-025** (BigInt→string upload break, HIGH — broke
 ALL uploads; one SDK-serializer root fix) · **ISSUE-026** (findings swallowed mutationError) · **ISSUE-027**
-(measurement-delete silent) · **ISSUE-028** (legacy images had a broken Edit → metadata 404). **Flagged:**
-ceph lock-all swallowed-error (canvas-bound) · imaging endpoints **500 on malformed imageId** (TypeSpec
+(measurement-delete silent) · **ISSUE-028** (legacy images had a broken Edit → metadata 404).
+**s7: fixed ISSUE-032** (ceph lock-all swallowed-error). **Flagged:**
+imaging endpoints **500 on malformed imageId** (TypeSpec
 types path params as plain `string`, skipping the uuid validation the rest of the API has → 500 not 400;
 only reachable via the `imaging-test` harness / URL-tamper but pollutes the error sink — spec+regen fix).
 

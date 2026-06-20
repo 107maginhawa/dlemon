@@ -233,6 +233,32 @@ describe('CephWorkspacePanel', () => {
     expect(screen.getByTestId('ceph-draft-only-notice')).not.toBeNull()
   })
 
+  test('ISSUE-026 family: a failed Lock-all surfaces an error banner (not swallowed)', async () => {
+    const user = userEvent.setup()
+    // List returns the 4 gate landmarks confirmed (so Lock-all is enabled + has
+    // rows to lock); the lock PATCH returns 403 (e.g. CEPH_SIGNOFF_REQUIRED).
+    global.fetch = mock((req: Request | string | URL) => {
+      const r = req instanceof Request ? req : null
+      const url = r ? r.url : String(req)
+      const method = r ? r.method : 'GET'
+      if (url.includes('/ceph/analysis')) return jsonResponse({ items: [], analysis: mkAnalysis() })
+      if (url.includes('/ceph/landmarks') && method === 'PATCH')
+        return jsonResponse({ error: 'forbidden', code: 'CEPH_SIGNOFF_REQUIRED' }, 403)
+      return jsonResponse(okLandmarks([mk('A'), mk('B'), mk('Go'), mk('Po')]))
+    }) as unknown as typeof fetch
+
+    renderPanel()
+    const lockBtn = (await screen.findByRole('button', {
+      name: /Lock all confirmed/i,
+    })) as HTMLButtonElement
+    await user.click(lockBtn)
+    // Before the fix the failure was swallowed (handleLockAll fires mutations but
+    // never reads the hook's mutationError) → silent no-op. Now an alert appears.
+    const banner = await screen.findByTestId('ceph-lockall-error', undefined, { timeout: 4000 })
+    expect(banner.getAttribute('role')).toBe('alert')
+    expect(banner.textContent && banner.textContent.length > 0).toBe(true)
+  })
+
   test('controlled selection: clicking a palette item calls onSelectCode (lifted state)', async () => {
     const user = userEvent.setup()
     const onSelectCode = mock(() => {})
