@@ -145,7 +145,12 @@ function DashboardLayout() {
         headerTitle="DENTALEMON"
         headerSubtitle="Dental Practice"
       />
-      <SidebarInset>
+      {/* min-w-0: at exactly 768px (iPad portrait) useIsMobile is false, so the
+          sidebar stays in-flow and reserves ~255px. Without min-w-0 the inset keeps
+          its w-full (full viewport) width and gets pushed right by the sidebar →
+          the page widens past the viewport (PP-9 / ISSUE-045). min-w-0 lets the
+          inset shrink to the remaining space so wide pages scroll/contain internally. */}
+      <SidebarInset className="min-w-0">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger data-testid="sidebar-toggle" />
           <div className="ml-auto flex items-center">

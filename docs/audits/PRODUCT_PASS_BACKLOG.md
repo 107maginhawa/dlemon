@@ -29,7 +29,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-6 | **Household** add/remove/link | P2 | ✅ done (ISSUE-040) | ISSUE-024 |
 | PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ✅ done (ISSUE-042,043,044; consultation descoped) | ISSUE-024 |
 | PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ✅ done (ISSUE-041) | ISSUE-010 tail |
-| PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ⬜ pending | ISSUE-018 |
+| PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ✅ done (ISSUE-045) | ISSUE-018 |
 
 Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs decision)
 
@@ -219,13 +219,21 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 - **Verify on pickup:** find the exact handler + confirm the min-length validation
   currently enforced so the modal preserves it.
 
-## PP-9 — iPad 768px sidebar collapse  · polish (NEEDS DESIGN CALL)
-- **Gap:** at iPad-portrait 768px the sidebar does **not** auto-collapse → the billing
-  invoices table clips the Status column and the page widens to 1024. Root: the global
-  shadcn sidebar mobile breakpoint is `<768`, which excludes 768px tablets.
-- **Blocked on:** one design decision — collapse the sidebar ≤1024px, or shrink the
-  inset/table instead? Pick the rule, then it's a small change.
-- **Value / effort:** medium / low (once the rule is decided).
+## PP-9 — iPad 768px sidebar collapse  · polish  — ✅ DONE (ISSUE-045)
+- **Decision (you chose):** keep the sidebar, contain the content (option B — surgical, no
+  shared `@monobase/ui` breakpoint change).
+- **Root cause:** at exactly 768px `useIsMobile` is false (`innerWidth < 768`), so the
+  in-flow sidebar reserves ~255px but `SidebarInset` kept `w-full` (full viewport) → pushed
+  right by the sidebar, the page widened to 1024 and the billing Status column ran off-screen.
+  The table's intrinsic width (~860px) exceeds even a full 768 tablet, so containment (not
+  just freeing space) was required regardless.
+- **Fix:** (1) `<SidebarInset className="min-w-0">` (`_dashboard.tsx`) lets the inset shrink
+  to the remaining space — fixes every dashboard page (1024→786). (2) billing summary cards
+  `grid-cols-3` → `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` cleared the residual 18px (the
+  wide peso totals don't fit 3-across at 768). The invoices table was already `overflow-x-auto
+  min-w-[860px]`, so it scrolls within its panel (Status reachable).
+- **Verified:** 768px → no page overflow (`docSW=768`), 2-up cards, table scrolls; desktop
+  1280 unaffected (3-up cards, full table, normal sidebar). FE 2644/0; gates clean.
 
 ---
 
