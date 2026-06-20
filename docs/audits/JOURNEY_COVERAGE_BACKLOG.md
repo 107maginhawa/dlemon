@@ -28,7 +28,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 | JC-1 | Continuous doctor-visit journey (chart-save + SOAP-save through real UI) | WF-074 / 009 / 011 | **P0** | ✅ done (J23) |
 | JC-2 | Patient login proof — magic-link + passkey | WF-003 / 002 | **P0** | ✅ done (J24 + contract) |
 | JC-3 | Promote journeys to a required CI gate + honest tally | — | **P1** | ✅ done (gate+tally; ⚠ human: branch-protection) |
-| JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ⬜ pending |
+| JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ✅ done (J25–J28) |
 | JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ⬜ pending |
 | JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ⬜ pending |
 | JC-7 | Real-binary storage round-trip (attachments / imaging via MinIO) | WF-039 / 098 / 099 | **P1** | ⬜ pending |
@@ -117,6 +117,16 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
   GDPR erasure (WF-088) are **backend-airtight but UI-unverified live** — highest blast radius.
 - **Fix:** add live confirm→commit journeys for each (drive the UI button → confirm → independent
   read of the durable status: paid/voided/uncollectible/refunded/anonymized).
+- **✅ Result:** four journeys, each driving the REAL UI + independent read — J25 record-payment
+  (→ `paid`, balance 0), J26 void + mark-uncollectible (→ `voided` / `uncollectible`), J27 refund
+  (→ invoice reopened, balance restored, no longer `paid`), J28 admin erasure approve (→
+  `anonymized`). Shared `_billing-helpers.ts` seeds a real issued invoice via the API; reusable
+  `spaNavigate` reaches `/billing` and `/settings` preserving the in-memory PIN session; erasure
+  promotes the demo owner via `/dev/promote-admin` before the browser signs in. **Real bug found +
+  fixed:** the billing list query (`DentalInvoiceRepository.findMany`) had **no `orderBy`** — order
+  was non-deterministic, so the newest invoice could fall off page 1 and pagination was unstable
+  run-to-run; added `orderBy(desc(createdAt))` (matching the per-patient facade). Coverage map:
+  WF-014/041/BIL-REFUND/088 re-pointed from e2e specs → the new journeys.
 
 ## JC-5 — Concurrent same-visit invoice race · P1
 

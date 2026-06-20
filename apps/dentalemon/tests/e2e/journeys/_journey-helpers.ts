@@ -524,6 +524,23 @@ export async function pinAuth(
   await page.waitForURL((u: URL) => !u.pathname.startsWith('/auth/'), { timeout: 10_000 })
 }
 
+/**
+ * SPA-navigate to a same-origin app path WITHOUT a full reload. PIN-gated routes
+ * (workspace, _dashboard/billing, …) rely on an IN-MEMORY pinSession that a hard
+ * page.goto wipes (it bounces back to /auth/pin-select). TanStack Router intercepts
+ * the history change and renders the target route with the session intact. Same
+ * mechanism openWorkspace uses; extracted so non-workspace routes (e.g. /billing)
+ * can reuse it after pinAuth.
+ */
+export async function spaNavigate(page: Page, pathname: string): Promise<void> {
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, pathname)
+  await page.waitForURL((u: URL) => u.pathname === pathname, { timeout: 15_000 })
+  await page.waitForLoadState('networkidle')
+}
+
 /** Open the clinical workspace for a patient (DOM navigation). */
 export async function openWorkspace(page: Page, patientId: string): Promise<void> {
   // Route is /$patientId — _workspace is a pathless layout (TanStack Router).

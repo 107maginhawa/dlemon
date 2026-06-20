@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { eq, and, sql, lte, gt, inArray } from 'drizzle-orm';
+import { eq, and, sql, lte, gt, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import {
@@ -117,9 +117,17 @@ export class DentalInvoiceRepository {
     if (filters?.branchId) conditions.push(eq(dentalInvoices.branchId, filters.branchId));
     if (filters?.status) conditions.push(eq(dentalInvoices.status, filters.status));
 
+    // Newest-first: the billing list paginates (default limit 25) with no client
+    // sort, so without a deterministic order the most-recent invoice could fall off
+    // page 1 and pagination would be unstable run-to-run. Matches the per-patient
+    // facade's `desc(createdAt)` convention.
     return conditions.length > 0
-      ? await this.db.select().from(dentalInvoices).where(and(...conditions))
-      : await this.db.select().from(dentalInvoices);
+      ? await this.db
+          .select()
+          .from(dentalInvoices)
+          .where(and(...conditions))
+          .orderBy(desc(dentalInvoices.createdAt))
+      : await this.db.select().from(dentalInvoices).orderBy(desc(dentalInvoices.createdAt));
   }
 
   /**

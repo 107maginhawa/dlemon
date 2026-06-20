@@ -82,6 +82,12 @@ const EXPECTED: Record<
   // SOAP note (WF-011), then mark-performed → invoice → complete. This is the test that
   // finally proves the chart-save / SOAP-save React paths persist (not just untested).
   J23: { name: 'Dentist visit day-in-the-life (chart entry + SOAP note authored through UI → performed → invoice → complete → PMD)', set: 'A', expected: 'PASS', rubricIds: ['WF-074', 'WF-009', 'WF-011', 'WF-021'] },
+  // J25–J28 — JC-4: money/destructive flows driven through the REAL billing/settings UI
+  // with an independent read of the durable status (highest blast radius — money + GDPR).
+  J25: { name: 'Record payment on an invoice via the billing UI → paid', set: 'A', expected: 'PASS', rubricIds: ['WF-014'] },
+  J26: { name: 'Void + mark-uncollectible an invoice via the billing UI → terminal status', set: 'A', expected: 'PASS', rubricIds: ['WF-041'] },
+  J27: { name: 'Refund a payment via the billing UI → invoice reopened', set: 'A', expected: 'PASS', rubricIds: ['WF-BIL-REFUND'] },
+  J28: { name: 'Platform admin approves a patient erasure request → anonymized', set: 'A', expected: 'PASS', rubricIds: ['WF-088'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
