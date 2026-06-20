@@ -9,6 +9,7 @@
  * D-4: Snapshot includes study_date, patient_display_id, branch_name.
  */
 
+import { sql } from 'drizzle-orm';
 import type { BaseContext } from '@/types/app';
 import type { User } from '@/types/auth';
 import type { DatabaseInstance } from '@/core/database';
@@ -192,15 +193,22 @@ export async function createCephReport(ctx: BaseContext): Promise<Response> {
     branch_name: branchName,
   };
 
-  // G1-B: link this version to the prior latest one (null for v1) so the chain
-  // is an explicit, reasoned lineage.
-  const priorReport = await cephRepo.getLatestReport(imageId);
-  const revisionOf = priorReport?.id ?? null;
-
-  const report = await cephRepo.createReportVersion(imageId, snapshot, user.id, {
-    revisionOf,
-    revisionReason,
+  // G1-B: link this version to the prior latest one (null for v1) so the chain is an
+  // explicit, reasoned lineage. Serialize finalize per image: getLatestReport→insert is a
+  // read-then-write, and createSnapshotVersion's unique(image_id,version)+retry recomputes
+  // only `version` on a 23505, NOT revisionOf — so two concurrent finalizes both reading
+  // latest=vN would fork the lineage (loser inserts vN+2 still pointing at vN). A per-image
+  // advisory lock makes the loser re-read the committed vN+1 and point revisionOf at it.
+  const report = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(4001, hashtext(${imageId}))`);
+    const txRepo = new ImagingCephRepository(tx);
+    const priorReport = await txRepo.getLatestReport(imageId);
+    return txRepo.createReportVersion(imageId, snapshot, user.id, {
+      revisionOf: priorReport?.id ?? null,
+      revisionReason,
+    });
   });
+  const revisionOf = report.revisionOf;
 
   logger?.info(
     { imageId, reportVersion: report.version, revisionOf, action: 'ceph_report_create', by: user.id },
