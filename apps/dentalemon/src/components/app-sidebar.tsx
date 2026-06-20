@@ -71,6 +71,11 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
   const navigate = useNavigate()
   const { data: session } = useSession()
   const signOut = useSignOut()
+  // ISSUE-017: on a shared kiosk the active PIN-selected member differs from the
+  // Better-Auth account owner. Show the active member's name (fall back to the
+  // account name before a profile is selected).
+  const activeMemberName = useOrgContextStore((s) => s.memberName)
+  const displayName = activeMemberName ?? session?.user?.name ?? 'User'
 
   async function handleSignOut() {
     useOrgContextStore.getState().clearContext()
@@ -119,11 +124,11 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3 px-1 py-1">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
-            {session?.user?.name?.charAt(0)?.toUpperCase() ?? session?.user?.email?.charAt(0)?.toUpperCase() ?? '?'}
+            {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {session?.user?.name ?? 'User'}
+              {displayName}
             </p>
             <p className="text-xs text-sidebar-foreground/60 truncate">
               {session?.user?.email ?? ''}
