@@ -96,20 +96,51 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
       'perio capture grid must render after starting the exam (Gap #7)',
     ).toBeVisible({ timeout: 10_000 })
 
-    // Step 4: independent read — a perio chart now persists for THIS visit
-    // (visit-anchored ⇒ linked to the odontogram session, not a free-floating row).
-    const chartResp = visitId
-      ? await apiReader.get(`/dental/visits/${visitId}/perio-chart`)
-      : null
-    if (chartResp?.ok()) {
-      recordJourneyPass(META)
-      return
-    }
+    // Step 4 (WF-P02): DRIVE a real tooth-level reading. The earlier J03 only proved
+    // the chart row EXISTS — it never entered a probing depth, so "record perio
+    // readings" was credited but unproven. Type a probing depth into the first depth
+    // cell (the cell commits on each keystroke → PUT …/readings/:toothNumber).
+    const depthCell = page.getByLabel(/ depth$/i).first()
+    await expect(depthCell, 'a probing-depth cell must render in the grid').toBeVisible({
+      timeout: 10_000,
+    })
+    const cellTooth = await depthCell.getAttribute('data-perio-tooth')
+    const [readingPut] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          /\/dental\/perio-charts\/[^/?]+\/readings\/[^/?]+/.test(r.url()) &&
+          r.request().method() === 'PUT',
+        { timeout: 10_000 },
+      ),
+      depthCell.fill('4'),
+    ])
+    expect(
+      readingPut.status(),
+      `entering a depth must PUT the reading (got ${readingPut.status()})`,
+    ).toBeGreaterThanOrEqual(200)
+    expect(readingPut.status(), 'reading PUT must be 2xx').toBeLessThan(300)
 
-    throw new Error(
-      `Perio grid rendered but no persisted chart for visit ${visitId ?? 'unknown'} ` +
-        `(GET /dental/visits/${visitId ?? 'unknown'}/perio-chart → ${chartResp?.status() ?? 'null'}).`,
+    // Step 5: independent read — the chart persists for THIS visit AND carries the
+    // probing depth we just typed (visit-anchored ⇒ linked to the odontogram session).
+    if (!visitId) throw new Error('could not resolve the active visit id for the read-back')
+    const chartResp = await apiReader.get(`/dental/visits/${visitId}/perio-chart`)
+    expect(
+      chartResp.ok(),
+      `GET /dental/visits/${visitId}/perio-chart → ${chartResp.status()}`,
+    ).toBe(true)
+    const chartBody = await chartResp.json()
+    const readings: Array<Record<string, unknown>> = chartBody?.readings ?? chartBody?.data?.readings ?? []
+    const persisted = readings.some(
+      (rd) =>
+        (cellTooth == null || String(rd.toothNumber) === cellTooth) &&
+        Object.entries(rd).some(([k, v]) => k.startsWith('depth') && v === 4),
     )
+    expect(
+      persisted,
+      `WF-P02: the UI-entered probing depth (4mm on tooth ${cellTooth ?? '?'}) must persist (readings: ${JSON.stringify(readings).slice(0, 300)})`,
+    ).toBe(true)
+
+    recordJourneyPass(META)
   } catch (err) {
     recordJourneyError(META, err)
     throw err

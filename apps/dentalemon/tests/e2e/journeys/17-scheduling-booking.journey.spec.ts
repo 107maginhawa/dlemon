@@ -109,6 +109,18 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     expect(mine.status).toBe('scheduled')
     expect(mine.visitType).toBe('checkup')
 
+    // WF-024: assert the booked appointment actually RENDERS on the calendar grid —
+    // not just that listAppointments returns it. Navigate the day view from today to
+    // the booked date (deterministic # of "Next day" clicks) and find its card.
+    const deltaDays = Math.round((Date.parse(bookYmd) - Date.parse(ymd(new Date()))) / 86_400_000)
+    for (let i = 0; i < deltaDays; i++) {
+      await page.getByRole('button', { name: 'Next day' }).click()
+    }
+    await expect(
+      page.getByTestId(`appt-draggable-${mine.id}`),
+      'the booked appointment must render on the calendar day grid (WF-024)',
+    ).toBeVisible({ timeout: 10_000 })
+
     recordJourneyPass(META)
   } catch (err) {
     recordJourneyError(META, err)

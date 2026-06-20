@@ -30,7 +30,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 | JC-3 | Promote journeys to a required CI gate + honest tally | — | **P1** | ✅ done (gate+tally; ⚠ human: branch-protection) |
 | JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ✅ done (J25–J28) |
 | JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ✅ done (real race fixed) |
-| JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ⬜ pending |
+| JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ✅ done (J03·J29·J30·J17) |
 | JC-7 | Real-binary storage round-trip (attachments / imaging via MinIO) | WF-039 / 098 / 099 | **P1** | ⬜ pending |
 | JC-8 | workflow-test-map.json honesty fixes | — | **P1** | ⬜ pending |
 | JC-9 | Product decisions: notifications, recall emails, EMR-import, bulk slots (NOT regressions) | WF-080·082·083·084·085 / 104 / 100 / 061 | P2 | ⏸ decision |
@@ -157,6 +157,14 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 - **Fix:** extend each journey to drive + read-back the real action (PUT a perio reading; drive the
   amendment entity; assert the in-visit consent gate blocks WF-010/012 without a signed consent;
   assert a seeded appointment is visible on the rendered calendar grid).
+- **✅ Result:** all four now drive the real action + independent read. **J03** types a probing depth
+  into a grid cell (PUT …/readings/:tooth) and reads it back (was: only proved the chart row exists).
+  **J29 (new)** drives the AmendmentForm on a completed visit's tooth record → reads back the
+  amendment entity (WF-038; J10 only ever drove the SOAP addendum WF-028). **J30 (new)** proves the
+  in-visit consent gate's teeth: mark-performed WITHOUT a signed consent is rejected (422
+  TREATMENT_CONSENT_REQUIRED) and the treatment stays planned (independent read). **J17** now asserts
+  the booked appointment RENDERS on the calendar day grid (navigates to the date, finds
+  `appt-draggable-<id>`), not just listAppointments. Coverage map re-pointed WF-P02/038/018/024.
 
 ## JC-7 — Real-binary storage round-trip · P1
 

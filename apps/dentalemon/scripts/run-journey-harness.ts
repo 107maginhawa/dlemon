@@ -88,6 +88,9 @@ const EXPECTED: Record<
   J26: { name: 'Void + mark-uncollectible an invoice via the billing UI → terminal status', set: 'A', expected: 'PASS', rubricIds: ['WF-041'] },
   J27: { name: 'Refund a payment via the billing UI → invoice reopened', set: 'A', expected: 'PASS', rubricIds: ['WF-BIL-REFUND'] },
   J28: { name: 'Platform admin approves a patient erasure request → anonymized', set: 'A', expected: 'PASS', rubricIds: ['WF-088'] },
+  // J29 / J30 — JC-6: de-aspirationalize "covered" — drive the real entity + read-back.
+  J29: { name: 'File a clinical amendment on a completed visit tooth record (WF-038)', set: 'A', expected: 'PASS', rubricIds: ['WF-038'] },
+  J30: { name: 'Consent gate blocks mark-performed without a signed consent (BR-014/WF-018)', set: 'A', expected: 'PASS', rubricIds: ['WF-018'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
