@@ -47,12 +47,21 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const bookDate = new Date()
     bookDate.setDate(bookDate.getDate() + 7)
     // Land on a weekday: seeded branch hours close Sunday and shorten Saturday, so a
-    // weekend 10:00 slot can 422 OUTSIDE_WORKING_HOURS depending on the calendar date
-    // CI runs on — which leaves the modal open and flakes the close assertion below.
-    while (bookDate.getDay() === 0 || bookDate.getDay() === 6) {
-      bookDate.setDate(bookDate.getDate() + 1)
+    // weekend 10:00 slot 422s OUTSIDE_WORKING_HOURS — which leaves the modal open and
+    // fails the close assertion below.
+    //
+    // Skip in the SAME frame the booking will actually use, not bookDate's. The modal
+    // builds startAt = `new Date(`${bookYmd}T10:00:00`)` (LOCAL, Asia/Manila), so the
+    // working-hours weekday is bookYmd-@-10:00's local weekday. bookDate.getDay() (the
+    // instant's local weekday) can disagree with ymd(bookDate) (its UTC date) at a
+    // UTC-evening wall-clock — emitting a bookYmd that is a closed Manila day. Validate
+    // the emitted date itself so the journey is wall-clock-robust.
+    let bookYmd = ymd(bookDate)
+    while ([0, 6].includes(new Date(`${bookYmd}T10:00:00`).getDay())) {
+      const next = new Date(`${bookYmd}T10:00:00`)
+      next.setDate(next.getDate() + 1)
+      bookYmd = ymd(next)
     }
-    const bookYmd = ymd(bookDate)
 
     // ── DOM-only journey ──────────────────────────────────────────────────
     // dentist lands on /dashboard. The _dashboard guard requires an IN-MEMORY
