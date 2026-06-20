@@ -87,7 +87,13 @@ export class DentalPaymentRepository {
   }
 
   /**
-   * Void a payment: soft-delete with reason and timestamp
+   * Void a payment: soft-delete with reason and timestamp.
+   *
+   * The `is_void = false` predicate makes the void idempotent under concurrency:
+   * two simultaneous voids of the same payment both pass the handler's pre-tx
+   * isVoid check, but under READ COMMITTED the second UPDATE re-evaluates its WHERE
+   * against the first's committed row (is_void now true) → 0 rows → null. The caller
+   * rejects the loser (ALREADY_VOIDED) instead of double-reversing the invoice.
    */
   async voidPayment(paymentId: string, voidReason: string, voidedByMemberId: string): Promise<DentalPayment | null> {
     const [updated] = await this.db
@@ -99,7 +105,7 @@ export class DentalPaymentRepository {
         voidedByMemberId,
         updatedAt: new Date(),
       })
-      .where(eq(dentalPayments.id, paymentId))
+      .where(and(eq(dentalPayments.id, paymentId), eq(dentalPayments.isVoid, false)))
       .returning();
     return updated ?? null;
   }
