@@ -28,7 +28,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-5 | **Waitlist** management UI | P2 | ✅ done (ISSUE-039) | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ✅ done (ISSUE-040) | ISSUE-024 |
 | PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ⬜ pending | ISSUE-024 |
-| PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ⬜ pending | ISSUE-010 tail |
+| PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ✅ done (ISSUE-041) | ISSUE-010 tail |
 | PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ⬜ pending | ISSUE-018 |
 
 Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs decision)
@@ -180,7 +180,14 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 - **Verify on pickup:** for each noun, confirm the endpoint + where in the clinical
   flow it belongs; this cluster may be partly descoped if low demand.
 
-## PP-8 — Discard-visit modal (replace `window.prompt()`)  · polish
+## PP-8 — Discard-visit modal (replace `window.prompt()`)  · polish  — ✅ DONE (ISSUE-041)
+- **Outcome:** replaced the `window.prompt()` in `$patientId.tsx`'s `handleDiscardVisit`
+  with a `DiscardVisitDialog` (reason textarea, `useSheetA11y` Escape/focus, min 5 / max
+  500 mirroring the backend `DiscardVisitRequest`). `handleDiscardVisit` opens it;
+  `handleConfirmDiscard` calls the discard mutation, closes on success, keeps the dialog
+  open on error (the hook toasts). Live-verified: Discard → accessible modal (not a
+  native prompt) → short reason blocked with the 5-char error → valid reason discards →
+  dialog closes + the visit drops. +4 unit assertions; FE suite 2625/0; typecheck + lint clean.
 - **Gap:** discarding a visit uses a native `window.prompt()` for the reason
   (`apps/dentalemon/src/routes/_workspace/$patientId.tsx`, ~the discard handler) —
   works, but inaccessible and off-brand. No product decision needed.

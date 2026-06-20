@@ -45,6 +45,7 @@ import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib
 import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
 import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
+import { DiscardVisitDialog } from '@/features/workspace/components/discard-visit-dialog';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
@@ -97,6 +98,7 @@ function WorkspacePage() {
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   // FIX-002: carry-over prompt shown at the new-visit entry point (returning patient).
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
@@ -239,19 +241,21 @@ function WorkspacePage() {
     );
   }
 
+  // PP-8 (ISSUE-041): open the accessible discard dialog instead of window.prompt().
   function handleDiscardVisit() {
     if (!openVisit) return;
-    const reason = window.prompt(
-      'Discard this visit? Its pending treatments will be dismissed. This cannot be undone.\n\nReason (required, min 5 chars):',
-    );
-    if (reason == null) return; // cancelled
-    if (reason.trim().length < 5) {
-      toast.error('A reason of at least 5 characters is required to discard a visit.');
-      return;
-    }
-    discardVisitMutation.discard(openVisit.id, reason.trim()).then(() => {
+    setDiscardDialogOpen(true);
+  }
+
+  async function handleConfirmDiscard(reason: string) {
+    if (!openVisit) return;
+    try {
+      await discardVisitMutation.discard(openVisit.id, reason);
+      setDiscardDialogOpen(false);
       setCurrentVisitId(null); // let the auto-select effect pick the next visit
-    }).catch(() => { /* error surfaced by the hook */ });
+    } catch {
+      // error surfaced by the hook (toast); keep the dialog open for retry
+    }
   }
 
   function handleSharePMD() {
@@ -712,6 +716,14 @@ function WorkspacePage() {
         branchId={branchId}
         deferredIds={carryOverDeferredIds}
         onClose={() => setCarryOverPromptOpen(false)}
+      />
+
+      {/* PP-8 (ISSUE-041): reason-gated discard dialog (replaces window.prompt) */}
+      <DiscardVisitDialog
+        open={discardDialogOpen}
+        saving={discardVisitMutation.isPending}
+        onClose={() => setDiscardDialogOpen(false)}
+        onConfirm={handleConfirmDiscard}
       />
     </div>
   );
