@@ -24,6 +24,7 @@ import { toastError } from '@/lib/error-toast';
 import { APP_LOCALE } from '@/constants/brand';
 import { RecallDueList } from '../../features/scheduling/components/recall-due-list';
 import type { RecallDueItem } from '../../features/scheduling/hooks/use-recall-due-list';
+import { WaitlistPanel } from '../../features/scheduling/components/waitlist-panel';
 import { useOrgContextStore } from '@/stores/org-context.store';
 
 export const Route = createFileRoute('/_dashboard/calendar')({
@@ -33,6 +34,11 @@ export const Route = createFileRoute('/_dashboard/calendar')({
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+// Shared class for the calendar top-bar toggle buttons (Recare due / Waitlist).
+// One source for the 13px so the font-size ratchet sees a single literal and the
+// two toggles stay identical; each appends only its active/inactive background.
+const TOGGLE_BTN = 'h-11 px-4 rounded-[10px] border border-border text-[13px] font-medium flex items-center gap-1.5 transition-colors';
 
 function getMondayOfWeek(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -87,6 +93,7 @@ function CalendarPage() {
   // ISSUE-012: hold the appointment being edited so the modal can pre-populate.
   const [editAppointment, setEditAppointment] = useState<Appointment | null>(null);
   const [showRecare, setShowRecare] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
   const role = useOrgContextStore((s) => s.role);
   // FR3.4 / EM-SCH-001: cancellation is owner/staff_full only (backend enforces;
@@ -343,12 +350,19 @@ function CalendarPage() {
             type="button"
             onClick={() => setShowRecare((v) => !v)}
             aria-pressed={showRecare}
-            className={`h-11 px-4 rounded-[10px] border border-border text-[13px] font-medium flex items-center gap-1.5 transition-colors ${
-              showRecare ? 'bg-secondary' : 'bg-background hover:bg-secondary'
-            }`}
+            className={`${TOGGLE_BTN} ${showRecare ? 'bg-secondary' : 'bg-background hover:bg-secondary'}`}
             aria-label="Toggle recare due-list"
           >
             Recare due
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowWaitlist((v) => !v)}
+            aria-pressed={showWaitlist}
+            className={`${TOGGLE_BTN} ${showWaitlist ? 'bg-secondary' : 'bg-background hover:bg-secondary'}`}
+            aria-label="Toggle waitlist"
+          >
+            Waitlist
           </button>
           <button
             type="button"
@@ -421,6 +435,16 @@ function CalendarPage() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowRecare(false)} />
           <div className="relative w-full max-w-[420px] h-full bg-background shadow-2xl overflow-y-auto p-4">
             <RecallDueList branchId={branchId} onSchedule={handleScheduleFromRecall} />
+          </div>
+        </div>
+      )}
+
+      {/* PP-5: waitlist slide-over panel (short-notice fills) */}
+      {showWaitlist && (
+        <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-label="Waitlist">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowWaitlist(false)} />
+          <div className="relative w-full max-w-[420px] h-full bg-background shadow-2xl overflow-y-auto p-4">
+            <WaitlistPanel branchId={branchId} />
           </div>
         </div>
       )}

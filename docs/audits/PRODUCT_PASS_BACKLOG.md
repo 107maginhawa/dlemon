@@ -25,7 +25,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-2 | **Insurance-profile** create/update | P0 | ✅ done (ISSUE-036) | ISSUE-024 |
 | PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ✅ done (ISSUE-037) | ISSUE-020 |
 | PP-4 | **Online-booking** config (staff) | P1 | ✅ done (ISSUE-038) | ISSUE-020 |
-| PP-5 | **Waitlist** management UI | P2 | ⬜ pending | ISSUE-020 |
+| PP-5 | **Waitlist** management UI | P2 | ✅ done (ISSUE-039) | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ⬜ pending | ISSUE-024 |
 | PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ⬜ pending | ISSUE-024 |
 | PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ⬜ pending | ISSUE-010 tail |
@@ -130,7 +130,19 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 - **Acceptance:** staff enable + configure online booking → the public `/book/$branchId`
   page becomes bookable; round-trip verified.
 
-## PP-5 — Waitlist management UI  · P2
+## PP-5 — Waitlist management UI  · P2  — ✅ DONE (ISSUE-039)
+- **Decision (you chose):** calendar slide-over panel (sibling of the Recare panel).
+- **Outcome:** FE-only — `listWaitlist` (GET, default active) + `promoteWaitlistEntry`
+  (books a `scheduled` appointment + marks the entry scheduled) already existed; added a
+  `WaitlistPanel` toggled from the calendar top bar that lists active entries and fills a
+  slot via an inline date/time/duration/provider/visit-type form → `POST /waitlist/:id/
+  promote`. `useWaitlist` invalidates both the waitlist key AND the appointments list on
+  promote. Live-verified end-to-end: seeded an active entry → it appeared in the panel →
+  "Fill slot" → "Slot filled from the waitlist" toast → entry dropped off the active list
+  (booked). +10 unit assertions; FE suite 2618/0; typecheck + lint clean.
+- **Scope:** view + promote (the endpoints that exist). **Cancel/remove deferred** — no
+  backend endpoint exists. Patient names show as truncated ids (same as the queue board;
+  no server-side name enrichment yet). Add-from-staff is a possible follow-up.
 - **Gap:** `createWaitlistEntry` / `promoteWaitlistEntry` exist server-side but are
   only referenced by the public `BookingWizard`; no staff waitlist surface.
 - **Proposed placement:** a waitlist panel on the calendar, or a dedicated route.
