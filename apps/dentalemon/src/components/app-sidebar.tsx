@@ -87,6 +87,9 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
         )}
       </SidebarHeader>
       <SidebarContent>
+        {/* a11y: expose a navigation landmark with an accessible name so screen
+            readers can jump to the primary nav (the shadcn Sidebar is a plain div). */}
+        <nav aria-label="Main navigation">
         {navGroups.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
@@ -111,6 +114,7 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+        </nav>
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3 px-1 py-1">
@@ -131,6 +135,7 @@ export function AppSidebar({ navGroups, headerTitle, headerSubtitle }: AppSideba
             disabled={signOut.isPending}
             className="shrink-0 p-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
             title="Sign out"
+            aria-label="Sign out"
           >
             <LogOut className="w-4 h-4" />
           </button>
