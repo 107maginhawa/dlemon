@@ -284,72 +284,72 @@ namespace DentalImagingModule {
     @get
     @route("/studies/{studyId}")
     @useAuth(bearerAuth)
-    getImagingStudy(@path studyId: string): ImagingStudyWithImages | ErrorResponse | ApiUnauthorizedResponse;
+    getImagingStudy(@path studyId: UUID): ImagingStudyWithImages | ErrorResponse | ApiUnauthorizedResponse;
 
     @delete
     @route("/images/{imageId}")
     @useAuth(bearerAuth)
-    deleteImage(@path imageId: string): void | ErrorResponse | ApiUnauthorizedResponse;
+    deleteImage(@path imageId: UUID): void | ErrorResponse | ApiUnauthorizedResponse;
 
     @patch
     @route("/images/{imageId}/modality")
     @useAuth(bearerAuth)
-    updateImageModality(@path imageId: string, @body body: UpdateImageModalityBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
+    updateImageModality(@path imageId: UUID, @body body: UpdateImageModalityBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
 
     // G5: update an image's library metadata (diagnostic flag, quality/retake, tags).
     @patch
     @route("/images/{imageId}/metadata")
     @useAuth(bearerAuth)
-    updateImageMetadata(@path imageId: string, @body body: UpdateImageMetadataBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
+    updateImageMetadata(@path imageId: UUID, @body body: UpdateImageMetadataBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
 
     // G5b: context links (treatment plan / ortho case / report).
     @post
     @route("/images/{imageId}/links")
     @useAuth(bearerAuth)
-    createImageLink(@path imageId: string, @body body: CreateImagingLinkBody): ImagingLink | ErrorResponse | ApiUnauthorizedResponse;
+    createImageLink(@path imageId: UUID, @body body: CreateImagingLinkBody): ImagingLink | ErrorResponse | ApiUnauthorizedResponse;
 
     @get
     @route("/images/{imageId}/links")
     @useAuth(bearerAuth)
-    listImageLinks(@path imageId: string): ImagingLinkListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    listImageLinks(@path imageId: UUID): ImagingLinkListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @delete
     @route("/links/{linkId}")
     @useAuth(bearerAuth)
-    deleteImageLink(@path linkId: string): void | ErrorResponse | ApiUnauthorizedResponse;
+    deleteImageLink(@path linkId: UUID): void | ErrorResponse | ApiUnauthorizedResponse;
 
     // P2-7 CBCT finalize: server-side DICOM parse + populate volume metadata + set
     // is_volume=true. Called after the storage multipart upload completes.
     @post
     @route("/studies/{studyId}/cbct/finalize")
     @useAuth(bearerAuth)
-    finalizeCbctStudy(@path studyId: string, @body body: FinalizeCbctStudyBody): FinalizeCbctStudyResponse | ErrorResponse | ApiUnauthorizedResponse;
+    finalizeCbctStudy(@path studyId: UUID, @body body: FinalizeCbctStudyBody): FinalizeCbctStudyResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     // P2-7 CBCT viewer handoff (A1): presigned GET download for an external DICOM viewer.
     @get
     @route("/studies/{studyId}/cbct/viewer-link")
     @useAuth(bearerAuth)
-    getCbctViewerLink(@path studyId: string): CbctViewerLinkResponse | ErrorResponse | ApiUnauthorizedResponse;
+    getCbctViewerLink(@path studyId: UUID): CbctViewerLinkResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @patch
     @route("/images/{imageId}/calibration")
     @useAuth(bearerAuth)
-    updateImageCalibration(@path imageId: string, @body body: UpdateCalibrationBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
+    updateImageCalibration(@path imageId: UUID, @body body: UpdateCalibrationBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
 
     @post
     @route("/images/{imageId}/measurements")
     @useAuth(bearerAuth)
-    createMeasurement(@path imageId: string, @body body: CreateMeasurementBody): ImagingAnnotation | ErrorResponse | ApiUnauthorizedResponse;
+    createMeasurement(@path imageId: UUID, @body body: CreateMeasurementBody): ImagingAnnotation | ErrorResponse | ApiUnauthorizedResponse;
 
     @get
     @route("/images/{imageId}/measurements")
     @useAuth(bearerAuth)
-    listMeasurements(@path imageId: string): MeasurementListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    listMeasurements(@path imageId: UUID): MeasurementListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @delete
     @route("/measurements/{measurementId}")
     @useAuth(bearerAuth)
-    deleteMeasurement(@path measurementId: string): void | ErrorResponse | ApiUnauthorizedResponse;
+    deleteMeasurement(@path measurementId: UUID): void | ErrorResponse | ApiUnauthorizedResponse;
   }
 
   interface PatientImageListing {
@@ -357,7 +357,7 @@ namespace DentalImagingModule {
     @route("/{patientId}/images")
     @useAuth(bearerAuth)
     listPatientImages(
-      @path patientId: string,
+      @path patientId: UUID,
       @query branchId: string,
       // G5 filters (all optional, additive): narrow the library to diagnostic-only,
       // a quality status, or a single tag. Filters apply to imaging-source rows;
@@ -460,22 +460,22 @@ namespace DentalImagingModule {
     @post
     @route("/dental/imaging/images/{imageId}/findings")
     @useAuth(bearerAuth)
-    createFinding(@path imageId: string, @body body: CreateFindingBody): ImagingFinding | ErrorResponse | ApiUnauthorizedResponse;
+    createFinding(@path imageId: UUID, @body body: CreateFindingBody): ImagingFinding | ErrorResponse | ApiUnauthorizedResponse;
 
     @get
     @route("/dental/imaging/images/{imageId}/findings")
     @useAuth(bearerAuth)
-    listFindings(@path imageId: string): ImagingFindingListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    listFindings(@path imageId: UUID): ImagingFindingListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @patch
     @route("/dental/imaging/findings/{findingId}")
     @useAuth(bearerAuth)
-    updateFinding(@path findingId: string, @body body: UpdateFindingBody): ImagingFinding | ErrorResponse | ApiUnauthorizedResponse;
+    updateFinding(@path findingId: UUID, @body body: UpdateFindingBody): ImagingFinding | ErrorResponse | ApiUnauthorizedResponse;
 
     @delete
     @route("/dental/imaging/findings/{findingId}")
     @useAuth(bearerAuth)
-    deleteFinding(@path findingId: string): void | ErrorResponse | ApiUnauthorizedResponse;
+    deleteFinding(@path findingId: UUID): void | ErrorResponse | ApiUnauthorizedResponse;
   }
 
   // =========================================================================
@@ -719,43 +719,43 @@ namespace DentalImagingModule {
     @post
     @route("/dental/imaging/images/{imageId}/ceph/landmarks")
     @useAuth(bearerAuth)
-    batchUpsertCephLandmarks(@path imageId: string, @body body: BatchUpsertLandmarksBody): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    batchUpsertCephLandmarks(@path imageId: UUID, @body body: BatchUpsertLandmarksBody): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @get
     @route("/dental/imaging/images/{imageId}/ceph/landmarks")
     @useAuth(bearerAuth)
-    listCephLandmarks(@path imageId: string): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    listCephLandmarks(@path imageId: UUID): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @patch
     @route("/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}")
     @useAuth(bearerAuth)
-    updateCephLandmark(@path imageId: string, @path landmarkCode: CephLandmarkCode, @body body: UpdateLandmarkBody): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    updateCephLandmark(@path imageId: UUID, @path landmarkCode: CephLandmarkCode, @body body: UpdateLandmarkBody): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @delete
     @route("/dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}")
     @useAuth(bearerAuth)
-    deleteCephLandmark(@path imageId: string, @path landmarkCode: CephLandmarkCode): void | ErrorResponse | ApiUnauthorizedResponse;
+    deleteCephLandmark(@path imageId: UUID, @path landmarkCode: CephLandmarkCode): void | ErrorResponse | ApiUnauthorizedResponse;
 
     // analysisType selects the protocol (steiner_hybrid_sn | ricketts). Omitted = default.
     @get
     @route("/dental/imaging/images/{imageId}/ceph/analysis")
     @useAuth(bearerAuth)
-    getCephAnalysis(@path imageId: string, @query analysisType?: string): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    getCephAnalysis(@path imageId: UUID, @query analysisType?: string): CephLandmarkListResponse | ErrorResponse | ApiUnauthorizedResponse;
 
     @post
     @route("/dental/imaging/images/{imageId}/ceph/analysis/recompute")
     @useAuth(bearerAuth)
-    recomputeCephAnalysis(@path imageId: string, @query analysisType?: string): CephAnalysis | ErrorResponse | ApiUnauthorizedResponse;
+    recomputeCephAnalysis(@path imageId: UUID, @query analysisType?: string): CephAnalysis | ErrorResponse | ApiUnauthorizedResponse;
 
     @post
     @route("/dental/imaging/images/{imageId}/ceph/reports")
     @useAuth(bearerAuth)
-    createCephReport(@path imageId: string, @body body: CreateCephReportBody): CephReport | ErrorResponse | ApiUnauthorizedResponse;
+    createCephReport(@path imageId: UUID, @body body: CreateCephReportBody): CephReport | ErrorResponse | ApiUnauthorizedResponse;
 
     @get
     @route("/dental/imaging/images/{imageId}/ceph/reports")
     @useAuth(bearerAuth)
-    getCephReport(@path imageId: string, @query version?: int32): CephReport | ErrorResponse | ApiUnauthorizedResponse;
+    getCephReport(@path imageId: UUID, @query version?: int32): CephReport | ErrorResponse | ApiUnauthorizedResponse;
 
     // ── Auto / AI landmark detection (P1-10, Phase 0) ──────────────────────
     // Full /dental/imaging prefix required (route-override gotcha; missing prefix
@@ -764,12 +764,12 @@ namespace DentalImagingModule {
     @post
     @route("/dental/imaging/images/{imageId}/ceph/landmarks/detect")
     @useAuth(bearerAuth)
-    detectCephLandmarks(@path imageId: string): CephLandmarkDetectionResult | ErrorResponse | ApiUnauthorizedResponse;
+    detectCephLandmarks(@path imageId: UUID): CephLandmarkDetectionResult | ErrorResponse | ApiUnauthorizedResponse;
 
     @get
     @route("/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}")
     @useAuth(bearerAuth)
-    getCephLandmarkDetectionJob(@path imageId: string, @path jobId: string): CephLandmarkDetectionResult | ErrorResponse | ApiUnauthorizedResponse;
+    getCephLandmarkDetectionJob(@path imageId: UUID, @path jobId: UUID): CephLandmarkDetectionResult | ErrorResponse | ApiUnauthorizedResponse;
 
     // ── Superimposition (P1-11, v1 cranial-base only) ──────────────────────
     // Compute-on-the-fly preview: returns transform + deltas WITHOUT persisting
@@ -790,12 +790,12 @@ namespace DentalImagingModule {
     @get
     @route("/dental/imaging/ceph/superimpositions/{superimpositionId}")
     @useAuth(bearerAuth)
-    getCephSuperimposition(@path superimpositionId: string): CephSuperimposition | ErrorResponse | ApiUnauthorizedResponse;
+    getCephSuperimposition(@path superimpositionId: UUID): CephSuperimposition | ErrorResponse | ApiUnauthorizedResponse;
 
     // List persisted superimpositions for a patient (timeline host).
     @get
     @route("/dental/imaging/patients/{patientId}/ceph/superimpositions")
     @useAuth(bearerAuth)
-    listCephSuperimpositions(@path patientId: string): CephSuperimpositionListResponse | ErrorResponse | ApiUnauthorizedResponse;
+    listCephSuperimpositions(@path patientId: UUID): CephSuperimpositionListResponse | ErrorResponse | ApiUnauthorizedResponse;
   }
 }

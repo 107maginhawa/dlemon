@@ -190,10 +190,12 @@ Backend (SDK + handlers) complete, **no FE write surface** — each needs a prod
 **Imaging-batch findings (2026-06-20 s5):** **fixed ISSUE-025** (BigInt→string upload break, HIGH — broke
 ALL uploads; one SDK-serializer root fix) · **ISSUE-026** (findings swallowed mutationError) · **ISSUE-027**
 (measurement-delete silent) · **ISSUE-028** (legacy images had a broken Edit → metadata 404).
-**s7: fixed ISSUE-032** (ceph lock-all swallowed-error). **Flagged:**
-imaging endpoints **500 on malformed imageId** (TypeSpec
-types path params as plain `string`, skipping the uuid validation the rest of the API has → 500 not 400;
-only reachable via the `imaging-test` harness / URL-tamper but pollutes the error sink — spec+regen fix).
+**s7: fixed ISSUE-032** (ceph lock-all swallowed-error) · **fixed ISSUE-033**
+(imaging endpoints **500 on malformed imageId** — 30 imaging `@path` params were typed as plain `string` in
+`specs/api/src/modules/dental-imaging.tsp`, skipping the uuid validation the rest of the API has → handler
+queried Postgres with a non-uuid → 500. Retyped to the `UUID` scalar (`@format("uuid")`) + `bun run build` +
+`bun run generate` → generated `zValidator('param', …)` now uses `UUIDSchema` → clean **400 VALIDATION_ERROR**.
+2 handler tests assert 400-not-500; `landmarkCode` (enum) left as-is).
 
 ### Notifications — **swept live 2026-06-20**
 - [x] ✅ bell list renders ("You're all caught up" empty state — no seeded notifs)
