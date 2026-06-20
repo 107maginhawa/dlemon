@@ -56,9 +56,13 @@ export async function voidDentalInvoice(
   // the app_rls policy enforces the branch scope as a second wall. Entity
   // fetch + authz + the active-payment-plan guard stay on db to preserve the
   // exact 403/404/422 behavior.
-  const voided = await withTenantTx(db, { branchIds: [invoice.branchId] }, (tx) =>
-    new DentalInvoiceRepository(tx).voidInvoice(invoiceId),
-  );
+  const voided = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
+    const row = await new DentalInvoiceRepository(tx).voidInvoice(invoiceId);
+    // Lost the void race: voidInvoice's status<>'voided' predicate matched 0 rows because
+    // a concurrent void already committed. Reject instead of writing a second audit row.
+    if (!row) throw new BusinessLogicError('Invoice is already voided', 'ALREADY_VOIDED');
+    return row;
+  });
 
   const logger = ctx.get('logger');
   logger?.info(

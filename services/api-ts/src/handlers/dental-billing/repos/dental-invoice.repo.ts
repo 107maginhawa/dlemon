@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { eq, and, sql, lte, gt, inArray, desc } from 'drizzle-orm';
+import { eq, and, ne, sql, lte, gt, inArray, desc } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import type { Logger } from '@/types/logger';
 import {
@@ -153,7 +153,12 @@ export class DentalInvoiceRepository {
   }
 
   /**
-   * Void an invoice: set status=voided and voidedAt
+   * Void an invoice: set status=voided and voidedAt.
+   *
+   * The `status <> 'voided'` predicate makes the void idempotent under concurrency: two
+   * simultaneous voids both pass the handler's pre-tx check, but the second UPDATE
+   * re-evaluates against the first's committed row (already voided) → 0 rows → null, and
+   * the caller rejects ALREADY_VOIDED instead of writing a second void + audit row.
    */
   async voidInvoice(invoiceId: string): Promise<DentalInvoice | null> {
     const [updated] = await this.db
@@ -163,7 +168,7 @@ export class DentalInvoiceRepository {
         voidedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(dentalInvoices.id, invoiceId))
+      .where(and(eq(dentalInvoices.id, invoiceId), ne(dentalInvoices.status, 'voided')))
       .returning();
     return updated ?? null;
   }
@@ -201,11 +206,17 @@ export class DentalInvoiceRepository {
   async addPayment(
     invoiceId: string,
     amountCents: number,
-    opts?: { guardBalance?: boolean },
+    opts?: { guardBalance?: boolean; guardStatus?: boolean },
   ): Promise<DentalInvoice | null> {
-    const where = opts?.guardBalance
-      ? and(eq(dentalInvoices.id, invoiceId), sql`${dentalInvoices.balanceCents} >= ${amountCents}`)
-      : eq(dentalInvoices.id, invoiceId);
+    // guardStatus re-checks status at WRITE time (mirrors guardBalance): a payment that
+    // read status='issued' before a concurrent void committed must not land on (and
+    // un-void) the now-voided/paid row — the predicate makes it match 0 rows → null →
+    // caller rejects (INVOICE_IMMUTABLE). Opt-in so the claim-remittance / credit callers
+    // (which serialize/clamp themselves) keep the unconditional behavior.
+    const conds = [eq(dentalInvoices.id, invoiceId)];
+    if (opts?.guardBalance) conds.push(sql`${dentalInvoices.balanceCents} >= ${amountCents}`);
+    if (opts?.guardStatus) conds.push(sql`${dentalInvoices.status} NOT IN ('voided', 'paid')`);
+    const where = and(...conds);
     const [updated] = await this.db
       .update(dentalInvoices)
       .set({
