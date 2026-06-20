@@ -10,10 +10,10 @@ Computed join of every workflow in `docs/product/WORKFLOW_MAP.md` against the jo
 |--------|------:|
 | Total workflows | 85 |
 | Cross-module (§12) | 16 |
-| **Covered** (mapped + spec exists) | **56** |
-| Gap | 27 |
-| Deferred | 2 |
-| Allowlisted gaps | 44 |
+| **Covered** (mapped + spec exists) | **59** |
+| Gap | 23 |
+| Deferred | 3 |
+| Allowlisted gaps | 41 |
 | Dangling spec refs | 0 |
 
 ## Cross-module flows (§12)
@@ -44,29 +44,29 @@ The 16 inter-module handoffs — the highest-risk integration seams.
 | WF | name | cross-module | mapped spec | spec exists | status |
 |----|------|:------------:|-------------|:-----------:|--------|
 | `WF-001` | User Login (email+password) |  | `apps/dentalemon/tests/e2e/auth-gates.spec.ts` | ✅ | covered |
-| `WF-002` | User Login (passkey) |  | — | — | gap |
-| `WF-003` | Magic link login (patient) |  | — | — | gap |
+| `WF-002` | User Login (passkey) |  | — | — | deferred |
+| `WF-003` | Magic link login (patient) |  | `apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts` | ✅ | covered |
 | `WF-004` | Staff invitation + first login |  | `apps/dentalemon/tests/e2e/add-staff.spec.ts` | ✅ | covered |
 | `WF-005` | Patient registration |  | `apps/dentalemon/tests/e2e/patient-registration.spec.ts` | ✅ | covered |
 | `WF-006` | Appointment booking |  | `apps/dentalemon/tests/e2e/journeys/17-scheduling-booking.journey.spec.ts` | ✅ | covered |
-| `WF-007` | Appointment check-in → visit creation |  | `apps/dentalemon/tests/e2e/patient-checkin.spec.ts` | ✅ | covered |
+| `WF-007` | Appointment check-in → visit creation |  | `apps/dentalemon/tests/e2e/journeys/31-checkin-creates-visit.journey.spec.ts` | ✅ | covered |
 | `WF-008` | Workspace open (patient record) |  | `apps/dentalemon/tests/e2e/workspace-readonly.spec.ts` | ✅ | covered |
-| `WF-009` | Dental chart entry (condition/treatment) |  | `apps/dentalemon/tests/e2e/journeys/01-new-patient-exam.journey.spec.ts` | ✅ | covered |
+| `WF-009` | Dental chart entry (condition/treatment) |  | `apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts` | ✅ | covered |
 | `WF-010` | Treatment mark as performed |  | `apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts` | ✅ | covered |
-| `WF-011` | Clinical notes (SOAP) authoring |  | — | — | gap |
-| `WF-012` | Complete visit |  | `apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts` | ✅ | covered |
+| `WF-011` | Clinical notes (SOAP) authoring |  | `apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts` | ✅ | covered |
+| `WF-012` | Complete visit |  | `apps/dentalemon/tests/e2e/journeys/22-complete-visit.journey.spec.ts` | ✅ | covered |
 | `WF-013` | Create invoice from visit |  | `apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts` | ✅ | covered |
-| `WF-014` | Record payment |  | `apps/dentalemon/tests/e2e/invoice-detail.spec.ts` | ✅ | covered |
+| `WF-014` | Record payment |  | `apps/dentalemon/tests/e2e/journeys/25-record-payment.journey.spec.ts` | ✅ | covered |
 | `WF-015` | Create payment plan |  | `apps/dentalemon/tests/e2e/payment-plan.spec.ts` | ✅ | covered |
 | `WF-016` | Write prescription |  | `apps/dentalemon/tests/e2e/prescribe-medication.spec.ts` | ✅ | covered |
 | `WF-017` | Create lab order |  | `apps/dentalemon/tests/e2e/lab-order-ui.spec.ts` | ✅ | covered |
-| `WF-018` | Obtain consent signature |  | `apps/dentalemon/tests/e2e/journeys/19-case-presentation-accept.journey.spec.ts` | ✅ | covered |
+| `WF-018` | Obtain consent signature |  | `apps/dentalemon/tests/e2e/journeys/30-consent-gate-blocks.journey.spec.ts` | ✅ | covered |
 | `WF-019` | Upload radiographic study |  | `apps/dentalemon/tests/e2e/imaging-annotation.spec.ts` | ✅ | covered |
 | `WF-020` | Annotate radiograph |  | `apps/dentalemon/tests/e2e/imaging-annotation.spec.ts` | ✅ | covered |
-| `WF-021` | Generate PMD |  | `apps/dentalemon/tests/e2e/pmd-generation.spec.ts` | ✅ | covered |
+| `WF-021` | Generate PMD |  | `apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts` | ✅ | covered |
 | `WF-022` | Import external PMD |  | `apps/dentalemon/tests/e2e/journeys/20-pmd-import-merge.journey.spec.ts` | ✅ | covered |
 | `WF-023` | Patient search |  | `apps/dentalemon/tests/e2e/patient-profile.spec.ts` | ✅ | covered |
-| `WF-024` | Calendar / schedule view |  | `apps/dentalemon/tests/e2e/calendar.spec.ts` | ✅ | covered |
+| `WF-024` | Calendar / schedule view |  | `apps/dentalemon/tests/e2e/journeys/17-scheduling-booking.journey.spec.ts` | ✅ | covered |
 | `WF-025` | Configure fee schedule |  | `apps/dentalemon/tests/e2e/fee-schedule.spec.ts` | ✅ | covered |
 | `WF-026` | Configure branch hours |  | `apps/dentalemon/tests/e2e/dental-onboarding.spec.ts` | ✅ | covered |
 | `WF-027` | Staff member management |  | `apps/dentalemon/tests/e2e/add-staff.spec.ts` | ✅ | covered |
@@ -74,16 +74,16 @@ The 16 inter-module handoffs — the highest-risk integration seams.
 | `WF-029` | Export practice reports |  | `apps/dentalemon/tests/e2e/reporting.spec.ts` | ✅ | covered |
 | `WF-030` | Cephalometric analysis |  | `apps/dentalemon/tests/e2e/journeys/11-ceph-tier-gate.journey.spec.ts` | ✅ | covered |
 | `WF-031` | Ceph landmark placement |  | `apps/dentalemon/tests/e2e/journeys/12-ceph-landmarks-numeric.journey.spec.ts` | ✅ | covered |
-| `WF-032` | Initializate dentition |  | — | — | gap |
+| `WF-032` | Initializate dentition |  | `apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts` | ✅ | covered |
 | `WF-033` | Carry-over treatment display |  | `apps/dentalemon/tests/e2e/returning-patient-carryover-ui.spec.ts` | ✅ | covered |
 | `WF-034` | Timeline carousel navigation |  | — | — | gap |
 | `WF-035` | Consent revocation |  | `apps/dentalemon/tests/e2e/consent-revoke-ui.spec.ts` | ✅ | covered |
 | `WF-036` | Lab order status progression |  | `apps/dentalemon/tests/e2e/lab-order-tracking-api.spec.ts` | ✅ | covered |
 | `WF-037` | Medical history entry |  | `apps/dentalemon/tests/e2e/medical-history-wiring.spec.ts` | ✅ | covered |
-| `WF-038` | Clinical amendment |  | `apps/dentalemon/tests/e2e/journeys/10-void-amend-audit.journey.spec.ts` | ✅ | covered |
+| `WF-038` | Clinical amendment |  | `apps/dentalemon/tests/e2e/journeys/29-clinical-amendment.journey.spec.ts` | ✅ | covered |
 | `WF-039` | File attachment upload |  | `apps/dentalemon/tests/e2e/attachments.spec.ts` | ✅ | covered |
 | `WF-040` | Imaging finding record |  | `apps/dentalemon/tests/e2e/imaging-findings.spec.ts` | ✅ | covered |
-| `WF-041` | Invoice void |  | `apps/dentalemon/tests/e2e/invoice-detail.spec.ts` | ✅ | covered |
+| `WF-041` | Invoice void |  | `apps/dentalemon/tests/e2e/journeys/26-void-uncollectible.journey.spec.ts` | ✅ | covered |
 | `WF-042` | Fee schedule lookup |  | `apps/dentalemon/tests/e2e/fee-schedule.spec.ts` | ✅ | covered |
 | `WF-043` | Branch-scoped login (membership select) |  | — | — | gap |
 | `WF-044` | Patient consent at registration |  | `apps/dentalemon/tests/e2e/patient-registration.spec.ts` | ✅ | covered |
@@ -100,7 +100,7 @@ The 16 inter-module handoffs — the highest-risk integration seams.
 | `WF-080` | Appointment notification |  | — | — | gap |
 | `WF-081` | Appointment reminder |  | — | — | gap |
 | `WF-087` | Imaging study |  | — | — | gap |
-| `WF-088` | GDPR erasure |  | `apps/dentalemon/tests/e2e/data-erasure-admin.spec.ts` | ✅ | covered |
+| `WF-088` | GDPR erasure |  | `apps/dentalemon/tests/e2e/journeys/28-data-erasure-approve.journey.spec.ts` | ✅ | covered |
 | `WF-089` | Check-in flow | 🔗 | `apps/dentalemon/tests/e2e/patient-checkin.spec.ts` | ✅ | covered |
 | `WF-090` | Visit → Invoice creation | 🔗 | `apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts` | ✅ | covered |
 | `WF-091` | Imaging context from visit | 🔗 | — | — | gap |

@@ -3,9 +3,9 @@
   "totals": {
     "workflows": 85,
     "crossModule": 16,
-    "covered": 56,
-    "gap": 27,
-    "deferred": 2,
+    "covered": 59,
+    "gap": 23,
+    "deferred": 3,
     "wfgGaps": 15,
     "danglingSpecRefs": 0
   },
@@ -24,14 +24,15 @@
       "name": "User Login (passkey)",
       "crossModule": false,
       "specExists": false,
-      "status": "gap"
+      "status": "deferred"
     },
     {
       "wfId": "WF-003",
       "name": "Magic link login (patient)",
       "crossModule": false,
-      "specExists": false,
-      "status": "gap"
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
     },
     {
       "wfId": "WF-004",
@@ -61,7 +62,7 @@
       "wfId": "WF-007",
       "name": "Appointment check-in → visit creation",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/patient-checkin.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/31-checkin-creates-visit.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -77,7 +78,7 @@
       "wfId": "WF-009",
       "name": "Dental chart entry (condition/treatment)",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/01-new-patient-exam.journey.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -93,14 +94,15 @@
       "wfId": "WF-011",
       "name": "Clinical notes (SOAP) authoring",
       "crossModule": false,
-      "specExists": false,
-      "status": "gap"
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
     },
     {
       "wfId": "WF-012",
       "name": "Complete visit",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/22-complete-visit.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -116,7 +118,7 @@
       "wfId": "WF-014",
       "name": "Record payment",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/25-record-payment.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -148,7 +150,7 @@
       "wfId": "WF-018",
       "name": "Obtain consent signature",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/19-case-presentation-accept.journey.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/30-consent-gate-blocks.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -172,7 +174,7 @@
       "wfId": "WF-021",
       "name": "Generate PMD",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/pmd-generation.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -196,7 +198,7 @@
       "wfId": "WF-024",
       "name": "Calendar / schedule view",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/calendar.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/17-scheduling-booking.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -260,8 +262,9 @@
       "wfId": "WF-032",
       "name": "Initializate dentition",
       "crossModule": false,
-      "specExists": false,
-      "status": "gap"
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/23-dentist-visit-day-in-the-life.journey.spec.ts",
+      "specExists": true,
+      "status": "covered"
     },
     {
       "wfId": "WF-033",
@@ -306,7 +309,7 @@
       "wfId": "WF-038",
       "name": "Clinical amendment",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/10-void-amend-audit.journey.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/29-clinical-amendment.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -330,7 +333,7 @@
       "wfId": "WF-041",
       "name": "Invoice void",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/invoice-detail.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/26-void-uncollectible.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },
@@ -457,7 +460,7 @@
       "wfId": "WF-088",
       "name": "GDPR erasure",
       "crossModule": false,
-      "mappedSpec": "apps/dentalemon/tests/e2e/data-erasure-admin.spec.ts",
+      "mappedSpec": "apps/dentalemon/tests/e2e/journeys/28-data-erasure-approve.journey.spec.ts",
       "specExists": true,
       "status": "covered"
     },

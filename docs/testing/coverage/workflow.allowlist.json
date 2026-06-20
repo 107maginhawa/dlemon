@@ -15,10 +15,7 @@
   { "id": "WFG-014", "reason": "§14 gap: lab orders and consent forms have no documented list/search flow." },
   { "id": "WFG-015", "reason": "§14 gap (HIGH): WF-045 New-Visit step-2 partial failure (POST draft ok, PATCH activate fails → stranded draft + error toast). Happy-path goal state is journey-locked by J21 (P3); the stranded-draft recovery error-path is undefined and not yet enforced — sibling of WFG-002. P5 decides enforce-vs-accept." },
 
-  { "id": "WF-002", "reason": "Passkey login — Better-Auth feature; no dedicated dentalemon journey/e2e spec yet (auth-gates covers password login WF-001)." },
-  { "id": "WF-003", "reason": "Magic-link patient login — portal-phase-1 surface; no journey/e2e spec dedicated to the magic-link flow yet." },
-  { "id": "WF-011", "reason": "Clinical notes (SOAP) authoring — exercised within broader workspace journeys but has no dedicated WF-anchored spec; map when a notes-specific spec lands." },
-  { "id": "WF-032", "reason": "Initialize dentition — exercised inside the new-patient exam journey but no dedicated dentition-init WF spec; covered transitively, not yet anchored." },
+  { "id": "WF-002", "reason": "Passkey login (deferred) — WebAuthn register/authenticate ceremony needs a real/virtual authenticator; contract-tested (auth-passkey.hurl), e2e deferred to a Playwright CDP virtual-authenticator spec." },
   { "id": "WF-034", "reason": "Timeline carousel navigation (UI, ADR-004) — interaction-level UI flow; no dedicated WF-anchored e2e spec." },
   { "id": "WF-043", "reason": "Branch-scoped login (membership select) — Better-Auth membership-select flow; no dedicated dentalemon spec yet." },
   { "id": "WF-046", "reason": "Visit lock job — scheduled background job (within 24h SLA); no UI/E2E surface to journey-lock; backend-test territory." },

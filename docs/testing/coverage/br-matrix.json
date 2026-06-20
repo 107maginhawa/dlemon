@@ -1466,7 +1466,8 @@
     "status": "implemented",
     "guardTyped": false,
     "corporaHit": [
-      "api-unit"
+      "api-unit",
+      "e2e"
     ],
     "hasNegativePath": true,
     "coverageState": "FULLY_COVERED"
