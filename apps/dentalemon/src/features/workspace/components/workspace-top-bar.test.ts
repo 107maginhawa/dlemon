@@ -53,6 +53,68 @@ function renderBar(role: DentalRole) {
   );
 }
 
+// =============================================================================
+// PP-7 (ISSUE-042): chairside dental alerts. Active alerts render as badges in
+// the top-bar safety area, and an always-present "Alerts" button opens the
+// manage sheet via onAlerts.
+// =============================================================================
+
+describe('WorkspaceTopBar — dental alerts (PP-7 / ISSUE-042)', () => {
+  afterEach(() => {
+    global.fetch = originalFetch;
+    useOrgContextStore.setState({ role: null });
+    cleanup();
+  });
+
+  function renderBarRouted(role: DentalRole, onAlerts: () => void) {
+    useOrgContextStore.setState({ role });
+    // Route GET /dental-alerts → one active alert; everything else → empty.
+    global.fetch = mock(async (req: Request | string | URL) => {
+      const url = req instanceof Request ? req.url : String(req);
+      if (url.includes('/dental-alerts')) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              { id: 'al-1', version: 1, patientId: 'p-1', alertType: 'needle_phobia', severity: 'high', description: null, active: true, createdAt: '2026-05-01T00:00:00.000Z', updatedAt: '2026-05-01T00:00:00.000Z' },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as unknown as typeof fetch;
+
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      React.createElement(
+        QueryClientProvider,
+        { client: qc },
+        React.createElement(WorkspaceTopBar, {
+          patientId: 'p-1',
+          onRx: NOOP, onConsent: NOOP, onLab: NOOP, onPmd: NOOP,
+          onAttachments: NOOP, onNotes: NOOP, onTreatmentPlan: NOOP, onCompleteVisit: NOOP,
+          onAlerts,
+          visitStatus: 'active',
+        }),
+      ),
+    );
+  }
+
+  test('renders an active dental-alert badge from listDentalAlerts', async () => {
+    renderBarRouted('dentist_owner', NOOP);
+    await waitFor(() => expect(screen.getByTestId('dental-alert-badges')).not.toBeNull());
+    expect(screen.getByText('Needle phobia')).not.toBeNull();
+  });
+
+  test('the Alerts button fires onAlerts', async () => {
+    let opened = 0;
+    renderBarRouted('dentist_owner', () => { opened++; });
+    const btn = await screen.findByLabelText('Alerts');
+    fireEvent.click(btn);
+    expect(opened).toBe(1);
+  });
+});
+
 describe('WorkspaceTopBar — dentist-only affordance gate (E2)', () => {
   beforeEach(() => {
     global.fetch = mockFetch as unknown as typeof fetch;

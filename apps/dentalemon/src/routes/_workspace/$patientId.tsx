@@ -55,6 +55,7 @@ import { usePMD } from '@/features/workspace/hooks/use-pmd';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@/lib/rbac';
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
+import { DentalAlertsSheet } from '@/features/workspace/components/dental-alerts-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
 import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
@@ -95,6 +96,7 @@ function WorkspacePage() {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [imagingOpen, setImagingOpen] = useState(false);
   const [recallsOpen, setRecallsOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
@@ -348,6 +350,7 @@ function WorkspacePage() {
         onNotes={() => setNotesSheetOpen(true)}
         onTreatmentPlan={() => setTreatmentPlanSheetOpen(true)}
         onCompleteVisit={() => setChecklistOpen(true)}
+        onAlerts={() => setAlertsOpen(true)}
         visitStatus={currentVisit?.status}
       />
 
@@ -664,6 +667,13 @@ function WorkspacePage() {
         patientId={patientId}
         open={recallsOpen}
         onClose={() => setRecallsOpen(false)}
+      />
+
+      {/* PP-7 (ISSUE-042): chairside dental alerts */}
+      <DentalAlertsSheet
+        patientId={patientId}
+        open={alertsOpen}
+        onClose={() => setAlertsOpen(false)}
       />
 
       {/* B4: TreatmentPlansSheet */}

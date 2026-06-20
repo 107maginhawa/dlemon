@@ -27,7 +27,7 @@ slice, so they were deliberately deferred from the sweep.
 | PP-4 | **Online-booking** config (staff) | P1 | ✅ done (ISSUE-038) | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ✅ done (ISSUE-039) | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ✅ done (ISSUE-040) | ISSUE-024 |
-| PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | ⬜ pending | ISSUE-024 |
+| PP-7 | Dental-alerts / patient-tasks / consultations / occlusion-screening | P2 | 🔨 in-progress (1/3: ISSUE-042 ✅; consultation descoped) | ISSUE-024 |
 | PP-8 | Discard-visit **modal** (replace `window.prompt()`) | polish | ✅ done (ISSUE-041) | ISSUE-010 tail |
 | PP-9 | iPad **768px sidebar** collapse | polish (needs design call) | ⬜ pending | ISSUE-018 |
 
@@ -175,10 +175,28 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
 - **Gap:** `createDentalAlert` / `createPatientTask` / `createConsultation` /
   `createOcclusionScreening` all exist; **no FE file even references these nouns.**
 - **Proposed placement:** workspace (clinical) surfaces — likely separate slices per noun.
-- **Value / effort:** low / medium (niche; lowest traffic). **Split into 4 sub-slices**
+- **Value / effort:** low / medium (niche; lowest traffic). **Split into sub-slices**
   when picked up — do not batch.
 - **Verify on pickup:** for each noun, confirm the endpoint + where in the clinical
   flow it belongs; this cluster may be partly descoped if low demand.
+
+**Verify-on-pickup outcome (2026-06-20) — split into 3 build slices + 1 descope:**
+- **Sub-slice 1 — Dental alerts · ✅ DONE (ISSUE-042).** Full CRUD, patient-scoped
+  (`…/patients/:id/dental-alerts`). `DentalAlertsSheet` (add/list/deactivate) opened
+  from a new top-bar **Alerts** button + active alerts as severity-coloured top-bar
+  badges. Live-verified create + badge + deactivate. FE 2633/0; typecheck + lint + font
+  ratchet clean.
+- **Sub-slice 2 — Patient tasks · ⬜ pending.** Full CRUD + FSM (open→in_progress→
+  done/cancelled), patient-scoped (`…/patients/:id/tasks`). Natural home: a workspace
+  sheet (mirror `RecallsSheet`). Follow-up/to-do list.
+- **Sub-slice 3 — Occlusion screening · ⬜ pending.** Create + list only (no HTTP
+  PATCH/single-GET exposed; `{data,pagination}` envelope). 9 clinical fields (Angle
+  class enum + overjet/overbite/crossbite/crowding/spacing/midline/notes), optional
+  `visitId`. Natural home: workspace exam area beside Perio.
+- **Consultation · ❌ DESCOPED (user decision).** `createConsultation` is the frozen
+  upstream **`/emr/consultations`** module (patient+provider, no branch/visit/tooth-
+  chart) and duplicates the dental `dental_visit` + per-visit SOAP `VisitNotes` flow —
+  no clean dental-workspace home. Not built.
 
 ## PP-8 — Discard-visit modal (replace `window.prompt()`)  · polish  — ✅ DONE (ISSUE-041)
 - **Outcome:** replaced the `window.prompt()` in `$patientId.tsx`'s `handleDiscardVisit`
