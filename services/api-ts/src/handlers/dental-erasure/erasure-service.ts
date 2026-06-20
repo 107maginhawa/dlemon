@@ -12,6 +12,7 @@
  * service functions take the resolved actor ids.
  */
 
+import { sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { ValidationError, NotFoundError } from '@/core/errors';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -143,72 +144,83 @@ export async function approveErasure(
   input: { reviewedBy: string; legalHold?: boolean },
   opts: ServiceOpts = {},
 ): Promise<ApproveErasureResult> {
-  const repo = new ErasureRequestRepository(db, logger);
-  const req = await repo.findOneById(requestId);
+  const req = await new ErasureRequestRepository(db, logger).findOneById(requestId);
   if (!req) throw new NotFoundError('Erasure request not found');
   if (req.status !== 'requested') {
     throw new ValidationError(`Cannot approve an erasure request in status '${req.status}'`);
   }
 
-  // Consult the real legal-hold store; a reviewer may also assert a hold
-  // out-of-band. Either blocks erasure.
-  const storeHold = await isPersonUnderLegalHold(db, req.subjectPersonId);
-  const legalHold = storeHold || (input.legalHold ?? false);
+  // WFG-006 hold-vs-erasure race: the hold READ and the irreversible anonymize must be
+  // atomic against a concurrent placeLegalHold, or a hold landing between them fails to
+  // block and legally-held PII is anonymized. Serialize approve / reject / placeLegalHold
+  // on the subject with a per-subject advisory xact lock (ns 1003) and keep the read +
+  // transition + anonymize inside the locked transaction. placeLegalHold takes the same
+  // lock, so either it commits before our read (we see it → block) or it can't commit until
+  // we finish (we already anonymized a then-unheld subject; its hold is placed after).
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1003, hashtext(${req.subjectPersonId}))`);
+    const repo = new ErasureRequestRepository(tx, logger);
 
-  // WFG-006 concurrency: CLAIM the transition out of 'requested' BEFORE the irreversible
-  // anonymize. transitionFromRequested's status='requested' conditional-WHERE means a
-  // concurrent reject (or second approve) matches 0 rows and aborts — so anonymize runs at
-  // most once and the record can never end up 'rejected' while the subject is in fact
-  // anonymized (the approve+reject clobber). The claimed status mirrors the legalHold
-  // decision (both derive from the same read), so it matches the anonymize outcome.
-  const claimed = await repo.transitionFromRequested(
-    requestId,
-    (legalHold
-      ? {
-          status: 'rejected',
-          legalHoldBlocked: true,
-          rejectionReason: 'Subject under an active legal hold — erasure refused',
-          reviewedBy: input.reviewedBy,
-          reviewedAt: new Date(),
-          updatedBy: input.reviewedBy,
-        }
-      : {
-          status: 'anonymized',
-          reviewedBy: input.reviewedBy,
-          reviewedAt: new Date(),
-          processedAt: new Date(),
-          updatedBy: input.reviewedBy,
-        }) as Partial<DentalErasureRequest>,
-  );
-  if (!claimed) {
-    const cur = await repo.findOneById(requestId);
-    throw new ValidationError(`Cannot approve an erasure request in status '${cur?.status ?? 'missing'}'`);
-  }
+    // Consult the real legal-hold store (now serialized behind the lock); a reviewer may
+    // also assert a hold out-of-band. Either blocks erasure.
+    const storeHold = await isPersonUnderLegalHold(tx, req.subjectPersonId);
+    const legalHold = storeHold || (input.legalHold ?? false);
 
-  const result = await anonymizeSubject(
-    db,
-    logger,
-    {
-      subjectPersonId: req.subjectPersonId,
-      subjectPatientId: req.subjectPatientId,
-      tenantId: req.tenantId,
-      branchId: req.branchId,
-    },
-    {
-      dryRun: opts.dryRun ?? false, // approval IS the explicit opt-in
-      legalHold,
-      audit: opts.audit,
-      actorId: input.reviewedBy,
-    },
-  );
+    // CLAIM the transition out of 'requested' BEFORE the irreversible anonymize.
+    // transitionFromRequested's status='requested' conditional-WHERE means a concurrent
+    // reject (or second approve) matches 0 rows and aborts — so anonymize runs at most once
+    // and the record can never end up 'rejected' while the subject is in fact anonymized
+    // (the approve+reject clobber). The claimed status mirrors the legalHold decision (both
+    // derive from the same locked read), so it matches the anonymize outcome.
+    const claimed = await repo.transitionFromRequested(
+      requestId,
+      (legalHold
+        ? {
+            status: 'rejected',
+            legalHoldBlocked: true,
+            rejectionReason: 'Subject under an active legal hold — erasure refused',
+            reviewedBy: input.reviewedBy,
+            reviewedAt: new Date(),
+            updatedBy: input.reviewedBy,
+          }
+        : {
+            status: 'anonymized',
+            reviewedBy: input.reviewedBy,
+            reviewedAt: new Date(),
+            processedAt: new Date(),
+            updatedBy: input.reviewedBy,
+          }) as Partial<DentalErasureRequest>,
+    );
+    if (!claimed) {
+      const cur = await repo.findOneById(requestId);
+      throw new ValidationError(`Cannot approve an erasure request in status '${cur?.status ?? 'missing'}'`);
+    }
 
-  // Anonymization is COMMITTED + audited above (no-op when blocked). The physical S3 delete
-  // of these file ids is a fail-open follow-up by the caller (handler scope, where the
-  // storage client lives) — see approveErasureHandler.
-  return {
-    request: claimed,
-    fileIdsPendingS3Delete: result.blockedByLegalHold ? [] : result.fileIdsPendingS3Delete,
-  };
+    const result = await anonymizeSubject(
+      tx,
+      logger,
+      {
+        subjectPersonId: req.subjectPersonId,
+        subjectPatientId: req.subjectPatientId,
+        tenantId: req.tenantId,
+        branchId: req.branchId,
+      },
+      {
+        dryRun: opts.dryRun ?? false, // approval IS the explicit opt-in
+        legalHold,
+        audit: opts.audit,
+        actorId: input.reviewedBy,
+      },
+    );
+
+    // Anonymization is COMMITTED + audited within this tx (no-op when blocked). The physical
+    // S3 delete of these file ids is a fail-open follow-up by the caller (handler scope,
+    // where the storage client lives) — see approveErasureHandler.
+    return {
+      request: claimed,
+      fileIdsPendingS3Delete: result.blockedByLegalHold ? [] : result.fileIdsPendingS3Delete,
+    };
+  });
 }
 
 /** Reject a `requested` erasure with a reason. Mutates no subject data. */
@@ -220,38 +232,44 @@ export async function rejectErasure(
   input: { reviewedBy: string; rejectionReason: string },
   opts: ServiceOpts = {},
 ): Promise<DentalErasureRequest> {
-  const repo = new ErasureRequestRepository(db, logger);
-  const req = await repo.findOneById(requestId);
+  const req = await new ErasureRequestRepository(db, logger).findOneById(requestId);
   if (!req) throw new NotFoundError('Erasure request not found');
   if (req.status !== 'requested') {
     throw new ValidationError(`Cannot reject an erasure request in status '${req.status}'`);
   }
 
-  // WFG-006 concurrency: guarded transition (status='requested' WHERE) — a reject racing an
-  // approve that already committed 'anonymized' matches 0 rows and aborts, so it can never
-  // clobber an anonymized subject's record back to 'rejected'.
-  const updated = await repo.transitionFromRequested(requestId, {
-    status: 'rejected',
-    rejectionReason: input.rejectionReason,
-    reviewedBy: input.reviewedBy,
-    reviewedAt: new Date(),
-    updatedBy: input.reviewedBy,
-  } as Partial<DentalErasureRequest>);
-  if (!updated) {
-    const cur = await repo.findOneById(requestId);
-    throw new ValidationError(`Cannot reject an erasure request in status '${cur?.status ?? 'missing'}'`);
-  }
+  // Take the same per-subject advisory lock (ns 1003) approve / placeLegalHold use, so the
+  // three transitions on a subject are serialized.
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1003, hashtext(${req.subjectPersonId}))`);
+    const repo = new ErasureRequestRepository(tx, logger);
 
-  await (opts.audit ?? logAuditEvent)(db, logger, {
-    personId: input.reviewedBy,
-    tenantId: req.tenantId,
-    branchId: req.branchId ?? undefined,
-    action: 'erasure.rejected',
-    resourceType: 'erasure_request',
-    resourceId: req.id,
-    eventType: 'compliance',
-    metadata: { subjectPersonId: req.subjectPersonId, rejectionReason: input.rejectionReason },
+    // Guarded transition (status='requested' WHERE) — a reject racing an approve that
+    // already committed 'anonymized' matches 0 rows and aborts, so it can never clobber an
+    // anonymized subject's record back to 'rejected'.
+    const updated = await repo.transitionFromRequested(requestId, {
+      status: 'rejected',
+      rejectionReason: input.rejectionReason,
+      reviewedBy: input.reviewedBy,
+      reviewedAt: new Date(),
+      updatedBy: input.reviewedBy,
+    } as Partial<DentalErasureRequest>);
+    if (!updated) {
+      const cur = await repo.findOneById(requestId);
+      throw new ValidationError(`Cannot reject an erasure request in status '${cur?.status ?? 'missing'}'`);
+    }
+
+    await (opts.audit ?? logAuditEvent)(tx, logger, {
+      personId: input.reviewedBy,
+      tenantId: req.tenantId,
+      branchId: req.branchId ?? undefined,
+      action: 'erasure.rejected',
+      resourceType: 'erasure_request',
+      resourceId: req.id,
+      eventType: 'compliance',
+      metadata: { subjectPersonId: req.subjectPersonId, rejectionReason: input.rejectionReason },
+    });
+
+    return updated;
   });
-
-  return updated;
 }

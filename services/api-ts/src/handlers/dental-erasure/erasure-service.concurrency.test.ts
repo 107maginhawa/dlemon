@@ -130,3 +130,48 @@ describe('erasure approve/reject — concurrent decisions cannot clobber each ot
     expect(approveRejected, 'the racing approve must be rejected').toBe(true);
   });
 });
+
+describe('erasure approval vs a concurrent legal hold cannot anonymize a held subject', () => {
+  test('approveErasure must block on the per-subject lock and refuse once the hold commits', async () => {
+    const { requestId, personId } = await seedRequestedErasure();
+
+    // A dedicated connection plays placeLegalHold mid-flight: it holds the
+    // per-subject erasure advisory lock AND stages an active hold, all
+    // uncommitted — exactly the window where approveErasure reads "no hold" and
+    // would anonymize before the hold lands. Under READ COMMITTED the uncommitted
+    // hold is invisible to other connections, so only the advisory lock can make
+    // approve wait for the hold to commit and then observe it.
+    const pool = new Pool({ connectionString: URL, max: 1 });
+    const client = await pool.connect();
+    let blocked = false;
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT pg_advisory_xact_lock(1003, hashtext($1))`, [personId]);
+      await client.query(
+        `INSERT INTO dental_legal_hold
+           (id, tenant_id, subject_person_id, name, reason, status, initiated_by, created_by, updated_by)
+         VALUES (gen_random_uuid(), $1, $2, 'hold', 'litigation', 'active', $3, $3, $3)`,
+        [ORG, personId, REVIEWER],
+      );
+
+      // With the fix approve blocks on the advisory lock; without it approve reads
+      // the (invisible) hold as absent and anonymizes during the sleep.
+      const approveP = approveErasure(db, noopLogger, requestId, { reviewedBy: REVIEWER }).then((r) => {
+        if (r.request.legalHoldBlocked) blocked = true;
+      });
+      await sleep(300);
+      await client.query('COMMIT'); // hold + advisory lock release together
+      await approveP;
+    } finally {
+      client.release();
+      await pool.end();
+    }
+
+    expect(
+      await isAnonymized(personId),
+      'a subject under a hold placed during approval must NOT be anonymized',
+    ).toBe(false);
+    expect(await reqStatus(requestId), 'the request must record the legal-hold block, not anonymized').toBe('rejected');
+    expect(blocked, 'approve must report the legal-hold block').toBe(true);
+  });
+});

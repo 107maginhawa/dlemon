@@ -3,6 +3,7 @@
  * Every transition is audited. RBAC is enforced at the handler layer.
  */
 
+import { sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { NotFoundError, ValidationError } from '@/core/errors';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -30,32 +31,40 @@ export async function placeLegalHold(
   input: PlaceLegalHoldInput,
   opts: LegalHoldServiceOpts = {},
 ): Promise<DentalLegalHold> {
-  const repo = new LegalHoldRepository(db, logger);
-  const hold = await repo.createOne({
-    tenantId: input.tenantId,
-    branchId: input.branchId ?? null,
-    subjectPersonId: input.subjectPersonId,
-    name: input.name,
-    reason: input.reason,
-    status: 'active',
-    initiatedBy: input.initiatedBy,
-    note: input.note ?? null,
-    createdBy: input.initiatedBy,
-    updatedBy: input.initiatedBy,
-  });
+  // Serialize against approveErasure/rejectErasure on the same subject (per-subject advisory
+  // xact lock, ns 1003). This closes the hold-vs-erasure race: a hold placed while an erasure
+  // approval is mid-flight either commits before the approval's hold-read (so it blocks the
+  // erasure) or waits until the approval releases the lock — it can never slip into the
+  // window between the read and the irreversible anonymize.
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1003, hashtext(${input.subjectPersonId}))`);
+    const repo = new LegalHoldRepository(tx, logger);
+    const hold = await repo.createOne({
+      tenantId: input.tenantId,
+      branchId: input.branchId ?? null,
+      subjectPersonId: input.subjectPersonId,
+      name: input.name,
+      reason: input.reason,
+      status: 'active',
+      initiatedBy: input.initiatedBy,
+      note: input.note ?? null,
+      createdBy: input.initiatedBy,
+      updatedBy: input.initiatedBy,
+    });
 
-  await (opts.audit ?? logAuditEvent)(db, logger, {
-    personId: input.initiatedBy,
-    tenantId: input.tenantId,
-    branchId: input.branchId ?? undefined,
-    action: 'legal_hold.placed',
-    resourceType: 'legal_hold',
-    resourceId: hold.id,
-    eventType: 'compliance',
-    metadata: { subjectPersonId: input.subjectPersonId, reason: input.reason },
-  });
+    await (opts.audit ?? logAuditEvent)(tx, logger, {
+      personId: input.initiatedBy,
+      tenantId: input.tenantId,
+      branchId: input.branchId ?? undefined,
+      action: 'legal_hold.placed',
+      resourceType: 'legal_hold',
+      resourceId: hold.id,
+      eventType: 'compliance',
+      metadata: { subjectPersonId: input.subjectPersonId, reason: input.reason },
+    });
 
-  return hold;
+    return hold;
+  });
 }
 
 export async function releaseLegalHold(
