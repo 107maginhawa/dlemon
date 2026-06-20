@@ -155,6 +155,36 @@ export async function approveErasure(
   const storeHold = await isPersonUnderLegalHold(db, req.subjectPersonId);
   const legalHold = storeHold || (input.legalHold ?? false);
 
+  // WFG-006 concurrency: CLAIM the transition out of 'requested' BEFORE the irreversible
+  // anonymize. transitionFromRequested's status='requested' conditional-WHERE means a
+  // concurrent reject (or second approve) matches 0 rows and aborts — so anonymize runs at
+  // most once and the record can never end up 'rejected' while the subject is in fact
+  // anonymized (the approve+reject clobber). The claimed status mirrors the legalHold
+  // decision (both derive from the same read), so it matches the anonymize outcome.
+  const claimed = await repo.transitionFromRequested(
+    requestId,
+    (legalHold
+      ? {
+          status: 'rejected',
+          legalHoldBlocked: true,
+          rejectionReason: 'Subject under an active legal hold — erasure refused',
+          reviewedBy: input.reviewedBy,
+          reviewedAt: new Date(),
+          updatedBy: input.reviewedBy,
+        }
+      : {
+          status: 'anonymized',
+          reviewedBy: input.reviewedBy,
+          reviewedAt: new Date(),
+          processedAt: new Date(),
+          updatedBy: input.reviewedBy,
+        }) as Partial<DentalErasureRequest>,
+  );
+  if (!claimed) {
+    const cur = await repo.findOneById(requestId);
+    throw new ValidationError(`Cannot approve an erasure request in status '${cur?.status ?? 'missing'}'`);
+  }
+
   const result = await anonymizeSubject(
     db,
     logger,
@@ -172,30 +202,13 @@ export async function approveErasure(
     },
   );
 
-  if (result.blockedByLegalHold) {
-    const request = await repo.updateOneById(requestId, {
-      status: 'rejected',
-      legalHoldBlocked: true,
-      rejectionReason: 'Subject under an active legal hold — erasure refused',
-      reviewedBy: input.reviewedBy,
-      reviewedAt: new Date(),
-      updatedBy: input.reviewedBy,
-    } as Partial<DentalErasureRequest>);
-    return { request, fileIdsPendingS3Delete: [] };
-  }
-
-  const request = await repo.updateOneById(requestId, {
-    status: 'anonymized',
-    reviewedBy: input.reviewedBy,
-    reviewedAt: new Date(),
-    processedAt: new Date(),
-    updatedBy: input.reviewedBy,
-  } as Partial<DentalErasureRequest>);
-
-  // Anonymization is COMMITTED + audited above. The physical S3 delete of these
-  // file ids is a fail-open follow-up performed by the caller (handler scope,
-  // where the storage client lives) — see approveErasureHandler.
-  return { request, fileIdsPendingS3Delete: result.fileIdsPendingS3Delete };
+  // Anonymization is COMMITTED + audited above (no-op when blocked). The physical S3 delete
+  // of these file ids is a fail-open follow-up by the caller (handler scope, where the
+  // storage client lives) — see approveErasureHandler.
+  return {
+    request: claimed,
+    fileIdsPendingS3Delete: result.blockedByLegalHold ? [] : result.fileIdsPendingS3Delete,
+  };
 }
 
 /** Reject a `requested` erasure with a reason. Mutates no subject data. */
@@ -214,13 +227,20 @@ export async function rejectErasure(
     throw new ValidationError(`Cannot reject an erasure request in status '${req.status}'`);
   }
 
-  const updated = await repo.updateOneById(requestId, {
+  // WFG-006 concurrency: guarded transition (status='requested' WHERE) — a reject racing an
+  // approve that already committed 'anonymized' matches 0 rows and aborts, so it can never
+  // clobber an anonymized subject's record back to 'rejected'.
+  const updated = await repo.transitionFromRequested(requestId, {
     status: 'rejected',
     rejectionReason: input.rejectionReason,
     reviewedBy: input.reviewedBy,
     reviewedAt: new Date(),
     updatedBy: input.reviewedBy,
   } as Partial<DentalErasureRequest>);
+  if (!updated) {
+    const cur = await repo.findOneById(requestId);
+    throw new ValidationError(`Cannot reject an erasure request in status '${cur?.status ?? 'missing'}'`);
+  }
 
   await (opts.audit ?? logAuditEvent)(db, logger, {
     personId: input.reviewedBy,

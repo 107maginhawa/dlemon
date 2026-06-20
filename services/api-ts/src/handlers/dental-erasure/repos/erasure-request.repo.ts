@@ -35,4 +35,25 @@ export class ErasureRequestRepository extends DatabaseRepository<
     if (filters?.status) conditions.push(eq(dentalErasureRequests.status, filters.status));
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
+
+  /**
+   * Atomically transition a request OUT of 'requested' to a terminal status, only if it is
+   * still 'requested'. The `status='requested'` predicate makes the decision idempotent
+   * under concurrency: of two simultaneous approve/reject calls (both passed the pre-write
+   * status check) the second UPDATE re-evaluates against the first's committed row, matches
+   * 0 rows, and returns null — so the caller (which CLAIMS the transition before any
+   * side-effect) never double-anonymizes or clobbers a committed decision. No transaction
+   * required; the conditional WHERE is the guard.
+   */
+  async transitionFromRequested(
+    id: string,
+    patch: Partial<NewDentalErasureRequest>,
+  ): Promise<DentalErasureRequest | null> {
+    const [row] = await this.db
+      .update(dentalErasureRequests)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(dentalErasureRequests.id, id), eq(dentalErasureRequests.status, 'requested')))
+      .returning();
+    return row ?? null;
+  }
 }
