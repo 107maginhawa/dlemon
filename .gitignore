@@ -300,6 +300,10 @@ docs/prompts-erase/
 .understand-anything/fingerprints.json
 .understand-anything/intermediate/
 .understand-anything/tmp/
+# Derived/transient overlays (regenerate from the committed graphs + working tree;
+# contract-spine = generated contract-coverage index, diff-overlay = working-tree diff).
+.understand-anything/contract-spine.json
+.understand-anything/diff-overlay.json
 
 # workflow-verification smoke venv (local Playwright/Firefox; never commit)
 apps/dentalemon/tests/smoke/.venv/
@@ -317,3 +321,9 @@ apps/dentalemon/tests/smoke/.craft-*/
 # AI brainstorm session scratch + Python Hypothesis cache
 .superpowers/
 .hypothesis/
+
+# Per-developer agent/skill tooling (gstack) — machine-local, not team-shared.
+# .claude/skills/design-taste-frontend is a symlink into .agents/skills.
+.agents/
+.claude/skills/design-taste-frontend
+skills-lock.json
