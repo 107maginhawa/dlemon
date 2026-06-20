@@ -18,6 +18,7 @@ import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
+import { InsuranceCard } from './insurance-card';
 import { PatientEditForm, normalizePhone } from './patient-edit-form';
 import { PatientStatement } from './patient-statement';
 import { PatientCredits } from './patient-credits';
@@ -112,6 +113,9 @@ function OverviewTab({ patientId }: { patientId: string }) {
     <div className="flex flex-col gap-4">
       {/* Household / guarantor — P1-27 */}
       <HouseholdCard patientId={patientId} />
+
+      {/* Insurance profiles — PP-2 (ISSUE-036) */}
+      <InsuranceCard patientId={patientId} />
 
       {/* Recent Visits — PROF-02 */}
       <div

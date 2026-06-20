@@ -22,7 +22,7 @@ slice, so they were deliberately deferred from the sweep.
 | # | Item | Tier | Status | Source |
 |---|------|------|--------|--------|
 | PP-1 | Appointment **no-show** action | P0 | ✅ done (ISSUE-035) | ISSUE-024 |
-| PP-2 | **Insurance-profile** create/update | P0 | ⬜ pending | ISSUE-024 |
+| PP-2 | **Insurance-profile** create/update | P0 | ✅ done (ISSUE-036) | ISSUE-024 |
 | PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ⬜ pending | ISSUE-020 |
 | PP-4 | **Online-booking** config (staff) | P1 | ⬜ pending | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ⬜ pending | ISSUE-020 |
@@ -56,7 +56,17 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
   No Show + list refreshes; illegal transition surfaces an error (not swallowed);
   unit + (if drivable) E2E.
 
-## PP-2 — Insurance-profile create/update  · P0
+## PP-2 — Insurance-profile create/update  · P0  — ✅ DONE (ISSUE-036)
+- **Outcome:** FE-only slice — backend `POST/PATCH .../insurance-profiles` + the
+  `listPatientInsuranceProfiles` read all existed and were backend-tested; the claim
+  payer-picker already read profiles via `usePatientInsuranceProfiles`. Added an
+  `InsuranceCard` (list + add/edit sheet form, `useSheetA11y`, required insurer/policy/
+  subscriber + payerType/relationship/groupNumber/notes/active) on the patient profile
+  next to Household, and a `useInsuranceProfileMutations` hook that invalidates the
+  SAME `listPatientInsuranceProfilesQueryKey` the claim flow uses. Live-verified the
+  full round-trip: created "Maxicare/PhilHealth/MX-77001" from the card → it shows in
+  the card AND in the claim payer-picker without API seeding. +10 unit assertions; FE
+  suite 2607/0; typecheck + lint clean. (annualLimit/accredited fields deferred.)
 - **Gap:** `createInsuranceProfile` / `updateInsuranceProfile` exist with **zero FE
   call-sites**; the claim flow assumes a profile already exists, so today you must
   seed one via the API to file any claim. Real revenue-workflow blocker.

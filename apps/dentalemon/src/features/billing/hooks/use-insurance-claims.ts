@@ -16,6 +16,7 @@ import {
   listCoverageAuthorizationsOptions,
   listCoverageAuthorizationsQueryKey,
   listPatientInsuranceProfilesOptions,
+  listPatientInsuranceProfilesQueryKey,
   getInsuranceClaimOptions,
   getInsuranceClaimQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
@@ -28,11 +29,15 @@ import {
   estimateClaimCoverage,
   createCoverageAuthorization,
   updateCoverageAuthorizationStatus,
+  createInsuranceProfile,
+  updateInsuranceProfile,
   type InsuranceClaimList,
   type PayerArAgingResponse,
   type CoverageEstimateResult,
   type DentalPatientFinanceModuleCoverageAuthorization,
   type DentalPatientFinanceModuleInsuranceProfile,
+  type DentalPatientFinanceModuleCreateInsuranceProfileRequest,
+  type DentalPatientFinanceModuleUpdateInsuranceProfileRequest,
   type InsuranceClaimWithLines,
 } from '@monobase/sdk-ts/generated';
 import { toInsuranceClaimRow } from '../components/insurance.helpers';
@@ -226,6 +231,43 @@ export function usePatientInsuranceProfiles(patientId?: string | null) {
     profiles: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error as Error | null,
+  };
+}
+
+// PP-2 (ISSUE-036): create / update a patient's insurance profile. Lives here next
+// to usePatientInsuranceProfiles + the query key so both the patient-profile
+// Insurance card AND the claim payer-picker refresh off the SAME cache key after a
+// write (the 001/002/003 cache-invalidation family). Consumed by the patients-feature
+// InsuranceCard — insurance profiles are billing data surfaced on the profile.
+export function useInsuranceProfileMutations(patientId?: string | null) {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    if (patientId) {
+      queryClient.invalidateQueries({ queryKey: listPatientInsuranceProfilesQueryKey({ path: { patientId } }) });
+    }
+  };
+
+  const create = useMutation({
+    mutationFn: async (body: DentalPatientFinanceModuleCreateInsuranceProfileRequest) => {
+      const { data } = await createInsuranceProfile({ path: { patientId: patientId ?? '' }, body, throwOnError: true });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
+  const update = useMutation({
+    mutationFn: async (args: { profileId: string; body: DentalPatientFinanceModuleUpdateInsuranceProfileRequest }) => {
+      const { data } = await updateInsuranceProfile({ path: { patientId: patientId ?? '', profileId: args.profileId }, body: args.body, throwOnError: true });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
+  return {
+    create: create.mutateAsync,
+    update: update.mutateAsync,
+    isSaving: create.isPending || update.isPending,
+    error: (create.error ?? update.error) as Error | null,
   };
 }
 
