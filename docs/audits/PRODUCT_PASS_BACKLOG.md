@@ -23,7 +23,7 @@ slice, so they were deliberately deferred from the sweep.
 |---|------|------|--------|--------|
 | PP-1 | Appointment **no-show** action | P0 | ✅ done (ISSUE-035) | ISSUE-024 |
 | PP-2 | **Insurance-profile** create/update | P0 | ✅ done (ISSUE-036) | ISSUE-024 |
-| PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ⬜ pending | ISSUE-020 |
+| PP-3 | **Queue-board** enqueue (check-in → queue) | P1 | ✅ done (ISSUE-037) | ISSUE-020 |
 | PP-4 | **Online-booking** config (staff) | P1 | ⬜ pending | ISSUE-020 |
 | PP-5 | **Waitlist** management UI | P2 | ⬜ pending | ISSUE-020 |
 | PP-6 | **Household** add/remove/link | P2 | ⬜ pending | ISSUE-024 |
@@ -81,7 +81,18 @@ Status legend: ⬜ pending · 🔨 in-progress · ✅ done · ⏸ blocked (needs
   persists, and the claim flow can then file against it without API seeding;
   validation + error surfacing; unit + E2E.
 
-## PP-3 — Queue-board enqueue  · P1
+## PP-3 — Queue-board enqueue  · P1  — ✅ DONE (ISSUE-037)
+- **Decision (you chose):** auto-enqueue on check-in (best-effort), no manual action.
+- **Outcome:** backend-only slice — `checkInAppointment` now also creates a `'waiting'`
+  queue item for the appointment, after the check-in commit tx, in its own
+  `withTenantTx` (dental_queue_item RLS scope), wrapped so a queue failure NEVER rolls
+  back a successful check-in (same posture as reminder-expiry). No dedupe guard: check-in
+  is a one-way FSM transition → fires exactly once (ponytail note flags the upgrade path
+  if a manual "Add to queue" is ever added). The board UI + update-status FSM already
+  worked once items exist. RED→GREEN unit test + full backend batch 4581/0 + scheduling
+  neighbors green; queue-board UI smoke-checked (renders, reads active branch). Live
+  check-in→board round-trip not driven (seed: all candidate patients have active visits;
+  today=Saturday → new bookings 422) — backend path is authoritative.
 - **Gap:** `/queue-board` renders the FSM columns + auto-refresh but is **permanently
   empty** — `createQueueItem` (`POST /appointments/{id}/queue-item`) is never called,
   check-in doesn't enqueue, and the seed has no queue items. Update-status FSM is

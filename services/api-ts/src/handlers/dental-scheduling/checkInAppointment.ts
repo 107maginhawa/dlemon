@@ -15,6 +15,7 @@ import type { HandlerContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ValidationError, ConflictError } from '@/core/errors';
 import { DentalAppointmentRepository } from './repos/dental-appointment.repo';
+import { QueueItemRepository } from './repos/queue-item.repo';
 import { findInProgressVisitByPatient, createVisit } from '@/handlers/dental-visit/utils/visit.service';
 import { APPOINTMENT_TRANSITIONS } from './repos/dental-appointment.schema';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
@@ -100,6 +101,31 @@ export async function checkInAppointment(ctx: HandlerContext) {
   const notifs = ctx.get('notifs') as NotificationService | undefined;
   if (notifs) {
     await notifs.expireQueuedByEntity(appointmentId, REMINDER_NOTIFICATION_TYPES).catch(() => {/* best-effort */});
+  }
+
+  // PP-3 (ISSUE-037): the patient is now waiting to be seen — auto-enqueue them on
+  // the branch queue board ('waiting'). Best-effort: a queue failure must NEVER roll
+  // back a successful check-in (same posture as the reminder-expiry above), so this
+  // runs after the commit tx in its own withTenantTx (the dental_queue_item app_rls
+  // policy needs the branch scope).
+  // ponytail: no dedupe guard — check-in is a one-way FSM transition, so it fires
+  // exactly once per appointment; add an appointment-scoped guard if a manual
+  // "Add to queue" path is introduced later.
+  const logger = ctx.get('logger');
+  try {
+    await withTenantTx(db, { branchIds: [appointment.branchId] }, (tx) =>
+      new QueueItemRepository(tx, logger).createOne({
+        appointmentId,
+        patientId: appointment.patientId,
+        branchId: appointment.branchId,
+        status: 'waiting',
+        notes: null,
+        createdBy: user.id,
+        updatedBy: user.id,
+      }),
+    );
+  } catch (err) {
+    logger?.warn({ err, appointmentId }, 'check-in queue enqueue failed (non-blocking)');
   }
 
   // V-SCH-010 / DE-001 VisitCheckedIn ownership: the VisitCheckedIn semantic marker
