@@ -231,10 +231,20 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Wipe imaging rows between tests (FK order: annotations/findings/teeth/calibrations/links → images → studies).
+  // Wipe imaging rows between tests, child→parent FK order. Ceph snapshot rows
+  // (seeded into the shared test template, or left by sibling ceph tests) reference
+  // imaging_study_image, so they MUST be cleared before images — else
+  // `delete imaging_study_image` trips imaging_ceph_report_image_id_*_fk.
+  // Superimposition references reports, so it goes first of all.
   const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations, imagingLinks } =
     await import('./repos/imaging.schema');
   const { imagingFindings } = await import('./repos/imaging_finding.schema');
+  const { imagingCephSuperimpositions, imagingCephReports, imagingCephAnalyses, imagingCephLandmarks } =
+    await import('./repos/imaging_ceph.schema');
+  await db.delete(imagingCephSuperimpositions);
+  await db.delete(imagingCephReports);
+  await db.delete(imagingCephAnalyses);
+  await db.delete(imagingCephLandmarks);
   await db.delete(imagingFindings);
   await db.delete(imagingAnnotations);
   await db.delete(imagingStudyTeeth);

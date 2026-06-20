@@ -125,7 +125,13 @@ beforeEach(async () => {
   const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations, imagingLinks } =
     await import('./repos/imaging.schema');
   const { imagingFindings } = await import('./repos/imaging_finding.schema');
-  const { imagingCephLandmarks, imagingCephAnalyses } = await import('./repos/imaging_ceph.schema');
+  const { imagingCephLandmarks, imagingCephAnalyses, imagingCephReports, imagingCephSuperimpositions } =
+    await import('./repos/imaging_ceph.schema');
+  // Child→parent FK order. Ceph report/superimposition snapshots (seeded into the
+  // shared test template, or left by sibling ceph tests) reference imaging_study_image
+  // / each other, so they MUST be cleared before images.
+  await db.delete(imagingCephSuperimpositions);
+  await db.delete(imagingCephReports);
   await db.delete(imagingFindings);
   await db.delete(imagingCephAnalyses);
   await db.delete(imagingCephLandmarks);
