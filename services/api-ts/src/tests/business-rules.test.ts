@@ -214,6 +214,13 @@ function makeApp(user?: typeof TEST_USER) {
     updateLabOrder as any,
   );
 
+  // Prescriptions
+  app.post('/dental/visits/:visitId/prescriptions',
+    zValidator('param', CreatePrescriptionParams, validationErrorHandler),
+    zValidator('json', CreatePrescriptionBody, validationErrorHandler),
+    createPrescription as any,
+  );
+
   // Appointments
   app.delete('/dental/appointments/:appointmentId',
     zValidator('param', CancelAppointmentParams, validationErrorHandler),
@@ -625,6 +632,46 @@ describe('BR-003: visit immutable after completed or locked', () => {
         patientId: PATIENT_ID,
         labName: 'Test Lab',
         description: 'Crown fabrication',
+      }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('cannot add prescription to a completed visit (4xx VISIT_IMMUTABLE) [BR-003]', async () => {
+    const visit = await seedCompletedVisit();
+    const app = makeApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visit!.id,
+        patientId: PATIENT_ID,
+        prescriberMemberId: MEMBER_ID,
+        drugName: 'Amoxicillin',
+        dosage: '500mg',
+        frequency: 'TID',
+      }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('cannot add prescription to a locked visit (4xx VISIT_IMMUTABLE) [BR-003]', async () => {
+    const visit = await seedLockedVisit();
+    const app = makeApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visit!.id,
+        patientId: PATIENT_ID,
+        prescriberMemberId: MEMBER_ID,
+        drugName: 'Amoxicillin',
+        dosage: '500mg',
+        frequency: 'TID',
       }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
