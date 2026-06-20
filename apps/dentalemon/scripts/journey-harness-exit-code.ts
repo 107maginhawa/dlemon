@@ -24,3 +24,25 @@ export function computeExitCode(
   )
   return errorCount > 0 || regressions.length > 0 ? 1 : 0
 }
+
+/**
+ * JC-3 core doctor-visit WF coverage gate (pure). For each core WF mapped to the
+ * harness id that proves it, return a failure line unless that journey actually
+ * PASSED this run. This ties the green to the core set: a core journey silently
+ * regressing, skipping, or never running is no longer invisible behind a 24/24.
+ * Documented gaps (a core WF with no live journey yet) are NOT passed in here —
+ * they are listed separately as tracked gaps, never as a pass.
+ */
+export function computeCoreCoverageFailures(
+  verdictById: Map<string, 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'>,
+  coreMap: Record<string, { journeyId: string; label: string }>,
+): string[] {
+  const failures: string[] = []
+  for (const [wf, { journeyId, label }] of Object.entries(coreMap)) {
+    const verdict = verdictById.get(journeyId)
+    if (verdict !== 'PASS') {
+      failures.push(`${wf} (${label}) → ${journeyId} is ${verdict ?? 'NOT RUN'} (expected PASS)`)
+    }
+  }
+  return failures
+}

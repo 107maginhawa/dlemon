@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { computeExitCode } from './journey-harness-exit-code'
+import { computeExitCode, computeCoreCoverageFailures } from './journey-harness-exit-code'
 
 describe('computeExitCode — journey harness exit gate', () => {
   // AC-001: PASS-expected regresses to BROKEN → must fail CI
@@ -71,5 +71,57 @@ describe('computeExitCode — journey harness exit gate', () => {
       { expectedVerdict: 'PASS' as const, actualVerdict: 'BROKEN' as const },
     ]
     expect(computeExitCode(journeys, 0)).toBe(1)
+  })
+})
+
+describe('computeCoreCoverageFailures — JC-3 core doctor-visit WF gate', () => {
+  const CORE = {
+    'WF-045': { journeyId: 'J21', label: 'Start new visit' },
+    'WF-009': { journeyId: 'J23', label: 'Chart entry' },
+    'WF-012': { journeyId: 'J22', label: 'Complete visit' },
+  }
+
+  // Non-vacuity: the gate is GREEN only when every mapped core WF's journey PASSED.
+  test('all core journeys PASS → no failures', () => {
+    const verdicts = new Map<string, 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'>([
+      ['J21', 'PASS'],
+      ['J23', 'PASS'],
+      ['J22', 'PASS'],
+    ])
+    expect(computeCoreCoverageFailures(verdicts, CORE)).toHaveLength(0)
+  })
+
+  // The teeth: a core journey regressing to BROKEN/ERROR/SKIPPED is caught.
+  test('a core journey returning BROKEN is reported as a failure', () => {
+    const verdicts = new Map<string, 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'>([
+      ['J21', 'PASS'],
+      ['J23', 'BROKEN'],
+      ['J22', 'PASS'],
+    ])
+    const fails = computeCoreCoverageFailures(verdicts, CORE)
+    expect(fails).toHaveLength(1)
+    expect(fails[0]).toContain('WF-009')
+  })
+
+  // The exact "broken for users while green" class: a core journey that never ran.
+  test('a core journey that never ran (NOT RUN) is a failure', () => {
+    const verdicts = new Map<string, 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'>([
+      ['J21', 'PASS'],
+      ['J22', 'PASS'],
+      // J23 absent entirely
+    ])
+    const fails = computeCoreCoverageFailures(verdicts, CORE)
+    expect(fails).toHaveLength(1)
+    expect(fails[0]).toContain('NOT RUN')
+  })
+
+  // A core journey silently SKIPPING does not count as proven.
+  test('a core journey returning SKIPPED is a failure (not proven)', () => {
+    const verdicts = new Map<string, 'PASS' | 'BROKEN' | 'ERROR' | 'SKIPPED'>([
+      ['J21', 'PASS'],
+      ['J23', 'SKIPPED'],
+      ['J22', 'PASS'],
+    ])
+    expect(computeCoreCoverageFailures(verdicts, CORE)).toHaveLength(1)
   })
 })

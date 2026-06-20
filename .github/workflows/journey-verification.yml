@@ -13,9 +13,17 @@ name: Journey Verification
 # journey. The same proven boot recipe as journey-stability.yml; that one banks
 # the 20× stability budget on demand, this one is the per-PR single-shot gate.
 #
-# ⚠ NOT YET a REQUIRED branch-protection check — adding it to the required set is
-# a GitHub-settings action a code agent cannot perform (VERIFICATION_HARDENING.md
-# P2 step 3 / ⚠ HUMAN). Make it required once it is green on main.
+# JC-3: the harness now SELF-ENFORCES a core-coverage gate — each core doctor-visit
+# WF (045/009/011/010/013/012/018/021) must be proven by a journey that PASSED this
+# run, else run-journey-harness.ts exits 1 (see CORE_DOCTOR_WFS + KNOWN_CORE_GAPS in
+# that script; non-vacuity covered by journey-harness-exit-code.test.ts). It also
+# prints an honest PROVEN-WORKING vs PROVEN-BROKEN tally so a green never reads
+# designed-broken/inverted proofs as feature health.
+#
+# ⚠ NOT YET a REQUIRED branch-protection check — adding this job to the required set
+# is a GitHub-settings action a code agent cannot perform (VERIFICATION_HARDENING.md
+# P2 step 3 / ⚠ HUMAN; also gated on GH Actions billing being restored). Make it
+# required now that it is green + self-enforcing on main.
 on:
   pull_request:
   push:

@@ -62,7 +62,7 @@ const META: JourneyMeta = {
   name: 'Dentist visit day-in-the-life (new visit → chart+treatment → SOAP note → performed → invoice → complete, persistence read each step)',
   set: 'A',
   expectedVerdict: 'PASS',
-  rubricIds: ['WF-074', 'WF-009', 'WF-011'],
+  rubricIds: ['WF-074', 'WF-009', 'WF-011', 'WF-021'],
 }
 
 // Deterministic chart entry: an anterior central incisor + an anterior resin code so the
@@ -366,6 +366,24 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
         timeout: 10_000,
       })
       .toBe(0)
+
+    // ── Step 8: PMD auto-generation (WF-021). Completing a visit auto-generates the
+    //    Portable Medical Document (updateDentalVisit → generatePmdForVisit). Prove
+    //    the immutable per-visit snapshot persisted with a checksum (independent read).
+    await expect
+      .poll(
+        async () => {
+          const r = await apiReader.get(`/dental/visits/${visitId}/pmd`)
+          if (!r.ok()) return null
+          const pmd = await r.json()
+          return (pmd?.checksum ?? pmd?.data?.checksum) as string | null
+        },
+        {
+          message: 'WF-021: completing the visit must auto-generate a PMD snapshot (checksum present)',
+          timeout: 15_000,
+        },
+      )
+      .toBeTruthy()
 
     recordJourneyPass(META)
   } catch (err) {

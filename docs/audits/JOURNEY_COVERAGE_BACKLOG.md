@@ -27,7 +27,7 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
 |---|------|-----|----------|--------|
 | JC-1 | Continuous doctor-visit journey (chart-save + SOAP-save through real UI) | WF-074 / 009 / 011 | **P0** | ✅ done (J23) |
 | JC-2 | Patient login proof — magic-link + passkey | WF-003 / 002 | **P0** | ✅ done (J24 + contract) |
-| JC-3 | Promote journeys to a required CI gate + honest tally | — | **P1** | ⬜ pending |
+| JC-3 | Promote journeys to a required CI gate + honest tally | — | **P1** | ✅ done (gate+tally; ⚠ human: branch-protection) |
 | JC-4 | Money/destructive UI live journeys (payment, void, refund, erasure) | WF-014 / 041 / BIL-REFUND / 088 | **P1** | ⬜ pending |
 | JC-5 | Concurrent same-visit invoice race (adversarial) | WFG-004 | **P1** | ⬜ pending |
 | JC-6 | De-aspirationalize "covered" journeys (perio reading, amendment, consent gate, calendar render) | WF-P02 / 038 / 018·BR-014 / 024 | **P1** | ⬜ pending |
@@ -97,6 +97,19 @@ asserts nothing is the bug we are removing. Split "proven-working" vs "proven-br
   the run if any *core* doctor-visit WF (045/007/009/011/012/010/018/013/021) lacks a
   `proven`-grade journey; emit a distinct **proven-working vs proven-broken** split so inverted
   proofs stop reading as feature health. (Human action may be needed for branch protection — flag it.)
+- **✅ Result:** `run-journey-harness.ts` now self-enforces a **CORE_DOCTOR_WFS gate** — each core
+  WF (045 J21 / 009·011·021 J23 / 010·013 J04 / 012 J22 / 018 J19) must be proven by a journey
+  that PASSED this run, else the harness exits 1 (caught the cheap WF-021 gap → added a PMD
+  read-back to J23; WF-012 re-pointed J04→J22, the genuine complete-visit proof). Teeth proven
+  non-vacuous by `computeCoreCoverageFailures` + 4 unit tests (fails on a core journey going
+  BROKEN/NOT-RUN/SKIPPED). Added a **PROVEN-WORKING vs PROVEN-BROKEN** tally to the summary +
+  `journey-results.json` (24 / 0 — note: J02/J05 are NOT designed-broken; the inverted-proof
+  helper was already retired, so the audit's "inverted proofs inflate the count" premise was
+  stale). **WF-007 check-in** is the one explicit, documented `KNOWN_CORE_GAPS` entry (its
+  Check-In control is a calendar-card hover action; only `patient-checkin.spec.ts` covers it, not
+  in the harness) — printed as a tracked gap, never hidden. **⚠ HUMAN remaining:** promote the
+  `journey-verification` job to a required branch-protection check (GitHub settings; also gated on
+  GH Actions billing being restored) — the gate is now green + self-enforcing on main.
 
 ## JC-4 — Money/destructive UI live journeys · P1
 
