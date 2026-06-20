@@ -72,7 +72,12 @@ export async function updatePerson(
     }
   }
   if (body.gender !== undefined) updateData.gender = body.gender;
-  if (body.contactInfo !== undefined) updateData.contactInfo = body.contactInfo;
+  // Partial contact-info merge — provided sub-fields override, omitted ones keep
+  // the stored value (mirrors person-dental-patient.facade.ts; a phone-only edit
+  // never wipes the stored email). A full JSONB replace here was silent data loss.
+  if (body.contactInfo !== undefined) {
+    updateData.contactInfo = { ...(existingPerson.contactInfo ?? {}), ...body.contactInfo };
+  }
   if (body.primaryAddress !== undefined) updateData.primaryAddress = body.primaryAddress as typeof updateData.primaryAddress;
   if (body.avatar !== undefined) updateData.avatar = body.avatar as typeof updateData.avatar;
   if (body.languagesSpoken !== undefined) updateData.languagesSpoken = body.languagesSpoken;
