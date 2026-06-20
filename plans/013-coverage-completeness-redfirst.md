@@ -122,6 +122,18 @@ journey harness green where touched. Commits end with:
   gaps)**. Artifacts: ledger-coverage.{ts,json}, LEDGER_COVERAGE.md, coverage-backlog.{json,md}.
   ⚠ PRE-EXISTING (not mine): 3 workflow-matrix.test.ts fail (dangling spec + allowlist drift
   from recent journey commits) — Phase 2 freshness fix.
+- 2026-06-21: **Phase 2 COMPLETE** (branch chore/coverage-completeness-013, commits cd8485e7
+  Phase0+1, bb087992 freshness, cd06e570 parser, 76031be8 ledger-ratchet+policy). (1) Fixed
+  workflow-matrix [INFERRED] parser blind spot via isIdOnlyCell() — 85→108 WFs visible; 21
+  newly-revealed gaps allowlisted (all [INFERRED] op-table reads/CRUD covered at be/contract +
+  §8 notif flows); 2 RED→GREEN parser tests. (2) Reconciled freshness: WF-002 covered→deferred
+  (contract-only passkey), dropped resolved WF-003/011/032; engine 196/0, freshness gate green.
+  (3) NEW report-only ledger ratchet: ledger-coverage.ts grep-only/deterministic + `--check` vs
+  ledger.allowlist.json (71 baseline, shrink-only); wired in quality.yml after freshness; npm
+  coverage:ledger[:check]. REPORT-ONLY because deterministic detection has FPs (grep blind to
+  buildTestApp be-unit; e2e spec-index ~29% FP per LLM verify) — promote to blocking when
+  detection hardened + branch protection on. (4) LAYER_POLICY.md = per-type×risk required-layer
+  matrix + artifact map + ratchet table.
 
 ## CONTINUE PROMPT (paste into a fresh session to resume)
 
