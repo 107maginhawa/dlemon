@@ -1,0 +1,286 @@
+[
+  {
+    "id": "be-dental-billing-apply-credit-to-invoice",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit+contract). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "be-dental-billing-credit-cap-invariant",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit+contract). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "be-dental-billing-generate-statement-batch",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
+  },
+  {
+    "id": "be-dental-billing-get-ar-aging",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
+  },
+  {
+    "id": "be-dental-billing-loa-authorization-dependency",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:e2e). RED-first, smallest viable: a UI-driving Playwright e2e is currently impossible because the LOA UI does not exist (no ro"
+  },
+  {
+    "id": "be-dental-billing-refund-cap-invariant",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
+  },
+  {
+    "id": "be-patient-create-patient",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "be-patient-create-requires-person-profile",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "be-patient-one-patient-per-person",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "be-patient-self-registration-role-grant",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "billing-create-invoice",
+    "reason": "deterministic baseline (e2e-gap/money, miss:e2e). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-ceph-landmark-fsm-forward-only",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "br-fee-resolution-precedence",
+    "reason": "deterministic baseline (unproven/clinical, miss:be-unit+contract). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-gingival-margin-bounds",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "br-grade-bounds",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "br-imaging-image-link-loose-coupling",
+    "reason": "deterministic baseline (be-unit-gap/clinical, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-p03-depth-recession-bounds",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "br-p04-fdi-tooth-number",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "br-p06-reading-upsert-idempotent",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "br-portal-001-idor-self-scope",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-portal-002-staff-only-denied",
+    "reason": "deterministic baseline (be-unit-gap/clinical, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-portal-003-empty-self-scope",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-portal-004-projection-and-writeoff-hidden",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "br-portal-005-read-only-no-mutation",
+    "reason": "deterministic baseline (unproven/rest, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "branch-settings-get",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "calibrate-image",
+    "reason": "deterministic baseline (e2e-gap/core, miss:e2e). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "ceph-delete-landmark",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "ceph-update-landmark",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "comms-ws-chat-room",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/core, miss:e2e). Add a server-level WebSocket integration test (not a Playwright UI journey, since comms has no UI in apps/dentalemon). B"
+  },
+  {
+    "id": "consent-template-list",
+    "reason": "deterministic baseline (be-unit-gap/clinical, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "dashboard-payment-plans-card",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "dashboard-payment-plans-card--1",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "dashboard-summary",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "dp-accept-treatment-option",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "dp-detect-duplicate-patients",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "dp-list-coverage-authorizations",
+    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit+contract). See above."
+  },
+  {
+    "id": "dp-list-due-recalls",
+    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit). Add a be-unit test (e.g. services/api-ts/src/handlers/dental-patient/recalls/listDueRecalls.test.ts) mounting listDueRec"
+  },
+  {
+    "id": "dp-list-patient-insurance-profiles",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
+  },
+  {
+    "id": "dp-list-patient-treatment-plans",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "dp-list-sync-logs",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "dp-list-treatment-option-group",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "dp-reject-case-presentation",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "dp-update-communication-consent",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "fee-schedule-get",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit+contract). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "fee-schedule-update-entry",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
+  },
+  {
+    "id": "imaging-create-image-link",
+    "reason": "deterministic baseline (be-unit-gap/money, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "imaging-delete-image-link",
+    "reason": "deterministic baseline (e2e-gap/clinical, miss:be-unit+e2e). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "imaging-list-image-links",
+    "reason": "deterministic baseline (be-unit-gap/clinical, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "inter-portal-billing-facade",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:be-unit+e2e). Add a RED-first Playwright e2e at apps/dentalemon/tests/e2e/portal-bills.spec.ts that authenticates as a patient and nav"
+  },
+  {
+    "id": "notif-push-click-deep-link",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:e2e). Add one Playwright e2e spec at apps/dentalemon/tests/e2e/push-deep-link.spec.ts that, on the authenticated /_dashboard s"
+  },
+  {
+    "id": "notif-push-opt-in-enable",
+    "reason": "Phase 1 VERIFIED gap (unproven/auth, miss:e2e). Add a RED-first Playwright spec at apps/dentalemon/tests/e2e/push-opt-in.spec.ts (or extend notification-inbox.spec.ts) "
+  },
+  {
+    "id": "notifs-mark-all-read",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/core, miss:e2e). Add an e2e test to notification-inbox.spec.ts that seeds 2+ real notifications, opens the bell, clicks notification-mark"
+  },
+  {
+    "id": "op-discard-visit",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
+  },
+  {
+    "id": "op-export-dental-chart",
+    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit). Add a handler-level bun test (e.g. services/api-ts/src/handlers/dental-visit/exportDentalChart.test.ts) mirroring the si"
+  },
+  {
+    "id": "op-get-tooth-history",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "op-update-tooth",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "patients-comm-consent-persist",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "patients-comm-consent-persist--1",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "perio-upsert-tooth-reading",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "person-billing-party-lookup-inter-module",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:e2e). See above."
+  },
+  {
+    "id": "person-get-operation",
+    "reason": "deterministic baseline (e2e-gap/clinical, miss:e2e). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "portal-get-my-balance",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:be-unit+e2e). Add one RED-first Playwright journey spec (e.g. apps/dentalemon/tests/e2e/journeys/32-portal-view-my-balance.journey.spe"
+  },
+  {
+    "id": "portal-index-redirect",
+    "reason": "Phase 1 VERIFIED gap (unproven/core, miss:e2e). Add one RED-first Playwright e2e that, as an authenticated patient session (Better-Auth user with linked Person+dental_p"
+  },
+  {
+    "id": "portal-list-my-appointments",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/clinical, miss:be-unit+e2e). Add a Playwright e2e journey, e.g. apps/dentalemon/tests/e2e/portal-appointments.spec.ts, RED-first against current main"
+  },
+  {
+    "id": "portal-list-my-invoices",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:be-unit+e2e). "
+  },
+  {
+    "id": "portal-resolve-self-patient-or-throw",
+    "reason": "deterministic baseline (be-unit-gap/clinical, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
+  },
+  {
+    "id": "portal-sign-out",
+    "reason": "Phase 1 VERIFIED gap (e2e-gap/core, miss:e2e). Add a focused portal sign-out journey (e.g. apps/dentalemon/tests/e2e/journeys/32-portal-sign-out.journey.spec.ts), Set "
+  },
+  {
+    "id": "portal-tab-navigation",
+    "reason": "Phase 1 VERIFIED gap (unproven/core, miss:e2e). Add ONE journey/e2e spec (e.g. apps/dentalemon/tests/e2e/journeys/32-patient-portal-tabs.journey.spec.ts, or a simpler p"
+  },
+  {
+    "id": "uc-get-medical-history-review",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  },
+  {
+    "id": "uc-list-consent-refusals",
+    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit). Add a RED-first bun unit test for the listConsentRefusals handler."
+  },
+  {
+    "id": "wf-record-medical-history-review",
+    "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
+  }
+]

@@ -3,35 +3,67 @@
   "source": "coverage-ledger.json",
   "totals": {
     "items": 915,
-    "PARTIAL": 522,
-    "GAP": 192,
-    "COVERED": 201,
+    "PARTIAL": 513,
+    "GAP": 206,
+    "COVERED": 196,
     "gapByLayer": {
-      "e2e": 17,
-      "be-unit": 4,
-      "contract": 37
+      "be-unit": 27,
+      "contract": 37,
+      "e2e": 17
     },
     "gapByRisk": {
+      "clinical": 39,
       "auth": 1,
       "core": 6,
-      "money": 16,
-      "clinical": 34
+      "rest": 1,
+      "money": 24
     },
     "gapBySeverity": {
-      "unproven": 3,
+      "unproven": 5,
       "e2e-gap": 14,
-      "be-unit-gap": 4,
-      "contract-only": 36
+      "be-unit-gap": 20,
+      "contract-only": 32
     },
     "partialUnknownByLayer": {
-      "be-unit": 63,
-      "fe-unit": 468,
+      "be-unit": 71,
+      "fe-unit": 457,
       "contract": 8
     },
-    "userReachableGaps": 57,
+    "userReachableGaps": 71,
     "backendOnlyGaps": 135
   },
   "backlog": [
+    {
+      "id": "br-fee-resolution-precedence",
+      "title": "Fee resolution precedence: branch override → catalog default → 0",
+      "type": "business-rule",
+      "modules": [
+        "dental-org",
+        "dental-visit"
+      ],
+      "route": null,
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "unproven",
+      "requiredLayers": [
+        "be-unit",
+        "contract"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "MISSING",
+        "fe-unit": "N/A",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit",
+        "contract"
+      ],
+      "unknown": [],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
     {
       "id": "notif-push-opt-in-enable",
       "title": "Enable push notifications (request permission)",
@@ -117,6 +149,34 @@
       "itemGrade": "GAP"
     },
     {
+      "id": "br-portal-005-read-only-no-mutation",
+      "title": "Portal is read-only: no /me write/pay/mutate route exists",
+      "type": "business-rule",
+      "modules": [
+        "dental-portal"
+      ],
+      "route": "/me/appointments",
+      "risk": "rest",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "unproven",
+      "requiredLayers": [
+        "be-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "N/A",
+        "fe-unit": "N/A",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
       "id": "be-dental-billing-loa-authorization-dependency",
       "title": "Coverage authorization (LOA) lifecycle backing claims (inter-module)",
       "type": "inter-module",
@@ -159,40 +219,6 @@
         "person"
       ],
       "route": "/billing/invoices",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "inter-portal-billing-facade",
-      "title": "Portal reads invoices/balance via dental-billing facade (boundary lint)",
-      "type": "inter-module",
-      "modules": [
-        "dental-portal",
-        "dental-billing"
-      ],
-      "route": "/me/invoices",
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
@@ -289,6 +315,41 @@
       "itemGrade": "GAP"
     },
     {
+      "id": "inter-portal-billing-facade",
+      "title": "Portal reads invoices/balance via dental-billing facade (boundary lint)",
+      "type": "inter-module",
+      "modules": [
+        "dental-portal",
+        "dental-billing"
+      ],
+      "route": "/me/invoices",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "be-unit",
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
       "id": "portal-get-my-balance",
       "title": "Patient views own outstanding balance roll-up (GET /me/balance)",
       "type": "workflow",
@@ -311,12 +372,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -338,6 +400,41 @@
       ],
       "route": "/portal/bills",
       "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "be-unit",
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "person-get-operation",
+      "title": "getPerson — read a person profile (owner | me | admin/support | internal-expand)",
+      "type": "workflow",
+      "modules": [
+        "person",
+        "auth"
+      ],
+      "route": "/*",
+      "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
       "severity": "e2e-gap",
@@ -383,46 +480,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "person-get-operation",
-      "title": "getPerson — read a person profile (owner | me | admin/support | internal-expand)",
-      "type": "workflow",
-      "modules": [
-        "person",
-        "auth"
-      ],
-      "route": "/*",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
         "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
         "e2e"
       ],
       "unknown": [
@@ -454,12 +518,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -600,6 +665,491 @@
       "itemGrade": "GAP"
     },
     {
+      "id": "br-portal-001-idor-self-scope",
+      "title": "IDOR-free self-scope: every portal read returns ONLY caller's own rows",
+      "type": "business-rule",
+      "modules": [
+        "dental-portal",
+        "patient",
+        "dental-scheduling",
+        "dental-billing"
+      ],
+      "route": "/me/appointments",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "br-portal-003-empty-self-scope",
+      "title": "Empty self-scope returns [] / zeroed roll-up, never a fallback to all",
+      "type": "business-rule",
+      "modules": [
+        "dental-portal",
+        "dental-scheduling",
+        "dental-billing"
+      ],
+      "route": "/me/balance",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "br-portal-004-projection-and-writeoff-hidden",
+      "title": "Patient-appropriate projection; internal fields & written-off/voided debt hidden",
+      "type": "business-rule",
+      "modules": [
+        "dental-portal",
+        "dental-billing",
+        "dental-scheduling"
+      ],
+      "route": "/me/invoices",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "branch-settings-get",
+      "title": "Get branch settings",
+      "type": "use-case",
+      "modules": [
+        "dental-org",
+        "settings",
+        "dental-billing",
+        "notifs",
+        "dental-scheduling"
+      ],
+      "route": "/settings",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dashboard-payment-plans-card",
+      "title": "Payment Plans metric with behind-badge (financial roles only)",
+      "type": "business-rule",
+      "modules": [
+        "dashboard",
+        "dental-billing",
+        "dental-org"
+      ],
+      "route": "/dashboard",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dashboard-payment-plans-card--1",
+      "title": "Payment Plans metric with behind-badge (financial roles only)",
+      "type": "business-rule",
+      "modules": [
+        "dashboard",
+        "dental-billing",
+        "dental-org"
+      ],
+      "route": "/dashboard",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dashboard-summary",
+      "title": "Owner dashboard summary (financials + lab orders)",
+      "type": "use-case",
+      "modules": [
+        "dental-org",
+        "dental-billing",
+        "dental-clinical",
+        "dashboard"
+      ],
+      "route": "/dashboard",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "imaging-create-image-link",
+      "title": "Link image to treatment plan / ortho case / report",
+      "type": "inter-module",
+      "modules": [
+        "dental-imaging",
+        "dental-billing",
+        "case-presentation",
+        "imaging",
+        "dental-clinical"
+      ],
+      "route": "/$patientId (imaging overlay, Edit sheet)",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "be-dental-billing-apply-credit-to-invoice",
+      "title": "Apply patient credit against invoice (atomic draw-down)",
+      "type": "workflow",
+      "modules": [
+        "dental-billing",
+        "dental-org",
+        "patients",
+        "billing"
+      ],
+      "route": "/patients/$patientId",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "be-unit",
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "be-dental-billing-credit-cap-invariant",
+      "title": "Credit apply cap: > 0, <= balance, <= available credit (BR-052)",
+      "type": "business-rule",
+      "modules": [
+        "dental-billing"
+      ],
+      "route": "/dental/billing/invoices/{invoiceId}/apply-credit",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit",
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "fee-schedule-get",
+      "title": "Read branch fee schedule (CDT catalog with effective prices)",
+      "type": "use-case",
+      "modules": [
+        "dental-org",
+        "dental-visit",
+        "settings",
+        "dental-fee-schedule",
+        "dental-billing"
+      ],
+      "route": "/settings",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit",
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "br-imaging-image-link-loose-coupling",
+      "title": "G5b: image links are loose-coupled UUID refs, idempotent",
+      "type": "business-rule",
+      "modules": [
+        "dental-imaging"
+      ],
+      "route": null,
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "N/A",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "br-portal-002-staff-only-denied",
+      "title": "Staff-only account denied (403); unauthenticated denied (401)",
+      "type": "business-rule",
+      "modules": [
+        "dental-portal",
+        "patient"
+      ],
+      "route": "/me/appointments",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "consent-template-list",
+      "title": "List branch consent-form templates",
+      "type": "use-case",
+      "modules": [
+        "dental-org",
+        "org",
+        "settings",
+        "workspace",
+        "clinical",
+        "dental-visit"
+      ],
+      "route": "/settings",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
       "id": "dp-list-due-recalls",
       "title": "List due recalls (front-desk recare worklist)",
       "type": "use-case",
@@ -610,6 +1160,39 @@
         "recall"
       ],
       "route": "/calendar",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "imaging-list-image-links",
+      "title": "List context links for an image",
+      "type": "use-case",
+      "modules": [
+        "dental-imaging",
+        "imaging"
+      ],
+      "route": "/$patientId (imaging overlay, Edit sheet)",
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
@@ -671,6 +1254,37 @@
       "itemGrade": "GAP"
     },
     {
+      "id": "portal-resolve-self-patient-or-throw",
+      "title": "Derive caller's own patientId from session (resolveSelfPatientIdOrThrow)",
+      "type": "use-case",
+      "modules": [
+        "dental-portal",
+        "patient",
+        "person"
+      ],
+      "route": null,
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "N/A",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
       "id": "uc-list-consent-refusals",
       "title": "List consent refusals for visit",
       "type": "use-case",
@@ -728,74 +1342,6 @@
       },
       "missing": [
         "be-unit",
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "be-dental-billing-apply-credit-to-invoice",
-      "title": "Apply patient credit against invoice (atomic draw-down)",
-      "type": "workflow",
-      "modules": [
-        "dental-billing",
-        "dental-org",
-        "patients",
-        "billing"
-      ],
-      "route": "/patients/$patientId",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "be-dental-billing-credit-cap-invariant",
-      "title": "Credit apply cap: > 0, <= balance, <= available credit (BR-052)",
-      "type": "business-rule",
-      "modules": [
-        "dental-billing"
-      ],
-      "route": "/dental/billing/invoices/{invoiceId}/apply-credit",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
         "contract"
       ],
       "unknown": [
@@ -916,42 +1462,6 @@
         "billing"
       ],
       "route": "/patients/$patientId",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "fee-schedule-get",
-      "title": "Read branch fee schedule (CDT catalog with effective prices)",
-      "type": "use-case",
-      "modules": [
-        "dental-org",
-        "dental-visit",
-        "settings",
-        "dental-fee-schedule",
-        "dental-billing"
-      ],
-      "route": "/settings",
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
@@ -1190,36 +1700,6 @@
       "type": "business-rule",
       "modules": [
         "dental-imaging"
-      ],
-      "route": null,
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "N/A",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "br-fee-resolution-precedence",
-      "title": "Fee resolution precedence: branch override → catalog default → 0",
-      "type": "business-rule",
-      "modules": [
-        "dental-org",
-        "dental-visit"
       ],
       "route": null,
       "risk": "clinical",
@@ -3034,7 +3514,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3043,6 +3523,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3099,7 +3580,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3108,6 +3589,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3131,7 +3613,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3140,6 +3622,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3163,7 +3646,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3172,6 +3655,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -8742,24 +9226,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "dashboard-payment-plans-card--1",
@@ -8774,24 +9260,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "dashboard-role-financial-gating",
@@ -9384,19 +9872,20 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [
+        "be-unit",
         "contract"
       ],
       "unknown": [
@@ -11253,21 +11742,23 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "COVERED"
+      "itemGrade": "GAP"
     },
     {
       "id": "br-imaging-image-patient-linkage",
@@ -11705,18 +12196,19 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "unproven",
       "requiredLayers": [
         "be-unit",
         "contract"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "MISSING",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
       "missing": [
+        "be-unit",
         "contract"
       ],
       "unknown": [],
@@ -11856,13 +12348,14 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -11885,13 +12378,14 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -13337,24 +13831,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "br-portal-002-staff-only-denied",
@@ -13368,24 +13864,26 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "br-portal-003-empty-self-scope",
@@ -13400,24 +13898,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "br-portal-004-projection-and-writeoff-hidden",
@@ -13432,24 +13932,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "br-portal-005-read-only-no-mutation",
@@ -13462,20 +13964,22 @@
       "risk": "rest",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "unproven",
       "requiredLayers": [
         "be-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "N/A",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "COVERED"
+      "itemGrade": "GAP"
     },
     {
       "id": "be-dental-scheduling-appointment-fsm",
@@ -17913,13 +18417,14 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -18060,13 +18565,14 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -18089,13 +18595,14 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -19767,7 +20274,7 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -19775,17 +20282,19 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "inter-imaging-org-tier",
@@ -20028,12 +20537,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -22074,24 +22584,26 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "imaging-list-measurements",
@@ -22281,24 +22793,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "consent-template-list",
@@ -22316,24 +22830,26 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "dashboard-summary",
@@ -22349,24 +22865,26 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "PARTIAL"
+      "itemGrade": "GAP"
     },
     {
       "id": "fee-schedule-get",
@@ -22383,19 +22901,20 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [
+        "be-unit",
         "contract"
       ],
       "unknown": [
@@ -22530,15 +23049,17 @@
         "be-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
       "missing": [],
-      "unknown": [],
+      "unknown": [
+        "be-unit"
+      ],
       "absentByDesign": false,
-      "itemGrade": "COVERED"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "working-hours-get",
@@ -23744,21 +24265,23 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "none",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
-      "missing": [],
+      "missing": [
+        "be-unit"
+      ],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "COVERED"
+      "itemGrade": "GAP"
     },
     {
       "id": "be-dental-scheduling-get-appointment",
@@ -24983,15 +25506,17 @@
         "be-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
       "missing": [],
-      "unknown": [],
+      "unknown": [
+        "be-unit"
+      ],
       "absentByDesign": false,
-      "itemGrade": "COVERED"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "invoice-detail-sheet-close",
@@ -26778,7 +27303,7 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -26786,12 +27311,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
       "missing": [
+        "be-unit",
         "contract"
       ],
       "unknown": [
@@ -28583,12 +29109,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -29497,13 +30024,14 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
       "missing": [],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -31209,12 +31737,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -31246,12 +31775,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -31283,12 +31813,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
+        "be-unit",
         "e2e"
       ],
       "unknown": [
@@ -33635,7 +34166,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -33644,6 +34175,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -33735,7 +34267,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -33744,6 +34276,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -33767,7 +34300,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -33776,6 +34309,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -33799,7 +34333,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "COVERED",
+        "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -33808,6 +34342,7 @@
         "e2e"
       ],
       "unknown": [
+        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,

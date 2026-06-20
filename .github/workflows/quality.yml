@@ -270,6 +270,17 @@ jobs:
             echo "Run 'bun run coverage:all' locally and commit docs/testing/coverage/."
             exit 1
           fi
+      - name: Ledger coverage ratchet (user-reachable workflows, ADVISORY)
+        # Grades the full coverage-ledger surface (915 items) across be-unit /
+        # contract / fe-unit / e2e and ratchets the user-reachable gaps against
+        # docs/testing/coverage/ledger.allowlist.json (shrink-only). REPORT-ONLY:
+        # deterministic detection has known false positives (grep is blind to
+        # buildTestApp route-only be-unit tests; the e2e spec-index is a fuzzy
+        # match — the Phase 1 LLM verify found ~29% of raw e2e candidates were
+        # actually covered). Promote to blocking once detection is hardened
+        # (recorder-in-CI) AND branch protection is enabled. Runs AFTER the
+        # freshness gate so its regen never perturbs that diff.
+        run: bun run coverage:ledger:check
 
   module-boundaries:
     name: Module Boundary Gate

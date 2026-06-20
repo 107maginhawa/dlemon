@@ -30,9 +30,11 @@
 
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { ratchet, loadAllowlist, formatRatchetReport, type Gap } from './lib/ratchet';
 
 const ROOT = join(import.meta.dir, '..', '..');
 const E2E_DIR = join(ROOT, 'apps/dentalemon/tests/e2e');
+const LEDGER_ALLOWLIST = join(ROOT, 'docs/testing/coverage/ledger.allowlist.json');
 const LEDGER = join(ROOT, 'docs/testing/coverage/coverage-ledger.json');
 const ENDPOINT_MATRIX = join(ROOT, 'docs/testing/coverage/endpoint-matrix.json');
 const WORKFLOW_MATRIX = join(ROOT, 'docs/testing/coverage/workflow-matrix.json');
@@ -89,6 +91,12 @@ interface EpRow {
  * references the handler by its operationId. So: an op is be-unit-covered if its
  * operationId token appears anywhere in the BE test corpus. (Validated: discardVisit,
  * listPatientInsuranceProfiles both resolve correctly where disposition='gap' lied.)
+ *
+ * CAVEAT (deterministic, CI-reproducible — no test run needed): the grep MISSES a
+ * buildTestApp test that routes by PATH without naming the operationId. Those show as
+ * be-unit "gaps" here but are covered. The Phase 1 recorder run + LLM verify confirmed
+ * which are real; see coverage-backlog.json (the curated, verified work list). This
+ * matrix is the raw deterministic view that feeds the (report-only) ratchet.
  */
 function loadBeUnitOps(opIds: string[]): Set<string> {
   const corpus = walkBE().map((f) => readFileSync(f, 'utf8')).join('\n');
@@ -99,28 +107,6 @@ function loadBeUnitOps(opIds: string[]): Set<string> {
   }
   return covered;
 }
-/**
- * Recorder sink (gitignored, populated by `COVERAGE_RECORD=1 bun test`): the set of
- * operationIds a buildTestApp-routed test actually hit. This catches be-unit tests
- * that route by PATH without naming the operationId — which the opId-grep misses.
- * be-unit signal = opId-grep ∪ recorder. Absent sink (e.g. CI) → grep-only, which is
- * slightly more conservative (a few extra candidate gaps the LLM verify pass filters).
- */
-function loadRecordedOps(epIndex: Map<string, EpRow>): Set<string> {
-  const covered = new Set<string>();
-  let text = '';
-  try { text = readFileSync(join(ROOT, 'docs/testing/coverage/.recorded-ops.jsonl'), 'utf8'); } catch { return covered; }
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const o = JSON.parse(line) as { method: string; matchedRoutePath: string };
-      const row = epIndex.get(epKey(o.method, o.matchedRoutePath));
-      if (row) covered.add(row.operationId);
-    } catch { /* skip malformed line */ }
-  }
-  return covered;
-}
-
 function walkBE(): string[] {
   const roots = [join(ROOT, 'services/api-ts/src/handlers'), join(ROOT, 'services/api-ts/src/tests'), join(ROOT, 'services/api-ts/tests')];
   const acc: string[] = [];
@@ -267,9 +253,7 @@ function main(): void {
   const ledger = JSON.parse(readFileSync(LEDGER, 'utf8'));
   const items = ledger.items as LedgerItem[];
   const ep = loadEndpointIndex();
-  const grepOps = loadBeUnitOps([...new Set([...ep.values()].map((r) => r.operationId))]);
-  const recordedOps = loadRecordedOps(ep);
-  const beUnitOps = new Set<string>([...grepOps, ...recordedOps]);
+  const beUnitOps = loadBeUnitOps([...new Set([...ep.values()].map((r) => r.operationId))]);
   const idx = { ep, wf: loadWorkflowIndex(), fe: loadFeRouteIndex(), e2e: loadE2eSpecSignals(), beUnitOps };
 
   const graded = items.map((it) => {
@@ -413,6 +397,27 @@ function main(): void {
   console.log(`  backend/orphan-only gaps ${backendGaps.length} (deprioritized)`);
   console.log(`  UNKNOWN by layer: ${JSON.stringify(partialUnknownByLayer)}`);
   console.log(`  wrote ${OUT_JSON} + ${OUT_MD}`);
+
+  // ── ratchet (REPORT-ONLY) ──────────────────────────────────────────────────
+  // Every current user-reachable gap must be on ledger.allowlist.json; a NEW one
+  // (a workflow shipped without its required test layer) is reported. This is
+  // ADVISORY, not blocking: the deterministic detection has known false positives
+  // (grep is blind to buildTestApp route-only be-unit tests; the e2e spec-index is
+  // a fuzzy testid/route match — the Phase 1 LLM verify found ~29% of raw e2e
+  // candidates were actually covered). Promote to a hard gate only once detection
+  // is hardened (e.g. recorder-in-CI) AND branch protection is enabled.
+  if (process.argv.includes('--check')) {
+    const allowlist = loadAllowlist(LEDGER_ALLOWLIST);
+    const gaps: Gap[] = backlog.map((g) => ({ id: g.id, risk: g.risk, severity: g.severity, missing: g.missing.join('+') }));
+    const result = ratchet(gaps, allowlist);
+    console.log('\n' + formatRatchetReport(result, { label: 'ledger-coverage (user-reachable workflows)' }));
+    console.log(
+      '\nℹ REPORT-ONLY (advisory). New gaps above = user-reachable workflows that shipped ' +
+      'without a required test layer — verify against coverage-backlog.json (the curated, ' +
+      'LLM-verified list) and either add a RED-first test (Phase 3) or allowlist with a reason.',
+    );
+    // Intentionally exit 0: report-only until detection is hardened + branch protection on.
+  }
 }
 
 if (import.meta.main) main();
