@@ -106,7 +106,8 @@ Fixes committed `9421c956`→`b31def48`; gates green (typecheck 0, 1290 tests):
 - [x] ✅ lab orders create ✅ (toast + persists) / update ✅ (Ordered → In Fabrication)
 - [ ] 🟢 chart conflicts resolve (offline sync) — code only
 - [x] ✅ workspace payment — modal + invoice detail + Record Payment form render ✅; submission code-verified (controlled inputs behind fixed footer) — **see ISSUE-009** (due-date raw ISO)
-- [ ] 🚫 attachments upload (MinIO)
+- [x] ✅ attachments upload — **driven (s5, MinIO up)**: file → presigned MinIO PUT → complete →
+  `POST /visits/{id}/attachments 201` → list refresh. Covered by the ISSUE-025 upload fix.
 
 **Workspace-batch findings (2026-06-20):** ISSUE-006 template duplication · ISSUE-007 no drug-allergy warning · ISSUE-008 Accept-Plan no-feedback/non-idempotent · ISSUE-009 invoice due-date raw ISO · ISSUE-010 workspace modals not Escape-dismissible + discard uses native prompt(). See `.gstack/qa-reports/`.
 
@@ -164,12 +165,32 @@ Backend (SDK + handlers) complete, **no FE write surface** — each needs a prod
 - [x] ✅ accept gate (name + signature both required; Accept disabled w/o signature — canvas headless-limited) · reject/decline drivable (reason popover → confirm) · accept treatment option (option-group A/B "Recommended" badge renders) · 🟢 create (Present-to-patient button gated to `presented`-status plan; no presented plan in seed to drive — FSM exercised via seed draft/accepted/rejected rows)
 - **fixed ISSUE-014** — accept/decline failures were **swallowed** (panel `void reject()`, hook no error state). Declining an already-approved plan 422'd silently with zero patient feedback. Now surfaces a patient-facing error banner + regression test. Same family as ISSUE-013.
 
-### Imaging / Ceph — 🚫 blocked (MinIO down; bring up `infra:up`)
-- [ ] 🚫 upload image
-- [ ] 🟢 image metadata / modality / calibration (math reviewed clean)
-- [ ] 🟢 measurements · imaging findings
-- [ ] 🟢 ceph report create (ISSUE-004 fixed) · ceph landmarks
-- [ ] ⬜ superimposition · occlusion screening
+### Imaging / Ceph — **swept live 2026-06-20 (session 5; MinIO up)**
+- [x] ✅ **upload image — driven end-to-end** (workspace Imaging Upload → `POST /studies 201` →
+  presigned MinIO `PUT 200` → appears in list). **Fixed ISSUE-025** — every UI upload **400'd**: the SDK
+  serialized `size: BigInt(file.size)` to a JSON string, the server validates int64 as `z.number()` →
+  rejected. Root-fixed in `createClientConfig` (bigint-safe bodySerializer) → covers imaging+attachment+PMD.
+- [x] ✅ image metadata / modality Edit form — drives + PATCHes (modality/diagnostic/quality/tags). 🟢
+  calibration knob code-verified clean (`confirmCalibrationSave` persists points+mm; ruler-draw canvas-bound).
+- [x] ✅ **imaging findings** — **fixed ISSUE-026** (create/update/delete failures were swallowed; hook
+  exposed `mutationError` but `FindingsSidebar` never rendered it → now an alert banner). 🟢 measurements
+  canvas-click-bound — **fixed ISSUE-027** (measurement delete failures were silent; create toasts, delete
+  didn't → added `toastError`).
+- [x] 🟢 ceph report create — version-pinning **code-verified intact** (`createCephReport` snapshot pins
+  analysis_type/norm_population/norm_version/formula_version/calibration; ISSUE-004 fix holds). Creation
+  gated on confirmed landmarks (canvas-bound). ⚠ **ceph lock-all swallowed-error flagged**
+  (`CephWorkspacePanel.handleLockAll` doesn't render the hook's `mutationError`; canvas-bound).
+- [x] ✅ **attachments upload — driven** (`/storage/files/upload 201 → PUT 200 → complete 200 →
+  /visits/{id}/attachments 201 → list refresh`); same ISSUE-025 fix covers it.
+- [ ] 🟢 superimposition · occlusion screening — superimposition canvas-bound (code-verify); occlusion
+  screening is the backend-only ISSUE-024 gap (no FE surface).
+
+**Imaging-batch findings (2026-06-20 s5):** **fixed ISSUE-025** (BigInt→string upload break, HIGH — broke
+ALL uploads; one SDK-serializer root fix) · **ISSUE-026** (findings swallowed mutationError) · **ISSUE-027**
+(measurement-delete silent) · **ISSUE-028** (legacy images had a broken Edit → metadata 404). **Flagged:**
+ceph lock-all swallowed-error (canvas-bound) · imaging endpoints **500 on malformed imageId** (TypeSpec
+types path params as plain `string`, skipping the uuid validation the rest of the API has → 500 not 400;
+only reachable via the `imaging-test` harness / URL-tamper but pollutes the error sink — spec+regen fix).
 
 ### Notifications — **swept live 2026-06-20**
 - [x] ✅ bell list renders ("You're all caught up" empty state — no seeded notifs)
