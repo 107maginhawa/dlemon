@@ -18,8 +18,10 @@
 import { describe, test, expect, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import { CreateMemberBody } from '@/generated/openapi/validators';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
@@ -62,7 +64,11 @@ function buildApp() {
     ctx.set('session', { id: 'sess', userId: USER.id });
     await next();
   });
-  app.post('/dental/org/members', createMember as any);
+  // Mount the generated body validator (the same one production runs) so this test
+  // exercises the real validate→handler chain — and clears the test-harness ratchet
+  // (no raw validator-free handler mounts). createMember reads branchId from the
+  // query and re-parses the cached body, so this is behavior-preserving.
+  app.post('/dental/org/members', zValidator('json', CreateMemberBody), createMember as any);
   return app;
 }
 
