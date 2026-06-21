@@ -175,16 +175,20 @@ describe('useDashboardSummary', () => {
     expect(result.current.error).not.toBeNull();
   });
 
-  test('sets error state when any fetch in the parallel batch fails', async () => {
+  // The dashboard-summary endpoint is OWNER-ONLY on the backend
+  // (getDashboardSummary -> assertBranchRole(..., ['dentist_owner'])). Every
+  // non-owner dashboard role (8 roles carry dashboard access) hits it and gets a
+  // 403. That 403 must NOT reject the whole query and blank the dashboard: the
+  // schedule (listAppointments, readable by every dashboard role) must still
+  // surface, and the owner-only summary metrics simply degrade to null.
+  // Regression for G-dashboard-nonowner-summary-403-breaks-dashboard.
+  test('tolerates an owner-only summary 403 — schedule still loads, no error', async () => {
     let callIdx = 0;
     global.fetch = mock(() => {
       const i = callIdx++;
-      if (i < 2) {
-        const data = i === 0 ? mockToday : mockTomorrow;
-        return jsonResponse(data);
-      }
-      // summary endpoint fails
-      return errorResponse(503);
+      if (i === 0) return jsonResponse(mockToday);
+      if (i === 1) return jsonResponse(mockTomorrow);
+      return errorResponse(403); // getDashboardSummary — owner-only
     });
 
     const qc = freshClient();
@@ -194,7 +198,12 @@ describe('useDashboardSummary', () => {
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.error).not.toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.data?.todayAppointments).toHaveLength(2);
+    expect(result.current.data?.tomorrowAppointments).toHaveLength(1);
+    // owner-only metrics degrade to null rather than blanking the dashboard
+    expect(result.current.data?.activePaymentPlans).toBeNull();
+    expect(result.current.data?.pendingLabOrders).toBeNull();
   });
 
   test('sets error state when overdue invoices fetch fails', async () => {

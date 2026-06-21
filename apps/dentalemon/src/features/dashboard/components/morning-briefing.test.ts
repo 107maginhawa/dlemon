@@ -6,8 +6,11 @@
  * outstanding sums, payment plan filtering, role-based access
  */
 
-import { describe, test, expect } from 'bun:test';
-import { canAccess, canViewFinancials } from '../../../lib/rbac';
+import { describe, test, expect, afterEach, mock } from 'bun:test';
+import React from 'react';
+import { render, screen, cleanup } from '@testing-library/react';
+import { canAccess, canViewFinancials, getDefaultRoute } from '../../../lib/rbac';
+import { freshClient, makeWrapper, jsonResponse } from '@/test-utils';
 import {
   getGreeting,
   formatTodayDate,
@@ -20,6 +23,7 @@ import {
   countPendingTreatments,
   formatDailyCollections,
 } from './morning-briefing';
+import { MorningBriefing } from './morning-briefing';
 
 // ---------------------------------------------------------------------------
 // Local helpers not exported by the component
@@ -376,5 +380,128 @@ describe('MorningBriefing -- role-based access (rbac.ts)', () => {
 
   test('staff_full can access dashboard', () => {
     expect(canAccess('staff_full', 'dashboard')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Render-level role gating + non-owner resilience (G-dashboard-*)
+//
+// The summary endpoint (getDashboardSummary) is OWNER-ONLY on the backend, but
+// the morning briefing is shown to 8 non-owner roles. These render tests prove:
+//  (1) a non-owner's owner-only summary 403 does NOT blank the dashboard —
+//      the schedule still renders (G-dashboard-nonowner-summary-403-...);
+//  (2) financial MetricCards are gated by canViewFinancials at the RENDER level
+//      (G-dashboard-financial-card-render-gating-untested).
+// ---------------------------------------------------------------------------
+
+const RENDER_TODAY = [
+  { id: 'a1', patientId: 'p1', patientName: 'Maria Santos', providerId: 'pr1', branchId: 'b1', startAt: '2026-05-04T09:00:00Z', endAt: '2026-05-04T09:30:00Z', status: 'scheduled', visitType: 'checkup', walkIn: false, createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z', version: 1 },
+  { id: 'a2', patientId: 'p2', patientName: 'Ramon Cruz', providerId: 'pr1', branchId: 'b1', startAt: '2026-05-04T10:00:00Z', endAt: '2026-05-04T10:30:00Z', status: 'completed', visitType: 'cleaning', walkIn: false, createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z', version: 1 },
+];
+const RENDER_TOMORROW: unknown[] = [];
+const RENDER_SUMMARY = { activePaymentPlans: { count: 2, behindCount: 0 }, labOrders: { totalPending: 1, overdueDelivery: 0 } };
+const RENDER_OVERDUE: unknown[] = [];
+const RENDER_ALL: unknown[] = [];
+
+function renderFetch(responses: unknown[]) {
+  let i = 0;
+  return mock(() => jsonResponse(responses[i++ % responses.length]));
+}
+
+function renderErrorAt(failFrom: number, successes: unknown[]) {
+  let i = 0;
+  return mock(() => {
+    const idx = i++;
+    if (idx < failFrom) return jsonResponse(successes[idx]);
+    return Promise.resolve(
+      new Response(JSON.stringify({ message: `error 403` }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+  });
+}
+
+describe('MorningBriefing -- render-level role gating', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    cleanup();
+    global.fetch = originalFetch;
+  });
+
+  test('non-owner: owner-only summary 403 does NOT blank the dashboard — schedule renders', async () => {
+    // calls: 0 today (ok), 1 tomorrow (ok), 2 summary (403, owner-only)
+    global.fetch = renderErrorAt(2, [RENDER_TODAY, RENDER_TOMORROW]);
+
+    render(
+      React.createElement(MorningBriefing, { role: 'front_desk', branchId: 'b1' }),
+      { wrapper: makeWrapper(freshClient()) },
+    );
+
+    // wait for post-load content; explicit timeout is robust under full-suite CPU load
+    await screen.findByText("Today's Schedule", undefined, { timeout: 5000 });
+    // schedule renders (NOT suppressed behind an error banner)
+    expect(screen.getByText('Maria Santos')).toBeTruthy();
+    // no error banner rendered
+    expect(screen.queryByText(/error 403/i)).toBeNull();
+  });
+
+  test('non-financial role (staff_full): financial cards omitted, non-financial shown', async () => {
+    global.fetch = renderFetch([RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY]);
+
+    render(
+      React.createElement(MorningBriefing, { role: 'staff_full', branchId: 'b1' }),
+      { wrapper: makeWrapper(freshClient()) },
+    );
+
+    await screen.findByText('Follow-ups', undefined, { timeout: 5000 });
+    // financial cards are NOT rendered for a non-financial role
+    expect(screen.queryByText('Daily Collections')).toBeNull();
+    expect(screen.queryByText('Overdue Alerts')).toBeNull();
+    expect(screen.queryByText('Payment Plans')).toBeNull();
+    // their non-financial substitutes ARE rendered
+    expect(screen.getByText('Follow-ups')).toBeTruthy();
+    expect(screen.getByText("Today's Completed")).toBeTruthy();
+    expect(screen.getByText('Checked In')).toBeTruthy();
+  });
+
+  test('financial role (dentist_owner): financial cards rendered', async () => {
+    global.fetch = renderFetch([
+      RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY,
+      { data: RENDER_OVERDUE }, { data: RENDER_ALL },
+    ]);
+
+    render(
+      React.createElement(MorningBriefing, { role: 'dentist_owner', branchId: 'b1' }),
+      { wrapper: makeWrapper(freshClient()) },
+    );
+
+    await screen.findByText('Daily Collections', undefined, { timeout: 5000 });
+    expect(screen.getByText('Overdue Alerts')).toBeTruthy();
+    expect(screen.getByText('Payment Plans')).toBeTruthy();
+    // non-financial substitutes are NOT shown for a financial role
+    expect(screen.queryByText('Follow-ups')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// staff_scheduling dashboard-denial — design pin (G-dashboard-staff-scheduling-
+// denial-unenforceable-vs-documented).
+//
+// Resolution: the denial is real but enforced at NAV + LANDING, not as a hard
+// route block. rbac denies the dashboard MODULE (no nav link) and getDefaultRoute
+// routes staff_scheduling to /patients, so they never land on /dashboard. The
+// /dashboard ROUTE itself is the intentional ungated universal-redirect fallback
+// (_dashboard.tsx) — enforcing a redirect there would loop. Pin both halves so
+// the (correct) design is documented, not silently regressed.
+// ---------------------------------------------------------------------------
+
+describe('MorningBriefing -- staff_scheduling dashboard denial (design pin)', () => {
+  test('dashboard module is denied (no nav affordance)', () => {
+    expect(canAccess('staff_scheduling', 'dashboard')).toBe(false);
+  });
+
+  test('landing route is /patients, so staff_scheduling never lands on the dashboard', () => {
+    expect(getDefaultRoute('staff_scheduling')).toBe('/patients');
   });
 });

@@ -98,26 +98,43 @@ async function fetchDashboardSummary(
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
-  // Parallel fetches via SDK — throwOnError propagates HTTP failures as SdkError
-  const fetches: Promise<unknown>[] = [
-    listAppointments({ query: { branchId, date_from: today, date_to: today }, throwOnError: true }),
-    listAppointments({ query: { branchId, date_from: tomorrow, date_to: tomorrow }, throwOnError: true }),
-    getDashboardSummary({ query: { branchId }, throwOnError: true }),
-  ];
+  // Schedule fetches — every dashboard role may read appointments, so a failure
+  // here IS a real dashboard error (propagated as SdkError via throwOnError).
+  const todayPromise = listAppointments({ query: { branchId, date_from: today, date_to: today }, throwOnError: true });
+  const tomorrowPromise = listAppointments({ query: { branchId, date_from: tomorrow, date_to: tomorrow }, throwOnError: true });
 
-  if (showFinancials) {
-    fetches.push(
-      listDentalInvoices({ query: { status: 'overdue', branchId }, throwOnError: true }),
-      listDentalInvoices({ query: { branchId }, throwOnError: true }),
-    );
-  }
+  // getDashboardSummary is OWNER-ONLY on the backend (assertBranchRole
+  // ['dentist_owner']). The morning briefing is shown to 8 non-owner roles, so a
+  // 403 here must NOT reject the whole query and blank the dashboard — degrade to
+  // null metrics and let the schedule render. (G-dashboard-nonowner-summary-403)
+  // ponytail: tolerate the failure in-place rather than threading the exact role
+  //   through; one catch also covers the owner/associate gate mismatch + transient errors.
+  const summaryPromise = getDashboardSummary({ query: { branchId } })
+    .then((r) => ((r as { data?: unknown }).data ?? null) as Record<string, unknown> | null)
+    .catch(() => null);
 
-  const results = await Promise.all(fetches);
+  // Financial invoice fetches — only requested for financial roles, who can read
+  // them; a failure there is a real error worth surfacing.
+  const overduePromise = showFinancials
+    ? listDentalInvoices({ query: { status: 'overdue', branchId }, throwOnError: true })
+    : null;
+  const allInvoicesPromise = showFinancials
+    ? listDentalInvoices({ query: { branchId }, throwOnError: true })
+    : null;
 
-  // Each SDK call returns { data } when throwOnError is true (throws on error, so data is defined here)
-  const todayData = (results[0] as { data: unknown }).data;
-  const tomorrowData = (results[1] as { data: unknown }).data;
-  const summaryData = (results[2] as { data: unknown }).data as Record<string, unknown> | null;
+  // Await the schedule + financial fetches together so any rejection is jointly
+  // handled (a sequential await would orphan a sibling's rejection). The
+  // owner-only summary is awaited separately — it never rejects (own .catch).
+  const [todayResult, tomorrowResult, overdueResult, allInvoicesResult] = await Promise.all([
+    todayPromise,
+    tomorrowPromise,
+    overduePromise ?? Promise.resolve(null),
+    allInvoicesPromise ?? Promise.resolve(null),
+  ]);
+  const summaryData = await summaryPromise;
+
+  const todayData = (todayResult as { data: unknown }).data;
+  const tomorrowData = (tomorrowResult as { data: unknown }).data;
 
   const toAppts = (raw: unknown): DashboardAppointment[] => {
     const arr = Array.isArray(raw) ? raw : ((raw as { appointments?: DentalAppointment[] })?.appointments ?? []);
@@ -135,14 +152,14 @@ async function fetchDashboardSummary(
   let overdueInvoices: DashboardInvoice[] = [];
   let dailyCollectionsCents: number | null = null;
 
-  if (showFinancials && results[3]) {
-    const overdueRaw = (results[3] as { data: unknown }).data;
+  if (showFinancials && overdueResult) {
+    const overdueRaw = (overdueResult as { data: unknown }).data;
     const arr = Array.isArray(overdueRaw) ? overdueRaw : ((overdueRaw as { data?: DentalInvoice[] })?.data ?? []);
     overdueInvoices = (arr as DentalInvoice[]).map(toInvoice);
   }
 
-  if (showFinancials && results[4]) {
-    const allRaw = (results[4] as { data: unknown }).data;
+  if (showFinancials && allInvoicesResult) {
+    const allRaw = (allInvoicesResult as { data: unknown }).data;
     const arr = Array.isArray(allRaw) ? allRaw : ((allRaw as { data?: DentalInvoice[] })?.data ?? []);
     const allInvoices = (arr as DentalInvoice[]).map(toInvoice);
     dailyCollectionsCents = allInvoices

@@ -8,7 +8,10 @@
  * - Tomorrow preview, reminders
  *
  * Role-based: staff_full sees simplified view (no financials).
- * staff_scheduling has no dashboard access (enforced at route level).
+ * staff_scheduling is denied the dashboard module at NAV + LANDING (rbac
+ * canAccess=false hides the nav link; getDefaultRoute lands them on /patients).
+ * The /dashboard route itself is the intentional ungated universal-redirect
+ * fallback (_dashboard.tsx), so denial is not a hard route block.
  *
  * Wireframe: docs/prd/context/wireframes/dashboard.html
  */
