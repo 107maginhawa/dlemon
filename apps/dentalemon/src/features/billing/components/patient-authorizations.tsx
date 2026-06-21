@@ -43,6 +43,10 @@ export interface PatientAuthorizationsProps {
 
 export function PatientAuthorizations({ patientId }: PatientAuthorizationsProps) {
   const { authorizations, isLoading, error } = usePatientAuthorizations(patientId);
+  // Defensive: never `.map` a non-array. The hook already normalizes to [], but a
+  // host page's test that stubs the hook/query can hand back a non-array — guarding
+  // here keeps a render crash from cascading (and hanging the whole test runner).
+  const list = Array.isArray(authorizations) ? authorizations : [];
   const { profiles } = usePatientInsuranceProfiles(patientId);
   const { create, approve, deny, isCreating, isUpdating, error: mutationError } =
     useAuthorizationMutations(patientId);
@@ -160,12 +164,12 @@ export function PatientAuthorizations({ patientId }: PatientAuthorizationsProps)
           <div className="text-sm text-destructive" data-testid="authorizations-error">
             {error.message || 'Could not load authorizations.'}
           </div>
-        ) : authorizations.length === 0 ? (
+        ) : list.length === 0 ? (
           <div className="text-sm text-muted-foreground" data-testid="authorizations-empty">
             No authorizations yet.
           </div>
         ) : (
-          authorizations.map((a) => (
+          list.map((a) => (
             <div
               key={a.id}
               data-testid={`authorization-row-${a.id}`}
