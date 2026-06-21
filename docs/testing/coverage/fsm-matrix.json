@@ -435,7 +435,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts",
-    "evidenceLine": 697
+    "evidenceLine": 705
   },
   {
     "fsm": "CephLandmark",

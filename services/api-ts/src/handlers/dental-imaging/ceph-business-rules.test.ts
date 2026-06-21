@@ -296,6 +296,14 @@ function makeCephDb(opts: {
     delete: (_tableRef: any) => ({
       where: (_cond: any) => Promise.resolve(undefined),
     }),
+    // Money-race fix 5317802a: createCephReport finalizes inside
+    // db.transaction(tx => { tx.execute(pg_advisory_xact_lock(4001,…)); … }).
+    // execute() is a no-op lock; transaction() hands the callback `this` (the
+    // same mock db) so the spy-db insert overrides used below still apply.
+    execute: (_query: any) => Promise.resolve({ rows: [] }),
+    async transaction(cb: any) {
+      return cb(this);
+    },
   };
 }
 

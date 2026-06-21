@@ -157,6 +157,17 @@ describe('GET /dental/dashboard/summary', () => {
 
   test('FR0.7: behindCount reflects behind plans', async () => {
     await seedBaseData();
+    // Money-race mig 0114 added a UNIQUE index on dental_payment_plan.invoice_id
+    // (at most one plan per invoice), so two plans need two distinct invoices.
+    const INVOICE_ID_2 = 'ffffffff-0000-1000-8000-000000000078';
+    await db.insert(dentalInvoices).values({
+      id: INVOICE_ID_2, patientId: PATIENT_ID, visitId: VISIT_ID, branchId: BRANCH_ID,
+      dentistMemberId: MEMBER_ID,
+      invoiceNumber: 'INV-TEST-002',
+      subtotalCents: 50000, totalCents: 50000,
+      status: 'issued', issuedAt: new Date(),
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
     await db.insert(dentalPaymentPlans).values([
       {
         id: crypto.randomUUID(),
@@ -168,7 +179,7 @@ describe('GET /dental/dashboard/summary', () => {
       },
       {
         id: crypto.randomUUID(),
-        invoiceId: INVOICE_ID, patientId: PATIENT_ID,
+        invoiceId: INVOICE_ID_2, patientId: PATIENT_ID,
         totalCents: 20000, numberOfInstallments: 2, amountPerInstallmentCents: 10000,
         frequency: 'monthly', startDate: new Date(),
         status: 'behind',

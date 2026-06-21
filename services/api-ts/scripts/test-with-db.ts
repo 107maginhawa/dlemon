@@ -188,6 +188,13 @@ async function runFile(file: string): Promise<FileResult> {
   try {
     const args = ['test', ...passthroughFlags];
     if (coverage) args.push('--coverage');
+    // The *.concurrency.test.ts suites run multi-round real DB races; bun's
+    // 5000ms default times out under CI's parallel-worker CPU contention (the
+    // abort then surfaces as spurious 500s). Raise the per-test ceiling unless
+    // the caller overrode it — a robustness ceiling only, no assertion relaxed.
+    if (!passthroughFlags.some((f) => f.startsWith('--timeout'))) {
+      args.push('--timeout', '30000');
+    }
     args.push(file);
 
     const proc = Bun.spawn(['bun', ...args], {
