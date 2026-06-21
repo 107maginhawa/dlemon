@@ -18,3 +18,18 @@ export async function recomputePlanForTreatment(
 ): Promise<void> {
   await new TreatmentPlanRepository(db).recomputeForTreatment(treatmentId);
 }
+
+/**
+ * G6.2: does treatment plan `planId` exist AND belong to `patientId`? Used by
+ * dental-imaging's createImageLink to reject orphan / cross-patient (cross-tenant)
+ * link targets. `findOneById` already scopes by patientId, so a plan owned by a
+ * different patient resolves to null — no cross-tenant existence is revealed.
+ */
+export async function treatmentPlanExistsForPatient(
+  db: DatabaseInstance,
+  planId: string,
+  patientId: string,
+): Promise<boolean> {
+  const plan = await new TreatmentPlanRepository(db).findOneById(planId, patientId);
+  return plan !== null;
+}

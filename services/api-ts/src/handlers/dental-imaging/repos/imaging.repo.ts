@@ -23,6 +23,7 @@ import {
   type ImagingLinkType,
   type ImagingModality,
 } from './imaging.schema';
+import { imagingCephReports } from './imaging_ceph.schema';
 import { getMemberRoleForImaging } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { getFileSizesByIds } from '@/handlers/storage/repos/storage-imaging.facade';
 
@@ -253,6 +254,22 @@ export class ImagingRepository {
 
   async deleteLink(linkId: string): Promise<void> {
     await this.db.delete(imagingLinks).where(eq(imagingLinks.id, linkId));
+  }
+
+  /**
+   * G6.2: does ceph report `reportId` exist AND belong to a study owned by
+   * `patientId`? (report → image → study.patientId). Used by createImageLink to
+   * reject orphan / cross-patient (cross-tenant) `report` link targets.
+   */
+  async cephReportExistsForPatient(reportId: string, patientId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: imagingCephReports.id })
+      .from(imagingCephReports)
+      .innerJoin(imagingStudyImages, eq(imagingCephReports.imageId, imagingStudyImages.id))
+      .innerJoin(imagingStudies, eq(imagingStudyImages.studyId, imagingStudies.id))
+      .where(and(eq(imagingCephReports.id, reportId), eq(imagingStudies.patientId, patientId)))
+      .limit(1);
+    return row !== undefined;
   }
 
   /** Batch-fetch links for many images → map keyed by imageId (list enrichment). */
