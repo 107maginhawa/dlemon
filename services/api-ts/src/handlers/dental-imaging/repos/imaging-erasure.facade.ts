@@ -47,6 +47,7 @@ import {
   imagingStudies,
   imagingStudyImages,
   imagingAnnotations,
+  imagingLinks,
 } from './imaging.schema';
 import { imagingFindings } from './imaging_finding.schema';
 
@@ -54,6 +55,16 @@ import { imagingFindings } from './imaging_finding.schema';
 export interface ImagingErasureResult {
   /** Count of imaging rows touched (studies + images + findings + annotations). */
   rowsAnonymized: number;
+  /**
+   * Count of `imaging_link` rows removed (G6.3). A context link carries no PII of
+   * its own, but it points at an image whose DICOM PHI is nulled and whose S3
+   * radiograph is physically deleted on erasure — a surviving link would dangle
+   * to destroyed PHI and back-reference the subject's treatment_plan/ortho_case/
+   * report. Removal is referential CLEANUP, a deliberate, documented exception to
+   * engine SAFETY INVARIANT #2 (anonymize-not-delete): the row has nothing to
+   * anonymize, so its only safe scrub is deletion. See DATA_GOVERNANCE.md §3.
+   */
+  linksRemoved: number;
   /**
    * Storage `file` IDs backing the anonymized radiographs. The caller MUST hand
    * these to the storage service for physical S3 object deletion (this DB facade
@@ -74,7 +85,7 @@ export async function anonymizeImagingByPersonDetailed(
 ): Promise<ImagingErasureResult> {
   const patient = await getPatientByPersonIdForEMR(db, subjectPersonId);
   if (!patient) {
-    return { rowsAnonymized: 0, fileIdsPendingS3Delete: [] };
+    return { rowsAnonymized: 0, linksRemoved: 0, fileIdsPendingS3Delete: [] };
   }
 
   const studies = await db
@@ -83,7 +94,7 @@ export async function anonymizeImagingByPersonDetailed(
     .where(eq(imagingStudies.patientId, patient.id));
   const studyIds = studies.map((s) => s.id);
   if (studyIds.length === 0) {
-    return { rowsAnonymized: 0, fileIdsPendingS3Delete: [] };
+    return { rowsAnonymized: 0, linksRemoved: 0, fileIdsPendingS3Delete: [] };
   }
 
   const images = await db
@@ -94,7 +105,19 @@ export async function anonymizeImagingByPersonDetailed(
   const fileIdsPendingS3Delete = images.map((i) => i.fileId);
 
   let rowsAnonymized = 0;
+  let linksRemoved = 0;
   const now = new Date();
+
+  // (G6.3) Remove context links for these images so none dangles to the
+  // about-to-be-scrubbed/S3-deleted imaging. The link row carries no PII —
+  // referential cleanup, the sanctioned exception to invariant #2 (see interface).
+  if (imageIds.length > 0) {
+    const linkRes = await db
+      .delete(imagingLinks)
+      .where(inArray(imagingLinks.imageId, imageIds))
+      .returning({ id: imagingLinks.id });
+    linksRemoved = linkRes.length;
+  }
 
   // Null DICOM headers (PatientName/PatientID/PatientBirthDate …) + archive images.
   if (imageIds.length > 0) {
@@ -134,7 +157,7 @@ export async function anonymizeImagingByPersonDetailed(
     .returning({ id: imagingStudies.id });
   rowsAnonymized += studyRes.length;
 
-  return { rowsAnonymized, fileIdsPendingS3Delete };
+  return { rowsAnonymized, linksRemoved, fileIdsPendingS3Delete };
 }
 
 /**

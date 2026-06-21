@@ -16,6 +16,7 @@ import {
   imagingStudies,
   imagingStudyImages,
   imagingAnnotations,
+  imagingLinks,
 } from './imaging.schema';
 import { imagingFindings } from './imaging_finding.schema';
 import { imagingCephAnalyses } from './imaging_ceph.schema';
@@ -141,6 +142,26 @@ describe('imaging-erasure facade', () => {
       .from(imagingCephAnalyses)
       .where(eq(imagingCephAnalyses.imageId, imageId));
     expect(analysis!.measurements).toEqual({ SNA: 82, SNB: 80 }); // derived metrics retained
+  });
+
+  test('removes imaging_link rows for the subject so no link dangles to scrubbed/deleted imaging (G6.3)', async () => {
+    // A context link (image → treatment plan) for the subject's image. After
+    // erasure the image is archived, its DICOM PHI nulled, and its S3 radiograph
+    // physically deleted — a surviving link would dangle to destroyed PHI.
+    await db.insert(imagingLinks).values({
+      imageId,
+      linkType: 'treatment_plan',
+      targetId: 'e2000000-0000-4000-8000-0000000000d1',
+    });
+
+    const res = await anonymizeImagingByPersonDetailed(db, PID);
+    expect(res.linksRemoved).toBeGreaterThanOrEqual(1);
+
+    const links = await db
+      .select()
+      .from(imagingLinks)
+      .where(eq(imagingLinks.imageId, imageId));
+    expect(links).toHaveLength(0); // referential cleanup: no dangling link survives erasure
   });
 
   test('is idempotent', async () => {

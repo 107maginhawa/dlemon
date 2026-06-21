@@ -60,9 +60,10 @@ const consentFormTarget: ErasureTarget = {
 const imagingTarget: ErasureTarget = {
   entityType: 'imaging',
   async anonymize(db: DatabaseInstance, subjectPersonId: string) {
-    const { rowsAnonymized, fileIdsPendingS3Delete } =
+    const { rowsAnonymized, linksRemoved, fileIdsPendingS3Delete } =
       await anonymizeImagingByPersonDetailed(db, subjectPersonId);
-    return { count: rowsAnonymized, fileIdsPendingS3Delete };
+    // linksRemoved (G6.3) are rows acted on — count them in the engine total.
+    return { count: rowsAnonymized + linksRemoved, fileIdsPendingS3Delete };
   },
 };
 

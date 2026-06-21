@@ -20,7 +20,7 @@ import { AppError } from '@/core/errors';
 import { persons } from '../person/repos/person.schema';
 import { patients } from '../patient/repos/patient.schema';
 import { storedFiles } from '../storage/repos/file.schema';
-import { imagingStudies, imagingStudyImages } from '../dental-imaging/repos/imaging.schema';
+import { imagingStudies, imagingStudyImages, imagingLinks } from '../dental-imaging/repos/imaging.schema';
 import { ERASED_MARKER } from '../person/repos/person-erasure.facade';
 import { requestErasureHandler } from './requestErasureHandler';
 import { approveErasureHandler } from './approveErasureHandler';
@@ -180,5 +180,39 @@ describe('erasure HTTP routes (V-DG-002)', () => {
     expect(deleted).toContain(FILE_ID);
     const rows = await db.select().from(storedFiles).where(eq(storedFiles.id, FILE_ID));
     expect(rows).toHaveLength(0);
+  });
+
+  test('G3b/G6.3: one HTTP approve fan-out scrubs person AND removes the imaging_link (whole-flow)', async () => {
+    // Seed a radiograph + a context link, then prove a single POST /approve drives
+    // the whole fan-out: person PII anonymized AND the imaging_link removed (so the
+    // engine provably reaches a non-person/patient cleanup step, not just firstName).
+    const FILE_ID = 'f3000000-0000-4000-8000-000000000002';
+    const LINK_TARGET = 'f9000000-0000-4000-8000-000000000002';
+    const [pat] = await db.select().from(patients).where(eq(patients.person, PID));
+    await db.insert(storedFiles).values({
+      id: FILE_ID, filename: 'rg.dcm', mimeType: 'application/dicom', size: 10, status: 'available', owner: ADMIN.id,
+    });
+    const studyId = 'f8000000-0000-4000-8000-000000000004';
+    await db.insert(imagingStudies).values({
+      id: studyId, patientId: pat!.id, branchId: 'b3000000-0000-4000-8000-000000000001',
+      acquiredBy: 'e8000000-0000-4000-8000-000000000004', modality: 'periapical',
+    });
+    const [img] = await db.insert(imagingStudyImages).values({ studyId, fileId: FILE_ID }).returning({ id: imagingStudyImages.id });
+    await db.insert(imagingLinks).values({ imageId: img!.id, linkType: 'treatment_plan', targetId: LINK_TARGET });
+
+    const storage = { async deleteFile() {} };
+    const app = makeApp(db, ADMIN, storage);
+    const created = await app.request('/dental/erasure-requests', J(reqBody));
+    const reqRow = (await created.json()) as { id: string };
+    const approved = await app.request(`/dental/erasure-requests/${reqRow.id}/approve`, J({}));
+    expect(approved.status).toBe(200);
+    expect(((await approved.json()) as any).status).toBe('anonymized');
+
+    // person PII gone …
+    const [p] = await db.select().from(persons).where(eq(persons.id, PID));
+    expect(p!.firstName).toBe(ERASED_MARKER);
+    // … AND the imaging_link removed by the same approve fan-out.
+    const links = await db.select().from(imagingLinks).where(eq(imagingLinks.targetId, LINK_TARGET));
+    expect(links).toHaveLength(0);
   });
 });
