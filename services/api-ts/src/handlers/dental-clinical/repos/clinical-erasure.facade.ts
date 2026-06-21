@@ -15,11 +15,17 @@
  *                   by patient-erasure.facade) — there is NOTHING to redact on
  *                   the treatment row itself. → NO-OP, no function exported.
  *
- *   - Prescription → "Drug name retains; patient identity gone." The
- *                   prescription row stores ONLY the patientId / prescriber FKs
- *                   plus clinical content (rxNormCode, drugName, dosage,
- *                   frequency, instructions). No denormalized patient PII.
- *                   → NO-OP, no function exported.
+ *   - Prescription → "Drug name retains; patient identity gone." Drug/dose/
+ *                   frequency are retained clinical codes, but `instructions`
+ *                   is free-text sig that DATA_GOVERNANCE.md §1.2 names as PII
+ *                   (it can embed the patient's name/identifiers inline, which
+ *                   anonymizing the patientId FK does NOT remove). → scrub
+ *                   `instructions` → null; keep the coded drug fields. BUILT below.
+ *
+ *   - MedicalHistoryEntry → systemic-health `notes` are free-text PII
+ *                   (DATA_GOVERNANCE.md §1.2/§3) that survive FK-anonymization.
+ *                   → scrub `notes` → null; keep the coded `displayName`/`code`
+ *                   clinical label. BUILT below.
  *
  *   - ConsentForm → "No — keep state; Mark as [ERASED]; consent record
  *                   anonymized." The consent_form row carries real signer-
@@ -33,6 +39,8 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { consentForms } from './consent-form.schema';
+import { medicalHistoryEntries } from './medical-history.schema';
+import { prescriptions } from './prescription.schema';
 import { patients } from '../../patient/repos/patient.schema';
 
 /** Marker written over identifying free-text on an erased consent form. */
@@ -75,5 +83,54 @@ export async function anonymizeConsentFormsByPerson(
     })
     .where(inArray(consentForms.patientId, patientIds))
     .returning({ id: consentForms.id });
+  return res.length;
+}
+
+/** Resolve the patient profile id(s) for a person (1:1 in practice). */
+async function patientIdsForPerson(db: DatabaseInstance, personId: string): Promise<string[]> {
+  const pts = await db
+    .select({ id: patients.id })
+    .from(patients)
+    .where(eq(patients.person, personId));
+  return pts.map((p) => p.id);
+}
+
+/**
+ * Scrub the free-text `notes` PII on every medical-history entry of the patient
+ * linked to `personId` (DATA_GOVERNANCE.md §1.2/§3 — systemic-health notes are
+ * free-text PII that survive FK-anonymization). The coded `displayName` / `code`
+ * clinical label is RETAINED. Returns rows updated; idempotent.
+ */
+export async function anonymizeMedicalHistoryByPerson(
+  db: DatabaseInstance,
+  personId: string,
+): Promise<number> {
+  const patientIds = await patientIdsForPerson(db, personId);
+  if (patientIds.length === 0) return 0;
+  const res = await db
+    .update(medicalHistoryEntries)
+    .set({ notes: null, updatedAt: new Date() })
+    .where(inArray(medicalHistoryEntries.patientId, patientIds))
+    .returning({ id: medicalHistoryEntries.id });
+  return res.length;
+}
+
+/**
+ * Scrub the free-text `instructions` sig PII on every prescription of the patient
+ * linked to `personId` (DATA_GOVERNANCE.md §1.2 — the sig can embed the patient's
+ * name/identifiers). Drug name / dosage / frequency are retained clinical codes.
+ * Returns rows updated; idempotent.
+ */
+export async function anonymizePrescriptionsByPerson(
+  db: DatabaseInstance,
+  personId: string,
+): Promise<number> {
+  const patientIds = await patientIdsForPerson(db, personId);
+  if (patientIds.length === 0) return 0;
+  const res = await db
+    .update(prescriptions)
+    .set({ instructions: null, updatedAt: new Date() })
+    .where(inArray(prescriptions.patientId, patientIds))
+    .returning({ id: prescriptions.id });
   return res.length;
 }
