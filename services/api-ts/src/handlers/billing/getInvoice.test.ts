@@ -1,19 +1,22 @@
 /**
- * getInvoice handler tests
+ * getInvoice handler tests — REAL handler via buildTestApp.
  *
- * Tests HTTP-level behavior: auth, access control, 200 on success, 404, 403.
- * No real DB — mocks InvoiceRepository and PersonRepository.
+ * Previously this file built a bespoke Hono app and RE-IMPLEMENTED the authz in
+ * an inline wrapper, so getInvoice.ts:70-73 could regress green (vacuous). It now
+ * drives the real generated route (authMiddleware -> zValidator -> getInvoice) and
+ * mocks ONLY the two repo seams the handler touches, so the assertions bind to the
+ * production authz. Closes billing-getinvoice-real-handler-authz-untested.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { Hono } from 'hono';
-import { getInvoice } from './getInvoice';
-import { AppError } from '@/core/errors';
+import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { buildTestApp } from '@/tests/helpers/test-app';
 
-const INVOICE_ID = 'invoice-uuid-1';
-const MERCHANT_ID = 'merchant-person-uuid';
-const CUSTOMER_ID = 'customer-person-uuid';
-const OTHER_USER_ID = 'other-user-uuid';
+// Real UUIDs — the generated GetInvoiceParams validator (UUIDSchema) 400s
+// non-UUID ids before the handler, unlike the old vacuous local route.
+const INVOICE_ID    = '11111111-1111-4111-8111-111111111111';
+const MERCHANT_ID   = '22222222-2222-4222-8222-222222222222';
+const CUSTOMER_ID   = '33333333-3333-4333-8333-333333333333';
+const OTHER_USER_ID = '44444444-4444-4444-8444-444444444444';
 
 const fakeInvoice = {
   id: INVOICE_ID,
@@ -48,175 +51,84 @@ const fakeInvoice = {
   updatedBy: null,
 };
 
-function buildTestApp(opts: {
-  userId: string;
-  userRole?: string;
-  invoiceExists?: boolean;
-}) {
-  const { userId, userRole = 'user', invoiceExists = true } = opts;
-  const app = new Hono();
+// ── repo seams (declared before the handler is imported via buildTestApp) ──────
+const mockFindOneWithLineItems = mock((_id: string) => Promise.resolve(fakeInvoice as any));
+mock.module('@/handlers/billing/repos/billing.repo', () => ({
+  InvoiceRepository: class {
+    findOneWithLineItems = mockFindOneWithLineItems;
+  },
+}));
 
-  app.onError((err, c) => {
-    if (err instanceof AppError) {
-      return c.json({ error: err.message, code: err.code }, err.statusCode as any);
-    }
-    return c.json({ error: 'Internal error' }, 500);
-  });
+const mockFindBillingParty = mock((_db: unknown, personId: string) =>
+  Promise.resolve(personId ? ({ id: personId, firstName: 'T', lastName: 'U' } as any) : null),
+);
+mock.module('@/handlers/person/repos/person-billing.facade', () => ({
+  findBillingParty: mockFindBillingParty,
+}));
 
-  app.use('*', async (c, next) => {
-    const ctx = c as any;
-    ctx.set('database', {});
-    ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    ctx.set('config', { billing: { taxRatePct: 0.08, platformFeePct: 0.02 } });
-    ctx.set('session', { id: 'session-1', user: { id: userId, email: `${userId}@test.com`, role: userRole } });
-    await next();
-  });
-
-  // Mount with param
-  app.get('/invoices/:invoice', async (c) => {
-    // Inject mocked repo behavior via prototype patching approach:
-    // We need to intercept InvoiceRepository and PersonRepository
-    // Since we can't easily mock modules in bun test, we test via context injection
-
-    const invoiceRepo = {
-      findOneWithLineItems: async (id: string) => {
-        if (!invoiceExists || id !== INVOICE_ID) return null;
-        return fakeInvoice;
-      },
-    };
-
-    const personRepo = {
-      findOneById: async (id: string) => {
-        if (id === MERCHANT_ID || id === CUSTOMER_ID) {
-          return { id, firstName: 'Test', lastName: 'User' };
-        }
-        return null;
-      },
-    };
-
-    // Proxy ctx to intercept repo instantiation
-    // We use a direct invocation approach: call handler internals via response comparison
-
-    // Since the handler uses `new InvoiceRepository(database, logger)`, we can't easily
-    // intercept without module mocking. Instead we verify the handler processes
-    // the context it receives correctly.
-    //
-    // For a clean integration, we re-implement the essential authorization and response
-    // logic in a minimal wrapper that mirrors the handler's contract.
-
-    const session = (c as any).get('session');
-    const user = session.user;
-    const config = (c as any).get('config');
-
-    const invoice = await invoiceRepo.findOneWithLineItems(c.req.param('invoice'));
-
-    if (!invoice) {
-      return c.json({ error: 'Invoice not found' }, 404);
-    }
-
-    const isAdmin = user.role === 'admin';
-    if (invoice.merchant !== user.id && invoice.customer !== user.id && !isAdmin) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    return c.json({
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      customer: invoice.customer,
-      merchant: invoice.merchant,
-      context: invoice.context || null,
-      status: invoice.status,
-      subtotal: invoice.subtotal,
-      tax: invoice.tax || null,
-      total: invoice.total,
-      currency: invoice.currency,
-      paymentCaptureMethod: invoice.paymentCaptureMethod,
-      paymentDueAt: invoice.paymentDueAt ?? null,
-      lineItems: invoice.lineItems,
-      paymentStatus: invoice.paymentStatus || null,
-      paidAt: invoice.paidAt ?? null,
-      paidBy: invoice.paidBy || null,
-      voidedAt: invoice.voidedAt ?? null,
-      voidedBy: invoice.voidedBy || null,
-      voidThresholdMinutes: invoice.voidThresholdMinutes || null,
-      authorizedAt: invoice.authorizedAt ?? null,
-      authorizedBy: invoice.authorizedBy || null,
-      metadata: invoice.metadata || null,
-      createdAt: invoice.createdAt.toISOString(),
-      updatedAt: invoice.updatedAt.toISOString(),
-    }, 200);
-  });
-
-  return app;
+function appFor(user: { id: string; role?: string } | null) {
+  return buildTestApp({ db: {} as any, user: user ?? undefined });
 }
 
-describe('GET /invoices/:invoice', () => {
-  test('returns 200 with invoice for merchant owner', async () => {
-    const app = buildTestApp({ userId: MERCHANT_ID });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
+describe('GET /billing/invoices/:invoice — real-handler authz', () => {
+  beforeEach(() => {
+    mockFindOneWithLineItems.mockClear();
+    mockFindOneWithLineItems.mockImplementation(() => Promise.resolve(fakeInvoice as any));
+    mockFindBillingParty.mockClear();
+    mockFindBillingParty.mockImplementation((_db: unknown, personId: string) =>
+      Promise.resolve(personId ? ({ id: personId, firstName: 'T', lastName: 'U' } as any) : null),
+    );
+  });
+
+  test('merchant owner -> 200', async () => {
+    const res = await appFor({ id: MERCHANT_ID }).request(`/billing/invoices/${INVOICE_ID}`);
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.id).toBe(INVOICE_ID);
-    expect(body.invoiceNumber).toBe('INV-2026-000001');
-    expect(body.customer).toBe(CUSTOMER_ID);
     expect(body.merchant).toBe(MERCHANT_ID);
+    expect(body.customer).toBe(CUSTOMER_ID);
+    expect(body.context).toBe('booking:123');
+    expect(body.lineItems).toHaveLength(1);
+    expect(body.lineItems[0].description).toBe('Consultation');
   });
 
-  test('returns 200 with invoice for customer owner', async () => {
-    const app = buildTestApp({ userId: CUSTOMER_ID });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
+  test('customer owner -> 200', async () => {
+    const res = await appFor({ id: CUSTOMER_ID }).request(`/billing/invoices/${INVOICE_ID}`);
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
-    expect(body.id).toBe(INVOICE_ID);
+    expect(((await res.json()) as any).id).toBe(INVOICE_ID);
   });
 
-  test('returns 200 for admin user', async () => {
-    const app = buildTestApp({ userId: OTHER_USER_ID, userRole: 'admin' });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
+  test('admin (non-owner) -> 200 — isAdmin branch, not ownership', async () => {
+    const res = await appFor({ id: OTHER_USER_ID, role: 'admin' }).request(`/billing/invoices/${INVOICE_ID}`);
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
-    expect(body.id).toBe(INVOICE_ID);
+    expect(((await res.json()) as any).id).toBe(INVOICE_ID);
   });
 
-  test('returns 403 for non-owner non-admin', async () => {
-    const app = buildTestApp({ userId: OTHER_USER_ID, userRole: 'user' });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
+  test('foreign user (non-owner, non-admin) -> 403', async () => {
+    const res = await appFor({ id: OTHER_USER_ID, role: 'user' }).request(`/billing/invoices/${INVOICE_ID}`);
     expect(res.status).toBe(403);
+    expect(((await res.json()) as any).code).toBe('FORBIDDEN');
   });
 
-  test('returns 404 for non-existent invoice', async () => {
-    const app = buildTestApp({ userId: MERCHANT_ID, invoiceExists: false });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
+  test('unauthenticated -> 401', async () => {
+    const res = await appFor(null).request(`/billing/invoices/${INVOICE_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('missing invoice -> 404', async () => {
+    mockFindOneWithLineItems.mockImplementation(() => Promise.resolve(null as any));
+    const res = await appFor({ id: MERCHANT_ID }).request(`/billing/invoices/${INVOICE_ID}`);
     expect(res.status).toBe(404);
   });
 
-  test('response includes line items', async () => {
-    const app = buildTestApp({ userId: MERCHANT_ID });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
-    const body = await res.json() as any;
-    expect(body.lineItems).toHaveLength(1);
-    expect(body.lineItems[0].description).toBe('Consultation');
-    expect(body.lineItems[0].amount).toBe(10000);
+  test('merchant person not found -> 404', async () => {
+    mockFindBillingParty.mockImplementation(() => Promise.resolve(null as any));
+    const res = await appFor({ id: MERCHANT_ID }).request(`/billing/invoices/${INVOICE_ID}`);
+    expect(res.status).toBe(404);
   });
 
-  test('response includes context field', async () => {
-    const app = buildTestApp({ userId: MERCHANT_ID });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
-    const body = await res.json() as any;
-    expect(body.context).toBe('booking:123');
-  });
-
-  test('response includes all schema fields', async () => {
-    const app = buildTestApp({ userId: MERCHANT_ID });
-    const res = await app.request(`/invoices/${INVOICE_ID}`);
-    const body = await res.json() as any;
-    // All previously-TODO fields now present
-    expect('paymentCaptureMethod' in body).toBe(true);
-    expect('paidBy' in body).toBe(true);
-    expect('voidedBy' in body).toBe(true);
-    expect('voidThresholdMinutes' in body).toBe(true);
-    expect('authorizedAt' in body).toBe(true);
-    expect('authorizedBy' in body).toBe(true);
-    expect('metadata' in body).toBe(true);
+  test('non-UUID id is rejected by the generated validator -> 400', async () => {
+    const res = await appFor({ id: MERCHANT_ID }).request('/billing/invoices/not-a-uuid');
+    expect(res.status).toBe(400);
   });
 });
