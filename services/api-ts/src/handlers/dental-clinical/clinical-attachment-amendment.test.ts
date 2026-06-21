@@ -683,3 +683,26 @@ describe('BR-019: clinical records append-only', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ---------------------------------------------------------------------------
+// BR-003 — createAttachment is blocked on a completed/locked visit
+// (the create-on-locked negative path; guard exists, this proves it)
+// NOTE: createAttachment uses the legacy code 'VISIT_LOCKED' (vs 'VISIT_IMMUTABLE'
+// used by findings/treatments/chart/consent/lab-order). The taxonomy split is a
+// known, separately-tracked cleanup; this test pins the CURRENT contract.
+// ---------------------------------------------------------------------------
+
+describe('BR-003 — createAttachment immutability', () => {
+  test('422 when adding an attachment to a completed visit', async () => {
+    const visit = await seedVisit();
+    await db.execute(sql`UPDATE dental_visit SET status = 'completed' WHERE id = ${visit.id}`);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/attachments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, imageType: 'xray', fileName: 'x.jpg', filePath: '/u/x.jpg', fileSizeBytes: 2048, mimeType: 'image/jpeg' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as { code: string }).code).toBe('VISIT_LOCKED');
+  });
+});

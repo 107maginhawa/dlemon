@@ -356,3 +356,29 @@ describe('P1-3: listConsentRefusals is visit-scoped', () => {
     expect(body.pagination.totalCount).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// BR-003 — recordConsentRefusal is blocked on a completed/locked visit
+// (create-on-locked negative path; guard exists at consent/recordConsentRefusal:39)
+// ---------------------------------------------------------------------------
+
+describe('BR-003 — recordConsentRefusal immutability', () => {
+  test('422 VISIT_IMMUTABLE when recording a refusal on a completed visit', async () => {
+    const visit = await seedVisit();
+    await db.execute(sql`UPDATE dental_visit SET status = 'completed' WHERE id = ${visit.id}`);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/consent-refusals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        refusingMemberId: MEMBER_ID,
+        procedureDescription: 'Tooth extraction tooth #48',
+        refusalReason: 'Patient declines',
+        patientAcknowledgement: 'Patient understands the risks of non-treatment and declines.',
+      }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as { code: string }).code).toBe('VISIT_IMMUTABLE');
+  });
+});
