@@ -2,13 +2,16 @@ name: OpenAPI Drift Detection
 
 # Fails if specs/api/dist/ is out of sync with TypeSpec sources.
 # Forces contributors to commit regenerated artifacts after touching .tsp files.
+#
+# Runs on EVERY pull request (no `paths:` filter). `detect-drift` is a required
+# branch-protection check, and a path-filtered workflow is *skipped* (never
+# reports) on PRs that don't touch the filtered paths — which leaves the required
+# check permanently pending and blocks every frontend-only PR. Running always
+# (on a no-spec-change PR the regen produces no diff, so it passes fast) keeps the
+# gate honest and unblockable. See the regen step below for the actual drift check.
 
 on:
   pull_request:
-    paths:
-      - 'specs/api/src/**'
-      - 'specs/api/package.json'
-      - 'specs/api/tspconfig.yaml'
 
 jobs:
   detect-drift:
