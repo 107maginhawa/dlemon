@@ -307,7 +307,10 @@ export function usePatientAuthorizations(patientId?: string | null) {
   return {
     // Narrow off the ErrorResponse union arm with a single `as`; the SDK auth type
     // carries the fields the LOA UI reads (id/status/loaNumber/approvedAmountCents).
-    authorizations: (query.data ?? []) as DentalPatientFinanceModuleCoverageAuthorization[],
+    // Guard with Array.isArray (not `?? []`): when the query resolves to a non-array
+    // (error-union arm, an envelope, or an unmocked default in a host page's tests)
+    // the consumer still gets an array and never `.map`s a non-array.
+    authorizations: (Array.isArray(query.data) ? query.data : []) as DentalPatientFinanceModuleCoverageAuthorization[],
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };
