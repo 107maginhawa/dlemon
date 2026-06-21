@@ -38,12 +38,16 @@ import { getCollectionsSummary } from './getCollectionsSummary';
 import { getPayerArAging } from './getPayerArAging';
 import { listInsuranceClaims } from './listInsuranceClaims';
 import { generateStatementBatch } from './generateStatementBatch';
+import { getCollectionsKpis } from './getCollectionsKpis';
+import { getCollectionsWorklist } from './getCollectionsWorklist';
 import {
   GetArAgingQuery,
   GetCollectionsSummaryQuery,
   GetPayerArAgingQuery,
   ListInsuranceClaimsQuery,
   GenerateStatementBatchBody,
+  GetCollectionsKpisQuery,
+  GetCollectionsWorklistQuery,
 } from '@/generated/openapi/validators';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -154,6 +158,8 @@ function buildApp(user: { id: string; email: string } = USER_A) {
   app.get('/dental/billing/claims/aging', zValidator('query', GetPayerArAgingQuery, validationErrorHandler), getPayerArAging as any);
   app.get('/dental/billing/claims', zValidator('query', ListInsuranceClaimsQuery, validationErrorHandler), listInsuranceClaims as any);
   app.post('/dental/billing/statements/batch', zValidator('json', GenerateStatementBatchBody, validationErrorHandler), generateStatementBatch as any);
+  app.get('/dental/billing/collections/kpis', zValidator('query', GetCollectionsKpisQuery, validationErrorHandler), getCollectionsKpis as any);
+  app.get('/dental/billing/collections/worklist', zValidator('query', GetCollectionsWorklistQuery, validationErrorHandler), getCollectionsWorklist as any);
   return app;
 }
 
@@ -207,6 +213,26 @@ describe('EM-BIL-002: omitted-branchId reports are scoped to caller branches (no
     expect(ids).toContain(PA.patient);
     expect(ids).not.toContain(PB.patient);
   });
+
+  test('getCollectionsKpis without branchId excludes ORG_B balances', async () => {
+    const res = await buildApp().request('/dental/billing/collections/kpis');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    // Only ORG_A's single 5000 overdue invoice is in scope; ORG_B's 90000 invisible.
+    expect(body.outstandingArCents).toBe(5000);
+    expect(body.billedTotalCents).toBe(5000);
+  });
+
+  test('getCollectionsWorklist without branchId excludes ORG_B patients/overdue', async () => {
+    const res = await buildApp().request('/dental/billing/collections/worklist');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const ids = body.rows.map((r: any) => r.patientId);
+    expect(ids).toContain(PA.patient);
+    expect(ids).not.toContain(PB.patient);
+    const totalVisibleOverdue = body.rows.reduce((s: number, r: any) => s + r.totalOverdueCents, 0);
+    expect(totalVisibleOverdue).toBe(5000);
+  });
 });
 
 describe('FIX-009: a zero-branch-membership caller gets EMPTY reports (no whole-DB leak)', () => {
@@ -247,5 +273,20 @@ describe('FIX-009: a zero-branch-membership caller gets EMPTY reports (no whole-
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.statements).toEqual([]);
+  });
+
+  test('getCollectionsKpis → zero outstanding/billed', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/collections/kpis');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.outstandingArCents).toBe(0);
+    expect(body.billedTotalCents).toBe(0);
+  });
+
+  test('getCollectionsWorklist → empty rows', async () => {
+    const res = await buildApp(USER_ZERO).request('/dental/billing/collections/worklist');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.rows).toEqual([]);
   });
 });
