@@ -25,8 +25,10 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { and, eq } from 'drizzle-orm';
 import { createDatabase } from '@/core/database';
 import { AppError } from '@/core/errors';
+import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 import {
   CreatePerioChartBody,
   UpsertToothReadingBody,
@@ -944,5 +946,80 @@ describe('getPerioChart', () => {
     const app = buildApp(TEST_USER);
     const res = await app.request('/dental/perio-charts/ee000000-0000-1000-8000-0000000000ff');
     expect(res.status).toBe(404);
+  });
+});
+
+// G-perio-audit-markers: the ADR-006 audit-log-only domain markers
+// (perio.chart.created/completed/locked) are written by the handlers but had no
+// test asserting they actually persist a dental_audit_log row. These do.
+describe('perio audit markers persist (G-perio-audit-markers / V-PER audit-convergence)', () => {
+  const AUDIT_VISIT          = 'ee000000-0000-1000-8000-0000000000b1';
+  const AUDIT_COMPLETE_VISIT = 'ee000000-0000-1000-8000-0000000000b2';
+  const AUDIT_LOCKED_VISIT   = 'ee000000-0000-1000-8000-0000000000b3';
+  const AUDIT_LOCKED_CHART   = 'ee000000-0000-1000-8000-0000000000b4';
+
+  beforeAll(async () => {
+    // 'draft' (not 'active') so they don't collide on the one-active-visit-per-patient
+    // partial unique index (PATIENT_ID already has the active VISIT_ID); createPerioChart
+    // / upsert / complete all accept a draft (writable) parent visit.
+    await db.insert(dentalVisits).values([
+      { id: AUDIT_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { id: AUDIT_COMPLETE_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'draft', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { id: AUDIT_LOCKED_VISIT, patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'locked', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]).onConflictDoNothing();
+    await db.insert(dentalPerioCharts).values({
+      id: AUDIT_LOCKED_CHART, visitId: AUDIT_LOCKED_VISIT, patientId: PATIENT_ID,
+      branchId: BRANCH_ID, examinerMemberId: MEMBER_ID, status: 'draft',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    }).onConflictDoNothing();
+  });
+
+  const auditRows = (action: string, targetId: string) =>
+    db.select().from(dentalAuditLog).where(and(eq(dentalAuditLog.action, action), eq(dentalAuditLog.targetId, targetId)));
+
+  test('perio.chart.created persists a dental_audit_log row on create', async () => {
+    const app = buildApp(TEST_USER);
+    const res = await app.request('/dental/perio-charts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: AUDIT_VISIT, patientId: PATIENT_ID }),
+    });
+    expect(res.status).toBe(201);
+    const chart = await res.json() as any;
+    const rows = await auditRows('perio.chart.created', chart.id);
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    expect(rows[0]!.targetType).toBe('dental_perio_chart');
+  });
+
+  test('perio.chart.completed persists a dental_audit_log row on complete', async () => {
+    const app = buildApp(TEST_USER);
+    const created = await app.request('/dental/perio-charts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId: AUDIT_COMPLETE_VISIT, patientId: PATIENT_ID }),
+    });
+    const chart = await created.json() as any;
+    // 16 readings (BR-P02 floor) so completion is allowed.
+    for (const tooth of [11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28]) {
+      const r = await app.request(`/dental/perio-charts/${chart.id}/readings/${tooth}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depthBM: 3, bopBM: false }),
+      });
+      expect(r.status).toBe(200);
+    }
+    const done = await app.request(`/dental/perio-charts/${chart.id}/complete`, { method: 'POST' });
+    expect(done.status).toBe(200);
+
+    const rows = await auditRows('perio.chart.completed', chart.id);
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('perio.chart.locked persists a dental_audit_log row on cascade lock', async () => {
+    const app = buildApp(TEST_USER);
+    // Reading a draft chart whose parent visit is locked cascades the chart to locked.
+    const res = await app.request(`/dental/perio-charts/${AUDIT_LOCKED_CHART}`);
+    expect(res.status).toBe(200);
+    expect((await res.json() as any).status).toBe('locked');
+
+    const rows = await auditRows('perio.chart.locked', AUDIT_LOCKED_CHART);
+    expect(rows.length).toBeGreaterThanOrEqual(1);
   });
 });
