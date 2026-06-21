@@ -1100,7 +1100,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 836
+    "evidenceLine": 883
   },
   {
     "fsm": "Treatment",
@@ -1208,7 +1208,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 840
+    "evidenceLine": 887
   },
   {
     "fsm": "Treatment",
@@ -1263,7 +1263,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 840
+    "evidenceLine": 887
   },
   {
     "fsm": "Visit",
