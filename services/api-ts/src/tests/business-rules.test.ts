@@ -15,7 +15,7 @@
  *   BR-020 — patient record merge (501 stub, not implemented)
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
@@ -408,7 +408,7 @@ async function seedSignedConsent(visitId: string) {
 // Teardown — matches table dependency order
 // ---------------------------------------------------------------------------
 
-afterEach(async () => {
+async function resetDentalTables() {
   await db.execute(sql`
     TRUNCATE TABLE
       imported_pmd,
@@ -432,7 +432,17 @@ afterEach(async () => {
       dental_organization
     CASCADE
   `);
-});
+}
+
+// Clean inherited state BEFORE the first test, not only after each. The
+// per-file clone inherits whatever the monobase_test template carries; if that
+// template was polluted (e.g. a sibling test run directly against it left an
+// active solo org for the SAME shared owner), ensureMembership's target-less
+// onConflictDoNothing would silently skip its own org insert on the partial
+// `dental_org_one_active_per_owner` index, and the branch FK would then fail.
+// Resetting first makes BR-001's seed deterministic regardless of template state.
+beforeAll(resetDentalTables);
+afterEach(resetDentalTables);
 
 // ===========================================================================
 // BR-001: A patient cannot have two active visits simultaneously
