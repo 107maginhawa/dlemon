@@ -1068,3 +1068,36 @@ describe('revokeConsentForm handler', () => {
     expect(form.revoked).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// BR-003 — createConsentForm / createLabOrder blocked on a completed/locked visit
+// (create-on-locked negative paths; guards exist, these prove them)
+// ---------------------------------------------------------------------------
+
+describe('BR-003 — consent/lab-order create-on-locked immutability', () => {
+  test('422 VISIT_IMMUTABLE when adding a consent form to a completed visit', async () => {
+    const visit = await seedVisit();
+    await db.execute(sql`UPDATE dental_visit SET status = 'completed' WHERE id = ${visit.id}`);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/consents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, templateId: 'tpl-001', templateName: 'General Consent' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as { code: string }).code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('422 VISIT_IMMUTABLE when adding a lab order to a completed visit', async () => {
+    const visit = await seedVisit();
+    await db.execute(sql`UPDATE dental_visit SET status = 'completed' WHERE id = ${visit.id}`);
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/lab-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, labName: 'Crown Lab', description: 'PFM crown' }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as { code: string }).code).toBe('VISIT_IMMUTABLE');
+  });
+});
