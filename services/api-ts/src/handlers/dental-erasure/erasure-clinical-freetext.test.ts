@@ -35,13 +35,20 @@ describe('erasure scrubs doc-named free-text clinical PHI (V-DG-002 / G3c)', () 
     const t = await openTestTx();
     db = t.db;
     teardown = t.rollback;
-    ids = await seedClinicalChain(db, { branches: 1, patients: 1, memberships: 1, visits: 1 });
+    ids = await seedClinicalChain(db, { branches: 1, patients: 2, memberships: 1, visits: 1 });
 
     await db.insert(medicalHistoryEntries).values({
       patientId: ids.PATIENT_1,
       entryType: 'condition',
       displayName: 'Hypertension',
       notes: 'Patient John Smith — controlled with lisinopril 10mg',
+    });
+    // A SECOND, non-subject patient's note — must SURVIVE the subject's erasure.
+    await db.insert(medicalHistoryEntries).values({
+      patientId: ids.PATIENT_2,
+      entryType: 'condition',
+      displayName: 'Asthma',
+      notes: 'Other patient — inhaler PRN',
     });
     await db.insert(prescriptions).values({
       visitId: ids.VISIT_1,
@@ -79,5 +86,22 @@ describe('erasure scrubs doc-named free-text clinical PHI (V-DG-002 / G3c)', () 
       .where(eq(prescriptions.patientId, ids.PATIENT_1));
     expect(rx!.instructions).toBeNull(); // free-text PHI scrubbed
     expect(rx!.drugName).toBe('Amoxicillin'); // drug name retained
+  });
+
+  test('does NOT scrub another patient — erasing the subject leaves a second patient untouched', async () => {
+    const req = await requestErasure(db, noopLogger, {
+      subjectPersonId: ids.PERSON_1,
+      tenantId: TENANT,
+      reason: 'GDPR Art.17 subject request',
+      requestedBy: REQUESTER,
+    });
+    await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER });
+
+    // The other patient's free-text note must be intact (scrub is scoped to the subject).
+    const [other] = await db
+      .select()
+      .from(medicalHistoryEntries)
+      .where(eq(medicalHistoryEntries.patientId, ids.PATIENT_2));
+    expect(other!.notes).toBe('Other patient — inhaler PRN');
   });
 });

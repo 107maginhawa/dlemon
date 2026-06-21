@@ -154,6 +154,19 @@ describe('imaging-erasure facade', () => {
       targetId: 'e2000000-0000-4000-8000-0000000000d1',
     });
 
+    // A DIFFERENT patient's link on their own image — must SURVIVE the subject's erasure.
+    await db.insert(persons).values({ id: NO_IMAGING_PID, firstName: 'Sam' });
+    const [otherPt] = await db.insert(patients).values({ person: NO_IMAGING_PID }).returning({ id: patients.id });
+    const [otherStudy] = await db
+      .insert(imagingStudies)
+      .values({ patientId: otherPt!.id, branchId: BRANCH, acquiredBy: ACQUIRED_BY, modality: 'periapical', status: 'active' })
+      .returning({ id: imagingStudies.id });
+    const [otherImg] = await db
+      .insert(imagingStudyImages)
+      .values({ studyId: otherStudy!.id, fileId: 'e2000000-0000-4000-8000-0000000000f2', modality: 'periapical', status: 'active' })
+      .returning({ id: imagingStudyImages.id });
+    await db.insert(imagingLinks).values({ imageId: otherImg!.id, linkType: 'report', targetId: 'e2000000-0000-4000-8000-0000000000d2' });
+
     const res = await anonymizeImagingByPersonDetailed(db, PID);
     expect(res.linksRemoved).toBeGreaterThanOrEqual(1);
 
@@ -162,6 +175,10 @@ describe('imaging-erasure facade', () => {
       .from(imagingLinks)
       .where(eq(imagingLinks.imageId, imageId));
     expect(links).toHaveLength(0); // referential cleanup: no dangling link survives erasure
+
+    // The other patient's link is untouched (delete is scoped to the subject's images).
+    const otherLinks = await db.select().from(imagingLinks).where(eq(imagingLinks.imageId, otherImg!.id));
+    expect(otherLinks).toHaveLength(1);
   });
 
   test('is idempotent', async () => {
