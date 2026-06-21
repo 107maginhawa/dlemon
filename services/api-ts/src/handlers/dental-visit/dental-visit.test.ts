@@ -1247,6 +1247,30 @@ describe('upsertDentalChart — EF-VIS-003 lock gate', () => {
 });
 
 // ---------------------------------------------------------------------------
+// upsertDentalChart — PATIENT_VISIT_MISMATCH (cross-patient baseline integrity)
+// ---------------------------------------------------------------------------
+
+describe('upsertDentalChart — PATIENT_VISIT_MISMATCH guard', () => {
+  // body.patientId drives BOTH the stored chart.patientId AND the cumulative
+  // patient-level baseline merge (mergeVisitChart(body.patientId, ...)). With no
+  // check that it matches the visit patient, posting a chart for patient A's visit
+  // with body.patientId=B corrupts patient B's longitudinal baseline with A's chart.
+  // createPerioChart enforces this guard; the odontogram chart must too.
+  test('422 PATIENT_VISIT_MISMATCH when body.patientId is not the visit patient', async () => {
+    const visit = await seedVisit(); // belongs to PATIENT_ID
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/chart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_2_ID, teeth: [{ toothNumber: 11, state: 'caries' }] }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json() as { code: string };
+    expect(body.code).toBe('PATIENT_VISIT_MISMATCH');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // EM-VIS-007: upsertVisitNotes — completed+locked gate
 // ---------------------------------------------------------------------------
 
