@@ -11406,8 +11406,8 @@
         "dental-patient"
       ],
       "userEntryPoint": {
-        "route": "/dental/patients/{patientId}/authorizations",
-        "control": "Add authorization"
+        "route": "/patients/{patientId}",
+        "control": "add-authorization-btn"
       },
       "endpoints": [
         "POST /dental/patients/{patientId}/authorizations",

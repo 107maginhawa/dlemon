@@ -307,7 +307,10 @@ export function usePatientAuthorizations(patientId?: string | null) {
   return {
     // Narrow off the ErrorResponse union arm with a single `as`; the SDK auth type
     // carries the fields the LOA UI reads (id/status/loaNumber/approvedAmountCents).
-    authorizations: (query.data ?? []) as DentalPatientFinanceModuleCoverageAuthorization[],
+    // Guard with Array.isArray (not `?? []`): when the query resolves to a non-array
+    // (error-union arm, an envelope, or an unmocked default in a host page's tests)
+    // the consumer still gets an array and never `.map`s a non-array.
+    authorizations: (Array.isArray(query.data) ? query.data : []) as DentalPatientFinanceModuleCoverageAuthorization[],
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };
@@ -343,10 +346,24 @@ export function useAuthorizationMutations(patientId?: string | null) {
     onSuccess: invalidate,
   });
 
+  const deny = useMutation({
+    mutationFn: async (args: { authorizationId: string }) => {
+      const { data } = await updateCoverageAuthorizationStatus({
+        path: { patientId: patientId ?? '', authorizationId: args.authorizationId },
+        body: { status: 'denied' },
+        throwOnError: true,
+      });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     create: create.mutateAsync,
     approve: approve.mutateAsync,
+    deny: deny.mutateAsync,
     isCreating: create.isPending,
-    error: (create.error ?? approve.error) as Error | null,
+    isUpdating: approve.isPending || deny.isPending,
+    error: (create.error ?? approve.error ?? deny.error) as Error | null,
   };
 }

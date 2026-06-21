@@ -16,10 +16,6 @@
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
   },
   {
-    "id": "be-dental-billing-loa-authorization-dependency",
-    "reason": "NOT user-reachable: the LOA hooks (usePatientAuthorizations/useAuthorizationMutations in use-insurance-claims.ts) are ORPHANED — zero consumer components, no route mounts authorization management (verified by grep). Lifecycle fully proven at contract (dental-revenue-cycle.hurl create→approve→list→FSM-violation) + be-unit (listCoverageAuthorizations.test.ts auth/scope; dental-insurance-claim.test.ts BR-056 expired-LOA + BR-057 cap). The e2e gap is a MISSING UI (product gap), not a test gap — closing it needs an Add-authorization control built first. Flagged to product."
-  },
-  {
     "id": "be-dental-billing-refund-cap-invariant",
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
   },
