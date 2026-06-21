@@ -77,7 +77,7 @@
   {
     "routePath": "/portal",
     "file": "apps/dentalemon/src/routes/_portal/portal.index.tsx",
-    "exercisedByE2E": false
+    "exercisedByE2E": true
   },
   {
     "routePath": "/portal/appointments",

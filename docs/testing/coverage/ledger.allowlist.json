@@ -193,7 +193,7 @@
   },
   {
     "id": "inter-portal-billing-facade",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:be-unit+e2e). Add a RED-first Playwright e2e at apps/dentalemon/tests/e2e/portal-bills.spec.ts that authenticates as a patient and nav"
+    "reason": "CLOSED in Phase 3a by apps/dentalemon/tests/e2e/portal-patient-self-service.spec.ts (logged-in patient drives /portal → appointments/bills/balance, RED-proven). Retained only because the deterministic e2e spec-index is grep-blind to this item (known FP) — drop when detection hardens."
   },
   {
     "id": "notif-push-click-deep-link",
@@ -245,39 +245,23 @@
   },
   {
     "id": "portal-get-my-balance",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:be-unit+e2e). Add one RED-first Playwright journey spec (e.g. apps/dentalemon/tests/e2e/journeys/32-portal-view-my-balance.journey.spe"
-  },
-  {
-    "id": "portal-index-redirect",
-    "reason": "Phase 1 VERIFIED gap (unproven/core, miss:e2e). Add one RED-first Playwright e2e that, as an authenticated patient session (Better-Auth user with linked Person+dental_p"
+    "reason": "CLOSED in Phase 3a by apps/dentalemon/tests/e2e/portal-patient-self-service.spec.ts (logged-in patient drives /portal → appointments/bills/balance, RED-proven). Retained only because the deterministic e2e spec-index is grep-blind to this item (known FP) — drop when detection hardens."
   },
   {
     "id": "portal-list-my-appointments",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/clinical, miss:be-unit+e2e). Add a Playwright e2e journey, e.g. apps/dentalemon/tests/e2e/portal-appointments.spec.ts, RED-first against current main"
+    "reason": "CLOSED in Phase 3a by apps/dentalemon/tests/e2e/portal-patient-self-service.spec.ts (logged-in patient drives /portal → appointments/bills/balance, RED-proven). Retained only because the deterministic e2e spec-index is grep-blind to this item (known FP) — drop when detection hardens."
   },
   {
     "id": "portal-list-my-invoices",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:be-unit+e2e). "
+    "reason": "CLOSED in Phase 3a by apps/dentalemon/tests/e2e/portal-patient-self-service.spec.ts (logged-in patient drives /portal → appointments/bills/balance, RED-proven). Retained only because the deterministic e2e spec-index is grep-blind to this item (known FP) — drop when detection hardens."
   },
   {
     "id": "portal-resolve-self-patient-or-throw",
     "reason": "deterministic baseline (be-unit-gap/clinical, miss:be-unit). May be a grep-blind buildTestApp be-unit test or a fuzzy-missed e2e — verify before treating as real (see coverage-backlog.json)."
   },
   {
-    "id": "portal-sign-out",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/core, miss:e2e). Add a focused portal sign-out journey (e.g. apps/dentalemon/tests/e2e/journeys/32-portal-sign-out.journey.spec.ts), Set "
-  },
-  {
-    "id": "portal-tab-navigation",
-    "reason": "Phase 1 VERIFIED gap (unproven/core, miss:e2e). Add ONE journey/e2e spec (e.g. apps/dentalemon/tests/e2e/journeys/32-patient-portal-tabs.journey.spec.ts, or a simpler p"
-  },
-  {
     "id": "uc-get-medical-history-review",
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
-  },
-  {
-    "id": "uc-list-consent-refusals",
-    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit). Add a RED-first bun unit test for the listConsentRefusals handler."
   },
   {
     "id": "wf-record-medical-history-review",

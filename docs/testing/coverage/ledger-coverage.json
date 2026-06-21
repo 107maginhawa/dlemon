@@ -3,33 +3,33 @@
   "source": "coverage-ledger.json",
   "totals": {
     "items": 915,
-    "PARTIAL": 513,
-    "GAP": 206,
-    "COVERED": 196,
+    "PARTIAL": 515,
+    "GAP": 202,
+    "COVERED": 198,
     "gapByLayer": {
-      "be-unit": 27,
+      "be-unit": 26,
       "contract": 37,
-      "e2e": 17
+      "e2e": 13
     },
     "gapByRisk": {
-      "clinical": 39,
+      "clinical": 38,
       "auth": 1,
-      "core": 6,
       "rest": 1,
-      "money": 24
+      "money": 24,
+      "core": 3
     },
     "gapBySeverity": {
-      "unproven": 5,
-      "e2e-gap": 14,
+      "unproven": 3,
+      "e2e-gap": 12,
       "be-unit-gap": 20,
       "contract-only": 32
     },
     "partialUnknownByLayer": {
-      "be-unit": 71,
-      "fe-unit": 457,
+      "be-unit": 72,
+      "fe-unit": 459,
       "contract": 8
     },
-    "userReachableGaps": 71,
+    "userReachableGaps": 67,
     "backendOnlyGaps": 135
   },
   "backlog": [
@@ -73,62 +73,6 @@
       ],
       "route": "/_workspace",
       "risk": "auth",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "unproven",
-      "requiredLayers": [
-        "e2e"
-      ],
-      "grades": {
-        "be-unit": "N/A",
-        "contract": "N/A",
-        "fe-unit": "N/A",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "e2e"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "portal-index-redirect",
-      "title": "Portal root redirects to Appointments tab",
-      "type": "workflow",
-      "modules": [
-        "portal"
-      ],
-      "route": "/portal",
-      "risk": "core",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "unproven",
-      "requiredLayers": [
-        "e2e"
-      ],
-      "grades": {
-        "be-unit": "N/A",
-        "contract": "N/A",
-        "fe-unit": "N/A",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "e2e"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "portal-tab-navigation",
-      "title": "Bottom tab navigation between Appointments and Bills",
-      "type": "workflow",
-      "modules": [
-        "portal"
-      ],
-      "route": "/portal/*",
-      "risk": "core",
       "feReachable": true,
       "allOrphan": false,
       "severity": "unproven",
@@ -323,44 +267,6 @@
         "dental-billing"
       ],
       "route": "/me/invoices",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "MISSING",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "be-unit",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "portal-get-my-balance",
-      "title": "Patient views own outstanding balance roll-up (GET /me/balance)",
-      "type": "workflow",
-      "modules": [
-        "dental-portal",
-        "dental-billing",
-        "patient",
-        "person",
-        "portal"
-      ],
-      "route": "/portal/bills",
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
@@ -631,40 +537,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "portal-sign-out",
-      "title": "Sign out of patient portal",
-      "type": "workflow",
-      "modules": [
-        "portal",
-        "auth"
-      ],
-      "route": "/portal/*",
-      "risk": "core",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "UNKNOWN",
-        "contract": "N/A",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "e2e"
-      ],
-      "unknown": [
-        "be-unit",
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "br-portal-001-idor-self-scope",
       "title": "IDOR-free self-scope: every portal read returns ONLY caller's own rows",
       "type": "business-rule",
@@ -918,6 +790,43 @@
         "dental-clinical"
       ],
       "route": "/$patientId (imaging overlay, Edit sheet)",
+      "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "be-unit-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "MISSING",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "be-unit"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "portal-get-my-balance",
+      "title": "Patient views own outstanding balance roll-up (GET /me/balance)",
+      "type": "workflow",
+      "modules": [
+        "dental-portal",
+        "dental-billing",
+        "patient",
+        "person",
+        "portal"
+      ],
+      "route": "/portal/bills",
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
@@ -1281,38 +1190,6 @@
         "be-unit"
       ],
       "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "uc-list-consent-refusals",
-      "title": "List consent refusals for visit",
-      "type": "use-case",
-      "modules": [
-        "dental-clinical"
-      ],
-      "route": "/dental/visits/:visitId/consent-refusals",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "be-unit-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "MISSING",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "be-unit"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
       "absentByDesign": false,
       "itemGrade": "GAP"
     },
@@ -21985,26 +21862,24 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "be-unit-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "MISSING",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "be-unit"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "uc-list-inventory-adjustments",
@@ -31729,7 +31604,7 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "e2e-gap",
+      "severity": "be-unit-gap",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -31740,11 +31615,10 @@
         "be-unit": "MISSING",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
+        "e2e": "COVERED"
       },
       "missing": [
-        "be-unit",
-        "e2e"
+        "be-unit"
       ],
       "unknown": [
         "fe-unit"
@@ -34069,7 +33943,7 @@
       "risk": "core",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "unproven",
+      "severity": "none",
       "requiredLayers": [
         "e2e"
       ],
@@ -34077,14 +33951,12 @@
         "be-unit": "N/A",
         "contract": "N/A",
         "fe-unit": "N/A",
-        "e2e": "MISSING"
+        "e2e": "COVERED"
       },
-      "missing": [
-        "e2e"
-      ],
+      "missing": [],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "COVERED"
     },
     {
       "id": "portal-sign-out",
@@ -34098,7 +33970,7 @@
       "risk": "core",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "e2e-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "e2e",
@@ -34108,17 +33980,15 @@
         "be-unit": "UNKNOWN",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
+        "e2e": "COVERED"
       },
-      "missing": [
-        "e2e"
-      ],
+      "missing": [],
       "unknown": [
         "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "portal-tab-navigation",
@@ -34131,7 +34001,7 @@
       "risk": "core",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "unproven",
+      "severity": "none",
       "requiredLayers": [
         "e2e"
       ],
@@ -34139,14 +34009,12 @@
         "be-unit": "N/A",
         "contract": "N/A",
         "fe-unit": "N/A",
-        "e2e": "MISSING"
+        "e2e": "COVERED"
       },
-      "missing": [
-        "e2e"
-      ],
+      "missing": [],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "COVERED"
     },
     {
       "id": "provider-create-practitioner",
