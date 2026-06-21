@@ -66,7 +66,12 @@ export async function updateLabOrder(
     return ctx.json(order);
   }
 
-  // Non-status fields update
+  // Non-status fields update.
+  // BR-003 boundary (product decision 2026-06-21): unlike finding/treatment/chart edits,
+  // updateLabOrder deliberately has NO VISIT_IMMUTABLE guard. A lab order is an in-flight
+  // work order whose fabrication/delivery and field corrections legitimately continue
+  // after the visit is completed/locked. Pinned by clinical-consent-lab.test.ts
+  // ("non-status field edits remain allowed on a COMPLETED visit").
   const updated = await repo.update(orderId, {
     expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : undefined,
     // P2-12: editable restoration detail fields

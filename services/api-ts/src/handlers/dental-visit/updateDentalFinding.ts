@@ -7,7 +7,7 @@
  */
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { VisitRepository } from './repos/visit.repo';
 import { DentalFindingRepository } from './repos/dental-finding.repo';
@@ -28,6 +28,13 @@ export async function updateDentalFinding(
   const visit = await new VisitRepository(db).findOneById(visitId);
   if (!visit) throw new NotFoundError('Dental visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'dental_assistant']);
+
+  // BR-003: a completed/locked visit's clinical record is immutable. createDentalFinding
+  // blocks ADDing a finding to such a visit; editing one is the same mutation and is blocked
+  // the same way.
+  if (visit.status === 'completed' || visit.status === 'locked') {
+    throw new BusinessLogicError(`Cannot edit findings on a ${visit.status} visit`, 'VISIT_IMMUTABLE');
+  }
 
   const repo = new DentalFindingRepository(db);
   const finding = await repo.findById(findingId);

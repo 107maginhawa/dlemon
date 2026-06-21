@@ -792,6 +792,37 @@ describe('updateLabOrder handler', () => {
     expect(body.isDefective).toBe(true);
   });
 
+  // BR-003 boundary — PRODUCT DECISION (2026-06-21): a lab order is an in-flight WORK
+  // ORDER, not a finalized clinical observation. Fabrication/delivery and field
+  // corrections (shade/material/dueDate/expectedDeliveryDate/isDefective) legitimately
+  // continue AFTER the visit is completed/locked, so updateLabOrder intentionally does
+  // NOT carry the VISIT_IMMUTABLE guard that finding/treatment/chart edits do. This
+  // characterization test pins that deliberate divergence so a future "consistency"
+  // change can't silently break the post-completion lab workflow.
+  test('non-status field edits remain allowed on a COMPLETED visit (lab order is a work order, not an immutable clinical record)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit();
+
+    const createRes = await app.request(`/dental/visits/${visit.id}/lab-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_ID, labName: 'Crown Lab', description: 'Emax crown' }),
+    });
+    const created = await createRes.json() as { id: string };
+
+    await db.execute(sql`UPDATE dental_visit SET status = 'completed' WHERE id = ${visit.id}`);
+
+    const res = await app.request(`/dental/visits/${visit.id}/lab-orders/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isDefective: true }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { isDefective: boolean };
+    expect(body.isDefective).toBe(true);
+  });
+
   // DE-015 LabOrderCompleted — the lab marking the order complete is the
   // `delivered` transition (lab's fabrication work is finished and handed back).
   // ADR-006: emit a synchronous dental_audit_log row only on that transition.

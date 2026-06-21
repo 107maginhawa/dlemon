@@ -145,6 +145,36 @@ describe('P0-C — updateFinding (resolve / edit)', () => {
   });
 });
 
+describe('BR-003 — updateFinding immutability (symmetric with createFinding)', () => {
+  // createDentalFinding rejects adding a finding to a completed/locked visit
+  // (VISIT_IMMUTABLE). Editing an existing finding on such a visit is the same
+  // clinical-record mutation and must be blocked too — otherwise a locked visit's
+  // findings can still be silently rewritten.
+  test('editing a finding on a COMPLETED visit → 422 VISIT_IMMUTABLE', async () => {
+    const created = await (await post(`/dental/visits/${VISIT}/findings`, { toothNumber: 44, conditionCode: 'caries' })).json() as { id: string };
+    await db.execute(sql`UPDATE dental_visit SET status = 'completed' WHERE id = ${VISIT}`);
+    try {
+      const res = await patch(`/dental/visits/${VISIT}/findings/${created.id}`, { conditionCode: 'calculus' });
+      expect(res.status).toBe(422);
+      expect((await res.json() as { code: string }).code).toBe('VISIT_IMMUTABLE');
+    } finally {
+      await db.execute(sql`UPDATE dental_visit SET status = 'active' WHERE id = ${VISIT}`);
+    }
+  });
+
+  test('editing a finding on a LOCKED visit → 422 VISIT_IMMUTABLE', async () => {
+    const created = await (await post(`/dental/visits/${VISIT}/findings`, { toothNumber: 43, conditionCode: 'caries' })).json() as { id: string };
+    await db.execute(sql`UPDATE dental_visit SET status = 'locked' WHERE id = ${VISIT}`);
+    try {
+      const res = await patch(`/dental/visits/${VISIT}/findings/${created.id}`, { status: 'resolved' });
+      expect(res.status).toBe(422);
+      expect((await res.json() as { code: string }).code).toBe('VISIT_IMMUTABLE');
+    } finally {
+      await db.execute(sql`UPDATE dental_visit SET status = 'active' WHERE id = ${VISIT}`);
+    }
+  });
+});
+
 /**
  * Wrap a db so the dental_finding UPDATE (the linkTreatment write) always throws,
  * at both the top level and inside a transaction. Lets us force a failure AFTER the
