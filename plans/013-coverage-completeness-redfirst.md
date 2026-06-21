@@ -147,6 +147,38 @@ journey harness green where touched. Commits end with:
   2 billing inter-module, 1 comms-WS) needs the web app (:3003) + Playwright and is the next wave.
   PRE-EXISTING (not mine): business-rules.test.ts BR-001 findInProgressByPatient fails on HEAD
   (dental_branch seeding flake) — flag for a separate fix.
+- 2026-06-21: **Phase 3 COMPLETE — 18/18 backlog gaps burned down (truth-first).** 14 closed
+  with new RED-proven tests, 4 dispositioned honestly (verified not-closeable-by-e2e, covered
+  at the layers that exist). Commits:
+  - 3a `2c0d97fd` — ONE patient-portal e2e (portal-patient-self-service.spec.ts) closes ALL 7
+    portal gaps (index-redirect/tab-nav/list-appointments/list-invoices/get-balance/sign-out/
+    billing-facade). A logged-in patient who owns data exists in no seed → constructed over HTTP
+    (fresh owner org → patient self-registers a dental_patient → owner seeds appt+issued invoice;
+    Set A, no Mailpit). RED proven by reverting the redirect + the balance render. Also `b9fdc5c7`
+    refreshed fsm-matrix line-refs (stale since 6ab9f3a9). allowlist 71→67 (4 nav gaps dropped;
+    4 data gaps grep-blind, kept w/ "covered by spec" reason). fe-route-matrix now hits /portal.
+  - 3b `19d2d55e` listDueRecalls (window+default-horizon+403+400) · `1fab63e1`
+    listCoverageAuthorizations be-unit + contract LOA-list (extends dental-revenue-cycle.hurl) ·
+    `0306c439` exportDentalChart handler-glue + cross-visit aggregation. Each RED via mutation;
+    each dropped from the ledger (and endpoint) allowlist.
+  - 3d `252ae5e8` notifs mark-all-read e2e (extends notification-inbox.spec.ts; RED by disabling
+    the click handler).
+  - 3e `f38042d7` comms chat-room WS auth boundary — server-level integration test boots the real
+    app, proves unauth/invalid-token upgrade → 401 (config-shape test was blind to it). No comms
+    UI → no Playwright possible; ledger e2e flag stays, reason updated.
+  - **4 dispositioned `31f758bc` (verified, not faked):** be-dental-billing-loa-authorization-
+    dependency (LOA hooks ORPHANED, no UI — contract+be-unit cover the lifecycle; ⚠ MISSING UI is
+    a product gap) · person-billing-party-lookup-inter-module (base /billing/invoices has ZERO
+    dentalemon consumers — backend-only) · notif-push-opt-in-enable + notif-push-click-deep-link
+    (e2e blocked: OneSignal SDK rejects the placeholder VITE_ONESIGNAL_APP_ID in the test env so
+    the prompt/listener never mount — empirically verified; logic is fe-unit tested).
+  Post: `72f83589` fixed the PRE-EXISTING BR-001 flake (root cause: polluted monobase_test template
+  + target-less onConflictDoNothing skipping the org insert on the partial active-per-owner index
+  → branch FK fails; fix = beforeAll reset). Per-commit gate green throughout (typecheck 0, lint
+  0-err, font 346, fsm-tokens, freshness byte-stable). ⚠ OPEN for human: (1) the LOA "Add
+  authorization" UI is missing (orphaned hooks); (2) branch-protection enforcement still blocked
+  on a GitHub plan — ratchets wired but advisory; (3) promote the ledger ratchet to blocking once
+  detection hardens.
 
 ## CONTINUE PROMPT (paste into a fresh session to resume)
 
