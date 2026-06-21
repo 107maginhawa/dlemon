@@ -17,7 +17,8 @@ import type { AuditLogFilters, AuditLogQueryParams } from './repos/audit.schema'
  * 
  * Path: GET /audit/logs
  * OperationId: listAuditLogs
- * Security: bearerAuth with roles ["admin", "compliance"]
+ * Security: bearerAuth with roles ["admin", "support"] (TypeSpec source of truth,
+ *   audit.tsp x-security-required-roles — must match the generated route gate).
  */
 export async function listAuditLogs(
   ctx: ValidatedContext<never, ListAuditLogsQuery, never>
@@ -28,8 +29,11 @@ export async function listAuditLogs(
 
   const userRole: string = user.role ?? '';
   const roles = userRole.split(',').map((r: string) => r.trim());
-  if (!roles.includes('admin') && !roles.includes('compliance')) {
-    throw new ForbiddenError('admin or compliance role required to access audit logs');
+  // Align to the TypeSpec source of truth (audit.tsp → generated route gate =
+  // {admin, support}). The handler previously gated on 'compliance', which both
+  // locked out the spec-required 'support' reader AND was a stale over-grant.
+  if (!roles.includes('admin') && !roles.includes('support')) {
+    throw new ForbiddenError('admin or support role required to access audit logs');
   }
 
   // Get query parameters
