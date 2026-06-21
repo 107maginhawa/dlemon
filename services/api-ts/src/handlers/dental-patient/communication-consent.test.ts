@@ -27,6 +27,9 @@ const ORG_ID = 'c0000000-0000-1000-8000-0000000000c9';
 const PATIENT_ID = 'd0000000-0000-1000-8000-0000000000c9';
 const PERSON_ID = 'e0000000-0000-1000-8000-0000000000c9';
 const MISSING_PATIENT_ID = 'd9000000-0000-1000-8000-0000000000c9';
+// An outsider caller: a real person UUID with NO active dental_memberships row
+// in the patient's branch (BRANCH_ID). Drives the cross-branch deny path.
+const OUTSIDER_USER = { id: 'a8000000-0000-1000-8000-0000000000c9', email: 'outsider@other.com' };
 
 const ve = (result: any, c: any) => {
   if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
@@ -79,7 +82,7 @@ afterEach(async () => {
   await db.execute(sql`TRUNCATE TABLE dental_audit_log`);
 });
 
-function buildApp() {
+function buildApp(user = TEST_USER) {
   const app = new Hono();
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: err.message, code: err.code }, err.statusCode as any);
@@ -89,7 +92,7 @@ function buildApp() {
     const ctx = c as any;
     ctx.set('database', db);
     ctx.set('logger', { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} });
-    ctx.set('user', TEST_USER);
+    ctx.set('user', user);
     await next();
   });
   app.get('/dental/patients/:patientId/communication-consent',
@@ -154,6 +157,22 @@ describe('P1-28 — per-channel communication consent', () => {
     const app = buildApp();
     const res = await app.request(`/dental/patients/${MISSING_PATIENT_ID}/communication-consent`);
     expect(res.status).toBe(404);
+  });
+
+  // roleOp / cross-branch PHI guard (assertPatientBranchAccess at
+  // updatePatientCommunicationConsent.ts:30): a caller with NO active membership
+  // in the patient's branch must not be able to edit consent PHI. The rest of the
+  // suite always drives TEST_USER (a member of BRANCH_ID), so this deny path is
+  // otherwise unexercised.
+  test('[roleOp] outsider with no membership in patient branch → 403 BRANCH_ACCESS_DENIED', async () => {
+    const app = buildApp(OUTSIDER_USER);
+    const res = await app.request(`/dental/patients/${PATIENT_ID}/communication-consent`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sms: true }),
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('BRANCH_ACCESS_DENIED');
   });
 
   // dental-patient G5 / dental-audit P1-B: a consent change is a data-governance

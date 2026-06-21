@@ -8,7 +8,7 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **56** (21 ownership-tested, **35 obligation gaps**).
+Sensitive mutating orphans: **56** (23 ownership-tested, **33 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
@@ -49,14 +49,14 @@ Sensitive mutating orphans: **56** (21 ownership-tested, **35 obligation gaps**)
 | `handleStripeWebhook` | billing | POST | `/billing/webhooks/stripe` | ⚠️ obligation |
 | `importPatients` | dental-patient | POST | `/dental/patients/import` | ✅ |
 | `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | ⚠️ obligation |
-| `mergePatients` | patient | POST | `/patients/merge` | ⚠️ obligation |
+| `mergePatients` | patient | POST | `/patients/merge` | ✅ |
 | `onboardMerchantAccount` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/onboard` | ⚠️ obligation |
 | `payInvoice` | billing | POST | `/billing/invoices/{invoice}/pay` | ⚠️ obligation |
 | `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | ✅ |
 | `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | ⚠️ obligation |
 | `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | ⚠️ obligation |
 | `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | ⚠️ obligation |
-| `unmergePatients` | patient | POST | `/patients/unmerge` | ⚠️ obligation |
+| `unmergePatients` | patient | POST | `/patients/unmerge` | ✅ |
 | `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | ⚠️ obligation |
 | `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | ✅ |
 | `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | ⚠️ obligation |
@@ -209,7 +209,7 @@ Total orphans: **158**
 | `listTreatmentPlanStatusHistory` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plans/{planId}/status-history` | keep | _triage pending_ |
 | `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | keep | sensitive-write (obligation) |
 | `markNoShowBooking` | booking | POST | `/booking/bookings/{booking}/no-show` | keep | _triage pending_ |
-| `mergePatients` | patient | POST | `/patients/merge` | keep | sensitive-write (obligation) |
+| `mergePatients` | patient | POST | `/patients/merge` | keep | sensitive-write (ownership-tested) |
 | `onboardMerchantAccount` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/onboard` | keep | sensitive-write (obligation) |
 | `payInvoice` | billing | POST | `/billing/invoices/{invoice}/pay` | keep | sensitive-write (obligation) |
 | `placeLegalHold` | dental-legalhold | POST | `/dental/legal-holds` | keep | _triage pending_ |
@@ -222,7 +222,7 @@ Total orphans: **158**
 | `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` | keep | _triage pending_ |
 | `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | keep | sensitive-write (obligation) |
 | `testEmailTemplate` | email | POST | `/email/templates/{template}/test` | keep | _triage pending_ |
-| `unmergePatients` | patient | POST | `/patients/unmerge` | keep | sensitive-write (obligation) |
+| `unmergePatients` | patient | POST | `/patients/unmerge` | keep | sensitive-write (ownership-tested) |
 | `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` | keep | _triage pending_ |
 | `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | keep | sensitive-write (obligation) |
 | `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` | keep | _triage pending_ |

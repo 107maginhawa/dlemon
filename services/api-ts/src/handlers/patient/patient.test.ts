@@ -364,6 +364,37 @@ describe('getPatient handler', () => {
     const body = await res.json() as any;
     expect(body.id).toBe(patient.id);
   });
+
+  // GAP patient-getpatient-idor-read-403: a plain (non-owner, non-staff) user
+  // must NOT be able to read another person's patient record (PHI IDOR).
+  // Guard: getPatient.ts `if (!isOwner && !isStaff) throw new ForbiddenError`.
+  test('returns 403 when a non-owner plain user reads another person record', async () => {
+    // Seed the patient owned by OTHER_USER_ID so person.id !== attacker.id.
+    const patient = await seedPatient(OTHER_USER_ID);
+    // Attacker is TEST_USER_ID: authenticated, but a plain 'user' role — not
+    // the owner and not a staff role.
+    const attacker = { id: TEST_USER_ID, email: 'attacker@test.com', name: 'Attacker', role: 'user' };
+    const app = buildTestApp(attacker);
+
+    const res = await app.request(`/patients/${patient.id}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  // Positive control: a staff caller (clinician) CAN read the same record (200),
+  // proving the 403 above is the IDOR guard firing on the non-staff role and not
+  // some unrelated failure (e.g. 404/auth).
+  test('returns 200 when a staff (clinician) caller reads another person record', async () => {
+    const patient = await seedPatient(OTHER_USER_ID);
+    const staff = { id: TEST_USER_ID, email: 'attacker@test.com', name: 'Clinician', role: 'clinician' };
+    const app = buildTestApp(staff);
+
+    const res = await app.request(`/patients/${patient.id}`);
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.id).toBe(patient.id);
+  });
 });
 
 // =============================================================================

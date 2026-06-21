@@ -19,6 +19,7 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 const ORG_ID    = 'a4000000-0000-1000-8000-000000000001';
 const BRANCH_ID = 'b4000000-0000-1000-8000-000000000001';
 const PERSON_ID = 'c4000000-0000-1000-8000-000000000001';
+const STAFF_ID  = 'c4000000-0000-1000-8000-000000000002';
 const NONEXISTENT_ID = 'd4000000-0000-1000-8000-000000000099';
 
 const authedUser = { id: PERSON_ID, email: 'owner@clinic.com' };
@@ -160,5 +161,50 @@ describe('resetMemberPin handler', () => {
     // Verify the new PIN can actually be verified
     const pinCorrect = await Bun.password.verify('999888', updated!.pinHash!);
     expect(pinCorrect).toBe(true);
+  });
+
+  // --------------------------------------------------------------------------
+  // Authorization (roleOp): only dentist_owner may reset another member's PIN
+  // --------------------------------------------------------------------------
+
+  test('returns 403 when a same-branch non-owner (staff_full) attempts to reset a member PIN', async () => {
+    const membershipRepo = await seedAll();
+    // Same-branch caller, role staff_full → passes assertBranchAccess but must be
+    // stopped by the dentist_owner-only check in resetMemberPin.ts.
+    await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      personId: STAFF_ID,
+      displayName: 'Staff Sam',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    // Target member whose PIN the staff_full caller tries to reset.
+    const target = await membershipRepo.createOne({
+      branchId: BRANCH_ID,
+      displayName: 'Target Tina',
+      role: 'staff_full',
+      status: 'active',
+      pinFailedAttempts: 0,
+    });
+    // Establish a known PIN hash on the target so we can prove the deny blocked the write.
+    const originalHash = await Bun.password.hash('111222');
+    await membershipRepo.updatePin(target.id, originalHash);
+
+    const app = buildTestApp({ db, user: { id: STAFF_ID, email: 'staff@clinic.com' } });
+
+    const res = await app.request(`/dental/org/members/${target.id}/reset-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPin: '999888' }),
+    });
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as any;
+    expect(body.error?.message ?? body.message).toBe('Only the dentist owner can reset member PINs');
+
+    // Prove the deny blocked the write: the target's pinHash is unchanged.
+    const after = await membershipRepo.findOneById(target.id);
+    expect(after?.pinHash).toBe(originalHash);
   });
 });
