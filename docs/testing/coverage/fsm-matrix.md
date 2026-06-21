@@ -77,7 +77,7 @@ _None — every illegal transition has a rejection test._
 | CephLandmark | `not_placed` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:90 |
 | CephLandmark | `not_placed` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:93 |
 | CephLandmark | `not_placed` | `placed` | ✅ |   |  |
-| CephLandmark | `placed` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:697 |
+| CephLandmark | `placed` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:705 |
 | CephLandmark | `placed` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:21 |
 | CephLandmark | `placed` | `not_placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:96 |
 | Finding | `confirmed` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:73 |
