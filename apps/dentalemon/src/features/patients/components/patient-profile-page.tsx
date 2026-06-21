@@ -22,6 +22,7 @@ import { InsuranceCard } from './insurance-card';
 import { PatientEditForm, normalizePhone } from './patient-edit-form';
 import { PatientStatement } from './patient-statement';
 import { PatientCredits } from './patient-credits';
+import { PatientAuthorizations } from '@/features/billing/components/patient-authorizations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -300,6 +301,7 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
       outstandingInvoices={outstandingInvoices}
       onChanged={() => { void queryClient.invalidateQueries(); }}
     />
+    <PatientAuthorizations patientId={patientId} />
     </>
   );
 }

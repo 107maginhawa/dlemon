@@ -343,10 +343,24 @@ export function useAuthorizationMutations(patientId?: string | null) {
     onSuccess: invalidate,
   });
 
+  const deny = useMutation({
+    mutationFn: async (args: { authorizationId: string }) => {
+      const { data } = await updateCoverageAuthorizationStatus({
+        path: { patientId: patientId ?? '', authorizationId: args.authorizationId },
+        body: { status: 'denied' },
+        throwOnError: true,
+      });
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     create: create.mutateAsync,
     approve: approve.mutateAsync,
+    deny: deny.mutateAsync,
     isCreating: create.isPending,
-    error: (create.error ?? approve.error) as Error | null,
+    isUpdating: approve.isPending || deny.isPending,
+    error: (create.error ?? approve.error ?? deny.error) as Error | null,
   };
 }
