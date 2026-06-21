@@ -17,7 +17,7 @@
   },
   {
     "id": "be-dental-billing-loa-authorization-dependency",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:e2e). RED-first, smallest viable: a UI-driving Playwright e2e is currently impossible because the LOA UI does not exist (no ro"
+    "reason": "NOT user-reachable: the LOA hooks (usePatientAuthorizations/useAuthorizationMutations in use-insurance-claims.ts) are ORPHANED — zero consumer components, no route mounts authorization management (verified by grep). Lifecycle fully proven at contract (dental-revenue-cycle.hurl create→approve→list→FSM-violation) + be-unit (listCoverageAuthorizations.test.ts auth/scope; dental-insurance-claim.test.ts BR-056 expired-LOA + BR-057 cap). The e2e gap is a MISSING UI (product gap), not a test gap — closing it needs an Add-authorization control built first. Flagged to product."
   },
   {
     "id": "be-dental-billing-refund-cap-invariant",
@@ -189,11 +189,11 @@
   },
   {
     "id": "notif-push-click-deep-link",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:e2e). Add one Playwright e2e spec at apps/dentalemon/tests/e2e/push-deep-link.spec.ts that, on the authenticated /_dashboard s"
+    "reason": "e2e blocked (same OneSignal gating): usePushNotificationRouting only registers the click listener when isOneSignalEnabled(), which is false in the test env (placeholder AppID rejected — verified). Deep-link resolution IS covered by fe-unit (notification-routing.test.ts: booking→/calendar, recall→/patients, billing→/billing, unknown→/dashboard). A true e2e needs a real OneSignal app id — deferred, not faked."
   },
   {
     "id": "notif-push-opt-in-enable",
-    "reason": "Phase 1 VERIFIED gap (unproven/auth, miss:e2e). Add a RED-first Playwright spec at apps/dentalemon/tests/e2e/push-opt-in.spec.ts (or extend notification-inbox.spec.ts) "
+    "reason": "e2e blocked in the test env (empirically verified): the OneSignal web SDK rejects the non-prod placeholder VITE_ONESIGNAL_APP_ID (\"AppID doesn’t match existing apps\"), so isOneSignalEnabled() stays false and the opt-in prompt never mounts. Component logic IS covered by fe-unit (push-opt-in-prompt.test.tsx: enable→requestPermission→dismiss + PUSH_OPT_IN_DISMISSED_KEY). A true e2e needs a real OneSignal app id (or a prod test-seam) — deferred, not faked."
   },
   {
     "id": "op-discard-visit",
@@ -221,7 +221,7 @@
   },
   {
     "id": "person-billing-party-lookup-inter-module",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/money, miss:e2e). See above."
+    "reason": "NOT user-reachable: base /billing/invoices (POST/PATCH/pay) has zero dentalemon consumers — the product UI uses only /dental/billing/invoices (verified by grep; the patient-profile test matcher is lenient). findBillingParty (person↔billing merchant/customer existence) proven at contract (billing-lifecycle.hurl merchant/customer 404 validation) + be-unit (createInvoice.test.ts, markInvoiceUncollectible.test.ts). Backend-only boundary → endpoint orphan ratchet, not the user-facing e2e backlog."
   },
   {
     "id": "person-get-operation",
