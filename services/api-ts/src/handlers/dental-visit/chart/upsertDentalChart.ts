@@ -33,6 +33,14 @@ export async function upsertDentalChart(
   // E2: dental_assistant may write chart CONDITIONS under dentist supervision.
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate', 'hygienist', 'dental_assistant']);
 
+  // Cross-patient integrity: body.patientId is caller-supplied and drives BOTH the
+  // stored chart.patientId AND the cumulative patient-level baseline merge below. It
+  // must match the visit's patient (mirrors createPerioChart's PATIENT_VISIT_MISMATCH)
+  // — otherwise one patient's chart silently corrupts another patient's baseline.
+  if (body.patientId !== visit.patientId) {
+    throw new BusinessLogicError('patientId does not match the visit patient', 'PATIENT_VISIT_MISMATCH');
+  }
+
   const repo = new DentalChartRepository(db);
 
   // SL-01 / B-G3: offline-replay idempotency. The chart is one-per-visit, so a

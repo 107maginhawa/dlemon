@@ -37,6 +37,14 @@ export async function createDentalTreatment(
   if (!visit) throw new NotFoundError('Dental visit');
   await assertBranchRole(db, user.id, visit.branchId, ['dentist_owner', 'dentist_associate']);
 
+  // Cross-patient integrity: body.patientId is caller-supplied and stored verbatim on
+  // the treatment row. It must match the visit's patient (mirrors createPerioChart's
+  // PATIENT_VISIT_MISMATCH) — otherwise a treatment is written under one patient's
+  // visit but attributed to another patient (wrong-patient clinical/billing record).
+  if (body.patientId !== visit.patientId) {
+    throw new BusinessLogicError('patientId does not match the visit patient', 'PATIENT_VISIT_MISMATCH');
+  }
+
   // SL-01: offline-replay idempotency. A retried create carrying a previously-seen
   // localId returns the EXISTING treatment instead of inserting a duplicate. Placed
   // before the immutability guard so a replay of a successful create still resolves

@@ -1089,7 +1089,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts",
-    "evidenceLine": 476
+    "evidenceLine": 506
   },
   {
     "fsm": "Treatment",
@@ -1142,7 +1142,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts",
-    "evidenceLine": 348
+    "evidenceLine": 378
   },
   {
     "fsm": "Treatment",
@@ -1175,7 +1175,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts",
-    "evidenceLine": 434
+    "evidenceLine": 464
   },
   {
     "fsm": "Treatment",
@@ -1186,7 +1186,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts",
-    "evidenceLine": 476
+    "evidenceLine": 506
   },
   {
     "fsm": "Treatment",
@@ -1197,7 +1197,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts",
-    "evidenceLine": 348
+    "evidenceLine": 378
   },
   {
     "fsm": "Treatment",

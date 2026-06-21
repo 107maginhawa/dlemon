@@ -136,6 +136,36 @@ async function auditRowsFor(treatmentId: string, action: string) {
 }
 
 // ---------------------------------------------------------------------------
+// createDentalTreatment — PATIENT_VISIT_MISMATCH (cross-patient integrity)
+// ---------------------------------------------------------------------------
+
+describe('createDentalTreatment — PATIENT_VISIT_MISMATCH guard', () => {
+  // body.patientId is caller-supplied and stored verbatim on the treatment row.
+  // Without a check that it matches the visit's patient, a treatment can be written
+  // under one patient's visit but attributed to ANOTHER patient — a durable
+  // wrong-patient clinical/billing record. createPerioChart enforces this; create
+  // treatment must too.
+  test('422 PATIENT_VISIT_MISMATCH when body.patientId is not the visit patient', async () => {
+    const { persons: personsTable } = await import('@/handlers/person/repos/person.schema');
+    const { patients: patientsTable } = await import('@/handlers/patient/repos/patient.schema');
+    const PERSON_OTHER = 'e0000000-0000-1000-8000-000000000b07';
+    const PATIENT_OTHER = 'a0000000-0000-1000-8000-000000000b07';
+    await db.insert(personsTable).values({ id: PERSON_OTHER, firstName: 'Other', lastName: 'Patient', createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+    await db.insert(patientsTable).values({ id: PATIENT_OTHER, person: PERSON_OTHER, preferredBranchId: BRANCH_ID, createdBy: TEST_USER.id, updatedBy: TEST_USER.id }).onConflictDoNothing();
+
+    const visit = await seedVisit(); // belongs to PATIENT_ID
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit.id}/treatments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: PATIENT_OTHER, cdtCode: 'D0120', description: 'Eval', priceCents: 5000 }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as { code: string }).code).toBe('PATIENT_VISIT_MISMATCH');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // createDentalTreatment
 // ---------------------------------------------------------------------------
 
