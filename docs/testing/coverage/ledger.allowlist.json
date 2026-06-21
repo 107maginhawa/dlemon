@@ -144,10 +144,6 @@
     "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit+contract). See above."
   },
   {
-    "id": "dp-list-due-recalls",
-    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit). Add a be-unit test (e.g. services/api-ts/src/handlers/dental-patient/recalls/listDueRecalls.test.ts) mounting listDueRec"
-  },
-  {
     "id": "dp-list-patient-insurance-profiles",
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
   },

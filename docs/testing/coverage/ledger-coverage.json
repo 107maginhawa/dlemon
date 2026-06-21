@@ -3,16 +3,16 @@
   "source": "coverage-ledger.json",
   "totals": {
     "items": 915,
-    "PARTIAL": 515,
-    "GAP": 202,
+    "PARTIAL": 516,
+    "GAP": 201,
     "COVERED": 198,
     "gapByLayer": {
-      "be-unit": 26,
+      "be-unit": 25,
       "contract": 37,
       "e2e": 13
     },
     "gapByRisk": {
-      "clinical": 38,
+      "clinical": 37,
       "auth": 1,
       "rest": 1,
       "money": 24,
@@ -21,15 +21,15 @@
     "gapBySeverity": {
       "unproven": 3,
       "e2e-gap": 12,
-      "be-unit-gap": 20,
+      "be-unit-gap": 19,
       "contract-only": 32
     },
     "partialUnknownByLayer": {
       "be-unit": 72,
-      "fe-unit": 459,
+      "fe-unit": 460,
       "contract": 8
     },
-    "userReachableGaps": 67,
+    "userReachableGaps": 66,
     "backendOnlyGaps": 135
   },
   "backlog": [
@@ -1034,41 +1034,6 @@
         "dental-visit"
       ],
       "route": "/settings",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "be-unit-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "MISSING",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "be-unit"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-list-due-recalls",
-      "title": "List due recalls (front-desk recare worklist)",
-      "type": "use-case",
-      "modules": [
-        "dental-patient",
-        "dental-org",
-        "scheduling",
-        "recall"
-      ],
-      "route": "/calendar",
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
@@ -23485,26 +23450,24 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "be-unit-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "MISSING",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "be-unit"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "dp-list-follow-up-notes",
