@@ -14,6 +14,13 @@ import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { withTenantTx } from '@/core/tenant-tx';
 
+/** Postgres unique-violation (SQLSTATE 23505) detector — same shape as generatePMD.ts. */
+function isUniqueViolation(err: unknown): boolean {
+  const code = (err as { cause?: { code?: string }; code?: string })?.cause?.code
+    ?? (err as { code?: string })?.code;
+  return code === '23505';
+}
+
 export async function createDentalPaymentPlan(
   ctx: ValidatedContext<CreateDentalPaymentPlanBody, never, CreateDentalPaymentPlanParams>
 ): Promise<Response> {
@@ -59,43 +66,57 @@ export async function createDentalPaymentPlan(
   // through a single withTenantTx so the create stays atomic and the tenant
   // choke point is pre-routed for when the Tier-3 plan tables are armed in P4.
   // Scope is resolved via the armed invoice (authz above stays on db).
-  const result = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
-    const planRepo = new DentalPaymentPlanRepository(tx);
+  // A request-content idempotency check (the plan has no localId): an identical re-create
+  // is a dropped-ACK replay (200 with the existing plan); a different shape is a genuine
+  // second-plan attempt (PLAN_EXISTS). One per invoice.
+  const sameShapeAs = (plan: { numberOfInstallments: number; frequency: string; totalCents: number; startDate: Date }) =>
+    plan.numberOfInstallments === body.numberOfInstallments &&
+    plan.frequency === body.frequency &&
+    plan.totalCents === invoice.balanceCents &&
+    plan.startDate.getTime() === new Date(body.startDate).getTime();
 
-    // Check for existing plan (one plan per invoice).
-    const existing = await planRepo.findByInvoice(invoiceId);
-    if (existing) {
-      // SL-04 / F-G16: offline-replay idempotency. A plan has no localId column, so
-      // the natural key is the request content: an identical re-create (same invoice
-      // + same plan shape) is a replay of the original (dropped ACK) — return the
-      // EXISTING plan (200) instead of erroring. A DIFFERENT shape is a genuine
-      // attempt to create a second/different plan → PLAN_EXISTS (one per invoice).
-      const sameShape =
-        existing.numberOfInstallments === body.numberOfInstallments &&
-        existing.frequency === body.frequency &&
-        existing.totalCents === invoice.balanceCents &&
-        existing.startDate.getTime() === new Date(body.startDate).getTime();
-      if (sameShape) {
-        const installments = await planRepo.findInstallmentsByPlan(existing.id);
-        return { replay: true as const, plan: existing, installments };
+  let result: { replay: boolean; plan: NonNullable<Awaited<ReturnType<DentalPaymentPlanRepository['findByInvoice']>>>; installments: Awaited<ReturnType<DentalPaymentPlanRepository['findInstallmentsByPlan']>> };
+  try {
+    // RLS P1b activation: route the idempotency check + plan/installment writes through a
+    // single withTenantTx so the create stays atomic. Scope is resolved via the armed
+    // invoice (authz above stays on db).
+    result = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
+      const planRepo = new DentalPaymentPlanRepository(tx);
+      const existing = await planRepo.findByInvoice(invoiceId);
+      if (existing) {
+        if (sameShapeAs(existing)) {
+          const installments = await planRepo.findInstallmentsByPlan(existing.id);
+          return { replay: true as const, plan: existing, installments };
+        }
+        throw new BusinessLogicError('Invoice already has a payment plan', 'PLAN_EXISTS');
       }
+      const totalCents = invoice.balanceCents;
+      const created = await planRepo.createWithInstallments({
+        invoiceId,
+        patientId: body.patientId,
+        totalCents,
+        numberOfInstallments: body.numberOfInstallments,
+        frequency: body.frequency,
+        startDate: new Date(body.startDate),
+        amountPerInstallmentCents: Math.floor(totalCents / body.numberOfInstallments),
+      });
+      return { replay: false as const, plan: created.plan, installments: created.installments };
+    });
+  } catch (err) {
+    // Concurrent create lost the race: both passed findByInvoice=null (no row to lock),
+    // then the dental_payment_plan_invoice_id_unique index rejected this INSERT (23505),
+    // aborting the tx. Recover on db (the tx is dead): re-read the winner's committed plan
+    // and apply the SAME idempotency rule the sequential path would have.
+    if (!isUniqueViolation(err)) throw err;
+    const planRepo = new DentalPaymentPlanRepository(db);
+    const winner = await planRepo.findByInvoice(invoiceId);
+    if (!winner) throw err;
+    if (!sameShapeAs(winner)) {
       throw new BusinessLogicError('Invoice already has a payment plan', 'PLAN_EXISTS');
     }
-
-    const totalCents = invoice.balanceCents;
-    const amountPerInstallmentCents = Math.floor(totalCents / body.numberOfInstallments);
-
-    const created = await planRepo.createWithInstallments({
-      invoiceId,
-      patientId: body.patientId,
-      totalCents,
-      numberOfInstallments: body.numberOfInstallments,
-      frequency: body.frequency,
-      startDate: new Date(body.startDate),
-      amountPerInstallmentCents,
-    });
-    return { replay: false as const, plan: created.plan, installments: created.installments };
-  });
+    const installments = await planRepo.findInstallmentsByPlan(winner.id);
+    result = { replay: true, plan: winner, installments };
+  }
 
   return ctx.json({ ...result.plan, installments: result.installments }, result.replay ? 200 : 201);
 }

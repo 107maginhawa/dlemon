@@ -61,6 +61,23 @@ export class TreatmentRepository {
   }
 
   /**
+   * WFG-004: same as findByVisit but takes a row-level FOR UPDATE lock. The invoice
+   * create path uses this INSIDE its transaction so two concurrent createDentalInvoice
+   * for the same visit SERIALIZE on the visit's treatment rows: the loser blocks until
+   * the winner commits, then reads the now-billed rows and is correctly rejected by the
+   * already-billed guard (TREATMENT_ALREADY_BILLED) — instead of both racing past the
+   * check-then-act guard under READ COMMITTED and each minting an invoice (double-billing).
+   * MUST be called within a transaction; FOR UPDATE outside a tx locks nothing useful.
+   */
+  async findByVisitForUpdate(visitId: string): Promise<DentalTreatment[]> {
+    return this.db
+      .select()
+      .from(dentalTreatments)
+      .where(eq(dentalTreatments.visitId, visitId))
+      .for('update');
+  }
+
+  /**
    * SL-01: offline-replay idempotency. Find a prior create by its client-generated
    * localId, scoped to the parent visit (a treatment localId is unique within its
    * visit). The handler returns the existing row on replay; a partial unique index

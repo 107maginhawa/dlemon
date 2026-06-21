@@ -52,7 +52,13 @@ function BillingPage() {
   }
 
   function handleUpdated() {
-    queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    // The invoice list comes from the generated SDK (useInvoices →
+    // listDentalInvoicesOptions), key [{ _id: 'listDentalInvoices', … }]. The
+    // literal ['invoices'] key never matched, so the list + summary totals
+    // didn't refresh after an invoice action (payment/void). Match by _id.
+    queryClient.invalidateQueries({
+      predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalInvoices',
+    })
   }
 
   return (

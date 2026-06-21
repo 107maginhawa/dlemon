@@ -53,7 +53,10 @@ describe('RetentionPolicyRepository', () => {
     const deleted = await repo.createOne(row({ entityType: 'prescription', enabled: true }));
     await repo.softDelete(deleted.id);
 
-    const enabled = await repo.findEnabled();
+    // Scope to TENANT_A: the shared test template may carry committed retention
+    // policies from org-creation tests (seeded under random org tenantIds), which
+    // an unscoped findEnabled() would pick up. TENANT_A is a clean test namespace.
+    const enabled = await repo.findEnabled(TENANT_A);
     const types = enabled.map((p) => p.entityType).sort();
     expect(types).toEqual(['clinical']);
   });
@@ -71,6 +74,6 @@ describe('RetentionPolicyRepository', () => {
     const p = await repo.createOne(row());
     expect(await repo.softDelete(p.id)).toBe(true);
     expect(await repo.findOneById(p.id)).toBeNull();
-    expect(await repo.findEnabled()).toHaveLength(0);
+    expect(await repo.findEnabled(TENANT_A)).toHaveLength(0);
   });
 });

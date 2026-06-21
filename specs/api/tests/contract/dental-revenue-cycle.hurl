@@ -84,6 +84,17 @@ HTTP 200
 jsonpath "$.status" == "approved"
 
 
+# 2a-list. The per-patient LOA list returns the authorization we just created.
+GET {{api}}/dental/patients/{{patient_id}}/authorizations
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 1
+jsonpath "$[0].id" == "{{auth_id}}"
+jsonpath "$[0].status" == "approved"
+jsonpath "$[0].loaNumber" == "LOA-{{suffix}}"
+
+
 # 2b. FSM violation: requested → expired is illegal (already approved) → 422
 PATCH {{api}}/dental/patients/{{patient_id}}/authorizations/{{auth_id}}/status
 Cookie: better-auth.session_token={{session_token}}

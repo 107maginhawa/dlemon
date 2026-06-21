@@ -137,7 +137,7 @@ _None — every P0 business rule is fully covered._
 | `V-PORTAL-005 (read-only; no patient write/mutate path)` | dental-portal | security | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-004` | dental-scheduling | lifecycle-coupling | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-SCH-001` | dental-scheduling | authorization | P0 | implemented | api-unit | ✓ | FULLY_COVERED |
-| `BR-SCH-002` | dental-scheduling | business-rule | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
+| `BR-SCH-002` | dental-scheduling | business-rule | P2 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-SCH-003` | dental-scheduling | validation | P2 | implemented | api-unit | ✓ | FULLY_COVERED |
 | `BR-SCH-004` | dental-scheduling | business-rule | P2 | implemented | api-unit | — | FULLY_COVERED |
 | `FR3.7` | dental-scheduling | business-rule | P2 | implemented | api-unit, e2e | ✓ | FULLY_COVERED |

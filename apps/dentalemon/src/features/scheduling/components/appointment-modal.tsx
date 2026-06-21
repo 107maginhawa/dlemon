@@ -34,6 +34,19 @@ export interface AppointmentModalProps {
   onSaved?: (appointment: unknown) => void;
   initialDate?: string;
   appointmentId?: string;
+  /**
+   * ISSUE-012: the existing appointment being edited. When provided, the form
+   * pre-populates from it on open (the modal previously opened blank in edit
+   * mode). Optional so the create path is unaffected.
+   */
+  appointment?: {
+    patientId: string;
+    dentistMemberId?: string;
+    scheduledAt: string;
+    durationMinutes: number;
+    serviceType: string;
+    notes?: string;
+  };
 }
 
 export function validateAppointmentForm(form: {
@@ -41,9 +54,17 @@ export function validateAppointmentForm(form: {
   serviceType: string;
   date: string;
   time: string;
+  /** Provider/dentist member id — required by the create API (providerId: UUIDSchema). */
+  dentistMemberId?: string;
+  /** Only the create path sends providerId; the edit body omits it, so don't require it there. */
+  requireProvider?: boolean;
 }): string[] {
   const errors: string[] = [];
   if (!form.patientId.trim()) errors.push('Patient ID is required');
+  // The dentist is required by the backend (providerId must be a UUID). Without
+  // this check the form submitted providerId:'' and the API 400'd with only a
+  // generic "Failed to create appointment" — no hint the dentist was missing.
+  if (form.requireProvider && !form.dentistMemberId?.trim()) errors.push('Dentist is required');
   if (!form.serviceType.trim()) errors.push('Service type is required');
   if (!form.date.trim() || !form.time.trim()) errors.push('Scheduled date and time are required');
   return errors;
@@ -65,6 +86,24 @@ export function buildTimeRange(date: string, time: string, durationMinutes: numb
   const start = new Date(`${date}T${time}:00`);
   const end = new Date(start.getTime() + (durationMinutes || 30) * 60_000);
   return { startAt: start.toISOString(), endAt: end.toISOString() };
+}
+
+/**
+ * Split an appointment's ISO `scheduledAt` back into the local date (YYYY-MM-DD)
+ * and time (HH:MM) used by the form's date/time inputs. Uses LOCAL getters to
+ * mirror buildTimeRange (which interprets date+time as local wall-clock) so the
+ * value round-trips and matches the calendar's local-time chips. ISSUE-012 (QA
+ * 2026-06-20): the edit modal never populated, so this is what feeds the
+ * pre-fill effect.
+ */
+export function splitScheduledAt(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: '', time: '' };
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
 }
 
 export function buildAppointmentPayload(form: {
@@ -102,7 +141,7 @@ export function extractDoubleBookingWarning(appointment: unknown): boolean {
   return Array.isArray(warnings) && warnings.includes('DOUBLE_BOOKING');
 }
 
-export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId }: AppointmentModalProps) {
+export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId, appointment }: AppointmentModalProps) {
   useSheetA11y({ open, onClose });
   const storeBranchId = useOrgContextStore((s) => s.branchId) ?? '';
   const [patientId, setPatientId] = useState('');
@@ -127,6 +166,21 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
     if (open) setBranchId(storeBranchId);
   }, [open, storeBranchId]);
 
+  // ISSUE-012 (QA 2026-06-20): pre-populate the form from the appointment being
+  // edited. Previously the edit modal opened blank, forcing the scheduler to
+  // re-enter every field (and tripping the "Patient ID is required" guard).
+  useEffect(() => {
+    if (!open || !appointment) return;
+    const { date: d, time: t } = splitScheduledAt(appointment.scheduledAt);
+    setPatientId(appointment.patientId);
+    setDentistMemberId(appointment.dentistMemberId ?? '');
+    setDate(d);
+    setTime(t);
+    setDurationMinutes(appointment.durationMinutes || 30);
+    setServiceType(appointment.serviceType as VisitType);
+    setNotes(appointment.notes ?? '');
+  }, [open, appointment]);
+
   if (!open) return null;
 
   function handleClose() {
@@ -145,7 +199,14 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   }
 
   async function handleSave() {
-    const errs = validateAppointmentForm({ patientId, serviceType, date, time });
+    const errs = validateAppointmentForm({
+      patientId,
+      serviceType,
+      date,
+      time,
+      dentistMemberId,
+      requireProvider: !appointmentId,
+    });
     if (errs.length > 0) {
       setErrors(errs);
       return;

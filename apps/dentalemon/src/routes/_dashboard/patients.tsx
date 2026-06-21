@@ -24,6 +24,7 @@ import {
   useRestorePatient,
   useBulkArchive,
   useExportPatients,
+  isPatientCollectionQuery,
 } from '@/features/patients/hooks/use-patient-actions';
 import { apiBaseUrl } from '@/lib/config';
 import { useOrgContextStore } from '@/stores/org-context.store';
@@ -45,6 +46,9 @@ function PatientsPage() {
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
+  // Patient export is dentist_owner-only (server enforces via assertBranchRole);
+  // hide the button for other roles so staff aren't offered an action that always 403s.
+  const isOwner = useOrgContextStore((s) => s.role) === 'dentist_owner';
 
   const { archive, isPending: isArchivePending } = useArchivePatient();
   const { restore, isPending: isRestorePending } = useRestorePatient();
@@ -96,8 +100,15 @@ function PatientsPage() {
     }
 
     setShowRegistration(false);
-    // Invalidate the patients query so the list refreshes
-    queryClient.invalidateQueries({ queryKey: ['dental-patients'] });
+    // Invalidate the patients list AND the duplicates panel so the new patient
+    // appears immediately. The list query comes from the generated SDK, whose
+    // key is [{ _id: 'listDentalPatients', ... }] — a literal ['dental-patients']
+    // key never matched it, so the list silently stayed stale after a create.
+    // ISSUE-019: a create can also form a new duplicate group, so the
+    // Find-Duplicates panel (detectDuplicatePatients) must refresh too.
+    queryClient.invalidateQueries({
+      predicate: (q) => isPatientCollectionQuery(q.queryKey),
+    });
   }
 
   return (
@@ -159,7 +170,7 @@ function PatientsPage() {
         onArchive={archive}
         onRestore={restore}
         onBulkArchive={bulkArchive}
-        onExport={exportPatients}
+        onExport={isOwner ? exportPatients : undefined}
         isActionPending={isArchivePending || isRestorePending || isBulkPending}
         isExporting={isExporting}
       />

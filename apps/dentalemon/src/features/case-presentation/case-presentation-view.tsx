@@ -30,6 +30,8 @@ interface CasePresentationViewProps {
   aggregate: CasePresentationAggregate;
   isAccepting: boolean;
   isRejecting: boolean;
+  acceptError?: Error | null;
+  rejectError?: Error | null;
   onAccept: (input: { signerName: string; signatureData: string }) => void;
   onReject: (input: { rejectionReason?: string }) => void;
 }
@@ -38,6 +40,8 @@ export function CasePresentationView({
   aggregate,
   isAccepting,
   isRejecting,
+  acceptError,
+  rejectError,
   onAccept,
   onReject,
 }: CasePresentationViewProps) {
@@ -163,6 +167,15 @@ export function CasePresentationView({
         </div>
       ) : (
         <section className="flex flex-col gap-3">
+          {(acceptError || rejectError) && (
+            <div
+              role="alert"
+              data-testid="decision-error"
+              className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              We couldn’t record your decision just now. Please ask the front desk to try again.
+            </div>
+          )}
           <SignaturePad isSubmitting={isAccepting} submitted={decided} onAccept={onAccept} />
           <Popover open={rejectOpen} onOpenChange={setRejectOpen}>
             <PopoverTrigger asChild>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Skeleton } from '@monobase/ui';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useTreatmentReport } from '../hooks/use-treatment-report';
+import { csvAmount } from '../lib/csv';
 
 export interface TreatmentReportProps {
   branchId: string;
@@ -25,9 +26,10 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
   });
 
   function handleExportCSV() {
+    // ISSUE-021: Total Billed is decimal pesos (centavos/100), not raw centavos.
     const header = 'CDT Code,Description,Count,Total Billed';
     const rows = grouped.map(
-      (g) => `${g.cdtCode},"${g.description}",${g.count},${g.totalCents}`,
+      (g) => `${g.cdtCode},"${g.description}",${g.count},${csvAmount(g.totalCents)}`,
     );
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });

@@ -54,6 +54,12 @@ export async function voidDentalPayment(
   // stay on db to preserve the exact 403/404/422 behavior.
   const voided = await withTenantTx(db, { branchIds: [payment.branchId] }, async (tx) => {
     const txVoided = await new DentalPaymentRepository(tx).voidPayment(paymentId, body.voidReason, membership.id);
+    // Lost the void race: voidPayment's `is_void = false` predicate matched 0 rows
+    // because a concurrent void already flipped this payment. Abort BEFORE removePayment
+    // so the invoice is reversed exactly once (throwing rolls back this tx).
+    if (!txVoided) {
+      throw new BusinessLogicError('Payment is already voided', 'ALREADY_VOIDED');
+    }
     await new DentalInvoiceRepository(tx).removePayment(invoiceId, payment.amountCents);
     return txVoided;
   });

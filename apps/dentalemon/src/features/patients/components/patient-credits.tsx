@@ -30,7 +30,7 @@ export interface PatientCreditsProps {
 }
 
 export function PatientCredits({ patientId, outstandingInvoices, onChanged }: PatientCreditsProps) {
-  const { balanceCents, isLoading, addCredit, isAdding, applyCredit, isApplying, applyError } = usePatientCredits(patientId);
+  const { balanceCents, isLoading, addCredit, isAdding, addError, applyCredit, isApplying, applyError } = usePatientCredits(patientId);
 
   const [addPesos, setAddPesos] = useState('');
   const [source, setSource] = useState('manual');
@@ -47,7 +47,7 @@ export function PatientCredits({ patientId, outstandingInvoices, onChanged }: Pa
       await addCredit({ amountCents: cents, source });
       setAddPesos('');
       onChanged?.();
-    } catch { /* surfaced by mutation */ }
+    } catch { /* ISSUE-023: surfaced via addError below — must never fail silently */ }
   }
 
   async function handleApply() {
@@ -101,6 +101,12 @@ export function PatientCredits({ patientId, outstandingInvoices, onChanged }: Pa
             {isAdding ? 'Adding…' : 'Add credit'}
           </button>
         </div>
+
+        {addError && (
+          <div className="text-sm text-destructive" data-testid="add-credit-error">
+            {addError.message || 'Could not add credit.'}
+          </div>
+        )}
 
         {/* Apply credit */}
         {balanceCents > 0 && outstandingInvoices.length > 0 && (

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { computeExitCode } from './journey-harness-exit-code'
+import { computeExitCode, computeCoreCoverageFailures } from './journey-harness-exit-code'
 /**
  * Journey Harness Runner — Phase 3.
  *
@@ -76,6 +76,27 @@ const EXPECTED: Record<
   // (completed) via an independent read. Consent + notes are seeded as the real
   // backend completion preconditions (VISIT_CONSENT_REQUIRED / WF-012, BR-002).
   J22: { name: 'Complete a clinical visit (active → checklist → completed)', set: 'A', expected: 'PASS', rubricIds: ['WF-012'] },
+  // J23 — JC-1 keystone: the continuous day-in-the-life visit (WF-074). Drives the two
+  // previously-unproven clinical AUTHORING acts through the real UI with an independent
+  // read-back each: charting a tooth condition + treatment (WF-009) and typing a fresh
+  // SOAP note (WF-011), then mark-performed → invoice → complete. This is the test that
+  // finally proves the chart-save / SOAP-save React paths persist (not just untested).
+  J23: { name: 'Dentist visit day-in-the-life (chart entry + SOAP note authored through UI → performed → invoice → complete → PMD)', set: 'A', expected: 'PASS', rubricIds: ['WF-074', 'WF-009', 'WF-011', 'WF-021'] },
+  // J25–J28 — JC-4: money/destructive flows driven through the REAL billing/settings UI
+  // with an independent read of the durable status (highest blast radius — money + GDPR).
+  J25: { name: 'Record payment on an invoice via the billing UI → paid', set: 'A', expected: 'PASS', rubricIds: ['WF-014'] },
+  J26: { name: 'Void + mark-uncollectible an invoice via the billing UI → terminal status', set: 'A', expected: 'PASS', rubricIds: ['WF-041'] },
+  J27: { name: 'Refund a payment via the billing UI → invoice reopened', set: 'A', expected: 'PASS', rubricIds: ['WF-BIL-REFUND'] },
+  J28: { name: 'Platform admin approves a patient erasure request → anonymized', set: 'A', expected: 'PASS', rubricIds: ['WF-088'] },
+  // J29 / J30 — JC-6: de-aspirationalize "covered" — drive the real entity + read-back.
+  J29: { name: 'File a clinical amendment on a completed visit tooth record (WF-038)', set: 'A', expected: 'PASS', rubricIds: ['WF-038'] },
+  J30: { name: 'Consent gate blocks mark-performed without a signed consent (BR-014/WF-018)', set: 'A', expected: 'PASS', rubricIds: ['WF-018'] },
+  // J31 — WF-007: front-desk checks a patient in from the calendar appointment-card
+  // hover action → a draft clinical visit is created (the last tracked core
+  // doctor-visit gap). Drives the real hover→"Check In" on a freshly-seeded walk-in
+  // appointment and independent-reads the appointment (checked_in + visitId) and the
+  // created visit (draft) back.
+  J31: { name: 'Check a patient in from the calendar card → a draft visit is created', set: 'A', expected: 'PASS', rubricIds: ['WF-007'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
@@ -88,10 +109,44 @@ const EXPECTED: Record<
   B02: { name: 'Landmark placement → SNA/SNB numeric', set: 'B', expected: 'PASS', rubricIds: ['CIMG-003'], skipAllowed: true },
   B03: { name: 'Locked landmark immutability', set: 'B', expected: 'PASS', rubricIds: ['CIMG-004'], skipAllowed: true },
   B04: { name: 'Report gate + immutable versioned snapshot', set: 'B', expected: 'PASS', rubricIds: ['CIMG-006', 'CIMG-008'], skipAllowed: true },
+  // J24 — JC-2: patient magic-link sign-in (WF-003, the sole patient login path).
+  // Drives the better-auth-ui magic-link flow through the DOM, consumes the emailed
+  // link via Mailpit, and independent-reads the durable session. Set B / skipAllowed:
+  // needs Mailpit (email transport), which the journey CI job lacks → honest SKIP
+  // there, like the ceph/MinIO journeys; runs to PASS where Mailpit is up.
+  J24: { name: 'Patient magic-link sign-in (request via UI → consume emailed link → session)', set: 'B', expected: 'PASS', rubricIds: ['WF-003'], skipAllowed: true },
   // J15 is Set B (sync-log lifecycle). It needs a seeded branch + a P10+ patient
   // but not MinIO; with the demo seed present it runs to PASS.
   J15: { name: 'Offline sync metadata — sync-log lifecycle + server-default syncStatus', set: 'B', expected: 'PASS', rubricIds: ['LF-BR-001', 'LF-BR-002', 'LF-BR-003', 'LF-BR-004'] },
 }
+
+// ── JC-3: core doctor-visit WF coverage gate ──────────────────────────────────
+// The audit's premise: a 22/22 green overstated reality because the core clinical
+// authoring WFs had no PROVEN journey. This gate ties the green to the core set:
+// each core doctor-visit WF must map to a journey that PASSED this run, else the
+// build fails (a core journey silently regressing/skip is no longer invisible).
+//
+// `journeyId` is the harness id whose live verdict proves the WF. Keep this in sync
+// with docs/testing/coverage/workflow-test-map.json (the broader documentation map).
+const CORE_DOCTOR_WFS: Record<string, { journeyId: string; label: string }> = {
+  'WF-045': { journeyId: 'J21', label: 'Start new visit' },
+  'WF-009': { journeyId: 'J23', label: 'Dental chart entry (persist)' },
+  'WF-011': { journeyId: 'J23', label: 'SOAP note authoring (persist)' },
+  'WF-010': { journeyId: 'J04', label: 'Mark treatment performed' },
+  'WF-013': { journeyId: 'J04', label: 'Create invoice from visit' },
+  'WF-012': { journeyId: 'J22', label: 'Complete visit' },
+  'WF-018': { journeyId: 'J19', label: 'Consent e-signature' },
+  'WF-021': { journeyId: 'J23', label: 'PMD auto-generation' },
+  'WF-007': { journeyId: 'J31', label: 'Appointment check-in → visit' },
+}
+
+// Documented, tracked gaps — core WFs that genuinely lack a live journey yet. Listed
+// EXPLICITLY (mirroring skipAllowed) so the green never silently hides them: the gate
+// prints each as a tracked gap rather than failing, and removing one from here is the
+// signal that its journey now exists. Keep the reason current.
+// (Empty: WF-007 graduated to CORE_DOCTOR_WFS above once J31 began driving its real
+// calendar-card check-in flow.)
+const KNOWN_CORE_GAPS: Record<string, string> = {}
 
 interface JourneyResult {
   id: string
@@ -222,12 +277,26 @@ async function main() {
     })
   }
 
+  // JC-3 honest tally: distinguish journeys that prove a workflow WORKS from any
+  // designed-broken/inverted proof that "passes" by confirming a LIMITATION. A green
+  // count must not let an inverted proof read as feature health. (Currently every
+  // journey is expectedVerdict:PASS, so provenBroken is 0 — but the split is now
+  // structural, so a future inverted journey is categorised, never miscounted.)
+  const provenWorking = journeys.filter(
+    (j) => j.expectedVerdict === 'PASS' && j.actualVerdict === 'PASS',
+  ).length
+  const provenBroken = journeys.filter(
+    (j) => j.expectedVerdict === 'BROKEN' && j.actualVerdict === 'BROKEN',
+  ).length
+
   const summary = {
     total: journeys.length,
     pass: journeys.filter((j) => j.actualVerdict === 'PASS').length,
     broken: journeys.filter((j) => j.actualVerdict === 'BROKEN').length,
     error: journeys.filter((j) => j.actualVerdict === 'ERROR').length,
     skipped: journeys.filter((j) => j.actualVerdict === 'SKIPPED').length,
+    provenWorking,
+    provenBroken,
     setA: {
       pass: journeys.filter((j) => j.set === 'A' && j.actualVerdict === 'PASS').length,
       broken: journeys.filter((j) => j.set === 'A' && j.actualVerdict === 'BROKEN').length,
@@ -272,6 +341,38 @@ async function main() {
     `Set A: PASS ${summary.setA.pass} BROKEN ${summary.setA.broken} | ` +
       `Set B: PASS ${summary.setB.pass} BROKEN ${summary.setB.broken}`,
   )
+  // JC-3 honest tally: PROVEN-WORKING vs PROVEN-BROKEN, so a green count is never
+  // read as feature health when it includes designed-broken/inverted proofs.
+  console.log(
+    `PROVEN-WORKING ${summary.provenWorking} | PROVEN-BROKEN ${summary.provenBroken} ` +
+      `(designed-broken confirmations are NOT feature coverage)`,
+  )
+  console.log('═'.repeat(70))
+
+  // JC-3 core doctor-visit WF coverage gate: each core WF must map to a journey that
+  // PASSED this run, else the gate fails. Documented gaps (KNOWN_CORE_GAPS) are
+  // printed as tracked, not failed — so the green never silently hides them.
+  const verdictById = new Map(journeys.map((j) => [j.id, j.actualVerdict]))
+  const coreFailures = computeCoreCoverageFailures(verdictById, CORE_DOCTOR_WFS)
+  console.log('\n CORE doctor-visit WF coverage (each must be proven by a passing journey):')
+  for (const [wf, { journeyId, label }] of Object.entries(CORE_DOCTOR_WFS)) {
+    const verdict = verdictById.get(journeyId)
+    console.log(
+      `  ${verdict === 'PASS' ? '✓' : '✗'} ${wf} (${label}) → ${journeyId} [${verdict ?? 'NOT RUN'}]`,
+    )
+  }
+  for (const [wf, reason] of Object.entries(KNOWN_CORE_GAPS)) {
+    console.log(`  ⚠ ${wf} — TRACKED GAP (no live journey yet): ${reason}`)
+  }
+  if (coreFailures.length) {
+    console.log('\n✗ CORE coverage gate FAILED — a core doctor-visit WF lost its proven journey:')
+    for (const f of coreFailures) console.log(`  ${f}`)
+  } else {
+    console.log(
+      `\n✓ CORE coverage gate: all ${Object.keys(CORE_DOCTOR_WFS).length} mapped core WFs proven ` +
+        `(${Object.keys(KNOWN_CORE_GAPS).length} tracked gap(s) listed above).`,
+    )
+  }
   console.log('═'.repeat(70))
 
   // A SKIPPED is an honest environment skip ONLY for a skip-allowed journey (ceph
@@ -298,8 +399,10 @@ async function main() {
     )
   }
 
-  // Exit 1 if any spec crashed (ERROR) OR any PASS-expected journey regressed to BROKEN/ERROR.
-  process.exit(computeExitCode(journeys, summary.error))
+  // Exit 1 if any spec crashed (ERROR) OR any PASS-expected journey regressed
+  // (verdict) OR a CORE doctor-visit WF lost its proven journey (JC-3 gate).
+  const verdictExit = computeExitCode(journeys, summary.error)
+  process.exit(verdictExit || coreFailures.length > 0 ? 1 : 0)
 }
 
 main().catch((e) => {

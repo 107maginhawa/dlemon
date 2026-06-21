@@ -9,7 +9,7 @@
  */
 
 import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
@@ -35,6 +35,7 @@ import { YearSegmentControl } from '@/features/workspace/components/year-segment
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useTreatments } from '@/features/workspace/hooks/use-treatments';
 import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan';
 import { usePreviousVisitDeferred } from '@/features/workspace/hooks/use-previous-visit-deferred';
@@ -44,6 +45,7 @@ import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib
 import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
 import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
+import { DiscardVisitDialog } from '@/features/workspace/components/discard-visit-dialog';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { useSharePMD } from '@/features/workspace/hooks/use-share-pmd';
@@ -53,6 +55,9 @@ import { usePMD } from '@/features/workspace/hooks/use-pmd';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canCreateGeneralVisit, canCreateHygieneVisit, type DentalRole } from '@/lib/rbac';
 import { RecallsSheet } from '@/features/workspace/components/recalls-sheet';
+import { DentalAlertsSheet } from '@/features/workspace/components/dental-alerts-sheet';
+import { TasksSheet } from '@/features/workspace/components/tasks-sheet';
+import { OcclusionScreeningSheet } from '@/features/workspace/components/occlusion-screening-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
 import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
@@ -93,13 +98,22 @@ function WorkspacePage() {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [imagingOpen, setImagingOpen] = useState(false);
   const [recallsOpen, setRecallsOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [occlusionOpen, setOcclusionOpen] = useState(false);
   const [perioOpen, setPerioOpen] = useState(false);
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   // FIX-002: carry-over prompt shown at the new-visit entry point (returning patient).
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
+
+  // ISSUE-010: the inline Treatment Plan modal is hand-rolled (not Radix) → wire
+  // Escape-to-dismiss + focus restore via the shared sheet-a11y hook (stable cb).
+  const closeTreatmentPlanSheet = useCallback(() => setTreatmentPlanSheetOpen(false), []);
+  useSheetA11y({ open: treatmentPlanSheetOpen, onClose: closeTreatmentPlanSheet });
 
   // prescriberMemberId for RxSheet (WBAR-02) — reactive selector
   const prescriberMemberId = useOrgContextStore(s => s.memberId) ?? '';
@@ -233,19 +247,21 @@ function WorkspacePage() {
     );
   }
 
+  // PP-8 (ISSUE-041): open the accessible discard dialog instead of window.prompt().
   function handleDiscardVisit() {
     if (!openVisit) return;
-    const reason = window.prompt(
-      'Discard this visit? Its pending treatments will be dismissed. This cannot be undone.\n\nReason (required, min 5 chars):',
-    );
-    if (reason == null) return; // cancelled
-    if (reason.trim().length < 5) {
-      toast.error('A reason of at least 5 characters is required to discard a visit.');
-      return;
-    }
-    discardVisitMutation.discard(openVisit.id, reason.trim()).then(() => {
+    setDiscardDialogOpen(true);
+  }
+
+  async function handleConfirmDiscard(reason: string) {
+    if (!openVisit) return;
+    try {
+      await discardVisitMutation.discard(openVisit.id, reason);
+      setDiscardDialogOpen(false);
       setCurrentVisitId(null); // let the auto-select effect pick the next visit
-    }).catch(() => { /* error surfaced by the hook */ });
+    } catch {
+      // error surfaced by the hook (toast); keep the dialog open for retry
+    }
   }
 
   function handleSharePMD() {
@@ -338,6 +354,7 @@ function WorkspacePage() {
         onNotes={() => setNotesSheetOpen(true)}
         onTreatmentPlan={() => setTreatmentPlanSheetOpen(true)}
         onCompleteVisit={() => setChecklistOpen(true)}
+        onAlerts={() => setAlertsOpen(true)}
         visitStatus={currentVisit?.status}
       />
 
@@ -370,6 +387,16 @@ function WorkspacePage() {
           Perio
         </button>
 
+        {/* PP-7 (ISSUE-044): Occlusion screening tab trigger */}
+        <button
+          type="button"
+          data-testid="occlusion-tab-btn"
+          onClick={() => setOcclusionOpen(true)}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Occlusion
+        </button>
+
         {/* B3: Recalls tab trigger */}
         <button
           type="button"
@@ -378,6 +405,16 @@ function WorkspacePage() {
           className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
         >
           Recalls
+        </button>
+
+        {/* PP-7 (ISSUE-043): Tasks tab trigger */}
+        <button
+          type="button"
+          data-testid="tasks-tab-btn"
+          onClick={() => setTasksOpen(true)}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+        >
+          Tasks
         </button>
 
         {/* B4: Treatment Plans tab trigger */}
@@ -551,14 +588,14 @@ function WorkspacePage() {
 
       {/* Treatment Plan sheet (from top bar) */}
       {treatmentPlanSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setTreatmentPlanSheetOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={closeTreatmentPlanSheet}>
           <div
             className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[85vh] overflow-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <h2 className="text-sm font-semibold">Treatment Plan</h2>
-              <button type="button" onClick={() => setTreatmentPlanSheetOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors">×</button>
+              <button type="button" aria-label="Close treatment plan" onClick={closeTreatmentPlanSheet} className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors">×</button>
             </div>
             <TreatmentPlanTab patientId={patientId} branchId={branchId} />
           </div>
@@ -656,6 +693,27 @@ function WorkspacePage() {
         onClose={() => setRecallsOpen(false)}
       />
 
+      {/* PP-7 (ISSUE-042): chairside dental alerts */}
+      <DentalAlertsSheet
+        patientId={patientId}
+        open={alertsOpen}
+        onClose={() => setAlertsOpen(false)}
+      />
+
+      {/* PP-7 (ISSUE-043): patient follow-up tasks */}
+      <TasksSheet
+        patientId={patientId}
+        open={tasksOpen}
+        onClose={() => setTasksOpen(false)}
+      />
+
+      {/* PP-7 (ISSUE-044): occlusion screening */}
+      <OcclusionScreeningSheet
+        patientId={patientId}
+        open={occlusionOpen}
+        onClose={() => setOcclusionOpen(false)}
+      />
+
       {/* B4: TreatmentPlansSheet */}
       <TreatmentPlansSheet
         patientId={patientId}
@@ -706,6 +764,14 @@ function WorkspacePage() {
         branchId={branchId}
         deferredIds={carryOverDeferredIds}
         onClose={() => setCarryOverPromptOpen(false)}
+      />
+
+      {/* PP-8 (ISSUE-041): reason-gated discard dialog (replaces window.prompt) */}
+      <DiscardVisitDialog
+        open={discardDialogOpen}
+        saving={discardVisitMutation.isPending}
+        onClose={() => setDiscardDialogOpen(false)}
+        onConfirm={handleConfirmDiscard}
       />
     </div>
   );

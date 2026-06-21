@@ -175,20 +175,44 @@ export const errorInterceptor: (
 ) => unknown = wrapError;
 
 /**
+ * JSON body serializer that emits int64 (`bigint`) request fields as JSON numbers.
+ *
+ * The generated default (`jsonBodySerializer`) stringifies every bigint, but the
+ * server validates every int64 request field as `z.number().int()` and rejects a
+ * string ("expected number, received string"). That silently 400'd every image /
+ * attachment / PMD upload — they all send `size: BigInt(file.size)`. Real int64
+ * request values (file sizes, counts) always fit a JS number; the string fallback
+ * only guards the >2^53 case to avoid precision loss (unreachable in practice).
+ */
+function bigintSafeBodySerializer(body: unknown): string {
+  const MAX = BigInt(Number.MAX_SAFE_INTEGER);
+  const MIN = BigInt(Number.MIN_SAFE_INTEGER);
+  return JSON.stringify(body, (_key, value) =>
+    typeof value === 'bigint'
+      ? value <= MAX && value >= MIN
+        ? Number(value)
+        : value.toString()
+      : value,
+  );
+}
+
+/**
  * Loose-typed signature on purpose: `CreateClientConfig` lives in `./generated/`,
  * but this file must compile before the first generation. The generated client
  * accepts any function that takes its config and returns a compatible shape; the
  * cast at the end bridges the inferred `T` with our spread overrides without
  * pulling in the generated type.
  *
- * Wires the bootstrap `baseUrl` and a Tauri-aware fetch into the generated client.
- * The error interceptor is installed separately (see provider.tsx) because the
- * interceptor registry lives on the client *instance*, not the config object.
+ * Wires the bootstrap `baseUrl`, a Tauri-aware fetch, and the bigint-safe body
+ * serializer into the generated client. The error interceptor is installed
+ * separately (see provider.tsx) because the interceptor registry lives on the
+ * client *instance*, not the config object.
  */
 export function createClientConfig<T>(config: T): T {
   return {
     ...config,
     baseUrl,
     fetch: customFetch,
+    bodySerializer: bigintSafeBodySerializer,
   } as T;
 }

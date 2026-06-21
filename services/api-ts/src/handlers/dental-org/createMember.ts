@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod';
+import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, AppError } from '@/core/errors';
@@ -78,27 +79,36 @@ export async function createMember(ctx: Context): Promise<Response> {
     await assertBranchRole(db, user.id, resolvedBranchId, ['dentist_owner']);
   }
 
-  const activeCount = await memberRepo.countActiveStaffByBranch(resolvedBranchId);
   const limit = TIER_MEMBER_LIMITS[org.tier] ?? Infinity;
 
-  if (activeCount >= limit) {
-    throw new AppError(
-      `Tier limit reached: ${org.tier} plan allows a maximum of ${limit} active staff members`,
-      'TIER_LIMIT_REACHED',
-      409,
-    );
-  }
-
-  const membership = await memberRepo.createOne({
-    branchId: resolvedBranchId,
-    displayName: body.displayName.trim(),
-    role: body.role,
-    // Owner bootstrap: the owner's first membership IS the owner — link it to
-    // their account so they gain branch access (set-pin and all subsequent
-    // owner operations assert an active membership for user.id).
-    personId: body.personId ?? (isOwnerBootstrap ? user.id : null),
-    avatarUrl: body.avatarUrl ?? null,
-    status: 'active',
+  // FR6.3 tier-limit race: countActiveStaffByBranch → createOne is a check-then-act with
+  // no row to lock (a count), and PIN-only staff have personId=null so no unique index
+  // bounds it. Two concurrent creates at limit-1 both pass the >= check and both insert,
+  // overshooting the cap. Serialize creation per branch with an advisory xact lock and
+  // re-count under it inside the tx so the losing writer sees the winner's committed member
+  // and is rejected. (db.transaction, not withTenantTx — membership is not RLS-activated.)
+  const membership = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(3001, hashtext(${resolvedBranchId}))`);
+    const txMemberRepo = new MembershipRepository(tx, logger);
+    const activeCount = await txMemberRepo.countActiveStaffByBranch(resolvedBranchId);
+    if (activeCount >= limit) {
+      throw new AppError(
+        `Tier limit reached: ${org.tier} plan allows a maximum of ${limit} active staff members`,
+        'TIER_LIMIT_REACHED',
+        409,
+      );
+    }
+    return txMemberRepo.createOne({
+      branchId: resolvedBranchId,
+      displayName: body.displayName.trim(),
+      role: body.role,
+      // Owner bootstrap: the owner's first membership IS the owner — link it to
+      // their account so they gain branch access (set-pin and all subsequent
+      // owner operations assert an active membership for user.id).
+      personId: body.personId ?? (isOwnerBootstrap ? user.id : null),
+      avatarUrl: body.avatarUrl ?? null,
+      status: 'active',
+    });
   });
 
   // Defensive: never surface a pin hash on the create response (the column is

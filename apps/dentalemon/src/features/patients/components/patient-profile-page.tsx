@@ -18,7 +18,8 @@ import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
-import { PatientEditForm } from './patient-edit-form';
+import { InsuranceCard } from './insurance-card';
+import { PatientEditForm, normalizePhone } from './patient-edit-form';
 import { PatientStatement } from './patient-statement';
 import { PatientCredits } from './patient-credits';
 
@@ -112,6 +113,9 @@ function OverviewTab({ patientId }: { patientId: string }) {
     <div className="flex flex-col gap-4">
       {/* Household / guarantor — P1-27 */}
       <HouseholdCard patientId={patientId} />
+
+      {/* Insurance profiles — PP-2 (ISSUE-036) */}
+      <InsuranceCard patientId={patientId} />
 
       {/* Recent Visits — PROF-02 */}
       <div
@@ -488,13 +492,18 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
         onClose={() => setEditOpen(false)}
         onSubmit={async (d) => {
           try {
-            // #14: send contactInfo only when a non-empty contact value actually
-            // changed — avoids a no-op `patient.contact.update` audit on a plain
-            // demographics save, and skips empty sub-fields (server merge keeps
-            // the stored value; explicit single-field clear is a V2 item).
+            // #14 / ISSUE-029: send contactInfo only when a non-empty contact
+            // value actually changed. Compare the form's canonical value against
+            // the *canonicalized* stored value (trim email, E.164-normalize phone)
+            // — otherwise an untouched phone stored with display spaces
+            // ("+63 917 …") always differs from its normalized form (ISSUE-015)
+            // and gets re-sent, silently mutating an unedited field and firing a
+            // spurious `patient.contact.update` audit. The server merges, so
+            // omitted sub-fields keep their stored value; explicit single-field
+            // clear is a V2 item.
             const contactInfo: { email?: string; phone?: string } = {};
-            if (d.email && d.email !== (data.email ?? '')) contactInfo.email = d.email;
-            if (d.phone && d.phone !== (data.phone ?? '')) contactInfo.phone = d.phone;
+            if (d.email && d.email !== (data.email ?? '').trim()) contactInfo.email = d.email;
+            if (d.phone && d.phone !== normalizePhone(data.phone ?? '')) contactInfo.phone = d.phone;
             const contactChanged = contactInfo.email !== undefined || contactInfo.phone !== undefined;
             await update({
               firstName: d.firstName,

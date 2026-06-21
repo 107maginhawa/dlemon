@@ -9,14 +9,13 @@ Per frontend route (enumerated from `apps/dentalemon/src/routeTree.gen.ts`), whe
 | Metric | Count |
 |--------|------:|
 | Total routes | 23 |
-| Exercised by e2e/journeys | 20 |
-| **Gap (no spec navigates to it)** | **3** |
+| Exercised by e2e/journeys | 21 |
+| **Gap (no spec navigates to it)** | **2** |
 
 ## Gaps (unexercised routes)
 
 | routePath | file |
 |-----------|------|
-| `/portal` | `apps/dentalemon/src/routes/_portal/portal.index.tsx` |
 | `/portal/appointments` | `apps/dentalemon/src/routes/_portal/portal.appointments.tsx` |
 | `/portal/bills` | `apps/dentalemon/src/routes/_portal/portal.bills.tsx` |
 
@@ -39,7 +38,7 @@ Per frontend route (enumerated from `apps/dentalemon/src/routeTree.gen.ts`), whe
 | `/onboarding` | `apps/dentalemon/src/routes/onboarding.tsx` | ✅ |
 | `/patients` | `apps/dentalemon/src/routes/_dashboard/patients.tsx` | ✅ |
 | `/patients/$patientId` | `apps/dentalemon/src/routes/_dashboard/patients_/$patientId.tsx` | ✅ |
-| `/portal` | `apps/dentalemon/src/routes/_portal/portal.index.tsx` | ❌ |
+| `/portal` | `apps/dentalemon/src/routes/_portal/portal.index.tsx` | ✅ |
 | `/portal/appointments` | `apps/dentalemon/src/routes/_portal/portal.appointments.tsx` | ❌ |
 | `/portal/bills` | `apps/dentalemon/src/routes/_portal/portal.bills.tsx` | ❌ |
 | `/queue-board` | `apps/dentalemon/src/routes/_workspace/queue-board.tsx` | ✅ |

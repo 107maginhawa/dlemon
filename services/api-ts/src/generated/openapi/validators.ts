@@ -21039,14 +21039,14 @@ export type CephMgmt_previewCephSuperimpositionBody = z.infer<typeof CephMgmt_pr
 export const CephMgmt_previewCephSuperimpositionResponse = z.union([DentalImagingModuleCephSuperimpositionSchema, ErrorResponseSchema]);
 
 export const CephMgmt_getCephSuperimpositionParams = z.object({
-  superimpositionId: z.string(),
+  superimpositionId: UUIDSchema,
 });
 export type CephMgmt_getCephSuperimpositionParams = z.infer<typeof CephMgmt_getCephSuperimpositionParams>;
 
 export const CephMgmt_getCephSuperimpositionResponse = z.union([DentalImagingModuleCephSuperimpositionSchema, ErrorResponseSchema]);
 
 export const ImagingFindingsMgmt_updateFindingParams = z.object({
-  findingId: z.string(),
+  findingId: UUIDSchema,
 });
 export type ImagingFindingsMgmt_updateFindingParams = z.infer<typeof ImagingFindingsMgmt_updateFindingParams>;
 
@@ -21056,21 +21056,21 @@ export type ImagingFindingsMgmt_updateFindingBody = z.infer<typeof ImagingFindin
 export const ImagingFindingsMgmt_updateFindingResponse = z.union([DentalImagingModuleImagingFindingSchema, ErrorResponseSchema]);
 
 export const ImagingFindingsMgmt_deleteFindingParams = z.object({
-  findingId: z.string(),
+  findingId: UUIDSchema,
 });
 export type ImagingFindingsMgmt_deleteFindingParams = z.infer<typeof ImagingFindingsMgmt_deleteFindingParams>;
 
 export const ImagingFindingsMgmt_deleteFindingResponse = ErrorResponseSchema;
 
 export const ImagingMgmt_deleteImageParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_deleteImageParams = z.infer<typeof ImagingMgmt_deleteImageParams>;
 
 export const ImagingMgmt_deleteImageResponse = ErrorResponseSchema;
 
 export const ImagingMgmt_updateImageCalibrationParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_updateImageCalibrationParams = z.infer<typeof ImagingMgmt_updateImageCalibrationParams>;
 
@@ -21080,7 +21080,7 @@ export type ImagingMgmt_updateImageCalibrationBody = z.infer<typeof ImagingMgmt_
 export const ImagingMgmt_updateImageCalibrationResponse = z.union([DentalImagingModuleImagingStudyImageSchema, ErrorResponseSchema]);
 
 export const CephMgmt_getCephAnalysisParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_getCephAnalysisParams = z.infer<typeof CephMgmt_getCephAnalysisParams>;
 
@@ -21092,7 +21092,7 @@ export type CephMgmt_getCephAnalysisQuery = z.infer<typeof CephMgmt_getCephAnaly
 export const CephMgmt_getCephAnalysisResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
 
 export const CephMgmt_recomputeCephAnalysisParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_recomputeCephAnalysisParams = z.infer<typeof CephMgmt_recomputeCephAnalysisParams>;
 
@@ -21104,7 +21104,7 @@ export type CephMgmt_recomputeCephAnalysisQuery = z.infer<typeof CephMgmt_recomp
 export const CephMgmt_recomputeCephAnalysisResponse = z.union([DentalImagingModuleCephAnalysisSchema, ErrorResponseSchema]);
 
 export const CephMgmt_batchUpsertCephLandmarksParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_batchUpsertCephLandmarksParams = z.infer<typeof CephMgmt_batchUpsertCephLandmarksParams>;
 
@@ -21114,29 +21114,29 @@ export type CephMgmt_batchUpsertCephLandmarksBody = z.infer<typeof CephMgmt_batc
 export const CephMgmt_batchUpsertCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
 
 export const CephMgmt_listCephLandmarksParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_listCephLandmarksParams = z.infer<typeof CephMgmt_listCephLandmarksParams>;
 
 export const CephMgmt_listCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
 
 export const CephMgmt_detectCephLandmarksParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_detectCephLandmarksParams = z.infer<typeof CephMgmt_detectCephLandmarksParams>;
 
 export const CephMgmt_detectCephLandmarksResponse = z.union([DentalImagingModuleCephLandmarkDetectionResultSchema, ErrorResponseSchema]);
 
 export const CephMgmt_getCephLandmarkDetectionJobParams = z.object({
-  imageId: z.string(),
-  jobId: z.string(),
+  imageId: UUIDSchema,
+  jobId: UUIDSchema,
 });
 export type CephMgmt_getCephLandmarkDetectionJobParams = z.infer<typeof CephMgmt_getCephLandmarkDetectionJobParams>;
 
 export const CephMgmt_getCephLandmarkDetectionJobResponse = z.union([DentalImagingModuleCephLandmarkDetectionResultSchema, ErrorResponseSchema]);
 
 export const CephMgmt_updateCephLandmarkParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
   landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
 });
 export type CephMgmt_updateCephLandmarkParams = z.infer<typeof CephMgmt_updateCephLandmarkParams>;
@@ -21147,7 +21147,7 @@ export type CephMgmt_updateCephLandmarkBody = z.infer<typeof CephMgmt_updateCeph
 export const CephMgmt_updateCephLandmarkResponse = z.union([DentalImagingModuleCephLandmarkListResponseSchema, ErrorResponseSchema]);
 
 export const CephMgmt_deleteCephLandmarkParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
   landmarkCode: DentalImagingModuleCephLandmarkCodeSchema,
 });
 export type CephMgmt_deleteCephLandmarkParams = z.infer<typeof CephMgmt_deleteCephLandmarkParams>;
@@ -21155,7 +21155,7 @@ export type CephMgmt_deleteCephLandmarkParams = z.infer<typeof CephMgmt_deleteCe
 export const CephMgmt_deleteCephLandmarkResponse = ErrorResponseSchema;
 
 export const CephMgmt_createCephReportParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_createCephReportParams = z.infer<typeof CephMgmt_createCephReportParams>;
 
@@ -21165,7 +21165,7 @@ export type CephMgmt_createCephReportBody = z.infer<typeof CephMgmt_createCephRe
 export const CephMgmt_createCephReportResponse = z.union([DentalImagingModuleCephReportSchema, ErrorResponseSchema]);
 
 export const CephMgmt_getCephReportParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type CephMgmt_getCephReportParams = z.infer<typeof CephMgmt_getCephReportParams>;
 
@@ -21177,7 +21177,7 @@ export type CephMgmt_getCephReportQuery = z.infer<typeof CephMgmt_getCephReportQ
 export const CephMgmt_getCephReportResponse = z.union([DentalImagingModuleCephReportSchema, ErrorResponseSchema]);
 
 export const ImagingFindingsMgmt_createFindingParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingFindingsMgmt_createFindingParams = z.infer<typeof ImagingFindingsMgmt_createFindingParams>;
 
@@ -21187,14 +21187,14 @@ export type ImagingFindingsMgmt_createFindingBody = z.infer<typeof ImagingFindin
 export const ImagingFindingsMgmt_createFindingResponse = z.union([DentalImagingModuleImagingFindingSchema, ErrorResponseSchema]);
 
 export const ImagingFindingsMgmt_listFindingsParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingFindingsMgmt_listFindingsParams = z.infer<typeof ImagingFindingsMgmt_listFindingsParams>;
 
 export const ImagingFindingsMgmt_listFindingsResponse = z.union([DentalImagingModuleImagingFindingListResponseSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_createImageLinkParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_createImageLinkParams = z.infer<typeof ImagingMgmt_createImageLinkParams>;
 
@@ -21204,14 +21204,14 @@ export type ImagingMgmt_createImageLinkBody = z.infer<typeof ImagingMgmt_createI
 export const ImagingMgmt_createImageLinkResponse = z.union([DentalImagingModuleImagingLinkSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_listImageLinksParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_listImageLinksParams = z.infer<typeof ImagingMgmt_listImageLinksParams>;
 
 export const ImagingMgmt_listImageLinksResponse = z.union([DentalImagingModuleImagingLinkListResponseSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_createMeasurementParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_createMeasurementParams = z.infer<typeof ImagingMgmt_createMeasurementParams>;
 
@@ -21221,14 +21221,14 @@ export type ImagingMgmt_createMeasurementBody = z.infer<typeof ImagingMgmt_creat
 export const ImagingMgmt_createMeasurementResponse = z.union([DentalImagingModuleImagingAnnotationSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_listMeasurementsParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_listMeasurementsParams = z.infer<typeof ImagingMgmt_listMeasurementsParams>;
 
 export const ImagingMgmt_listMeasurementsResponse = z.union([DentalImagingModuleMeasurementListResponseSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_updateImageMetadataParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_updateImageMetadataParams = z.infer<typeof ImagingMgmt_updateImageMetadataParams>;
 
@@ -21238,7 +21238,7 @@ export type ImagingMgmt_updateImageMetadataBody = z.infer<typeof ImagingMgmt_upd
 export const ImagingMgmt_updateImageMetadataResponse = z.union([DentalImagingModuleImagingStudyImageSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_updateImageModalityParams = z.object({
-  imageId: z.string(),
+  imageId: UUIDSchema,
 });
 export type ImagingMgmt_updateImageModalityParams = z.infer<typeof ImagingMgmt_updateImageModalityParams>;
 
@@ -21248,21 +21248,21 @@ export type ImagingMgmt_updateImageModalityBody = z.infer<typeof ImagingMgmt_upd
 export const ImagingMgmt_updateImageModalityResponse = z.union([DentalImagingModuleImagingStudyImageSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_deleteImageLinkParams = z.object({
-  linkId: z.string(),
+  linkId: UUIDSchema,
 });
 export type ImagingMgmt_deleteImageLinkParams = z.infer<typeof ImagingMgmt_deleteImageLinkParams>;
 
 export const ImagingMgmt_deleteImageLinkResponse = ErrorResponseSchema;
 
 export const ImagingMgmt_deleteMeasurementParams = z.object({
-  measurementId: z.string(),
+  measurementId: UUIDSchema,
 });
 export type ImagingMgmt_deleteMeasurementParams = z.infer<typeof ImagingMgmt_deleteMeasurementParams>;
 
 export const ImagingMgmt_deleteMeasurementResponse = ErrorResponseSchema;
 
 export const CephMgmt_listCephSuperimpositionsParams = z.object({
-  patientId: z.string(),
+  patientId: UUIDSchema,
 });
 export type CephMgmt_listCephSuperimpositionsParams = z.infer<typeof CephMgmt_listCephSuperimpositionsParams>;
 
@@ -21274,14 +21274,14 @@ export type ImagingMgmt_createImagingStudyBody = z.infer<typeof ImagingMgmt_crea
 export const ImagingMgmt_createImagingStudyResponse = z.union([DentalImagingModuleCreateImagingStudyResponseSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_getImagingStudyParams = z.object({
-  studyId: z.string(),
+  studyId: UUIDSchema,
 });
 export type ImagingMgmt_getImagingStudyParams = z.infer<typeof ImagingMgmt_getImagingStudyParams>;
 
 export const ImagingMgmt_getImagingStudyResponse = z.union([DentalImagingModuleImagingStudyWithImagesSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_finalizeCbctStudyParams = z.object({
-  studyId: z.string(),
+  studyId: UUIDSchema,
 });
 export type ImagingMgmt_finalizeCbctStudyParams = z.infer<typeof ImagingMgmt_finalizeCbctStudyParams>;
 
@@ -21291,7 +21291,7 @@ export type ImagingMgmt_finalizeCbctStudyBody = z.infer<typeof ImagingMgmt_final
 export const ImagingMgmt_finalizeCbctStudyResponse = z.union([DentalImagingModuleFinalizeCbctStudyResponseSchema, ErrorResponseSchema]);
 
 export const ImagingMgmt_getCbctViewerLinkParams = z.object({
-  studyId: z.string(),
+  studyId: UUIDSchema,
 });
 export type ImagingMgmt_getCbctViewerLinkParams = z.infer<typeof ImagingMgmt_getCbctViewerLinkParams>;
 
@@ -21866,7 +21866,7 @@ export type GetPatientHouseholdParams = z.infer<typeof GetPatientHouseholdParams
 export const GetPatientHouseholdResponse = z.union([DentalPatientFinanceModuleHouseholdWithMembersSchema, ErrorResponseSchema]);
 
 export const PatientImageMgmt_listPatientImagesParams = z.object({
-  patientId: z.string(),
+  patientId: UUIDSchema,
 });
 export type PatientImageMgmt_listPatientImagesParams = z.infer<typeof PatientImageMgmt_listPatientImagesParams>;
 

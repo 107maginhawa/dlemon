@@ -94,6 +94,18 @@ function isSeparatorRow(cells: string[]): boolean {
   return cells.length > 0 && cells.every((c) => /^:?-{2,}:?$/.test(c.trim()));
 }
 
+/**
+ * True when a cell IS essentially just the id (the row's id column) — tolerating a
+ * trailing/leading status annotation in brackets, e.g. `WF-055 [INFERRED]` or
+ * `WF-056 [VERIFY]` (the §3 op-tables annotate inferred ids). Without the bracket
+ * strip, ~16 [INFERRED] workflows were silently dropped → invisible to the ratchet.
+ * A prose cell that merely mentions an id ("see WF-055 for…") still has leftover
+ * text and is correctly rejected.
+ */
+function isIdOnlyCell(cell: string, idRe: RegExp): boolean {
+  return cell.replace(idRe, '').replace(/\[[^\]]*\]/g, '').replace(/[\s|]/g, '').length === 0;
+}
+
 /** Split a markdown `| a | b | c |` line into trimmed cell strings. */
 function splitPipeRow(line: string): string[] | null {
   const t = line.trim();
@@ -126,8 +138,8 @@ export function parseWorkflowTables(md: string): Map<string, WorkflowDef> {
       const m = cells[i]!.match(WF_ID_RE);
       // Treat as the id column only when the cell IS essentially just the id
       // (header column), so a "Linked BRs"/prose cell that mentions a WF id in
-      // passing does not hijack the row.
-      if (m && cells[i]!.replace(WF_ID_RE, '').replace(/[\s|]/g, '').length === 0) {
+      // passing does not hijack the row. A `[INFERRED]`/`[VERIFY]` annotation is OK.
+      if (m && isIdOnlyCell(cells[i]!, WF_ID_RE)) {
         idCellIdx = i;
         wfId = m[0];
         break;
@@ -142,7 +154,7 @@ export function parseWorkflowTables(md: string): Map<string, WorkflowDef> {
       if (i === idCellIdx) continue;
       const c = cells[i]!;
       if (!c) continue;
-      if (WF_ID_RE.test(c) && c.replace(WF_ID_RE, '').replace(/[\s|]/g, '').length === 0) continue;
+      if (WF_ID_RE.test(c) && isIdOnlyCell(c, WF_ID_RE)) continue;
       name = c;
       break;
     }
@@ -187,7 +199,7 @@ function collectIdsInSection(md: string, sectionMarker: string, idRe: RegExp): S
     if (!cells || isSeparatorRow(cells)) continue;
     for (const c of cells) {
       const m = c.match(idRe);
-      if (m && c.replace(idRe, '').replace(/[\s|]/g, '').length === 0) {
+      if (m && isIdOnlyCell(c, idRe)) {
         ids.add(m[0]);
         break; // one id per row (the row's id column)
       }

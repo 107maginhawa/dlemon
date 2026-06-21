@@ -55,7 +55,9 @@
     "coverage:workflows": "bun scripts/coverage/workflow-matrix.ts",
     "coverage:fe-route": "bun scripts/coverage/fe-route-matrix.ts",
     "coverage:all": "bun scripts/coverage/run-all.ts",
-    "coverage:all:ci": "bun scripts/coverage/run-all.ts --check"
+    "coverage:all:ci": "bun scripts/coverage/run-all.ts --check",
+    "coverage:ledger": "bun scripts/coverage/ledger-coverage.ts",
+    "coverage:ledger:check": "bun scripts/coverage/ledger-coverage.ts --check"
   },
   "engines": {
     "node": ">=18.0.0",

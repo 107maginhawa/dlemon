@@ -9,9 +9,10 @@ import {
   SelectValue,
 } from '@monobase/ui'
 import { ANALYSIS_TYPES, NORM_POPULATIONS, DEFAULT_POPULATION, getPopulationLabel } from '@monobase/ceph-math'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cephMgmtCreateCephReport } from '@monobase/sdk-ts/generated'
 import { useOrgContextStore } from '@/stores/org-context.store'
+import { getErrorMessage } from '@/lib/error-toast'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephLandmarkCode } from '../hooks/use-ceph-landmarks'
@@ -89,7 +90,7 @@ export function CephWorkspacePanel({
   analysisType: controlledAnalysisType,
   onAnalysisTypeChange,
 }: CephWorkspacePanelProps) {
-  const { landmarks, commitLandmark, autoDetect } = useCephLandmarks(imageId)
+  const { landmarks, commitLandmark, autoDetect, mutationError } = useCephLandmarks(imageId)
   // #15: analysis protocol switcher. Drives the analysis query + measurements panel.
   // Controlled/uncontrolled (mirrors selectedCode): when the workspace owns
   // analysisType it shares the value with the canvas arc layer so both stay in sync.
@@ -116,6 +117,7 @@ export function CephWorkspacePanel({
   const role = useOrgContextStore((s) => s.role)
   const canFinalize = role != null && CEPH_SIGNOFF_ROLES.includes(role)
 
+  const queryClient = useQueryClient()
   const createReport = useMutation({
     mutationFn: async () => {
       const { data } = await cephMgmtCreateCephReport({
@@ -130,6 +132,9 @@ export function CephWorkspacePanel({
     },
     onSuccess: (data) => {
       setCreatedVersion(data.version)
+      // Refresh the "latest report" query the superimposition/comparison view
+      // reads (use-ceph-superimposition.ts), else it shows the prior version.
+      queryClient.invalidateQueries({ queryKey: ['ceph-report-latest', imageId] })
     },
   })
 
@@ -304,6 +309,19 @@ export function CephWorkspacePanel({
             {createReport.isError && (
               <p className="text-xs text-red-400 mt-1">
                 {String(createReport.error)}
+              </p>
+            )}
+
+            {/* ISSUE-026 family: surface lock-all / landmark-commit failures (e.g.
+                403 CEPH_SIGNOFF_REQUIRED, 422) instead of swallowing them. The hook
+                already exposes mutationError — handleLockAll just never read it. */}
+            {mutationError && (
+              <p
+                role="alert"
+                data-testid="ceph-lockall-error"
+                className="text-xs text-red-400 mt-1"
+              >
+                {getErrorMessage(mutationError, 'Could not lock landmarks. Please try again.')}
               </p>
             )}
           </div>

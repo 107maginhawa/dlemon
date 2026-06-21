@@ -5,7 +5,7 @@
  * Status lifecycle: on_track -> behind | completed | defaulted
  */
 
-import { pgTable, uuid, text, timestamp, integer, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { baseEntityFields } from '@/core/database.schema';
 import { dentalInvoices } from './dental-invoice.schema';
 import { patients } from '../../patient/repos/patient.schema';
@@ -34,7 +34,10 @@ export const dentalPaymentPlans = pgTable('dental_payment_plan', {
   amountPerInstallmentCents: integer('amount_per_installment_cents').notNull(),
   status: planStatusEnum('status').notNull().default('on_track'),
 }, (table) => ({
-  invoiceIdx: index('dental_payment_plan_invoice_id_idx').on(table.invoiceId),
+  // One plan per invoice — durable race guard. Two concurrent creates both read
+  // findByInvoice=null (no row to lock) and both insert; the unique index makes the
+  // loser fail with 23505, which the handler turns into an idempotent replay / PLAN_EXISTS.
+  invoiceUniq: uniqueIndex('dental_payment_plan_invoice_id_unique').on(table.invoiceId),
   patientIdx: index('dental_payment_plan_patient_id_idx').on(table.patientId),
 }));
 

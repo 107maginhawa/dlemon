@@ -17,6 +17,7 @@
  *     invoice balance (proven by the acceptance test).
  */
 
+import { sql } from 'drizzle-orm';
 import type { HandlerContext } from '@/types/app';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import type { DatabaseInstance } from '@/core/database';
@@ -101,6 +102,28 @@ export async function recordClaimRemittance(ctx: HandlerContext): Promise<Respon
     const txClaimRepo = new DentalInsuranceClaimRepository(tx, logger);
     const txPayerRepo = new DentalPayerPaymentRepository(tx, logger);
     const txInvoiceRepo = new DentalInvoiceRepository(tx);
+
+    // Serialize concurrent remittances on THIS claim (mirrors refundDentalPayment's
+    // per-payment advisory lock, classid 1002 → here 1004). The over-post guard above and
+    // the invoice apply below both read PRE-tx state; two remittances with distinct
+    // references would otherwise both pass and over-post the claim past billed AND
+    // over-pay the anchored invoice (applyRemittance is a JS read-modify-write; the
+    // invoice addPayment here carries no guardBalance). The lock makes the settled-total
+    // re-read + the invoice balance re-read accurate.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1004, hashtext(${claimId}))`);
+
+    // Re-assert the over-post guard against the COMMITTED state under the lock: the pre-tx
+    // guard (above) read a stale snapshot. The loser sees the winner's settled total and
+    // aborts BEFORE recording anything (rolling back nothing it has not yet written).
+    const live = await txClaimRepo.findOneById(claimId);
+    if (!live) throw new NotFoundError('Insurance claim not found');
+    const liveSettled = (live.paidByPayerCents ?? 0) + (live.disallowedCents ?? 0);
+    if (liveSettled + paid + disallowed > live.billedAmountCents) {
+      throw new BusinessLogicError(
+        `Remittance (paid ${paid} + disallowed ${disallowed}) exceeds the claim's unsettled amount`,
+        'PAYER_OVERPOST',
+      );
+    }
 
     // 1. Record the payer payment.
     const txPayerPayment = await txPayerRepo.createOne({

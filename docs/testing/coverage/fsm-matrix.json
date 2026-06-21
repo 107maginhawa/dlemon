@@ -435,7 +435,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts",
-    "evidenceLine": 697
+    "evidenceLine": 705
   },
   {
     "fsm": "CephLandmark",
@@ -1100,7 +1100,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 836
+    "evidenceLine": 893
   },
   {
     "fsm": "Treatment",
@@ -1208,7 +1208,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 840
+    "evidenceLine": 897
   },
   {
     "fsm": "Treatment",
@@ -1263,7 +1263,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 840
+    "evidenceLine": 897
   },
   {
     "fsm": "Visit",

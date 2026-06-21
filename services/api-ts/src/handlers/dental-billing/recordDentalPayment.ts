@@ -130,7 +130,31 @@ export async function recordDentalPayment(
       notes: body.notes,
       ...(paymentDate ? { createdAt: paymentDate } : {}),
     });
-    const txInvoice = await new DentalInvoiceRepository(tx).addPayment(invoiceId, body.amountCents);
+    // WFG-004-class: the overpayment + immutability guards above read from the pre-tx
+    // fetch. Re-assert them ATOMICALLY at write time — addPayment only applies when
+    // balance_cents >= amount AND status is not voided/paid, so a concurrent payment that
+    // consumed the balance OR a concurrent void/pay that made the invoice terminal makes
+    // this match 0 rows (null). Throw to abort the tx (rolling back the payment insert).
+    const txInvoiceRepo = new DentalInvoiceRepository(tx);
+    const txInvoice = await txInvoiceRepo.addPayment(invoiceId, body.amountCents, {
+      guardBalance: true,
+      guardStatus: true,
+    });
+    if (!txInvoice) {
+      // Distinguish the cause from the committed concurrent state for the right code: a
+      // void/pay that landed first → INVOICE_IMMUTABLE; otherwise an over-the-balance race.
+      const cur = await txInvoiceRepo.findOneById(invoiceId);
+      if (cur && (cur.status === 'voided' || cur.status === 'paid')) {
+        throw new BusinessLogicError(
+          `Cannot record payment on a ${cur.status} invoice`,
+          'INVOICE_IMMUTABLE',
+        );
+      }
+      throw new BusinessLogicError(
+        `Payment amount (${body.amountCents}) exceeds remaining balance`,
+        'PAYMENT_EXCEEDS_BALANCE',
+      );
+    }
     return { payment: txPayment, updatedInvoice: txInvoice };
   });
 

@@ -140,6 +140,33 @@ const TEMPLATE_METADATA: Record<string, TemplateMetadata> = {
     ]
   },
 
+  'auth/magic-link': {
+    name: 'Magic Link Sign-In',
+    description: 'Passwordless magic-link sign-in email (Better-Auth magicLink plugin)',
+    subject: 'Your sign-in link',
+    tags: [EmailTemplateTags.AUTH_MAGIC_LINK],
+    variables: [
+      {
+        id: 'name',
+        type: 'string' as const,
+        label: 'Recipient Name',
+        required: true
+      },
+      {
+        id: 'email',
+        type: 'email' as const,
+        label: 'Email Address',
+        required: true
+      },
+      {
+        id: 'magicLink',
+        type: 'url' as const,
+        label: 'Magic Sign-In Link',
+        required: true
+      }
+    ]
+  },
+
   'auth/welcome': {
     name: 'Welcome Email',
     description: 'Welcome email for new users after successful registration',

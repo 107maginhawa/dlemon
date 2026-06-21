@@ -94,6 +94,18 @@ describe('CarryOverPrompt — FIX-002 restore-dismissed affordance', () => {
     }
   });
 
+  test('ISSUE-010: pressing Escape dismisses the prompt (hand-rolled overlay a11y)', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    render(
+      React.createElement(CarryOverPrompt, { ...baseProps, onClose }),
+      { wrapper: makeWrapper() },
+    );
+    expect(screen.getByTestId('carry-over-prompt')).not.toBeNull();
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalled();
+  });
+
   test('clicking "Skip" closes without calling the endpoint', async () => {
     const user = userEvent.setup();
     const urls: string[] = [];

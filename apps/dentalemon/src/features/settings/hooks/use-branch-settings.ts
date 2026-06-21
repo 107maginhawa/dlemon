@@ -42,6 +42,17 @@ export interface BranchSettings {
   toothNotation?: string;
   // Working hours (JSON string)
   workingHours?: string;
+  // P1-25 / PP-4: per-branch online-booking policy (freeform JSONB sub-key,
+  // parsed + defaulted server-side by parseOnlineBookingConfig — no TypeSpec type).
+  onlineBooking?: {
+    enabled?: boolean;
+    bookableVisitTypes?: string[];
+    bookableProviderMemberIds?: 'all' | string[];
+    leadTimeMinutes?: number;
+    horizonDays?: number;
+    slotStepMinutes?: number;
+    requirePatientAuth?: boolean;
+  };
   // Notification preferences
   notificationPreferences?: Record<string, unknown>;
   // Any other settings fields

@@ -24,8 +24,9 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Lower this as arbitrary font sizes are migrated to the token scale.
-// It must never increase. Current count at introduction: 348.
-const BASELINE = 348;
+// It must never increase. Current count at introduction: 348; lowered to 346
+// when the AppointmentCard action buttons were de-duplicated into one shared class.
+const BASELINE = 346;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

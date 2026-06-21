@@ -231,10 +231,20 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Wipe imaging rows between tests (FK order: annotations/findings/teeth/calibrations/links → images → studies).
+  // Wipe imaging rows between tests, child→parent FK order. Ceph snapshot rows
+  // (seeded into the shared test template, or left by sibling ceph tests) reference
+  // imaging_study_image, so they MUST be cleared before images — else
+  // `delete imaging_study_image` trips imaging_ceph_report_image_id_*_fk.
+  // Superimposition references reports, so it goes first of all.
   const { imagingStudies, imagingStudyImages, imagingStudyTeeth, imagingAnnotations, imagingCalibrations, imagingLinks } =
     await import('./repos/imaging.schema');
   const { imagingFindings } = await import('./repos/imaging_finding.schema');
+  const { imagingCephSuperimpositions, imagingCephReports, imagingCephAnalyses, imagingCephLandmarks } =
+    await import('./repos/imaging_ceph.schema');
+  await db.delete(imagingCephSuperimpositions);
+  await db.delete(imagingCephReports);
+  await db.delete(imagingCephAnalyses);
+  await db.delete(imagingCephLandmarks);
   await db.delete(imagingFindings);
   await db.delete(imagingAnnotations);
   await db.delete(imagingStudyTeeth);
@@ -385,6 +395,27 @@ describe('getImagingStudy', () => {
     const app = buildTestApp(undefined);
     const res = await app.request(`/dental/imaging/studies/${studyId}`);
     expect(res.status).toBe(401);
+  });
+
+  // ISSUE-033: imaging path params were typed as plain `string` in TypeSpec, so a
+  // malformed id skipped the uuid validation the rest of the API has → the handler
+  // queried Postgres with a non-uuid → 'invalid input syntax for type uuid' → 500.
+  // After adding `format: uuid` (UUID scalar) to the path params, the generated
+  // zValidator('param', …) rejects it cleanly with 400 VALIDATION_ERROR.
+  test('400 VALIDATION_ERROR (not 500) for a malformed studyId path param', async () => {
+    const app = buildTestApp(DENTIST);
+    const res = await app.request('/dental/imaging/studies/not-a-uuid');
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('400 VALIDATION_ERROR (not 500) for a malformed imageId path param', async () => {
+    const app = buildTestApp(DENTIST);
+    const res = await app.request('/dental/imaging/images/not-a-uuid/findings');
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as any;
+    expect(body.code).toBe('VALIDATION_ERROR');
   });
 });
 

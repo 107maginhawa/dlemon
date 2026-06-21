@@ -72,7 +72,7 @@
   { "code": "D7310", "description": "Alveoloplasty in conjunction with extractions - four or more teeth or tooth spaces, per quadrant", "category": "Oral Surgery", "specialty": "OralSurgery", "defaultPriceCents": 600000 },
   { "code": "D7510", "description": "Incision and drainage of abscess - intraoral soft tissue", "category": "Oral Surgery", "specialty": "OralSurgery", "defaultPriceCents": 400000 },
   { "code": "D7960", "description": "Frenulectomy - also known as frenectomy or frenotomy - separate procedure not incidental to another procedure", "category": "Oral Surgery", "specialty": "OralSurgery", "defaultPriceCents": 500000 },
-  { "code": "D7310", "description": "Alveoloplasty in conjunction with extractions - one to three teeth or tooth spaces, per quadrant", "category": "Oral Surgery", "specialty": "OralSurgery", "defaultPriceCents": 400000 },
+  { "code": "D7311", "description": "Alveoloplasty in conjunction with extractions - one to three teeth or tooth spaces, per quadrant", "category": "Oral Surgery", "specialty": "OralSurgery", "defaultPriceCents": 400000 },
   { "code": "D7410", "description": "Excision of benign lesion up to 1.25 cm", "category": "Oral Surgery", "specialty": "OralSurgery", "defaultPriceCents": 800000 },
 
   { "code": "D8010", "description": "Limited orthodontic treatment of the primary dentition", "category": "Orthodontic", "specialty": "Ortho", "defaultPriceCents": 3000000 },
@@ -110,7 +110,6 @@
   { "code": "D2962", "description": "Labial veneer, porcelain laminate - laboratory", "category": "Cosmetic", "specialty": "Cosmetic", "defaultPriceCents": 1200000 },
   { "code": "D9910", "description": "Application of desensitizing medicament", "category": "Cosmetic", "specialty": "Cosmetic", "defaultPriceCents": 100000 },
   { "code": "D7471", "description": "Removal of lateral exostosis (maxilla or mandible)", "category": "Cosmetic", "specialty": "Cosmetic", "defaultPriceCents": 800000 },
-  { "code": "D4211", "description": "Gingivectomy or gingivoplasty - one to three teeth, per quadrant (cosmetic)", "category": "Cosmetic", "specialty": "Cosmetic", "defaultPriceCents": 600000 },
   { "code": "D4245", "description": "Apically positioned flap", "category": "Cosmetic", "specialty": "Cosmetic", "defaultPriceCents": 1000000 },
   { "code": "D4270", "description": "Pedicle soft tissue graft procedure", "category": "Cosmetic", "specialty": "Cosmetic", "defaultPriceCents": 1500000 }
 ]

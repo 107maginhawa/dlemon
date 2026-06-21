@@ -13,6 +13,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '@monobase/ui';
 import { updateRecall } from '@monobase/sdk-ts/generated';
+import { toastError } from '@/lib/error-toast';
 import { useRecallDueList, type RecallDueItem } from '../hooks/use-recall-due-list';
 
 export interface RecallDueListProps {
@@ -27,6 +28,16 @@ const TYPE_LABEL: Record<RecallDueItem['type'], string> = {
   treatment: 'Treatment',
   other: 'Other',
 };
+
+/**
+ * "Reach out" flips a recall to 'sent'. Per the recall FSM that transition is
+ * only valid from 'pending' — offering it on an already-'sent' (Reminded) recall
+ * produced a silent 422 (ISSUE-022). Mirror the FSM so the button is rendered
+ * only when the manual outreach can actually succeed.
+ */
+export function canReachOut(status: RecallDueItem['status']): boolean {
+  return status === 'pending';
+}
 
 export function formatDueDate(dueDate: string): string {
   // dueDate is YYYY-MM-DD; render as a locale date without TZ drift.
@@ -51,8 +62,11 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
         body: { status: 'sent' },
       });
       await refetch();
-    } catch {
-      // Network error — leave the row as-is.
+    } catch (err) {
+      // ISSUE-022: surface the failure instead of swallowing it. The row is left
+      // as-is, but the user must know the outreach didn't go through (network,
+      // permission, or an FSM conflict) rather than assume the patient was contacted.
+      toastError(err, `Couldn’t reach out to ${recall.patientName || 'this patient'}.`);
     } finally {
       setBusyId(null);
     }
@@ -99,16 +113,18 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
               >
                 {recall.status === 'sent' ? 'Reminded' : 'Due'}
               </Badge>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => void handleReachOut(recall)}
-                disabled={busyId === recall.id}
-                className="h-8 px-3 rounded-lg border border-border text-[13px] font-medium hover:bg-secondary transition-colors disabled:opacity-50"
-                aria-label={`Reach out to ${recall.patientName}`}
-              >
-                {busyId === recall.id ? '…' : 'Reach out'}
-              </Button>
+              {canReachOut(recall.status) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void handleReachOut(recall)}
+                  disabled={busyId === recall.id}
+                  className="h-8 px-3 rounded-lg border border-border text-[13px] font-medium hover:bg-secondary transition-colors disabled:opacity-50"
+                  aria-label={`Reach out to ${recall.patientName}`}
+                >
+                  {busyId === recall.id ? '…' : 'Reach out'}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"

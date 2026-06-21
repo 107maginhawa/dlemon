@@ -57,6 +57,14 @@ export function canCancelStatus(status: string): boolean {
   return ['scheduled', 'confirmed', 'checked_in'].includes(status);
 }
 
+// PP-1 (ISSUE-035): a no-show can be recorded only from a state that
+// APPOINTMENT_TRANSITIONS allows to reach `no_show` — scheduled/confirmed/checked_in.
+// Same FSM-mirroring rule as canCancelStatus, so the action never appears where the
+// backend would 422.
+export function canMarkNoShow(status: string): boolean {
+  return ['scheduled', 'confirmed', 'checked_in'].includes(status);
+}
+
 function formatTime(isoString: string): string {
   const d = new Date(isoString);
   const h = d.getHours();
@@ -72,6 +80,12 @@ function truncateId(id: string, maxLen = 8): string {
   return id.slice(0, maxLen) + '...';
 }
 
+// Shared sizing for the hover action buttons (Confirm / Check In / No Show / Cancel).
+// Centralizing the 11px keeps the font-size ratchet to a single arbitrary literal and
+// the four buttons pixel-identical; each button adds only its bg/text-colour.
+const ACTION_BTN = 'text-[11px] font-semibold px-2.5 py-1 rounded-md';
+const ACTION_BTN_SECONDARY = `${ACTION_BTN} bg-secondary border border-border hover:bg-background transition-colors`;
+
 interface AppointmentCardProps {
   appointment: Appointment;
   onClick?: (appointment: Appointment) => void;
@@ -79,15 +93,18 @@ interface AppointmentCardProps {
   onConfirm?: (appointmentId: string) => void;
   /** FR3.4: cancel affordance. Parent supplies it only for cancel-capable roles. */
   onCancel?: (appointment: Appointment) => void;
+  /** PP-1: record a no-show. Parent supplies it only for scheduling-capable roles. */
+  onNoShow?: (appointment: Appointment) => void;
   compact?: boolean;
 }
 
-export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, onCancel, compact }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, onCancel, onNoShow, compact }: AppointmentCardProps) {
   const badge = getStatusBadgeProps(appointment.status);
   const time = formatTime(appointment.scheduledAt);
   const checkInAllowed = canCheckIn(appointment.status);
   const confirmAllowed = canConfirm(appointment.status);
   const cancelAllowed = canCancelStatus(appointment.status);
+  const noShowAllowed = canMarkNoShow(appointment.status);
 
   const statusStyles: Record<string, string> = {
     scheduled: 'border-l-blue-500 bg-blue-50/60',
@@ -141,7 +158,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
               e.stopPropagation();
               onConfirm(appointment.id);
             }}
-            className="bg-secondary text-foreground text-[11px] font-semibold px-2.5 py-1 rounded-md border border-border hover:bg-background transition-colors"
+            className={`${ACTION_BTN_SECONDARY} text-foreground`}
             aria-label={`Confirm ${appointment.patientName ?? truncateId(appointment.patientId)}`}
           >
             Confirm
@@ -154,10 +171,23 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
               e.stopPropagation();
               onCheckIn(appointment.id);
             }}
-            className="bg-lemon text-lemon-foreground text-[11px] font-semibold px-2.5 py-1 rounded-md"
+            className={`${ACTION_BTN} bg-lemon text-lemon-foreground`}
             aria-label={`Check in ${appointment.patientName ?? truncateId(appointment.patientId)}`}
           >
             Check In
+          </button>
+        )}
+        {noShowAllowed && onNoShow && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onNoShow(appointment);
+            }}
+            className={`${ACTION_BTN_SECONDARY} text-muted-foreground`}
+            aria-label={`Mark ${appointment.patientName ?? truncateId(appointment.patientId)} as no-show`}
+          >
+            No Show
           </button>
         )}
         {cancelAllowed && onCancel && (
@@ -167,7 +197,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
               e.stopPropagation();
               onCancel(appointment);
             }}
-            className="bg-secondary text-destructive text-[11px] font-semibold px-2.5 py-1 rounded-md border border-border hover:bg-background transition-colors"
+            className={`${ACTION_BTN_SECONDARY} text-destructive`}
             aria-label={`Cancel ${appointment.patientName ?? truncateId(appointment.patientId)}`}
           >
             Cancel

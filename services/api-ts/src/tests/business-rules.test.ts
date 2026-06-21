@@ -15,7 +15,7 @@
  *   BR-020 — patient record merge (501 stub, not implemented)
  */
 
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, beforeAll, afterEach } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
@@ -214,6 +214,13 @@ function makeApp(user?: typeof TEST_USER) {
     updateLabOrder as any,
   );
 
+  // Prescriptions
+  app.post('/dental/visits/:visitId/prescriptions',
+    zValidator('param', CreatePrescriptionParams, validationErrorHandler),
+    zValidator('json', CreatePrescriptionBody, validationErrorHandler),
+    createPrescription as any,
+  );
+
   // Appointments
   app.delete('/dental/appointments/:appointmentId',
     zValidator('param', CancelAppointmentParams, validationErrorHandler),
@@ -401,7 +408,7 @@ async function seedSignedConsent(visitId: string) {
 // Teardown — matches table dependency order
 // ---------------------------------------------------------------------------
 
-afterEach(async () => {
+async function resetDentalTables() {
   await db.execute(sql`
     TRUNCATE TABLE
       imported_pmd,
@@ -425,7 +432,17 @@ afterEach(async () => {
       dental_organization
     CASCADE
   `);
-});
+}
+
+// Clean inherited state BEFORE the first test, not only after each. The
+// per-file clone inherits whatever the monobase_test template carries; if that
+// template was polluted (e.g. a sibling test run directly against it left an
+// active solo org for the SAME shared owner), ensureMembership's target-less
+// onConflictDoNothing would silently skip its own org insert on the partial
+// `dental_org_one_active_per_owner` index, and the branch FK would then fail.
+// Resetting first makes BR-001's seed deterministic regardless of template state.
+beforeAll(resetDentalTables);
+afterEach(resetDentalTables);
 
 // ===========================================================================
 // BR-001: A patient cannot have two active visits simultaneously
@@ -625,6 +642,46 @@ describe('BR-003: visit immutable after completed or locked', () => {
         patientId: PATIENT_ID,
         labName: 'Test Lab',
         description: 'Crown fabrication',
+      }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('cannot add prescription to a completed visit (4xx VISIT_IMMUTABLE) [BR-003]', async () => {
+    const visit = await seedCompletedVisit();
+    const app = makeApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visit!.id,
+        patientId: PATIENT_ID,
+        prescriberMemberId: MEMBER_ID,
+        drugName: 'Amoxicillin',
+        dosage: '500mg',
+        frequency: 'TID',
+      }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    const body = await res.json() as any;
+    expect(body.code).toBe('VISIT_IMMUTABLE');
+  });
+
+  test('cannot add prescription to a locked visit (4xx VISIT_IMMUTABLE) [BR-003]', async () => {
+    const visit = await seedLockedVisit();
+    const app = makeApp(TEST_USER);
+    const res = await app.request(`/dental/visits/${visit!.id}/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visit!.id,
+        patientId: PATIENT_ID,
+        prescriberMemberId: MEMBER_ID,
+        drugName: 'Amoxicillin',
+        dosage: '500mg',
+        frequency: 'TID',
       }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);

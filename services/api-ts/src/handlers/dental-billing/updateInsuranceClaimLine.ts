@@ -46,6 +46,12 @@ export async function updateInsuranceClaimLine(ctx: HandlerContext): Promise<Res
   // line-not-found 404 is preserved: recompute is skipped when updateLine misses.
   const updated = await withTenantTx(db, { branchIds: [claim.branchId] }, async (tx) => {
     const txRepo = new DentalInsuranceClaimRepository(tx, logger);
+    // Serialize concurrent line edits on this claim: recalculateBilled is an unlocked
+    // read-modify-write of the claim aggregate, so two PATCHes to different lines could
+    // each recompute from a snapshot missing the other's edit and the last write would
+    // lose one line's contribution. Locking the claim row first makes the second tx
+    // re-read the first's committed line edit before recomputing.
+    await txRepo.lockClaim(claimId);
     const u = await txRepo.updateLine(lineId, claimId, {
       ...(body.approvedAmountCents !== undefined && { approvedAmountCents: body.approvedAmountCents }),
       ...(body.paidAmountCents !== undefined && { paidAmountCents: body.paidAmountCents }),

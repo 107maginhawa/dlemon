@@ -38,6 +38,7 @@ import { getAppointment } from './getAppointment';
 import { listAppointments } from './listAppointments';
 import { updateAppointment } from './updateAppointment';
 import { checkInAppointment } from './checkInAppointment';
+import { QueueItemRepository } from './repos/queue-item.repo';
 import { cancelAppointment } from './cancelAppointment';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
@@ -614,6 +615,26 @@ describe('checkInAppointment handler', () => {
     const repo = new DentalAppointmentRepository(db);
     const updated = await repo.findOneById(appt.id);
     expect(updated!.visitId).toBe(body.visitId);
+  });
+
+  // PP-3 (ISSUE-037): checking a patient in auto-enqueues them onto the branch
+  // queue board (status 'waiting'), so the board is no longer permanently empty.
+  test('auto-enqueues the patient onto the branch queue board on check-in', async () => {
+    const appt = await seedAppointment();
+    const app = buildTestApp(TEST_USER);
+
+    const res = await app.request(`/dental/appointments/${appt.id}/check-in`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(200);
+
+    // Scope by BRANCH_ID + this appointment so the polluted test template can't
+    // leak in foreign rows.
+    const queue = new QueueItemRepository(db);
+    const mine = (await queue.findMany({ branchId: BRANCH_ID })).filter((i) => i.appointmentId === appt.id);
+    expect(mine.length).toBe(1);
+    expect(mine[0]!.status).toBe('waiting');
+    expect(mine[0]!.patientId).toBe(PATIENT_ID);
   });
 });
 

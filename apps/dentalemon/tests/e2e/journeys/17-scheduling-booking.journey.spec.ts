@@ -47,12 +47,21 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     const bookDate = new Date()
     bookDate.setDate(bookDate.getDate() + 7)
     // Land on a weekday: seeded branch hours close Sunday and shorten Saturday, so a
-    // weekend 10:00 slot can 422 OUTSIDE_WORKING_HOURS depending on the calendar date
-    // CI runs on — which leaves the modal open and flakes the close assertion below.
-    while (bookDate.getDay() === 0 || bookDate.getDay() === 6) {
-      bookDate.setDate(bookDate.getDate() + 1)
+    // weekend 10:00 slot 422s OUTSIDE_WORKING_HOURS — which leaves the modal open and
+    // fails the close assertion below.
+    //
+    // Skip in the SAME frame the booking will actually use, not bookDate's. The modal
+    // builds startAt = `new Date(`${bookYmd}T10:00:00`)` (LOCAL, Asia/Manila), so the
+    // working-hours weekday is bookYmd-@-10:00's local weekday. bookDate.getDay() (the
+    // instant's local weekday) can disagree with ymd(bookDate) (its UTC date) at a
+    // UTC-evening wall-clock — emitting a bookYmd that is a closed Manila day. Validate
+    // the emitted date itself so the journey is wall-clock-robust.
+    let bookYmd = ymd(bookDate)
+    while ([0, 6].includes(new Date(`${bookYmd}T10:00:00`).getDay())) {
+      const next = new Date(`${bookYmd}T10:00:00`)
+      next.setDate(next.getDate() + 1)
+      bookYmd = ymd(next)
     }
-    const bookYmd = ymd(bookDate)
 
     // ── DOM-only journey ──────────────────────────────────────────────────
     // dentist lands on /dashboard. The _dashboard guard requires an IN-MEMORY
@@ -108,6 +117,18 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     ).toBeTruthy()
     expect(mine.status).toBe('scheduled')
     expect(mine.visitType).toBe('checkup')
+
+    // WF-024: assert the booked appointment actually RENDERS on the calendar grid —
+    // not just that listAppointments returns it. Navigate the day view from today to
+    // the booked date (deterministic # of "Next day" clicks) and find its card.
+    const deltaDays = Math.round((Date.parse(bookYmd) - Date.parse(ymd(new Date()))) / 86_400_000)
+    for (let i = 0; i < deltaDays; i++) {
+      await page.getByRole('button', { name: 'Next day' }).click()
+    }
+    await expect(
+      page.getByTestId(`appt-draggable-${mine.id}`),
+      'the booked appointment must render on the calendar day grid (WF-024)',
+    ).toBeVisible({ timeout: 10_000 })
 
     recordJourneyPass(META)
   } catch (err) {

@@ -65,6 +65,16 @@ export function truncateId(id: string, maxLen = 8): string {
   return id.length <= maxLen ? id : id.slice(0, maxLen) + '...';
 }
 
+/**
+ * Label shown on a week-view appointment chip. Prefer the patient name; fall
+ * back to a truncated id only when the name is absent. ISSUE-011 (QA
+ * 2026-06-20): the week chip rendered the raw patient UUID even when
+ * patientName was present (the day view already preferred the name).
+ */
+export function chipLabel(appt: { patientName?: string; patientId: string }): string {
+  return appt.patientName ?? truncateId(appt.patientId);
+}
+
 const statusChipStyle: Record<string, string> = {
   scheduled: 'bg-blue-50/80 border-l-blue-500',
   checkedIn: 'bg-teal-50/80 border-l-teal-500',
@@ -202,11 +212,11 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                       style={{ top, height, ...weekChipStyle(column) }}
                       role="button"
                       tabIndex={0}
-                      aria-label={`${truncateId(appt.patientId)}, ${formatChipTime(appt.scheduledAt)}`}
+                      aria-label={`${chipLabel(appt)}, ${formatChipTime(appt.scheduledAt)}`}
                       onClick={() => onAppointmentClick(appt)}
                       onKeyDown={activateOnKey(() => onAppointmentClick(appt))}
                     >
-                      <div className="text-[11px] font-semibold truncate">{truncateId(appt.patientId)}</div>
+                      <div className="text-[11px] font-semibold truncate">{chipLabel(appt)}</div>
                       <div className="text-[10px] text-muted-foreground tabular-nums">{formatChipTime(appt.scheduledAt)}</div>
                     </div>
                   );

@@ -451,6 +451,33 @@ describe('updatePerson handler', () => {
     expect(found!.firstName).toBe('New');
   });
 
+  test('partial contactInfo merges — a phone-only edit keeps the stored email', async () => {
+    // Mirrors the dental-patient PATCH contract (dental-patient.hurl step 5e):
+    // contactInfo is a partial merge, so omitting a sub-field must NOT wipe it.
+    await seedPerson(TEST_USER_ID, {
+      firstName: 'Merge',
+      contactInfo: { email: 'keep@test.com', phone: '+639111111111' },
+    });
+    const app = buildTestApp(authedUser);
+
+    const res = await app.request(`/persons/${TEST_USER_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactInfo: { phone: '+639222222222' } }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.contactInfo.phone).toBe('+639222222222');
+    // Omitted email survives the partial update (no silent data loss).
+    expect(body.contactInfo.email).toBe('keep@test.com');
+
+    // Persisted, not just echoed.
+    const found = await new PersonRepository(db).findOneById(TEST_USER_ID);
+    expect((found!.contactInfo as any).email).toBe('keep@test.com');
+    expect((found!.contactInfo as any).phone).toBe('+639222222222');
+  });
+
   test('explicit null clears a nullable field', async () => {
     await seedPerson(TEST_USER_ID, { firstName: 'Keep', middleName: 'Clearme' });
     const app = buildTestApp(authedUser);

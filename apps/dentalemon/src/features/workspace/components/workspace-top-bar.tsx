@@ -9,9 +9,10 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard } from 'lucide-react';
+import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard, AlertTriangle } from 'lucide-react';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
+import { useDentalAlerts, DENTAL_ALERT_TYPE_LABELS, type DentalAlertSeverity } from '@/features/workspace/hooks/use-dental-alerts';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canPrescribe, canAddTreatment, canCaptureConsent, type DentalRole } from '@/lib/rbac';
 
@@ -26,8 +27,16 @@ interface WorkspaceTopBarProps {
   onNotes: () => void;
   onTreatmentPlan: () => void;
   onCompleteVisit: () => void;
+  onAlerts?: () => void;
   visitStatus?: 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
 }
+
+// Severity colours for chairside dental-alert badges in the top bar.
+const ALERT_SEVERITY_BADGE: Record<DentalAlertSeverity, string> = {
+  high: 'bg-red-100 text-red-700 border-red-200',
+  medium: 'bg-amber-100 text-amber-700 border-amber-200',
+  low: 'bg-slate-100 text-slate-600 border-slate-200',
+};
 
 function IconButton({
   label,
@@ -92,10 +101,12 @@ export function WorkspaceTopBar({
   onNotes,
   onTreatmentPlan,
   onCompleteVisit,
+  onAlerts,
   visitStatus,
 }: WorkspaceTopBarProps) {
   const { data: profile } = usePatientProfile({ patientId });
   const { entries } = useMedicalHistory(patientId);
+  const { activeAlerts } = useDentalAlerts(patientId);
 
   // E2 / FIX-008: role-gate the WRITE-launcher affordances (Rx / Consent / Treatment
   // Plan / Lab / PMD) — these have no read value for a non-clinical role, so hide them
@@ -155,30 +166,55 @@ export function WorkspaceTopBar({
         <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
       </div>
 
-      {/* CENTER: Safety floor */}
-      {safetyItems.length > 0 && (
-        <div className="flex-1 flex items-center justify-center min-w-0">
-          <div className="bg-red-50 border border-red-200 rounded-lg px-2 py-1 flex gap-1 flex-wrap max-w-full overflow-hidden">
-            {safetyItems.slice(0, 6).map((item) => (
-              <span
-                key={item.id}
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                  badgeColor[item.entryType] ?? 'bg-gray-100 text-gray-600 border-gray-200'
-                }`}
-                title={`${item.entryType}: ${item.displayName}`}
-              >
-                {item.displayName}
-              </span>
-            ))}
-            {safetyItems.length > 6 && (
-              <span className="text-[10px] text-red-500 font-semibold">
-                +{safetyItems.length - 6} more
-              </span>
-            )}
-          </div>
+      {/* CENTER: Safety floor (medical history) + chairside dental alerts */}
+      {safetyItems.length > 0 || activeAlerts.length > 0 ? (
+        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+          {safetyItems.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-2 py-1 flex gap-1 flex-wrap max-w-full overflow-hidden">
+              {safetyItems.slice(0, 6).map((item) => (
+                <span
+                  key={item.id}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    badgeColor[item.entryType] ?? 'bg-gray-100 text-gray-600 border-gray-200'
+                  }`}
+                  title={`${item.entryType}: ${item.displayName}`}
+                >
+                  {item.displayName}
+                </span>
+              ))}
+              {safetyItems.length > 6 && (
+                <span className="text-[10px] text-red-500 font-semibold">
+                  +{safetyItems.length - 6} more
+                </span>
+              )}
+            </div>
+          )}
+          {activeAlerts.length > 0 && (
+            <div
+              data-testid="dental-alert-badges"
+              className="bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 flex items-center gap-1 flex-wrap max-w-full overflow-hidden"
+            >
+              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+              {activeAlerts.slice(0, 6).map((alert) => (
+                <span
+                  key={alert.id}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${ALERT_SEVERITY_BADGE[alert.severity]}`}
+                  title={`Alert (${alert.severity}): ${DENTAL_ALERT_TYPE_LABELS[alert.alertType]}${alert.description ? ` — ${alert.description}` : ''}`}
+                >
+                  {DENTAL_ALERT_TYPE_LABELS[alert.alertType]}
+                </span>
+              ))}
+              {activeAlerts.length > 6 && (
+                <span className="text-xs text-amber-600 font-semibold">
+                  +{activeAlerts.length - 6} more
+                </span>
+              )}
+            </div>
+          )}
         </div>
+      ) : (
+        <div className="flex-1" />
       )}
-      {safetyItems.length === 0 && <div className="flex-1" />}
 
       {/* RIGHT: Visit date + icon buttons */}
       <div className="flex items-center gap-1 shrink-0">
@@ -200,6 +236,9 @@ export function WorkspaceTopBar({
         </IconButton>
         <IconButton label="Attachments" onClick={onAttachments}>
           <Paperclip className="h-4 w-4" />
+        </IconButton>
+        <IconButton label="Alerts" onClick={() => onAlerts?.()}>
+          <AlertTriangle className="h-4 w-4" />
         </IconButton>
         {allowTreatmentPlan && (
           <IconButton label="Treatment Plan" onClick={onTreatmentPlan}>

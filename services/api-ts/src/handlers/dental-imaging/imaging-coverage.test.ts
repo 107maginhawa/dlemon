@@ -1204,6 +1204,12 @@ function makeCephCoverageDb(opts: {
     delete: (_tableRef: any) => ({
       where: (_cond: any) => Promise.resolve(undefined),
     }),
+    // Money-race fix 5317802a: createCephReport finalizes inside
+    // db.transaction(tx => { tx.execute(pg_advisory_xact_lock(4001,…)); … }).
+    execute: (_query: any) => Promise.resolve({ rows: [] }),
+    async transaction(cb: any) {
+      return cb(this);
+    },
   };
 }
 

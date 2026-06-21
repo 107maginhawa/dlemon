@@ -277,7 +277,11 @@ function PinEntryRoute() {
 
     if (data.success) {
       pinSession.startSession({ memberId, displayName: member.displayName, role: member.role });
-      useOrgContextStore.getState().setContext({ memberId, role: member.role });
+      // ISSUE-017: carry the active member's name so the sidebar shows who is
+      // actually acting (not the Better-Auth account owner) on a shared kiosk.
+      useOrgContextStore
+        .getState()
+        .setContext({ memberId, memberName: member.displayName, role: member.role });
       setFailedAttempts(0);
       // FR9.3: Navigate to role-appropriate landing page
       const destination = ROLE_LANDING[member.role] ?? '/dashboard';

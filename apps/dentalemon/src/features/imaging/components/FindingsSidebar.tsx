@@ -12,6 +12,7 @@ import {
 } from '@monobase/ui'
 import { Skeleton } from '@monobase/ui'
 import { useImagingFindings, type ImagingFinding, type ImagingFindingType, type ImagingFindingStatus } from '@/features/imaging/hooks/use-imaging-findings'
+import { getErrorMessage } from '@/lib/error-toast'
 
 // ── Type map ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export function FindingsSidebar({
   onClose,
   initialAnnotationId,
 }: FindingsSidebarProps) {
-  const { findings, isLoading, isError, createFinding, updateFinding, deleteFinding } =
+  const { findings, isLoading, isError, mutationError, createFinding, updateFinding, deleteFinding } =
     useImagingFindings(imageId, { enabled: isOpen })
 
   const [selectedType, setSelectedType] = useState<ImagingFindingType | ''>('')
@@ -259,6 +260,15 @@ export function FindingsSidebar({
           {createFinding.isPending ? 'Adding...' : 'Add Finding'}
         </Button>
       </form>
+
+      {/* ISSUE-026: surface create/update/delete failures (tier-block 402/403,
+          422, 5xx, network). The hook exposes `mutationError` "for visible error
+          UI" but the panel previously only logged to console → silent failures. */}
+      {mutationError && (
+        <p role="alert" className="text-xs text-red-400 px-4 py-2 border-b border-zinc-700">
+          {getErrorMessage(mutationError, 'Could not save the finding. Please try again.')}
+        </p>
+      )}
 
       {/* Findings list */}
       <div className="flex flex-col flex-1 px-4 py-3 gap-2">

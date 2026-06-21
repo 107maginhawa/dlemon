@@ -277,6 +277,15 @@ function makeCephDb(opts: {
     delete: (_tableRef: any) => ({
       where: (_cond: any) => Promise.resolve(undefined),
     }),
+    // Money-race fix 5317802a: createCephReport now finalizes inside
+    // db.transaction(tx => { tx.execute(pg_advisory_xact_lock(4001,…)); … }).
+    // execute() is a no-op lock; transaction() hands the callback `this` (the
+    // same mock db) so getLatestReport/createReportVersion resolve as before —
+    // and the D4 spy's insert override (which spreads this object) still applies.
+    execute: (_query: any) => Promise.resolve({ rows: [] }),
+    async transaction(cb: any) {
+      return cb(this);
+    },
   };
 }
 

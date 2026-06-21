@@ -17,6 +17,24 @@ import {
   updateDentalPatientMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import { exportDentalPatients } from '@monobase/sdk-ts/generated';
+import { toastError } from '@/lib/error-toast';
+
+// ─── shared cache-invalidation predicate ────────────────────────────────────
+//
+// Any patient mutation that adds/removes/renames an ACTIVE patient changes two
+// derived collections, both read off the generated-SDK key shape
+// [{ _id: 'listX', … }]:
+//   - listDentalPatients      (the list)
+//   - detectDuplicatePatients (the Find-Duplicates panel; scans ACTIVE patients
+//     only — see patient.repo.ts#findDuplicateCandidates)
+// ISSUE-019: create/archive/restore/bulk-archive/demographics-edit invalidated
+// only the list, so the duplicates panel kept serving a 5-min-stale result
+// (global staleTime is 5 min) — a just-created duplicate showed "no duplicates".
+// Invalidate BOTH wherever the active set changes.
+export function isPatientCollectionQuery(queryKey: readonly unknown[]): boolean {
+  const id = (queryKey[0] as { _id?: string })?._id;
+  return id === 'listDentalPatients' || id === 'detectDuplicatePatients';
+}
 
 // ─── useUpdatePatient (FR2.4) ───────────────────────────────────────────────
 
@@ -35,13 +53,13 @@ export function useUpdatePatient(patientId: string) {
   const mutation = useMutation({
     ...updateDentalPatientMutation(),
     onSuccess: () => {
-      // Refresh the single profile (getDentalPatient) and the list so the edit
-      // is reflected on reload (edit-save-reload journey).
+      // Refresh the single profile (getDentalPatient), the list, and the
+      // duplicates panel (a name/DOB edit can form or resolve a match) so the
+      // edit is reflected on reload (edit-save-reload journey).
       queryClient.invalidateQueries({
-        predicate: (q) => {
-          const id = (q.queryKey[0] as { _id?: string })?._id;
-          return id === 'getDentalPatient' || id === 'listDentalPatients';
-        },
+        predicate: (q) =>
+          (q.queryKey[0] as { _id?: string })?._id === 'getDentalPatient' ||
+          isPatientCollectionQuery(q.queryKey),
       });
     },
   });
@@ -65,7 +83,7 @@ export function useArchivePatient() {
     ...archiveDentalPatientMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
+        predicate: (q) => isPatientCollectionQuery(q.queryKey),
       });
     },
   });
@@ -90,7 +108,7 @@ export function useRestorePatient() {
     ...restoreDentalPatientMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
+        predicate: (q) => isPatientCollectionQuery(q.queryKey),
       });
     },
   });
@@ -115,7 +133,7 @@ export function useBulkArchive() {
     ...bulkArchiveDentalPatientsMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalPatients',
+        predicate: (q) => isPatientCollectionQuery(q.queryKey),
       });
     },
   });
@@ -169,6 +187,12 @@ export function useExportPatients(branchId?: string) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       return data;
+    } catch (err) {
+      // Surface the failure instead of a silent no-op. Export is dentist_owner-only
+      // server-side (assertBranchRole), so a staff role 403s — without this the user
+      // clicked Export and saw nothing happen.
+      toastError(err, 'Could not export patients. You may not have permission to export.');
+      return undefined;
     } finally {
       setIsExporting(false);
     }

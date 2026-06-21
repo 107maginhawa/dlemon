@@ -19,6 +19,7 @@ import { FeeSchedule } from './components/fee-schedule';
 import { PaymentTermsSettings } from './components/payment-terms-settings';
 import { TaxModeSettings } from './components/tax-mode-settings';
 import { ReminderCadenceSettings } from './components/reminder-cadence-settings';
+import { OnlineBookingSettings } from './components/online-booking-settings';
 import { LocaleSettings } from './components/locale-settings';
 import { NotificationSettings } from './components/notification-settings';
 import { ConsentTemplates } from './components/consent-templates';
@@ -39,6 +40,7 @@ export const SETTINGS_PANELS: SettingsPanel[] = [
   { key: 'payment-terms', label: 'Payment Terms', Component: PaymentTermsSettings },
   { key: 'tax-mode', label: 'Tax (VAT)', Component: TaxModeSettings },
   { key: 'reminder-cadence', label: 'Reminder Cadence', Component: ReminderCadenceSettings },
+  { key: 'online-booking', label: 'Online Booking', Component: OnlineBookingSettings },
   { key: 'locale', label: 'Locale', Component: LocaleSettings },
   { key: 'notifications', label: 'Notifications', Component: NotificationSettings },
   { key: 'consent', label: 'Consent Forms', Component: ConsentTemplates },

@@ -656,11 +656,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "addInsuranceClaimLine",
@@ -1163,11 +1163,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "createDentalFinding",
@@ -1267,11 +1267,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "createInsuranceClaim",
@@ -1293,11 +1293,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "createInventoryAdjustment",
@@ -1397,11 +1397,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "createOnboarding",
@@ -1618,11 +1618,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "createTreatmentPlan",
@@ -3179,10 +3179,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "listDentalAlerts",
@@ -3191,11 +3191,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "listDentalFindings",
@@ -3542,11 +3542,11 @@
     "module": "dental-clinical",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "listPMDs",
@@ -3633,11 +3633,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "listPatientTreatmentPlans",
@@ -3854,11 +3854,11 @@
     "module": "dental-scheduling",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "markAllNotificationsAsRead",
@@ -3997,11 +3997,11 @@
     "module": "dental-scheduling",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "recordClaimRemittance",
@@ -4153,11 +4153,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "requestErasure",
@@ -4426,11 +4426,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "updateDentalFinding",
@@ -4543,11 +4543,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "updateInventoryItem",
@@ -4777,11 +4777,11 @@
     "module": "dental-patient",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": false,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "gap"
   },
   {
     "operationId": "updateTooth",

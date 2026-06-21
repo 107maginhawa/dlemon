@@ -20,10 +20,12 @@ import {
   CreateConsentFormBody, CreateConsentFormParams,
   SignConsentFormBody, SignConsentFormParams,
   RecordConsentRefusalBody, RecordConsentRefusalParams,
+  ListConsentRefusalsParams,
 } from '@/generated/openapi/validators';
 import { createConsentForm } from './consent/createConsentForm';
 import { signConsentForm } from './consent/signConsentForm';
 import { recordConsentRefusal } from './consent/recordConsentRefusal';
+import { listConsentRefusals } from './consent/listConsentRefusals';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -82,6 +84,10 @@ function buildTestApp(user?: typeof TEST_USER) {
     zValidator('param', RecordConsentRefusalParams, ve),
     zValidator('json', RefusalBodyOnly, ve),
     recordConsentRefusal as any,
+  );
+  app.get('/dental/visits/:visitId/consent-refusals',
+    zValidator('param', ListConsentRefusalsParams, ve),
+    listConsentRefusals as any,
   );
   return app;
 }
@@ -309,5 +315,44 @@ describe('P1-3: Informed refusal path', () => {
     });
 
     expect(res.status).toBe(422);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1-3: listConsentRefusals — visit-scoped read (coverage-backlog uc-list-consent-refusals)
+// ---------------------------------------------------------------------------
+
+describe('P1-3: listConsentRefusals is visit-scoped', () => {
+  async function recordRefusal(app: ReturnType<typeof buildTestApp>, visitId: string, desc: string) {
+    const res = await app.request(`/dental/visits/${visitId}/consent-refusals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientId: PATIENT_ID,
+        refusingMemberId: MEMBER_ID,
+        procedureDescription: desc,
+        refusalReason: 'Patient declines',
+        patientAcknowledgement: 'Patient understands and declines.',
+      }),
+    });
+    expect(res.status).toBe(201);
+    return (await res.json()) as any;
+  }
+
+  test('returns only the refusals for the requested visit (not another visit\'s)', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visitA = await seedVisit();
+    const visitB = await seedVisit();
+    const refusalA = await recordRefusal(app, visitA.id, 'Extraction A');
+    await recordRefusal(app, visitB.id, 'Extraction B');
+
+    const res = await app.request(`/dental/visits/${visitA.id}/consent-refusals`, { method: 'GET' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    // visit-scoped: exactly visitA's one refusal, NOT visitB's (RED if the handler drops the visitId filter)
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].id).toBe(refusalA.id);
+    expect(body.data[0].visitId).toBe(visitA.id);
+    expect(body.pagination.totalCount).toBe(1);
   });
 });

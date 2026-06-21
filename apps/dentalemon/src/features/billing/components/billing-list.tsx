@@ -125,16 +125,22 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
 
   function handleTabChange(tab: FilterTab) {
     setActiveTab(tab);
-    // Invalidate so switching tabs always fetches fresh data
-    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    // Invalidate so switching tabs always fetches fresh data. The list query is
+    // the generated SDK's (key [{ _id: 'listDentalInvoices', … }]); the literal
+    // ['invoices'] key never matched it. Match by _id.
+    queryClient.invalidateQueries({
+      predicate: (q) => (q.queryKey[0] as { _id?: string })?._id === 'listDentalInvoices',
+    });
   }
 
   const summary = summarizeInvoices(invoices);
 
   return (
     <div className="flex flex-col gap-4" data-testid="billing-list">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Summary Cards — stack on phones, 2-up on tablet (the wide peso totals
+          don't fit 3-across once the sidebar is present at ~768px), 3-up at lg.
+          Keeps the page from overflowing at iPad-portrait (PP-9 / ISSUE-045). */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
             Total Outstanding

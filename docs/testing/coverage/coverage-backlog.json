@@ -1,0 +1,947 @@
+{
+  "generatedBy": "Phase 1 (ledger-coverage.ts + LLM verify wf_27c33227-093)",
+  "note": "Verified user-reachable coverage gaps. Each confirmed real by corpus search. Burn down RED-first in Phase 3.",
+  "totals": {
+    "confirmedGaps": 18,
+    "droppedFalsePositives": 4,
+    "contractOnlyDeferred": 36
+  },
+  "droppedFalsePositives": [
+    "billing-create-invoice",
+    "imaging-delete-image-link",
+    "person-get-operation",
+    "calibrate-image"
+  ],
+  "backlog": [
+    {
+      "id": "notif-push-opt-in-enable",
+      "title": "Enable push notifications (request permission)",
+      "type": "workflow",
+      "risk": "auth",
+      "severity": "unproven",
+      "modules": [
+        "notifications"
+      ],
+      "route": "/_workspace",
+      "control": "data-testid=push-opt-in-enable (\"Enable notifications\")",
+      "endpoints": [],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add a RED-first Playwright spec at apps/dentalemon/tests/e2e/push-opt-in.spec.ts (or extend notification-inbox.spec.ts) that signs up/onboards/unlocks PIN, navigates to a /_workspace child route, deterministically enables push (test seam for VITE_ONESIGNAL_APP_ID and a page.addInitScript stub of Notification.requestPermission so no real OS prompt fires), then asserts getByTestId('push-opt-in') is visible, clicks getByTestId('push-opt-in-enable'), and asserts the nudge disappears AND localStorage[PUSH_OPT_IN_DISMISSED_KEY]==='1' AND the stubbed permission request was invoked.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/push-opt-in-prompt.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/push-opt-in-prompt.test.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_workspace.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/notification-inbox.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/onesignal.ts"
+      ]
+    },
+    {
+      "id": "portal-index-redirect",
+      "title": "Portal root redirects to Appointments tab",
+      "type": "workflow",
+      "risk": "core",
+      "severity": "unproven",
+      "modules": [
+        "portal"
+      ],
+      "route": "/portal",
+      "control": "beforeLoad redirect",
+      "endpoints": [],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add one RED-first Playwright e2e that, as an authenticated patient session (Better-Auth user with linked Person+dental_patient and NO membership), runs page.goto(`${APP}/portal`) and asserts the redirect: await page.waitForURL(/\\/portal\\/appointments$/) plus expect(page.getByTestId('portal-tab-appointments')).toHaveAttribute('aria-current','page'). Seed the patient session via the J24 magic-link/Mailpit helper. Prove RED by temporarily removing the `throw redirect` in portal.index.tsx (URL stays at /portal), then restore.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.index.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/authed-route-sweep.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts"
+      ]
+    },
+    {
+      "id": "portal-tab-navigation",
+      "title": "Bottom tab navigation between Appointments and Bills",
+      "type": "workflow",
+      "risk": "core",
+      "severity": "unproven",
+      "modules": [
+        "portal"
+      ],
+      "route": "/portal/*",
+      "control": "portal-tab-appointments / portal-tab-bills",
+      "endpoints": [],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add ONE journey/e2e spec (e.g. apps/dentalemon/tests/e2e/journeys/32-patient-portal-tabs.journey.spec.ts, or a simpler portal-tabs.spec.ts) that, as a PATIENT session (auth-only, no PIN — reuse the magic-link/session setup from 24-patient-magic-link-signin.journey.spec.ts so it lands authenticated): 1) navigate to /portal (or /portal/appointments) and assert the bottom nav is visible with both tabs; 2) start on Appointments — assert MyAppointmentsView content is shown and `getByTestId('portal-tab-appointments')` has aria-current=\"page\"; 3) click `getByTestId('portal-tab-bills')`, assert URL becomes /portal/bills, MyInvoicesView (/me/invoices + /me/balance roll-up) renders, and aria-current flips to the Bills tab; 4) click back to `portal-tab-appointments` and assert it returns. Write it RED first (the route/view/testids already exist, so it should go GREEN once the patient session is correctly established — make the patient-session setup the deliberate failing precondition, e.g. assert you reach /portal not /auth/pin). This drives the tab control end-to-end and exercises the /me/* endpoints through the real UI.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.appointments.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.bills.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/authed-route-sweep.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-appointments-view.test.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.test.tsx"
+      ]
+    },
+    {
+      "id": "be-dental-billing-loa-authorization-dependency",
+      "title": "Coverage authorization (LOA) lifecycle backing claims (inter-module)",
+      "type": "inter-module",
+      "risk": "money",
+      "severity": "e2e-gap",
+      "modules": [
+        "dental-billing",
+        "dental-patient"
+      ],
+      "route": "/dental/patients/{patientId}/authorizations",
+      "control": "Add authorization",
+      "endpoints": [
+        "POST /dental/patients/{patientId}/authorizations",
+        "GET /dental/patients/{patientId}/authorizations",
+        "PATCH /dental/patients/{patientId}/authorizations/{authorizationId}/status"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [
+        "BR-056",
+        "BR-057"
+      ],
+      "recommendation": "RED-first, smallest viable: a UI-driving Playwright e2e is currently impossible because the LOA UI does not exist (no route, no \"Add authorization\" control, orphaned hooks). So add an API-level lifecycle e2e/journey that walks the LOA flow through the live stack, mirroring billing journeys 25-27: (1) create an insurance profile for a seeded patient, (2) POST /dental/patients/{patientId}/authorizations with insuranceProfileId, (3) GET /dental/patients/{patientId}/authorizations and assert the new LOA appears with status 'pending', (4) PATCH /dental/patients/{patientId}/authorizations/{authorizationId}/status to 'approved' with approvedAmountCents and assert the transition + persisted amount. Place it at apps/dentalemon/tests/e2e/loa-authorization-lifecycle.spec.ts (or a numbered journey). This is the honest minimal lock. The full fix is a follow-up: surface an \"Add authorization\" control (wire the existing usePatientAuthorizations/useAuthorizationMutations hooks into InsuranceCard or a patient-profile panel) and then add a true UI-driving Playwright journey.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/15-offline-sync-metadata.journey.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/billing/hooks/use-insurance-claims.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routeTree.gen.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-billing/revenue-cycle-route-registration.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-billing/revenue-cycle-acceptance.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-revenue-cycle.hurl"
+      ]
+    },
+    {
+      "id": "inter-portal-billing-facade",
+      "title": "Portal reads invoices/balance via dental-billing facade (boundary lint)",
+      "type": "inter-module",
+      "risk": "money",
+      "severity": "e2e-gap",
+      "modules": [
+        "dental-portal",
+        "dental-billing"
+      ],
+      "route": "/me/invoices",
+      "control": null,
+      "endpoints": [
+        "GET /me/invoices",
+        "GET /me/balance"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [
+        "WF-078"
+      ],
+      "relatedBR": [
+        "BR-013"
+      ],
+      "recommendation": "Add a RED-first Playwright e2e at apps/dentalemon/tests/e2e/portal-bills.spec.ts that authenticates as a patient and navigates to /portal/bills, asserting the facade end-to-end: balance roll-up via getByTestId('portal-balance-amount') from GET /me/balance, own invoices via getByTestId('portal-invoices-list')/portal-invoice-card from GET /me/invoices (with a voided/uncollectible invoice confirmed hidden in the UI), and an IDOR sanity check that only the caller's data appears.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.bills.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.test.tsx",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-portal/dental-portal.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-portal.hurl",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/patient-balance.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/19-case-presentation-accept.journey.spec.ts"
+      ]
+    },
+    {
+      "id": "notif-push-click-deep-link",
+      "title": "Route a clicked push to its in-app deep link",
+      "type": "inter-module",
+      "risk": "money",
+      "severity": "e2e-gap",
+      "modules": [
+        "notifications",
+        "booking",
+        "billing",
+        "patients"
+      ],
+      "route": "/_dashboard (usePushNotificationRouting registered on shell mount)",
+      "control": "OS/browser push notification click (OneSignal click listener)",
+      "endpoints": [],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add one Playwright e2e spec at apps/dentalemon/tests/e2e/push-deep-link.spec.ts that, on the authenticated /_dashboard shell, page.addInitScript a window.OneSignal stub (Notifications.addEventListener captures the click handler; force the SDK's isInitialized truthy so the real usePushNotificationRouting listener is registered). Then invoke the captured handler with additionalData {type:'booking.created'} and assert navigation to /calendar; add cases type:'recall.due'->/patients, type:'billing'->/billing, unknown type->/dashboard (never a dead tap). This exercises the full _dashboard -> hook -> listener -> resolveNotificationDeepLink -> navigate chain the pure unit test cannot. Write it RED-first.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/hooks/use-push-notification-routing.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/lib/notification-routing.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/onesignal.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/lib/notification-routing.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_dashboard.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/_journey-helpers.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/notification-inbox.spec.ts"
+      ]
+    },
+    {
+      "id": "person-billing-party-lookup-inter-module",
+      "title": "Inter-module: findBillingParty — invoice merchant/customer existence validation",
+      "type": "inter-module",
+      "risk": "money",
+      "severity": "e2e-gap",
+      "modules": [
+        "person",
+        "billing"
+      ],
+      "route": "/invoices",
+      "control": null,
+      "endpoints": [
+        "POST /invoices",
+        "PATCH /invoices/:invoice",
+        "POST /invoices/:invoice/pay"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "See above.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/person/repos/person-billing.facade.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/billing/createInvoice.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/billing/payInvoice.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/billing/updateInvoice.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/generated/openapi/routes.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/billing/createInvoice.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/billing-lifecycle.hurl",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/04-revenue-chain.journey.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/api-error-paths.spec.ts"
+      ]
+    },
+    {
+      "id": "portal-get-my-balance",
+      "title": "Patient views own outstanding balance roll-up (GET /me/balance)",
+      "type": "workflow",
+      "risk": "money",
+      "severity": "e2e-gap",
+      "modules": [
+        "dental-portal",
+        "dental-billing",
+        "patient",
+        "person",
+        "portal"
+      ],
+      "route": "/portal/bills",
+      "control": "portal-balance-summary / portal-balance-amount",
+      "endpoints": [
+        "GET /me/balance"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [
+        "WF-078"
+      ],
+      "relatedBR": [
+        "BR-013"
+      ],
+      "recommendation": "Add one RED-first Playwright journey spec (e.g. apps/dentalemon/tests/e2e/journeys/32-portal-view-my-balance.journey.spec.ts) modeled on J24. Set B / skipAllowed (needs an authenticated patient session). Steps: establish a patient session for an account whose person owns a dental_patient row with at least one issued invoice carrying a balance; page.goto(`${APP}/portal/bills`); assert expect(page.getByTestId('portal-balance-summary')).toBeVisible(); then do an independent read page.request.get(`${API}/me/balance`) via the browser's own cookie jar and assert the rendered outstanding amount equals body.outstandingBalanceCents. RED today (no spec drives /portal/bills), GREEN once the live control is proven to reflect the endpoint.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.test.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.bills.tsx",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-portal/dental-portal.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-portal/getMyBalance.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-portal.hurl"
+      ]
+    },
+    {
+      "id": "portal-list-my-invoices",
+      "title": "Patient views own invoices (GET /me/invoices)",
+      "type": "workflow",
+      "risk": "money",
+      "severity": "e2e-gap",
+      "modules": [
+        "dental-portal",
+        "dental-billing",
+        "patient",
+        "person",
+        "portal"
+      ],
+      "route": "/portal/bills",
+      "control": "Try again button",
+      "endpoints": [
+        "GET /me/invoices"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [
+        "WF-078"
+      ],
+      "relatedBR": [
+        "BR-013"
+      ],
+      "recommendation": "",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.bills.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-invoices-view.test.tsx",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-portal/dental-portal.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-portal.hurl"
+      ]
+    },
+    {
+      "id": "portal-list-my-appointments",
+      "title": "Patient views own appointments (GET /me/appointments)",
+      "type": "workflow",
+      "risk": "clinical",
+      "severity": "e2e-gap",
+      "modules": [
+        "dental-portal",
+        "dental-scheduling",
+        "patient",
+        "person",
+        "portal"
+      ],
+      "route": "/portal/appointments",
+      "control": "Try again button",
+      "endpoints": [
+        "GET /me/appointments"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [
+        "WF-078"
+      ],
+      "relatedBR": [],
+      "recommendation": "Add a Playwright e2e journey, e.g. apps/dentalemon/tests/e2e/portal-appointments.spec.ts, RED-first against current main. Sign in as a seeded patient who owns at least one appointment, navigate to ${APP}/portal/appointments, and assert DOM-first (Anti-Cheating Rule 1): [data-testid=\"portal-appointments-list\"] visible with at least one [data-testid=\"portal-appointment-card\"] whose visible text matches the seeded visit type/when. Add an independent read (Rule 2) via page.request.get(`${API}/me/appointments`) on the browser cookie jar, asserting the same appointment id appears. For the flagged \"Try again\" control, also force GET /me/appointments to fail (route.fulfill 500), reload, assert the role=\"alert\" copy + visible \"Try again\" button, then click it and assert it re-fires GET /me/appointments. Standard authed Postgres lane (no Mailpit/MinIO); seed patient+appointment via API as J31/online-booking specs do.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal/portal.appointments.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/portal/components/my-appointments-view.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-portal/dental-portal.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-portal.hurl"
+      ]
+    },
+    {
+      "id": "comms-ws-chat-room",
+      "title": "Chat room WebSocket (real-time chat + WebRTC signaling)",
+      "type": "workflow",
+      "risk": "core",
+      "severity": "e2e-gap",
+      "modules": [
+        "comms"
+      ],
+      "route": "/ws/comms/chat-rooms/:room",
+      "control": null,
+      "endpoints": [
+        "GET /ws/comms/chat-rooms/{room}"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add a server-level WebSocket integration test (not a Playwright UI journey, since comms has no UI in apps/dentalemon). Boot api-ts, connect a real WebSocket client to /ws/comms/chat-rooms/:room. RED-first smallest test: assert an unauthenticated/invalid-token connection is rejected (handshake closed), exercising the live middleware+onConnect chain the config-shape unit test cannot. Then extend to authenticated connect + message broadcast to a second client + onClose cleanup.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/comms/ws.chat-room.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/comms/ws.chat-room.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/generated/websocket/registry.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys"
+      ]
+    },
+    {
+      "id": "notifs-mark-all-read",
+      "title": "Mark all notifications as read (optionally by type)",
+      "type": "workflow",
+      "risk": "core",
+      "severity": "e2e-gap",
+      "modules": [
+        "notifs",
+        "notifications"
+      ],
+      "route": "/_dashboard header (inbox header)",
+      "control": "data-testid=notification-mark-all (\"Mark all read\")",
+      "endpoints": [
+        "POST /notifs/read-all",
+        "GET /notifs?status=unread&channel=in-app&limit=25"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add an e2e test to notification-inbox.spec.ts that seeds 2+ real notifications, opens the bell, clicks notification-mark-all, and asserts the empty state + badge removal via the live POST /notifs/read-all round-trip.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/notification-inbox.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/notification-bell.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/notification-bell.test.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/features/notifications/hooks/use-notifications.ts"
+      ]
+    },
+    {
+      "id": "portal-sign-out",
+      "title": "Sign out of patient portal",
+      "type": "workflow",
+      "risk": "core",
+      "severity": "e2e-gap",
+      "modules": [
+        "portal",
+        "auth"
+      ],
+      "route": "/portal/*",
+      "control": "portal-sign-out",
+      "endpoints": [
+        "POST /api/auth/sign-out"
+      ],
+      "missing": [
+        "e2e"
+      ],
+      "relatedWF": [],
+      "relatedBR": [],
+      "recommendation": "Add a focused portal sign-out journey (e.g. apps/dentalemon/tests/e2e/journeys/32-portal-sign-out.journey.spec.ts), Set B / skipAllowed since establishing the patient session most cleanly reuses Mailpit. RED-first smallest path: (1) get a patient session (reuse J24's magic-link helper, or seed a patient and sign in via API into the browser cookie jar); (2) page.goto(`${APP}/portal/appointments`) and assert getByTestId('portal-sign-out') is visible (proves /portal/* loaded under the auth-only guard); (3) drive the control while capturing the call: await Promise.all([page.waitForResponse(r => /\\/auth\\/sign-out/.test(r.url()) && r.request().method()==='POST'), page.getByTestId('portal-sign-out').click()]) and assert status 200; (4) goal-state independent read (Rule 2): expect redirect to /auth/sign-in AND page.request.get(`${API}/auth/get-session`) now returns a null/empty user, proving the session was actually destroyed — not merely that the button exists.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/routes/_portal.tsx",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/cold-start-full-loop.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/tests/e2e/journeys/24-patient-magic-link-signin.journey.spec.ts",
+        "/Users/eladventures/Desktop/dentalemon/apps/dentalemon/src/components/app-sidebar.tsx"
+      ]
+    },
+    {
+      "id": "dp-list-coverage-authorizations",
+      "title": "List coverage authorizations",
+      "type": "use-case",
+      "risk": "clinical",
+      "severity": "be-unit-gap",
+      "modules": [
+        "dental-patient",
+        "patient"
+      ],
+      "route": "/dental/patients/:patientId/authorizations",
+      "control": "LOA list",
+      "endpoints": [
+        "GET /dental/patients/:patientId/authorizations"
+      ],
+      "missing": [
+        "be-unit",
+        "contract"
+      ],
+      "relatedWF": [
+        "WF-013"
+      ],
+      "relatedBR": [
+        "BR-016"
+      ],
+      "recommendation": "See above.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-patient/insurance/listCoverageAuthorizations.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-billing/revenue-cycle-route-registration.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-billing/dental-insurance-claim.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-billing/revenue-cycle-acceptance.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-revenue-cycle.hurl",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/src/modules/dental-patient-finance.tsp"
+      ]
+    },
+    {
+      "id": "dp-list-due-recalls",
+      "title": "List due recalls (front-desk recare worklist)",
+      "type": "use-case",
+      "risk": "clinical",
+      "severity": "be-unit-gap",
+      "modules": [
+        "dental-patient",
+        "dental-org",
+        "scheduling",
+        "recall"
+      ],
+      "route": "/calendar",
+      "control": "Recare due toggle button -> slide-over (data-testid=recall-due-list)",
+      "endpoints": [
+        "GET /dental/recalls/due"
+      ],
+      "missing": [
+        "be-unit"
+      ],
+      "relatedWF": [
+        "WF-081",
+        "WF-045"
+      ],
+      "relatedBR": [
+        "BR-016"
+      ],
+      "recommendation": "Add a be-unit test (e.g. services/api-ts/src/handlers/dental-patient/recalls/listDueRecalls.test.ts) mounting listDueRecalls at GET /dental/recalls/due via a buildTestApp-style harness, with an authenticated branch member. Smallest RED-first assertions: (1) 200 returns only in-window non-terminal (pending/sent) recalls enriched with patientName, excluding out-of-window and completed/cancelled — proving the handler's window+projection (not just the repo); (2) 403 for an authenticated non-member of branchId (assertBranchAccess); (3) 400 on malformed from/to (e.g. from=2026-13-99) — the YYYY-MM-DD ValidationError guard; (4) default window applied when from/to omitted (seed one due today vs one +60d, assert only today's appears). Do NOT duplicate 401-no-auth/route-existence — already covered by reminders-route-registration.test.ts.",
+      "evidenceFiles": [
+        "services/api-ts/src/handlers/dental-patient/recalls/listDueRecalls.ts",
+        "services/api-ts/src/handlers/dental-scheduling/reminders-route-registration.test.ts",
+        "services/api-ts/src/handlers/dental-patient/jobs/recallDispatch.test.ts",
+        "services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts",
+        "specs/api/tests/contract/dental-patient.hurl",
+        "apps/dentalemon/tests/e2e/recall-due-list.spec.ts"
+      ]
+    },
+    {
+      "id": "op-export-dental-chart",
+      "title": "Export structured chart snapshot",
+      "type": "use-case",
+      "risk": "clinical",
+      "severity": "be-unit-gap",
+      "modules": [
+        "dental-visit",
+        "dental-patient",
+        "dental-org",
+        "workspace",
+        "dental-chart"
+      ],
+      "route": "/$patientId",
+      "control": "data-testid=chart-export-btn → ChartExportOverlay (window.print)",
+      "endpoints": [
+        "GET /dental/visits/{visitId}/chart/export"
+      ],
+      "missing": [
+        "be-unit"
+      ],
+      "relatedWF": [
+        "WF-009",
+        "WF-034"
+      ],
+      "relatedBR": [],
+      "recommendation": "Add a handler-level bun test (e.g. services/api-ts/src/handlers/dental-visit/exportDentalChart.test.ts) mirroring the sibling dental-pmd.data-portability.test.ts harness (buildTestApp + seeded org/branch/membership/person/patient/visit). RED-first, assert the handler's untested branches that buildChartExport cannot cover: (1) 401 when no authenticated user; (2) 404 NotFoundError('Dental visit') for an unknown visitId; (3) branch-access denial via assertBranchAccess for a visit on a branch the user lacks; (4) 404 when the patient is missing; (5) baseline-fallback path — when the visit has no chart row, teeth come from DentalChartBaselineRepository.findByPatient; (6) cross-visit treatment aggregation — a treatment on a DIFFERENT visit of the same patient appears in the exported summary (proving the inArray(visitIds) join at lines 57-64). Start with the cheapest RED, the 404 on unknown visitId.",
+      "evidenceFiles": [
+        "services/api-ts/src/handlers/dental-visit/exportDentalChart.ts",
+        "services/api-ts/src/handlers/dental-visit/chart/chart-export.test.ts",
+        "services/api-ts/src/handlers/dental-pmd/dental-pmd.data-portability.test.ts",
+        "specs/api/tests/contract/dental-visit.hurl",
+        "apps/dentalemon/tests/e2e/chart-export.spec.ts"
+      ]
+    },
+    {
+      "id": "uc-list-consent-refusals",
+      "title": "List consent refusals for visit",
+      "type": "use-case",
+      "risk": "clinical",
+      "severity": "be-unit-gap",
+      "modules": [
+        "dental-clinical"
+      ],
+      "route": "/dental/visits/:visitId/consent-refusals",
+      "control": null,
+      "endpoints": [
+        "GET /dental/visits/:visitId/consent-refusals"
+      ],
+      "missing": [
+        "be-unit"
+      ],
+      "relatedWF": [
+        "WF-018"
+      ],
+      "relatedBR": [],
+      "recommendation": "Add a RED-first bun unit test for the listConsentRefusals handler.",
+      "evidenceFiles": [
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-clinical/consent/listConsentRefusals.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-clinical/dental-clinical.consent-content.test.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/handlers/dental-clinical/repos/consent-refusal.repo.ts",
+        "/Users/eladventures/Desktop/dentalemon/services/api-ts/src/generated/openapi/routes.ts",
+        "/Users/eladventures/Desktop/dentalemon/specs/api/tests/contract/dental-clinical.hurl"
+      ]
+    },
+    {
+      "id": "br-003-visit-immutable-clinical-writes",
+      "title": "BR-003 — no clinical writes to a locked/completed visit",
+      "type": "business-rule",
+      "risk": "clinical",
+      "severity": "vacuity",
+      "modules": [
+        "dental-clinical"
+      ],
+      "route": null,
+      "control": null,
+      "endpoints": [
+        "POST /dental/visits/:visitId/prescriptions",
+        "POST /dental/visits/:visitId/consents",
+        "POST /dental/visits/:visitId/consent-refusals",
+        "POST /dental/visits/:visitId/lab-orders",
+        "POST /dental/visits/:visitId/attachments",
+        "PATCH /dental/visits/:visitId/prescriptions/:prescriptionId"
+      ],
+      "missing": [
+        "be-unit (negative-path)"
+      ],
+      "relatedWF": [
+        "WF-016",
+        "WF-017",
+        "WF-018",
+        "WF-039"
+      ],
+      "relatedBR": [
+        "BR-003"
+      ],
+      "recommendation": "BR-003 locked/completed-visit guard exists in createPrescription.ts:37-40 but no test asserts it on the prescription-create path. Add a RED negative-path test: create prescription on a locked visit → expect 409/BusinessLogicError.",
+      "evidenceFiles": [
+        "services/api-ts/src/handlers/dental-clinical/prescription.status.test.ts:310-329 (PATCH path only, not the named POST create endpoint)"
+      ]
+    }
+  ],
+  "contractOnlyDeferred": [
+    {
+      "id": "be-dental-billing-apply-credit-to-invoice",
+      "risk": "money",
+      "title": "Apply patient credit against invoice (atomic draw-down)",
+      "modules": [
+        "dental-billing",
+        "dental-org",
+        "patients",
+        "billing"
+      ]
+    },
+    {
+      "id": "be-dental-billing-credit-cap-invariant",
+      "risk": "money",
+      "title": "Credit apply cap: > 0, <= balance, <= available credit (BR-052)",
+      "modules": [
+        "dental-billing"
+      ]
+    },
+    {
+      "id": "be-dental-billing-generate-statement-batch",
+      "risk": "money",
+      "title": "Generate batch patient statements (read-side aggregation)",
+      "modules": [
+        "dental-billing",
+        "billing",
+        "notifs"
+      ]
+    },
+    {
+      "id": "be-dental-billing-get-ar-aging",
+      "risk": "money",
+      "title": "AR aging buckets per patient + summary",
+      "modules": [
+        "dental-billing",
+        "dental-org",
+        "billing"
+      ]
+    },
+    {
+      "id": "be-dental-billing-refund-cap-invariant",
+      "risk": "money",
+      "title": "Refund cap: non-void payment/invoice, amount <= un-refunded remainder",
+      "modules": [
+        "dental-billing"
+      ]
+    },
+    {
+      "id": "dp-list-patient-insurance-profiles",
+      "risk": "money",
+      "title": "List patient insurance profiles",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "patients",
+        "billing"
+      ]
+    },
+    {
+      "id": "fee-schedule-get",
+      "risk": "money",
+      "title": "Read branch fee schedule (CDT catalog with effective prices)",
+      "modules": [
+        "dental-org",
+        "dental-visit",
+        "settings",
+        "dental-fee-schedule",
+        "dental-billing"
+      ]
+    },
+    {
+      "id": "fee-schedule-update-entry",
+      "risk": "money",
+      "title": "Set a per-branch CDT price override",
+      "modules": [
+        "dental-org",
+        "dental-visit",
+        "settings",
+        "dental-fee-schedule",
+        "dental-billing"
+      ]
+    },
+    {
+      "id": "op-discard-visit",
+      "risk": "money",
+      "title": "Discard (abandon) an open visit",
+      "modules": [
+        "dental-visit",
+        "dental-clinical",
+        "dental-org",
+        "dental-audit",
+        "dental-billing",
+        "workspace",
+        "rbac"
+      ]
+    },
+    {
+      "id": "be-patient-create-patient",
+      "risk": "clinical",
+      "title": "Create patient profile",
+      "modules": [
+        "patient",
+        "person"
+      ]
+    },
+    {
+      "id": "be-patient-create-requires-person-profile",
+      "risk": "clinical",
+      "title": "Create blocked without a person identity (MISSING_PERSON_PROFILE)",
+      "modules": [
+        "patient",
+        "person"
+      ]
+    },
+    {
+      "id": "be-patient-one-patient-per-person",
+      "risk": "clinical",
+      "title": "One patient profile per person (PATIENT_EXISTS / unique index)",
+      "modules": [
+        "patient"
+      ]
+    },
+    {
+      "id": "be-patient-self-registration-role-grant",
+      "risk": "clinical",
+      "title": "Self-registration grants patient role; staff creation does not",
+      "modules": [
+        "patient",
+        "person"
+      ]
+    },
+    {
+      "id": "br-ceph-landmark-fsm-forward-only",
+      "risk": "clinical",
+      "title": "CIMG-003: landmark FSM strictly forward placed→confirmed→locked",
+      "modules": [
+        "dental-imaging"
+      ]
+    },
+    {
+      "id": "br-fee-resolution-precedence",
+      "risk": "clinical",
+      "title": "Fee resolution precedence: branch override → catalog default → 0",
+      "modules": [
+        "dental-org",
+        "dental-visit"
+      ]
+    },
+    {
+      "id": "br-gingival-margin-bounds",
+      "risk": "clinical",
+      "title": "Per-site gingival margin must be integer -5..20mm",
+      "modules": [
+        "dental-perio"
+      ]
+    },
+    {
+      "id": "br-grade-bounds",
+      "risk": "clinical",
+      "title": "Mobility/furcation grades must be 0-3",
+      "modules": [
+        "dental-perio"
+      ]
+    },
+    {
+      "id": "br-p03-depth-recession-bounds",
+      "risk": "clinical",
+      "title": "BR-P03 probing depths 0-20mm, recession -5..20mm",
+      "modules": [
+        "dental-perio"
+      ]
+    },
+    {
+      "id": "br-p04-fdi-tooth-number",
+      "risk": "clinical",
+      "title": "BR-P04 FDI tooth number must be a valid quadrant range",
+      "modules": [
+        "dental-perio"
+      ]
+    },
+    {
+      "id": "br-p06-reading-upsert-idempotent",
+      "risk": "clinical",
+      "title": "BR-P06 tooth-reading upsert idempotent on (chartId, toothNumber)",
+      "modules": [
+        "dental-perio"
+      ]
+    },
+    {
+      "id": "ceph-delete-landmark",
+      "risk": "clinical",
+      "title": "Delete ceph landmark (lock-protected)",
+      "modules": [
+        "dental-imaging",
+        "dental-org"
+      ]
+    },
+    {
+      "id": "ceph-update-landmark",
+      "risk": "clinical",
+      "title": "Update single ceph landmark (transition + lock guard)",
+      "modules": [
+        "dental-imaging",
+        "dental-org",
+        "imaging"
+      ]
+    },
+    {
+      "id": "dp-accept-treatment-option",
+      "risk": "clinical",
+      "title": "Accept one alternate treatment option",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "dental-visit",
+        "workspace",
+        "dental-clinical",
+        "dental-patient-finance"
+      ]
+    },
+    {
+      "id": "dp-detect-duplicate-patients",
+      "risk": "clinical",
+      "title": "Detect duplicate patients",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "patients"
+      ]
+    },
+    {
+      "id": "dp-list-patient-treatment-plans",
+      "risk": "clinical",
+      "title": "List patient treatment plans",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-clinical"
+      ]
+    },
+    {
+      "id": "dp-list-sync-logs",
+      "risk": "clinical",
+      "title": "List sync logs",
+      "modules": [
+        "dental-patient",
+        "cadence",
+        "workspace",
+        "sync"
+      ]
+    },
+    {
+      "id": "dp-list-treatment-option-group",
+      "risk": "clinical",
+      "title": "List treatment option group",
+      "modules": [
+        "dental-patient",
+        "patient"
+      ]
+    },
+    {
+      "id": "dp-reject-case-presentation",
+      "risk": "clinical",
+      "title": "Reject case presentation",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "case-presentation",
+        "dental-patient-finance"
+      ]
+    },
+    {
+      "id": "dp-update-communication-consent",
+      "risk": "clinical",
+      "title": "Update patient communication consent",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "person"
+      ]
+    },
+    {
+      "id": "op-get-tooth-history",
+      "risk": "clinical",
+      "title": "Per-tooth history across patient visits",
+      "modules": [
+        "dental-visit",
+        "workspace",
+        "dental-clinical"
+      ]
+    },
+    {
+      "id": "op-update-tooth",
+      "risk": "clinical",
+      "title": "Update a single tooth (per-tooth PATCH)",
+      "modules": [
+        "dental-visit"
+      ]
+    },
+    {
+      "id": "patients-comm-consent-persist",
+      "risk": "clinical",
+      "title": "Persist per-channel communication consent (post-registration)",
+      "modules": [
+        "patients",
+        "person"
+      ]
+    },
+    {
+      "id": "patients-comm-consent-persist--1",
+      "risk": "clinical",
+      "title": "Persist per-channel communication consent (post-registration)",
+      "modules": [
+        "patients",
+        "person"
+      ]
+    },
+    {
+      "id": "perio-upsert-tooth-reading",
+      "risk": "clinical",
+      "title": "Record/update a tooth-level periodontal reading",
+      "modules": [
+        "dental-perio",
+        "dental-visit",
+        "workspace"
+      ]
+    },
+    {
+      "id": "uc-get-medical-history-review",
+      "risk": "clinical",
+      "title": "Get latest medical history review",
+      "modules": [
+        "dental-clinical"
+      ]
+    },
+    {
+      "id": "wf-record-medical-history-review",
+      "risk": "clinical",
+      "title": "Record medical history review (ASA classification)",
+      "modules": [
+        "dental-clinical",
+        "workspace",
+        "patient-safety"
+      ]
+    }
+  ]
+}

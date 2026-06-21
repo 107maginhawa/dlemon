@@ -47,6 +47,16 @@ const GENDER_OPTIONS: ReadonlyArray<readonly [string, string]> = [
   ['prefer-not-to-say', 'Prefer not to say (explicit)'],
 ];
 
+/**
+ * Normalize a human-typed phone to E.164 (the server contract is
+ * `^\+[1-9]\d{1,14}$` — digits only after a leading `+`). Strips spaces and the
+ * usual visual separators so a natural "+63 917 555 1234" is accepted instead of
+ * being silently 400'd by the server's stricter pattern (ISSUE-015).
+ */
+export function normalizePhone(raw: string): string {
+  return raw.trim().replace(/[\s().-]/g, '');
+}
+
 export function PatientEditForm({
   open,
   initial,
@@ -77,10 +87,12 @@ export function PatientEditForm({
       setFieldError('Please enter a valid email address');
       return false;
     }
-    // Phone is optional; when provided allow only digits, spaces, and a leading +.
-    const trimmedPhone = phone.trim();
-    if (trimmedPhone && !/^\+?[\d\s]+$/.test(trimmedPhone)) {
-      setFieldError('Please enter a valid phone number');
+    // Phone is optional. Normalize to E.164 and validate against the server contract
+    // (`^\+[1-9]\d{1,14}$`) so we never pass client validation only to be 400'd: the
+    // patient/staff gets actionable guidance instead of a generic save failure.
+    const normalizedPhone = normalizePhone(phone);
+    if (normalizedPhone && !/^\+[1-9]\d{1,14}$/.test(normalizedPhone)) {
+      setFieldError('Enter phone in international format, e.g. +639171234567');
       return false;
     }
     setFieldError(null);
@@ -97,7 +109,7 @@ export function PatientEditForm({
       dateOfBirth,
       gender,
       email: email.trim(),
-      phone: phone.trim(),
+      phone: normalizePhone(phone),
     });
   }
 
