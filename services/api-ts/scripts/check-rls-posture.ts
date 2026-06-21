@@ -1,7 +1,7 @@
 /**
  * RLS posture drift gate (ADR-010 P5).
  *
- * Asserts that every PHI table the RLS migrations (0104–0107) armed STILL has
+ * Asserts that every PHI table the RLS migrations (0104–0107, 0115) armed STILL has
  * Row-Level-Security ENABLED + FORCED and carries at least one policy, by querying
  * the live catalog (pg_class / pg_policies) of a freshly-migrated database.
  *
@@ -70,6 +70,8 @@ const EXPECTED_RLS_TABLES: readonly string[] = [
   'treatment_plan_version',
   'dental_patient_chart_baseline',
   'dental_occlusion_screening',
+  // P6 (0115) — chart-anchored perio reading (per-site probing depths / BOP / CAL)
+  'dental_perio_tooth_reading',
 ];
 
 interface PostureRow {
