@@ -204,10 +204,6 @@
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
   },
   {
-    "id": "op-export-dental-chart",
-    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit). Add a handler-level bun test (e.g. services/api-ts/src/handlers/dental-visit/exportDentalChart.test.ts) mirroring the si"
-  },
-  {
     "id": "op-get-tooth-history",
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
   },
