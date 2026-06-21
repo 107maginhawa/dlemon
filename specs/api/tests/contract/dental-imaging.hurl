@@ -159,13 +159,25 @@ HTTP 200
 jsonpath "$.qualityStatus" == "ok"
 
 
-# 2d. G5b context links — link the image to a treatment plan, list, then delete.
+# 2c-bis. Create a real treatment plan for the patient. G6.2: a link target must
+# exist and belong to the same patient, so a bogus uuid now 404s — link to this plan.
+POST {{api}}/dental/patients/{{patient_id}}/treatment-plans
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "providerId": "{{dentist_member_id}}"
+}
+HTTP 201
+[Captures]
+plan_id: jsonpath "$.id"
+
+# 2d. G5b context links — link the image to that treatment plan, list, then delete.
 POST {{api}}/dental/imaging/images/{{image_id}}/links
 Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "linkType": "treatment_plan",
-  "targetId": "11111111-2222-4333-8444-555555555555"
+  "targetId": "{{plan_id}}"
 }
 HTTP 201
 [Captures]
@@ -173,7 +185,7 @@ link_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.imageId" == "{{image_id}}"
 jsonpath "$.linkType" == "treatment_plan"
-jsonpath "$.targetId" == "11111111-2222-4333-8444-555555555555"
+jsonpath "$.targetId" == "{{plan_id}}"
 
 # 2e. Re-linking the same target is idempotent — list still has exactly one.
 POST {{api}}/dental/imaging/images/{{image_id}}/links
@@ -181,7 +193,7 @@ Cookie: better-auth.session_token={{session_token}}
 Content-Type: application/json
 {
   "linkType": "treatment_plan",
-  "targetId": "11111111-2222-4333-8444-555555555555"
+  "targetId": "{{plan_id}}"
 }
 HTTP 201
 

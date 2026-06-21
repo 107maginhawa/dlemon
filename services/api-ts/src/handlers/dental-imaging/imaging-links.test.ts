@@ -27,9 +27,23 @@ const db = createDatabase({
 const ORG_ID = 'c5e00000-0000-4000-8000-000000000001';
 const BRANCH_ID = 'b5e00000-0000-4000-8000-000000000001';
 const DENTIST = { id: 'a5e00000-0000-4000-8000-0000000000d1', email: 'dentist@imglink.test' };
+const PERSON_ID = 'd5e00000-0000-4000-8000-0000000000e1';
 const PATIENT_ID = 'd5e00000-0000-4000-8000-0000000000f5';
 const PLAN_ID = 'e5e00000-0000-4000-8000-0000000000a1';
 const REPORT_ID = 'e5e00000-0000-4000-8000-0000000000a2';
+// A second patient (different person) + their own plan — for the cross-patient guard.
+const OTHER_PERSON_ID = 'd5e00000-0000-4000-8000-0000000000e2';
+const OTHER_PATIENT_ID = 'd5e00000-0000-4000-8000-0000000000f6';
+const OTHER_PLAN_ID = 'e5e00000-0000-4000-8000-0000000000a3';
+// A stable study+image owned by PATIENT_ID, backing the seeded ceph report.
+const REPORT_STUDY_ID = 'e5e00000-0000-4000-8000-0000000000b1';
+const REPORT_IMAGE_ID = 'e5e00000-0000-4000-8000-0000000000b2';
+const REPORT_FILE_ID = 'e5e00000-0000-4000-8000-0000000000b3';
+// A ceph report owned by the OTHER patient — for the cross-patient report guard.
+const OTHER_REPORT_STUDY_ID = 'e5e00000-0000-4000-8000-0000000000c1';
+const OTHER_REPORT_IMAGE_ID = 'e5e00000-0000-4000-8000-0000000000c2';
+const OTHER_REPORT_FILE_ID = 'e5e00000-0000-4000-8000-0000000000c3';
+const OTHER_REPORT_ID = 'e5e00000-0000-4000-8000-0000000000c4';
 
 function buildApp(user?: { id: string; email: string }) {
   return buildTestApp({ db, user });
@@ -55,6 +69,61 @@ async function seedOrg() {
     id: 'aac50000-0000-4000-8000-0000000000d1', branchId: BRANCH_ID, personId: DENTIST.id,
     displayName: 'Owner Dentist', role: 'dentist_owner', status: 'active',
     pinFailedAttempts: 0, createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+
+  // Real link targets so createImageLink's existence + same-patient guard (G6.2) passes.
+  const { persons } = await import('@/handlers/person/repos/person.schema');
+  const { patients } = await import('@/handlers/patient/repos/patient.schema');
+  const { dentalTreatmentPlans } = await import('@/handlers/dental-patient/repos/treatment-plan.schema');
+  const { imagingStudies, imagingStudyImages } = await import('./repos/imaging.schema');
+  const { imagingCephReports } = await import('./repos/imaging_ceph.schema');
+  const { storedFiles } = await import('@/handlers/storage/repos/file.schema');
+
+  await db.insert(persons).values([
+    { id: PERSON_ID, firstName: 'Link', lastName: 'Patient' },
+    { id: OTHER_PERSON_ID, firstName: 'Other', lastName: 'Patient' },
+  ]).onConflictDoNothing();
+  await db.insert(patients).values([
+    { id: PATIENT_ID, person: PERSON_ID },
+    { id: OTHER_PATIENT_ID, person: OTHER_PERSON_ID },
+  ]).onConflictDoNothing();
+  await db.insert(dentalTreatmentPlans).values([
+    { id: PLAN_ID, patientId: PATIENT_ID, providerId: DENTIST.id, createdBy: DENTIST.id, updatedBy: DENTIST.id },
+    { id: OTHER_PLAN_ID, patientId: OTHER_PATIENT_ID, providerId: DENTIST.id, createdBy: DENTIST.id, updatedBy: DENTIST.id },
+  ]).onConflictDoNothing();
+
+  // A stable study+image owned by PATIENT_ID, backing the seeded ceph report.
+  await db.insert(storedFiles).values({
+    id: REPORT_FILE_ID, filename: 'ceph.png', mimeType: 'image/png', size: 1024,
+    status: 'available', owner: DENTIST.id, createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+  await db.insert(imagingStudies).values({
+    id: REPORT_STUDY_ID, patientId: PATIENT_ID, visitId: null, branchId: BRANCH_ID, acquiredBy: DENTIST.id,
+    modality: 'cephalometric', status: 'active', createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+  await db.insert(imagingStudyImages).values({
+    id: REPORT_IMAGE_ID, studyId: REPORT_STUDY_ID, fileId: REPORT_FILE_ID, modality: 'cephalometric',
+    sequenceNumber: 0, status: 'active', createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+  await db.insert(imagingCephReports).values({
+    id: REPORT_ID, imageId: REPORT_IMAGE_ID, version: 1, snapshot: {}, createdBy: DENTIST.id,
+  }).onConflictDoNothing();
+
+  // A ceph report owned by OTHER_PATIENT_ID (study→image→report) for the cross-patient guard.
+  await db.insert(storedFiles).values({
+    id: OTHER_REPORT_FILE_ID, filename: 'other-ceph.png', mimeType: 'image/png', size: 1024,
+    status: 'available', owner: DENTIST.id, createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+  await db.insert(imagingStudies).values({
+    id: OTHER_REPORT_STUDY_ID, patientId: OTHER_PATIENT_ID, visitId: null, branchId: BRANCH_ID, acquiredBy: DENTIST.id,
+    modality: 'cephalometric', status: 'active', createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+  await db.insert(imagingStudyImages).values({
+    id: OTHER_REPORT_IMAGE_ID, studyId: OTHER_REPORT_STUDY_ID, fileId: OTHER_REPORT_FILE_ID, modality: 'cephalometric',
+    sequenceNumber: 0, status: 'active', createdBy: DENTIST.id, updatedBy: DENTIST.id,
+  }).onConflictDoNothing();
+  await db.insert(imagingCephReports).values({
+    id: OTHER_REPORT_ID, imageId: OTHER_REPORT_IMAGE_ID, version: 1, snapshot: {}, createdBy: DENTIST.id,
   }).onConflictDoNothing();
 }
 
@@ -141,6 +210,41 @@ describe('G5b context links', () => {
     const app = buildApp(DENTIST);
     const res = await delLink(app, uuidv4());
     expect(res.status).toBe(404);
+  });
+
+  test('G6.2: orphan treatment_plan targetId (no such plan) → 404', async () => {
+    const app = buildApp(DENTIST);
+    const res = await createLink(app, imageId, { linkType: 'treatment_plan', targetId: uuidv4() });
+    expect(res.status).toBe(404);
+  });
+
+  test('G6.2: treatment_plan owned by a DIFFERENT patient → 404 (no cross-patient/tenant link)', async () => {
+    const app = buildApp(DENTIST);
+    const res = await createLink(app, imageId, { linkType: 'treatment_plan', targetId: OTHER_PLAN_ID });
+    expect(res.status).toBe(404);
+  });
+
+  test('G6.2: orphan report targetId (no such ceph report) → 404', async () => {
+    const app = buildApp(DENTIST);
+    const res = await createLink(app, imageId, { linkType: 'report', targetId: uuidv4() });
+    expect(res.status).toBe(404);
+  });
+
+  test('G6.2: report owned by a DIFFERENT patient → 404 (proves the same-patient clause)', async () => {
+    const app = buildApp(DENTIST);
+    const res = await createLink(app, imageId, { linkType: 'report', targetId: OTHER_REPORT_ID });
+    expect(res.status).toBe(404);
+  });
+
+  test('G6.2: ortho_case is left unvalidated (no ortho module to validate against) → 201 [characterization]', async () => {
+    // KNOWN GAP: ortho_case has no backing table, so target validation is skipped
+    // (unchanged behavior). It only ever links to a not-yet-built feature, never real
+    // patient data. The clean fix is to remove the dead ortho_case affordance (FE +
+    // TypeSpec + enum) or build the ortho module — tracked as a follow-up. This test
+    // locks the current behavior so a future change to it is intentional.
+    const app = buildApp(DENTIST);
+    const res = await createLink(app, imageId, { linkType: 'ortho_case', targetId: uuidv4() });
+    expect(res.status).toBe(201);
   });
 
   test('listPatientImages surfaces links and filters by linkTargetId / linkType', async () => {

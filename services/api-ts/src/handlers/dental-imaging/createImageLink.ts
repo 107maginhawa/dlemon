@@ -13,6 +13,7 @@ import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { treatmentPlanExistsForPatient } from '@/handlers/dental-patient/repos/treatment-plan.facade';
 import { ImagingRepository } from './repos/imaging.repo';
 import type { ImagingLinkType } from './repos/imaging.schema';
 
@@ -42,6 +43,26 @@ export async function createImageLink(ctx: BaseContext): Promise<Response> {
   if (!study) throw new NotFoundError('Parent imaging study not found');
 
   await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
+
+  // G6.2: targetId is a cross-module soft-FK (no DB constraint). Validate the target
+  // EXISTS and belongs to the SAME patient as the image — otherwise a well-formed but
+  // bogus uuid creates an orphan link, or one image can be linked across patients/orgs
+  // (cross-tenant leak). The same-patient lookups reveal nothing about other tenants.
+  if (body.linkType === 'treatment_plan') {
+    if (!(await treatmentPlanExistsForPatient(db, body.targetId, study.patientId))) {
+      throw new NotFoundError('Treatment plan not found for this patient');
+    }
+  } else if (body.linkType === 'report') {
+    if (!(await repo.cephReportExistsForPatient(body.targetId, study.patientId))) {
+      throw new NotFoundError('Ceph report not found for this patient');
+    }
+  }
+  // ortho_case: there is no ortho module/table to validate against, so its target
+  // is left unvalidated (unchanged from before — an ortho_case link only ever
+  // points at a not-yet-built feature, never real patient data). ponytail: don't
+  // half-remove a dead feature here — the clean fix is to drop the ortho_case
+  // affordance entirely (FE dropdown + TypeSpec + enum) in a focused cleanup, or
+  // add real validation when the ortho module ships. Tracked as a follow-up.
 
   const link = await repo.createImageLink(imageId, {
     linkType: body.linkType as ImagingLinkType,
