@@ -673,7 +673,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts",
-    "evidenceLine": 821
+    "evidenceLine": 852
   },
   {
     "fsm": "LabOrder",
@@ -737,7 +737,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts",
-    "evidenceLine": 850
+    "evidenceLine": 881
   },
   {
     "fsm": "PaymentPlan",
@@ -1456,8 +1456,8 @@
     "to": "completed",
     "legal": false,
     "coveredByTest": true,
-    "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-visit.test.ts",
-    "evidenceLine": 1126
+    "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-finding.test.ts",
+    "evidenceLine": 149
   },
   {
     "fsm": "Visit",

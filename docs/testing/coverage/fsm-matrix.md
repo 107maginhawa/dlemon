@@ -99,13 +99,13 @@ _None — every illegal transition has a rejection test._
 | LabOrder | `fitted` | `in_fabrication` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `fitted` | `ordered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `in_fabrication` | `cancelled` | ✅ |   |  |
-| LabOrder | `in_fabrication` | `delivered` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:821 |
+| LabOrder | `in_fabrication` | `delivered` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:852 |
 | LabOrder | `in_fabrication` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `in_fabrication` | `ordered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `ordered` | `cancelled` | ✅ |   |  |
 | LabOrder | `ordered` | `delivered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
 | LabOrder | `ordered` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/acceptance.clinical-workflows.test.ts`:8 |
-| LabOrder | `ordered` | `in_fabrication` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:850 |
+| LabOrder | `ordered` | `in_fabrication` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/clinical-consent-lab.test.ts`:881 |
 | PaymentPlan | `behind` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:13 |
 | PaymentPlan | `behind` | `defaulted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:12 |
 | PaymentPlan | `behind` | `on_track` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/dental-billing.payment-plan-fsm.test.ts`:9 |
@@ -171,6 +171,6 @@ _None — every illegal transition has a rejection test._
 | Visit | `draft` | `discarded` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:96 |
 | Visit | `draft` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:99 |
 | Visit | `locked` | `active` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:102 |
-| Visit | `locked` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.test.ts`:1126 |
+| Visit | `locked` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-finding.test.ts`:149 |
 | Visit | `locked` | `discarded` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:105 |
 | Visit | `locked` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:108 |
