@@ -119,8 +119,9 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 | `Person` | No — Anonymize | Replace name/DOB/contact with synthetic pseudonym | Patient profile anonymized; dental records retain clinical data only | Yes — audit log retains actorId (now pseudonym) |
 | `Patient` | No — Anonymize | Unlink from Person; replace with `[ERASED]` marker | Visits/treatments retain clinical codes; patient name gone | Yes |
 | `Visit` / `Treatment` | No | Anonymize patient reference | CDT codes, procedure codes retain for statistical/billing compliance | Yes |
-| `Prescription` | No | Anonymize patient reference | Drug name retains; patient identity gone | Yes |
-| `ImagingStudy` | Yes — S3 delete (implemented V-DG-002) | Delete S3 object (radiograph) + storage `file` row; retain anonymized metadata | CephAnalysis anonymized | Yes |
+| `Prescription` | No | Anonymize patient reference + null free-text `instructions` (PII §1.2) | Drug name/dose/frequency codes retain; patient identity gone | Yes |
+| `MedicalHistoryEntry` | No | Null free-text `notes` (systemic-health PII §1.2) | Coded `displayName`/`code` clinical label retains | Yes |
+| `ImagingStudy` | Yes — S3 delete (implemented V-DG-002) | Delete S3 object (radiograph) + storage `file` row; retain anonymized metadata; remove `imaging_link` rows (G6.3) | CephAnalysis anonymized; context links removed so none dangles to the scrubbed image | Yes |
 | `DentalAttachment` | Yes — S3 delete (implemented V-DG-002) | Null `fileName`/`note` (PHI) + redact `filePath`; delete the S3 object + storage `file` row for **confirmed object-store keys**; retain `imageType`/`toothNumbers` clinical metadata; mark row deleted | None | Yes |
 | `PMDDocument` | **No** — legal hold | Cannot delete signed PMD | PMD remains; patient name may be anonymized in DB record | Yes |
 | `Invoice` | No | Anonymize patient name; retain for 7-year tax compliance | LineItems retain CDT codes; patient identity gone | Yes |
@@ -136,16 +137,23 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > far: **Person** (name→`[ERASED]` pseudonym, all other identifiers nulled, row
 > kept), **Patient** (emergency contact / provider / pharmacy / history /
 > comms-prefs nulled), **ConsentForm** (signature + name snapshot redacted, state
-> kept), **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
-> archived), and **Attachment** (x-ray/photo `fileName`/`note` nulled, `filePath`
+> kept), **MedicalHistoryEntry** (free-text `notes` nulled; coded label kept),
+> **Prescription** (free-text `instructions` nulled; drug codes kept),
+> **Imaging** (DICOM/finding/annotation identifiers nulled, image rows
+> archived, `imaging_link` rows removed so none dangles to the scrubbed image —
+> G6.3), and **Attachment** (x-ray/photo `fileName`/`note` nulled, `filePath`
 > redacted, row marked deleted; only filePaths confirmed as object-store keys are
 > surfaced for physical S3 delete — legacy free-form `/uploads/…` paths have their
 > DB PHI erased but are never handed to the storage client as a bogus delete),
 > all via boundary-compliant `*-erasure.facade.ts`. A real **LegalHold
 > store** (`dental_legal_hold`) blocks erasure of held subjects (and is consulted
-> by retention). Visit/Treatment/Prescription/Invoice are verified NO-OP (they
-> only reference patientId → resolves to the anonymized Person; clinical/billing
-> codes retained per the §3 table).
+> by retention). Visit/Treatment/Invoice are NO-OP (they only reference
+> patientId → resolves to the anonymized Person; clinical/billing codes retained
+> per the §3 table). **MedicalHistoryEntry** and **Prescription** are NOT NO-OP:
+> they additionally null the free-text columns DATA_GOVERNANCE §1.2 names as PII
+> (`notes` / `instructions`), since a name typed inside free-text survives
+> FK-anonymization; their coded fields are kept. See "KNOWN RESIDUAL" below for
+> the remaining free-text columns that are not yet scrubbed (ruling pending).
 > HTTP surface (admin-only, manual routes + `dental-erasure.tsp` contract):
 > `POST /dental/erasure-requests`, `GET /dental/erasure-requests[/{id}]`,
 > `POST /dental/erasure-requests/{id}/approve|reject`, plus
@@ -170,6 +178,44 @@ justify it. Tracked as defense-in-depth, not a compliance blocker.
 > `DeleteObject` as deleted without a `HeadObject` confirmation — both tracked for a future
 > erasure-hardening pass.) The remaining §3 entities are covered above. (PHI at-rest encryption:
 > resolved separately — AG-6/G-012, §1.1.)
+
+### §3.1 KNOWN RESIDUAL — free-text PHI not yet scrubbed (ruling pending)
+
+The erasure engine scrubs only its **registered targets**; the registry is the
+complete set (`erasure-targets.ts`). Free-text columns can embed a patient's
+name/identifiers *inline*, which anonymizing the `patientId` FK does **not**
+remove. The columns below are patient/visit-linked free-text that **survive
+erasure today**. Closing them is a deliberate, ruling-gated follow-up — NOT a
+silent omission. Resolve before a multi-tenant/hosted launch.
+
+**(a) Clinical free-text — likely scrub (strict GDPR Art. 17), but §3 currently
+documents Visit/Treatment as "anonymize FK only":** `visit_notes` SOAP
+(`subjective`/`objective`/`assessment`/`plan`/`notes`), `dental_visit.chief_complaint`,
+`dental_treatment.clinical_notes`/`description`/`dismiss_reason`/`refusal_reason`,
+`dental_finding.note`, `dental_perio_chart.notes` + `dental_perio_reading.notes`,
+`lab_order.description`/`cancel_reason`, `dental_case_presentation.signer_name`/`signature_data`,
+`patient.follow_up_notes`. **Ruling needed:** does GDPR erasure scrub these, or
+does the documented FK-anonymization stance hold? (Recommend scrub — these are
+not medico-legal records.)
+
+**(b) Medico-legal-immutable — likely RETAIN with a documented legal basis:**
+`consent_refusal` (`procedure_description`/`refusal_reason`/`patient_acknowledgement` —
+verbatim patient text) and `amendment` (`content`/`reason`) are documented as
+immutable ("required by ADA/medico-legal best practice"). GDPR Art. 17(3)(b)/(e)
+permit retention for legal obligations / defense of legal claims. **Ruling
+needed (legal):** retain-with-carve-out vs scrub. **Do NOT scrub these without a
+documented legal sign-off** — over-scrubbing could destroy a legally required record.
+
+**(c) Operational free-text — product call:** `dental_alert.description`,
+`dental_recall.notes`, `dental_task.title`/`description`, `treatment_plan.notes`,
+`dental_appointment.notes`/`cancellation_reason` (appointments already auto-purge
+after 1yr per §2). **Ruling needed:** retain vs scrub per table.
+
+**G6.3 sanctioned exception (implemented):** `imaging_link` rows carry no PII of
+their own but point at an image whose DICOM PHI is nulled and whose S3 radiograph
+is physically deleted. They are **removed** on erasure — referential cleanup, an
+explicit, sanctioned exception to engine SAFETY INVARIANT #2 (anonymize-not-delete),
+because a row with nothing to anonymize can only be safely scrubbed by deletion.
 
 ---
 

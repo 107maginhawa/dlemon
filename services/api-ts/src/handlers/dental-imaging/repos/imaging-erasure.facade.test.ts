@@ -16,6 +16,7 @@ import {
   imagingStudies,
   imagingStudyImages,
   imagingAnnotations,
+  imagingLinks,
 } from './imaging.schema';
 import { imagingFindings } from './imaging_finding.schema';
 import { imagingCephAnalyses } from './imaging_ceph.schema';
@@ -141,6 +142,43 @@ describe('imaging-erasure facade', () => {
       .from(imagingCephAnalyses)
       .where(eq(imagingCephAnalyses.imageId, imageId));
     expect(analysis!.measurements).toEqual({ SNA: 82, SNB: 80 }); // derived metrics retained
+  });
+
+  test('removes imaging_link rows for the subject so no link dangles to scrubbed/deleted imaging (G6.3)', async () => {
+    // A context link (image → treatment plan) for the subject's image. After
+    // erasure the image is archived, its DICOM PHI nulled, and its S3 radiograph
+    // physically deleted — a surviving link would dangle to destroyed PHI.
+    await db.insert(imagingLinks).values({
+      imageId,
+      linkType: 'treatment_plan',
+      targetId: 'e2000000-0000-4000-8000-0000000000d1',
+    });
+
+    // A DIFFERENT patient's link on their own image — must SURVIVE the subject's erasure.
+    await db.insert(persons).values({ id: NO_IMAGING_PID, firstName: 'Sam' });
+    const [otherPt] = await db.insert(patients).values({ person: NO_IMAGING_PID }).returning({ id: patients.id });
+    const [otherStudy] = await db
+      .insert(imagingStudies)
+      .values({ patientId: otherPt!.id, branchId: BRANCH, acquiredBy: ACQUIRED_BY, modality: 'periapical', status: 'active' })
+      .returning({ id: imagingStudies.id });
+    const [otherImg] = await db
+      .insert(imagingStudyImages)
+      .values({ studyId: otherStudy!.id, fileId: 'e2000000-0000-4000-8000-0000000000f2', modality: 'periapical', status: 'active' })
+      .returning({ id: imagingStudyImages.id });
+    await db.insert(imagingLinks).values({ imageId: otherImg!.id, linkType: 'report', targetId: 'e2000000-0000-4000-8000-0000000000d2' });
+
+    const res = await anonymizeImagingByPersonDetailed(db, PID);
+    expect(res.linksRemoved).toBeGreaterThanOrEqual(1);
+
+    const links = await db
+      .select()
+      .from(imagingLinks)
+      .where(eq(imagingLinks.imageId, imageId));
+    expect(links).toHaveLength(0); // referential cleanup: no dangling link survives erasure
+
+    // The other patient's link is untouched (delete is scoped to the subject's images).
+    const otherLinks = await db.select().from(imagingLinks).where(eq(imagingLinks.imageId, otherImg!.id));
+    expect(otherLinks).toHaveLength(1);
   });
 
   test('is idempotent', async () => {

@@ -15,7 +15,7 @@ import type { StorageProvider } from '@/core/storage';
 import { persons } from '../person/repos/person.schema';
 import { patients } from '../patient/repos/patient.schema';
 import { storedFiles } from '../storage/repos/file.schema';
-import { imagingStudies, imagingStudyImages } from '../dental-imaging/repos/imaging.schema';
+import { imagingStudies, imagingStudyImages, imagingLinks } from '../dental-imaging/repos/imaging.schema';
 import { requestErasure, approveErasure } from './erasure-service';
 import { physicalDeleteErasedFiles } from './erasure-storage';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -30,6 +30,7 @@ const MEMBER = 'e8000000-0000-4000-8000-000000000001';
 const REVIEWER = 'a7000000-0000-4000-8000-000000000001';
 const FILE_ID = 'f7000000-0000-4000-8000-000000000001';
 const STUDY_ID = 'f8000000-0000-4000-8000-000000000001';
+const LINK_TARGET = 'f9000000-0000-4000-8000-000000000001';
 
 /** Records every deleteFile call; can be configured to throw. */
 function makeMockStorage(opts: { throwOn?: Set<string> } = {}) {
@@ -61,10 +62,19 @@ async function seedSubjectWithRadiograph(db: NodePgDatabase) {
     acquiredBy: MEMBER,
     modality: 'periapical',
   });
-  await db.insert(imagingStudyImages).values({
-    studyId: STUDY_ID,
-    fileId: FILE_ID,
-    dicomMetadata: { PatientName: 'Jane Doe' },
+  const [img] = await db
+    .insert(imagingStudyImages)
+    .values({
+      studyId: STUDY_ID,
+      fileId: FILE_ID,
+      dicomMetadata: { PatientName: 'Jane Doe' },
+    })
+    .returning({ id: imagingStudyImages.id });
+  // A context link on that image (G6.3): must not survive the subject's erasure.
+  await db.insert(imagingLinks).values({
+    imageId: img!.id,
+    linkType: 'treatment_plan',
+    targetId: LINK_TARGET,
   });
 }
 
@@ -98,6 +108,20 @@ describe('erasure physically deletes radiograph S3 objects (V-DG-002)', () => {
 
     expect(request.status).toBe('anonymized');
     expect(fileIdsPendingS3Delete).toContain(FILE_ID);
+  });
+
+  test('approveErasure removes the imaging_link so it cannot dangle to the scrubbed image (G6.3 whole-flow)', async () => {
+    // Link exists before erasure.
+    const before = await db.select().from(imagingLinks).where(eq(imagingLinks.targetId, LINK_TARGET));
+    expect(before).toHaveLength(1);
+
+    const req = await requestErasure(db, noopLogger, baseInput);
+    const { request } = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER });
+    expect(request.status).toBe('anonymized');
+
+    // The whole approve fan-out reached the imaging-link cleanup — not just person PII.
+    const after = await db.select().from(imagingLinks).where(eq(imagingLinks.targetId, LINK_TARGET));
+    expect(after).toHaveLength(0);
   });
 
   test('physicalDeleteErasedFiles deletes the S3 object AND the storage file row', async () => {
