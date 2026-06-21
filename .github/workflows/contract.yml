@@ -66,6 +66,14 @@ jobs:
       PORT: 7213
       API_URL: http://localhost:7213
       AUTH_SECRET: contract-test-secret-do-not-use-in-prod
+      # Pin the auth base URL to the SAME host the scenarios query (localhost). Better-Auth
+      # builds email-embedded URLs (the magic-link verify link) from this baseUrl; without it
+      # config falls back to http://<SERVER_HOST=0.0.0.0>:7213, so magic-link verify sets the
+      # session cookie for host 0.0.0.0 while GET /auth/get-session hits localhost → cookie-
+      # domain mismatch → no session (auth-magic-link.hurl:65 failed "actual: none"). The
+      # sibling email scenarios pass without it because they sign in via POST to localhost
+      # directly; only the email-link round-trip depends on the baseUrl host.
+      AUTH_BASE_URL: http://localhost:7213
       # The contract runner's admin preflight signs up admin@contract-tests.local;
       # it is only granted the admin role (needed for admin-gated ops, e.g. org
       # creation EM-ORG-002) when its email is in AUTH_ADMIN_EMAILS.
