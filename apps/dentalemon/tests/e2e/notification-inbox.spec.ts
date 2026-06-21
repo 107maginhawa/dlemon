@@ -135,4 +135,58 @@ test.describe('In-app notification inbox (FIX-001)', () => {
       .poll(async () => page.getByTestId('notification-row').count(), { timeout: 10_000 })
       .toBeLessThan(rowsBefore);
   });
+
+  test('mark all read clears every unread notification + badge via POST /notifs/read-all', async ({
+    page,
+  }) => {
+    // The bell refetches on a 60s interval; allow the eventual-consistency backstop.
+    test.setTimeout(120_000);
+
+    await signUpOnboardAndUnlock(page, { tier: 'solo', label: 'MarkAll' });
+
+    // TWO real producer-written notifications so "mark ALL" is distinguishable from
+    // marking one (each booking cancel writes one notification to the caller's inbox).
+    await seedSelfNotification(page);
+    await seedSelfNotification(page);
+
+    await spaNavigate(page, '/dashboard');
+
+    const bell = page.getByTestId('notification-bell');
+    await bell.waitFor({ state: 'visible', timeout: 10_000 });
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    const badge = page.getByTestId('notification-unread-badge');
+    await expect(badge).toBeVisible({ timeout: 65_000 });
+
+    await bell.click();
+    const inbox = page.getByTestId('notification-inbox');
+    await expect(inbox).toBeVisible();
+    await expect
+      .poll(async () => page.getByTestId('notification-row').count(), { timeout: 10_000 })
+      .toBeGreaterThanOrEqual(2);
+
+    // Drive "Mark all read" and assert the live POST /notifs/read-all round-trip.
+    const markAll = page.getByTestId('notification-mark-all');
+    await expect(markAll).toBeVisible();
+    const [resp] = await Promise.all([
+      page.waitForResponse(
+        (r) => /\/notifs\/read-all/.test(r.url()) && r.request().method() === 'POST',
+        { timeout: 10_000 },
+      ),
+      markAll.click(),
+    ]);
+    expect(resp.status(), 'POST /notifs/read-all must be 200').toBe(200);
+
+    // Goal state: the whole unread list collapses — rows gone, badge gone, the
+    // "Mark all read" affordance itself gone, and the empty state shown.
+    await expect
+      .poll(async () => page.getByTestId('notification-row').count(), { timeout: 10_000 })
+      .toBe(0);
+    await expect(badge).not.toBeVisible({ timeout: 5_000 });
+    await expect(markAll).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('notification-empty')).toBeVisible();
+  });
 });

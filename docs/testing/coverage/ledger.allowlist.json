@@ -196,10 +196,6 @@
     "reason": "Phase 1 VERIFIED gap (unproven/auth, miss:e2e). Add a RED-first Playwright spec at apps/dentalemon/tests/e2e/push-opt-in.spec.ts (or extend notification-inbox.spec.ts) "
   },
   {
-    "id": "notifs-mark-all-read",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/core, miss:e2e). Add an e2e test to notification-inbox.spec.ts that seeds 2+ real notifications, opens the bell, clicks notification-mark"
-  },
-  {
     "id": "op-discard-visit",
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
   },

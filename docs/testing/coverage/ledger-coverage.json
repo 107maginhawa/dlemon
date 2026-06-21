@@ -3,33 +3,33 @@
   "source": "coverage-ledger.json",
   "totals": {
     "items": 915,
-    "PARTIAL": 518,
-    "GAP": 199,
+    "PARTIAL": 519,
+    "GAP": 198,
     "COVERED": 198,
     "gapByLayer": {
       "be-unit": 23,
       "contract": 36,
-      "e2e": 13
+      "e2e": 12
     },
     "gapByRisk": {
       "clinical": 35,
       "auth": 1,
       "rest": 1,
       "money": 24,
-      "core": 3
+      "core": 2
     },
     "gapBySeverity": {
       "unproven": 3,
-      "e2e-gap": 12,
+      "e2e-gap": 11,
       "be-unit-gap": 17,
       "contract-only": 32
     },
     "partialUnknownByLayer": {
       "be-unit": 72,
-      "fe-unit": 462,
+      "fe-unit": 463,
       "contract": 8
     },
-    "userReachableGaps": 64,
+    "userReachableGaps": 63,
     "backendOnlyGaps": 135
   },
   "backlog": [
@@ -499,39 +499,6 @@
       ],
       "unknown": [
         "be-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "notifs-mark-all-read",
-      "title": "Mark all notifications as read (optionally by type)",
-      "type": "workflow",
-      "modules": [
-        "notifs",
-        "notifications"
-      ],
-      "route": "/_dashboard header (inbox header)",
-      "risk": "core",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "N/A",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
       ],
       "absentByDesign": false,
       "itemGrade": "GAP"
@@ -33261,7 +33228,7 @@
       "risk": "core",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "e2e-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "e2e",
@@ -33271,16 +33238,14 @@
         "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
+        "e2e": "COVERED"
       },
-      "missing": [
-        "e2e"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "notifs-mark-notification-read",

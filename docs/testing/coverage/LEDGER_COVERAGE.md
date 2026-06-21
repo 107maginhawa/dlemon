@@ -10,8 +10,8 @@ Only confident `MISSING` required layers count as GAPs.
 | Grade | Count | Meaning |
 |-------|------:|---------|
 | COVERED | 198 | all required layers proven (be/contract/e2e) |
-| PARTIAL | 518 | no confident MISSING, but ≥1 UNKNOWN (mostly fe-unit / no-endpoint be-unit) |
-| **GAP** | **199** | ≥1 required layer confidently MISSING — the backlog |
+| PARTIAL | 519 | no confident MISSING, but ≥1 UNKNOWN (mostly fe-unit / no-endpoint be-unit) |
+| **GAP** | **198** | ≥1 required layer confidently MISSING — the backlog |
 | DEFERRED | 0 | absent-by-design (WF-P05 / V-XRI-003 / BR-031) |
 
 ## GAP backlog by risk × layer
@@ -21,20 +21,20 @@ Only confident `MISSING` required layers count as GAPs.
 | money | 24 |
 | clinical | 35 |
 | auth | 1 |
-| core | 3 |
+| core | 2 |
 | rest | 1 |
 
 | Missing layer | GAP count |
 |---------------|----------:|
 | contract | 36 |
 | be-unit | 23 |
-| e2e | 13 |
+| e2e | 12 |
 
 ## UNKNOWN (needs scan, mostly fe-unit + no-endpoint be-unit)
 
 | Layer | UNKNOWN count |
 |-------|--------------:|
-| fe-unit | 462 |
+| fe-unit | 463 |
 | be-unit | 72 |
 | contract | 8 |
 
@@ -45,12 +45,12 @@ Severity precedence: `unproven` (NO layer covers the behavior — critical) > `e
 | severity | GAPs |
 |----------|-----:|
 | unproven | 3 |
-| e2e-gap | 12 |
+| e2e-gap | 11 |
 | be-unit-gap | 17 |
 | fe-unit-gap | 0 |
 | contract-only | 32 |
 
-## Prioritized user-reachable GAP backlog (64) — the north-star work
+## Prioritized user-reachable GAP backlog (63) — the north-star work
 
 | # | sev | risk | id | type | missing | route | title |
 |--:|-----|------|----|------|---------|-------|-------|
@@ -68,56 +68,55 @@ Severity precedence: `unproven` (NO layer covers the behavior — critical) > `e
 | 12 | e2e-gap | clinical | `portal-list-my-appointments` | workflow | be-unit+e2e | /portal/appointments | Patient views own appointments (GET /me/appointments) |
 | 13 | e2e-gap | core | `calibrate-image` | workflow | e2e | /$patientId (imaging workspace) | Calibrate mm-per-pixel via two-point ruler |
 | 14 | e2e-gap | core | `comms-ws-chat-room` | workflow | e2e | /ws/comms/chat-rooms/:room | Chat room WebSocket (real-time chat + WebRTC signaling) |
-| 15 | e2e-gap | core | `notifs-mark-all-read` | workflow | e2e | /_dashboard header (inbox header) | Mark all notifications as read (optionally by type) |
-| 16 | be-unit-gap | money | `br-portal-001-idor-self-scope` | business-rule | be-unit | /me/appointments | IDOR-free self-scope: every portal read returns ONLY cal |
-| 17 | be-unit-gap | money | `br-portal-003-empty-self-scope` | business-rule | be-unit | /me/balance | Empty self-scope returns [] / zeroed roll-up, never a fa |
-| 18 | be-unit-gap | money | `br-portal-004-projection-and-writeoff-hidden` | business-rule | be-unit | /me/invoices | Patient-appropriate projection; internal fields & writte |
-| 19 | be-unit-gap | money | `branch-settings-get` | use-case | be-unit | /settings | Get branch settings |
-| 20 | be-unit-gap | money | `dashboard-payment-plans-card` | business-rule | be-unit | /dashboard | Payment Plans metric with behind-badge (financial roles  |
-| 21 | be-unit-gap | money | `dashboard-payment-plans-card--1` | business-rule | be-unit | /dashboard | Payment Plans metric with behind-badge (financial roles  |
-| 22 | be-unit-gap | money | `dashboard-summary` | use-case | be-unit | /dashboard | Owner dashboard summary (financials + lab orders) |
-| 23 | be-unit-gap | money | `imaging-create-image-link` | inter-module | be-unit | /$patientId (imaging overlay, Edit sheet) | Link image to treatment plan / ortho case / report |
-| 24 | be-unit-gap | money | `portal-get-my-balance` | workflow | be-unit | /portal/bills | Patient views own outstanding balance roll-up (GET /me/b |
-| 25 | be-unit-gap | money | `be-dental-billing-apply-credit-to-invoice` | workflow | be-unit+contract | /patients/$patientId | Apply patient credit against invoice (atomic draw-down) |
-| 26 | be-unit-gap | money | `be-dental-billing-credit-cap-invariant` | business-rule | be-unit+contract | /dental/billing/invoices/{invoiceId}/apply-credit | Credit apply cap: > 0, <= balance, <= available credit ( |
-| 27 | be-unit-gap | money | `fee-schedule-get` | use-case | be-unit+contract | /settings | Read branch fee schedule (CDT catalog with effective pri |
-| 28 | be-unit-gap | clinical | `br-imaging-image-link-loose-coupling` | business-rule | be-unit | — | G5b: image links are loose-coupled UUID refs, idempotent |
-| 29 | be-unit-gap | clinical | `br-portal-002-staff-only-denied` | business-rule | be-unit | /me/appointments | Staff-only account denied (403); unauthenticated denied  |
-| 30 | be-unit-gap | clinical | `consent-template-list` | use-case | be-unit | /settings | List branch consent-form templates |
-| 31 | be-unit-gap | clinical | `imaging-list-image-links` | use-case | be-unit | /$patientId (imaging overlay, Edit sheet) | List context links for an image |
-| 32 | be-unit-gap | clinical | `portal-resolve-self-patient-or-throw` | use-case | be-unit | — | Derive caller's own patientId from session (resolveSelfP |
-| 33 | contract-only | money | `be-dental-billing-generate-statement-batch` | workflow | contract | /billing | Generate batch patient statements (read-side aggregation |
-| 34 | contract-only | money | `be-dental-billing-get-ar-aging` | use-case | contract | /billing | AR aging buckets per patient + summary |
-| 35 | contract-only | money | `be-dental-billing-refund-cap-invariant` | business-rule | contract | /dental/billing/payments/{paymentId}/refund | Refund cap: non-void payment/invoice, amount <= un-refun |
-| 36 | contract-only | money | `dp-list-patient-insurance-profiles` | use-case | contract | /patients/$patientId | List patient insurance profiles |
-| 37 | contract-only | money | `fee-schedule-update-entry` | workflow | contract | /settings | Set a per-branch CDT price override |
-| 38 | contract-only | money | `op-discard-visit` | workflow | contract | /$patientId | Discard (abandon) an open visit |
-| 39 | contract-only | clinical | `be-patient-create-patient` | workflow | contract | /patients | Create patient profile |
-| 40 | contract-only | clinical | `be-patient-create-requires-person-profile` | business-rule | contract | /patients | Create blocked without a person identity (MISSING_PERSON |
-| 41 | contract-only | clinical | `be-patient-one-patient-per-person` | business-rule | contract | /patients | One patient profile per person (PATIENT_EXISTS / unique  |
-| 42 | contract-only | clinical | `be-patient-self-registration-role-grant` | business-rule | contract | /patients | Self-registration grants patient role; staff creation do |
-| 43 | contract-only | clinical | `br-ceph-landmark-fsm-forward-only` | business-rule | contract | — | CIMG-003: landmark FSM strictly forward placed→confirmed |
-| 44 | contract-only | clinical | `br-gingival-margin-bounds` | business-rule | contract | /workspace | Per-site gingival margin must be integer -5..20mm |
-| 45 | contract-only | clinical | `br-grade-bounds` | business-rule | contract | /workspace | Mobility/furcation grades must be 0-3 |
-| 46 | contract-only | clinical | `br-p03-depth-recession-bounds` | business-rule | contract | /workspace | BR-P03 probing depths 0-20mm, recession -5..20mm |
-| 47 | contract-only | clinical | `br-p04-fdi-tooth-number` | business-rule | contract | /workspace | BR-P04 FDI tooth number must be a valid quadrant range |
-| 48 | contract-only | clinical | `br-p06-reading-upsert-idempotent` | business-rule | contract | /workspace | BR-P06 tooth-reading upsert idempotent on (chartId, toot |
-| 49 | contract-only | clinical | `ceph-delete-landmark` | workflow | contract | /dental/imaging | Delete ceph landmark (lock-protected) |
-| 50 | contract-only | clinical | `ceph-update-landmark` | workflow | contract | /$patientId (imaging workspace, ceph panel) | Update single ceph landmark (transition + lock guard) |
-| 51 | contract-only | clinical | `dp-accept-treatment-option` | workflow | contract | /$patientId | Accept one alternate treatment option |
-| 52 | contract-only | clinical | `dp-detect-duplicate-patients` | use-case | contract | /patients | Detect duplicate patients |
-| 53 | contract-only | clinical | `dp-list-patient-treatment-plans` | use-case | contract | /$patientId | List patient treatment plans |
-| 54 | contract-only | clinical | `dp-list-sync-logs` | use-case | contract | /$patientId | List sync logs |
-| 55 | contract-only | clinical | `dp-list-treatment-option-group` | use-case | contract | /dental/patients/:patientId/treatment-options/:optionGroupId | List treatment option group |
-| 56 | contract-only | clinical | `dp-reject-case-presentation` | workflow | contract | /$patientId/case-presentation/$presentationId | Reject case presentation |
-| 57 | contract-only | clinical | `dp-update-communication-consent` | workflow | contract | /dental/patients/:patientId/communication-consent | Update patient communication consent |
-| 58 | contract-only | clinical | `op-get-tooth-history` | use-case | contract | /$patientId | Per-tooth history across patient visits |
-| 59 | contract-only | clinical | `op-update-tooth` | workflow | contract | /workspace/$patientId | Update a single tooth (per-tooth PATCH) |
-| 60 | contract-only | clinical | `patients-comm-consent-persist` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
-| 61 | contract-only | clinical | `patients-comm-consent-persist--1` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
-| 62 | contract-only | clinical | `perio-upsert-tooth-reading` | workflow | contract | /$patientId | Record/update a tooth-level periodontal reading |
-| 63 | contract-only | clinical | `uc-get-medical-history-review` | use-case | contract | /dental/clinical/medical-history-review?patientId= | Get latest medical history review |
-| 64 | contract-only | clinical | `wf-record-medical-history-review` | workflow | contract | /$patientId | Record medical history review (ASA classification) |
+| 15 | be-unit-gap | money | `br-portal-001-idor-self-scope` | business-rule | be-unit | /me/appointments | IDOR-free self-scope: every portal read returns ONLY cal |
+| 16 | be-unit-gap | money | `br-portal-003-empty-self-scope` | business-rule | be-unit | /me/balance | Empty self-scope returns [] / zeroed roll-up, never a fa |
+| 17 | be-unit-gap | money | `br-portal-004-projection-and-writeoff-hidden` | business-rule | be-unit | /me/invoices | Patient-appropriate projection; internal fields & writte |
+| 18 | be-unit-gap | money | `branch-settings-get` | use-case | be-unit | /settings | Get branch settings |
+| 19 | be-unit-gap | money | `dashboard-payment-plans-card` | business-rule | be-unit | /dashboard | Payment Plans metric with behind-badge (financial roles  |
+| 20 | be-unit-gap | money | `dashboard-payment-plans-card--1` | business-rule | be-unit | /dashboard | Payment Plans metric with behind-badge (financial roles  |
+| 21 | be-unit-gap | money | `dashboard-summary` | use-case | be-unit | /dashboard | Owner dashboard summary (financials + lab orders) |
+| 22 | be-unit-gap | money | `imaging-create-image-link` | inter-module | be-unit | /$patientId (imaging overlay, Edit sheet) | Link image to treatment plan / ortho case / report |
+| 23 | be-unit-gap | money | `portal-get-my-balance` | workflow | be-unit | /portal/bills | Patient views own outstanding balance roll-up (GET /me/b |
+| 24 | be-unit-gap | money | `be-dental-billing-apply-credit-to-invoice` | workflow | be-unit+contract | /patients/$patientId | Apply patient credit against invoice (atomic draw-down) |
+| 25 | be-unit-gap | money | `be-dental-billing-credit-cap-invariant` | business-rule | be-unit+contract | /dental/billing/invoices/{invoiceId}/apply-credit | Credit apply cap: > 0, <= balance, <= available credit ( |
+| 26 | be-unit-gap | money | `fee-schedule-get` | use-case | be-unit+contract | /settings | Read branch fee schedule (CDT catalog with effective pri |
+| 27 | be-unit-gap | clinical | `br-imaging-image-link-loose-coupling` | business-rule | be-unit | — | G5b: image links are loose-coupled UUID refs, idempotent |
+| 28 | be-unit-gap | clinical | `br-portal-002-staff-only-denied` | business-rule | be-unit | /me/appointments | Staff-only account denied (403); unauthenticated denied  |
+| 29 | be-unit-gap | clinical | `consent-template-list` | use-case | be-unit | /settings | List branch consent-form templates |
+| 30 | be-unit-gap | clinical | `imaging-list-image-links` | use-case | be-unit | /$patientId (imaging overlay, Edit sheet) | List context links for an image |
+| 31 | be-unit-gap | clinical | `portal-resolve-self-patient-or-throw` | use-case | be-unit | — | Derive caller's own patientId from session (resolveSelfP |
+| 32 | contract-only | money | `be-dental-billing-generate-statement-batch` | workflow | contract | /billing | Generate batch patient statements (read-side aggregation |
+| 33 | contract-only | money | `be-dental-billing-get-ar-aging` | use-case | contract | /billing | AR aging buckets per patient + summary |
+| 34 | contract-only | money | `be-dental-billing-refund-cap-invariant` | business-rule | contract | /dental/billing/payments/{paymentId}/refund | Refund cap: non-void payment/invoice, amount <= un-refun |
+| 35 | contract-only | money | `dp-list-patient-insurance-profiles` | use-case | contract | /patients/$patientId | List patient insurance profiles |
+| 36 | contract-only | money | `fee-schedule-update-entry` | workflow | contract | /settings | Set a per-branch CDT price override |
+| 37 | contract-only | money | `op-discard-visit` | workflow | contract | /$patientId | Discard (abandon) an open visit |
+| 38 | contract-only | clinical | `be-patient-create-patient` | workflow | contract | /patients | Create patient profile |
+| 39 | contract-only | clinical | `be-patient-create-requires-person-profile` | business-rule | contract | /patients | Create blocked without a person identity (MISSING_PERSON |
+| 40 | contract-only | clinical | `be-patient-one-patient-per-person` | business-rule | contract | /patients | One patient profile per person (PATIENT_EXISTS / unique  |
+| 41 | contract-only | clinical | `be-patient-self-registration-role-grant` | business-rule | contract | /patients | Self-registration grants patient role; staff creation do |
+| 42 | contract-only | clinical | `br-ceph-landmark-fsm-forward-only` | business-rule | contract | — | CIMG-003: landmark FSM strictly forward placed→confirmed |
+| 43 | contract-only | clinical | `br-gingival-margin-bounds` | business-rule | contract | /workspace | Per-site gingival margin must be integer -5..20mm |
+| 44 | contract-only | clinical | `br-grade-bounds` | business-rule | contract | /workspace | Mobility/furcation grades must be 0-3 |
+| 45 | contract-only | clinical | `br-p03-depth-recession-bounds` | business-rule | contract | /workspace | BR-P03 probing depths 0-20mm, recession -5..20mm |
+| 46 | contract-only | clinical | `br-p04-fdi-tooth-number` | business-rule | contract | /workspace | BR-P04 FDI tooth number must be a valid quadrant range |
+| 47 | contract-only | clinical | `br-p06-reading-upsert-idempotent` | business-rule | contract | /workspace | BR-P06 tooth-reading upsert idempotent on (chartId, toot |
+| 48 | contract-only | clinical | `ceph-delete-landmark` | workflow | contract | /dental/imaging | Delete ceph landmark (lock-protected) |
+| 49 | contract-only | clinical | `ceph-update-landmark` | workflow | contract | /$patientId (imaging workspace, ceph panel) | Update single ceph landmark (transition + lock guard) |
+| 50 | contract-only | clinical | `dp-accept-treatment-option` | workflow | contract | /$patientId | Accept one alternate treatment option |
+| 51 | contract-only | clinical | `dp-detect-duplicate-patients` | use-case | contract | /patients | Detect duplicate patients |
+| 52 | contract-only | clinical | `dp-list-patient-treatment-plans` | use-case | contract | /$patientId | List patient treatment plans |
+| 53 | contract-only | clinical | `dp-list-sync-logs` | use-case | contract | /$patientId | List sync logs |
+| 54 | contract-only | clinical | `dp-list-treatment-option-group` | use-case | contract | /dental/patients/:patientId/treatment-options/:optionGroupId | List treatment option group |
+| 55 | contract-only | clinical | `dp-reject-case-presentation` | workflow | contract | /$patientId/case-presentation/$presentationId | Reject case presentation |
+| 56 | contract-only | clinical | `dp-update-communication-consent` | workflow | contract | /dental/patients/:patientId/communication-consent | Update patient communication consent |
+| 57 | contract-only | clinical | `op-get-tooth-history` | use-case | contract | /$patientId | Per-tooth history across patient visits |
+| 58 | contract-only | clinical | `op-update-tooth` | workflow | contract | /workspace/$patientId | Update a single tooth (per-tooth PATCH) |
+| 59 | contract-only | clinical | `patients-comm-consent-persist` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
+| 60 | contract-only | clinical | `patients-comm-consent-persist--1` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
+| 61 | contract-only | clinical | `perio-upsert-tooth-reading` | workflow | contract | /$patientId | Record/update a tooth-level periodontal reading |
+| 62 | contract-only | clinical | `uc-get-medical-history-review` | use-case | contract | /dental/clinical/medical-history-review?patientId= | Get latest medical history review |
+| 63 | contract-only | clinical | `wf-record-medical-history-review` | workflow | contract | /$patientId | Record medical history review (ASA classification) |
 
 ## Backend / orphan-endpoint GAPs (135) — NOT user-reachable
 
