@@ -113,7 +113,7 @@
   },
   {
     "id": "comms-ws-chat-room",
-    "reason": "Phase 1 VERIFIED gap (e2e-gap/core, miss:e2e). Add a server-level WebSocket integration test (not a Playwright UI journey, since comms has no UI in apps/dentalemon). B"
+    "reason": "No comms UI in apps/dentalemon → a Playwright e2e is impossible. ws.chat-room.integration.test.ts now boots the real app and proves the live auth chain REJECTS an unauthenticated/invalid-token WS upgrade with 401 (the config-shape test was blind to this). The ledger e2e flag remains because the test runs in the server lane, not Playwright. Authenticated connect + broadcast + onClose deferred."
   },
   {
     "id": "consent-template-list",
