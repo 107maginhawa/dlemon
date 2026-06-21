@@ -56,10 +56,6 @@
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/visits/history/{patientId}/teeth/{toothNumber} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
-    "id": "listCoverageAuthorizations",
-    "reason": "Baseline gap seeded 2026-06-15: GET /dental/patients/{patientId}/authorizations is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
-  },
-  {
     "id": "listPatientInsuranceProfiles",
     "reason": "Baseline gap seeded 2026-06-19: GET /dental/patients/{patientId}/insurance-profiles is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Read-only list; backend-exercised via dental-patient-insurance.test.ts."
   },

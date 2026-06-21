@@ -140,10 +140,6 @@
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (clinical)."
   },
   {
-    "id": "dp-list-coverage-authorizations",
-    "reason": "Phase 1 VERIFIED gap (be-unit-gap/clinical, miss:be-unit+contract). See above."
-  },
-  {
     "id": "dp-list-patient-insurance-profiles",
     "reason": "contract-only: be-unit covered, no Hurl — often deliberate \"integration-tested instead\". Low priority (money)."
   },

@@ -3,16 +3,16 @@
   "source": "coverage-ledger.json",
   "totals": {
     "items": 915,
-    "PARTIAL": 516,
-    "GAP": 201,
+    "PARTIAL": 517,
+    "GAP": 200,
     "COVERED": 198,
     "gapByLayer": {
-      "be-unit": 25,
-      "contract": 37,
+      "be-unit": 24,
+      "contract": 36,
       "e2e": 13
     },
     "gapByRisk": {
-      "clinical": 37,
+      "clinical": 36,
       "auth": 1,
       "rest": 1,
       "money": 24,
@@ -21,15 +21,15 @@
     "gapBySeverity": {
       "unproven": 3,
       "e2e-gap": 12,
-      "be-unit-gap": 19,
+      "be-unit-gap": 18,
       "contract-only": 32
     },
     "partialUnknownByLayer": {
       "be-unit": 72,
-      "fe-unit": 460,
+      "fe-unit": 461,
       "contract": 8
     },
-    "userReachableGaps": 66,
+    "userReachableGaps": 65,
     "backendOnlyGaps": 135
   },
   "backlog": [
@@ -1155,40 +1155,6 @@
         "be-unit"
       ],
       "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-list-coverage-authorizations",
-      "title": "List coverage authorizations",
-      "type": "use-case",
-      "modules": [
-        "dental-patient",
-        "patient"
-      ],
-      "route": "/dental/patients/:patientId/authorizations",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "be-unit-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "MISSING",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "be-unit",
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
       "absentByDesign": false,
       "itemGrade": "GAP"
     },
@@ -23344,27 +23310,24 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "be-unit-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "MISSING",
-        "contract": "MISSING",
+        "be-unit": "COVERED",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "be-unit",
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "dp-list-dental-alerts",

@@ -10,8 +10,8 @@ Only confident `MISSING` required layers count as GAPs.
 | Grade | Count | Meaning |
 |-------|------:|---------|
 | COVERED | 198 | all required layers proven (be/contract/e2e) |
-| PARTIAL | 516 | no confident MISSING, but ≥1 UNKNOWN (mostly fe-unit / no-endpoint be-unit) |
-| **GAP** | **201** | ≥1 required layer confidently MISSING — the backlog |
+| PARTIAL | 517 | no confident MISSING, but ≥1 UNKNOWN (mostly fe-unit / no-endpoint be-unit) |
+| **GAP** | **200** | ≥1 required layer confidently MISSING — the backlog |
 | DEFERRED | 0 | absent-by-design (WF-P05 / V-XRI-003 / BR-031) |
 
 ## GAP backlog by risk × layer
@@ -19,22 +19,22 @@ Only confident `MISSING` required layers count as GAPs.
 | Risk | GAPs |
 |------|-----:|
 | money | 24 |
-| clinical | 37 |
+| clinical | 36 |
 | auth | 1 |
 | core | 3 |
 | rest | 1 |
 
 | Missing layer | GAP count |
 |---------------|----------:|
-| contract | 37 |
-| be-unit | 25 |
+| contract | 36 |
+| be-unit | 24 |
 | e2e | 13 |
 
 ## UNKNOWN (needs scan, mostly fe-unit + no-endpoint be-unit)
 
 | Layer | UNKNOWN count |
 |-------|--------------:|
-| fe-unit | 460 |
+| fe-unit | 461 |
 | be-unit | 72 |
 | contract | 8 |
 
@@ -46,11 +46,11 @@ Severity precedence: `unproven` (NO layer covers the behavior — critical) > `e
 |----------|-----:|
 | unproven | 3 |
 | e2e-gap | 12 |
-| be-unit-gap | 19 |
+| be-unit-gap | 18 |
 | fe-unit-gap | 0 |
 | contract-only | 32 |
 
-## Prioritized user-reachable GAP backlog (66) — the north-star work
+## Prioritized user-reachable GAP backlog (65) — the north-star work
 
 | # | sev | risk | id | type | missing | route | title |
 |--:|-----|------|----|------|---------|-------|-------|
@@ -87,39 +87,38 @@ Severity precedence: `unproven` (NO layer covers the behavior — critical) > `e
 | 31 | be-unit-gap | clinical | `imaging-list-image-links` | use-case | be-unit | /$patientId (imaging overlay, Edit sheet) | List context links for an image |
 | 32 | be-unit-gap | clinical | `op-export-dental-chart` | use-case | be-unit | /$patientId | Export structured chart snapshot |
 | 33 | be-unit-gap | clinical | `portal-resolve-self-patient-or-throw` | use-case | be-unit | — | Derive caller's own patientId from session (resolveSelfP |
-| 34 | be-unit-gap | clinical | `dp-list-coverage-authorizations` | use-case | be-unit+contract | /dental/patients/:patientId/authorizations | List coverage authorizations |
-| 35 | contract-only | money | `be-dental-billing-generate-statement-batch` | workflow | contract | /billing | Generate batch patient statements (read-side aggregation |
-| 36 | contract-only | money | `be-dental-billing-get-ar-aging` | use-case | contract | /billing | AR aging buckets per patient + summary |
-| 37 | contract-only | money | `be-dental-billing-refund-cap-invariant` | business-rule | contract | /dental/billing/payments/{paymentId}/refund | Refund cap: non-void payment/invoice, amount <= un-refun |
-| 38 | contract-only | money | `dp-list-patient-insurance-profiles` | use-case | contract | /patients/$patientId | List patient insurance profiles |
-| 39 | contract-only | money | `fee-schedule-update-entry` | workflow | contract | /settings | Set a per-branch CDT price override |
-| 40 | contract-only | money | `op-discard-visit` | workflow | contract | /$patientId | Discard (abandon) an open visit |
-| 41 | contract-only | clinical | `be-patient-create-patient` | workflow | contract | /patients | Create patient profile |
-| 42 | contract-only | clinical | `be-patient-create-requires-person-profile` | business-rule | contract | /patients | Create blocked without a person identity (MISSING_PERSON |
-| 43 | contract-only | clinical | `be-patient-one-patient-per-person` | business-rule | contract | /patients | One patient profile per person (PATIENT_EXISTS / unique  |
-| 44 | contract-only | clinical | `be-patient-self-registration-role-grant` | business-rule | contract | /patients | Self-registration grants patient role; staff creation do |
-| 45 | contract-only | clinical | `br-ceph-landmark-fsm-forward-only` | business-rule | contract | — | CIMG-003: landmark FSM strictly forward placed→confirmed |
-| 46 | contract-only | clinical | `br-gingival-margin-bounds` | business-rule | contract | /workspace | Per-site gingival margin must be integer -5..20mm |
-| 47 | contract-only | clinical | `br-grade-bounds` | business-rule | contract | /workspace | Mobility/furcation grades must be 0-3 |
-| 48 | contract-only | clinical | `br-p03-depth-recession-bounds` | business-rule | contract | /workspace | BR-P03 probing depths 0-20mm, recession -5..20mm |
-| 49 | contract-only | clinical | `br-p04-fdi-tooth-number` | business-rule | contract | /workspace | BR-P04 FDI tooth number must be a valid quadrant range |
-| 50 | contract-only | clinical | `br-p06-reading-upsert-idempotent` | business-rule | contract | /workspace | BR-P06 tooth-reading upsert idempotent on (chartId, toot |
-| 51 | contract-only | clinical | `ceph-delete-landmark` | workflow | contract | /dental/imaging | Delete ceph landmark (lock-protected) |
-| 52 | contract-only | clinical | `ceph-update-landmark` | workflow | contract | /$patientId (imaging workspace, ceph panel) | Update single ceph landmark (transition + lock guard) |
-| 53 | contract-only | clinical | `dp-accept-treatment-option` | workflow | contract | /$patientId | Accept one alternate treatment option |
-| 54 | contract-only | clinical | `dp-detect-duplicate-patients` | use-case | contract | /patients | Detect duplicate patients |
-| 55 | contract-only | clinical | `dp-list-patient-treatment-plans` | use-case | contract | /$patientId | List patient treatment plans |
-| 56 | contract-only | clinical | `dp-list-sync-logs` | use-case | contract | /$patientId | List sync logs |
-| 57 | contract-only | clinical | `dp-list-treatment-option-group` | use-case | contract | /dental/patients/:patientId/treatment-options/:optionGroupId | List treatment option group |
-| 58 | contract-only | clinical | `dp-reject-case-presentation` | workflow | contract | /$patientId/case-presentation/$presentationId | Reject case presentation |
-| 59 | contract-only | clinical | `dp-update-communication-consent` | workflow | contract | /dental/patients/:patientId/communication-consent | Update patient communication consent |
-| 60 | contract-only | clinical | `op-get-tooth-history` | use-case | contract | /$patientId | Per-tooth history across patient visits |
-| 61 | contract-only | clinical | `op-update-tooth` | workflow | contract | /workspace/$patientId | Update a single tooth (per-tooth PATCH) |
-| 62 | contract-only | clinical | `patients-comm-consent-persist` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
-| 63 | contract-only | clinical | `patients-comm-consent-persist--1` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
-| 64 | contract-only | clinical | `perio-upsert-tooth-reading` | workflow | contract | /$patientId | Record/update a tooth-level periodontal reading |
-| 65 | contract-only | clinical | `uc-get-medical-history-review` | use-case | contract | /dental/clinical/medical-history-review?patientId= | Get latest medical history review |
-| 66 | contract-only | clinical | `wf-record-medical-history-review` | workflow | contract | /$patientId | Record medical history review (ASA classification) |
+| 34 | contract-only | money | `be-dental-billing-generate-statement-batch` | workflow | contract | /billing | Generate batch patient statements (read-side aggregation |
+| 35 | contract-only | money | `be-dental-billing-get-ar-aging` | use-case | contract | /billing | AR aging buckets per patient + summary |
+| 36 | contract-only | money | `be-dental-billing-refund-cap-invariant` | business-rule | contract | /dental/billing/payments/{paymentId}/refund | Refund cap: non-void payment/invoice, amount <= un-refun |
+| 37 | contract-only | money | `dp-list-patient-insurance-profiles` | use-case | contract | /patients/$patientId | List patient insurance profiles |
+| 38 | contract-only | money | `fee-schedule-update-entry` | workflow | contract | /settings | Set a per-branch CDT price override |
+| 39 | contract-only | money | `op-discard-visit` | workflow | contract | /$patientId | Discard (abandon) an open visit |
+| 40 | contract-only | clinical | `be-patient-create-patient` | workflow | contract | /patients | Create patient profile |
+| 41 | contract-only | clinical | `be-patient-create-requires-person-profile` | business-rule | contract | /patients | Create blocked without a person identity (MISSING_PERSON |
+| 42 | contract-only | clinical | `be-patient-one-patient-per-person` | business-rule | contract | /patients | One patient profile per person (PATIENT_EXISTS / unique  |
+| 43 | contract-only | clinical | `be-patient-self-registration-role-grant` | business-rule | contract | /patients | Self-registration grants patient role; staff creation do |
+| 44 | contract-only | clinical | `br-ceph-landmark-fsm-forward-only` | business-rule | contract | — | CIMG-003: landmark FSM strictly forward placed→confirmed |
+| 45 | contract-only | clinical | `br-gingival-margin-bounds` | business-rule | contract | /workspace | Per-site gingival margin must be integer -5..20mm |
+| 46 | contract-only | clinical | `br-grade-bounds` | business-rule | contract | /workspace | Mobility/furcation grades must be 0-3 |
+| 47 | contract-only | clinical | `br-p03-depth-recession-bounds` | business-rule | contract | /workspace | BR-P03 probing depths 0-20mm, recession -5..20mm |
+| 48 | contract-only | clinical | `br-p04-fdi-tooth-number` | business-rule | contract | /workspace | BR-P04 FDI tooth number must be a valid quadrant range |
+| 49 | contract-only | clinical | `br-p06-reading-upsert-idempotent` | business-rule | contract | /workspace | BR-P06 tooth-reading upsert idempotent on (chartId, toot |
+| 50 | contract-only | clinical | `ceph-delete-landmark` | workflow | contract | /dental/imaging | Delete ceph landmark (lock-protected) |
+| 51 | contract-only | clinical | `ceph-update-landmark` | workflow | contract | /$patientId (imaging workspace, ceph panel) | Update single ceph landmark (transition + lock guard) |
+| 52 | contract-only | clinical | `dp-accept-treatment-option` | workflow | contract | /$patientId | Accept one alternate treatment option |
+| 53 | contract-only | clinical | `dp-detect-duplicate-patients` | use-case | contract | /patients | Detect duplicate patients |
+| 54 | contract-only | clinical | `dp-list-patient-treatment-plans` | use-case | contract | /$patientId | List patient treatment plans |
+| 55 | contract-only | clinical | `dp-list-sync-logs` | use-case | contract | /$patientId | List sync logs |
+| 56 | contract-only | clinical | `dp-list-treatment-option-group` | use-case | contract | /dental/patients/:patientId/treatment-options/:optionGroupId | List treatment option group |
+| 57 | contract-only | clinical | `dp-reject-case-presentation` | workflow | contract | /$patientId/case-presentation/$presentationId | Reject case presentation |
+| 58 | contract-only | clinical | `dp-update-communication-consent` | workflow | contract | /dental/patients/:patientId/communication-consent | Update patient communication consent |
+| 59 | contract-only | clinical | `op-get-tooth-history` | use-case | contract | /$patientId | Per-tooth history across patient visits |
+| 60 | contract-only | clinical | `op-update-tooth` | workflow | contract | /workspace/$patientId | Update a single tooth (per-tooth PATCH) |
+| 61 | contract-only | clinical | `patients-comm-consent-persist` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
+| 62 | contract-only | clinical | `patients-comm-consent-persist--1` | business-rule | contract | /patients | Persist per-channel communication consent (post-registra |
+| 63 | contract-only | clinical | `perio-upsert-tooth-reading` | workflow | contract | /$patientId | Record/update a tooth-level periodontal reading |
+| 64 | contract-only | clinical | `uc-get-medical-history-review` | use-case | contract | /dental/clinical/medical-history-review?patientId= | Get latest medical history review |
+| 65 | contract-only | clinical | `wf-record-medical-history-review` | workflow | contract | /$patientId | Record medical history review (ASA classification) |
 
 ## Backend / orphan-endpoint GAPs (135) — NOT user-reachable
 

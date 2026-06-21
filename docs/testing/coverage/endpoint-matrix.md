@@ -12,12 +12,12 @@ Per-operation coverage across the four test layers (contract / integration / jou
 |--------|------:|
 | Total operations | 380 |
 | FE-consumed | 198 |
-| With a contract test | 261 |
+| With a contract test | 262 |
 | With an integration test | 0 |
 | With a journey | 0 |
-| **gap** (consumed, untested) | **32** |
+| **gap** (consumed, untested) | **31** |
 | orphan (handler+SDK, no FE consumer) | 173 |
-| tested / no-obligation | 175 |
+| tested / no-obligation | 176 |
 
 ## GAPS — FE-consumed but untested (ratchet-tracked)
 
@@ -37,7 +37,6 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `getFeeSchedule` | dental-org | GET | `/dental/fee-schedule` |
 | `getMedicalHistoryReview` | dental-clinical | GET | `/dental/clinical/medical-history-review` |
 | `getToothHistory` | dental-visit | GET | `/dental/visits/history/{patientId}/teeth/{toothNumber}` |
-| `listCoverageAuthorizations` | dental-patient | GET | `/dental/patients/{patientId}/authorizations` |
 | `listPatientInsuranceProfiles` | dental-patient | GET | `/dental/patients/{patientId}/insurance-profiles` |
 | `listPatientTreatmentPlans` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plans` |
 | `listQueueBoard` | dental-scheduling | GET | `/dental/branches/{branchId}/queue-board` |
@@ -304,7 +303,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `listConsentRefusals` | dental-clinical | GET | `/dental/visits/{visitId}/consent-refusals` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listConsentTemplates` | dental-org | GET | `/dental/branches/{branchId}/consent-templates` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listConsultations` | emr | GET | `/emr/consultations` | ✅ | ✅ |  |  |  |  | orphan |
-| `listCoverageAuthorizations` | dental-patient | GET | `/dental/patients/{patientId}/authorizations` | ✅ | ✅ | ✅ |  |  |  | gap |
+| `listCoverageAuthorizations` | dental-patient | GET | `/dental/patients/{patientId}/authorizations` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listDentalAlerts` | dental-patient | GET | `/dental/patients/{patientId}/dental-alerts` | ✅ | ✅ |  |  |  |  | orphan |
 | `listDentalFindings` | dental-visit | GET | `/dental/visits/{visitId}/findings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listDentalInvoices` | dental-billing | GET | `/dental/billing/invoices` | ✅ | ✅ | ✅ | ✅ |  |  | tested |

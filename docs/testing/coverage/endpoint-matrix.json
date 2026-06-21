@@ -3179,10 +3179,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "listDentalAlerts",
