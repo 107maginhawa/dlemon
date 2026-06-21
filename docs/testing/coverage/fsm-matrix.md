@@ -138,7 +138,7 @@ _None — every illegal transition has a rejection test._
 | Treatment | `dismissed` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
 | Treatment | `dismissed` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:96 |
 | Treatment | `dismissed` | `planned` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:476 |
-| Treatment | `dismissed` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:883 |
+| Treatment | `dismissed` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:893 |
 | Treatment | `performed` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:99 |
 | Treatment | `performed` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.revenue-path-regression.test.ts`:10 |
 | Treatment | `performed` | `dismissed` | ✅ |   |  |
@@ -148,12 +148,12 @@ _None — every illegal transition has a rejection test._
 | Treatment | `planned` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:434 |
 | Treatment | `planned` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:476 |
 | Treatment | `planned` | `performed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:348 |
-| Treatment | `planned` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:887 |
+| Treatment | `planned` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:897 |
 | Treatment | `verified` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:102 |
 | Treatment | `verified` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:105 |
 | Treatment | `verified` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:250 |
 | Treatment | `verified` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:215 |
-| Treatment | `verified` | `planned` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:887 |
+| Treatment | `verified` | `planned` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:897 |
 | Visit | `active` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.test.ts`:502 |
 | Visit | `active` | `discarded` | ✅ |   |  |
 | Visit | `active` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:350 |

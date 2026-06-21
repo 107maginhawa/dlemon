@@ -4,6 +4,10 @@
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/patients/{patientId}/treatment-options/{optionGroupId}/accept is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "addHouseholdMember",
+    "reason": "Baseline gap seeded 2026-06-21: POST /dental/households/{householdId}/members is FE-consumed (apps/dentalemon, household management (product-pass PP-6)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
     "id": "addInsuranceClaimLine",
     "reason": "Baseline gap seeded 2026-06-19: POST /dental/billing/claims/{claimId}/lines is FE-consumed (apps/dentalemon claim line editor) but has no contract/integration/journey test yet. Backend-tested at the handler level (dental-insurance-claim.test.ts); FE-consumed E2E pending."
   },
@@ -20,8 +24,24 @@
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "createDentalAlert",
+    "reason": "Baseline gap seeded 2026-06-21: POST /dental/patients/{patientId}/dental-alerts is FE-consumed (apps/dentalemon, dental-alerts sheet (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
+    "id": "createHousehold",
+    "reason": "Baseline gap seeded 2026-06-21: POST /dental/households is FE-consumed (apps/dentalemon, household management (product-pass PP-6)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
+    "id": "createOcclusionScreening",
+    "reason": "Baseline gap seeded 2026-06-21: POST /dental/patients/{patientId}/occlusion-screenings is FE-consumed (apps/dentalemon, occlusion screening sheet (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
     "id": "createPatient",
-    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): POST /patients is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating PII — Phase 3 skeptic-fan-out pin (createPatient validator + tenant-scoping)."
+    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): POST /patients is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating PII \u2014 Phase 3 skeptic-fan-out pin (createPatient validator + tenant-scoping)."
+  },
+  {
+    "id": "createTask",
+    "reason": "Baseline gap seeded 2026-06-21: POST /dental/patients/{patientId}/tasks is FE-consumed (apps/dentalemon, patient-tasks sheet (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
   },
   {
     "id": "deactivateMember",
@@ -56,8 +76,20 @@
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/visits/history/{patientId}/teeth/{toothNumber} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "listDentalAlerts",
+    "reason": "Baseline gap seeded 2026-06-21: GET /dental/patients/{patientId}/dental-alerts is FE-consumed (apps/dentalemon, dental-alerts sheet + top-bar badges (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
+    "id": "listOcclusionScreenings",
+    "reason": "Baseline gap seeded 2026-06-21: GET /dental/patients/{patientId}/occlusion-screenings is FE-consumed (apps/dentalemon, occlusion screening sheet (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
     "id": "listPatientInsuranceProfiles",
     "reason": "Baseline gap seeded 2026-06-19: GET /dental/patients/{patientId}/insurance-profiles is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Read-only list; backend-exercised via dental-patient-insurance.test.ts."
+  },
+  {
+    "id": "listPatientTasks",
+    "reason": "Baseline gap seeded 2026-06-21: GET /dental/patients/{patientId}/tasks is FE-consumed (apps/dentalemon, patient-tasks sheet (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
   },
   {
     "id": "listPatientTreatmentPlans",
@@ -76,12 +108,20 @@
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/patients/{patientId}/treatment-options/{optionGroupId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "listWaitlist",
+    "reason": "Baseline gap seeded 2026-06-21: GET /dental/branches/{branchId}/waitlist is FE-consumed (apps/dentalemon, waitlist panel (product-pass PP-5)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
     "id": "markNotificationAsRead",
     "reason": "Baseline gap seeded 2026-06-15: POST /notifs/{notif}/read is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
     "id": "markUncollectible",
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/billing/invoices/{invoiceId}/uncollectible is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
+  },
+  {
+    "id": "promoteWaitlistEntry",
+    "reason": "Baseline gap seeded 2026-06-21: POST /dental/waitlist/{entryId}/promote is FE-consumed (apps/dentalemon, waitlist panel (product-pass PP-5)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
   },
   {
     "id": "recordMedicalHistoryReview",
@@ -96,6 +136,14 @@
     "reason": "Baseline gap seeded 2026-06-15: POST /dental/patients/{patientId}/case-presentations/{presentationId}/reject is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
+    "id": "removeHouseholdMember",
+    "reason": "Baseline gap seeded 2026-06-21: DELETE /dental/households/{householdId}/members/{patientId} is FE-consumed (apps/dentalemon, household management (product-pass PP-6)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
+    "id": "updateDentalAlert",
+    "reason": "Baseline gap seeded 2026-06-21: PATCH /dental/patients/{patientId}/dental-alerts/{alertId} is FE-consumed (apps/dentalemon, dental-alerts sheet (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
     "id": "updateFeeScheduleEntry",
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/fee-schedule/{cdt} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
@@ -104,16 +152,24 @@
     "reason": "Baseline gap seeded 2026-06-19: PATCH /dental/billing/claims/{claimId}/lines/{lineId} is FE-consumed (apps/dentalemon claim line editor) but has no contract/integration/journey test yet. Backend-tested at the handler level; FE-consumed E2E pending."
   },
   {
+    "id": "updateInsuranceProfile",
+    "reason": "Baseline gap seeded 2026-06-21: PATCH /dental/patients/{patientId}/insurance-profiles/{profileId} is FE-consumed (apps/dentalemon, insurance profile editor) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
+  },
+  {
     "id": "updateMember",
-    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. SUSPECTED credential-write IDOR (license/npi writable by any member on any memberId) — Phase 3 skeptic-fan-out pin."
+    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. SUSPECTED credential-write IDOR (license/npi writable by any member on any memberId) \u2014 Phase 3 skeptic-fan-out pin."
   },
   {
     "id": "updatePatientCommunicationConsent",
-    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/patients/{patientId}/communication-consent is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating consent PII — Phase 3 skeptic-fan-out pin (cross-tenant + branch authz)."
+    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/patients/{patientId}/communication-consent is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating consent PII \u2014 Phase 3 skeptic-fan-out pin (cross-tenant + branch authz)."
   },
   {
     "id": "updateQueueItemStatus",
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/queue-items/{itemId}/status is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
+  },
+  {
+    "id": "updateTask",
+    "reason": "Baseline gap seeded 2026-06-21: PATCH /dental/patients/{patientId}/tasks/{taskId} is FE-consumed (apps/dentalemon, patient-tasks sheet FSM (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
   },
   {
     "id": "updateTooth",
