@@ -62,7 +62,16 @@ afterEach(async () => {
   await db.execute(sql`DELETE FROM dental_invoice`);
   // Reset branch settings any reminder-cadence test mutated.
   await db.update(dentalBranches).set({ settings: {} }).where(eq(dentalBranches.id, BRANCH_ID));
+  // Reset per-channel consent any dunning test mutated (shared PERSON_ID row).
+  await db.update(persons).set({ consent: null }).where(eq(persons.id, PERSON_ID));
 });
+
+/** Persist per-channel communication consent on the shared dunning person. */
+async function seedDunningConsent(channels: Record<string, boolean>) {
+  await db.update(persons)
+    .set({ consent: { registrationConsent: true, capturedAt: new Date().toISOString(), channels } as any })
+    .where(eq(persons.id, PERSON_ID));
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -226,7 +235,8 @@ describe('dental-billing status sweep — dunning reminders (BR-050)', () => {
     );
   }
 
-  test('fires the first offset (default [3,7,14]) and logs one row + enqueues billing notifs', async () => {
+  test('fires the first offset (default [3,7,14]) and enqueues email (consented) + always-on in-app', async () => {
+    await seedDunningConsent({ email: true }); // email opted in; push has no flag → fail-closed
     const invoice = await seedIssuedInvoicePastDue(4); // 4 days overdue → offset 3 only
     const { handler } = captureHandler();
     await handler(makeContext());
@@ -239,7 +249,9 @@ describe('dental-billing status sweep — dunning reminders (BR-050)', () => {
     const notifs = await billingNotifs(invoice.id);
     expect(notifs.length).toBeGreaterThanOrEqual(1);
     expect(notifs.every((n) => n.recipient === PERSON_ID)).toBe(true);
-    expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['email', 'push']));
+    // Consent-gated outbound: email fires (consented), push fails closed (no flag),
+    // in-app is always delivered.
+    expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['email', 'in-app']));
   });
 
   test('idempotent: a second sweep writes no further reminder row for the same offset', async () => {
@@ -330,34 +342,35 @@ describe('dental-billing status sweep — dunning reminders (BR-050)', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ⚠ CONSENT BYPASS — CHARACTERIZATION ONLY, FLAGGED FOR PRODUCT/LEGAL RULING.
-  // Dunning enqueues billing reminders on email+push WITHOUT consulting the
-  // patient's per-channel communication consent, whereas recall/appointment
-  // reminders consent-gate via resolveConsentedChannels (dental-scheduling/utils).
-  // Whether transactional debt-collection reminders SHOULD respect communication
-  // -channel consent is a product/legal call (often consent-exempt as a legitimate
-  // business interest; but the shared PersonConsent was built for "all automated
-  // reminders"). This test PINS the current behavior so any future gate is a
-  // deliberate, test-breaking change — it does NOT endorse it. See backlog
-  // gap `person-consent-dunning-channel-bypass`.
+  // CONSENT GATE (resolved ruling): dunning payment reminders gate OUTBOUND
+  // (sms/email/push) on per-channel communication consent and ALWAYS deliver
+  // in-app — identical to recall/appointment reminders (resolveConsentedChannels).
+  // No longer a bypass.
   // ─────────────────────────────────────────────────────────────────────────
-  test('FLAGGED: dunning enqueues email+push even when the patient has DENIED all comms consent (bypass — unlike clinical reminders)', async () => {
-    await db.update(persons)
-      .set({ consent: { email: false, sms: false, phone: false, marketing: false } as any })
-      .where(eq(persons.id, PERSON_ID));
-    try {
-      const invoice = await seedIssuedInvoicePastDue(4); // offset 3 elapsed
-      const { handler } = captureHandler();
-      await handler(makeContext());
+  test('consent-denied subject: NO outbound (sms/email/push), in-app still delivered', async () => {
+    await seedDunningConsent({ email: false, sms: false, phone: false, marketing: false });
+    const invoice = await seedIssuedInvoicePastDue(4); // offset 3 elapsed
+    const { handler } = captureHandler();
+    await handler(makeContext());
 
-      const notifs = await billingNotifs(invoice.id);
-      // Current behavior: consent is NOT consulted — both channels fire regardless.
-      expect(notifs.length).toBeGreaterThanOrEqual(1);
-      expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['email', 'push']));
-      expect(notifs.every((n) => n.recipient === PERSON_ID)).toBe(true);
-    } finally {
-      // Restore so the shared PERSON_ID row is consent-neutral for other tests.
-      await db.update(persons).set({ consent: null }).where(eq(persons.id, PERSON_ID));
-    }
+    const notifs = await billingNotifs(invoice.id);
+    // Outbound suppressed by consent; in-app is the only delivered channel.
+    expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['in-app']));
+    expect(notifs.some((n) => ['email', 'push', 'sms'].includes(n.channel))).toBe(false);
+    expect(notifs.every((n) => n.recipient === PERSON_ID)).toBe(true);
+    // The offset claim is still consumed (in-app was delivered) — exactly-once holds.
+    const rows = await reminderRows(invoice.id);
+    expect(rows.map((r) => r.offsetDay)).toEqual([3]);
+    expect(rows[0]!.status).toBe('sent');
+  });
+
+  test('consent unset (null): outbound fails closed → in-app only', async () => {
+    // PERSON_ID consent defaults to null (afterEach resets it).
+    const invoice = await seedIssuedInvoicePastDue(4);
+    const { handler } = captureHandler();
+    await handler(makeContext());
+
+    const notifs = await billingNotifs(invoice.id);
+    expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['in-app']));
   });
 });
