@@ -36,14 +36,6 @@
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/branches/{branchId}/postop-templates is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
-    "id": "createPractitioner",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /providers/practitioners is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "createPractitionerRole",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /providers/practitioner-roles is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
     "id": "createQueueItem",
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/appointments/{appointmentId}/queue-item is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
@@ -60,20 +52,12 @@
     "reason": "Allowlisted 2026-06-22: POST /billing/webhooks/stripe is UNAUTHENTICATED — its trust boundary is the Stripe webhook signature (verified, with an idempotency ledger, in handleStripeWebhook.test.ts), not per-user object ownership. A cross-tenant/IDOR negative test does not apply to a signature-gated machine-to-machine endpoint."
   },
   {
-    "id": "mergePatients",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /patients/merge is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
     "id": "requestErasure",
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/erasure-requests is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
     "id": "setSecurityQuestion",
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/org/members/{memberId}/security-question is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "unmergePatients",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /patients/unmerge is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
     "id": "updateClaimStatus",
@@ -86,13 +70,5 @@
   {
     "id": "updatePostopTemplate",
     "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/branches/{branchId}/postop-templates/{templateId} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePractitioner",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /providers/practitioners/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePractitionerRole",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /providers/practitioner-roles/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   }
 ]
