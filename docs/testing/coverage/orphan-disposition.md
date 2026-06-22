@@ -8,7 +8,7 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **56** (23 ownership-tested, **33 obligation gaps**).
+Sensitive mutating orphans: **56** (24 ownership-tested, **32 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
@@ -67,7 +67,7 @@ Sensitive mutating orphans: **56** (23 ownership-tested, **33 obligation gaps**)
 | `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | ⚠️ obligation |
 | `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | ⚠️ obligation |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | ✅ |
-| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | ⚠️ obligation |
+| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | ✅ |
 
 ## All orphans (wire / remove / keep backlog)
 
@@ -238,4 +238,4 @@ Total orphans: **158**
 | `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | keep | sensitive-write (ownership-tested) |
 | `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` | keep | _triage pending_ |
-| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | keep | sensitive-write (obligation) |
+| `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | keep | sensitive-write (ownership-tested) |
