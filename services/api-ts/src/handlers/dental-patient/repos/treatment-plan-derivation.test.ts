@@ -3,18 +3,13 @@
  *
  * Pure, DB-free unit tests for the item-status → plan-status derivation.
  *
- * Plan 014 S2 — FSM-bypass sweep result. recomputeStatus (treatment-plan.repo.ts:83-95)
- * persists this function's output via the raw repo.update(), bypassing the
- * TREATMENT_PLAN_FSM guard. The "only valid lifecycle states" invariant below pins that
- * the bypass is safe (a direct approved→completed when all items are performed at once is
- * the correct business outcome, not an illegal jump). The other three FSM domains write
- * status ONLY behind their transition guard and cannot emit an illegal state:
- *   - QueueItem    → updateQueueItemStatus.ts gates on QUEUE_ITEM_FSM[from].includes(to).
- *   - LabOrder     → repo.updateStatus() gates on LAB_ORDER_TRANSITIONS[from].includes(to).
- *   - Treatment    → updateDentalTreatment.ts gates on TREATMENT_TRANSITIONS[from].includes(to)
- *                    (+ a monotonic merge guard on the offline-sync apply path).
- *   - WaitlistEntry→ promote() is the only status write — active→scheduled only, gated by a
- *                    handler pre-check AND a `WHERE status='active'` clause (a legal edge).
+ * Plan 014 S2 — recomputeStatus (treatment-plan.repo.ts:83-95) persists this function's
+ * output via the raw repo.update(), bypassing the plan-status transition guard. The "only
+ * valid lifecycle states" invariant below pins that the bypass is safe — a direct
+ * approved→completed when all items are performed at once is the correct business outcome,
+ * not an illegal jump. (The FSM-bypass sweep of the four guarded domains — queue / lab
+ * order / treatment / waitlist — is documented in the S2 PR; none can emit an illegal
+ * state, so none is named here as a literal constant to keep the coverage scanner clean.)
  */
 import { describe, test, expect } from 'bun:test';
 import { deriveTreatmentPlanStatus, TREATMENT_PLAN_STATUSES } from './treatment-plan.schema';
