@@ -1,9 +1,5 @@
 [
   {
-    "id": "CephMgmt_createCephSuperimposition",
-    "reason": "Allowlisted 2026-06-22: POST /dental/imaging/ceph/superimpositions is branch-gated via assertBranchRole on the TO report study branch (cephSuperimposition.ts loadAndCompute) — verified in source. The sibling ImagingMgmt_finalizeCbctStudy uses the identical assertBranchRole(branch, [dentist_owner, dentist_associate]) mechanic and has a pinned cross-tenant deny test (imaging.cross-tenant-orphans.test.ts). A dedicated deny test for this op is deferred (its report->image->study load needs a heavier 3-method repo mock)."
-  },
-  {
     "id": "approveAmendment",
     "reason": "Allowlisted 2026-06-22: POST /dental/visits/{visitId}/amendments/{amendmentId}/approve is a 501 NOT_IMPLEMENTED stub — supervisor approval is deferred behind the dental_clinical_amendment_approval flag (BR-019). It mutates nothing and returns 501 to every authenticated caller, so there is no object-ownership/IDOR surface to test. Re-evaluate when the approval workflow ships."
   },
