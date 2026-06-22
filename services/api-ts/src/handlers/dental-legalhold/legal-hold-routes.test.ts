@@ -82,4 +82,30 @@ describe('legal-hold HTTP routes', () => {
     const res = await app.request('/dental/legal-holds', J({ tenantId: TENANT, subjectPersonId: PERSON, reason: 'x' }));
     expect(res.status).toBe(400);
   });
+
+  // Pins the INTENTIONAL platform-admin global scope: listLegalHolds returns
+  // holds across ALL tenants (tenantId is only an optional filter) and release
+  // is by-id with no tenant scoping. A future accidental org-filter on list, or
+  // a tenant-ownership check on release, would break this — exactly what the
+  // backlog gap `legalhold-crosstenant-admin-scope-unpinned` warns about.
+  test('cross-tenant admin scope: a platform admin lists + releases holds across DIFFERENT tenants', async () => {
+    const TENANT_B = 'd6000000-0000-4000-8000-0000000000b2';
+    const PERSON_B = 'e6000000-0000-4000-8000-0000000000b2';
+    const app = makeApp(db, ADMIN);
+
+    const a = (await (await app.request('/dental/legal-holds', J(holdBody))).json()) as { id: string };
+    const b = (await (await app.request('/dental/legal-holds',
+      J({ tenantId: TENANT_B, subjectPersonId: PERSON_B, name: 'hold-b', reason: 'audit' }))).json()) as { id: string };
+
+    // List with NO tenant filter → the admin sees BOTH tenants' holds.
+    const list = (await (await app.request('/dental/legal-holds')).json()) as Array<{ id: string }>;
+    const ids = new Set(list.map((h) => h.id));
+    expect(ids.has(a.id)).toBe(true);
+    expect(ids.has(b.id)).toBe(true);
+
+    // The admin can release the OTHER tenant's hold (no tenant-ownership gate).
+    const rel = await app.request(`/dental/legal-holds/${b.id}/release`, J({}));
+    expect(rel.status).toBe(200);
+    expect(((await rel.json()) as { status: string }).status).toBe('released');
+  });
 });
