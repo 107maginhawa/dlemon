@@ -559,3 +559,52 @@ HTTP 200
 [Asserts]
 jsonpath "$" isCollection
 jsonpath "$[*].status" includes "pending"
+
+
+# ============================================================
+# COMMUNICATION CONSENT (Plan 014 S3 — consent-bearing wire pin)
+# updatePatientCommunicationConsent is a consent PII write the FE depends on; a
+# silent wire regression here is a compliance event. Pin request + response shape.
+# ============================================================
+
+# C1. Set per-channel communication consent (partial — only supplied channels change).
+PATCH {{api}}/dental/patients/{{patient_id}}/communication-consent
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "sms": true,
+  "email": false,
+  "marketing": true
+}
+HTTP 200
+[Asserts]
+jsonpath "$.registrationConsent" exists
+jsonpath "$.channels.sms" == true
+jsonpath "$.channels.email" == false
+jsonpath "$.channels.marketing" == true
+jsonpath "$.channelsUpdatedAt" != null
+
+
+# C2. Partial update preserves untouched channels (phone omitted above, sms flipped here).
+PATCH {{api}}/dental/patients/{{patient_id}}/communication-consent
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "sms": false
+}
+HTTP 200
+[Asserts]
+jsonpath "$.channels.sms" == false
+jsonpath "$.channels.email" == false
+jsonpath "$.channels.marketing" == true
+
+
+# C3. Read back the persisted consent (GET surfaces the same wire shape).
+GET {{api}}/dental/patients/{{patient_id}}/communication-consent
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.registrationConsent" exists
+jsonpath "$.channels.sms" == false
+jsonpath "$.channels.marketing" == true
+jsonpath "$.channelsUpdatedAt" != null

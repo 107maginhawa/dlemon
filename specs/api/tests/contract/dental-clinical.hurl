@@ -510,6 +510,40 @@ jsonpath "$.code" == "MEDICAL_HISTORY_IMMUTABLE"
 
 
 # ============================================================
+# MEDICAL HISTORY REVIEW (Plan 014 S3 — wire pin)
+# recordMedicalHistoryReview (ASA attestation) is FE-consumed; pin its request +
+# response shape and the read-back the "due for review" prompt derives from.
+# ============================================================
+
+# 21a. Record an ASA Physical Status review (append-only attestation).
+POST {{api}}/dental/clinical/medical-history-review
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{patient_id}}",
+  "asaClassification": "II",
+  "asaEmergency": false
+}
+HTTP 201
+[Asserts]
+jsonpath "$.id" exists
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.asaClassification" == "II"
+jsonpath "$.asaEmergency" == false
+jsonpath "$.reviewedAt" != null
+
+
+# 21b. Read back the latest review (the prompt derives "due" from reviewedAt).
+GET {{api}}/dental/clinical/medical-history-review?patientId={{patient_id}}
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.patientId" == "{{patient_id}}"
+jsonpath "$.asaClassification" == "II"
+jsonpath "$.reviewedAt" != null
+
+
+# ============================================================
 # AMENDMENTS
 # ============================================================
 

@@ -2490,10 +2490,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "getMerchantAccount",
@@ -2620,7 +2620,7 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
@@ -4050,10 +4050,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "recoverPin",
@@ -4635,10 +4635,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "updatePatientContact",

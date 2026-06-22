@@ -48,8 +48,9 @@
 
 `updatePatientCommunicationConsent` (consent-bearing) and `recordMedicalHistoryReview` are FE-consumed and unit-tested but have **no contract test pinning the wire shape** the FE depends on. A silent wire regression on consent is a compliance event, not a UX bug.
 
-- [ ] Add Hurl contract tests under `specs/api/tests/contract/` (or api-unit contract-shape tests) pinning request/response for both. Check whether this discharges their `endpoint.allowlist.json` Cat-2 entries; if so, remove them + regen roadmap.
-- [ ] One PR.
+- [x] Added Hurl contract tests: `dental-patient.hurl` (communication-consent PATCH partial-merge + GET read-back) and `dental-clinical.hurl` (medical-history-review POST + GET). All pass against the live API (non-vacuity proven: flipping a consent assert → fail; reverted).
+- [x] Discharged **3** `endpoint.allowlist.json` entries now `tested`: `updatePatientCommunicationConsent`, `recordMedicalHistoryReview`, `getMedicalHistoryReview` (the GET rode along for free). `getPatientCommunicationConsent` = orphan (not a gap). Regenerated endpoint-matrix + COVERAGE_GAP_ROADMAP; `coverage:all:ci` exit 0; 196 coverage tests pass.
+- [x] One PR.
 
 ---
 
@@ -85,6 +86,6 @@ The ratchet blocks *new* gaps, but `docs/testing/coverage/*.allowlist.json` is s
 |-------|-------|----------|--------|
 | S1 | updateInsuranceClaimLine immutability + audit | P1 | DONE |
 | S2 | deriveTreatmentPlanStatus test + FSM-bypass sweep | P2 | DONE |
-| S3 | consent + med-history contract tests | P2 | TODO |
+| S3 | consent + med-history contract tests | P2 | DONE |
 | S4 | frozen FSM-table snapshot | P3 | TODO |
 | S5 | allowlist CODEOWNERS + RLS trip-wire | P2 | TODO |
