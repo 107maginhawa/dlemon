@@ -9,7 +9,7 @@
   },
   {
     "id": "approveAmendment",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/visits/{visitId}/amendments/{amendmentId}/approve is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: POST /dental/visits/{visitId}/amendments/{amendmentId}/approve is a 501 NOT_IMPLEMENTED stub — supervisor approval is deferred behind the dental_clinical_amendment_approval flag (BR-019). It mutates nothing and returns 501 to every authenticated caller, so there is no object-ownership/IDOR surface to test. Re-evaluate when the approval workflow ships."
   },
   {
     "id": "approveTreatmentPlan",
@@ -18,10 +18,6 @@
   {
     "id": "confirmAppointmentByToken",
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/public/appointments/{appointmentId}/confirm/{token} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "createPostopTemplate",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/branches/{branchId}/postop-templates is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
     "id": "createQueueItem",
@@ -46,9 +42,5 @@
   {
     "id": "updateClaimStatus",
     "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/patients/{patientId}/claims/{claimId}/status is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePostopTemplate",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/branches/{branchId}/postop-templates/{templateId} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   }
 ]
