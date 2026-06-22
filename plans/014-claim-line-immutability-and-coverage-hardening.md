@@ -38,9 +38,9 @@
 
 **Context:** `treatment-plan.repo.ts:83-95` `recomputeStatus()` writes status via `deriveTreatmentPlanStatus()` (`repos/treatment-plan.schema.ts:56-77`) using the raw `update()` — **bypassing** the `TREATMENT_PLAN_FSM` guard in `updateTreatmentPlan.ts:54-61`. Expert-2 proved the derivation only emits *legal* states (so no illegal-transition bug), but it is bespoke money/clinical arithmetic (completion %, all-declined denominator, scheduled-vs-approved baseline) with **zero unit test**.
 
-- [ ] **Sweep first** (Expert-1 caveat): `grep` each FSM repo (`QueueItem`/`WaitlistEntry`/`LabOrder`/`Treatment`) for a `.update({status})` write NOT behind the `FSM[from].includes(to)` guard. Document findings in the PR. If any *can* emit an illegal state → that's a real bug, add a guard + test (escalate).
-- [ ] **RED/GREEN**: pure-function unit test for `deriveTreatmentPlanStatus` — all-items-declined denominator, scheduled baseline preserved, partial vs full completion, empty-items. (Pure fn → may be GREEN-on-arrival = characterization pin; prove non-vacuity by mutating the function.)
-- [ ] One PR.
+- [x] **Sweep done**: QueueItem (`updateQueueItemStatus` → `QUEUE_ITEM_FSM.includes`), LabOrder (`repo.updateStatus` → `LAB_ORDER_TRANSITIONS.includes`), Treatment (`updateDentalTreatment` → `TREATMENT_TRANSITIONS.includes` + sync monotonic merge), WaitlistEntry (`promote` = sole status write, active→scheduled, gated by handler pre-check + `WHERE status='active'`). **No domain can emit an illegal state → no escalation.** The only deliberate FSM bypass is `recomputeStatus`, and the invariant test proves it only emits valid lifecycle states.
+- [x] **GREEN** (characterization pin): augmented the EXISTING `treatment-plan-derivation.test.ts` (it already covered all-declined/partial/full/empty) with the gaps S2 named — `scheduled` baseline preserved/advances, partially_completed/completed→approved fallback, `rejected` untouched, and the only-valid-lifecycle-state safety invariant. 11/11 pass. Non-vacuity: mutating the scheduled-baseline branch → RED; reverted.
+- [x] One PR.
 
 ---
 
@@ -84,7 +84,7 @@ The ratchet blocks *new* gaps, but `docs/testing/coverage/*.allowlist.json` is s
 | Slice | Title | Priority | Status |
 |-------|-------|----------|--------|
 | S1 | updateInsuranceClaimLine immutability + audit | P1 | DONE |
-| S2 | deriveTreatmentPlanStatus test + FSM-bypass sweep | P2 | TODO |
+| S2 | deriveTreatmentPlanStatus test + FSM-bypass sweep | P2 | DONE |
 | S3 | consent + med-history contract tests | P2 | TODO |
 | S4 | frozen FSM-table snapshot | P3 | TODO |
 | S5 | allowlist CODEOWNERS + RLS trip-wire | P2 | TODO |
