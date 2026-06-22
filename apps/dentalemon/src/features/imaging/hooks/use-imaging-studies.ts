@@ -33,8 +33,8 @@ export interface PatientImageItem {
   qualityStatus: 'ok' | 'retake'
   retakeReason: string | null
   tags: string[]
-  // G5b context links (treatment plan / ortho case / report).
-  links: { id: string; linkType: 'treatment_plan' | 'ortho_case' | 'report'; targetId: string }[]
+  // G5b context links (treatment plan / report).
+  links: { id: string; linkType: 'treatment_plan' | 'report'; targetId: string }[]
 }
 
 const toIso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : String(d))

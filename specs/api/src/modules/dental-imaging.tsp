@@ -109,7 +109,7 @@ namespace DentalImagingModule {
     qualityStatus?: "ok" | "retake";
     retakeReason?: string | null;
     tags?: string[];
-    // G5b: context links (treatment plan / ortho case / report). Empty for legacy.
+    // G5b: context links (treatment plan / report). Empty for legacy.
     links?: ImagingLink[];
   }
 
@@ -237,17 +237,17 @@ namespace DentalImagingModule {
     tags?: string[];
   }
 
-  // G5b: a context link from an image to a treatment plan / ortho case / ceph report.
+  // G5b: a context link from an image to a treatment plan / ceph report.
   model ImagingLink {
     id: string;
     imageId: string;
-    linkType: "treatment_plan" | "ortho_case" | "report";
+    linkType: "treatment_plan" | "report";
     targetId: string;
     createdAt: utcDateTime;
   }
 
   model CreateImagingLinkBody {
-    linkType: "treatment_plan" | "ortho_case" | "report";
+    linkType: "treatment_plan" | "report";
     targetId: string;
   }
 
@@ -302,7 +302,7 @@ namespace DentalImagingModule {
     @useAuth(bearerAuth)
     updateImageMetadata(@path imageId: UUID, @body body: UpdateImageMetadataBody): ImagingStudyImage | ErrorResponse | ApiUnauthorizedResponse;
 
-    // G5b: context links (treatment plan / ortho case / report).
+    // G5b: context links (treatment plan / report).
     @post
     @route("/images/{imageId}/links")
     @useAuth(bearerAuth)
@@ -365,10 +365,10 @@ namespace DentalImagingModule {
       @query isDiagnostic?: boolean,
       @query qualityStatus?: "ok" | "retake",
       @query tag?: string,
-      // G5b: filter to images linked to a specific target (treatment plan / ortho
-      // case / report id), optionally narrowed by link type.
+      // G5b: filter to images linked to a specific target (treatment plan /
+      // report id), optionally narrowed by link type.
       @query linkTargetId?: string,
-      @query linkType?: "treatment_plan" | "ortho_case" | "report",
+      @query linkType?: "treatment_plan" | "report",
     ): ListPatientImagesResponse | ErrorResponse | ApiUnauthorizedResponse;
   }
 

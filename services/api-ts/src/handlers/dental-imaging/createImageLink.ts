@@ -3,7 +3,7 @@
  *
  * POST /dental/imaging/images/:imageId/links
  *
- * G5b: link an image to a treatment plan / ortho case / ceph report. Loose-coupled —
+ * G5b: link an image to a treatment plan / ceph report. Loose-coupled —
  * targetId references another module's row id with no DB-level FK. Idempotent: linking
  * the same (image, type, target) twice returns the existing link.
  */
@@ -17,7 +17,7 @@ import { treatmentPlanExistsForPatient } from '@/handlers/dental-patient/repos/t
 import { ImagingRepository } from './repos/imaging.repo';
 import type { ImagingLinkType } from './repos/imaging.schema';
 
-const LINK_TYPES = ['treatment_plan', 'ortho_case', 'report'] as const;
+const LINK_TYPES = ['treatment_plan', 'report'] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function createImageLink(ctx: BaseContext): Promise<Response> {
@@ -28,7 +28,7 @@ export async function createImageLink(ctx: BaseContext): Promise<Response> {
   const body = (await ctx.req.json().catch(() => ({}))) as { linkType?: unknown; targetId?: unknown };
 
   if (typeof body.linkType !== 'string' || !(LINK_TYPES as readonly string[]).includes(body.linkType)) {
-    throw new ValidationError("linkType must be one of 'treatment_plan', 'ortho_case', 'report'");
+    throw new ValidationError("linkType must be one of 'treatment_plan', 'report'");
   }
   if (typeof body.targetId !== 'string' || !UUID_RE.test(body.targetId)) {
     throw new ValidationError('targetId must be a valid uuid');
@@ -57,12 +57,6 @@ export async function createImageLink(ctx: BaseContext): Promise<Response> {
       throw new NotFoundError('Ceph report not found for this patient');
     }
   }
-  // ortho_case: there is no ortho module/table to validate against, so its target
-  // is left unvalidated (unchanged from before — an ortho_case link only ever
-  // points at a not-yet-built feature, never real patient data). ponytail: don't
-  // half-remove a dead feature here — the clean fix is to drop the ortho_case
-  // affordance entirely (FE dropdown + TypeSpec + enum) in a focused cleanup, or
-  // add real validation when the ortho module ships. Tracked as a follow-up.
 
   const link = await repo.createImageLink(imageId, {
     linkType: body.linkType as ImagingLinkType,

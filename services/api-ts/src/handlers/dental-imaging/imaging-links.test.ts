@@ -236,15 +236,13 @@ describe('G5b context links', () => {
     expect(res.status).toBe(404);
   });
 
-  test('G6.2: ortho_case is left unvalidated (no ortho module to validate against) → 201 [characterization]', async () => {
-    // KNOWN GAP: ortho_case has no backing table, so target validation is skipped
-    // (unchanged behavior). It only ever links to a not-yet-built feature, never real
-    // patient data. The clean fix is to remove the dead ortho_case affordance (FE +
-    // TypeSpec + enum) or build the ortho module — tracked as a follow-up. This test
-    // locks the current behavior so a future change to it is intentional.
+  test('ortho_case is a removed link type → 400 (dead feature, #48)', async () => {
+    // ortho_case had no backing table/module — it could only ever link to a
+    // not-yet-built feature. Removed from the accepted link types; the handler now
+    // rejects it as an invalid linkType.
     const app = buildApp(DENTIST);
     const res = await createLink(app, imageId, { linkType: 'ortho_case', targetId: uuidv4() });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(400);
   });
 
   test('listPatientImages surfaces links and filters by linkTargetId / linkType', async () => {
@@ -262,7 +260,7 @@ describe('G5b context links', () => {
     expect(ids.has(linkedImage)).toBe(true);
     expect(ids.has(imageId)).toBe(false);
 
-    const byType = (await (await listImages(app, '&linkType=ortho_case')).json()) as { items: PatientImageItem[] };
+    const byType = (await (await listImages(app, '&linkType=report')).json()) as { items: PatientImageItem[] };
     expect(byType.items.some((i) => i.id === linkedImage)).toBe(false); // only treatment_plan linked
   });
 });

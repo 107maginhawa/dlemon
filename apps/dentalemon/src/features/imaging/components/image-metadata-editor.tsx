@@ -22,7 +22,7 @@ interface ImageMetadataEditorProps {
   onSaved?: () => void
 }
 
-const LINK_TYPES: ImageLinkType[] = ['treatment_plan', 'ortho_case', 'report']
+const LINK_TYPES: ImageLinkType[] = ['treatment_plan', 'report']
 
 // Reclassify targets. Mirrors DentalImagingModuleModalityEnum; CBCT volumes are
 // edited via their own card, so 'cbct' is intentionally absent from this 2-D
@@ -40,7 +40,7 @@ const MODALITY_OPTIONS: { value: ImageModality; label: string }[] = [
 /**
  * G5 write UI — edit an image's library metadata (diagnostic flag, acquisition
  * quality / retake reason, tags) and manage its context links (treatment plan /
- * ortho case / report). Mutations live in useImageLibrary; the per-image links
+ * report). Mutations live in useImageLibrary; the per-image links
  * query is the fresh source for the link list.
  */
 export function ImageMetadataEditor({ item, patientId, branchId, onSaved }: ImageMetadataEditorProps) {
