@@ -8,7 +8,7 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **56** (24 ownership-tested, **32 obligation gaps**).
+Sensitive mutating orphans: **56** (28 ownership-tested, **28 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
@@ -32,8 +32,8 @@ Sensitive mutating orphans: **56** (24 ownership-tested, **32 obligation gaps**)
 | `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | ⚠️ obligation |
 | `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | ✅ |
 | `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | ⚠️ obligation |
-| `createPractitioner` | provider | POST | `/providers/practitioners` | ⚠️ obligation |
-| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | ⚠️ obligation |
+| `createPractitioner` | provider | POST | `/providers/practitioners` | ✅ |
+| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | ✅ |
 | `createProvider` | provider | POST | `/providers` | ✅ |
 | `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | ⚠️ obligation |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | ✅ |
@@ -64,8 +64,8 @@ Sensitive mutating orphans: **56** (24 ownership-tested, **32 obligation gaps**)
 | `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | ✅ |
 | `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | ⚠️ obligation |
 | `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | ⚠️ obligation |
-| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | ⚠️ obligation |
-| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | ⚠️ obligation |
+| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | ✅ |
+| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | ✅ |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | ✅ |
 | `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | ✅ |
 
@@ -118,8 +118,8 @@ Total orphans: **158**
 | `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | keep | sensitive-write (obligation) |
 | `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | keep | sensitive-write (ownership-tested) |
 | `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | keep | sensitive-write (obligation) |
-| `createPractitioner` | provider | POST | `/providers/practitioners` | keep | sensitive-write (obligation) |
-| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | keep | sensitive-write (obligation) |
+| `createPractitioner` | provider | POST | `/providers/practitioners` | keep | sensitive-write (ownership-tested) |
+| `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | keep | sensitive-write (ownership-tested) |
 | `createProvider` | provider | POST | `/providers` | keep | sensitive-write (ownership-tested) |
 | `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | keep | sensitive-write (obligation) |
 | `createReview` | reviews | POST | `/reviews/` | keep | _triage pending_ |
@@ -234,8 +234,8 @@ Total orphans: **158**
 | `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | keep | sensitive-write (obligation) |
 | `updatePerson` | person | PATCH | `/persons/{person}` | keep | _triage pending_ |
 | `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | keep | sensitive-write (obligation) |
-| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | keep | sensitive-write (obligation) |
-| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |
+| `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | keep | sensitive-write (ownership-tested) |
+| `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | sensitive-write (ownership-tested) |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | keep | sensitive-write (ownership-tested) |
 | `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` | keep | _triage pending_ |
 | `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | keep | sensitive-write (ownership-tested) |

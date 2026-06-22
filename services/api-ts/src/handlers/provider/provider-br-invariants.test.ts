@@ -261,3 +261,74 @@ describe('V-PROV-004 — deactivate is a soft-delete, records retained', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V-PROV-005 — parent-FK existence + missing-id guards on create/update
+//   The Zod validator only enforces UUID *shape* on providerId/practitionerId;
+//   the HANDLER must reject a well-formed-but-dangling FK (404) so a practitioner
+//   can never be orphaned from a non-existent provider, nor a role from a
+//   non-existent practitioner. V-PROV-004 pins DELETE-on-missing; these pin the
+//   POST-FK-404 and PATCH-on-missing paths the ledger flagged uncovered.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('V-PROV-005 — create FK existence + update missing-id (404, never a silent write)', () => {
+  const ADMIN_USER = { id: PROVIDER_USER_ID, email: 'admin@clinic.test', role: 'admin' };
+  const MISSING_ID = 'ed000000-0000-4000-8000-0000000bdead';
+
+  test('createPractitioner with a well-formed but non-existent providerId → 404 (no orphan practitioner)', async () => {
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request('/providers/practitioners', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId: MISSING_ID, name: [{ family: 'Orphan', given: ['Nope'] }] }),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { code?: string; message?: string };
+    expect(body.message).toBe('Provider not found');
+
+    // Nothing was written: no practitioner now hangs off the dangling provider id.
+    const rows = await db
+      .select({ id: practitioners.id })
+      .from(practitioners)
+      .where(eq(practitioners.providerId, MISSING_ID));
+    expect(rows).toHaveLength(0);
+  });
+
+  test('createPractitionerRole with a non-existent practitionerId → 404 (no orphan role)', async () => {
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request('/providers/practitioner-roles', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        practitionerId: MISSING_ID,
+        practitioner: { resourceType: 'Practitioner', id: MISSING_ID },
+        organization: { resourceType: 'Organization', id: EXISTING_PROVIDER_ID },
+        code: [],
+        specialty: [],
+      }),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { message?: string };
+    expect(body.message).toBe('Practitioner not found');
+  });
+
+  test('updatePractitioner on a non-existent id → 404 (never a silent no-op 200)', async () => {
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request(`/providers/practitioners/${MISSING_ID}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ active: false }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test('updatePractitionerRole on a non-existent id → 404 (never a silent no-op 200)', async () => {
+    const app = buildTestApp({ db, user: ADMIN_USER });
+    const res = await app.request(`/providers/practitioner-roles/${MISSING_ID}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ active: false }),
+    });
+    expect(res.status).toBe(404);
+  });
+});
