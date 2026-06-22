@@ -4,18 +4,6 @@
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/imaging/ceph/superimpositions is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
-    "id": "DentalMembershipManagement_create",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/organizations/{orgId}/branches/{branchId}/members is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "DentalOrganizationManagement_create",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/organizations is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "DentalOrganizationManagement_update",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/organizations/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
     "id": "ImagingMgmt_finalizeCbctStudy",
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/imaging/studies/{studyId}/cbct/finalize is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
@@ -56,16 +44,8 @@
     "reason": "Baseline obligation seeded 2026-06-16: POST /dental/erasure-requests is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
-    "id": "setSecurityQuestion",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/org/members/{memberId}/security-question is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
     "id": "updateClaimStatus",
     "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/patients/{patientId}/claims/{claimId}/status is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePermissions",
-    "reason": "Baseline obligation seeded 2026-06-16: PUT /dental/org/permissions is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
   },
   {
     "id": "updatePostopTemplate",
