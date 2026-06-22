@@ -1,9 +1,5 @@
 [
   {
-    "id": "/portal",
-    "reason": "baseline"
-  },
-  {
     "id": "/portal/appointments",
     "reason": "baseline"
   },
