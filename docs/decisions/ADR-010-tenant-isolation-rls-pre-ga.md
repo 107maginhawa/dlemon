@@ -36,6 +36,24 @@ RLS is genuine defense-in-depth (it protects against a missing app-level filter)
 
 ---
 
+## Hard release gate: single-clinic invariant (plan 014 S5)
+
+RLS is **posture-only** today — the policies are armed (ENABLE+FORCE) but not every
+handler routes through `withTenantTx`, so un-routed handlers still read the pooled
+superuser connection that bypasses RLS. The product is therefore safe **only while
+exactly one `dental_organization` exists**: a single clinic cannot leak across a tenant
+boundary that does not exist yet. The moment a **second** organization is created before
+RLS is fully activated, every un-routed handler becomes a cross-tenant PHI leak.
+
+**Gate (must hold until P3b activation completes):** before onboarding a second clinic
+to any deployment, `services/api-ts/scripts/check-single-clinic-invariant.ts` must pass
+against that database (exit 0). It fails when `count(dental_organization) > 1` while
+`RLS_FULLY_ACTIVATED` is false. The gate **lifts** by flipping that constant to true once
+every tenant-scoped handler is routed through `withTenantTx` and cross-tenant tests cover
+every module — a deliberate, reviewed event.
+
+---
+
 ## References
 
 - [`docs/decisions/ADR-010-rls-implementation-plan.md`](./ADR-010-rls-implementation-plan.md) — the implementation scoping plan for this gate (tiered target tables, policy shape, `withTenantTx` plumbing, migration/test strategy, 6-PR rollout, open decisions D1–D7)

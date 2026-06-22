@@ -68,9 +68,9 @@ Converts Cat-4's 48-edge debt into ONE guard: import each domain's transition ta
 
 The ratchet blocks *new* gaps, but `docs/testing/coverage/*.allowlist.json` is self-editable — a dev can neutralize a new gap by appending a `reason`. And RLS is posture-only: the moment a 2nd `dental_organization` exists before full RLS activation, un-routed handlers leak cross-tenant PHI.
 
-- [ ] Add a `.github/CODEOWNERS` rule requiring a second approval on `docs/testing/coverage/*.allowlist.json` (and ideally `*.mcp.md`/migration dirs if desired).
-- [ ] RLS trip-wire: a cheap gate/test that **fails if `count(dental_organization) > 1` while RLS is not fully activated** (single-clinic invariant), OR at minimum document it as a hard release gate in the RLS posture doc + `KNOWN_LIMITATIONS.md`. Scope the mechanism in the PR; don't over-build.
-- [ ] One PR.
+- [x] `.github/CODEOWNERS`: added a "self-editable quality gates" section requiring code-owner review on `docs/testing/coverage/*.allowlist.json` (the gap-neutralization vector) + `*rls*` migrations. (Enforcement also needs the branch-protection "Require review from Code Owners" toggle — an admin setting, noted in-file.)
+- [x] RLS trip-wire: `services/api-ts/scripts/check-single-clinic-invariant.ts` — fails (exit 1) if `count(dental_organization) > 1` while `RLS_FULLY_ACTIVATED` is false. A pre-launch/release gate (NOT a suite test — per-file test DBs seed many orgs by design); pure predicate `violatesSingleClinicInvariant` unit-tested in `src/core/single-clinic-invariant.test.ts` (4/4). Documented as a hard release gate in ADR-010 + KNOWN_LIMITATIONS.md. Smoke-verified: flagged the 6-org dev DB, exit 1.
+- [x] One PR.
 
 ---
 
@@ -89,4 +89,4 @@ The ratchet blocks *new* gaps, but `docs/testing/coverage/*.allowlist.json` is s
 | S2 | deriveTreatmentPlanStatus test + FSM-bypass sweep | P2 | DONE |
 | S3 | consent + med-history contract tests | P2 | DONE |
 | S4 | frozen FSM-table snapshot | P3 | DONE |
-| S5 | allowlist CODEOWNERS + RLS trip-wire | P2 | TODO |
+| S5 | allowlist CODEOWNERS + RLS trip-wire | P2 | DONE |
