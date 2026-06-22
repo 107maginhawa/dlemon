@@ -76,3 +76,69 @@ describe('Coverage-authorization FSM property tests', () => {
     }
   });
 });
+
+describe('COVERAGE_AUTH_FSM — explicit per-edge legality (PR-9b)', () => {
+  // 5 legal edges — one literal toContain assertion each.
+  test('requested -> approved is legal', () => {
+    expect(COVERAGE_AUTH_FSM['requested']).toContain('approved');
+  });
+  test('requested -> denied is legal', () => {
+    expect(COVERAGE_AUTH_FSM['requested']).toContain('denied');
+  });
+  test('approved -> partial is legal', () => {
+    expect(COVERAGE_AUTH_FSM['approved']).toContain('partial');
+  });
+  test('approved -> expired is legal', () => {
+    expect(COVERAGE_AUTH_FSM['approved']).toContain('expired');
+  });
+  test('partial -> expired is legal', () => {
+    expect(COVERAGE_AUTH_FSM['partial']).toContain('expired');
+  });
+
+  // 15 illegal edges — every ordered (from,to) pair, from != to, not declared.
+  test('requested -> partial is not a legal transition', () => {
+    expect(isValidTransition('requested', 'partial')).toBe(false);
+  });
+  test('requested -> expired is not a legal transition', () => {
+    expect(isValidTransition('requested', 'expired')).toBe(false);
+  });
+  test('approved -> requested is not a legal transition', () => {
+    expect(isValidTransition('approved', 'requested')).toBe(false);
+  });
+  test('approved -> denied is not a legal transition', () => {
+    expect(isValidTransition('approved', 'denied')).toBe(false);
+  });
+  test('partial -> requested is not a legal transition', () => {
+    expect(isValidTransition('partial', 'requested')).toBe(false);
+  });
+  test('partial -> approved is not a legal transition', () => {
+    expect(isValidTransition('partial', 'approved')).toBe(false);
+  });
+  test('partial -> denied is not a legal transition', () => {
+    expect(isValidTransition('partial', 'denied')).toBe(false);
+  });
+  test('denied -> requested is not a legal transition', () => {
+    expect(isValidTransition('denied', 'requested')).toBe(false);
+  });
+  test('denied -> approved is not a legal transition', () => {
+    expect(isValidTransition('denied', 'approved')).toBe(false);
+  });
+  test('denied -> partial is not a legal transition', () => {
+    expect(isValidTransition('denied', 'partial')).toBe(false);
+  });
+  test('denied -> expired is not a legal transition', () => {
+    expect(isValidTransition('denied', 'expired')).toBe(false);
+  });
+  test('expired -> requested is not a legal transition', () => {
+    expect(isValidTransition('expired', 'requested')).toBe(false);
+  });
+  test('expired -> approved is not a legal transition', () => {
+    expect(isValidTransition('expired', 'approved')).toBe(false);
+  });
+  test('expired -> partial is not a legal transition', () => {
+    expect(isValidTransition('expired', 'partial')).toBe(false);
+  });
+  test('expired -> denied is not a legal transition', () => {
+    expect(isValidTransition('expired', 'denied')).toBe(false);
+  });
+});

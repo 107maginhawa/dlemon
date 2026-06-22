@@ -40,6 +40,42 @@
     "reason": "baseline — legal edge uncovered at matrix introduction"
   },
   {
+    "id": "QueueItem:called->cancelled",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:called->in_progress",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:cancelled->called",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:cancelled->in_progress",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:cancelled->waiting",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:in_progress->cancelled",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:in_progress->completed",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:waiting->called",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "QueueItem:waiting->cancelled",
+    "reason": "baseline (PR-9b) — QUEUE_ITEM_FSM enforced by dental-scheduling/updateQueueItemStatus.ts (allowed.includes guard → BusinessLogicError); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
     "id": "Treatment:declined->performed",
     "reason": "baseline — illegal edge uncovered at matrix introduction"
   },
@@ -70,6 +106,118 @@
   {
     "id": "Treatment:verified->diagnosed",
     "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "TreatmentPlan:approved->cancelled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:approved->completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:cancelled->draft",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:cancelled->partially_completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:cancelled->presented",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:cancelled->scheduled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:completed->approved",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:completed->draft",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:completed->partially_completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:completed->scheduled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:draft->completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:draft->partially_completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:draft->scheduled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:partially_completed->approved",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:partially_completed->cancelled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:partially_completed->draft",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:partially_completed->presented",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:partially_completed->rejected",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:presented->cancelled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:presented->partially_completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:presented->scheduled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:rejected->partially_completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:rejected->scheduled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:scheduled->cancelled",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:scheduled->completed",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:scheduled->draft",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:scheduled->presented",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "TreatmentPlan:scheduled->rejected",
+    "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
   },
   {
     "id": "Visit:active->discarded",
@@ -118,5 +266,21 @@
   {
     "id": "Visit:locked->draft",
     "reason": "baseline — illegal edge uncovered at matrix introduction"
+  },
+  {
+    "id": "WaitlistEntry:active->cancelled",
+    "reason": "baseline (PR-9b) — only mutation promoteWaitlistEntry.ts hard-guards status===active (WAITLIST_ENTRY_NOT_ACTIVE); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "WaitlistEntry:active->scheduled",
+    "reason": "baseline (PR-9b) — only mutation promoteWaitlistEntry.ts hard-guards status===active (WAITLIST_ENTRY_NOT_ACTIVE); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "WaitlistEntry:cancelled->active",
+    "reason": "baseline (PR-9b) — only mutation promoteWaitlistEntry.ts hard-guards status===active (WAITLIST_ENTRY_NOT_ACTIVE); literal per-edge matrix coverage deferred to follow-up"
+  },
+  {
+    "id": "WaitlistEntry:scheduled->active",
+    "reason": "baseline (PR-9b) — only mutation promoteWaitlistEntry.ts hard-guards status===active (WAITLIST_ENTRY_NOT_ACTIVE); literal per-edge matrix coverage deferred to follow-up"
   }
 ]

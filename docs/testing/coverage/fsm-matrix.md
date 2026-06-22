@@ -8,14 +8,14 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 
 | Metric | Count |
 |--------|------:|
-| FSMs | 8 |
-| Total edges (legal + illegal) | 136 |
-| Legal edges | 44 |
-| Illegal edges | 92 |
-| Legal covered | 37 |
-| **Legal uncovered** | **7** |
-| Illegal covered | 92 |
-| **Illegal uncovered (high-value)** | **0** |
+| FSMs | 17 |
+| Total edges (legal + illegal) | 384 |
+| Legal edges | 103 |
+| Illegal edges | 281 |
+| Legal covered | 84 |
+| **Legal uncovered** | **19** |
+| Illegal covered | 252 |
+| **Illegal uncovered (high-value)** | **29** |
 
 ## Per-FSM coverage
 
@@ -23,16 +23,55 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 |-----|------:|:---------------:|:-----------------:|
 | Appointment | 30 | 11/11 | 19/19 |
 | CephLandmark | 12 | 2/3 | 9/9 |
+| ClaimDraft | 20 | 5/5 | 15/15 |
+| CoverageAuth | 20 | 5/5 | 15/15 |
 | Finding | 6 | 3/3 | 3/3 |
+| InsuranceClaim | 90 | 16/16 | 74/74 |
 | LabOrder | 20 | 3/6 | 14/14 |
 | PaymentPlan | 12 | 6/6 | 6/6 |
 | Prescription | 6 | 2/2 | 4/4 |
+| QueueItem | 20 | 0/6 | 11/14 |
+| Recall | 12 | 4/4 | 8/8 |
+| Sync | 12 | 5/5 | 7/7 |
+| Task | 12 | 4/4 | 8/8 |
 | Treatment | 30 | 8/9 | 21/21 |
+| TreatmentPlan | 56 | 8/12 | 20/44 |
 | Visit | 20 | 2/4 | 16/16 |
+| WaitlistEntry | 6 | 0/2 | 2/4 |
 
 ## Uncovered ILLEGAL edges (high-value)
 
-_None — every illegal transition has a rejection test._
+| FSM | from | to |
+|-----|------|----|
+| QueueItem | `cancelled` | `called` |
+| QueueItem | `cancelled` | `in_progress` |
+| QueueItem | `cancelled` | `waiting` |
+| TreatmentPlan | `approved` | `completed` |
+| TreatmentPlan | `cancelled` | `draft` |
+| TreatmentPlan | `cancelled` | `partially_completed` |
+| TreatmentPlan | `cancelled` | `presented` |
+| TreatmentPlan | `cancelled` | `scheduled` |
+| TreatmentPlan | `completed` | `approved` |
+| TreatmentPlan | `completed` | `draft` |
+| TreatmentPlan | `completed` | `partially_completed` |
+| TreatmentPlan | `completed` | `scheduled` |
+| TreatmentPlan | `draft` | `completed` |
+| TreatmentPlan | `draft` | `partially_completed` |
+| TreatmentPlan | `draft` | `scheduled` |
+| TreatmentPlan | `partially_completed` | `approved` |
+| TreatmentPlan | `partially_completed` | `draft` |
+| TreatmentPlan | `partially_completed` | `presented` |
+| TreatmentPlan | `partially_completed` | `rejected` |
+| TreatmentPlan | `presented` | `partially_completed` |
+| TreatmentPlan | `presented` | `scheduled` |
+| TreatmentPlan | `rejected` | `partially_completed` |
+| TreatmentPlan | `rejected` | `scheduled` |
+| TreatmentPlan | `scheduled` | `completed` |
+| TreatmentPlan | `scheduled` | `draft` |
+| TreatmentPlan | `scheduled` | `presented` |
+| TreatmentPlan | `scheduled` | `rejected` |
+| WaitlistEntry | `cancelled` | `active` |
+| WaitlistEntry | `scheduled` | `active` |
 
 ## Full edge matrix
 
@@ -80,12 +119,142 @@ _None — every illegal transition has a rejection test._
 | CephLandmark | `placed` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:705 |
 | CephLandmark | `placed` | `locked` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-business-rules.test.ts`:21 |
 | CephLandmark | `placed` | `not_placed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/ceph-landmark.fsm.property.test.ts`:96 |
+| ClaimDraft | `accepted` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:133 |
+| ClaimDraft | `accepted` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:136 |
+| ClaimDraft | `accepted` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:142 |
+| ClaimDraft | `accepted` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:139 |
+| ClaimDraft | `draft` | `accepted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:106 |
+| ClaimDraft | `draft` | `ready` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:85 |
+| ClaimDraft | `draft` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:109 |
+| ClaimDraft | `draft` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:103 |
+| ClaimDraft | `ready` | `accepted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:117 |
+| ClaimDraft | `ready` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:114 |
+| ClaimDraft | `ready` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:120 |
+| ClaimDraft | `ready` | `submitted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:88 |
+| ClaimDraft | `rejected` | `accepted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:153 |
+| ClaimDraft | `rejected` | `draft` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:97 |
+| ClaimDraft | `rejected` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:147 |
+| ClaimDraft | `rejected` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:150 |
+| ClaimDraft | `submitted` | `accepted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:91 |
+| ClaimDraft | `submitted` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:125 |
+| ClaimDraft | `submitted` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:128 |
+| ClaimDraft | `submitted` | `rejected` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:94 |
+| CoverageAuth | `approved` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:109 |
+| CoverageAuth | `approved` | `expired` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:92 |
+| CoverageAuth | `approved` | `partial` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:89 |
+| CoverageAuth | `approved` | `requested` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:106 |
+| CoverageAuth | `denied` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:124 |
+| CoverageAuth | `denied` | `expired` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:130 |
+| CoverageAuth | `denied` | `partial` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:127 |
+| CoverageAuth | `denied` | `requested` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:121 |
+| CoverageAuth | `expired` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:136 |
+| CoverageAuth | `expired` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:142 |
+| CoverageAuth | `expired` | `partial` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:139 |
+| CoverageAuth | `expired` | `requested` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:133 |
+| CoverageAuth | `partial` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:115 |
+| CoverageAuth | `partial` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:118 |
+| CoverageAuth | `partial` | `expired` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:95 |
+| CoverageAuth | `partial` | `requested` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:112 |
+| CoverageAuth | `requested` | `approved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:83 |
+| CoverageAuth | `requested` | `denied` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:86 |
+| CoverageAuth | `requested` | `expired` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:103 |
+| CoverageAuth | `requested` | `partial` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/authorization.fsm.property.test.ts`:100 |
 | Finding | `confirmed` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:73 |
 | Finding | `confirmed` | `resolved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:66 |
 | Finding | `draft` | `confirmed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:67 |
 | Finding | `draft` | `resolved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:68 |
 | Finding | `resolved` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:66 |
 | Finding | `resolved` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-imaging/imaging-finding.fsm.property.test.ts`:66 |
+| InsuranceClaim | `appealed` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:176 |
+| InsuranceClaim | `appealed` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:179 |
+| InsuranceClaim | `appealed` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:173 |
+| InsuranceClaim | `appealed` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:178 |
+| InsuranceClaim | `appealed` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:177 |
+| InsuranceClaim | `appealed` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:174 |
+| InsuranceClaim | `appealed` | `submitted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:110 |
+| InsuranceClaim | `appealed` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:175 |
+| InsuranceClaim | `appealed` | `written_off` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:111 |
+| InsuranceClaim | `approved` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:148 |
+| InsuranceClaim | `approved` | `denied` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:105 |
+| InsuranceClaim | `approved` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:144 |
+| InsuranceClaim | `approved` | `paid` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:104 |
+| InsuranceClaim | `approved` | `partially_paid` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:103 |
+| InsuranceClaim | `approved` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:145 |
+| InsuranceClaim | `approved` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:146 |
+| InsuranceClaim | `approved` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:147 |
+| InsuranceClaim | `approved` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:149 |
+| InsuranceClaim | `denied` | `appealed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:108 |
+| InsuranceClaim | `denied` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:170 |
+| InsuranceClaim | `denied` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:166 |
+| InsuranceClaim | `denied` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:172 |
+| InsuranceClaim | `denied` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:171 |
+| InsuranceClaim | `denied` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:167 |
+| InsuranceClaim | `denied` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:168 |
+| InsuranceClaim | `denied` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:169 |
+| InsuranceClaim | `denied` | `written_off` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:109 |
+| InsuranceClaim | `draft` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:121 |
+| InsuranceClaim | `draft` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:117 |
+| InsuranceClaim | `draft` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:120 |
+| InsuranceClaim | `draft` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:119 |
+| InsuranceClaim | `draft` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:118 |
+| InsuranceClaim | `draft` | `ready` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:96 |
+| InsuranceClaim | `draft` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:115 |
+| InsuranceClaim | `draft` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:116 |
+| InsuranceClaim | `draft` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:122 |
+| InsuranceClaim | `paid` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:164 |
+| InsuranceClaim | `paid` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:161 |
+| InsuranceClaim | `paid` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:163 |
+| InsuranceClaim | `paid` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:157 |
+| InsuranceClaim | `paid` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:162 |
+| InsuranceClaim | `paid` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:158 |
+| InsuranceClaim | `paid` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:159 |
+| InsuranceClaim | `paid` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:160 |
+| InsuranceClaim | `paid` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:165 |
+| InsuranceClaim | `partially_paid` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:155 |
+| InsuranceClaim | `partially_paid` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:154 |
+| InsuranceClaim | `partially_paid` | `denied` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:107 |
+| InsuranceClaim | `partially_paid` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:150 |
+| InsuranceClaim | `partially_paid` | `paid` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:106 |
+| InsuranceClaim | `partially_paid` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:151 |
+| InsuranceClaim | `partially_paid` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:152 |
+| InsuranceClaim | `partially_paid` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:153 |
+| InsuranceClaim | `partially_paid` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:156 |
+| InsuranceClaim | `ready` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:129 |
+| InsuranceClaim | `ready` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:125 |
+| InsuranceClaim | `ready` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:128 |
+| InsuranceClaim | `ready` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:123 |
+| InsuranceClaim | `ready` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:127 |
+| InsuranceClaim | `ready` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:126 |
+| InsuranceClaim | `ready` | `submitted` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:97 |
+| InsuranceClaim | `ready` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:124 |
+| InsuranceClaim | `ready` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:130 |
+| InsuranceClaim | `submitted` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:135 |
+| InsuranceClaim | `submitted` | `approved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:99 |
+| InsuranceClaim | `submitted` | `denied` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:100 |
+| InsuranceClaim | `submitted` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:131 |
+| InsuranceClaim | `submitted` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:89 |
+| InsuranceClaim | `submitted` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:90 |
+| InsuranceClaim | `submitted` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:132 |
+| InsuranceClaim | `submitted` | `under_review` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:98 |
+| InsuranceClaim | `submitted` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:136 |
+| InsuranceClaim | `under_review` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:142 |
+| InsuranceClaim | `under_review` | `approved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:101 |
+| InsuranceClaim | `under_review` | `denied` | ✅ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:102 |
+| InsuranceClaim | `under_review` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:137 |
+| InsuranceClaim | `under_review` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:141 |
+| InsuranceClaim | `under_review` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:140 |
+| InsuranceClaim | `under_review` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:138 |
+| InsuranceClaim | `under_review` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:139 |
+| InsuranceClaim | `under_review` | `written_off` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:143 |
+| InsuranceClaim | `written_off` | `appealed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:188 |
+| InsuranceClaim | `written_off` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:184 |
+| InsuranceClaim | `written_off` | `denied` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:187 |
+| InsuranceClaim | `written_off` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:180 |
+| InsuranceClaim | `written_off` | `paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:186 |
+| InsuranceClaim | `written_off` | `partially_paid` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:185 |
+| InsuranceClaim | `written_off` | `ready` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:181 |
+| InsuranceClaim | `written_off` | `submitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:182 |
+| InsuranceClaim | `written_off` | `under_review` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-billing/claim.fsm.property.test.ts`:183 |
 | LabOrder | `cancelled` | `delivered` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.fsm.property.test.ts`:6 |
 | LabOrder | `cancelled` | `fitted` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.fsm.property.test.ts`:7 |
 | LabOrder | `cancelled` | `in_fabrication` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.fsm.property.test.ts`:6 |
@@ -124,6 +293,62 @@ _None — every illegal transition has a rejection test._
 | Prescription | `dispensed` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.fsm.property.test.ts`:10 |
 | Prescription | `pending` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.status.test.ts`:192 |
 | Prescription | `pending` | `dispensed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-clinical/prescription.status.test.ts`:173 |
+| QueueItem | `called` | `cancelled` | ✅ |   |  |
+| QueueItem | `called` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `called` | `in_progress` | ✅ |   |  |
+| QueueItem | `called` | `waiting` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:266 |
+| QueueItem | `cancelled` | `called` | ⛔ |   |  |
+| QueueItem | `cancelled` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-scheduling-transitions.test.ts`:223 |
+| QueueItem | `cancelled` | `in_progress` | ⛔ |   |  |
+| QueueItem | `cancelled` | `waiting` | ⛔ |   |  |
+| QueueItem | `completed` | `called` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `completed` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-scheduling-transitions.test.ts`:223 |
+| QueueItem | `completed` | `in_progress` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `completed` | `waiting` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `in_progress` | `called` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `in_progress` | `cancelled` | ✅ |   |  |
+| QueueItem | `in_progress` | `completed` | ✅ |   |  |
+| QueueItem | `in_progress` | `waiting` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `waiting` | `called` | ✅ |   |  |
+| QueueItem | `waiting` | `cancelled` | ✅ |   |  |
+| QueueItem | `waiting` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| QueueItem | `waiting` | `in_progress` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/dental-queue.test.ts`:303 |
+| Recall | `cancelled` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `cancelled` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `cancelled` | `sent` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `completed` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `completed` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `completed` | `sent` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `pending` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `pending` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `pending` | `sent` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `sent` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `sent` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Recall | `sent` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| Sync | `failed` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `failed` | `synced` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `failed` | `syncing` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `pending` | `failed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `pending` | `synced` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `pending` | `syncing` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `synced` | `failed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `synced` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `synced` | `syncing` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `syncing` | `failed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `syncing` | `pending` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Sync | `syncing` | `synced` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-sync.test.ts`:12 |
+| Task | `cancelled` | `done` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `cancelled` | `in_progress` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `cancelled` | `open` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `done` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `done` | `in_progress` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `done` | `open` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `in_progress` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `in_progress` | `done` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `in_progress` | `open` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `open` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `open` | `done` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
+| Task | `open` | `in_progress` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-tasks.test.ts`:7 |
 | Treatment | `declined` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
 | Treatment | `declined` | `dismissed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
 | Treatment | `declined` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:87 |
@@ -154,6 +379,62 @@ _None — every illegal transition has a rejection test._
 | Treatment | `verified` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:250 |
 | Treatment | `verified` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:215 |
 | Treatment | `verified` | `planned` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:897 |
+| TreatmentPlan | `approved` | `cancelled` | ✅ |   |  |
+| TreatmentPlan | `approved` | `completed` | ⛔ |   |  |
+| TreatmentPlan | `approved` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:393 |
+| TreatmentPlan | `approved` | `partially_completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:333 |
+| TreatmentPlan | `approved` | `presented` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/case-presentation.test.ts`:8 |
+| TreatmentPlan | `approved` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:384 |
+| TreatmentPlan | `approved` | `scheduled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/treatment-plan-status-history.test.ts`:132 |
+| TreatmentPlan | `cancelled` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:384 |
+| TreatmentPlan | `cancelled` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| TreatmentPlan | `cancelled` | `draft` | ⛔ |   |  |
+| TreatmentPlan | `cancelled` | `partially_completed` | ⛔ |   |  |
+| TreatmentPlan | `cancelled` | `presented` | ⛔ |   |  |
+| TreatmentPlan | `cancelled` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:401 |
+| TreatmentPlan | `cancelled` | `scheduled` | ⛔ |   |  |
+| TreatmentPlan | `completed` | `approved` | ⛔ |   |  |
+| TreatmentPlan | `completed` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:7 |
+| TreatmentPlan | `completed` | `draft` | ⛔ |   |  |
+| TreatmentPlan | `completed` | `partially_completed` | ⛔ |   |  |
+| TreatmentPlan | `completed` | `presented` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:371 |
+| TreatmentPlan | `completed` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:369 |
+| TreatmentPlan | `completed` | `scheduled` | ⛔ |   |  |
+| TreatmentPlan | `draft` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:393 |
+| TreatmentPlan | `draft` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:360 |
+| TreatmentPlan | `draft` | `completed` | ⛔ |   |  |
+| TreatmentPlan | `draft` | `partially_completed` | ⛔ |   |  |
+| TreatmentPlan | `draft` | `presented` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/case-presentation-real-flow.test.ts`:9 |
+| TreatmentPlan | `draft` | `rejected` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:109 |
+| TreatmentPlan | `draft` | `scheduled` | ⛔ |   |  |
+| TreatmentPlan | `partially_completed` | `approved` | ⛔ |   |  |
+| TreatmentPlan | `partially_completed` | `cancelled` | ✅ |   |  |
+| TreatmentPlan | `partially_completed` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:346 |
+| TreatmentPlan | `partially_completed` | `draft` | ⛔ |   |  |
+| TreatmentPlan | `partially_completed` | `presented` | ⛔ |   |  |
+| TreatmentPlan | `partially_completed` | `rejected` | ⛔ |   |  |
+| TreatmentPlan | `partially_completed` | `scheduled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/treatment-plan-status-history.test.ts`:6 |
+| TreatmentPlan | `presented` | `approved` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/case-presentation.test.ts`:296 |
+| TreatmentPlan | `presented` | `cancelled` | ✅ |   |  |
+| TreatmentPlan | `presented` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:371 |
+| TreatmentPlan | `presented` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/case-presentation-real-flow.test.ts`:9 |
+| TreatmentPlan | `presented` | `partially_completed` | ⛔ |   |  |
+| TreatmentPlan | `presented` | `rejected` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:371 |
+| TreatmentPlan | `presented` | `scheduled` | ⛔ |   |  |
+| TreatmentPlan | `rejected` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:384 |
+| TreatmentPlan | `rejected` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:401 |
+| TreatmentPlan | `rejected` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-recall.test.ts`:369 |
+| TreatmentPlan | `rejected` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/claim-draft.fsm.property.test.ts`:96 |
+| TreatmentPlan | `rejected` | `partially_completed` | ⛔ |   |  |
+| TreatmentPlan | `rejected` | `presented` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/case-presentation.test.ts`:11 |
+| TreatmentPlan | `rejected` | `scheduled` | ⛔ |   |  |
+| TreatmentPlan | `scheduled` | `approved` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/treatment-plan-status-history.test.ts`:5 |
+| TreatmentPlan | `scheduled` | `cancelled` | ✅ |   |  |
+| TreatmentPlan | `scheduled` | `completed` | ⛔ |   |  |
+| TreatmentPlan | `scheduled` | `draft` | ⛔ |   |  |
+| TreatmentPlan | `scheduled` | `partially_completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-patient/treatment-plan-status-history.test.ts`:142 |
+| TreatmentPlan | `scheduled` | `presented` | ⛔ |   |  |
+| TreatmentPlan | `scheduled` | `rejected` | ⛔ |   |  |
 | Visit | `active` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.test.ts`:502 |
 | Visit | `active` | `discarded` | ✅ |   |  |
 | Visit | `active` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:350 |
@@ -174,3 +455,9 @@ _None — every illegal transition has a rejection test._
 | Visit | `locked` | `completed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-finding.test.ts`:149 |
 | Visit | `locked` | `discarded` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:105 |
 | Visit | `locked` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/visit.fsm.property.test.ts`:108 |
+| WaitlistEntry | `active` | `cancelled` | ✅ |   |  |
+| WaitlistEntry | `active` | `scheduled` | ✅ |   |  |
+| WaitlistEntry | `cancelled` | `active` | ⛔ |   |  |
+| WaitlistEntry | `cancelled` | `scheduled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:67 |
+| WaitlistEntry | `scheduled` | `active` | ⛔ |   |  |
+| WaitlistEntry | `scheduled` | `cancelled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:67 |
