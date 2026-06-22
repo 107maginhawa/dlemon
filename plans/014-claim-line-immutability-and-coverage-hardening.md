@@ -58,8 +58,9 @@
 
 Converts Cat-4's 48-edge debt into ONE guard: import each domain's transition table (`*_FSM` / `*TRANSITIONS` in the schema/repo files) and assert it matches a committed snapshot. Fails CI if anyone edits a transition table without review.
 
-- [ ] One `*.fsm-snapshot.test.ts` asserting each table === a frozen literal (or `toMatchSnapshot`). Enumerate the tables: TreatmentPlan, QueueItem, WaitlistEntry, LabOrder, Treatment, Visit, Claim, Prescription, CephLandmark.
-- [ ] One PR (can fold into S2 if small).
+- [x] `scripts/coverage/fsm-snapshot.test.ts` freezes **all 17** discovered transition tables (not just the 9 enumerated): reuses `discoverFsms()` so the snapshot covers table names AND each from→to[] map in ONE literal — catches a new/removed/renamed table and any edge add/remove/reorder. No 17-way import, no workspace-boundary crossing. Tables: Appointment, CephLandmark, ClaimDraft, CoverageAuth, Finding, InsuranceClaim, LabOrder, PaymentPlan, Prescription, QueueItem, Recall, Sync, Task, Treatment, TreatmentPlan, Visit, WaitlistEntry.
+- [x] Runs in the Coverage Ratchet CI job (`bun test ./scripts/coverage/`); 198/198 coverage tests pass. Non-vacuity: adding an illegal `waiting→completed` edge to QUEUE_ITEM_FSM → RED; reverted.
+- [x] One PR.
 
 ---
 
@@ -87,5 +88,5 @@ The ratchet blocks *new* gaps, but `docs/testing/coverage/*.allowlist.json` is s
 | S1 | updateInsuranceClaimLine immutability + audit | P1 | DONE |
 | S2 | deriveTreatmentPlanStatus test + FSM-bypass sweep | P2 | DONE |
 | S3 | consent + med-history contract tests | P2 | DONE |
-| S4 | frozen FSM-table snapshot | P3 | TODO |
+| S4 | frozen FSM-table snapshot | P3 | DONE |
 | S5 | allowlist CODEOWNERS + RLS trip-wire | P2 | TODO |
