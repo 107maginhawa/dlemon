@@ -6,8 +6,10 @@
  * elapsed and not yet been sent. The `dental_billing_reminder_log` unique
  * (invoiceId, offsetDay) claim makes each offset exactly-once.
  *
- * Channels: email + push (SMS deferred — notifs 'sms' is a no-op). Delivery is
- * the notifs module's job; here we only enqueue `billing` notifications, which
+ * Channels: consent-gated. Outbound (sms/email/push) fires only on the patient's
+ * explicit per-channel communication consent; in-app is ALWAYS delivered —
+ * identical to recall/appointment reminders (resolveConsentedChannels). Delivery
+ * is the notifs module's job; here we only enqueue `billing` notifications, which
  * the notifs cron then sends.
  */
 
@@ -19,12 +21,19 @@ import { patients } from '@/handlers/patient/repos/patient.schema';
 import { BranchRepository } from '@/handlers/dental-org/repos/branch.repo';
 import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
 import { DentalBillingReminderLogRepository } from '../repos/dental-billing-reminder-log.repo';
+import { getPatientPersonConsent } from '@/handlers/person/repos/person-dental-patient.facade';
+import { getPatientPreferredChannel } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { resolveConsentedChannels, type ReminderChannel, type PersonConsent } from '@/handlers/dental-scheduling/utils/resolve-reminder-channels';
 
 /** Default cadence (days past due) when a branch has not configured its own. */
 export const DEFAULT_REMINDER_OFFSET_DAYS = [3, 7, 14];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const REMINDER_CHANNELS = ['email', 'push'] as const;
+// Outbound channels dunning offers + always-on in-app. resolveConsentedChannels
+// gates the outbound ones on consent; in-app is never suppressed.
+// ponytail: push has no per-channel consent flag yet → fails closed (never fires)
+// until one is added; left in to mirror the reminder policy.
+const REMINDER_POLICY_CHANNELS: ReminderChannel[] = ['email', 'push', 'in-app'];
 // A 'pending' claim older than this is an orphan from a crashed sweep, safe to
 // reclaim. Enqueue takes milliseconds, so an hour clears any real in-flight run.
 const RECLAIM_STALE_MS = 60 * 60 * 1000;
@@ -46,6 +55,7 @@ export async function runDunningSweep(
       branchId: dentalInvoices.branchId,
       dueDate: dentalInvoices.dueDate,
       balanceCents: dentalInvoices.balanceCents,
+      patientId: dentalInvoices.patientId,
       recipientPersonId: patients.person,
     })
     .from(dentalInvoices)
@@ -93,8 +103,17 @@ export async function runDunningSweep(
       });
       if (!claim) continue; // already reminded for this offset (or freshly in flight)
 
+      // Consent gate: outbound on explicit per-channel consent, in-app always.
+      const consent = await getPatientPersonConsent(db, inv.patientId);
+      const preferredChannel = await getPatientPreferredChannel(db, inv.patientId);
+      const { channels } = resolveConsentedChannels({
+        consent: consent as PersonConsent | null,
+        policyChannels: REMINDER_POLICY_CHANNELS,
+        preferredChannel,
+      });
+
       const sent: string[] = [];
-      for (const channel of REMINDER_CHANNELS) {
+      for (const channel of channels) {
         try {
           await notifRepo.createNotificationForModule({
             recipient: inv.recipientPersonId!,
