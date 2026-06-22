@@ -3126,9 +3126,7 @@
     "from": "dismissed",
     "to": "verified",
     "legal": false,
-    "coveredByTest": true,
-    "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 893
+    "coveredByTest": false
   },
   {
     "fsm": "Treatment",
@@ -3234,9 +3232,7 @@
     "from": "planned",
     "to": "verified",
     "legal": false,
-    "coveredByTest": true,
-    "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 897
+    "coveredByTest": false
   },
   {
     "fsm": "Treatment",
@@ -3289,9 +3285,7 @@
     "from": "verified",
     "to": "planned",
     "legal": false,
-    "coveredByTest": true,
-    "evidenceFile": "services/api-ts/src/tests/business-rules.test.ts",
-    "evidenceLine": 897
+    "coveredByTest": false
   },
   {
     "fsm": "TreatmentPlan",

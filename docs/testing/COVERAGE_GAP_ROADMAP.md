@@ -145,7 +145,7 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] WF-093 — Clinical amendment approval _(cross-module)_
 - [ ] WF-P05 — Print perio chart (PDF export)
 
-## 4. FSM uncovered transition edges (48: 29 illegal, 19 legal)
+## 4. FSM uncovered transition edges (51: 32 illegal, 19 legal)
 
 **What:** a state-machine edge with no literal per-edge test. Illegal edges = transitions that MUST be rejected; legal = valid transitions without an explicit assertion.
 **Why deferred:** the handlers enforce the FSM generically (`allowed=FSM[cur]; if(!allowed.includes(to)) throw`), and the high-risk machines (visit, invoice, claim) have literal per-edge tests. The rest are handler-guaranteed; literal per-edge tests were ratcheted, not all written.
@@ -153,6 +153,7 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 
 ### illegal edges (must-reject)
 - [ ] **QueueItem** (3): cancelled→called, cancelled→in_progress, cancelled→waiting
+- [ ] **Treatment** (3): dismissed→verified, planned→verified, verified→planned
 - [ ] **TreatmentPlan** (24): approved→completed, cancelled→draft, cancelled→partially_completed, cancelled→presented, cancelled→scheduled, completed→approved, completed→draft, completed→partially_completed, completed→scheduled, draft→completed, draft→partially_completed, draft→scheduled, partially_completed→approved, partially_completed→draft, partially_completed→presented, partially_completed→rejected, presented→partially_completed, presented→scheduled, rejected→partially_completed, rejected→scheduled, scheduled→completed, scheduled→draft, scheduled→presented, scheduled→rejected
 - [ ] **WaitlistEntry** (2): cancelled→active, scheduled→active
 

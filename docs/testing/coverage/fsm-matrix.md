@@ -14,8 +14,8 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Illegal edges | 281 |
 | Legal covered | 84 |
 | **Legal uncovered** | **19** |
-| Illegal covered | 252 |
-| **Illegal uncovered (high-value)** | **29** |
+| Illegal covered | 249 |
+| **Illegal uncovered (high-value)** | **32** |
 
 ## Per-FSM coverage
 
@@ -34,7 +34,7 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Recall | 12 | 4/4 | 8/8 |
 | Sync | 12 | 5/5 | 7/7 |
 | Task | 12 | 4/4 | 8/8 |
-| Treatment | 30 | 8/9 | 21/21 |
+| Treatment | 30 | 8/9 | 18/21 |
 | TreatmentPlan | 56 | 8/12 | 20/44 |
 | Visit | 20 | 2/4 | 16/16 |
 | WaitlistEntry | 6 | 0/2 | 2/4 |
@@ -46,6 +46,9 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | QueueItem | `cancelled` | `called` |
 | QueueItem | `cancelled` | `in_progress` |
 | QueueItem | `cancelled` | `waiting` |
+| Treatment | `dismissed` | `verified` |
+| Treatment | `planned` | `verified` |
+| Treatment | `verified` | `planned` |
 | TreatmentPlan | `approved` | `completed` |
 | TreatmentPlan | `cancelled` | `draft` |
 | TreatmentPlan | `cancelled` | `partially_completed` |
@@ -363,7 +366,7 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Treatment | `dismissed` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:63 |
 | Treatment | `dismissed` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:96 |
 | Treatment | `dismissed` | `planned` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:506 |
-| Treatment | `dismissed` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:893 |
+| Treatment | `dismissed` | `verified` | ⛔ |   |  |
 | Treatment | `performed` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:99 |
 | Treatment | `performed` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.revenue-path-regression.test.ts`:10 |
 | Treatment | `performed` | `dismissed` | ✅ |   |  |
@@ -373,12 +376,12 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Treatment | `planned` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:464 |
 | Treatment | `planned` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:506 |
 | Treatment | `planned` | `performed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts`:378 |
-| Treatment | `planned` | `verified` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:897 |
+| Treatment | `planned` | `verified` | ⛔ |   |  |
 | Treatment | `verified` | `declined` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:102 |
 | Treatment | `verified` | `diagnosed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/treatment.fsm.property.test.ts`:105 |
 | Treatment | `verified` | `dismissed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:250 |
 | Treatment | `verified` | `performed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts`:215 |
-| Treatment | `verified` | `planned` | ⛔ | ✓ | `services/api-ts/src/tests/business-rules.test.ts`:897 |
+| Treatment | `verified` | `planned` | ⛔ |   |  |
 | TreatmentPlan | `approved` | `cancelled` | ✅ |   |  |
 | TreatmentPlan | `approved` | `completed` | ⛔ |   |  |
 | TreatmentPlan | `approved` | `draft` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-patient/dental-patient-treatment-plan.test.ts`:393 |

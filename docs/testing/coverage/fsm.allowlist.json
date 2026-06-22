@@ -108,6 +108,18 @@
     "reason": "baseline — illegal edge uncovered at matrix introduction"
   },
   {
+    "id": "Treatment:dismissed->verified",
+    "reason": "illegal edge enforced by TREATMENT_TRANSITIONS (updateDentalTreatment.ts allowed.includes guard); previously only comment-mirage-covered (surfaced by the plan-014 fsm-scanner comment-selection fix), no dedicated rejection assertion yet — opportunistic"
+  },
+  {
+    "id": "Treatment:planned->verified",
+    "reason": "illegal edge enforced by TREATMENT_TRANSITIONS (updateDentalTreatment.ts allowed.includes guard); previously only comment-mirage-covered (surfaced by the plan-014 fsm-scanner comment-selection fix), no dedicated rejection assertion yet — opportunistic"
+  },
+  {
+    "id": "Treatment:verified->planned",
+    "reason": "illegal edge enforced by TREATMENT_TRANSITIONS (updateDentalTreatment.ts allowed.includes guard); previously only comment-mirage-covered (surfaced by the plan-014 fsm-scanner comment-selection fix), no dedicated rejection assertion yet — opportunistic"
+  },
+  {
     "id": "TreatmentPlan:approved->cancelled",
     "reason": "baseline (PR-9b) — TREATMENT_PLAN_FSM enforced by dental-patient/treatment-plans/updateTreatmentPlan.ts + case-presentation accept/reject (allowed.includes guard); literal per-edge matrix coverage deferred to follow-up"
   },
