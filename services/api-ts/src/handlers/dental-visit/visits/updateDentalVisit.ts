@@ -38,7 +38,7 @@ export async function updateDentalVisit(
 
   // FR1.16: Immutability — completed/locked visits cannot be modified
   if (visit.status === 'locked') {
-    throw new BusinessLogicError('Locked visits cannot be modified', 'VISIT_LOCKED');
+    throw new BusinessLogicError('Locked visits cannot be modified', 'VISIT_IMMUTABLE');
   }
 
   // Validate status transition using VISIT_TRANSITIONS map

@@ -41,7 +41,7 @@ export type { PerioChart, PerioToothReading, CompletePerioChartRequest, Complete
 
 export const PERIO_ERROR_MESSAGES: Record<string, string> = {
   CHART_COMPLETED: 'This chart is completed and can no longer be edited.',
-  VISIT_LOCKED: 'The visit is locked — the chart is read-only.',
+  VISIT_IMMUTABLE: 'The visit is locked — the chart is read-only.',
   INSUFFICIENT_READINGS: 'Chart at least 16 teeth (8 for primary) before completing.',
   INVALID_GRADE: 'Mobility and furcation must be a grade of 0–3.',
   INVALID_TOOTH_NUMBER: 'That tooth number is not valid for this chart.',

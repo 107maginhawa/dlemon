@@ -98,9 +98,9 @@ describe('useSaveChart', () => {
     expect(_toastError.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
-  test('AC-005: toast.error message contains "locked" for VISIT_LOCKED 422', async () => {
+  test('AC-005: toast.error message contains "locked" for VISIT_IMMUTABLE 422', async () => {
     const callsBefore = _toastError.mock.calls.length;
-    global.fetch = mock(() => jsonResponse({ code: 'VISIT_LOCKED', message: 'Visit is locked' }, 422));
+    global.fetch = mock(() => jsonResponse({ code: 'VISIT_IMMUTABLE', message: 'Visit is locked' }, 422));
     const { result } = renderHook(() => useSaveChart(), { wrapper: makeWrapper(freshClient()) });
     result.current.mutate(input);
     await waitFor(() => expect(result.current.isError).toBe(true));

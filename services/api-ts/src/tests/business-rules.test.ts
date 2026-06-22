@@ -555,7 +555,7 @@ describe('BR-002: visit state transitions are linear, no reversal', () => {
     expect(body.code).toBe('VISIT_TRANSITION_INVALID');
   });
 
-  test('reverse transition: cannot modify a locked visit at all (4xx VISIT_LOCKED) [BR-002]', async () => {
+  test('reverse transition: cannot modify a locked visit at all (4xx VISIT_IMMUTABLE) [BR-002]', async () => {
     const visit = await seedLockedVisit();
     const app = makeApp(TEST_USER);
     const res = await app.request(`/dental/visits/${visit!.id}`, {
@@ -565,7 +565,7 @@ describe('BR-002: visit state transitions are linear, no reversal', () => {
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 });
 

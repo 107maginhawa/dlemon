@@ -55,7 +55,7 @@ describe('getErrorMessage', () => {
   });
 
   test('mapped code takes precedence over the raw message (friendlier copy)', () => {
-    const err = makeSdkError(422, { code: 'VISIT_LOCKED', message: 'visit is locked' });
+    const err = makeSdkError(422, { code: 'VISIT_IMMUTABLE', message: 'visit is locked' });
     expect(getErrorMessage(err, FALLBACK)).toBe('Visit is locked. Reopen the visit to make changes.');
   });
 
@@ -77,7 +77,7 @@ describe('getErrorMessage', () => {
   });
 
   test('last-resort scan finds a known code in a wrapped/stringified error', () => {
-    const err = new Error('Request failed: {"error":{"code":"VISIT_LOCKED"}}');
+    const err = new Error('Request failed: {"error":{"code":"VISIT_IMMUTABLE"}}');
     expect(getErrorMessage(err, FALLBACK)).toBe('Visit is locked. Reopen the visit to make changes.');
   });
 
@@ -149,7 +149,7 @@ describe('getErrorMessage — opaque errors carry a ref (Plan F)', () => {
   });
 
   test('a mapped code is shown friendly with NO ref noise', () => {
-    const err = makeSdkError(422, { code: 'VISIT_LOCKED', message: 'visit is locked', requestId: REQ });
+    const err = makeSdkError(422, { code: 'VISIT_IMMUTABLE', message: 'visit is locked', requestId: REQ });
     expect(getErrorMessage(err, FALLBACK)).toBe('Visit is locked. Reopen the visit to make changes.');
   });
 
