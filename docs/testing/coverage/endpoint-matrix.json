@@ -1138,7 +1138,7 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
@@ -1970,7 +1970,7 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
@@ -2217,7 +2217,7 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
@@ -3166,7 +3166,7 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"
@@ -3296,7 +3296,7 @@
     "hasHandler": true,
     "hasSDK": false,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "tested"
@@ -4401,7 +4401,7 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": false,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
     "disposition": "orphan"

@@ -23,7 +23,7 @@ import type { NotificationService } from '@/core/notifs';
 import type { DatabaseInstance } from '@/core/database';
 import { dentalAppointments } from '../repos/dental-appointment.schema';
 import { getBranchReminderPolicy } from '@/handlers/dental-org/repos/org-scheduling.facade';
-import { getPatientPersonConsent } from '@/handlers/person/repos/person-dental-patient.facade';
+import { getPatientPersonConsent, isDentalPatientPersonErased } from '@/handlers/person/repos/person-dental-patient.facade';
 import { getPatientPreferredChannel } from '@/handlers/patient/repos/patient-dental-patient.facade';
 import { resolveConsentedChannels, type ReminderChannel, type PersonConsent } from '../utils/resolve-reminder-channels';
 
@@ -57,6 +57,13 @@ export async function reminderArmerJob(context: ReminderArmerJobContext): Promis
     let suppressedCount = 0;
 
     for (const appt of upcoming) {
+      // An erased ([ERASED]) data subject must receive NO outreach — not even the
+      // always-on in-app channel the consent gate never suppresses.
+      if (await isDentalPatientPersonErased(db, appt.patientId)) {
+        logger.info({ jobId, appointmentId: appt.id }, 'Reminder suppressed: subject erased');
+        continue;
+      }
+
       const { policy } = await getBranchReminderPolicy(db, appt.branchId);
       const consent = await getPatientPersonConsent(db, appt.patientId);
       const preferredChannel = await getPatientPreferredChannel(db, appt.patientId);

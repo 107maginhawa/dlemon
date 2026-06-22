@@ -21,6 +21,7 @@ import { RecallRepository } from '../repos/recall.repo';
 import { getBranchReminderPolicy } from '@/handlers/dental-org/repos/org-scheduling.facade';
 import { getPatientPersonConsent } from '@/handlers/person/repos/person-dental-patient.facade';
 import { getPatientPreferredChannel } from '@/handlers/patient/repos/patient-dental-patient.facade';
+import { isPersonErased } from '@/handlers/person/repos/person-erasure.facade';
 import { resolveConsentedChannels, type ReminderChannel, type PersonConsent } from '@/handlers/dental-scheduling/utils/resolve-reminder-channels';
 import { todayInTimezone, isDueOnOrBefore } from '../utils/recall-dates';
 
@@ -67,6 +68,14 @@ export async function recallDispatchJob(context: RecallDispatchJobContext): Prom
           const nextEligible = new Date(recall.lastSentAt.getTime() + policy.recallReattemptDays * 24 * 3_600_000);
           if (nextEligible.getTime() > now.getTime()) continue;
         }
+      }
+
+      // An erased ([ERASED]) data subject must receive NO further outreach — not
+      // even the always-on in-app channel, which the consent gate never suppresses.
+      // Skip without dispatching so the recall is left untouched (still pending).
+      if (await isPersonErased(db, recall.personId)) {
+        logger.info({ jobId, recallId: recall.id }, 'Recall suppressed: subject erased');
+        continue;
       }
 
       const consent = await getPatientPersonConsent(db, recall.patientId);
