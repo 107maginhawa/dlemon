@@ -23,6 +23,8 @@ import { dentalBillingReminderLog } from '../repos/dental-billing-reminder-log.s
 import { dentalAuditLog } from '@/handlers/dental-audit/repos/audit-log.schema';
 import { notifications } from '@/handlers/notifs/repos/notification.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
+import { persons } from '@/handlers/person/repos/person.schema';
+import { runDunningSweep } from './dunning';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 const noopLogger = { info() {}, warn() {}, error() {}, debug() {}, child() { return noopLogger; } } as any;
@@ -325,5 +327,37 @@ describe('dental-billing status sweep — dunning reminders (BR-050)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.status).toBe('pending'); // left untouched
     expect(await billingNotifs(invoice.id)).toHaveLength(0); // no duplicate send
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ⚠ CONSENT BYPASS — CHARACTERIZATION ONLY, FLAGGED FOR PRODUCT/LEGAL RULING.
+  // Dunning enqueues billing reminders on email+push WITHOUT consulting the
+  // patient's per-channel communication consent, whereas recall/appointment
+  // reminders consent-gate via resolveConsentedChannels (dental-scheduling/utils).
+  // Whether transactional debt-collection reminders SHOULD respect communication
+  // -channel consent is a product/legal call (often consent-exempt as a legitimate
+  // business interest; but the shared PersonConsent was built for "all automated
+  // reminders"). This test PINS the current behavior so any future gate is a
+  // deliberate, test-breaking change — it does NOT endorse it. See backlog
+  // gap `person-consent-dunning-channel-bypass`.
+  // ─────────────────────────────────────────────────────────────────────────
+  test('FLAGGED: dunning enqueues email+push even when the patient has DENIED all comms consent (bypass — unlike clinical reminders)', async () => {
+    await db.update(persons)
+      .set({ consent: { email: false, sms: false, phone: false, marketing: false } as any })
+      .where(eq(persons.id, PERSON_ID));
+    try {
+      const invoice = await seedIssuedInvoicePastDue(4); // offset 3 elapsed
+      const { handler } = captureHandler();
+      await handler(makeContext());
+
+      const notifs = await billingNotifs(invoice.id);
+      // Current behavior: consent is NOT consulted — both channels fire regardless.
+      expect(notifs.length).toBeGreaterThanOrEqual(1);
+      expect(new Set(notifs.map((n) => n.channel))).toEqual(new Set(['email', 'push']));
+      expect(notifs.every((n) => n.recipient === PERSON_ID)).toBe(true);
+    } finally {
+      // Restore so the shared PERSON_ID row is consent-neutral for other tests.
+      await db.update(persons).set({ consent: null }).where(eq(persons.id, PERSON_ID));
+    }
   });
 });
