@@ -29,6 +29,10 @@ import {
   GetChatMessagesParams,
   EndVideoCallParams,
   LeaveVideoCallParams,
+  GetChatRoomParams,
+  ListChatRoomsQuery,
+  UpdateVideoCallParticipantBody,
+  UpdateVideoCallParticipantParams,
 } from '@/generated/openapi/validators';
 import { chatRooms, chatMessages } from './repos/comms.schema';
 import { createChatRoom } from './createChatRoom';
@@ -37,6 +41,9 @@ import { getChatMessages } from './getChatMessages';
 import { getIceServers } from './getIceServers';
 import { endVideoCall } from './endVideoCall';
 import { leaveVideoCall } from './leaveVideoCall';
+import { getChatRoom } from './getChatRoom';
+import { listChatRooms } from './listChatRooms';
+import { updateVideoCallParticipant } from './updateVideoCallParticipant';
 
 // ---------------------------------------------------------------------------
 // DB + fixtures
@@ -125,6 +132,9 @@ function buildTestApp(user?: typeof USER_A) {
   app.get('/comms/ice-servers', getIceServers as any);
   app.post('/comms/chat-rooms/:room/video-call/end', zValidator('param', EndVideoCallParams, ve), endVideoCall as any);
   app.post('/comms/chat-rooms/:room/video-call/leave', zValidator('param', LeaveVideoCallParams, ve), leaveVideoCall as any);
+  app.get('/comms/chat-rooms', zValidator('query', ListChatRoomsQuery, ve), listChatRooms as any);
+  app.get('/comms/chat-rooms/:room', zValidator('param', GetChatRoomParams, ve), getChatRoom as any);
+  app.patch('/comms/chat-rooms/:room/video-call/participant', zValidator('param', UpdateVideoCallParticipantParams, ve), zValidator('json', UpdateVideoCallParticipantBody, ve), updateVideoCallParticipant as any);
 
   return app;
 }
@@ -194,6 +204,28 @@ async function seedVideoCallMessage(
   const [readback] = await db.select().from(chatMessages).where(eq(chatMessages.id, id));
   expect(readback!.messageType).toBe('video_call');
   return readback!;
+}
+
+// Seed a video-call message with an EXPLICIT participant list, so tests can
+// exercise the per-participant state guards (already-left / not-yet-joined).
+async function seedVideoCallMessageWithParticipants(
+  id: string,
+  roomId: string,
+  senderId: string,
+  participants: Array<Record<string, unknown>>,
+) {
+  await db.insert(chatMessages).values({
+    id,
+    chatRoom: roomId,
+    sender: senderId,
+    messageType: 'video_call',
+    videoCallData: { status: 'active', participants, startedAt: FIXED_TS.toISOString() } as any,
+    timestamp: FIXED_TS,
+    createdBy: senderId,
+    updatedBy: senderId,
+    createdAt: FIXED_TS,
+    updatedAt: FIXED_TS,
+  }).onConflictDoNothing();
 }
 
 // Track rooms created with server-generated UUIDs (happy-path createChatRoom,
@@ -697,5 +729,186 @@ describe('leaveVideoCall', () => {
     // auto-ends with zero remaining participants.
     expect(body.callStillActive).toBe(false);
     expect(body.remainingParticipants).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getChatRoom / listChatRooms — participant isolation (data scoping)
+//   getChatRoom.ts:59-62 → 403 for a non-participant; listChatRooms.ts:93
+//   findUserChatRooms scopes results to rooms the caller participates in.
+//   The ledger flagged both isolation paths as unasserted everywhere.
+// ---------------------------------------------------------------------------
+
+describe('getChatRoom — participant isolation', () => {
+  afterEach(truncateComms);
+
+  test('room not found → 404 NOT_FOUND', async () => {
+    const app = buildTestApp(USER_A);
+    const res = await app.request('/comms/chat-rooms/00000000-0000-4000-8000-0000990a0001');
+    expect(res.status).toBe(404);
+  });
+
+  test('a participant can read their room → 200', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id]);
+    const app = buildTestApp(USER_A);
+    const res = await app.request(`/comms/chat-rooms/${ROOM_ID_1}`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.id).toBe(ROOM_ID_1);
+    expect(body.participants).toContain(USER_A.id);
+  });
+
+  test('a NON-participant is refused → 403 FORBIDDEN (no peeking into other peoples rooms)', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id]);
+    const app = buildTestApp(USER_C);
+    const res = await app.request(`/comms/chat-rooms/${ROOM_ID_1}`);
+    expect(res.status).toBe(403);
+    const body = await res.json() as any;
+    expect(body.code).toBe('FORBIDDEN');
+  });
+});
+
+describe('listChatRooms — own-rooms-only scoping', () => {
+  afterEach(truncateComms);
+
+  test('only returns rooms the caller participates in (never other peoples rooms)', async () => {
+    // ROOM_1 = {A,B}; ROOM_2 = {B,C}. USER_A participates in ROOM_1 only.
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id]);
+    await seedChatRoom(ROOM_ID_2, [USER_B.id, USER_C.id]);
+
+    const app = buildTestApp(USER_A);
+    const res = await app.request('/comms/chat-rooms');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const ids = (body.data as Array<{ id: string }>).map((r) => r.id);
+    expect(ids).toContain(ROOM_ID_1);
+    expect(ids).not.toContain(ROOM_ID_2); // ROOM_2 belongs to B & C — invisible to A
+  });
+
+  test('a user with no rooms gets an empty list (not everyone elses rooms)', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id]);
+    const app = buildTestApp(USER_C);
+    const res = await app.request('/comms/chat-rooms');
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect((body.data as Array<{ id: string }>).map((r) => r.id)).not.toContain(ROOM_ID_1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sendChatMessage — one active video call per room (409 conflict invariant)
+//   sendChatMessage.ts video_call branch: findActiveVideoCall → ConflictError
+//   when a call is already active. comms.test.ts covered the happy/403 paths
+//   but never the already-active 409.
+// ---------------------------------------------------------------------------
+
+describe('sendChatMessage — one-active-call-per-room invariant', () => {
+  afterEach(truncateComms);
+
+  test('starting a video call while one is already active → 409 CONFLICT', async () => {
+    // Room with an already-active call linked; USER_A is admin (allowed to start).
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], {
+      activeVideoCallMessage: MSG_ID_1,
+    });
+    await seedVideoCallMessage(MSG_ID_1, ROOM_ID_1, USER_A.id, 'active');
+
+    const app = buildTestApp(USER_A);
+    const res = await app.request(`/comms/chat-rooms/${ROOM_ID_1}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messageType: 'video_call',
+        videoCallData: {
+          status: 'starting',
+          participants: [{
+            user: USER_A.id,
+            userType: 'host',
+            displayName: 'User Alpha',
+            audioEnabled: true,
+            videoEnabled: true,
+          }],
+        },
+      }),
+    });
+    expect(res.status).toBe(409);
+    const body = await res.json() as any;
+    expect(body.code).toBe('CONFLICT');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateVideoCallParticipant — zero prior coverage; authz + per-participant
+//   state guards (updateVideoCallParticipant.ts): non-participant 403,
+//   no-active-call 404, user-not-in-call 404, already-left 404,
+//   not-yet-joined 400, no-field 400, happy mute 200.
+// ---------------------------------------------------------------------------
+
+describe('updateVideoCallParticipant — authz + participant state guards', () => {
+  afterEach(truncateComms);
+
+  const patch = (app: ReturnType<typeof buildTestApp>, body: unknown) =>
+    app.request(`/comms/chat-rooms/${ROOM_ID_1}/video-call/participant`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+  test('no fields provided → 400 VALIDATION_ERROR', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], { activeVideoCallMessage: MSG_ID_1 });
+    await seedVideoCallMessage(MSG_ID_1, ROOM_ID_1, USER_A.id, 'active');
+    const res = await patch(buildTestApp(USER_A), {});
+    expect(res.status).toBe(400);
+  });
+
+  test('room not found → 404 NOT_FOUND', async () => {
+    const res = await patch(buildTestApp(USER_A), { audioEnabled: false });
+    expect(res.status).toBe(404);
+  });
+
+  test('non-participant of the room → 403 FORBIDDEN', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], { activeVideoCallMessage: MSG_ID_1 });
+    await seedVideoCallMessage(MSG_ID_1, ROOM_ID_1, USER_A.id, 'active');
+    const res = await patch(buildTestApp(USER_C), { audioEnabled: false });
+    expect(res.status).toBe(403);
+    expect((await res.json() as any).code).toBe('FORBIDDEN');
+  });
+
+  test('room participant who is not in the active call → 404 NOT_FOUND', async () => {
+    // Call started with only USER_A; USER_B is a room member but not in the call.
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], { activeVideoCallMessage: MSG_ID_1 });
+    await seedVideoCallMessage(MSG_ID_1, ROOM_ID_1, USER_A.id, 'active');
+    const res = await patch(buildTestApp(USER_B), { audioEnabled: false });
+    expect(res.status).toBe(404);
+  });
+
+  test('participant who has already left → 404 NOT_FOUND', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], { activeVideoCallMessage: MSG_ID_1 });
+    await seedVideoCallMessageWithParticipants(MSG_ID_1, ROOM_ID_1, USER_A.id, [{
+      user: USER_A.id, userType: 'host', displayName: 'Host',
+      joinedAt: FIXED_TS.toISOString(), leftAt: FIXED_TS.toISOString(),
+      audioEnabled: true, videoEnabled: true,
+    }]);
+    const res = await patch(buildTestApp(USER_A), { audioEnabled: false });
+    expect(res.status).toBe(404);
+  });
+
+  test('participant who has not yet joined → 400 VALIDATION_ERROR', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], { activeVideoCallMessage: MSG_ID_1 });
+    await seedVideoCallMessageWithParticipants(MSG_ID_1, ROOM_ID_1, USER_A.id, [{
+      user: USER_A.id, userType: 'host', displayName: 'Host',
+      joinedAt: null, audioEnabled: true, videoEnabled: true,
+    }]);
+    const res = await patch(buildTestApp(USER_A), { audioEnabled: false });
+    expect(res.status).toBe(400);
+  });
+
+  test('a joined participant mutes audio → 200 with updated participant', async () => {
+    await seedChatRoom(ROOM_ID_1, [USER_A.id, USER_B.id], [USER_A.id], { activeVideoCallMessage: MSG_ID_1 });
+    await seedVideoCallMessage(MSG_ID_1, ROOM_ID_1, USER_A.id, 'active');
+    const res = await patch(buildTestApp(USER_A), { audioEnabled: false });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.user).toBe(USER_A.id);
+    expect(body.audioEnabled).toBe(false);
   });
 });
