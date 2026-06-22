@@ -8,21 +8,21 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **56** (38 ownership-tested, **18 obligation gaps**).
+Sensitive mutating orphans: **56** (49 ownership-tested, **7 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
 | `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | ⚠️ obligation |
 | `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | ✅ |
 | `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | ✅ |
-| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | ⚠️ obligation |
+| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | ✅ |
 | `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | ✅ |
 | `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | ✅ |
-| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | ⚠️ obligation |
-| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | ⚠️ obligation |
-| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | ⚠️ obligation |
+| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | ✅ |
+| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | ✅ |
+| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | ✅ |
 | `approveAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments/{amendmentId}/approve` | ⚠️ obligation |
-| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | ⚠️ obligation |
+| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | ✅ |
 | `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | ✅ |
 | `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | ✅ |
 | `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | ⚠️ obligation |
@@ -31,11 +31,11 @@ Sensitive mutating orphans: **56** (38 ownership-tested, **18 obligation gaps**)
 | `createInventoryItem` | dental-clinical | POST | `/dental/branches/{branchId}/inventory` | ✅ |
 | `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | ✅ |
 | `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | ✅ |
-| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | ⚠️ obligation |
+| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | ✅ |
 | `createPractitioner` | provider | POST | `/providers/practitioners` | ✅ |
 | `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | ✅ |
 | `createProvider` | provider | POST | `/providers` | ✅ |
-| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | ⚠️ obligation |
+| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | ✅ |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | ✅ |
 | `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | ✅ |
 | `deactivatePatient` | patient | DELETE | `/patients/{id}` | ✅ |
@@ -55,15 +55,15 @@ Sensitive mutating orphans: **56** (38 ownership-tested, **18 obligation gaps**)
 | `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | ✅ |
 | `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | ✅ |
 | `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | ⚠️ obligation |
-| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | ⚠️ obligation |
+| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | ✅ |
 | `unmergePatients` | patient | POST | `/patients/unmerge` | ✅ |
-| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | ⚠️ obligation |
+| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | ✅ |
 | `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | ✅ |
 | `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | ✅ |
 | `updatePatient` | patient | PATCH | `/patients/{id}` | ✅ |
 | `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | ✅ |
-| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | ⚠️ obligation |
-| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | ⚠️ obligation |
+| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | ✅ |
+| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | ✅ |
 | `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | ✅ |
 | `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | ✅ |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | ✅ |
@@ -89,18 +89,18 @@ Total orphans: **158**
 | `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | keep | sensitive-write (ownership-tested) |
 | `DentalBranchManagement_get` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}` | keep | _triage pending_ |
 | `DentalBranchManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches` | keep | _triage pending_ |
-| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | sensitive-write (obligation) |
+| `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | sensitive-write (ownership-tested) |
 | `DentalMembershipManagement_deactivate` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/deactivate` | keep | sensitive-write (ownership-tested) |
 | `DentalMembershipManagement_list` | dental-org | GET | `/dental/organizations/{orgId}/branches/{branchId}/members` | keep | _triage pending_ |
 | `DentalMembershipManagement_verifyPin` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members/{membershipId}/verify-pin` | keep | sensitive-write (ownership-tested) |
-| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | keep | sensitive-write (obligation) |
+| `DentalOrganizationManagement_create` | dental-org | POST | `/dental/organizations` | keep | sensitive-write (ownership-tested) |
 | `DentalOrganizationManagement_get` | dental-org | GET | `/dental/organizations/{id}` | keep | _triage pending_ |
-| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | sensitive-write (obligation) |
-| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | sensitive-write (obligation) |
+| `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | sensitive-write (ownership-tested) |
+| `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | sensitive-write (ownership-tested) |
 | `ImagingMgmt_getImagingStudy` | dental-imaging | GET | `/dental/imaging/studies/{studyId}` | keep | _triage pending_ |
 | `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | keep | _triage pending_ |
 | `approveAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments/{amendmentId}/approve` | keep | sensitive-write (obligation) |
-| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | keep | sensitive-write (obligation) |
+| `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | keep | sensitive-write (ownership-tested) |
 | `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | sensitive-write (ownership-tested) |
 | `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` | keep | _triage pending_ |
 | `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` | keep | _triage pending_ |
@@ -117,11 +117,11 @@ Total orphans: **158**
 | `createInventoryItem` | dental-clinical | POST | `/dental/branches/{branchId}/inventory` | keep | sensitive-write (ownership-tested) |
 | `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | keep | sensitive-write (ownership-tested) |
 | `createPatientContact` | dental-patient | POST | `/dental/patients/{patientId}/contacts` | keep | sensitive-write (ownership-tested) |
-| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | keep | sensitive-write (obligation) |
+| `createPostopTemplate` | dental-clinical | POST | `/dental/branches/{branchId}/postop-templates` | keep | sensitive-write (ownership-tested) |
 | `createPractitioner` | provider | POST | `/providers/practitioners` | keep | sensitive-write (ownership-tested) |
 | `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | keep | sensitive-write (ownership-tested) |
 | `createProvider` | provider | POST | `/providers` | keep | sensitive-write (ownership-tested) |
-| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | keep | sensitive-write (obligation) |
+| `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | keep | sensitive-write (ownership-tested) |
 | `createReview` | reviews | POST | `/reviews/` | keep | _triage pending_ |
 | `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` | keep | _triage pending_ |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | keep | sensitive-write (ownership-tested) |
@@ -220,20 +220,20 @@ Total orphans: **158**
 | `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | keep | sensitive-write (obligation) |
 | `retryEmailQueueItem` | email | POST | `/email/queue/{queue}/retry` | keep | _triage pending_ |
 | `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` | keep | _triage pending_ |
-| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | keep | sensitive-write (obligation) |
+| `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | keep | sensitive-write (ownership-tested) |
 | `testEmailTemplate` | email | POST | `/email/templates/{template}/test` | keep | _triage pending_ |
 | `unmergePatients` | patient | POST | `/patients/unmerge` | keep | sensitive-write (ownership-tested) |
 | `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` | keep | _triage pending_ |
-| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | keep | sensitive-write (obligation) |
+| `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | keep | sensitive-write (ownership-tested) |
 | `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` | keep | _triage pending_ |
 | `updateEmailTemplate` | email | PATCH | `/email/templates/{template}` | keep | _triage pending_ |
 | `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | keep | sensitive-write (ownership-tested) |
 | `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | keep | sensitive-write (ownership-tested) |
 | `updatePatient` | patient | PATCH | `/patients/{id}` | keep | sensitive-write (ownership-tested) |
 | `updatePatientContact` | dental-patient | PATCH | `/dental/patients/{patientId}/contacts/{contactId}` | keep | sensitive-write (ownership-tested) |
-| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | keep | sensitive-write (obligation) |
+| `updatePermissions` | dental-org | PUT | `/dental/org/permissions` | keep | sensitive-write (ownership-tested) |
 | `updatePerson` | person | PATCH | `/persons/{person}` | keep | _triage pending_ |
-| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | keep | sensitive-write (obligation) |
+| `updatePostopTemplate` | dental-clinical | PATCH | `/dental/branches/{branchId}/postop-templates/{templateId}` | keep | sensitive-write (ownership-tested) |
 | `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | keep | sensitive-write (ownership-tested) |
 | `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | sensitive-write (ownership-tested) |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | keep | sensitive-write (ownership-tested) |

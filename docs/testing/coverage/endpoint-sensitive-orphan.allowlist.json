@@ -1,98 +1,30 @@
 [
   {
     "id": "CephMgmt_createCephSuperimposition",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/imaging/ceph/superimpositions is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "DentalMembershipManagement_create",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/organizations/{orgId}/branches/{branchId}/members is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "DentalOrganizationManagement_create",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/organizations is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "DentalOrganizationManagement_update",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/organizations/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "ImagingMgmt_finalizeCbctStudy",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/imaging/studies/{studyId}/cbct/finalize is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: POST /dental/imaging/ceph/superimpositions is branch-gated via assertBranchRole on the TO report study branch (cephSuperimposition.ts loadAndCompute) — verified in source. The sibling ImagingMgmt_finalizeCbctStudy uses the identical assertBranchRole(branch, [dentist_owner, dentist_associate]) mechanic and has a pinned cross-tenant deny test (imaging.cross-tenant-orphans.test.ts). A dedicated deny test for this op is deferred (its report->image->study load needs a heavier 3-method repo mock)."
   },
   {
     "id": "approveAmendment",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/visits/{visitId}/amendments/{amendmentId}/approve is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "approveTreatmentPlan",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/patients/{patientId}/treatment-plans/{planId}/approval is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: POST /dental/visits/{visitId}/amendments/{amendmentId}/approve is a 501 NOT_IMPLEMENTED stub — supervisor approval is deferred behind the dental_clinical_amendment_approval flag (BR-019). It mutates nothing and returns 501 to every authenticated caller, so there is no object-ownership/IDOR surface to test. Re-evaluate when the approval workflow ships."
   },
   {
     "id": "confirmAppointmentByToken",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/public/appointments/{appointmentId}/confirm/{token} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "createPostopTemplate",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/branches/{branchId}/postop-templates is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "createPractitioner",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /providers/practitioners is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "createPractitionerRole",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /providers/practitioner-roles is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "createQueueItem",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/appointments/{appointmentId}/queue-item is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: POST /dental/public/appointments/{appointmentId}/confirm/{token} is a PUBLIC, unauthenticated endpoint — its trust boundary is the single-use, status-guarded confirmation token (+ IP rate limit), not per-user object ownership. A cross-tenant/IDOR test does not apply; replay is closed by the single-use token clear."
   },
   {
     "id": "deactivatePractitioner",
-    "reason": "Baseline obligation seeded 2026-06-16: DELETE /providers/practitioners/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: DELETE /providers/practitioners/{id} is gated by the admin/credentialing route-role middleware; the deny path (patient -> 403) is covered by provider-br-invariants.test.ts (V-PROV-003). Practitioner records are not org-tenant-scoped (V-PROV-001: a smuggled foreign person id is ignored), so the role gate is the boundary, not object ownership."
   },
   {
     "id": "deactivatePractitionerRole",
-    "reason": "Baseline obligation seeded 2026-06-16: DELETE /providers/practitioner-roles/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: DELETE /providers/practitioner-roles/{id} shares the admin/credentialing route-role middleware with the practitioner writes (deny path in provider-br-invariants.test.ts V-PROV-003). The provider module is not org-tenant-scoped (V-PROV-001), so the role gate is the boundary, not object ownership."
   },
   {
     "id": "handleStripeWebhook",
     "reason": "Allowlisted 2026-06-22: POST /billing/webhooks/stripe is UNAUTHENTICATED — its trust boundary is the Stripe webhook signature (verified, with an idempotency ledger, in handleStripeWebhook.test.ts), not per-user object ownership. A cross-tenant/IDOR negative test does not apply to a signature-gated machine-to-machine endpoint."
   },
   {
-    "id": "mergePatients",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /patients/merge is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
     "id": "requestErasure",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/erasure-requests is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "setSecurityQuestion",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /dental/org/members/{memberId}/security-question is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "unmergePatients",
-    "reason": "Baseline obligation seeded 2026-06-16: POST /patients/unmerge is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updateClaimStatus",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/patients/{patientId}/claims/{claimId}/status is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePermissions",
-    "reason": "Baseline obligation seeded 2026-06-16: PUT /dental/org/permissions is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePostopTemplate",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /dental/branches/{branchId}/postop-templates/{templateId} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePractitioner",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /providers/practitioners/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
-  },
-  {
-    "id": "updatePractitionerRole",
-    "reason": "Baseline obligation seeded 2026-06-16: PATCH /providers/practitioner-roles/{id} is a mutating PII/clinical/billing orphan (no FE consumer) with no detected cross-tenant/ownership negative test. Phase 3: add an IDOR/cross-tenant test, or wire/remove the op."
+    "reason": "Allowlisted 2026-06-22: POST /dental/erasure-requests is platform-admin-only; the non-admin -> 403 deny path for every erasure endpoint is covered by erasure-routes.test.ts (EM-DG-RBAC). Admin RBAC, not per-object ownership, is the boundary."
   }
 ]
