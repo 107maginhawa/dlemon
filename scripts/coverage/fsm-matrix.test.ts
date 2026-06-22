@@ -241,19 +241,28 @@ describe('isEdgeCovered', () => {
 describe('discoverFsms (live repo)', () => {
   let fsms: ParsedFsm[];
 
-  test('finds every declared *_TRANSITIONS constant', () => {
+  test('finds every declared *_TRANSITIONS and *_FSM constant', () => {
     fsms = discoverFsms();
     const names = fsms.map((f) => f.constName).sort();
     expect(names).toEqual(
       [
         'APPOINTMENT_TRANSITIONS',
         'CEPH_LANDMARK_TRANSITIONS',
+        'CLAIM_DRAFT_FSM',
+        'COVERAGE_AUTH_FSM',
         'FINDING_TRANSITIONS',
+        'INSURANCE_CLAIM_FSM',
         'LAB_ORDER_TRANSITIONS',
         'PAYMENT_PLAN_TRANSITIONS',
         'PRESCRIPTION_TRANSITIONS',
+        'QUEUE_ITEM_FSM',
+        'RECALL_FSM',
+        'SYNC_FSM',
+        'TASK_FSM',
+        'TREATMENT_PLAN_FSM',
         'TREATMENT_TRANSITIONS',
         'VISIT_TRANSITIONS',
+        'WAITLIST_ENTRY_FSM',
       ].sort(),
     );
   });

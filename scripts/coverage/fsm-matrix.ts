@@ -5,7 +5,8 @@
  * WHY: each clinical/billing entity (Visit, Treatment, Appointment, LabOrder,
  * Prescription, imaging Finding, Ceph landmark, payment Plan) is governed by a
  * declared finite-state machine — a `Record<Status, Status[]>` constant named
- * `*_TRANSITIONS`. The latent bug class is an *unguarded illegal transition*: a
+ * `*_TRANSITIONS` or `*_FSM` (both naming conventions exist in the codebase).
+ * The latent bug class is an *unguarded illegal transition*: a
  * handler that silently accepts (from → to) the FSM never declared, e.g.
  * `diagnosed → performed` skipping `planned`, or reviving a terminal `voided`.
  * A property/HTTP test that asserts the rejection of every illegal edge closes
@@ -223,10 +224,10 @@ export interface ParsedFsm {
   legalMap: LegalMap;
 }
 
-/** VISIT_TRANSITIONS → Visit; CEPH_LANDMARK_TRANSITIONS → CephLandmark. */
+/** VISIT_TRANSITIONS → Visit; CEPH_LANDMARK_TRANSITIONS → CephLandmark; INSURANCE_CLAIM_FSM → InsuranceClaim. */
 function nameFromConst(constName: string): string {
   return constName
-    .replace(/_TRANSITIONS$/, '')
+    .replace(/_(?:TRANSITIONS|FSM)$/, '')
     .toLowerCase()
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -246,7 +247,7 @@ export function discoverFsms(): ParsedFsm[] {
   for (const rel of g.scanSync({ cwd: dir, onlyFiles: true })) {
     const abs = join(dir, rel);
     const src = readFileSync(abs, 'utf8');
-    const constRe = /export\s+const\s+([A-Z][A-Z0-9_]*_TRANSITIONS)\s*:/g;
+    const constRe = /export\s+const\s+([A-Z][A-Z0-9_]*_(?:TRANSITIONS|FSM))\s*:/g;
     let m: RegExpExecArray | null;
     while ((m = constRe.exec(src))) {
       const constName = m[1]!;
