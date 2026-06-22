@@ -8,11 +8,11 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
 
-Sensitive mutating orphans: **56** (49 ownership-tested, **7 obligation gaps**).
+Sensitive mutating orphans: **56** (50 ownership-tested, **6 obligation gaps**).
 
 | operationId | module | method | path | ownership test? |
 |-------------|--------|--------|------|:---------------:|
-| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | ⚠️ obligation |
+| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | ✅ |
 | `CephMgmt_recomputeCephAnalysis` | dental-imaging | POST | `/dental/imaging/images/{imageId}/ceph/analysis/recompute` | ✅ |
 | `DentalBranchManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches` | ✅ |
 | `DentalMembershipManagement_create` | dental-org | POST | `/dental/organizations/{orgId}/branches/{branchId}/members` | ✅ |
@@ -81,7 +81,7 @@ Total orphans: **158**
 
 | operationId | module | method | path | decision | notes |
 |-------------|--------|--------|------|----------|-------|
-| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | keep | sensitive-write (obligation) |
+| `CephMgmt_createCephSuperimposition` | dental-imaging | POST | `/dental/imaging/ceph/superimpositions` | keep | sensitive-write (ownership-tested) |
 | `CephMgmt_getCephLandmarkDetectionJob` | dental-imaging | GET | `/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}` | keep | _triage pending_ |
 | `CephMgmt_getCephSuperimposition` | dental-imaging | GET | `/dental/imaging/ceph/superimpositions/{superimpositionId}` | keep | _triage pending_ |
 | `CephMgmt_listCephSuperimpositions` | dental-imaging | GET | `/dental/imaging/patients/{patientId}/ceph/superimpositions` | keep | _triage pending_ |
