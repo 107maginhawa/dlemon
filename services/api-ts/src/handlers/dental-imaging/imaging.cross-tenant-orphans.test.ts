@@ -14,7 +14,9 @@
  */
 
 import { describe, test, expect, mock } from 'bun:test';
+import { z } from 'zod';
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
 
@@ -44,6 +46,7 @@ function inject(user: any) {
     await next();
   };
 }
+function veh(result: any, c: any) { if (!result.success) return c.json({ error: 'validation' }, 400); }
 
 import { finalizeCbctStudy } from './finalizeCbctStudy';
 
@@ -52,7 +55,10 @@ describe('ImagingMgmt_finalizeCbctStudy — branch-role gate (cross-tenant deny)
     const app = new Hono();
     app.onError(makeErrorHandler());
     app.use('*', inject(user));
-    app.post('/dental/imaging/studies/:studyId/cbct/finalize', finalizeCbctStudy as any);
+    app.post('/dental/imaging/studies/:studyId/cbct/finalize',
+      zValidator('param', z.object({ studyId: z.string() }), veh),
+      zValidator('json', z.object({ imageId: z.string(), dicomBase64: z.string() }), veh),
+      finalizeCbctStudy as any);
     return app;
   }
   test('a non-member of the study’s branch cannot finalize a CBCT study → 403', async () => {
