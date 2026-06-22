@@ -15,15 +15,22 @@
  *                          (G6.3), + image S3-delete handles.
  *  - attachment          : x-ray/photo PII (fileName, note) + the backing S3-delete handle.
  *
- * KNOWN RESIDUAL (free-text columns that can embed identifiers inline and are NOT
- * yet scrubbed — anonymizing the patientId FK does not remove a name typed inside
- * a note). These are a RULING-PENDING follow-up (GDPR-scrub vs documented retain,
- * incl. the medico-legal-immutable consent_refusal/amendment): visit_notes (SOAP),
- * dental_visit.chief_complaint, dental_treatment.clinical_notes, dental_finding.note,
- * dental_perio_chart/reading.notes, consent_refusal.*, amendment.content,
- * lab_order.description, case_presentation.signer_name. Tracked in
- * DATA_GOVERNANCE.md §3 "KNOWN RESIDUAL — ruling pending". Do NOT add scrub targets
- * for the medico-legal-immutable tables without the documented legal ruling.
+ *  - visit_clinical      : §3.1(a) visit free-text (chief_complaint, SOAP visit_notes,
+ *                          treatment notes/description, finding note).
+ *  - perio               : §3.1(a) perio chart + tooth-reading notes.
+ *  - lab_order           : §3.1(a) lab order description + cancel_reason.
+ *  - case_presentation   : §3.1(a) signer_name + signature_data.
+ *
+ * KNOWN RESIDUAL (free-text columns deliberately NOT scrubbed). The §3.1(a)
+ * "likely-scrub" set above is now covered by PR-B. What remains is RULING-PENDING:
+ *   (b) MEDICO-LEGAL-IMMUTABLE — `consent_refusal.*` and `amendment.content/reason`.
+ *       Do NOT add scrub targets for these without a documented LEGAL sign-off —
+ *       GDPR Art. 17(3)(b)/(e) permit retention and over-scrubbing could destroy a
+ *       legally required record.
+ *   (c) OPERATIONAL free-text (alert/recall/task/treatment_plan.notes,
+ *       appointment.notes) — product call; appointments auto-purge after 1yr (§2).
+ *   visit_note_version history snapshots also retain prior SOAP text (audit trail).
+ * Tracked in DATA_GOVERNANCE.md §3.1.
  */
 
 import type { DatabaseInstance } from '@/core/database';
@@ -34,9 +41,13 @@ import {
   anonymizeConsentFormsByPerson,
   anonymizeMedicalHistoryByPerson,
   anonymizePrescriptionsByPerson,
+  anonymizeLabOrdersByPerson,
 } from '@/handlers/dental-clinical/repos/clinical-erasure.facade';
 import { anonymizeAttachmentsByPersonDetailed } from '@/handlers/dental-clinical/repos/attachment-erasure.facade';
 import { anonymizeImagingByPersonDetailed } from '@/handlers/dental-imaging/repos/imaging-erasure.facade';
+import { anonymizeVisitClinicalFreeTextByPerson } from '@/handlers/dental-visit/repos/visit-erasure.facade';
+import { anonymizePerioNotesByPerson } from '@/handlers/dental-perio/repos/perio-erasure.facade';
+import { anonymizeCasePresentationsByPerson } from '@/handlers/dental-patient/repos/case-presentation-erasure.facade';
 
 /** The central PII record. Name → pseudonym, all other identifiers nulled. */
 const personTarget: ErasureTarget = {
@@ -111,12 +122,48 @@ const prescriptionTarget: ErasureTarget = {
   },
 };
 
+/** §3.1(a) visit free-text: chief complaint, SOAP notes, treatment notes, finding note. */
+const visitClinicalTarget: ErasureTarget = {
+  entityType: 'visit_clinical',
+  async anonymize(db: DatabaseInstance, subjectPersonId: string) {
+    return anonymizeVisitClinicalFreeTextByPerson(db, subjectPersonId);
+  },
+};
+
+/** §3.1(a) perio free-text: chart + tooth-reading notes (coded readings kept). */
+const perioTarget: ErasureTarget = {
+  entityType: 'perio',
+  async anonymize(db: DatabaseInstance, subjectPersonId: string) {
+    return anonymizePerioNotesByPerson(db, subjectPersonId);
+  },
+};
+
+/** §3.1(a) lab orders: scrub description + cancel_reason (operational fields kept). */
+const labOrderTarget: ErasureTarget = {
+  entityType: 'lab_order',
+  async anonymize(db: DatabaseInstance, subjectPersonId: string) {
+    return anonymizeLabOrdersByPerson(db, subjectPersonId);
+  },
+};
+
+/** §3.1(a) case presentations: scrub signer name + captured signature, keep state. */
+const casePresentationTarget: ErasureTarget = {
+  entityType: 'case_presentation',
+  async anonymize(db: DatabaseInstance, subjectPersonId: string) {
+    return anonymizeCasePresentationsByPerson(db, subjectPersonId);
+  },
+};
+
 export const ERASURE_TARGETS: ErasureTargetRegistry = {
   person: personTarget,
   patient: patientTarget,
   consent_form: consentFormTarget,
   medical_history: medicalHistoryTarget,
   prescription: prescriptionTarget,
+  visit_clinical: visitClinicalTarget,
+  perio: perioTarget,
+  lab_order: labOrderTarget,
+  case_presentation: casePresentationTarget,
   imaging: imagingTarget,
   attachment: attachmentTarget,
 };

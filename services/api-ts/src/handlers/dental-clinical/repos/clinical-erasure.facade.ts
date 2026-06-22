@@ -41,6 +41,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { consentForms } from './consent-form.schema';
 import { medicalHistoryEntries } from './medical-history.schema';
 import { prescriptions } from './prescription.schema';
+import { labOrders } from './lab-order.schema';
 import { patients } from '../../patient/repos/patient.schema';
 
 /** Marker written over identifying free-text on an erased consent form. */
@@ -132,5 +133,25 @@ export async function anonymizePrescriptionsByPerson(
     .set({ instructions: null, updatedAt: new Date() })
     .where(inArray(prescriptions.patientId, patientIds))
     .returning({ id: prescriptions.id });
+  return res.length;
+}
+
+/**
+ * Scrub the free-text PII on every lab order of the patient linked to `personId`
+ * (DATA_GOVERNANCE §3.1(a)): `description` (NOT NULL → '[ERASED]') and
+ * `cancelReason` (→ null). Coded/operational fields (labName, status, shade,
+ * material) are retained. Idempotent.
+ */
+export async function anonymizeLabOrdersByPerson(
+  db: DatabaseInstance,
+  personId: string,
+): Promise<number> {
+  const patientIds = await patientIdsForPerson(db, personId);
+  if (patientIds.length === 0) return 0;
+  const res = await db
+    .update(labOrders)
+    .set({ description: ERASED_MARKER, cancelReason: null, updatedAt: new Date() })
+    .where(inArray(labOrders.patientId, patientIds))
+    .returning({ id: labOrders.id });
   return res.length;
 }

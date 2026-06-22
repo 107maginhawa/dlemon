@@ -188,15 +188,20 @@ remove. The columns below are patient/visit-linked free-text that **survive
 erasure today**. Closing them is a deliberate, ruling-gated follow-up — NOT a
 silent omission. Resolve before a multi-tenant/hosted launch.
 
-**(a) Clinical free-text — likely scrub (strict GDPR Art. 17), but §3 currently
-documents Visit/Treatment as "anonymize FK only":** `visit_notes` SOAP
+**(a) Clinical free-text — SCRUBBED ON ERASURE (PR-B, 2026-06-22).** Resolved in
+favor of strict GDPR Art. 17 scrub (these are not medico-legal records). The
+erasure engine now scrubs: `visit_notes` SOAP
 (`subjective`/`objective`/`assessment`/`plan`/`notes`), `dental_visit.chief_complaint`,
-`dental_treatment.clinical_notes`/`description`/`dismiss_reason`/`refusal_reason`,
-`dental_finding.note`, `dental_perio_chart.notes` + `dental_perio_reading.notes`,
-`lab_order.description`/`cancel_reason`, `dental_case_presentation.signer_name`/`signature_data`,
-`patient.follow_up_notes`. **Ruling needed:** does GDPR erasure scrub these, or
-does the documented FK-anonymization stance hold? (Recommend scrub — these are
-not medico-legal records.)
+`dental_treatment.clinical_notes`/`dismiss_reason`/`refusal_reason` (→null) +
+`description` (NOT NULL → `[ERASED]`, coded `cdt_code` kept), `dental_finding.note`,
+`dental_perio_chart.notes` + `dental_perio_tooth_reading.notes`,
+`lab_order.description` (→`[ERASED]`)/`cancel_reason` (→null),
+`dental_case_presentation.signer_name`/`signature_data`, `patient.follow_up_notes`.
+Targets: `visit_clinical`, `perio`, `lab_order`, `case_presentation`, plus the
+`patient` target's `follow_up_notes`. Whole-flow test:
+`erasure-clinical-freetext.test.ts`. **Residual within (a):** `visit_note_version`
+history snapshots still retain prior SOAP text (audit-trail history — same
+deferral rationale as the medico-legal set below).
 
 **(b) Medico-legal-immutable — likely RETAIN with a documented legal basis:**
 `consent_refusal` (`procedure_description`/`refusal_reason`/`patient_acknowledgement` —

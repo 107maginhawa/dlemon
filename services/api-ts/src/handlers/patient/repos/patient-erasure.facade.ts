@@ -45,6 +45,8 @@ export async function anonymizePatientPiiByPerson(db: DatabaseInstance, personId
       communicationPreferences: null,
       recallNote: null,
       archiveNote: null,
+      // §3.1(a): free-text follow-up notes can embed identifiers inline.
+      followUpNotes: [],
       updatedAt: new Date(),
     })
     .where(eq(patients.person, personId))
