@@ -23,11 +23,13 @@ import {
   GetNotificationParams,
   ListNotificationsQuery,
   MarkAllNotificationsAsReadQuery,
+  MarkNotificationAsReadParams,
 } from '@/generated/openapi/validators';
 import { notifications } from './repos/notification.schema';
 import { getNotification } from './getNotification';
 import { listNotifications } from './listNotifications';
 import { markAllNotificationsAsRead } from './markAllNotificationsAsRead';
+import { markNotificationAsRead } from './markNotificationAsRead';
 
 // ---------------------------------------------------------------------------
 // DB + fixtures
@@ -91,6 +93,7 @@ function buildTestApp(user?: typeof USER_A) {
   app.get('/notifications', zValidator('query', ListNotificationsQuery, ve), listNotifications as any);
   app.get('/notifications/:notif', zValidator('param', GetNotificationParams, ve), getNotification as any);
   app.post('/notifications/read-all', zValidator('query', MarkAllNotificationsAsReadQuery, ve), markAllNotificationsAsRead as any);
+  app.post('/notifications/:notif/read', zValidator('param', MarkNotificationAsReadParams, ve), markNotificationAsRead as any);
 
   return app;
 }
@@ -342,4 +345,38 @@ describe('markAllNotificationsAsRead', () => {
     expect(row!.status).toBe('queued');
     expect(row!.readAt).toBeNull();
   });
+});
+
+// ---------------------------------------------------------------------------
+// markNotificationAsRead — ownership guard + read transition (de-vacuoused).
+// The prior markNotificationAsRead.test.ts uses an empty-mock db and only
+// asserts loose >=400 / not-401 codes; it never reaches the ownership check or
+// the read transition. These DB-backed tests do.
+// ---------------------------------------------------------------------------
+
+describe('markNotificationAsRead — ownership + read transition', () => {
+  afterEach(truncateNotifications);
+
+  test('owner marks own sent notification → 200 and status flips to read', async () => {
+    await seedNotification(NOTIF_ID_1, USER_A.id, { status: 'sent' });
+    const app = buildTestApp(USER_A);
+    const res = await app.request(`/notifications/${NOTIF_ID_1}/read`, { method: 'POST' });
+    expect(res.status).toBe(200);
+    const [row] = await db.select().from(notifications).where(eq(notifications.id, NOTIF_ID_1));
+    expect(row!.status).toBe('read');
+    expect(row!.readAt).not.toBeNull();
+  });
+
+  test('a user cannot mark ANOTHER user notification as read → 404 (ownership filter, not 403)', async () => {
+    await seedNotification(NOTIF_ID_1, USER_B.id, { status: 'sent' }); // owned by B
+    const app = buildTestApp(USER_A);
+    const res = await app.request(`/notifications/${NOTIF_ID_1}/read`, { method: 'POST' });
+    expect(res.status).toBe(404);
+    // And B's notification is untouched (no cross-user write).
+    const [row] = await db.select().from(notifications).where(eq(notifications.id, NOTIF_ID_1));
+    expect(row!.status).toBe('sent');
+    expect(row!.readAt).toBeNull();
+  });
+  // (Unauthenticated 401 is enforced by authMiddleware at the route, not in this
+  // handler — exercised by the route-gate tests, not this handler-unit harness.)
 });
