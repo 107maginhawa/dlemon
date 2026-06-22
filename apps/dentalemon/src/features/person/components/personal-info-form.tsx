@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/form-resolver'
 import { CalendarIcon, Camera, Loader2, X } from 'lucide-react'
 import { format, isAfter, isBefore } from 'date-fns'
 import { formatDate } from '@monobase/shared-utils'
@@ -78,7 +78,7 @@ export function PersonalInfoForm({
   const [isAvatarRemoved, setIsAvatarRemoved] = useState(false)
 
   const form = useForm<PersonalInfo>({
-    resolver: zodResolver(personalInfoSchema),
+    resolver: formResolver(personalInfoSchema),
     defaultValues: {
       firstName: defaultValues?.firstName || '',
       lastName: defaultValues?.lastName || '',

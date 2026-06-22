@@ -399,6 +399,27 @@ function scannedLinesOf(repoRelFile: string): ScannedLine[] {
 }
 
 /**
+ * repo-relative file → comment-stripped source (cached). Used ONLY to decide whether a
+ * file references an FSM's constant. A doc-comment that names a constant in prose
+ * (e.g. "gates on TREATMENT_TRANSITIONS[from]…") must NOT pull the file into that FSM's
+ * test set — otherwise its unrelated state-name string literals can false-anchor edges
+ * (plan 014 S2). Edge-coverage scanning still uses the raw lines above.
+ */
+const fileCodeCache = new Map<string, string>();
+function codeOf(repoRelFile: string): string {
+  const cached = fileCodeCache.get(repoRelFile);
+  if (cached !== undefined) return cached;
+  let code = '';
+  try {
+    code = stripComments(readFileSync(join(ROOT, repoRelFile), 'utf8'));
+  } catch {
+    code = '';
+  }
+  fileCodeCache.set(repoRelFile, code);
+  return code;
+}
+
+/**
  * Select the api-unit test files relevant to an FSM:
  *   1. Files that import/reference the FSM's `*_TRANSITIONS` constant (strongest
  *      signal — these are tests of exactly this state machine), anywhere.
@@ -422,7 +443,7 @@ function fsmTestFiles(fsm: ParsedFsm): string[] {
       out.add(f);
       continue;
     }
-    if (scannedLinesOf(f).some((l) => l.text.includes(fsm.constName))) out.add(f);
+    if (codeOf(f).includes(fsm.constName)) out.add(f);
   }
   return [...out].sort();
 }

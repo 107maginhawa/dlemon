@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/form-resolver'
 import { Button } from '@monobase/ui'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@monobase/ui'
 import { Combobox } from '@/components/combobox'
@@ -42,7 +42,7 @@ export function PreferencesForm({
   const detectedTimezoneName = TIMEZONE_OPTIONS.find(tz => tz.value === detectedTimezone)?.label
 
   const form = useForm<Preferences>({
-    resolver: zodResolver(preferencesSchema),
+    resolver: formResolver(preferencesSchema),
     defaultValues: {
       languagesSpoken: defaultValues?.languagesSpoken || [detectedLanguage],
       timezone: defaultValues?.timezone || detectedTimezone,
