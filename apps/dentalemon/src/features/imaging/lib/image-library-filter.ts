@@ -1,6 +1,6 @@
 import type { PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
 
-export type ImageLinkType = 'treatment_plan' | 'ortho_case' | 'report'
+export type ImageLinkType = 'treatment_plan' | 'report'
 
 export interface ImageLibraryFilter {
   diagnosticOnly?: boolean
@@ -12,7 +12,6 @@ export interface ImageLibraryFilter {
 /** Short human label for a context-link type (badges + filter options). */
 export const LINK_TYPE_LABELS: Record<ImageLinkType, string> = {
   treatment_plan: 'Plan',
-  ortho_case: 'Ortho',
   report: 'Report',
 }
 

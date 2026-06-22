@@ -47,9 +47,13 @@ export const imagingStatusEnum = pgEnum('imaging_status', ['active', 'archived']
 // (with an optional retakeReason). Additive, non-default-changing.
 export const imagingQualityStatusEnum = pgEnum('imaging_quality_status', ['ok', 'retake']);
 
-// G5b: context-link target kinds. An image can be linked to a treatment plan, an
-// ortho case, or a cephalometric report (loose-coupled — targetId references the
-// other module's row id with NO DB-level FK, mirroring the existing cross-module pattern).
+// G5b: context-link target kinds. An image can be linked to a treatment plan or a
+// cephalometric report (loose-coupled — targetId references the other module's row
+// id with NO DB-level FK, mirroring the existing cross-module pattern).
+// ponytail: 'ortho_case' is a DEAD value (#48) — removed from the API surface
+// (TypeSpec + handler + FE). Kept in the pg enum as a harmless orphan; nothing
+// writes it, and dropping a pg enum value needs a destructive type-recreate
+// migration for zero benefit. Re-add to the API only if an ortho module ships.
 export const imagingLinkTypeEnum = pgEnum('imaging_link_type', [
   'treatment_plan',
   'ortho_case',

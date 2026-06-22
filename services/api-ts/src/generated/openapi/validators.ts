@@ -1935,7 +1935,7 @@ export const DentalImagingModuleCreateFindingBodySchema = z.object({
 });
 
 export const DentalImagingModuleCreateImagingLinkBodySchema = z.object({
-  linkType: z.enum(["treatment_plan", "ortho_case", "report"]),
+  linkType: z.enum(["treatment_plan", "report"]),
   targetId: z.string()
 });
 
@@ -2055,7 +2055,7 @@ export const DentalImagingModuleImagingFindingListResponseSchema = z.object({
 export const DentalImagingModuleImagingLinkSchema = z.object({
   id: z.string(),
   imageId: z.string(),
-  linkType: z.enum(["treatment_plan", "ortho_case", "report"]),
+  linkType: z.enum(["treatment_plan", "report"]),
   targetId: z.string(),
   createdAt: z.string().datetime().transform((str) => new Date(str))
 });
@@ -21876,7 +21876,7 @@ export const PatientImageMgmt_listPatientImagesQuery = z.object({
   qualityStatus: z.enum(["ok", "retake"]).optional(),
   tag: z.string().optional(),
   linkTargetId: z.string().optional(),
-  linkType: z.enum(["treatment_plan", "ortho_case", "report"]).optional(),
+  linkType: z.enum(["treatment_plan", "report"]).optional(),
 });
 export type PatientImageMgmt_listPatientImagesQuery = z.infer<typeof PatientImageMgmt_listPatientImagesQuery>;
 

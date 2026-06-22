@@ -3668,7 +3668,7 @@ export type DentalImagingModuleCreateFindingBody = {
 };
 
 export type DentalImagingModuleCreateImagingLinkBody = {
-    linkType: 'treatment_plan' | 'ortho_case' | 'report';
+    linkType: 'treatment_plan' | 'report';
     targetId: string;
 };
 
@@ -3760,7 +3760,7 @@ export type DentalImagingModuleImagingFindingType = 'caries' | 'secondary_caries
 export type DentalImagingModuleImagingLink = {
     id: string;
     imageId: string;
-    linkType: 'treatment_plan' | 'ortho_case' | 'report';
+    linkType: 'treatment_plan' | 'report';
     targetId: string;
     createdAt: Date;
 };
@@ -71148,7 +71148,7 @@ export type PatientImageMgmtListPatientImagesData = {
         qualityStatus?: 'ok' | 'retake';
         tag?: string;
         linkTargetId?: string;
-        linkType?: 'treatment_plan' | 'ortho_case' | 'report';
+        linkType?: 'treatment_plan' | 'report';
     };
     url: '/dental/patients/{patientId}/images';
 };
