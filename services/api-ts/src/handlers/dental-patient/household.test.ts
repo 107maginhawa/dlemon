@@ -34,6 +34,11 @@ const OUTSIDER_PT = 'd0000000-0000-1000-8000-0000000000a3';
 const GUARANTOR_PERSON = 'e0000000-0000-1000-8000-0000000000a1';
 const CHILD_PERSON = 'e0000000-0000-1000-8000-0000000000a2';
 const OUTSIDER_PERSON = 'e0000000-0000-1000-8000-0000000000a3';
+// A patient whose preferred branch differs from the household's branch — used to
+// exercise the MEMBER_BRANCH_MISMATCH guard (addHouseholdMember.ts).
+const OTHER_BRANCH_ID = 'b0000000-0000-1000-8000-0000000000ab';
+const MISMATCH_PT = 'd0000000-0000-1000-8000-0000000000a4';
+const MISMATCH_PERSON = 'e0000000-0000-1000-8000-0000000000a4';
 
 const ve = (result: any, c: any) => {
   if (!result.success) return c.json({ error: result.error.issues.map((i: any) => i.message).join('; ') }, 400);
@@ -55,10 +60,12 @@ beforeAll(async () => {
     id: ORG_ID, name: 'HH Clinic', tier: 'solo', ownerPersonId: TEST_USER.id, countryCode: 'PH',
     createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
   }).onConflictDoNothing();
-  await db.insert(dentalBranches).values({
-    id: BRANCH_ID, organizationId: ORG_ID, name: 'Main', timezone: 'Asia/Manila',
-    createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
-  }).onConflictDoNothing();
+  await db.insert(dentalBranches).values([
+    { id: BRANCH_ID, organizationId: ORG_ID, name: 'Main', timezone: 'Asia/Manila',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    { id: OTHER_BRANCH_ID, organizationId: ORG_ID, name: 'Annex', timezone: 'Asia/Manila',
+      createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+  ]).onConflictDoNothing();
   await db.insert(dentalMemberships).values({
     id: MEMBER_ID, branchId: BRANCH_ID, personId: TEST_USER.id, displayName: 'Dentist',
     role: 'dentist_owner', status: 'active', pinFailedAttempts: 0, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
@@ -67,11 +74,13 @@ beforeAll(async () => {
     { id: GUARANTOR_PERSON, firstName: 'Maria', lastName: 'Santos', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
     { id: CHILD_PERSON, firstName: 'Juan', lastName: 'Santos', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
     { id: OUTSIDER_PERSON, firstName: 'Pedro', lastName: 'Cruz', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    { id: MISMATCH_PERSON, firstName: 'Ana', lastName: 'Reyes', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
   ]).onConflictDoNothing();
   await db.insert(patients).values([
     { id: GUARANTOR_PT, person: GUARANTOR_PERSON, preferredBranchId: BRANCH_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
     { id: CHILD_PT, person: CHILD_PERSON, preferredBranchId: BRANCH_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
     { id: OUTSIDER_PT, person: OUTSIDER_PERSON, preferredBranchId: BRANCH_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    { id: MISMATCH_PT, person: MISMATCH_PERSON, preferredBranchId: OTHER_BRANCH_ID, status: 'active', createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
   ]).onConflictDoNothing();
 });
 
@@ -135,6 +144,17 @@ describe('P1-27 — household / guarantor', () => {
     expect(member.patientId).toBe(CHILD_PT);
     expect(member.relationship).toBe('child');
     expect(member.isGuarantor).toBe(false);
+  });
+
+  test('MEMBER_BRANCH_MISMATCH: cannot add a patient whose preferred branch differs from the household branch', async () => {
+    const app = buildApp();
+    const created = (await (await makeHousehold(app)).json()) as any; // household in BRANCH_ID
+    const res = await app.request(`/dental/households/${created.household.id}/members`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: MISMATCH_PT, relationship: 'child' }), // MISMATCH_PT lives in OTHER_BRANCH_ID
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('MEMBER_BRANCH_MISMATCH');
   });
 
   test('P1-27-AC3: a patient cannot join two households', async () => {
