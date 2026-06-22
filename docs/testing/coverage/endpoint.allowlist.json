@@ -68,10 +68,6 @@
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/fee-schedule is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
-    "id": "getMedicalHistoryReview",
-    "reason": "Baseline gap seeded 2026-06-15: GET /dental/clinical/medical-history-review is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
-  },
-  {
     "id": "getToothHistory",
     "reason": "Baseline gap seeded 2026-06-15: GET /dental/visits/history/{patientId}/teeth/{toothNumber} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
@@ -124,10 +120,6 @@
     "reason": "Baseline gap seeded 2026-06-21: POST /dental/waitlist/{entryId}/promote is FE-consumed (apps/dentalemon, waitlist panel (product-pass PP-5)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
   },
   {
-    "id": "recordMedicalHistoryReview",
-    "reason": "Baseline gap seeded 2026-06-15: POST /dental/clinical/medical-history-review is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
-  },
-  {
     "id": "refundDentalPayment",
     "reason": "Baseline gap seeded 2026-06-19: POST /dental/billing/payments/{paymentId}/refund is FE-consumed (apps/dentalemon refund action) but has no contract/integration/journey test yet. Backend-tested (dental-billing.refunds.test.ts, BR-053); FE-consumed E2E pending."
   },
@@ -158,10 +150,6 @@
   {
     "id": "updateMember",
     "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. SUSPECTED credential-write IDOR (license/npi writable by any member on any memberId) \u2014 Phase 3 skeptic-fan-out pin."
-  },
-  {
-    "id": "updatePatientCommunicationConsent",
-    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/patients/{patientId}/communication-consent is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating consent PII \u2014 Phase 3 skeptic-fan-out pin (cross-tenant + branch authz)."
   },
   {
     "id": "updateQueueItemStatus",

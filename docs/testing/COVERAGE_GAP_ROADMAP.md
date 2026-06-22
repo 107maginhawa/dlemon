@@ -20,7 +20,7 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `handleStripeWebhook` — billing — `POST /billing/webhooks/stripe`
 - [ ] `requestErasure` — dental-erasure — `POST /dental/erasure-requests`
 
-## 2. Endpoint gaps — FE-consumed but untested (45)
+## 2. Endpoint gaps — FE-consumed but untested (42)
 
 **What:** an operation the product UI **does** call, but with no contract/integration/journey test.
 **Why deferred:** mostly reads and lower-risk writes whose happy path is implicitly exercised by journeys/FE unit tests; the gate ratchets them so no NEW untested FE-consumed op can land.
@@ -30,7 +30,7 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `CephMgmt_deleteCephLandmark` — `DELETE /dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}`
 - [ ] `CephMgmt_updateCephLandmark` — `PATCH /dental/imaging/images/{imageId}/ceph/landmarks/{landmarkCode}`
 
-### dental-patient (18)
+### dental-patient (17)
 - [ ] `acceptTreatmentOption` — `POST /dental/patients/{patientId}/treatment-options/{optionGroupId}/accept`
 - [ ] `addHouseholdMember` — `POST /dental/households/{householdId}/members`
 - [ ] `createDentalAlert` — `POST /dental/patients/{patientId}/dental-alerts`
@@ -47,7 +47,6 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `removeHouseholdMember` — `DELETE /dental/households/{householdId}/members/{patientId}`
 - [ ] `updateDentalAlert` — `PATCH /dental/patients/{patientId}/dental-alerts/{alertId}`
 - [ ] `updateInsuranceProfile` — `PATCH /dental/patients/{patientId}/insurance-profiles/{profileId}`
-- [ ] `updatePatientCommunicationConsent` — `PATCH /dental/patients/{patientId}/communication-consent`
 - [ ] `updateTask` — `PATCH /dental/patients/{patientId}/tasks/{taskId}`
 
 ### dental-billing (7)
@@ -59,11 +58,9 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `refundDentalPayment` — `POST /dental/billing/payments/{paymentId}/refund`
 - [ ] `updateInsuranceClaimLine` — `PATCH /dental/billing/claims/{claimId}/lines/{lineId}`
 
-### dental-clinical (4)
+### dental-clinical (2)
 - [ ] `createOcclusionScreening` — `POST /dental/patients/{patientId}/occlusion-screenings`
-- [ ] `getMedicalHistoryReview` — `GET /dental/clinical/medical-history-review`
 - [ ] `listOcclusionScreenings` — `GET /dental/patients/{patientId}/occlusion-screenings`
-- [ ] `recordMedicalHistoryReview` — `POST /dental/clinical/medical-history-review`
 
 ### patient (1)
 - [ ] `createPatient` — `POST /patients`
