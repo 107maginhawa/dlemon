@@ -37,7 +37,7 @@ export async function createPerioChart(
 
   // BR-P02: visit must be writable.
   if (visit.status === 'locked' || visit.status === 'completed' || visit.status === 'discarded') {
-    throw new BusinessLogicError(`Cannot create perio chart on ${visit.status} visit`, 'VISIT_LOCKED');
+    throw new BusinessLogicError(`Cannot create perio chart on ${visit.status} visit`, 'VISIT_IMMUTABLE');
   }
 
   // BR-P05: dentist or hygienist role required on branch.

@@ -31,7 +31,7 @@ export async function createAttachment(
 
   // BR-003: writes to locked or completed visits are blocked
   if (visit.status === 'locked' || visit.status === 'completed') {
-    throw new BusinessLogicError('Cannot add attachments to a locked or completed visit', 'VISIT_LOCKED');
+    throw new BusinessLogicError('Cannot add attachments to a locked or completed visit', 'VISIT_IMMUTABLE');
   }
 
   const repo = new AttachmentRepository(db);

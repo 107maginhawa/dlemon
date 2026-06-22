@@ -139,8 +139,7 @@ via `apps/dentalemon/src/lib/error-toast.ts` (`extractApiError` / `getErrorMessa
 |------|------|---------|
 | `VISIT_NOT_FOUND` | 404 | Visit ID not found |
 | `ACTIVE_VISIT_EXISTS` | 409 | Patient already has active visit (BR-001) |
-| `VISIT_IMMUTABLE` | 422 | Write to locked/completed visit (BR-003) |
-| `VISIT_LOCKED` | 422 | Write to a visit locked post-completion (BR-003) |
+| `VISIT_IMMUTABLE` | 422 | Write to locked/completed visit (BR-003). Unified code — the former `VISIT_LOCKED` alias was merged into this. |
 | `INVALID_STATUS_TRANSITION` | 422 | Visit FSM violation |
 | `TREATMENT_NOT_FOUND` | 404 | Treatment ID not on visit |
 | `TREATMENT_IMMUTABLE` | 422 | Modify performed treatment (BR-007) |
@@ -197,7 +196,7 @@ via `apps/dentalemon/src/lib/error-toast.ts` (`extractApiError` / `getErrorMessa
 | `INVALID_TOOTH_NUMBER` | 422 | FDI tooth number not in the valid set (BR-P04) |
 | `INSUFFICIENT_READINGS` | 422 | Chart complete with fewer than the required readings |
 
-> `VISIT_LOCKED` (422) and `FORBIDDEN` (403) returned by perio handlers are shared platform codes — see §3 and dental-visit.
+> `VISIT_IMMUTABLE` (422) and `FORBIDDEN` (403) returned by perio handlers are shared platform codes — see §3 and dental-visit.
 
 ### dental-imaging
 

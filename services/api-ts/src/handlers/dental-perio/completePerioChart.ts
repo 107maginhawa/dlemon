@@ -69,7 +69,7 @@ export async function completePerioChart(
   const visit = await getVisitForPerio(db, chart.visitId);
   if (!visit) throw new NotFoundError('Dental visit');
   if (visit.status === 'completed' || visit.status === 'locked') {
-    throw new BusinessLogicError('Cannot complete chart on a locked visit', 'VISIT_LOCKED');
+    throw new BusinessLogicError('Cannot complete chart on a locked visit', 'VISIT_IMMUTABLE');
   }
 
   await assertBranchRole(db, user.id, chart.branchId, ['dentist_owner', 'dentist_associate', 'hygienist']);

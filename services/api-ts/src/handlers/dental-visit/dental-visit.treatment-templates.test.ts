@@ -392,7 +392,7 @@ describe('FR1.16: immutability on completed/locked visits', () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 
   test('cannot add treatment to locked visit', async () => {

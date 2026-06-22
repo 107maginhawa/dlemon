@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 
 /** A few terse codes that deserve friendlier copy than the raw backend message. */
 const CODE_MESSAGES: Record<string, string> = {
-  VISIT_LOCKED: 'Visit is locked. Reopen the visit to make changes.',
+  VISIT_IMMUTABLE: 'Visit is locked. Reopen the visit to make changes.',
   FORBIDDEN: "You don't have permission to do that.",
   CONSENT_REQUIRED: 'Patient consent is required before continuing.',
   CONSENT_NOT_SIGNED: 'Patient consent must be signed before continuing.',

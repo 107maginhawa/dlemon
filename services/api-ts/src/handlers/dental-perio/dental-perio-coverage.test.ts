@@ -248,7 +248,7 @@ describe('createPerioChart', () => {
 
   // BR-P02: cannot create a perio chart on a sealed (completed/locked) visit.
   // The visit-status guard fires before the CHART_EXISTS / role checks.
-  test('returns 422 VISIT_LOCKED creating a chart on a completed visit', async () => {
+  test('returns 422 VISIT_IMMUTABLE creating a chart on a completed visit', async () => {
     const app = buildApp(TEST_USER);
     const res = await app.request('/dental/perio-charts', {
       method: 'POST',
@@ -257,10 +257,10 @@ describe('createPerioChart', () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 
-  test('returns 422 VISIT_LOCKED creating a chart on a locked visit', async () => {
+  test('returns 422 VISIT_IMMUTABLE creating a chart on a locked visit', async () => {
     const app = buildApp(TEST_USER);
     const res = await app.request('/dental/perio-charts', {
       method: 'POST',
@@ -269,7 +269,7 @@ describe('createPerioChart', () => {
     });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 });
 
@@ -641,20 +641,20 @@ describe('completePerioChart', () => {
   });
 
   // BR-P02 / AC-P08: cannot complete a draft chart whose parent visit is locked/completed
-  test('returns 422 VISIT_LOCKED when parent visit is completed', async () => {
+  test('returns 422 VISIT_IMMUTABLE when parent visit is completed', async () => {
     const app = buildApp(TEST_USER);
     const res = await app.request(`/dental/perio-charts/${COMPLETED_CHART_ID}/complete`, { method: 'POST' });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 
-  test('returns 422 VISIT_LOCKED when parent visit is locked', async () => {
+  test('returns 422 VISIT_IMMUTABLE when parent visit is locked', async () => {
     const app = buildApp(TEST_USER);
     const res = await app.request(`/dental/perio-charts/${LOCKED_CHART_ID}/complete`, { method: 'POST' });
     expect(res.status).toBe(422);
     const body = await res.json() as any;
-    expect(body.code).toBe('VISIT_LOCKED');
+    expect(body.code).toBe('VISIT_IMMUTABLE');
   });
 });
 

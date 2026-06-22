@@ -687,9 +687,8 @@ describe('BR-019: clinical records append-only', () => {
 // ---------------------------------------------------------------------------
 // BR-003 — createAttachment is blocked on a completed/locked visit
 // (the create-on-locked negative path; guard exists, this proves it)
-// NOTE: createAttachment uses the legacy code 'VISIT_LOCKED' (vs 'VISIT_IMMUTABLE'
-// used by findings/treatments/chart/consent/lab-order). The taxonomy split is a
-// known, separately-tracked cleanup; this test pins the CURRENT contract.
+// Uses the unified VISIT_IMMUTABLE code (the legacy VISIT_LOCKED alias was
+// merged into VISIT_IMMUTABLE — see ERROR_TAXONOMY.md).
 // ---------------------------------------------------------------------------
 
 describe('BR-003 — createAttachment immutability', () => {
@@ -703,6 +702,6 @@ describe('BR-003 — createAttachment immutability', () => {
       body: JSON.stringify({ patientId: PATIENT_ID, imageType: 'xray', fileName: 'x.jpg', filePath: '/u/x.jpg', fileSizeBytes: 2048, mimeType: 'image/jpeg' }),
     });
     expect(res.status).toBe(422);
-    expect((await res.json() as { code: string }).code).toBe('VISIT_LOCKED');
+    expect((await res.json() as { code: string }).code).toBe('VISIT_IMMUTABLE');
   });
 });
