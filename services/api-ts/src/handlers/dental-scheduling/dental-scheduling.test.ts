@@ -40,6 +40,8 @@ import { updateAppointment } from './updateAppointment';
 import { checkInAppointment } from './checkInAppointment';
 import { QueueItemRepository } from './repos/queue-item.repo';
 import { cancelAppointment } from './cancelAppointment';
+import { notifications } from '@/handlers/notifs/repos/notification.schema';
+import { NotificationRepository } from '@/handlers/notifs/repos/notification.repo';
 
 const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test' });
 
@@ -683,6 +685,75 @@ describe('cancelAppointment handler', () => {
       method: 'DELETE',
     });
     expect(res.status).toBe(422);
+  });
+});
+
+// ===========================================================================
+// P1-24: cancellation expires QUEUED reminders (side-effect coverage)
+// The existing cancel tests never inject `notifs`, so the reminder-expiry
+// side-effect (cancelAppointment.ts → notifs.expireQueuedByEntity) was never
+// exercised. Drive it through a real NotificationRepository against the test DB.
+// ===========================================================================
+
+describe('cancelAppointment reminder-expiry side-effect (P1-24)', () => {
+  // App identical to buildTestApp's DELETE wiring, but with a real notifs service
+  // bound to the test DB so the handler's expiry call actually runs.
+  function buildAppWithNotifs(user: typeof TEST_USER) {
+    const app = new Hono();
+    app.onError((err, c) =>
+      err instanceof AppError
+        ? c.json({ error: err.message, code: err.code }, err.statusCode as any)
+        : c.json({ error: String((err as Error).message) }, 500),
+    );
+    const repo = new NotificationRepository(db);
+    app.use('*', async (c, next) => {
+      const ctx = c as any;
+      ctx.set('database', db);
+      ctx.set('logger', { debug() {}, info() {}, warn() {}, error() {} });
+      ctx.set('user', user);
+      ctx.set('session', { id: 'test-session', userId: user.id });
+      ctx.set('notifs', { expireQueuedByEntity: repo.expireQueuedByEntity.bind(repo) });
+      await next();
+    });
+    app.delete('/dental/appointments/:appointmentId',
+      zValidator('param', CancelAppointmentParams),
+      zValidator('query', CancelAppointmentQuery),
+      cancelAppointment as any);
+    return app;
+  }
+
+  async function seedNotif(appointmentId: string, type: string, status: string) {
+    const [row] = await db.insert(notifications).values({
+      recipient: PATIENT_ID, type: type as any, channel: 'email',
+      title: 't', message: 'm', status: status as any,
+      relatedEntityType: 'dental_appointment', relatedEntity: appointmentId,
+    }).returning({ id: notifications.id });
+    return row!.id;
+  }
+  const statusOf = async (id: string) => {
+    const [r] = await db.select({ s: notifications.status }).from(notifications).where(sql`${notifications.id} = ${id}`);
+    return r?.s;
+  };
+
+  test('cancelling expires QUEUED reminders but leaves delivered + non-reminder rows intact', async () => {
+    const appt = await seedAppointment();
+    const queuedReminder = await seedNotif(appt.id, 'appointment.reminder', 'queued');
+    const queuedConfirm = await seedNotif(appt.id, 'appointment.confirmation-request', 'queued');
+    const deliveredReminder = await seedNotif(appt.id, 'appointment.reminder', 'delivered'); // history — must survive
+    const queuedRecall = await seedNotif(appt.id, 'recall.due', 'queued'); // not a reminder type — must survive
+
+    const app = buildAppWithNotifs(TEST_USER);
+    const res = await app.request(`/dental/appointments/${appt.id}?reason=${encodeURIComponent('Patient rescheduled')}`, { method: 'DELETE' });
+    expect(res.status).toBe(204);
+
+    expect(await statusOf(queuedReminder)).toBe('expired');
+    expect(await statusOf(queuedConfirm)).toBe('expired');
+    expect(await statusOf(deliveredReminder)).toBe('delivered'); // delivered history untouched
+    expect(await statusOf(queuedRecall)).toBe('queued'); // recall is not an appointment-reminder type
+  });
+
+  afterEach(async () => {
+    await db.execute(sql`DELETE FROM notification`);
   });
 });
 

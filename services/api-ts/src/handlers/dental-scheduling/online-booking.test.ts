@@ -48,6 +48,7 @@ const db = createDatabase({ url: process.env['DATABASE_URL'] ?? 'postgres://post
 const ORG_ID = 'f0000000-0000-1000-8000-0000000b2500';
 const BRANCH_ID = '7b000000-0000-4000-8000-000000b25001';
 const BRANCH_DISABLED_ID = '7b000000-0000-4000-8000-000000b25002';
+const BRANCH_AUTH_ID = '7b000000-0000-4000-8000-000000b25003';
 const PROVIDER_ID = '7c000000-0000-4000-8000-000000b25001';
 const PROVIDER_PERSON_ID = 'e0000000-0000-1000-8000-000000b25001';
 const OWNER_PERSON_ID = 'e0000000-0000-1000-8000-000000b25009';
@@ -134,6 +135,19 @@ beforeAll(async () => {
     {
       id: BRANCH_DISABLED_ID, organizationId: ORG_ID, name: 'Disabled Branch', timezone: 'UTC',
       workingHours: WORKING_HOURS, active: true, settings: { onlineBooking: { enabled: false } } as any,
+      createdBy: OWNER_PERSON_ID, updatedBy: OWNER_PERSON_ID,
+    },
+    {
+      // Online booking enabled but gated to verified patients (requirePatientAuth=true):
+      // a prospect (unauthenticated) commit must be rejected with PATIENT_AUTH_REQUIRED.
+      id: BRANCH_AUTH_ID, organizationId: ORG_ID, name: 'Auth-Required Branch', timezone: 'UTC',
+      workingHours: WORKING_HOURS, active: true,
+      settings: {
+        onlineBooking: {
+          enabled: true, bookableVisitTypes: ['checkup', 'recall'],
+          leadTimeMinutes: 60, horizonDays: 60, slotStepMinutes: 30, requirePatientAuth: true,
+        },
+      } as any,
       createdBy: OWNER_PERSON_ID, updatedBy: OWNER_PERSON_ID,
     },
   ]).onConflictDoNothing();
@@ -432,6 +446,56 @@ describe('POST bookings (commit)', () => {
     const [a, b] = await Promise.all([mk(), mk()]);
     const statuses = [a.status, b.status].sort();
     expect(statuses).toEqual([201, 409]);
+  });
+
+  test('requirePatientAuth=true rejects a prospect commit (422 PATIENT_AUTH_REQUIRED)', async () => {
+    const app = bookingApp();
+    const day = uniqueBookableSlot();
+    const res = await safeReq(app, new Request(`http://x/dental/public/branches/${BRANCH_AUTH_ID}/bookings`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId: PROVIDER_ID, startAt: day.toISOString(), visitType: 'checkup', firstName: 'Prospect' }),
+    }));
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('PATIENT_AUTH_REQUIRED');
+  });
+
+  test('an active competing hold (different session) blocks the commit (409 SLOT_HELD)', async () => {
+    // Distinct from the SLOT_TAKEN double-book path: here nobody has committed an
+    // appointment yet — another prospect just holds the slot. A commit that does not
+    // carry that hold's token must be rejected with SLOT_HELD (not SLOT_TAKEN).
+    const hold = holdApp();
+    const booking = bookingApp();
+    const day = uniqueBookableSlot();
+    const held = await safeReq(hold, new Request(`http://x/dental/public/branches/${BRANCH_ID}/holds`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId: PROVIDER_ID, startAt: day.toISOString(), visitType: 'checkup' }),
+    }));
+    expect(held.status).toBe(201);
+    // Commit WITHOUT the hold's sessionToken → the active hold is not the caller's
+    // own, so it blocks.
+    const res = await safeReq(booking, new Request(`http://x/dental/public/branches/${BRANCH_ID}/bookings`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId: PROVIDER_ID, startAt: day.toISOString(), visitType: 'checkup', firstName: 'Gatecrasher' }),
+    }));
+    expect(res.status).toBe(409);
+    expect((await res.json() as any).code).toBe('SLOT_HELD');
+  });
+
+  test('the holder can commit their own held slot (own hold ignored by token)', async () => {
+    const hold = holdApp();
+    const booking = bookingApp();
+    const day = uniqueBookableSlot();
+    const held = await safeReq(hold, new Request(`http://x/dental/public/branches/${BRANCH_ID}/holds`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId: PROVIDER_ID, startAt: day.toISOString(), visitType: 'checkup' }),
+    }));
+    const { sessionToken } = await held.json() as any;
+    expect(sessionToken).toBeTruthy();
+    const res = await safeReq(booking, new Request(`http://x/dental/public/branches/${BRANCH_ID}/bookings`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId: PROVIDER_ID, startAt: day.toISOString(), visitType: 'checkup', firstName: 'Holder', sessionToken }),
+    }));
+    expect(res.status).toBe(201);
   });
 });
 
