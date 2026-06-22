@@ -97,6 +97,12 @@ const EXPECTED: Record<
   // appointment and independent-reads the appointment (checked_in + visitId) and the
   // created visit (draft) back.
   J31: { name: 'Check a patient in from the calendar card → a draft visit is created', set: 'A', expected: 'PASS', rubricIds: ['WF-007'] },
+  // G7-1/2/3 (production-readiness required journeys): the scheduling↔visit hand-off
+  // from a UI-booked appointment (J33), the waitlist Fill→Book promotion DOM flow
+  // (J34), and the No-Show calendar-card action (J32) — none were ever DOM-driven.
+  J32: { name: 'Mark a patient as no-show from the calendar card → durably no_show', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
+  J33: { name: 'Book a walk-in via the modal → check it in → a draft visit is created', set: 'A', expected: 'PASS', rubricIds: ['WF-007', 'WF-SCH-001'] },
+  J34: { name: 'Fill a short-notice slot from the waitlist → entry promoted to a scheduled appointment', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
   J19: { name: 'Case presentation — present → e-sign → accept / reject', set: 'A', expected: 'PASS', rubricIds: ['Q19', 'Q20'] },
   J16: { name: 'Medical alert (allergy) visible before/during clinical encounter', set: 'A', expected: 'PASS', rubricIds: ['ENC-BR-004', 'PAT-BR-003'] },
   J17: { name: 'Front-desk books an appointment via the calendar UI', set: 'A', expected: 'PASS', rubricIds: ['WF-SCH-001'] },
