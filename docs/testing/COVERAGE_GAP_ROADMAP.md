@@ -7,7 +7,7 @@
 
 The 16-PR production-readiness program was scoped by **risk**: suspected real bugs, every P0 business rule, money-race/concurrency paths, RBAC deny-paths, erasure/consent/privacy, and the 9 required user journeys — all closed and verified. What remains below is the lower-risk long tail, deferred for concrete reasons (per category) rather than oversight. Single-clinic launch posture: RLS is posture-only; multi-tenant isolation E2E is gated on cloud-launch.
 
-## 1. Sensitive mutating-orphan obligations (13) — HIGHEST VALUE
+## 1. Sensitive mutating-orphan obligations (11) — HIGHEST VALUE
 
 **What:** a write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with a shipped handler + SDK but **no FE consumer** and no ownership/cross-tenant negative test. Reachable over the wire → IDOR / cross-tenant exploitable even with no UI (this class swallowed the P0 `updatePatientContact` IDOR).
 **Why deferred:** not reachable from the product UI (no FE consumer), so they cannot break a user flow; the P0s that *were* FE-reachable were all closed. Each needs a bespoke cross-tenant/ownership negative test. Ratcheted in `endpoint-sensitive-orphan.allowlist.json`.
@@ -18,14 +18,12 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `approveAmendment` — dental-clinical — `POST /dental/visits/{visitId}/amendments/{amendmentId}/approve`
 - [ ] `approveTreatmentPlan` — dental-patient — `POST /dental/patients/{patientId}/treatment-plans/{planId}/approval`
 - [ ] `confirmAppointmentByToken` — dental-scheduling — `POST /dental/public/appointments/{appointmentId}/confirm/{token}`
-- [ ] `createPostopTemplate` — dental-clinical — `POST /dental/branches/{branchId}/postop-templates`
 - [ ] `createQueueItem` — dental-scheduling — `POST /dental/appointments/{appointmentId}/queue-item`
 - [ ] `deactivatePractitioner` — provider — `DELETE /providers/practitioners/{id}`
 - [ ] `deactivatePractitionerRole` — provider — `DELETE /providers/practitioner-roles/{id}`
 - [ ] `handleStripeWebhook` — billing — `POST /billing/webhooks/stripe`
 - [ ] `requestErasure` — dental-erasure — `POST /dental/erasure-requests`
 - [ ] `updateClaimStatus` — dental-patient — `PATCH /dental/patients/{patientId}/claims/{claimId}/status`
-- [ ] `updatePostopTemplate` — dental-clinical — `PATCH /dental/branches/{branchId}/postop-templates/{templateId}`
 
 ## 2. Endpoint gaps — FE-consumed but untested (45)
 
