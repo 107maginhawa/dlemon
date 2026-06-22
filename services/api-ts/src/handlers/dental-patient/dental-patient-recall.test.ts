@@ -425,6 +425,55 @@ describe('Recall FSM (AC-004, BR-003)', () => {
 });
 
 // =============================================================================
+// P1-24: completing a RECURRING recall seeds the next-cycle pending recall.
+// The FSM tests above complete non-recurring recalls, so the recurrence-seeding
+// side-effect (updateRecall.ts:74) had no non-vacuous coverage.
+// =============================================================================
+
+describe('Recall recurrence seeding (P1-24)', () => {
+  async function createAndComplete(body: Record<string, unknown>) {
+    const app = buildTestApp(TEST_USER);
+    const created = await (await app.request(`/dental/patients/${PATIENT_ID}/recalls`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })).json() as any;
+    await app.request(`/dental/patients/${PATIENT_ID}/recalls/${created.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'sent' }),
+    });
+    const comp = await app.request(`/dental/patients/${PATIENT_ID}/recalls/${created.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'completed' }),
+    });
+    expect(comp.status).toBe(200);
+    const list = await (await app.request(`/dental/patients/${PATIENT_ID}/recalls`)).json() as any[];
+    return { created, list };
+  }
+
+  test('completing a recurring recall (intervalMonths>0) seeds a next-cycle pending recall', async () => {
+    const { list } = await createAndComplete({ type: 'cleaning', dueDate: '2026-09-01', intervalMonths: 6 });
+
+    // Two recalls now: the original (completed) + the seeded next cycle (pending).
+    expect(list).toHaveLength(2);
+    const completed = list.filter((r) => r.status === 'completed');
+    const pending = list.filter((r) => r.status === 'pending');
+    expect(completed).toHaveLength(1);
+    expect(pending).toHaveLength(1);
+
+    const seeded = pending[0]!;
+    expect(seeded.type).toBe('cleaning'); // carries the source recall's type
+    expect(seeded.intervalMonths).toBe(6); // and its interval (keeps recurring)
+    // dueDate is today + intervalMonths (UTC), not the original 2026-09-01.
+    const expected = new Date();
+    expected.setUTCMonth(expected.getUTCMonth() + 6);
+    expect(String(seeded.dueDate).slice(0, 7)).toBe(expected.toISOString().slice(0, 7));
+  });
+
+  test('completing a NON-recurring recall (no intervalMonths) seeds nothing', async () => {
+    const { list } = await createAndComplete({ type: 'checkup', dueDate: '2026-09-01' });
+    expect(list).toHaveLength(1);
+    expect(list[0]!.status).toBe('completed');
+  });
+});
+
+// =============================================================================
 // AC-005: 401 without auth
 // =============================================================================
 
