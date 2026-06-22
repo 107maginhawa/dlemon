@@ -7,16 +7,13 @@
 
 The 16-PR production-readiness program was scoped by **risk**: suspected real bugs, every P0 business rule, money-race/concurrency paths, RBAC deny-paths, erasure/consent/privacy, and the 9 required user journeys — all closed and verified. What remains below is the lower-risk long tail, deferred for concrete reasons (per category) rather than oversight. Single-clinic launch posture: RLS is posture-only; multi-tenant isolation E2E is gated on cloud-launch.
 
-## 1. Sensitive mutating-orphan obligations (18) — HIGHEST VALUE
+## 1. Sensitive mutating-orphan obligations (13) — HIGHEST VALUE
 
 **What:** a write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with a shipped handler + SDK but **no FE consumer** and no ownership/cross-tenant negative test. Reachable over the wire → IDOR / cross-tenant exploitable even with no UI (this class swallowed the P0 `updatePatientContact` IDOR).
 **Why deferred:** not reachable from the product UI (no FE consumer), so they cannot break a user flow; the P0s that *were* FE-reachable were all closed. Each needs a bespoke cross-tenant/ownership negative test. Ratcheted in `endpoint-sensitive-orphan.allowlist.json`.
 **Fix per item:** add a cross-tenant/IDOR negative test asserting 401/403/404 for a non-owner; OR wire/remove the endpoint; OR allowlist with a reason.
 
 - [ ] `CephMgmt_createCephSuperimposition` — dental-imaging — `POST /dental/imaging/ceph/superimpositions`
-- [ ] `DentalMembershipManagement_create` — dental-org — `POST /dental/organizations/{orgId}/branches/{branchId}/members`
-- [ ] `DentalOrganizationManagement_create` — dental-org — `POST /dental/organizations`
-- [ ] `DentalOrganizationManagement_update` — dental-org — `PATCH /dental/organizations/{id}`
 - [ ] `ImagingMgmt_finalizeCbctStudy` — dental-imaging — `POST /dental/imaging/studies/{studyId}/cbct/finalize`
 - [ ] `approveAmendment` — dental-clinical — `POST /dental/visits/{visitId}/amendments/{amendmentId}/approve`
 - [ ] `approveTreatmentPlan` — dental-patient — `POST /dental/patients/{patientId}/treatment-plans/{planId}/approval`
@@ -27,9 +24,7 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `deactivatePractitionerRole` — provider — `DELETE /providers/practitioner-roles/{id}`
 - [ ] `handleStripeWebhook` — billing — `POST /billing/webhooks/stripe`
 - [ ] `requestErasure` — dental-erasure — `POST /dental/erasure-requests`
-- [ ] `setSecurityQuestion` — dental-org — `POST /dental/org/members/{memberId}/security-question`
 - [ ] `updateClaimStatus` — dental-patient — `PATCH /dental/patients/{patientId}/claims/{claimId}/status`
-- [ ] `updatePermissions` — dental-org — `PUT /dental/org/permissions`
 - [ ] `updatePostopTemplate` — dental-clinical — `PATCH /dental/branches/{branchId}/postop-templates/{templateId}`
 
 ## 2. Endpoint gaps — FE-consumed but untested (45)
