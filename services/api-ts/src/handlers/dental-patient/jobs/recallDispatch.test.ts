@@ -93,6 +93,8 @@ beforeAll(async () => {
 afterEach(async () => {
   await db.execute(sql`DELETE FROM notification WHERE related_entity_type = 'recall'`);
   await db.execute(sql`DELETE FROM dental_recall WHERE patient_id = ${PATIENT_ID}`);
+  // Restore the shared person's name in case a test marked it erased.
+  await db.update(persons).set({ firstName: 'Recall' }).where(eq(persons.id, PERSON_ID));
 });
 
 const yesterday = () => {
@@ -168,6 +170,30 @@ describe('recallDispatch (P1-24)', () => {
     await recallDispatchJob(ctx(buildNotifsService()));
     [row] = await db.select().from(dentalRecalls).where(eq(dentalRecalls.id, recall.id)); if (!row) throw new Error('row missing');
     expect(row.sendAttempts).toBe(3); // capped
+  });
+
+  test('an ERASED subject gets NO outreach — not even the always-on in-app channel — and the recall is left pending', async () => {
+    // person-erasure-then-reminder-inapp-leak (G-low): anonymizePersonPii nulls
+    // consent but KEEPS the row; the consent gate fails outbound (sms/email/push)
+    // closed but in-app is always written, so an erased subject still got queued
+    // in-app recall notices. The cron must skip an erased subject entirely.
+    await setPolicy(['email', 'in-app']);
+    await setConsent({ email: true });
+    const recall = await seedRecall({ dueDate: yesterday(), status: 'pending' });
+
+    // Mark the subject erased (the [ERASED] marker is what isPersonErased checks).
+    await db.update(persons).set({ firstName: '[ERASED]' }).where(eq(persons.id, PERSON_ID));
+
+    await recallDispatchJob(ctx(buildNotifsService()));
+
+    // No notifications at all — in-app included.
+    const notifs = await recallNotifsFor(recall.id);
+    expect(notifs.length).toBe(0);
+
+    // The recall is untouched (still pending), not flipped to 'sent'.
+    const [row] = await db.select().from(dentalRecalls).where(eq(dentalRecalls.id, recall.id)); if (!row) throw new Error('row missing');
+    expect(row.status).toBe('pending');
+    expect(row.sendAttempts).toBe(0);
   });
 
   test('not-yet-due pending recall is not dispatched', async () => {

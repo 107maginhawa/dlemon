@@ -10,6 +10,25 @@ import type { DatabaseInstance } from '@/core/database';
 import { persons } from './person.schema';
 import type { PersonConsent, CommunicationChannelConsent, ContactInfo } from './person.schema';
 import { patients } from '../../patient/repos/patient.schema';
+import { ERASED_MARKER } from './person-erasure.facade';
+
+/**
+ * Whether the person behind a dental patient has been erased ([ERASED] marker).
+ * Lets crons/jobs that only hold a patientId fail closed on outreach to an
+ * anonymized data subject (anonymizePersonPii keeps the row but nulls PII).
+ */
+export async function isDentalPatientPersonErased(
+  db: DatabaseInstance,
+  patientId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ firstName: persons.firstName })
+    .from(patients)
+    .innerJoin(persons, eq(persons.id, patients.person))
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  return row?.firstName === ERASED_MARKER;
+}
 
 export async function createPersonForDentalPatient(
   db: DatabaseInstance,

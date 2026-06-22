@@ -96,6 +96,8 @@ beforeAll(async () => {
 afterEach(async () => {
   await db.execute(sql`DELETE FROM notification WHERE related_entity_type = 'appointment'`);
   await db.execute(sql`DELETE FROM dental_appointment WHERE branch_id = ${BRANCH_ID}`);
+  // Restore the shared person's name in case a test marked it erased.
+  await db.update(persons).set({ firstName: 'Armer' }).where(eq(persons.id, PERSON_ID));
 });
 
 async function reminderRowsFor(apptId: string) {
@@ -135,6 +137,20 @@ describe('reminderArmer (P1-24)', () => {
 
     expect(first).toBe(6);
     expect(second).toBe(6); // no duplicates
+  });
+
+  test('an ERASED subject gets NO reminders — in-app included — even for an upcoming appointment', async () => {
+    // person-erasure-then-reminder-inapp-leak (G-low): the consent gate fails
+    // outbound closed for an anonymized subject but always keeps in-app, so an
+    // erased patient with a future appointment still got queued in-app reminders.
+    await seedConsent({ email: true }, ['email', 'in-app']);
+    const appt = await seedAppointment(80);
+    await db.update(persons).set({ firstName: '[ERASED]' }).where(eq(persons.id, PERSON_ID));
+
+    await reminderArmerJob(jobContext(buildNotifsService()));
+
+    const rows = await reminderRowsFor(appt.id);
+    expect(rows.length).toBe(0);
   });
 
   test('consent gate: SMS suppressed when not consented; in-app still written', async () => {
