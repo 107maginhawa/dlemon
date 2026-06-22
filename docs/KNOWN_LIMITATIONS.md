@@ -84,7 +84,11 @@ Previously-open standards questions, now decided:
   implementation scoping — tiered target tables, policy shape, `withTenantTx` plumbing,
   migration/test strategy, a 6-PR rollout (~4–6 engineer-weeks), and open decisions
   D1–D7 — is recorded in `docs/decisions/ADR-010-rls-implementation-plan.md` (build
-  deferred, not started).
+  deferred, not started). **Single-clinic release gate (plan 014 S5):** while RLS is
+  posture-only, the product is safe only with exactly one `dental_organization` — a
+  second tenant before full activation is a cross-tenant PHI leak via un-routed
+  handlers. `services/api-ts/scripts/check-single-clinic-invariant.ts` must pass
+  (exit 0) before onboarding a second clinic; it lifts when ADR-010 P3b completes.
 - **`no-raw-fetch` coverage**: the ESLint rule now also enforces in `src/routes/` and
   `src/lib/`. Existing bootstrap / static-asset / legacy fetches carry inline
   disables-with-reason; two (`_dashboard/patients.tsx` POST and the

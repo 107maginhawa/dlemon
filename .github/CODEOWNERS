@@ -27,3 +27,19 @@ services/api-ts/src/handlers/dental-visit/repos/visit.repo.ts @eladventures
 
 # SA-API-HUB-007 — fan-in 37: visit schema, load-bearing FK anchor
 services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts @eladventures
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Governance — self-editable quality gates (plan 014 S5)
+#
+# These files can NEUTRALIZE a coverage/quality gate by appending a `reason`
+# (the ratchet trusts the allowlist) or by altering a tenant-isolation migration.
+# Require code-owner review so a gap cannot be silently allowlisted away or an
+# RLS policy quietly dropped. (Enforcement also needs branch protection's
+# "Require review from Code Owners" toggle enabled — an admin setting.)
+
+# Coverage/quality allowlists — appending a reason here suppresses a ratchet gap.
+docs/testing/coverage/*.allowlist.json @eladventures
+
+# Tenant-isolation (RLS) migrations — dropping ENABLE/FORCE/POLICY here re-opens
+# the cross-tenant PHI surface ADR-010 closes.
+services/api-ts/src/generated/migrations/*rls* @eladventures
