@@ -15,36 +15,29 @@
  *
  * It is intentionally NOT wired into the unit test suite: per-file test DBs seed
  * many orgs by design, so the invariant only makes sense against a real single-
- * tenant deployment. The pure predicate is unit-tested in
- * src/core/single-clinic-invariant.test.ts.
+ * tenant deployment. The pure predicate (now in src/core/single-clinic-invariant.ts)
+ * is unit-tested in src/core/single-clinic-invariant.test.ts; a production-scoped
+ * boot advisory in src/app.ts logs CRITICAL on the same violation at runtime.
  *
  * Usage:
  *   DATABASE_URL=postgres://… bun scripts/check-single-clinic-invariant.ts
+ *
+ * Enforced as a hard gate in .github/workflows/release.yml (runs against the
+ * PRODUCTION_DATABASE_URL secret on tag release; a violation blocks the release).
  *
  * Exit 0 = invariant holds (≤1 org, or RLS fully activated). Exit 1 = violated.
  *
  * Lifting the gate: when ADR-010 P3b lands and EVERY tenant-scoped handler routes
  * through withTenantTx (RLS is the load-bearing control, not just posture), flip
- * RLS_FULLY_ACTIVATED to true here — the trip-wire then permits multiple orgs.
+ * RLS_FULLY_ACTIVATED in src/core/single-clinic-invariant.ts to true — the
+ * trip-wire then permits multiple orgs.
  */
 
 import { Client } from 'pg';
-
-/**
- * Whether RLS is the load-bearing tenant-isolation control (every handler routed
- * through withTenantTx), NOT just armed posture. Currently false (ADR-010 P3b
- * deferred). Flip to true only when activation is complete + cross-tenant tests
- * cover every module.
- */
-export const RLS_FULLY_ACTIVATED = false;
-
-/**
- * The single-clinic invariant: while RLS is not fully activated, more than one
- * organization is a cross-tenant exposure. Pure — unit-tested separately.
- */
-export function violatesSingleClinicInvariant(orgCount: number, rlsFullyActivated: boolean): boolean {
-  return !rlsFullyActivated && orgCount > 1;
-}
+import {
+  RLS_FULLY_ACTIVATED,
+  violatesSingleClinicInvariant,
+} from '../src/core/single-clinic-invariant';
 
 async function main(): Promise<void> {
   const url = process.env['DATABASE_URL'];

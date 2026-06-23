@@ -89,6 +89,11 @@ Previously-open standards questions, now decided:
   second tenant before full activation is a cross-tenant PHI leak via un-routed
   handlers. `services/api-ts/scripts/check-single-clinic-invariant.ts` must pass
   (exit 0) before onboarding a second clinic; it lifts when ADR-010 P3b completes.
+  **Now enforced (plan 015 S1):** the `release.yml` `single-clinic-gate` job runs the
+  check against the `PRODUCTION_DATABASE_URL` secret on every `v*` tag (a violation
+  blocks the release; no secret → no-op), and `initializeApp` logs a CRITICAL boot
+  advisory on a live violation in production (never hard-fails boot — dev/test seed
+  many orgs by design).
 - **`no-raw-fetch` coverage**: the ESLint rule now also enforces in `src/routes/` and
   `src/lib/`. Existing bootstrap / static-asset / legacy fetches carry inline
   disables-with-reason; two (`_dashboard/patients.tsx` POST and the

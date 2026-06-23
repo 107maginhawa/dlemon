@@ -6,9 +6,42 @@ on:
       - 'v*'
 
 jobs:
+  # ADR-010 / plan 015 S1: HARD deploy gate. While RLS is posture-only, a second
+  # dental_organization in the target DB is a cross-tenant PHI leak. This blocks
+  # the release if the production DB violates the single-clinic invariant.
+  #
+  # Production-scoped by construction: it only runs when the PRODUCTION_DATABASE_URL
+  # secret is set. With no secret (e.g. the upstream template, or a repo with no
+  # prod DB yet) it no-ops and passes — it NEVER bricks a release that has no
+  # production database to check.
+  single-clinic-gate:
+    name: Single-clinic invariant gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check single-clinic invariant against production DB
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$PRODUCTION_DATABASE_URL" ]; then
+            echo "PRODUCTION_DATABASE_URL not set — no production DB to gate. Skipping (pass)."
+            exit 0
+          fi
+          cd services/api-ts
+          DATABASE_URL="$PRODUCTION_DATABASE_URL" bun scripts/check-single-clinic-invariant.ts
+
   release:
     name: Build & Release
     runs-on: ubuntu-latest
+    needs: single-clinic-gate
     permissions:
       contents: write
 

@@ -48,9 +48,22 @@ RLS is fully activated, every un-routed handler becomes a cross-tenant PHI leak.
 **Gate (must hold until P3b activation completes):** before onboarding a second clinic
 to any deployment, `services/api-ts/scripts/check-single-clinic-invariant.ts` must pass
 against that database (exit 0). It fails when `count(dental_organization) > 1` while
-`RLS_FULLY_ACTIVATED` is false. The gate **lifts** by flipping that constant to true once
-every tenant-scoped handler is routed through `withTenantTx` and cross-tenant tests cover
-every module — a deliberate, reviewed event.
+`RLS_FULLY_ACTIVATED` is false. The gate **lifts** by flipping that constant (now in
+`services/api-ts/src/core/single-clinic-invariant.ts`) to true once every tenant-scoped
+handler is routed through `withTenantTx` and cross-tenant tests cover every module — a
+deliberate, reviewed event.
+
+**Enforcement (plan 015 S1):** the gate is no longer a script-on-disk only —
+
+- **Deploy:** `.github/workflows/release.yml` runs the check against the
+  `PRODUCTION_DATABASE_URL` secret on every `v*` tag release; a violation fails the
+  `single-clinic-gate` job and blocks the release. It is production-scoped by
+  construction — with no `PRODUCTION_DATABASE_URL` secret it no-ops (the upstream
+  template / a repo with no prod DB never has its release bricked).
+- **Runtime:** `initializeApp` (boot) runs a production-scoped advisory
+  (`checkSingleClinicInvariantAdvisory`) that logs **CRITICAL** on a live violation.
+  It NEVER hard-fails boot — dev/test DBs seed many orgs by design, so an
+  unconditional boot fail would brick them.
 
 ---
 

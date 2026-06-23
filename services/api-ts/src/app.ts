@@ -28,6 +28,7 @@ import { registerDentalSchedulingJobs } from '@/handlers/dental-scheduling/jobs/
 import { registerDentalPatientJobs } from '@/handlers/dental-patient/jobs';
 import { registerDentalBillingJobs } from '@/handlers/dental-billing/jobs';
 import { seedProcedureCatalog } from '@/handlers/dental-visit/repos/seed-procedure-catalog';
+import { checkSingleClinicInvariantAdvisory } from '@/core/single-clinic-invariant';
 
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
@@ -278,6 +279,16 @@ export async function initializeApp(app: App, config: Config): Promise<void> {
     await seedProcedureCatalog(database);
     logger.debug('CDT procedure-code catalog seeded');
   }
+
+  // ADR-010 / plan 015 S1: production-scoped single-clinic invariant advisory.
+  // Logs CRITICAL (never hard-fails boot) if a 2nd dental_organization exists
+  // while RLS is posture-only. Dev/test seed many orgs by design, so this only
+  // runs in production; the hard deploy gate lives in release.yml.
+  await checkSingleClinicInvariantAdvisory({
+    database,
+    logger,
+    isProduction: process.env['NODE_ENV'] === 'production',
+  });
 
   // Initialize email templates
   logger.debug('Initializing email templates...');
