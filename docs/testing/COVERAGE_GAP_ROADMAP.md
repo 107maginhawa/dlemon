@@ -20,7 +20,7 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `handleStripeWebhook` — billing — `POST /billing/webhooks/stripe`
 - [ ] `requestErasure` — dental-erasure — `POST /dental/erasure-requests`
 
-## 2. Endpoint gaps — FE-consumed but untested (42)
+## 2. Endpoint gaps — FE-consumed but untested (37)
 
 **What:** an operation the product UI **does** call, but with no contract/integration/journey test.
 **Why deferred:** mostly reads and lower-risk writes whose happy path is implicitly exercised by journeys/FE unit tests; the gate ratchets them so no NEW untested FE-consumed op can land.
@@ -49,14 +49,11 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 - [ ] `updateInsuranceProfile` — `PATCH /dental/patients/{patientId}/insurance-profiles/{profileId}`
 - [ ] `updateTask` — `PATCH /dental/patients/{patientId}/tasks/{taskId}`
 
-### dental-billing (7)
+### dental-billing (4)
 - [ ] `addInsuranceClaimLine` — `POST /dental/billing/claims/{claimId}/lines`
 - [ ] `applyCreditToInvoice` — `POST /dental/billing/invoices/{invoiceId}/apply-credit`
 - [ ] `generateStatementBatch` — `POST /dental/billing/statements/batch`
 - [ ] `getArAging` — `GET /dental/billing/collections/aging`
-- [ ] `markUncollectible` — `POST /dental/billing/invoices/{invoiceId}/uncollectible`
-- [ ] `refundDentalPayment` — `POST /dental/billing/payments/{paymentId}/refund`
-- [ ] `updateInsuranceClaimLine` — `PATCH /dental/billing/claims/{claimId}/lines/{lineId}`
 
 ### dental-clinical (2)
 - [ ] `createOcclusionScreening` — `POST /dental/patients/{patientId}/occlusion-screenings`
@@ -65,16 +62,14 @@ The 16-PR production-readiness program was scoped by **risk**: suspected real bu
 ### patient (1)
 - [ ] `createPatient` — `POST /patients`
 
-### dental-org (4)
+### dental-org (3)
 - [ ] `deactivateMember` — `DELETE /dental/org/members/{memberId}`
 - [ ] `getFeeSchedule` — `GET /dental/fee-schedule`
 - [ ] `updateFeeScheduleEntry` — `PATCH /dental/fee-schedule/{cdt}`
-- [ ] `updateMember` — `PATCH /dental/org/members/{memberId}`
 
-### dental-visit (3)
+### dental-visit (2)
 - [ ] `discardVisit` — `POST /dental/visits/{visitId}/discard`
 - [ ] `getToothHistory` — `GET /dental/visits/history/{patientId}/teeth/{toothNumber}`
-- [ ] `updateTooth` — `PATCH /dental/visits/{visitId}/chart/teeth/{toothNumber}`
 
 ### dental-scheduling (4)
 - [ ] `listQueueBoard` — `GET /dental/branches/{branchId}/queue-board`

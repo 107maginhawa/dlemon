@@ -240,7 +240,7 @@
       "e2e",
       "hurl"
     ],
-    "hasNegativePath": false,
+    "hasNegativePath": true,
     "coverageState": "FULLY_COVERED"
   },
   {
@@ -257,7 +257,7 @@
       "e2e",
       "hurl"
     ],
-    "hasNegativePath": false,
+    "hasNegativePath": true,
     "coverageState": "FULLY_COVERED"
   },
   {

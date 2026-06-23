@@ -502,3 +502,36 @@ jsonpath "$.organizationId" == "{{org_id}}"
 GET {{api}}/dental/org/context
 Authorization: Bearer invalid-no-session
 HTTP 401
+
+
+# ============================================================
+# Plan 015 S4a — updateMember cross-tenant deny pin.
+# updateMember (PATCH /dental/org/members/{memberId}) is FE-consumed (the staff
+# settings screen) and was a SUSPECTED credential-write IDOR. It is guarded:
+# assertBranchAccess denies any caller with no active membership in the member's
+# branch, and a dentist_owner gate denies non-owners editing role/credentials. This
+# pins the FE-reachable cross-tenant deny a happy-path test misses.
+#
+# Runs LAST: the tenant-B sign-up repopulates libcurl's cookie jar, so every
+# {{session_token}} (tenant A) request above must precede it.
+# ============================================================
+POST {{api}}/auth/sign-up/email
+Content-Type: application/json
+Origin: {{api}}
+{
+  "email": "dental-org-other-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest",
+  "name": "Dr. Other Org Tenant"
+}
+HTTP 200
+[Captures]
+org_other_token: cookie "better-auth.session_token"
+
+
+# Tenant B (no membership in tenant A's branch) tries to rewrite tenant A's member's
+# provider credential → 403 (assertBranchAccess denies the non-member).
+PATCH {{api}}/dental/org/members/{{flat_member_id}}
+Cookie: better-auth.session_token={{org_other_token}}
+Content-Type: application/json
+{ "licenseNumber": "FORGED-LICENSE-{{suffix}}" }
+HTTP 403

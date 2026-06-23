@@ -112,16 +112,8 @@
     "reason": "Baseline gap seeded 2026-06-15: POST /notifs/{notif}/read is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
-    "id": "markUncollectible",
-    "reason": "Baseline gap seeded 2026-06-15: POST /dental/billing/invoices/{invoiceId}/uncollectible is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
-  },
-  {
     "id": "promoteWaitlistEntry",
     "reason": "Baseline gap seeded 2026-06-21: POST /dental/waitlist/{entryId}/promote is FE-consumed (apps/dentalemon, waitlist panel (product-pass PP-5)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
-  },
-  {
-    "id": "refundDentalPayment",
-    "reason": "Baseline gap seeded 2026-06-19: POST /dental/billing/payments/{paymentId}/refund is FE-consumed (apps/dentalemon refund action) but has no contract/integration/journey test yet. Backend-tested (dental-billing.refunds.test.ts, BR-053); FE-consumed E2E pending."
   },
   {
     "id": "rejectCasePresentation",
@@ -140,16 +132,8 @@
     "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/fee-schedule/{cdt} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
-    "id": "updateInsuranceClaimLine",
-    "reason": "Baseline gap seeded 2026-06-19: PATCH /dental/billing/claims/{claimId}/lines/{lineId} is FE-consumed (apps/dentalemon claim line editor) but has no contract/integration/journey test yet. Backend-tested at the handler level; FE-consumed E2E pending."
-  },
-  {
     "id": "updateInsuranceProfile",
     "reason": "Baseline gap seeded 2026-06-21: PATCH /dental/patients/{patientId}/insurance-profiles/{profileId} is FE-consumed (apps/dentalemon, insurance profile editor) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
-  },
-  {
-    "id": "updateMember",
-    "reason": "PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet (backend handler-tested). GUARD EXISTS (no longer 'suspected'): updateMember.ts assertBranchAccess denies cross-tenant memberId, and a dentist_owner gate denies any non-owner edit to role/licenseNumber/npi/credentialType/licenseExpiry (403). FE-reachable non-owner + cross-tenant DENY pin tracked in plan 015 S4a (will discharge this entry)."
   },
   {
     "id": "updateQueueItemStatus",
@@ -158,10 +142,6 @@
   {
     "id": "updateTask",
     "reason": "Baseline gap seeded 2026-06-21: PATCH /dental/patients/{patientId}/tasks/{taskId} is FE-consumed (apps/dentalemon, patient-tasks sheet FSM (product-pass PP-7)) but has no contract/integration/journey test yet (backend handler-tested). Migrated from endpoint-sensitive-orphan.allowlist.json now that the product-pass FE wires it."
-  },
-  {
-    "id": "updateTooth",
-    "reason": "Baseline gap seeded 2026-06-15: PATCH /dental/visits/{visitId}/chart/teeth/{toothNumber} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet."
   },
   {
     "id": "upsertToothReading",

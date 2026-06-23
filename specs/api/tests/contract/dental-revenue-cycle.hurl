@@ -156,8 +156,11 @@ jsonpath "$.total" >= 1
 GET {{api}}/dental/billing/claims/{{claim_id}}
 Cookie: better-auth.session_token={{session_token}}
 HTTP 200
+[Captures]
+line_id: jsonpath "$.lines[0].id"
 [Asserts]
 jsonpath "$.lines" count == 2
+jsonpath "$.lines[0].id" isString
 
 
 # 7. FSM violation: draft → paid is illegal → 422
@@ -186,6 +189,21 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "submitted"
+
+
+# 9a. Plan 015 S4b — CLAIM_IMMUTABLE deny (plan 014 S1 guard). The claim is now
+# `submitted`, so the clinic-controlled billed fields (billedAmountCents/description)
+# are frozen on every line. updateInsuranceClaimLine rejects a billed-field edit
+# with 422 CLAIM_IMMUTABLE (payer-decision fields like status stay editable). Runs
+# BEFORE the tenant-B signup below — that signup repopulates libcurl's cookie jar,
+# so any later {{session_token}} request would be hijacked to tenant B.
+PATCH {{api}}/dental/billing/claims/{{claim_id}}/lines/{{line_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "billedAmountCents": 999999 }
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "CLAIM_IMMUTABLE"
 
 
 # 10. Post an HMO remittance (payer pays part, no over-post)
@@ -233,4 +251,15 @@ other_token: cookie "better-auth.session_token"
 # Tenant B reads tenant A's claim → 404 (never reveals existence)
 GET {{api}}/dental/billing/claims/{{claim_id}}
 Cookie: better-auth.session_token={{other_token}}
+HTTP 404
+
+
+# Plan 015 S4b (cross-tenant): tenant B edits tenant A's claim LINE → 404.
+# updateInsuranceClaimLine catches assertBranchAccess's ForbiddenError and rethrows
+# NotFound, so the line's existence is never revealed. The FE claim-line editor
+# consumes updateInsuranceClaimLine; this is the FE-reachable IDOR deny pin.
+PATCH {{api}}/dental/billing/claims/{{claim_id}}/lines/{{line_id}}
+Cookie: better-auth.session_token={{other_token}}
+Content-Type: application/json
+{ "status": "covered" }
 HTTP 404

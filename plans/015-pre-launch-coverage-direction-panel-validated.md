@@ -60,13 +60,15 @@ Plan 014 S5 added CODEOWNERS on `*.allowlist.json` + `*rls*` migrations, but enf
 | S1 | Enforce single-clinic invariant gate | P0 | agent | ✅ DONE (#41 `cc1c908f`) |
 | S2 | Reclassify base-template orphans (denominator) | P2 | agent | ✅ DONE (97 product orphans + 61 template-base) |
 | S3 | Refresh 2 stale allowlist reasons | P3 | agent | ✅ DONE (folded into S2) |
-| S4a | updateMember deny pin | P1 | agent | TODO |
-| S4b | updateInsuranceClaimLine contract + immutability pin | P1 | agent | TODO |
-| S4c | refundDentalPayment cross-tenant deny | P1 | agent | TODO |
-| S4d | markUncollectible non-owner deny | P1 | agent | TODO |
-| S4e | updateTooth locked-visit deny | P1 | agent | TODO |
-| S4f | createPatient tenant-scoping pin | P2 | agent | TODO (optional) |
-| S5 | "Require review from Code Owners" toggle | P1 | **user** | TODO |
+| S4a | updateMember deny pin | P1 | agent | ✅ DONE (cross-tenant 403, dental-org.hurl) |
+| S4b | updateInsuranceClaimLine contract + immutability pin | P1 | agent | ✅ DONE (CLAIM_IMMUTABLE 422 + cross-tenant 404) |
+| S4c | refundDentalPayment cross-tenant deny | P1 | agent | ✅ DONE (cross-tenant 403) |
+| S4d | markUncollectible non-owner deny | P1 | agent | ✅ DONE (cross-tenant 403) |
+| S4e | updateTooth locked-visit deny | P1 | agent | ✅ DONE (VISIT_IMMUTABLE 422) |
+| S4f | createPatient tenant-scoping pin | P2 | agent | SKIPPED (optional; compliance: likely fine) |
+| S5 | "Require review from Code Owners" toggle | P1 | **user** | ⚠️ AWAITING USER (admin toggle) |
+
+**S4 note:** all 5 pins batched into one PR (closely-related contract deny pins, as the plan permits) to avoid 5 sequential conflict-prone matrix regens. Each validated against a live stack; all 5 ops flip gap→tested and their allowlist entries are discharged. S4f (createPatient) skipped — optional, and compliance judged it likely fine.
 
 ## CI gotchas (carried from plan 014 / #38)
 - Coverage Ratchet fails "matrices STALE" → regen `bun scripts/coverage/run-all.ts` + commit `docs/testing/coverage/*`.

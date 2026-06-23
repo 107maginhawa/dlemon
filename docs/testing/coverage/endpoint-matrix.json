@@ -3920,10 +3920,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "mergeImportedPMDSafetyFloor",
@@ -4076,10 +4076,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "refundInvoicePayment",
@@ -4518,10 +4518,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "updateInsuranceClaimStatus",
@@ -4609,10 +4609,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "updatePatient",
@@ -4791,10 +4791,10 @@
     "hasHandler": true,
     "hasSDK": true,
     "hasFEConsumer": true,
-    "hasContractTest": false,
+    "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "gap"
+    "disposition": "tested"
   },
   {
     "operationId": "updateTreatmentPlan",
