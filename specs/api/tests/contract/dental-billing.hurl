@@ -615,3 +615,44 @@ HTTP 200
 [Asserts]
 jsonpath "$.balanceCents" == 5000
 jsonpath "$.credits" isCollection
+
+
+# ============================================================
+# Plan 015 S4c + S4d — cross-tenant authz deny pins for the two FE-reachable
+# money mutations (refundDentalPayment, markUncollectible). Both are owner-gated
+# billing actions (assertBranchRole dentist_owner); a caller with NO membership in
+# the resource's branch is denied with 403. The FE billing screens consume both
+# ops, so these pin the FE-reachable cross-tenant deny a happy-path test misses.
+#
+# Runs LAST: the tenant-B sign-up repopulates libcurl's cookie jar, so every
+# {{session_token}} (tenant A) request above must precede it.
+# ============================================================
+POST {{api}}/auth/sign-up/email
+Content-Type: application/json
+Origin: {{api}}
+{
+  "email": "dental-billing-other-{{suffix}}@example.org",
+  "password": "Sup3rSecret!ContractTest",
+  "name": "Dr. Other Billing Tenant"
+}
+HTTP 200
+[Captures]
+billing_other_token: cookie "better-auth.session_token"
+
+
+# S4c — tenant B refunds tenant A's payment → 403 (assertBranchRole denies the
+# non-member before any payment-state check).
+POST {{api}}/dental/billing/payments/{{payment_id}}/refund
+Cookie: better-auth.session_token={{billing_other_token}}
+Content-Type: application/json
+{ "amountCents": 1000, "reason": "cross-tenant refund attempt" }
+HTTP 403
+
+
+# S4d — tenant B marks tenant A's invoice uncollectible → 403 (owner-only write-off,
+# assertBranchRole denies the non-member).
+POST {{api}}/dental/billing/invoices/{{invoice_id}}/uncollectible
+Cookie: better-auth.session_token={{billing_other_token}}
+Content-Type: application/json
+{ "reason": "cross-tenant write-off attempt" }
+HTTP 403

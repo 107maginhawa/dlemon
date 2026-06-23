@@ -349,6 +349,25 @@ jsonpath "$.status" == "locked"
 jsonpath "$.lockedAt" isString
 
 
+# 14a. Plan 015 S4e — VISIT_IMMUTABLE deny (EF-VIS-002). The visit is now `locked`,
+# so its chart is frozen. updateTooth (PATCH .../chart/teeth/{toothNumber}) — which
+# the FE odontogram consumes — must reject any edit to a completed/locked visit with
+# 422 VISIT_IMMUTABLE. Pins the FE-reachable immutability deny a happy-path misses.
+# The tooth number is a templated {{deny_tooth}} segment (not a literal) so the
+# coverage matrix resolves this request to the updateTooth operationId.
+PATCH {{api}}/dental/visits/{{visit_id}}/chart/teeth/{{deny_tooth}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+[Options]
+variable: deny_tooth=26
+{
+  "conditionCode": "caries"
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "VISIT_IMMUTABLE"
+
+
 # NEW: G2-S4 — create a second visit to test notes amendment (upsert idempotency)
 POST {{api}}/dental/visits
 Cookie: better-auth.session_token={{session_token}}
