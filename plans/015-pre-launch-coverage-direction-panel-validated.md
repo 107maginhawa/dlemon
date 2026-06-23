@@ -50,7 +50,9 @@ Each is backend-tested but missing an FE-reachable cross-tenant/authz **deny** p
 ## S5 — Branch-protection "Require review from Code Owners" toggle  [ADMIN — user action, NOT code]
 Plan 014 S5 added CODEOWNERS on `*.allowlist.json` + `*rls*` migrations, but enforcement needs the GitHub branch-protection **"Require review from Code Owners"** toggle ON. Until then the allowlist self-edit vector is open and the ratchet is *advisory, not enforced*.
 
-- [ ] **USER/ADMIN:** enable the toggle on `main` branch protection. (Not executable by the agent.)
+**RESOLVED 2026-06-23 — N/A for a single-maintainer repo (toggle intentionally left OFF).** The repo has one writer (`@107maginhawa`); GitHub never lets a PR author approve their own PR, so a code-owner-review requirement could never be satisfied and would hard-block every PR touching the governance files. The stale `@eladventures` owner (a removed account) was repointed to `@107maginhawa`, so CODEOWNERS now serves as an auto-review-request *visibility* nudge on those PRs. Mechanical enforcement would need a second maintainer or a CI gate (deferred — not built; the existing ratchet already blocks new untested gaps, and the allowlist edit is now at least surfaced on every such PR).
+
+- [x] ~~enable the toggle~~ → not viable solo; CODEOWNERS fixed to a valid owner + documented as visibility-only.
 
 ---
 
@@ -66,7 +68,7 @@ Plan 014 S5 added CODEOWNERS on `*.allowlist.json` + `*rls*` migrations, but enf
 | S4d | markUncollectible non-owner deny | P1 | agent | ✅ DONE (cross-tenant 403) |
 | S4e | updateTooth locked-visit deny | P1 | agent | ✅ DONE (VISIT_IMMUTABLE 422) |
 | S4f | createPatient tenant-scoping pin | P2 | agent | SKIPPED (optional; compliance: likely fine) |
-| S5 | "Require review from Code Owners" toggle | P1 | **user** | ⚠️ AWAITING USER (admin toggle) |
+| S5 | "Require review from Code Owners" toggle | P1 | **user** | ✅ RESOLVED N/A (solo repo — toggle off; CODEOWNERS owner fixed @eladventures→@107maginhawa) |
 
 **S4 note:** all 5 pins batched into one PR (closely-related contract deny pins, as the plan permits) to avoid 5 sequential conflict-prone matrix regens. Each validated against a live stack; all 5 ops flip gap→tested and their allowlist entries are discharged. S4f (createPatient) skipped — optional, and compliance judged it likely fine.
 
