@@ -52,8 +52,8 @@ _None — every P0 business rule is fully covered._
 | `BR-015` | dental-billing | validation | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
 | `BR-048` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e | — | FULLY_COVERED |
 | `BR-049` | dental-billing | business-logic | P2 | implemented | api-unit | — | FULLY_COVERED |
-| `BR-050` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | — | FULLY_COVERED |
-| `BR-051` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | — | FULLY_COVERED |
+| `BR-050` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
+| `BR-051` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e, hurl | ✓ | FULLY_COVERED |
 | `BR-052` | dental-billing | business-logic | P2 | implemented | api-unit, e2e, hurl | ✓ | FULLY_COVERED |
 | `BR-053` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit, e2e | ✓ | FULLY_COVERED |
 | `BR-054` | dental-billing | business-logic | P2 | implemented | api-unit, app-unit | — | FULLY_COVERED |
