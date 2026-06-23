@@ -73,12 +73,23 @@ const OUT_SENSITIVE_ALLOWLIST = join(
   'docs/testing/coverage/endpoint-sensitive-orphan.allowlist.json',
 );
 const OUT_ORPHANS = join(ROOT, 'docs/testing/coverage/orphan-disposition.md');
+// Committed, hand-curated list of upstream base-template operationIds (booking,
+// comms, email, storage, reviews, emr, notifs, generic providers/patients/persons)
+// the dental product does not consume. They are permanent orphans that can never
+// be zeroed, so they are reported SEPARATELY (disposition 'template-base') and
+// EXCLUDED from the product-orphan denominator — otherwise the orphan metric
+// trains the team to ignore it. Sensitive mutating orphans are NEVER on this list
+// (the classifier refuses to template-base them); see plan 015 S2.
+const TEMPLATE_BASE_ALLOWLIST = join(
+  ROOT,
+  'docs/testing/coverage/template-base.allowlist.json',
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Disposition = 'gap' | 'orphan' | 'tested';
+export type Disposition = 'gap' | 'orphan' | 'template-base' | 'tested';
 
 export interface EndpointRow {
   operationId: string;
@@ -263,14 +274,43 @@ export function loadRecordedOps(
 /**
  * Classify an operation's coverage disposition (see module header):
  *   - FE-consumed but no test on ANY layer → "gap"   (ratchet-tracked).
- *   - handler + SDK but no FE consumer      → "orphan" (doc-tracked, not ratcheted).
+ *   - handler + SDK but no FE consumer      → "orphan" (doc-tracked, not ratcheted),
+ *     EXCEPT a committed upstream base-template op that is NOT a sensitive mutating
+ *     orphan → "template-base" (reported separately, excluded from the product-
+ *     orphan denominator). A sensitive mutating orphan can NEVER be template-base —
+ *     the guard refuses, so the IDOR obligation set is untouched (plan 015 S2).
  *   - everything else                       → "tested" (no obligation / covered).
  */
-export function classifyDisposition(row: EndpointRow): Disposition {
+export function classifyDisposition(
+  row: EndpointRow,
+  templateBaseIds: Set<string> = new Set(),
+): Disposition {
   const anyTest = row.hasContractTest || row.hasIntegrationTest || row.hasJourney;
   if (row.hasFEConsumer && !anyTest) return 'gap';
-  if (row.hasHandler && row.hasSDK && !row.hasFEConsumer) return 'orphan';
+  if (row.hasHandler && row.hasSDK && !row.hasFEConsumer) {
+    // Reclassify ONLY genuinely-unused upstream base-template surface; never a
+    // sensitive mutating orphan (those stay obligations). isSensitiveMutatingOrphan
+    // keys off disposition === 'orphan', so probe with that forced.
+    if (
+      templateBaseIds.has(row.operationId) &&
+      !isSensitiveMutatingOrphan({ ...row, disposition: 'orphan' })
+    ) {
+      return 'template-base';
+    }
+    return 'orphan';
+  }
   return 'tested';
+}
+
+/** Load the committed base-template operationId allowlist as a Set (empty if absent). */
+export function loadTemplateBaseIds(path: string = TEMPLATE_BASE_ALLOWLIST): Set<string> {
+  if (!existsSync(path)) return new Set();
+  try {
+    const raw = JSON.parse(readFileSync(path, 'utf8')) as Array<{ id: string }>;
+    return new Set(raw.map((e) => e.id));
+  } catch {
+    return new Set();
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -457,6 +497,8 @@ export function build(): EndpointRow[] {
   const integrationOps = loadRecordedOps(RECORDED_SINK, resolver, false, 'api-unit');
   const journeyOps = loadRecordedOps(RECORDED_SINK, resolver, false, 'journeys');
 
+  const templateBaseIds = loadTemplateBaseIds();
+
   const rows: EndpointRow[] = [];
   for (const entry of spine.values()) {
     const raw = rawSpine.get(entry.operationId);
@@ -478,7 +520,7 @@ export function build(): EndpointRow[] {
       hasJourney: journeyOps.has(entry.operationId),
       disposition: 'tested',
     };
-    base.disposition = classifyDisposition(base);
+    base.disposition = classifyDisposition(base, templateBaseIds);
     rows.push(base);
   }
 
@@ -497,6 +539,7 @@ function bool(b: boolean): string {
 function renderMd(rows: EndpointRow[]): string {
   const gaps = rows.filter((r) => r.disposition === 'gap');
   const orphans = rows.filter((r) => r.disposition === 'orphan');
+  const templateBase = rows.filter((r) => r.disposition === 'template-base');
   const tested = rows.filter((r) => r.disposition === 'tested');
   const feConsumed = rows.filter((r) => r.hasFEConsumer);
   const anyRecorded = rows.some((r) => r.hasIntegrationTest || r.hasJourney);
@@ -535,7 +578,8 @@ function renderMd(rows: EndpointRow[]): string {
   lines.push(`| With an integration test | ${rows.filter((r) => r.hasIntegrationTest).length} |`);
   lines.push(`| With a journey | ${rows.filter((r) => r.hasJourney).length} |`);
   lines.push(`| **gap** (consumed, untested) | **${gaps.length}** |`);
-  lines.push(`| orphan (handler+SDK, no FE consumer) | ${orphans.length} |`);
+  lines.push(`| orphan (product handler+SDK, no FE consumer) | ${orphans.length} |`);
+  lines.push(`| template-base (upstream-template orphan, excluded from denominator) | ${templateBase.length} |`);
   lines.push(`| tested / no-obligation | ${tested.length} |`);
   lines.push('');
 
@@ -574,6 +618,7 @@ function renderMd(rows: EndpointRow[]): string {
 
 function renderOrphans(rows: EndpointRow[], ownershipTested: Set<string>): string {
   const orphans = rows.filter((r) => r.disposition === 'orphan');
+  const templateBase = rows.filter((r) => r.disposition === 'template-base');
   const sensitive = rows.filter(isSensitiveMutatingOrphan);
   const lines: string[] = [];
   lines.push('<!-- GENERATED by scripts/coverage/endpoint-matrix.ts — do not edit by hand. -->');
@@ -590,6 +635,21 @@ function renderOrphans(rows: EndpointRow[], ownershipTested: Set<string>): strin
       'that swallowed the P0 `updatePatientContact` contact IDOR). Those are ' +
       'reclassified below into a tracked OBLIGATION (ratcheted in ' +
       '`endpoint-sensitive-orphan.allowlist.json`).',
+  );
+  lines.push('');
+  lines.push(
+    '**Upstream base-template orphans** (booking / comms / email / storage / reviews ' +
+      '/ emr / notifs / generic providers-patients-persons) are tracked separately as ' +
+      'disposition `template-base` and **excluded from the product-orphan denominator** ' +
+      '— they are permanent upstream surface the dental product does not consume and can ' +
+      "never be zeroed, so counting them in the orphan metric trains the team to ignore " +
+      'it. The list is hand-curated in `template-base.allowlist.json`; a sensitive ' +
+      'mutating orphan can NEVER be on it (the classifier refuses).',
+  );
+  lines.push('');
+  lines.push(
+    `Counts: **${orphans.length} product orphans** + **${templateBase.length} template-base** ` +
+      `(upstream, excluded).`,
   );
   lines.push('');
 
@@ -655,6 +715,28 @@ function renderOrphans(rows: EndpointRow[], ownershipTested: Set<string>): strin
     }
   }
   lines.push('');
+
+  // ── Template-base orphans (upstream surface, excluded from the denominator) ──
+  lines.push('## Template-base orphans (upstream surface — excluded from the orphan denominator)');
+  lines.push('');
+  lines.push(
+    'Upstream `mono-js-lf` base-template operations the dental product does not ' +
+      'consume. Permanent orphans (can never be zeroed); reported here for honesty but ' +
+      'kept OUT of the product-orphan count. Curated in `template-base.allowlist.json`.',
+  );
+  lines.push('');
+  lines.push(`Total template-base: **${templateBase.length}**`);
+  lines.push('');
+  if (templateBase.length === 0) {
+    lines.push('_No template-base orphans._');
+  } else {
+    lines.push('| operationId | module | method | path |');
+    lines.push('|-------------|--------|--------|------|');
+    for (const r of templateBase) {
+      lines.push(`| \`${r.operationId}\` | ${r.module ?? '—'} | ${r.method} | \`${r.path}\` |`);
+    }
+  }
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -714,11 +796,13 @@ function main(): void {
 
   const gaps = rows.filter((r) => r.disposition === 'gap');
   const orphans = rows.filter((r) => r.disposition === 'orphan');
+  const templateBase = rows.filter((r) => r.disposition === 'template-base');
   const tested = rows.filter((r) => r.disposition === 'tested');
   const sensGaps = sensitiveOrphanGapsOf(rows, ownershipTested);
   console.log(
     `endpoint-matrix: ${rows.length} ops — ${tested.length} tested, ${gaps.length} gap, ` +
-      `${orphans.length} orphan (${sensGaps.length} sensitive-mutating-orphan obligation gaps). ` +
+      `${orphans.length} orphan (${sensGaps.length} sensitive-mutating-orphan obligation gaps), ` +
+      `${templateBase.length} template-base (upstream, excluded). ` +
       `Wrote ${OUT_JSON} + ${OUT_MD} + ${OUT_ORPHANS}`,
   );
 

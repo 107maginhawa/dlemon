@@ -37,7 +37,7 @@
   },
   {
     "id": "createPatient",
-    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): POST /patients is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. Mutating PII \u2014 Phase 3 skeptic-fan-out pin (createPatient validator + tenant-scoping)."
+    "reason": "POST /patients is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet (backend handler-tested incl. validator + tenant-scoping). Tenant-scoping contract pin tracked in plan 015 S4f (optional; will discharge this entry)."
   },
   {
     "id": "createTask",
@@ -149,7 +149,7 @@
   },
   {
     "id": "updateMember",
-    "reason": "Baseline gap seeded 2026-06-16 (armed-ratchet baseline): PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet. SUSPECTED credential-write IDOR (license/npi writable by any member on any memberId) \u2014 Phase 3 skeptic-fan-out pin."
+    "reason": "PATCH /dental/org/members/{memberId} is FE-consumed (apps/dentalemon) but has no contract/integration/journey test yet (backend handler-tested). GUARD EXISTS (no longer 'suspected'): updateMember.ts assertBranchAccess denies cross-tenant memberId, and a dentist_owner gate denies any non-owner edit to role/licenseNumber/npi/credentialType/licenseExpiry (403). FE-reachable non-owner + cross-tenant DENY pin tracked in plan 015 S4a (will discharge this entry)."
   },
   {
     "id": "updateQueueItemStatus",

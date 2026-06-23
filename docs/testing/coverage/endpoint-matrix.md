@@ -16,7 +16,8 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | With an integration test | 0 |
 | With a journey | 0 |
 | **gap** (consumed, untested) | **42** |
-| orphan (handler+SDK, no FE consumer) | 158 |
+| orphan (product handler+SDK, no FE consumer) | 97 |
+| template-base (upstream-template orphan, excluded from denominator) | 61 |
 | tested / no-obligation | 180 |
 
 ## GAPS — FE-consumed but untested (ratchet-tracked)
@@ -114,7 +115,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `ImagingMgmt_updateImageMetadata` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/metadata` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `ImagingMgmt_updateImageModality` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/modality` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `PatientImageMgmt_listPatientImages` | dental-imaging | GET | `/dental/patients/{patientId}/images` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | ✅ | ✅ |  |  |  |  | orphan |
+| `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | ✅ | ✅ |  |  |  |  | template-base |
 | `acceptCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations/{presentationId}/accept` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `acceptTreatmentOption` | dental-patient | POST | `/dental/patients/{patientId}/treatment-options/{optionGroupId}/accept` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `acceptTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plan/accept` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -133,31 +134,31 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | ✅ | ✅ |  |  |  |  | orphan |
 | `bulkArchiveDentalPatients` | dental-patient | POST | `/dental/patients/bulk-archive` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `cancelAppointment` | dental-scheduling | DELETE | `/dental/appointments/{appointmentId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` | ✅ | ✅ |  |  |  |  | orphan |
+| `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` | ✅ | ✅ |  |  |  |  | template-base |
 | `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | ✅ | ✅ |  |  |  |  | orphan |
 | `carryOverTreatments` | dental-visit | POST | `/dental/visits/{visitId}/carry-over` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `checkInAppointment` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/check-in` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `completeFileUpload` | storage | POST | `/storage/files/{file}/complete` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `completeMultipartUpload` | storage | POST | `/storage/multipart/{file}/complete` | ✅ | ✅ |  |  |  |  | orphan |
+| `completeMultipartUpload` | storage | POST | `/storage/multipart/{file}/complete` | ✅ | ✅ |  |  |  |  | template-base |
 | `completePerioChart` | dental-perio | POST | `/dental/perio-charts/{chartId}/complete` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `confirmAppointment` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/confirm` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | ✅ | ✅ |  |  |  |  | orphan |
-| `confirmBooking` | booking | POST | `/booking/bookings/{booking}/confirm` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `confirmBooking` | booking | POST | `/booking/bookings/{booking}/confirm` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `convertFindingToTreatment` | dental-visit | POST | `/dental/visits/{visitId}/findings/{findingId}/treatment` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createAppointment` | dental-scheduling | POST | `/dental/appointments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createAttachment` | dental-clinical | POST | `/dental/visits/{visitId}/attachments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createBooking` | booking | POST | `/booking/bookings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `createBookingEvent` | booking | POST | `/booking/events` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `createBookingEvent` | booking | POST | `/booking/events` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `createBookingHold` | dental-scheduling | POST | `/dental/public/branches/{branchId}/holds` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `createChatRoom` | comms | POST | `/comms/chat-rooms` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `createChatRoom` | comms | POST | `/comms/chat-rooms` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `createClaimDraft` | dental-patient | POST | `/dental/patients/{patientId}/claims` | ✅ | ✅ |  |  |  |  | orphan |
 | `createCollectionNote` | dental-billing | POST | `/dental/billing/collections/notes` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createConsentForm` | dental-clinical | POST | `/dental/visits/{visitId}/consents` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createConsentTemplate` | dental-org | POST | `/dental/branches/{branchId}/consent-templates` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `createConsultation` | emr | POST | `/emr/consultations` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `createConsultation` | emr | POST | `/emr/consultations` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `createCoverageAuthorization` | dental-patient | POST | `/dental/patients/{patientId}/authorizations` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalAlert` | dental-patient | POST | `/dental/patients/{patientId}/dental-alerts` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `createDentalFinding` | dental-visit | POST | `/dental/visits/{visitId}/findings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -166,7 +167,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `createDentalPaymentPlan` | dental-billing | POST | `/dental/billing/invoices/{invoiceId}/plan` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalTreatment` | dental-visit | POST | `/dental/visits/{visitId}/treatments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalVisit` | dental-visit | POST | `/dental/visits` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `createEmailTemplate` | email | POST | `/email/templates` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `createEmailTemplate` | email | POST | `/email/templates` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `createHousehold` | dental-patient | POST | `/dental/households` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `createInsuranceClaim` | dental-billing | POST | `/dental/billing/claims` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createInsuranceProfile` | dental-patient | POST | `/dental/patients/{patientId}/insurance-profiles` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -191,8 +192,8 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `createProvider` | provider | POST | `/providers` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | ✅ | ✅ |  |  |  |  | orphan |
 | `createRecall` | dental-patient | POST | `/dental/patients/{patientId}/recalls` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `createReview` | reviews | POST | `/reviews/` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `createReview` | reviews | POST | `/reviews/` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | ✅ | ✅ |  |  |  |  | orphan |
 | `createTask` | dental-patient | POST | `/dental/patients/{patientId}/tasks` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `createTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -204,43 +205,43 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `deleteAttachment` | dental-clinical | DELETE | `/dental/visits/{visitId}/attachments/{attachmentId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `deleteBookingEvent` | booking | DELETE | `/booking/events/{event}` | ✅ | ✅ |  |  |  |  | orphan |
+| `deleteBookingEvent` | booking | DELETE | `/booking/events/{event}` | ✅ | ✅ |  |  |  |  | template-base |
 | `deleteConsentTemplate` | dental-org | DELETE | `/dental/branches/{branchId}/consent-templates/{id}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `deleteFile` | storage | DELETE | `/storage/files/{file}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `deleteFile` | storage | DELETE | `/storage/files/{file}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `deleteInvoice` | billing | DELETE | `/billing/invoices/{invoice}` | ✅ | ✅ |  |  |  |  | orphan |
 | `deletePatientContact` | dental-patient | DELETE | `/dental/patients/{patientId}/contacts/{contactId}` | ✅ | ✅ |  |  |  |  | orphan |
-| `deleteReview` | reviews | DELETE | `/reviews/{review}` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `deleteScheduleException` | booking | DELETE | `/booking/events/{event}/exceptions/{exception}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `deleteReview` | reviews | DELETE | `/reviews/{review}` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `deleteScheduleException` | booking | DELETE | `/booking/events/{event}/exceptions/{exception}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `deleteTreatmentTemplate` | dental-visit | DELETE | `/dental/treatment-templates/{id}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `detachTreatmentAppointment` | dental-patient | DELETE | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | ✅ | ✅ |  |  |  |  | orphan |
 | `detectDuplicatePatients` | dental-patient | GET | `/dental/patients/duplicates` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `discardVisit` | dental-visit | POST | `/dental/visits/{visitId}/discard` | ✅ | ✅ | ✅ |  |  |  | gap |
-| `endVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/end` | ✅ | ✅ |  |  |  |  | orphan |
+| `endVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/end` | ✅ | ✅ |  |  |  |  | template-base |
 | `estimateClaimCoverage` | dental-billing | POST | `/dental/billing/estimate` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `exportDentalChart` | dental-visit | GET | `/dental/visits/{visitId}/chart/export` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `exportDentalPatients` | dental-patient | GET | `/dental/patients/export` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `exportPMD` | dental-pmd | GET | `/dental/visits/{visitId}/pmd/export` | ✅ |  |  | ✅ |  |  | tested |
 | `exportPatientCareRecord` | dental-pmd | GET | `/dental/pmd/patient/{patientId}/care-record` | ✅ | ✅ |  |  |  |  | orphan |
-| `finalizeConsultation` | emr | POST | `/emr/consultations/{consultation}/finalize` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `finalizeConsultation` | emr | POST | `/emr/consultations/{consultation}/finalize` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `finalizeInvoice` | billing | POST | `/billing/invoices/{invoice}/finalize` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `generateMultipartPartUrl` | storage | GET | `/storage/multipart/{file}/part-url` | ✅ | ✅ |  |  |  |  | orphan |
+| `generateMultipartPartUrl` | storage | GET | `/storage/multipart/{file}/part-url` | ✅ | ✅ |  |  |  |  | template-base |
 | `generatePMD` | dental-pmd | POST | `/dental/visits/{visitId}/pmd` | ✅ |  |  | ✅ |  |  | tested |
 | `generateStatementBatch` | dental-billing | POST | `/dental/billing/statements/batch` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `getAppointment` | dental-scheduling | GET | `/dental/appointments/{appointmentId}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getArAging` | dental-billing | GET | `/dental/billing/collections/aging` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `getAuditEvents` | dental-audit | GET | `/dental/audit-events` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `getBooking` | booking | GET | `/booking/bookings/{booking}` | ✅ | ✅ |  |  |  |  | orphan |
-| `getBookingEvent` | booking | GET | `/booking/events/{event}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `getBooking` | booking | GET | `/booking/bookings/{booking}` | ✅ | ✅ |  |  |  |  | template-base |
+| `getBookingEvent` | booking | GET | `/booking/events/{event}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `getBranchSettings` | dental-org | GET | `/dental/branches/{branchId}/settings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getBranchesByUser` | dental-org | GET | `/dental/branches` | ✅ | ✅ |  |  |  |  | orphan |
 | `getCasePresentation` | dental-patient | GET | `/dental/patients/{patientId}/case-presentations/{presentationId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `getChatMessages` | comms | GET | `/comms/chat-rooms/{room}/messages` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getChatRoom` | comms | GET | `/comms/chat-rooms/{room}` | ✅ | ✅ |  |  |  |  | orphan |
+| `getChatMessages` | comms | GET | `/comms/chat-rooms/{room}/messages` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `getChatRoom` | comms | GET | `/comms/chat-rooms/{room}` | ✅ | ✅ |  |  |  |  | template-base |
 | `getClaimReadiness` | dental-patient | GET | `/dental/patients/{patientId}/claims/{claimId}/readiness` | ✅ | ✅ |  |  |  |  | orphan |
 | `getCollectionsKpis` | dental-billing | GET | `/dental/billing/collections/kpis` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getCollectionsSummary` | dental-billing | GET | `/dental/billing/collections/summary` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getCollectionsWorklist` | dental-billing | GET | `/dental/billing/collections/worklist` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `getConsultation` | emr | GET | `/emr/consultations/{consultation}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `getConsultation` | emr | GET | `/emr/consultations/{consultation}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `getDashboardSummary` | dental-org | GET | `/dental/dashboard/summary` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getDentalChart` | dental-visit | GET | `/dental/visits/{visitId}/chart` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getDentalInvoice` | dental-billing | GET | `/dental/billing/invoices/{invoiceId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -250,14 +251,14 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `getDentalPaymentPlan` | dental-billing | GET | `/dental/billing/invoices/{invoiceId}/plan` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getDentalPaymentReceipt` | dental-billing | GET | `/dental/billing/invoices/{invoiceId}/payments/{paymentId}/receipt` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getDentalVisit` | dental-visit | GET | `/dental/visits/{visitId}` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getEmailQueueItem` | email | GET | `/email/queue/{queue}` | ✅ | ✅ |  |  |  |  | orphan |
-| `getEmailTemplate` | email | GET | `/email/templates/{template}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `getEmailQueueItem` | email | GET | `/email/queue/{queue}` | ✅ | ✅ |  |  |  |  | template-base |
+| `getEmailTemplate` | email | GET | `/email/templates/{template}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `getErasureRequest` | dental-erasure | GET | `/dental/erasure-requests/{id}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getFeeSchedule` | dental-org | GET | `/dental/fee-schedule` | ✅ | ✅ | ✅ |  |  |  | gap |
-| `getFile` | storage | GET | `/storage/files/{file}` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getFileDownload` | storage | GET | `/storage/files/{file}/download` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `getFile` | storage | GET | `/storage/files/{file}` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `getFileDownload` | storage | GET | `/storage/files/{file}/download` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `getHousehold` | dental-patient | GET | `/dental/households/{householdId}` | ✅ | ✅ |  |  |  |  | orphan |
-| `getIceServers` | comms | GET | `/comms/ice-servers` | ✅ | ✅ |  |  |  |  | orphan |
+| `getIceServers` | comms | GET | `/comms/ice-servers` | ✅ | ✅ |  |  |  |  | template-base |
 | `getImportedPMD` | dental-pmd | GET | `/dental/pmd/imported/{id}` | ✅ |  |  | ✅ |  |  | tested |
 | `getInsuranceClaim` | dental-billing | GET | `/dental/billing/claims/{claimId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getInvoice` | billing | GET | `/billing/invoices/{invoice}` | ✅ | ✅ |  |  |  |  | orphan |
@@ -265,11 +266,11 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `getMerchantAccount` | billing | GET | `/billing/merchant-accounts/{merchantAccount}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getMerchantDashboard` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/dashboard` | ✅ | ✅ |  |  |  |  | orphan |
 | `getMyBalance` | dental-portal | GET | `/me/balance` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `getNotification` | notifs | GET | `/notifs/{notif}` | ✅ | ✅ |  |  |  |  | orphan |
+| `getNotification` | notifs | GET | `/notifs/{notif}` | ✅ | ✅ |  |  |  |  | template-base |
 | `getOnlineBooking` | dental-scheduling | GET | `/dental/public/bookings/{confirmationCode}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getOrgContext` | dental-org | GET | `/dental/org/context` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getPMDForVisit` | dental-pmd | GET | `/dental/visits/{visitId}/pmd` | ✅ |  |  | ✅ |  |  | tested |
-| `getPatient` | patient | GET | `/patients/{id}` | ✅ | ✅ |  |  |  |  | orphan |
+| `getPatient` | patient | GET | `/patients/{id}` | ✅ | ✅ |  |  |  |  | template-base |
 | `getPatientBalance` | dental-billing | GET | `/dental/billing/patients/{patientId}/balance` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getPatientCommunicationConsent` | dental-patient | GET | `/dental/patients/{patientId}/communication-consent` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getPatientCredits` | dental-billing | GET | `/dental/billing/patients/{patientId}/credits` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -278,14 +279,14 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `getPerioChart` | dental-perio | GET | `/dental/perio-charts/{chartId}` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `getPermissionGrid` | dental-org | GET | `/dental/org/permissions` | ✅ | ✅ |  |  |  |  | orphan |
 | `getPerson` | person | GET | `/persons/{person}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `getPractitioner` | provider | GET | `/providers/practitioners/{id}` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getPractitionerRole` | provider | GET | `/providers/practitioner-roles/{id}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `getPractitioner` | provider | GET | `/providers/practitioners/{id}` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `getPractitionerRole` | provider | GET | `/providers/practitioner-roles/{id}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `getPublicAvailability` | dental-scheduling | GET | `/dental/public/branches/{branchId}/availability` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getPublicBookingConfig` | dental-scheduling | GET | `/dental/public/branches/{branchId}/booking-config` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getRetentionStatus` | retention | GET | `/dental/retention-status` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getReview` | reviews | GET | `/reviews/{review}` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getScheduleException` | booking | GET | `/booking/events/{event}/exceptions/{exception}` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `getTimeSlot` | booking | GET | `/booking/slots/{slotId}` | ✅ | ✅ |  |  |  |  | orphan |
+| `getReview` | reviews | GET | `/reviews/{review}` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `getScheduleException` | booking | GET | `/booking/events/{event}/exceptions/{exception}` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `getTimeSlot` | booking | GET | `/booking/slots/{slotId}` | ✅ | ✅ |  |  |  |  | template-base |
 | `getToothHistory` | dental-visit | GET | `/dental/visits/history/{patientId}/teeth/{toothNumber}` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `getTreatmentPlan` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plan` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getTreatmentPlanVersion` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plan/versions/{versionId}` | ✅ | ✅ |  | ✅ |  |  | orphan |
@@ -297,23 +298,23 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `importPMD` | dental-pmd | POST | `/dental/pmd/import` | ✅ |  |  | ✅ |  |  | tested |
 | `importPatients` | dental-patient | POST | `/dental/patients/import` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `initializeDentition` | dental-patient | POST | `/dental/patients/{patientId}/dentition` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `initiateMultipartUpload` | storage | POST | `/storage/multipart/initiate` | ✅ | ✅ |  |  |  |  | orphan |
+| `initiateMultipartUpload` | storage | POST | `/storage/multipart/initiate` | ✅ | ✅ |  |  |  |  | template-base |
 | `issueDentalInvoice` | dental-billing | PATCH | `/dental/billing/invoices/{invoiceId}/issue` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `joinVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/join` | ✅ | ✅ |  |  |  |  | orphan |
-| `leaveVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/leave` | ✅ | ✅ |  |  |  |  | orphan |
+| `joinVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/join` | ✅ | ✅ |  |  |  |  | template-base |
+| `leaveVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/leave` | ✅ | ✅ |  |  |  |  | template-base |
 | `listAmendments` | dental-clinical | GET | `/dental/visits/{visitId}/amendments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listAppointments` | dental-scheduling | GET | `/dental/appointments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listAttachments` | dental-clinical | GET | `/dental/visits/{visitId}/attachments` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listAuditLogs` | audit | GET | `/audit/logs` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listBookingEvents` | booking | GET | `/booking/events` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listBookings` | booking | GET | `/booking/bookings` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listBookingEvents` | booking | GET | `/booking/events` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `listBookings` | booking | GET | `/booking/bookings` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listCasePresentations` | dental-patient | GET | `/dental/patients/{patientId}/case-presentations` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listChartConflicts` | dental-visit | GET | `/dental/visits/chart-conflicts/{patientId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `listChatRooms` | comms | GET | `/comms/chat-rooms` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listChatRooms` | comms | GET | `/comms/chat-rooms` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listConsentForms` | dental-clinical | GET | `/dental/visits/{visitId}/consents` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listConsentRefusals` | dental-clinical | GET | `/dental/visits/{visitId}/consent-refusals` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listConsentTemplates` | dental-org | GET | `/dental/branches/{branchId}/consent-templates` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `listConsultations` | emr | GET | `/emr/consultations` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listConsultations` | emr | GET | `/emr/consultations` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listCoverageAuthorizations` | dental-patient | GET | `/dental/patients/{patientId}/authorizations` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listDentalAlerts` | dental-patient | GET | `/dental/patients/{patientId}/dental-alerts` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `listDentalFindings` | dental-visit | GET | `/dental/visits/{visitId}/findings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -324,11 +325,11 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `listDentalVisits` | dental-visit | GET | `/dental/visits` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listDueRecalls` | dental-patient | GET | `/dental/recalls/due` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listEMRPatients` | emr | GET | `/emr/patients` | ✅ |  |  | ✅ |  |  | tested |
-| `listEmailQueueItems` | email | GET | `/email/queue` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listEmailTemplates` | email | GET | `/email/templates` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listEmailQueueItems` | email | GET | `/email/queue` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `listEmailTemplates` | email | GET | `/email/templates` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listErasureRequests` | dental-erasure | GET | `/dental/erasure-requests` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `listEventSlots` | booking | GET | `/booking/events/{event}/slots` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listFiles` | storage | GET | `/storage/files` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listEventSlots` | booking | GET | `/booking/events/{event}/slots` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `listFiles` | storage | GET | `/storage/files` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listFollowUpNotes` | dental-patient | GET | `/dental/patients/{id}/follow-up-notes` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listImportedPMDs` | dental-pmd | GET | `/dental/pmd/imported` | ✅ |  |  | ✅ |  |  | tested |
 | `listInsuranceClaims` | dental-billing | GET | `/dental/billing/claims` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -352,16 +353,16 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `listPatientTasks` | dental-patient | GET | `/dental/patients/{patientId}/tasks` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `listPatientTreatmentPlans` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plans` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `listPatientVisits` | dental-patient | GET | `/dental/patients/{patientId}/visits` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listPatients` | patient | GET | `/patients` | ✅ | ✅ |  |  |  |  | orphan |
+| `listPatients` | patient | GET | `/patients` | ✅ | ✅ |  |  |  |  | template-base |
 | `listPerioChartsForPatient` | dental-perio | GET | `/dental/perio-charts` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `listPersons` | person | GET | `/persons` | ✅ | ✅ |  |  |  |  | orphan |
+| `listPersons` | person | GET | `/persons` | ✅ | ✅ |  |  |  |  | template-base |
 | `listPostopTemplates` | dental-clinical | GET | `/dental/branches/{branchId}/postop-templates` | ✅ | ✅ |  |  |  |  | orphan |
-| `listPractitionerRoles` | provider | GET | `/providers/practitioner-roles` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listPractitioners` | provider | GET | `/providers/practitioners` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listPractitionerRoles` | provider | GET | `/providers/practitioner-roles` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `listPractitioners` | provider | GET | `/providers/practitioners` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listPrescriptions` | dental-clinical | GET | `/dental/visits/{visitId}/prescriptions` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `listQueueBoard` | dental-scheduling | GET | `/dental/branches/{branchId}/queue-board` | ✅ | ✅ | ✅ |  |  |  | gap |
-| `listReviews` | reviews | GET | `/reviews/` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `listScheduleExceptions` | booking | GET | `/booking/events/{event}/exceptions` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `listReviews` | reviews | GET | `/reviews/` | ✅ | ✅ |  | ✅ |  |  | template-base |
+| `listScheduleExceptions` | booking | GET | `/booking/events/{event}/exceptions` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `listSyncLogs` | dental-patient | GET | `/dental/sync-logs` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `listTreatmentOptionGroup` | dental-patient | GET | `/dental/patients/{patientId}/treatment-options/{optionGroupId}` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `listTreatmentPlanStatusHistory` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plans/{planId}/status-history` | ✅ | ✅ |  |  |  |  | orphan |
@@ -369,7 +370,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `listWaitlist` | dental-scheduling | GET | `/dental/branches/{branchId}/waitlist` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `markAllNotificationsAsRead` | notifs | POST | `/notifs/read-all` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | ✅ | ✅ |  | ✅ |  |  | orphan |
-| `markNoShowBooking` | booking | POST | `/booking/bookings/{booking}/no-show` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `markNoShowBooking` | booking | POST | `/booking/bookings/{booking}/no-show` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `markNotificationAsRead` | notifs | POST | `/notifs/{notif}/read` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `markUncollectible` | dental-billing | POST | `/dental/billing/invoices/{invoiceId}/uncollectible` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `mergeImportedPMDSafetyFloor` | dental-pmd | POST | `/dental/pmd/imported/{id}/merge-safety-floor` | ✅ |  |  | ✅ |  |  | tested |
@@ -385,7 +386,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `refundDentalPayment` | dental-billing | POST | `/dental/billing/payments/{paymentId}/refund` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | ✅ | ✅ |  |  |  |  | orphan |
-| `rejectBooking` | booking | POST | `/booking/bookings/{booking}/reject` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `rejectBooking` | booking | POST | `/booking/bookings/{booking}/reject` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `rejectCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations/{presentationId}/reject` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `rejectErasure` | dental-erasure | POST | `/dental/erasure-requests/{id}/reject` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `releaseLegalHold` | dental-legalhold | POST | `/dental/legal-holds/{id}/release` | ✅ | ✅ |  | ✅ |  |  | orphan |
@@ -394,28 +395,28 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `resetMemberPin` | dental-org | POST | `/dental/org/members/{memberId}/reset-pin` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `resolveChartConflict` | dental-visit | POST | `/dental/visits/{visitId}/chart/resolve-conflict` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `restoreDentalPatient` | dental-patient | POST | `/dental/patients/{id}/restore` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `retryEmailQueueItem` | email | POST | `/email/queue/{queue}/retry` | ✅ | ✅ |  |  |  |  | orphan |
+| `retryEmailQueueItem` | email | POST | `/email/queue/{queue}/retry` | ✅ | ✅ |  |  |  |  | template-base |
 | `revokeConsentForm` | dental-clinical | PATCH | `/dental/visits/{visitId}/consents/{cid}/revoke` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `sendPatientStatement` | dental-billing | POST | `/dental/billing/patients/{patientId}/statement/send` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | ✅ | ✅ |  | ✅ |  |  | orphan |
 | `signConsentForm` | dental-clinical | POST | `/dental/visits/{visitId}/consents/{consentId}/sign` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `signVisitNotes` | dental-visit | POST | `/dental/visits/{visitId}/notes/sign` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `testEmailTemplate` | email | POST | `/email/templates/{template}/test` | ✅ | ✅ |  |  |  |  | orphan |
+| `testEmailTemplate` | email | POST | `/email/templates/{template}/test` | ✅ | ✅ |  |  |  |  | template-base |
 | `unmergePatients` | patient | POST | `/patients/unmerge` | ✅ | ✅ |  |  |  |  | orphan |
 | `updateAppointment` | dental-scheduling | PATCH | `/dental/appointments/{appointmentId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `updateBranchSettings` | dental-org | PUT | `/dental/branches/{branchId}/settings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | ✅ | ✅ |  |  |  |  | orphan |
 | `updateConsentTemplate` | dental-org | PATCH | `/dental/branches/{branchId}/consent-templates/{id}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `updateCoverageAuthorizationStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/authorizations/{authorizationId}/status` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `updateDentalAlert` | dental-patient | PATCH | `/dental/patients/{patientId}/dental-alerts/{alertId}` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `updateDentalFinding` | dental-visit | PATCH | `/dental/visits/{visitId}/findings/{findingId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `updateDentalPatient` | dental-patient | PATCH | `/dental/patients/{id}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `updateDentalTreatment` | dental-visit | PATCH | `/dental/visits/{visitId}/treatments/{treatmentId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `updateDentalVisit` | dental-visit | PATCH | `/dental/visits/{visitId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `updateEmailTemplate` | email | PATCH | `/email/templates/{template}` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `updateEmailTemplate` | email | PATCH | `/email/templates/{template}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `updateFeeScheduleEntry` | dental-org | PATCH | `/dental/fee-schedule/{cdt}` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `updateInsuranceClaimLine` | dental-billing | PATCH | `/dental/billing/claims/{claimId}/lines/{lineId}` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `updateInsuranceClaimStatus` | dental-billing | PATCH | `/dental/billing/claims/{claimId}/status` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
@@ -441,7 +442,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `updateTooth` | dental-visit | PATCH | `/dental/visits/{visitId}/chart/teeth/{toothNumber}` | ✅ | ✅ | ✅ |  |  |  | gap |
 | `updateTreatmentPlan` | dental-patient | PATCH | `/dental/patients/{patientId}/treatment-plans/{planId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `updateTreatmentTemplate` | dental-visit | PATCH | `/dental/treatment-templates/{id}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` | ✅ | ✅ |  |  |  |  | orphan |
+| `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` | ✅ | ✅ |  |  |  |  | template-base |
 | `updateWorkingHours` | dental-org | PUT | `/dental/branches/{branchId}/working-hours` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `uploadFile` | storage | POST | `/storage/files/upload` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `upsertDentalChart` | dental-visit | POST | `/dental/visits/{visitId}/chart` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
