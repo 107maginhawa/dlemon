@@ -8,38 +8,43 @@
 # Source: dependency-graph fan-in analysis (counts measured 2026-05-28).
 
 # SA-API-HUB-001 — fan-in 65: central patient record, consumed by every dental module
-services/api-ts/src/handlers/patient/repos/patient.schema.ts @eladventures
+services/api-ts/src/handlers/patient/repos/patient.schema.ts @107maginhawa
 
 # SA-API-HUB-002 — fan-in 56: patient repository, consumed by every dental module
-services/api-ts/src/handlers/patient/repos/patient.repo.ts @eladventures
+services/api-ts/src/handlers/patient/repos/patient.repo.ts @107maginhawa
 
 # SA-API-HUB-003 — fan-in 48: branch schema, tenancy-critical (all branch-scoped handlers)
-services/api-ts/src/handlers/dental-org/repos/branch.schema.ts @eladventures
+services/api-ts/src/handlers/dental-org/repos/branch.schema.ts @107maginhawa
 
 # SA-API-HUB-004 — fan-in 47: person schema, Better-Auth-coupled (PII layer)
-services/api-ts/src/handlers/person/repos/person.schema.ts @eladventures
+services/api-ts/src/handlers/person/repos/person.schema.ts @107maginhawa
 
 # SA-API-HUB-005 — fan-in 46: membership schema, tier/role-critical
-services/api-ts/src/handlers/dental-org/repos/membership.schema.ts @eladventures
+services/api-ts/src/handlers/dental-org/repos/membership.schema.ts @107maginhawa
 
 # SA-API-HUB-006 — fan-in 38: visit repo, load-bearing for billing + clinical
-services/api-ts/src/handlers/dental-visit/repos/visit.repo.ts @eladventures
+services/api-ts/src/handlers/dental-visit/repos/visit.repo.ts @107maginhawa
 
 # SA-API-HUB-007 — fan-in 37: visit schema, load-bearing FK anchor
-services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts @eladventures
+services/api-ts/src/handlers/dental-visit/repos/visit.schema.ts @107maginhawa
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Governance — self-editable quality gates (plan 014 S5)
 #
 # These files can NEUTRALIZE a coverage/quality gate by appending a `reason`
 # (the ratchet trusts the allowlist) or by altering a tenant-isolation migration.
-# Require code-owner review so a gap cannot be silently allowlisted away or an
-# RLS policy quietly dropped. (Enforcement also needs branch protection's
-# "Require review from Code Owners" toggle enabled — an admin setting.)
+# Listing them here makes GitHub auto-request the maintainer's review on any PR
+# that touches them — a visibility nudge against a silent self-weakening edit.
+#
+# NOTE (single-maintainer repo): branch protection's "Require review from Code
+# Owners" toggle is intentionally LEFT OFF. GitHub never lets a PR author approve
+# their own PR, so on a one-account repo a code-owner-review requirement can never
+# be satisfied and would hard-block every PR touching these files. Mechanical
+# enforcement here needs either a second maintainer or a CI gate, not this toggle.
 
 # Coverage/quality allowlists — appending a reason here suppresses a ratchet gap.
-docs/testing/coverage/*.allowlist.json @eladventures
+docs/testing/coverage/*.allowlist.json @107maginhawa
 
 # Tenant-isolation (RLS) migrations — dropping ENABLE/FORCE/POLICY here re-opens
 # the cross-tenant PHI surface ADR-010 closes.
-services/api-ts/src/generated/migrations/*rls* @eladventures
+services/api-ts/src/generated/migrations/*rls* @107maginhawa
