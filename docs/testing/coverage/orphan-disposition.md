@@ -4,6 +4,10 @@
 
 An **orphan** is an operation with a shipped handler AND a generated SDK surface that NO file under `apps/dentalemon/src/**` consumes. A *read-only* orphan is not a test obligation (nothing in the product calls it, so a missing test cannot break the app). **A *mutating* orphan that writes PII / clinical / billing data is the exception** — it is reachable over the wire and therefore IDOR / cross-tenant exploitable even with no FE consumer (this is the class that swallowed the P0 `updatePatientContact` contact IDOR). Those are reclassified below into a tracked OBLIGATION (ratcheted in `endpoint-sensitive-orphan.allowlist.json`).
 
+**Upstream base-template orphans** (booking / comms / email / storage / reviews / emr / notifs / generic providers-patients-persons) are tracked separately as disposition `template-base` and **excluded from the product-orphan denominator** — they are permanent upstream surface the dental product does not consume and can never be zeroed, so counting them in the orphan metric trains the team to ignore it. The list is hand-curated in `template-base.allowlist.json`; a sensitive mutating orphan can NEVER be on it (the classifier refuses).
+
+Counts: **97 product orphans** + **61 template-base** (upstream, excluded).
+
 ## Sensitive mutating orphans — require a cross-tenant / ownership negative test
 
 A write (POST/PUT/PATCH/DELETE) to a PII/clinical/billing/org surface with no FE consumer. `ownership test` = a heuristic match (the operationId named in an api-unit test alongside a cross-tenant/IDOR marker and a 401/403/404 rejection). An op WITHOUT one is a ratcheted obligation: add a negative test, or wire/remove it, or allowlist it with a reason.
@@ -77,7 +81,7 @@ Decision column legend:
 - **remove** — dead surface; delete the handler + regenerate the SDK.
 - **keep** — intentionally headless (platform/SDK-for-3rd-parties/admin-only/dev); leave as-is.
 
-Total orphans: **158**
+Total orphans: **97**
 
 | operationId | module | method | path | decision | notes |
 |-------------|--------|--------|------|----------|-------|
@@ -98,21 +102,12 @@ Total orphans: **158**
 | `DentalOrganizationManagement_update` | dental-org | PATCH | `/dental/organizations/{id}` | keep | sensitive-write (ownership-tested) |
 | `ImagingMgmt_finalizeCbctStudy` | dental-imaging | POST | `/dental/imaging/studies/{studyId}/cbct/finalize` | keep | sensitive-write (ownership-tested) |
 | `ImagingMgmt_getImagingStudy` | dental-imaging | GET | `/dental/imaging/studies/{studyId}` | keep | _triage pending_ |
-| `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | keep | _triage pending_ |
 | `approveAmendment` | dental-clinical | POST | `/dental/visits/{visitId}/amendments/{amendmentId}/approve` | keep | sensitive-write (obligation) |
 | `approveTreatmentPlan` | dental-patient | POST | `/dental/patients/{patientId}/treatment-plans/{planId}/approval` | keep | sensitive-write (ownership-tested) |
 | `attachTreatmentAppointment` | dental-patient | POST | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | sensitive-write (ownership-tested) |
-| `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` | keep | _triage pending_ |
-| `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` | keep | _triage pending_ |
 | `captureInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/capture` | keep | sensitive-write (ownership-tested) |
-| `completeMultipartUpload` | storage | POST | `/storage/multipart/{file}/complete` | keep | _triage pending_ |
 | `confirmAppointmentByToken` | dental-scheduling | POST | `/dental/public/appointments/{appointmentId}/confirm/{token}` | keep | sensitive-write (obligation) |
-| `confirmBooking` | booking | POST | `/booking/bookings/{booking}/confirm` | keep | _triage pending_ |
-| `createBookingEvent` | booking | POST | `/booking/events` | keep | _triage pending_ |
-| `createChatRoom` | comms | POST | `/comms/chat-rooms` | keep | _triage pending_ |
 | `createClaimDraft` | dental-patient | POST | `/dental/patients/{patientId}/claims` | keep | sensitive-write (ownership-tested) |
-| `createConsultation` | emr | POST | `/emr/consultations` | keep | _triage pending_ |
-| `createEmailTemplate` | email | POST | `/email/templates` | keep | _triage pending_ |
 | `createInventoryAdjustment` | dental-clinical | POST | `/dental/branches/{branchId}/inventory/{itemId}/adjustments` | keep | sensitive-write (ownership-tested) |
 | `createInventoryItem` | dental-clinical | POST | `/dental/branches/{branchId}/inventory` | keep | sensitive-write (ownership-tested) |
 | `createMerchantAccount` | billing | POST | `/billing/merchant-accounts` | keep | sensitive-write (ownership-tested) |
@@ -122,75 +117,38 @@ Total orphans: **158**
 | `createPractitionerRole` | provider | POST | `/providers/practitioner-roles` | keep | sensitive-write (ownership-tested) |
 | `createProvider` | provider | POST | `/providers` | keep | sensitive-write (ownership-tested) |
 | `createQueueItem` | dental-scheduling | POST | `/dental/appointments/{appointmentId}/queue-item` | keep | sensitive-write (ownership-tested) |
-| `createReview` | reviews | POST | `/reviews/` | keep | _triage pending_ |
-| `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` | keep | _triage pending_ |
 | `createSyncLog` | dental-patient | POST | `/dental/sync-logs` | keep | sensitive-write (ownership-tested) |
 | `createWaitlistEntry` | dental-scheduling | POST | `/dental/branches/{branchId}/waitlist` | keep | sensitive-write (ownership-tested) |
 | `deactivatePatient` | patient | DELETE | `/patients/{id}` | keep | sensitive-write (ownership-tested) |
 | `deactivatePractitioner` | provider | DELETE | `/providers/practitioners/{id}` | keep | sensitive-write (obligation) |
 | `deactivatePractitionerRole` | provider | DELETE | `/providers/practitioner-roles/{id}` | keep | sensitive-write (obligation) |
-| `deleteBookingEvent` | booking | DELETE | `/booking/events/{event}` | keep | _triage pending_ |
-| `deleteFile` | storage | DELETE | `/storage/files/{file}` | keep | _triage pending_ |
 | `deleteInvoice` | billing | DELETE | `/billing/invoices/{invoice}` | keep | sensitive-write (ownership-tested) |
 | `deletePatientContact` | dental-patient | DELETE | `/dental/patients/{patientId}/contacts/{contactId}` | keep | sensitive-write (ownership-tested) |
-| `deleteReview` | reviews | DELETE | `/reviews/{review}` | keep | _triage pending_ |
-| `deleteScheduleException` | booking | DELETE | `/booking/events/{event}/exceptions/{exception}` | keep | _triage pending_ |
 | `detachTreatmentAppointment` | dental-patient | DELETE | `/dental/patients/{patientId}/treatments/{treatmentId}/appointment` | keep | sensitive-write (ownership-tested) |
-| `endVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/end` | keep | _triage pending_ |
 | `exportPatientCareRecord` | dental-pmd | GET | `/dental/pmd/patient/{patientId}/care-record` | keep | _triage pending_ |
-| `finalizeConsultation` | emr | POST | `/emr/consultations/{consultation}/finalize` | keep | _triage pending_ |
 | `finalizeInvoice` | billing | POST | `/billing/invoices/{invoice}/finalize` | keep | sensitive-write (ownership-tested) |
-| `generateMultipartPartUrl` | storage | GET | `/storage/multipart/{file}/part-url` | keep | _triage pending_ |
 | `getAppointment` | dental-scheduling | GET | `/dental/appointments/{appointmentId}` | keep | _triage pending_ |
-| `getBooking` | booking | GET | `/booking/bookings/{booking}` | keep | _triage pending_ |
-| `getBookingEvent` | booking | GET | `/booking/events/{event}` | keep | _triage pending_ |
 | `getBranchesByUser` | dental-org | GET | `/dental/branches` | keep | _triage pending_ |
-| `getChatMessages` | comms | GET | `/comms/chat-rooms/{room}/messages` | keep | _triage pending_ |
-| `getChatRoom` | comms | GET | `/comms/chat-rooms/{room}` | keep | _triage pending_ |
 | `getClaimReadiness` | dental-patient | GET | `/dental/patients/{patientId}/claims/{claimId}/readiness` | keep | _triage pending_ |
 | `getCollectionsSummary` | dental-billing | GET | `/dental/billing/collections/summary` | keep | _triage pending_ |
-| `getConsultation` | emr | GET | `/emr/consultations/{consultation}` | keep | _triage pending_ |
 | `getDentalPatientSafetyFloor` | dental-patient | GET | `/dental/patients/{id}/safety-floor` | keep | _triage pending_ |
 | `getDentalVisit` | dental-visit | GET | `/dental/visits/{visitId}` | keep | _triage pending_ |
-| `getEmailQueueItem` | email | GET | `/email/queue/{queue}` | keep | _triage pending_ |
-| `getEmailTemplate` | email | GET | `/email/templates/{template}` | keep | _triage pending_ |
 | `getErasureRequest` | dental-erasure | GET | `/dental/erasure-requests/{id}` | keep | _triage pending_ |
-| `getFile` | storage | GET | `/storage/files/{file}` | keep | _triage pending_ |
-| `getFileDownload` | storage | GET | `/storage/files/{file}/download` | keep | _triage pending_ |
 | `getHousehold` | dental-patient | GET | `/dental/households/{householdId}` | keep | _triage pending_ |
-| `getIceServers` | comms | GET | `/comms/ice-servers` | keep | _triage pending_ |
 | `getInvoice` | billing | GET | `/billing/invoices/{invoice}` | keep | _triage pending_ |
 | `getMerchantAccount` | billing | GET | `/billing/merchant-accounts/{merchantAccount}` | keep | _triage pending_ |
 | `getMerchantDashboard` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/dashboard` | keep | sensitive-write (ownership-tested) |
-| `getNotification` | notifs | GET | `/notifs/{notif}` | keep | _triage pending_ |
 | `getOnlineBooking` | dental-scheduling | GET | `/dental/public/bookings/{confirmationCode}` | keep | _triage pending_ |
 | `getOrgContext` | dental-org | GET | `/dental/org/context` | keep | _triage pending_ |
-| `getPatient` | patient | GET | `/patients/{id}` | keep | _triage pending_ |
 | `getPatientCommunicationConsent` | dental-patient | GET | `/dental/patients/{patientId}/communication-consent` | keep | _triage pending_ |
 | `getPerioChart` | dental-perio | GET | `/dental/perio-charts/{chartId}` | keep | _triage pending_ |
 | `getPermissionGrid` | dental-org | GET | `/dental/org/permissions` | keep | _triage pending_ |
-| `getPractitioner` | provider | GET | `/providers/practitioners/{id}` | keep | _triage pending_ |
-| `getPractitionerRole` | provider | GET | `/providers/practitioner-roles/{id}` | keep | _triage pending_ |
 | `getRetentionStatus` | retention | GET | `/dental/retention-status` | keep | _triage pending_ |
-| `getReview` | reviews | GET | `/reviews/{review}` | keep | _triage pending_ |
-| `getScheduleException` | booking | GET | `/booking/events/{event}/exceptions/{exception}` | keep | _triage pending_ |
-| `getTimeSlot` | booking | GET | `/booking/slots/{slotId}` | keep | _triage pending_ |
 | `getTreatmentPlanVersion` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plan/versions/{versionId}` | keep | _triage pending_ |
 | `handleStripeWebhook` | billing | POST | `/billing/webhooks/stripe` | keep | sensitive-write (obligation) |
 | `importPatients` | dental-patient | POST | `/dental/patients/import` | keep | sensitive-write (ownership-tested) |
-| `initiateMultipartUpload` | storage | POST | `/storage/multipart/initiate` | keep | _triage pending_ |
-| `joinVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/join` | keep | _triage pending_ |
-| `leaveVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/leave` | keep | _triage pending_ |
 | `listAuditLogs` | audit | GET | `/audit/logs` | keep | _triage pending_ |
-| `listBookingEvents` | booking | GET | `/booking/events` | keep | _triage pending_ |
-| `listBookings` | booking | GET | `/booking/bookings` | keep | _triage pending_ |
-| `listChatRooms` | comms | GET | `/comms/chat-rooms` | keep | _triage pending_ |
-| `listConsultations` | emr | GET | `/emr/consultations` | keep | _triage pending_ |
 | `listDentalPayments` | dental-billing | GET | `/dental/billing/invoices/{invoiceId}/payments` | keep | _triage pending_ |
-| `listEmailQueueItems` | email | GET | `/email/queue` | keep | _triage pending_ |
-| `listEmailTemplates` | email | GET | `/email/templates` | keep | _triage pending_ |
-| `listEventSlots` | booking | GET | `/booking/events/{event}/slots` | keep | _triage pending_ |
-| `listFiles` | storage | GET | `/storage/files` | keep | _triage pending_ |
 | `listInventoryAdjustments` | dental-clinical | GET | `/dental/branches/{branchId}/inventory/{itemId}/adjustments` | keep | _triage pending_ |
 | `listInventoryItems` | dental-clinical | GET | `/dental/branches/{branchId}/inventory` | keep | _triage pending_ |
 | `listInvoices` | billing | GET | `/billing/invoices` | keep | _triage pending_ |
@@ -199,34 +157,20 @@ Total orphans: **158**
 | `listPatientConditions` | dental-patient | GET | `/dental/patients/{patientId}/treatments` | keep | _triage pending_ |
 | `listPatientContacts` | dental-patient | GET | `/dental/patients/{patientId}/contacts` | keep | _triage pending_ |
 | `listPatientVisits` | dental-patient | GET | `/dental/patients/{patientId}/visits` | keep | _triage pending_ |
-| `listPatients` | patient | GET | `/patients` | keep | _triage pending_ |
-| `listPersons` | person | GET | `/persons` | keep | _triage pending_ |
 | `listPostopTemplates` | dental-clinical | GET | `/dental/branches/{branchId}/postop-templates` | keep | _triage pending_ |
-| `listPractitionerRoles` | provider | GET | `/providers/practitioner-roles` | keep | _triage pending_ |
-| `listPractitioners` | provider | GET | `/providers/practitioners` | keep | _triage pending_ |
-| `listReviews` | reviews | GET | `/reviews/` | keep | _triage pending_ |
-| `listScheduleExceptions` | booking | GET | `/booking/events/{event}/exceptions` | keep | _triage pending_ |
 | `listTreatmentPlanStatusHistory` | dental-patient | GET | `/dental/patients/{patientId}/treatment-plans/{planId}/status-history` | keep | _triage pending_ |
 | `markInvoiceUncollectible` | billing | POST | `/billing/invoices/{invoice}/mark-uncollectible` | keep | sensitive-write (ownership-tested) |
-| `markNoShowBooking` | booking | POST | `/booking/bookings/{booking}/no-show` | keep | _triage pending_ |
 | `mergePatients` | patient | POST | `/patients/merge` | keep | sensitive-write (ownership-tested) |
 | `onboardMerchantAccount` | billing | POST | `/billing/merchant-accounts/{merchantAccount}/onboard` | keep | sensitive-write (ownership-tested) |
 | `payInvoice` | billing | POST | `/billing/invoices/{invoice}/pay` | keep | sensitive-write (ownership-tested) |
 | `placeLegalHold` | dental-legalhold | POST | `/dental/legal-holds` | keep | _triage pending_ |
 | `recoverPin` | dental-org | POST | `/dental/org/members/{memberId}/recover-pin` | keep | sensitive-write (ownership-tested) |
 | `refundInvoicePayment` | billing | POST | `/billing/invoices/{invoice}/refund` | keep | sensitive-write (ownership-tested) |
-| `rejectBooking` | booking | POST | `/booking/bookings/{booking}/reject` | keep | _triage pending_ |
 | `releaseLegalHold` | dental-legalhold | POST | `/dental/legal-holds/{id}/release` | keep | _triage pending_ |
 | `requestErasure` | dental-erasure | POST | `/dental/erasure-requests` | keep | sensitive-write (obligation) |
-| `retryEmailQueueItem` | email | POST | `/email/queue/{queue}/retry` | keep | _triage pending_ |
-| `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` | keep | _triage pending_ |
 | `setSecurityQuestion` | dental-org | POST | `/dental/org/members/{memberId}/security-question` | keep | sensitive-write (ownership-tested) |
-| `testEmailTemplate` | email | POST | `/email/templates/{template}/test` | keep | _triage pending_ |
 | `unmergePatients` | patient | POST | `/patients/unmerge` | keep | sensitive-write (ownership-tested) |
-| `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` | keep | _triage pending_ |
 | `updateClaimStatus` | dental-patient | PATCH | `/dental/patients/{patientId}/claims/{claimId}/status` | keep | sensitive-write (ownership-tested) |
-| `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` | keep | _triage pending_ |
-| `updateEmailTemplate` | email | PATCH | `/email/templates/{template}` | keep | _triage pending_ |
 | `updateInventoryItem` | dental-clinical | PATCH | `/dental/branches/{branchId}/inventory/{itemId}` | keep | sensitive-write (ownership-tested) |
 | `updateInvoice` | billing | PATCH | `/billing/invoices/{invoice}` | keep | sensitive-write (ownership-tested) |
 | `updatePatient` | patient | PATCH | `/patients/{id}` | keep | sensitive-write (ownership-tested) |
@@ -237,5 +181,74 @@ Total orphans: **158**
 | `updatePractitioner` | provider | PATCH | `/providers/practitioners/{id}` | keep | sensitive-write (ownership-tested) |
 | `updatePractitionerRole` | provider | PATCH | `/providers/practitioner-roles/{id}` | keep | sensitive-write (ownership-tested) |
 | `updateSyncLog` | dental-patient | PATCH | `/dental/sync-logs/{logId}` | keep | sensitive-write (ownership-tested) |
-| `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` | keep | _triage pending_ |
 | `voidInvoice` | billing | POST | `/billing/invoices/{invoice}/void` | keep | sensitive-write (ownership-tested) |
+
+## Template-base orphans (upstream surface — excluded from the orphan denominator)
+
+Upstream `mono-js-lf` base-template operations the dental product does not consume. Permanent orphans (can never be zeroed); reported here for honesty but kept OUT of the product-orphan count. Curated in `template-base.allowlist.json`.
+
+Total template-base: **61**
+
+| operationId | module | method | path |
+|-------------|--------|--------|------|
+| `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` |
+| `cancelBooking` | booking | POST | `/booking/bookings/{booking}/cancel` |
+| `cancelEmailQueueItem` | email | POST | `/email/queue/{queue}/cancel` |
+| `completeMultipartUpload` | storage | POST | `/storage/multipart/{file}/complete` |
+| `confirmBooking` | booking | POST | `/booking/bookings/{booking}/confirm` |
+| `createBookingEvent` | booking | POST | `/booking/events` |
+| `createChatRoom` | comms | POST | `/comms/chat-rooms` |
+| `createConsultation` | emr | POST | `/emr/consultations` |
+| `createEmailTemplate` | email | POST | `/email/templates` |
+| `createReview` | reviews | POST | `/reviews/` |
+| `createScheduleException` | booking | POST | `/booking/events/{event}/exceptions` |
+| `deleteBookingEvent` | booking | DELETE | `/booking/events/{event}` |
+| `deleteFile` | storage | DELETE | `/storage/files/{file}` |
+| `deleteReview` | reviews | DELETE | `/reviews/{review}` |
+| `deleteScheduleException` | booking | DELETE | `/booking/events/{event}/exceptions/{exception}` |
+| `endVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/end` |
+| `finalizeConsultation` | emr | POST | `/emr/consultations/{consultation}/finalize` |
+| `generateMultipartPartUrl` | storage | GET | `/storage/multipart/{file}/part-url` |
+| `getBooking` | booking | GET | `/booking/bookings/{booking}` |
+| `getBookingEvent` | booking | GET | `/booking/events/{event}` |
+| `getChatMessages` | comms | GET | `/comms/chat-rooms/{room}/messages` |
+| `getChatRoom` | comms | GET | `/comms/chat-rooms/{room}` |
+| `getConsultation` | emr | GET | `/emr/consultations/{consultation}` |
+| `getEmailQueueItem` | email | GET | `/email/queue/{queue}` |
+| `getEmailTemplate` | email | GET | `/email/templates/{template}` |
+| `getFile` | storage | GET | `/storage/files/{file}` |
+| `getFileDownload` | storage | GET | `/storage/files/{file}/download` |
+| `getIceServers` | comms | GET | `/comms/ice-servers` |
+| `getNotification` | notifs | GET | `/notifs/{notif}` |
+| `getPatient` | patient | GET | `/patients/{id}` |
+| `getPractitioner` | provider | GET | `/providers/practitioners/{id}` |
+| `getPractitionerRole` | provider | GET | `/providers/practitioner-roles/{id}` |
+| `getReview` | reviews | GET | `/reviews/{review}` |
+| `getScheduleException` | booking | GET | `/booking/events/{event}/exceptions/{exception}` |
+| `getTimeSlot` | booking | GET | `/booking/slots/{slotId}` |
+| `initiateMultipartUpload` | storage | POST | `/storage/multipart/initiate` |
+| `joinVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/join` |
+| `leaveVideoCall` | comms | POST | `/comms/chat-rooms/{room}/video-call/leave` |
+| `listBookingEvents` | booking | GET | `/booking/events` |
+| `listBookings` | booking | GET | `/booking/bookings` |
+| `listChatRooms` | comms | GET | `/comms/chat-rooms` |
+| `listConsultations` | emr | GET | `/emr/consultations` |
+| `listEmailQueueItems` | email | GET | `/email/queue` |
+| `listEmailTemplates` | email | GET | `/email/templates` |
+| `listEventSlots` | booking | GET | `/booking/events/{event}/slots` |
+| `listFiles` | storage | GET | `/storage/files` |
+| `listPatients` | patient | GET | `/patients` |
+| `listPersons` | person | GET | `/persons` |
+| `listPractitionerRoles` | provider | GET | `/providers/practitioner-roles` |
+| `listPractitioners` | provider | GET | `/providers/practitioners` |
+| `listReviews` | reviews | GET | `/reviews/` |
+| `listScheduleExceptions` | booking | GET | `/booking/events/{event}/exceptions` |
+| `markNoShowBooking` | booking | POST | `/booking/bookings/{booking}/no-show` |
+| `rejectBooking` | booking | POST | `/booking/bookings/{booking}/reject` |
+| `retryEmailQueueItem` | email | POST | `/email/queue/{queue}/retry` |
+| `sendChatMessage` | comms | POST | `/comms/chat-rooms/{room}/messages` |
+| `testEmailTemplate` | email | POST | `/email/templates/{template}/test` |
+| `updateBookingEvent` | booking | PATCH | `/booking/events/{event}` |
+| `updateConsultation` | emr | PATCH | `/emr/consultations/{consultation}` |
+| `updateEmailTemplate` | email | PATCH | `/email/templates/{template}` |
+| `updateVideoCallParticipant` | comms | PATCH | `/comms/chat-rooms/{room}/video-call/participant` |

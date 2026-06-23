@@ -15,6 +15,7 @@ import {
   parseHurlContractOps,
   loadRecordedOps,
   classifyDisposition,
+  loadTemplateBaseIds,
   gapsOf,
   seedAllowlist,
   isSensitiveMutatingOrphan,
@@ -242,6 +243,30 @@ describe('classifyDisposition', () => {
       classifyDisposition(row({ hasHandler: true, hasSDK: false, hasFEConsumer: false })),
     ).toBe('tested');
   });
+
+  test('a committed base-template orphan → template-base (excluded from the denominator)', () => {
+    const r = row({ operationId: 'createChatRoom', module: 'comms', method: 'POST', hasFEConsumer: false });
+    expect(classifyDisposition(r, new Set(['createChatRoom']))).toBe('template-base');
+    // without the set, it is a plain orphan (back-compat default)
+    expect(classifyDisposition(r)).toBe('orphan');
+  });
+
+  test('a SENSITIVE mutating orphan is NEVER template-base even if listed (caveat guard)', () => {
+    const r = row({
+      operationId: 'updatePatient',
+      module: 'patient',
+      method: 'PATCH',
+      path: '/patients/{id}',
+      hasFEConsumer: false,
+    });
+    // Even with the op on the list, the classifier refuses to hide a PII write.
+    expect(classifyDisposition(r, new Set(['updatePatient']))).toBe('orphan');
+  });
+
+  test('an FE-consumed op on the template-base list is still a gap, not hidden', () => {
+    const r = row({ operationId: 'createChatRoom', module: 'comms', hasFEConsumer: true });
+    expect(classifyDisposition(r, new Set(['createChatRoom']))).toBe('gap');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -407,14 +432,31 @@ describe('generated endpoint-matrix.json', () => {
     expect(ids.size).toBe(rows.length); // no dupes
     for (const r of rows) {
       expect(typeof r.operationId).toBe('string');
-      expect(['gap', 'orphan', 'tested']).toContain(r.disposition);
+      expect(['gap', 'orphan', 'template-base', 'tested']).toContain(r.disposition);
     }
   });
 
-  test('disposition is internally consistent with the boolean columns', () => {
+  test('disposition is internally consistent with the boolean columns + committed template-base list', () => {
     const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) as EndpointRow[];
+    const templateBaseIds = loadTemplateBaseIds();
     for (const r of rows) {
-      expect(classifyDisposition(r)).toBe(r.disposition);
+      expect(classifyDisposition(r, templateBaseIds)).toBe(r.disposition);
+    }
+  });
+
+  test('NO committed template-base op is a sensitive mutating orphan (the caveat invariant)', () => {
+    // The denominator fix must never hide a PII/clinical/billing write. Probe each
+    // listed op as if it were an orphan; none may trip the sensitive detector.
+    const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8')) as EndpointRow[];
+    const templateBaseIds = loadTemplateBaseIds();
+    const byId = new Map(rows.map((r) => [r.operationId, r]));
+    for (const id of templateBaseIds) {
+      const r = byId.get(id);
+      expect(r, `template-base op ${id} must exist in the matrix`).toBeDefined();
+      expect(
+        isSensitiveMutatingOrphan({ ...(r as EndpointRow), disposition: 'orphan' }),
+        `template-base op ${id} must NOT be a sensitive mutating orphan`,
+      ).toBe(false);
     }
   });
 

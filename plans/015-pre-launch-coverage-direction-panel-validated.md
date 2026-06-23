@@ -57,9 +57,9 @@ Plan 014 S5 added CODEOWNERS on `*.allowlist.json` + `*rls*` migrations, but enf
 ## Status
 | Slice | Title | Priority | Owner | Status |
 |-------|-------|----------|-------|--------|
-| S1 | Enforce single-clinic invariant gate | P0 | agent | TODO |
-| S2 | Reclassify base-template orphans (denominator) | P2 | agent | TODO |
-| S3 | Refresh 2 stale allowlist reasons | P3 | agent | TODO (fold into S2) |
+| S1 | Enforce single-clinic invariant gate | P0 | agent | ✅ DONE (#41 `cc1c908f`) |
+| S2 | Reclassify base-template orphans (denominator) | P2 | agent | ✅ DONE (97 product orphans + 61 template-base) |
+| S3 | Refresh 2 stale allowlist reasons | P3 | agent | ✅ DONE (folded into S2) |
 | S4a | updateMember deny pin | P1 | agent | TODO |
 | S4b | updateInsuranceClaimLine contract + immutability pin | P1 | agent | TODO |
 | S4c | refundDentalPayment cross-tenant deny | P1 | agent | TODO |

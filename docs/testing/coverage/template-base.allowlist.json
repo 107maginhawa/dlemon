@@ -1,0 +1,246 @@
+[
+  {
+    "id": "abortMultipartUpload",
+    "reason": "Upstream mono-js-lf base-template storage op (DELETE /storage/multipart/{file}/abort) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "cancelBooking",
+    "reason": "Upstream mono-js-lf base-template booking op (POST /booking/bookings/{booking}/cancel) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "cancelEmailQueueItem",
+    "reason": "Upstream mono-js-lf base-template email op (POST /email/queue/{queue}/cancel) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "completeMultipartUpload",
+    "reason": "Upstream mono-js-lf base-template storage op (POST /storage/multipart/{file}/complete) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "confirmBooking",
+    "reason": "Upstream mono-js-lf base-template booking op (POST /booking/bookings/{booking}/confirm) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "createBookingEvent",
+    "reason": "Upstream mono-js-lf base-template booking op (POST /booking/events) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "createChatRoom",
+    "reason": "Upstream mono-js-lf base-template comms op (POST /comms/chat-rooms) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "createConsultation",
+    "reason": "Upstream mono-js-lf base-template emr op (POST /emr/consultations) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "createEmailTemplate",
+    "reason": "Upstream mono-js-lf base-template email op (POST /email/templates) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "createReview",
+    "reason": "Upstream mono-js-lf base-template reviews op (POST /reviews/) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "createScheduleException",
+    "reason": "Upstream mono-js-lf base-template booking op (POST /booking/events/{event}/exceptions) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "deleteBookingEvent",
+    "reason": "Upstream mono-js-lf base-template booking op (DELETE /booking/events/{event}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "deleteFile",
+    "reason": "Upstream mono-js-lf base-template storage op (DELETE /storage/files/{file}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "deleteReview",
+    "reason": "Upstream mono-js-lf base-template reviews op (DELETE /reviews/{review}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "deleteScheduleException",
+    "reason": "Upstream mono-js-lf base-template booking op (DELETE /booking/events/{event}/exceptions/{exception}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "endVideoCall",
+    "reason": "Upstream mono-js-lf base-template comms op (POST /comms/chat-rooms/{room}/video-call/end) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "finalizeConsultation",
+    "reason": "Upstream mono-js-lf base-template emr op (POST /emr/consultations/{consultation}/finalize) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "generateMultipartPartUrl",
+    "reason": "Upstream mono-js-lf base-template storage op (GET /storage/multipart/{file}/part-url) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getBooking",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/bookings/{booking}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getBookingEvent",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/events/{event}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getChatMessages",
+    "reason": "Upstream mono-js-lf base-template comms op (GET /comms/chat-rooms/{room}/messages) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getChatRoom",
+    "reason": "Upstream mono-js-lf base-template comms op (GET /comms/chat-rooms/{room}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getConsultation",
+    "reason": "Upstream mono-js-lf base-template emr op (GET /emr/consultations/{consultation}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getEmailQueueItem",
+    "reason": "Upstream mono-js-lf base-template email op (GET /email/queue/{queue}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getEmailTemplate",
+    "reason": "Upstream mono-js-lf base-template email op (GET /email/templates/{template}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getFile",
+    "reason": "Upstream mono-js-lf base-template storage op (GET /storage/files/{file}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getFileDownload",
+    "reason": "Upstream mono-js-lf base-template storage op (GET /storage/files/{file}/download) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getIceServers",
+    "reason": "Upstream mono-js-lf base-template comms op (GET /comms/ice-servers) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getNotification",
+    "reason": "Upstream mono-js-lf base-template notifs op (GET /notifs/{notif}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getPatient",
+    "reason": "Upstream mono-js-lf base-template patient op (GET /patients/{id}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getPractitioner",
+    "reason": "Upstream mono-js-lf base-template provider op (GET /providers/practitioners/{id}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getPractitionerRole",
+    "reason": "Upstream mono-js-lf base-template provider op (GET /providers/practitioner-roles/{id}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getReview",
+    "reason": "Upstream mono-js-lf base-template reviews op (GET /reviews/{review}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getScheduleException",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/events/{event}/exceptions/{exception}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "getTimeSlot",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/slots/{slotId}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "initiateMultipartUpload",
+    "reason": "Upstream mono-js-lf base-template storage op (POST /storage/multipart/initiate) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "joinVideoCall",
+    "reason": "Upstream mono-js-lf base-template comms op (POST /comms/chat-rooms/{room}/video-call/join) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "leaveVideoCall",
+    "reason": "Upstream mono-js-lf base-template comms op (POST /comms/chat-rooms/{room}/video-call/leave) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listBookingEvents",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/events) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listBookings",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/bookings) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listChatRooms",
+    "reason": "Upstream mono-js-lf base-template comms op (GET /comms/chat-rooms) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listConsultations",
+    "reason": "Upstream mono-js-lf base-template emr op (GET /emr/consultations) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listEmailQueueItems",
+    "reason": "Upstream mono-js-lf base-template email op (GET /email/queue) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listEmailTemplates",
+    "reason": "Upstream mono-js-lf base-template email op (GET /email/templates) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listEventSlots",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/events/{event}/slots) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listFiles",
+    "reason": "Upstream mono-js-lf base-template storage op (GET /storage/files) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listPatients",
+    "reason": "Upstream mono-js-lf base-template patient op (GET /patients) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listPersons",
+    "reason": "Upstream mono-js-lf base-template person op (GET /persons) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listPractitionerRoles",
+    "reason": "Upstream mono-js-lf base-template provider op (GET /providers/practitioner-roles) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listPractitioners",
+    "reason": "Upstream mono-js-lf base-template provider op (GET /providers/practitioners) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listReviews",
+    "reason": "Upstream mono-js-lf base-template reviews op (GET /reviews/) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "listScheduleExceptions",
+    "reason": "Upstream mono-js-lf base-template booking op (GET /booking/events/{event}/exceptions) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "markNoShowBooking",
+    "reason": "Upstream mono-js-lf base-template booking op (POST /booking/bookings/{booking}/no-show) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "rejectBooking",
+    "reason": "Upstream mono-js-lf base-template booking op (POST /booking/bookings/{booking}/reject) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "retryEmailQueueItem",
+    "reason": "Upstream mono-js-lf base-template email op (POST /email/queue/{queue}/retry) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "sendChatMessage",
+    "reason": "Upstream mono-js-lf base-template comms op (POST /comms/chat-rooms/{room}/messages) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "testEmailTemplate",
+    "reason": "Upstream mono-js-lf base-template email op (POST /email/templates/{template}/test) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "updateBookingEvent",
+    "reason": "Upstream mono-js-lf base-template booking op (PATCH /booking/events/{event}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "updateConsultation",
+    "reason": "Upstream mono-js-lf base-template emr op (PATCH /emr/consultations/{consultation}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "updateEmailTemplate",
+    "reason": "Upstream mono-js-lf base-template email op (PATCH /email/templates/{template}) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  },
+  {
+    "id": "updateVideoCallParticipant",
+    "reason": "Upstream mono-js-lf base-template comms op (PATCH /comms/chat-rooms/{room}/video-call/participant) — not consumed by the dental product; permanent orphan, excluded from the product-orphan denominator (plan 015 S2)."
+  }
+]
