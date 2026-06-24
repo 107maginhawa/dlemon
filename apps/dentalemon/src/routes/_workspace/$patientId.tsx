@@ -10,6 +10,15 @@
 
 import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Image as ImageIcon,
+  Activity,
+  Stethoscope,
+  CalendarClock,
+  ListChecks,
+  ClipboardList,
+  Download,
+} from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
@@ -67,6 +76,12 @@ import { ChartExportOverlay } from '@/features/workspace/components/chart-export
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
 });
+
+// 2.1: shared workspace-toolbar button affordance — icon + label, subtle
+// border/background, clear hover/active and disabled states. Replaces the muted
+// text links that were indistinguishable from body copy on cold start.
+const WORKSPACE_TOOL_BTN =
+  'inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted active:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-background';
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
@@ -368,35 +383,49 @@ function WorkspacePage() {
           selectedYear={yearFilter}
           onSelect={setYearFilter}
         />
+        {/* 2.1: toolbar features as real icon+label buttons (not muted text
+            links that read as body copy). Shared affordance class below. */}
         {/* Imaging tab trigger */}
         <button
           type="button"
           data-testid="imaging-tab-btn"
           onClick={() => setImagingOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <ImageIcon className="h-3.5 w-3.5" />
           Imaging
         </button>
 
         {/* P0-1: Perio tab trigger — per-visit, disabled without an active visit */}
-        <button
-          type="button"
-          data-testid="perio-tab-btn"
-          onClick={() => setPerioOpen(true)}
-          disabled={currentVisitId === null}
-          title={currentVisitId === null ? 'Select a visit to chart perio' : 'Periodontal chart'}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-        >
-          Perio
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            data-testid="perio-tab-btn"
+            onClick={() => setPerioOpen(true)}
+            disabled={currentVisitId === null}
+            title={currentVisitId === null ? 'Select a visit to chart perio' : 'Periodontal chart'}
+            aria-describedby={currentVisitId === null ? 'perio-disabled-hint' : undefined}
+            className={WORKSPACE_TOOL_BTN}
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Perio
+          </button>
+          {/* 2.3: touch devices can't hover a title tooltip — surface the reason inline. */}
+          {currentVisitId === null && (
+            <span id="perio-disabled-hint" className="text-xs text-muted-foreground">
+              Select a visit to chart
+            </span>
+          )}
+        </div>
 
         {/* PP-7 (ISSUE-044): Occlusion screening tab trigger */}
         <button
           type="button"
           data-testid="occlusion-tab-btn"
           onClick={() => setOcclusionOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <Stethoscope className="h-3.5 w-3.5" />
           Occlusion
         </button>
 
@@ -405,8 +434,9 @@ function WorkspacePage() {
           type="button"
           data-testid="recalls-tab-btn"
           onClick={() => setRecallsOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <CalendarClock className="h-3.5 w-3.5" />
           Recalls
         </button>
 
@@ -415,32 +445,38 @@ function WorkspacePage() {
           type="button"
           data-testid="tasks-tab-btn"
           onClick={() => setTasksOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <ListChecks className="h-3.5 w-3.5" />
           Tasks
         </button>
 
-        {/* B4: Treatment Plans tab trigger */}
+        {/* B4: Treatment Plans tab trigger. N1: "Plan docs" disambiguates from the
+            top-bar "Treatment Plan" working list. */}
         <button
           type="button"
           data-testid="treatment-plans-tab-btn"
           onClick={() => setTreatmentPlansOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
-          Plans
+          <ClipboardList className="h-3.5 w-3.5" />
+          Plan docs
         </button>
 
-        {/* P0-B: structured chart export (print-ready) for the current visit */}
-        {currentVisitId && (
-          <button
-            type="button"
-            data-testid="chart-export-btn"
-            onClick={() => setChartExportOpen(true)}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
-          >
-            Export
-          </button>
-        )}
+        {/* P0-B: structured chart export (print-ready). 2.2: always rendered;
+            disabled + explained when no visit is selected (mirrors Perio) rather
+            than silently vanishing. */}
+        <button
+          type="button"
+          data-testid="chart-export-btn"
+          onClick={() => setChartExportOpen(true)}
+          disabled={currentVisitId === null}
+          title={currentVisitId === null ? 'Select a visit to export the chart' : 'Export the chart'}
+          className={WORKSPACE_TOOL_BTN}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export
+        </button>
 
         {/* B5: Sync status badge */}
         <SyncStatusBadge branchId={branchId ?? null} />
