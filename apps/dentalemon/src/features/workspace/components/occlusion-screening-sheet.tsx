@@ -337,6 +337,11 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
             </div>
           )}
         </div>
+
+        {/* Permanent-record hint: no edit/delete endpoint exists, so make that explicit. */}
+        <p className="shrink-0 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+          Screenings are a permanent record and can’t be edited.
+        </p>
         </div>
       </DialogContent>
     </Dialog>

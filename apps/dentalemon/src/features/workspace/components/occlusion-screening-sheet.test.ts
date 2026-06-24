@@ -216,6 +216,18 @@ describe('OcclusionScreeningSheet — shipped component', () => {
     }
   });
 
+  test('5: renders the permanent-record hint footer', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() =>
+        expect(screen.getByText(/permanent record and can.?t be edited/i)).not.toBeNull(),
+      );
+    } finally {
+      f.restore();
+    }
+  });
+
   test('4: renders skeleton rows (occlusion-loading) while the fetch is in flight', () => {
     const original = global.fetch;
     global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
