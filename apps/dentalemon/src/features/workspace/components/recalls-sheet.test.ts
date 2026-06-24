@@ -122,6 +122,19 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('"Back to workspace" closes the modal', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    const f = installFetch([]);
+    try {
+      renderSheet({ onClose });
+      await user.click(await screen.findByTestId('recalls-back-btn'));
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('L6: empty state hosts a primary "New recall" affordance that opens the form', async () => {
     const user = userEvent.setup();
     const f = installFetch([]);

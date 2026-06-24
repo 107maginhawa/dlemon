@@ -8,7 +8,7 @@
  */
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@monobase/ui';
-import { CheckCircle2, Plus } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Plus } from 'lucide-react';
 import {
   usePatientTasks,
   TASK_TYPES,
@@ -150,25 +150,36 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
             on this inner wrapper (the harness stubs Radix Content + drops props). */}
         <div data-testid="tasks-sheet" className="flex flex-1 flex-col min-h-0">
         {/* Header (pr-10 clears the dialog's built-in close button) */}
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-            <DialogTitle className="text-sm font-semibold">Tasks</DialogTitle>
-            {tasks.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                {tasks.length}
-              </span>
-            )}
-          </div>
+        <DialogHeader className="flex flex-col gap-2 space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <button
             type="button"
-            onClick={() => setShowForm((v) => !v)}
-            aria-label="New task"
-            className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+            onClick={onClose}
+            data-testid="tasks-back-btn"
+            className="flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-            New Task
+            <ArrowLeft className="h-4 w-4" />
+            Back to workspace
           </button>
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <DialogTitle className="text-sm font-semibold">Tasks</DialogTitle>
+              {tasks.length > 0 && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                  {tasks.length}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowForm((v) => !v)}
+              aria-label="New task"
+              className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Task
+            </button>
+          </div>
         </DialogHeader>
 
         {/* New task form */}

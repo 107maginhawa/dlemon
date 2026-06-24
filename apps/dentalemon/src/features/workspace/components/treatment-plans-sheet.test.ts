@@ -98,6 +98,19 @@ describe('TreatmentPlansSheet — shipped component', () => {
     }
   });
 
+  test('"Back to workspace" closes the modal', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    const f = installFetch([]);
+    try {
+      renderSheet({ onClose });
+      await user.click(await screen.findByTestId('treatment-plans-back-btn'));
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('1.1: empty state create button POSTs a draft plan with providerId from org-context', async () => {
     const user = userEvent.setup();
     useOrgContextStore.setState({ memberId: 'member-7', role: 'dentist_owner' });

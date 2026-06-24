@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@monobase/ui';
-import { CalendarClock, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Plus } from 'lucide-react';
 import {
   useRecalls,
   type RecallType,
@@ -171,25 +171,36 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
             stubs Radix Content and drops its props, so the testid must be here). */}
         <div data-testid="recalls-sheet" className="flex flex-1 flex-col min-h-0">
         {/* Header (pr-10 clears the dialog's built-in close button) */}
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            <DialogTitle className="text-sm font-semibold">Recalls</DialogTitle>
-            {recalls.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                {recalls.length}
-              </span>
-            )}
-          </div>
+        <DialogHeader className="flex flex-col gap-2 space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <button
             type="button"
-            onClick={() => setShowForm((v) => !v)}
-            aria-label="New recall"
-            className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+            onClick={onClose}
+            data-testid="recalls-back-btn"
+            className="flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-            New Recall
+            <ArrowLeft className="h-4 w-4" />
+            Back to workspace
           </button>
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              <DialogTitle className="text-sm font-semibold">Recalls</DialogTitle>
+              {recalls.length > 0 && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  {recalls.length}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowForm((v) => !v)}
+              aria-label="New recall"
+              className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Recall
+            </button>
+          </div>
         </DialogHeader>
 
         {/* New recall form */}

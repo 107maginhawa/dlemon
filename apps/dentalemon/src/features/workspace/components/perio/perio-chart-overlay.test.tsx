@@ -115,6 +115,19 @@ describe('PerioChartOverlay', () => {
     }
   });
 
+  test('"Back to workspace" closes the overlay', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    const f = installFetch({ getStatus: 404 });
+    try {
+      renderOverlay({ onClose });
+      await user.click(await screen.findByTestId('perio-back-btn'));
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('404 shows the empty state with a Start button', async () => {
     const f = installFetch({ getStatus: 404 });
     try {
