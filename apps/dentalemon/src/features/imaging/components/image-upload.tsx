@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button, Input, Label } from '@monobase/ui'
 import { useImagingUpload } from '@/features/imaging/hooks/use-imaging-upload'
 import { DICOM_MIME_TYPE, isDicomMimeType } from '@/features/imaging/lib/dicom'
 
@@ -90,16 +91,16 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4 bg-zinc-900 rounded-lg">
-      <div>
-        <label htmlFor="image-upload-modality" className="text-sm text-zinc-300 block mb-1">Modality</label>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="image-upload-modality">Modality</Label>
         <select
           id="image-upload-modality"
           name="modality"
           aria-label="Modality"
           value={modality}
           onChange={(e) => setModality(e.target.value)}
-          className="w-full bg-zinc-800 text-white border border-zinc-700 rounded px-2 py-1 text-sm"
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           {MODALITY_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -108,62 +109,58 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
           ))}
         </select>
       </div>
-      <div>
-        <label className="text-sm text-zinc-300 block mb-1">Tooth Number (optional)</label>
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="image-upload-tooth">Tooth Number (optional)</Label>
+        <Input
+          id="image-upload-tooth"
           type="number"
           min={1}
           max={32}
           value={toothNumber}
           onChange={(e) => setToothNumber(e.target.value)}
           placeholder="1–32"
-          className="w-full bg-zinc-800 text-white border border-zinc-700 rounded px-2 py-1 text-sm"
         />
       </div>
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        className="border-2 border-dashed border-zinc-600 rounded-lg p-4 text-center"
+        className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-4 text-center"
       >
-        <label className="text-sm text-zinc-300 block mb-2">Image File</label>
+        <Label className="mb-2 block">Image File</Label>
         <input
           type="file"
           accept=".jpg,.jpeg,.png,.tif,.tiff,.bmp,.dcm,application/dicom"
           onChange={handleFileChange}
-          className="text-sm text-zinc-300"
+          className="mx-auto block text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted"
         />
         {file && (
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="mt-2 text-xs text-foreground">
             {file.name} — {(file.size / 1024).toFixed(0)} KB
           </p>
         )}
-        <p className="text-xs text-zinc-500 mt-1">or drag and drop here</p>
+        <p className="mt-1 text-xs text-muted-foreground">or drag and drop here</p>
       </div>
       {isUploading && (
-        <div className="w-full bg-zinc-700 rounded-full h-2">
+        <div className="h-2 w-full rounded-full bg-muted">
           <div
-            className="bg-lemon h-2 rounded-full transition-all"
+            className="h-2 rounded-full bg-lemon transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
           disabled={!file || isUploading || Boolean(error)}
-          className="flex-1 bg-lemon text-black font-semibold py-2 rounded text-sm disabled:opacity-50"
+          className="flex-1 bg-lemon text-lemon-foreground hover:bg-lemon-hover"
         >
           {isUploading ? `Uploading… ${progress}%` : 'Upload'}
-        </button>
+        </Button>
         {isUploading && (
-          <button
-            type="button"
-            onClick={abort}
-            className="px-3 py-2 text-sm text-zinc-300 bg-zinc-700 rounded"
-          >
+          <Button type="button" variant="outline" onClick={abort}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </form>

@@ -51,20 +51,33 @@ export function WorkspaceImagingOverlay({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="imaging-overlay">
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-        {/* L3: drilled-in viewers leave back to the list without closing the overlay. */}
-        {isDrilledIn ? (
-          <button
-            type="button"
-            onClick={backToImages}
-            data-testid="imaging-back-btn"
-            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft size={16} />
-            Back to images
-          </button>
-        ) : (
+        <div className="flex items-center gap-2">
+          {/* A back control is ALWAYS present: drilled-in viewers step back to the
+              image list; the list/empty level steps back out to the workspace
+              toolbar (the only prior exit was the small X). */}
+          {isDrilledIn ? (
+            <button
+              type="button"
+              onClick={backToImages}
+              data-testid="imaging-back-btn"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to images
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleClose}
+              data-testid="imaging-back-workspace-btn"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to workspace
+            </button>
+          )}
           <h2 className="text-sm font-semibold">Imaging</h2>
-        )}
+        </div>
         <button
           type="button"
           onClick={handleClose}

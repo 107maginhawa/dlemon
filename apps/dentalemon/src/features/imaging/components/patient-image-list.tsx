@@ -65,10 +65,11 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
 
   return (
     <div className={`flex flex-col h-full border-r border-zinc-200 bg-white ${view === 'fmx' ? 'w-[460px]' : 'w-[280px]'}`}>
-      {/* Header with Upload trigger */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-800">Images</span>
+      {/* Header: title on its own row, actions below as a 2-col grid + a
+          full-width primary Upload — no longer crammed into one row. */}
+      <div className="flex flex-col gap-2 px-4 py-3 border-b border-zinc-100">
+        <span className="text-sm font-semibold text-zinc-800">Images</span>
+        <div className="grid grid-cols-2 gap-1.5">
           {/* P2-5: list ↔ FMX anatomical mount toggle. N6: spell out the jargon. */}
           <button
             type="button"
@@ -76,32 +77,31 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
             aria-pressed={view === 'fmx'}
             data-testid="fmx-toggle"
             title="Full-mouth X-ray layout"
-            className="rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
+            className="flex h-9 items-center justify-center rounded-md border border-zinc-200 px-2 text-xs font-medium text-zinc-600 hover:border-lemon"
           >
             {view === 'fmx' ? 'List view' : 'FMX mount'}
           </button>
+          {/* N3: Compare is a discoverable affordance — always visible, disabled
+              until exactly two 2-D images are selected (it enables at 2). */}
+          <button
+            type="button"
+            onClick={() => {
+              const selected = allItems.filter(i => selectedIds.has(i.id))
+              if (selected.length === 2) {
+                onCompare?.([selected[0]!, selected[1]!])
+              }
+            }}
+            disabled={selectedIds.size !== 2}
+            title="Select two images to compare"
+            className="flex h-9 items-center justify-center rounded-md border border-zinc-200 px-2 text-xs font-medium text-zinc-600 hover:border-lemon disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200"
+            data-testid="compare-btn"
+          >
+            {selectedIds.size === 2 ? 'Compare ▶' : 'Compare (select 2)'}
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-        {/* N3: Compare is a discoverable affordance — always visible, disabled
-            until exactly two 2-D images are selected (it enables at 2). */}
-        <button
-          type="button"
-          onClick={() => {
-            const selected = allItems.filter(i => selectedIds.has(i.id))
-            if (selected.length === 2) {
-              onCompare?.([selected[0]!, selected[1]!])
-            }
-          }}
-          disabled={selectedIds.size !== 2}
-          title="Select two images to compare"
-          className="bg-lemon text-black text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          data-testid="compare-btn"
-        >
-          {selectedIds.size === 2 ? 'Compare ▶' : 'Compare (select 2)'}
-        </button>
         <Sheet open={uploadOpen} onOpenChange={setUploadOpen}>
           <SheetTrigger asChild>
-            <button className="bg-lemon text-black text-xs font-semibold px-3 py-1.5 rounded-md">
+            <button className="flex h-9 w-full items-center justify-center rounded-md bg-lemon text-black text-xs font-semibold hover:bg-lemon-hover">
               Upload Image
             </button>
           </SheetTrigger>
@@ -119,7 +119,6 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
             />
           </SheetContent>
         </Sheet>
-        </div>
       </div>
 
       {/* G5: library filters (list view only, once there are images) */}

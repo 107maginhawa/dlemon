@@ -102,6 +102,22 @@ describe('WorkspaceImagingOverlay — image/file coherence', () => {
     // overlay itself stays mounted
     expect(screen.getByTestId('imaging-overlay')).not.toBeNull();
   });
+
+  // At the list level the back control returns to the workspace toolbar (closes
+  // the overlay) — previously only the small X did this.
+  test('list level shows a "Back to workspace" control that closes the overlay', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    render(
+      React.createElement(WorkspaceImagingOverlay, {
+        patientId: 'pat-1', branchId: 'br-1', currentVisitId: null, open: true, onClose,
+      }),
+      { wrapper: makeWrapper() },
+    );
+    const back = await screen.findByTestId('imaging-back-workspace-btn');
+    await user.click(back);
+    expect(onClose).toHaveBeenCalled();
+  });
 });
 
 describe('WorkspaceImagingOverlay — empty canvas (L1/L2)', () => {
