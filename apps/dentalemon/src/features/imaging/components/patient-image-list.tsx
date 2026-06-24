@@ -68,7 +68,17 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
       {/* Header: title on its own row, actions below as a 2-col grid + a
           full-width primary Upload — no longer crammed into one row. */}
       <div className="flex flex-col gap-2 px-4 py-3 border-b border-zinc-100">
-        <span className="text-sm font-semibold text-zinc-800">Images</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-zinc-800">Images</span>
+          {allItems.length > 0 && (
+            <span
+              data-testid="image-count-badge"
+              className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground"
+            >
+              {allItems.length}
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-1.5">
           {/* P2-5: list ↔ FMX anatomical mount toggle. N6: spell out the jargon. */}
           <button

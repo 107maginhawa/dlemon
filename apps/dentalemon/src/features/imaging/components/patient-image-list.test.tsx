@@ -104,4 +104,19 @@ describe('PatientImageList — row affordances', () => {
     const toggle = await screen.findByTestId('fmx-toggle');
     expect(toggle.getAttribute('title')).toBe('Full-mouth X-ray layout');
   });
+
+  test('shows a count badge with the number of images next to the "Images" title', async () => {
+    render(<PatientImageList patientId="p-1" branchId="b-1" />, { wrapper: makeWrapper() });
+    const badge = await screen.findByTestId('image-count-badge');
+    expect(badge.textContent).toBe('2');
+  });
+});
+
+describe('PatientImageList — count badge hidden when empty', () => {
+  test('does not render the count badge when there are no images', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0 })) as unknown as typeof fetch;
+    render(<PatientImageList patientId="p-1" branchId="b-1" />, { wrapper: makeWrapper() });
+    await screen.findByText('No images yet');
+    expect(screen.queryByTestId('image-count-badge')).toBeNull();
+  });
 });
