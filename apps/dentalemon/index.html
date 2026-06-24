@@ -4,7 +4,22 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Skin fonts (used only by the opt-in .skin-line skin; harmless otherwise). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Shantell+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <title>Dentalemon</title>
+    <!-- Apply the saved theme BEFORE first paint (no flash). Mirrors the
+         classes in src/lib/appearance.ts. Default theme = no class. -->
+    <script>
+      try {
+        if (localStorage.getItem('dl-theme') === 'white')
+          document.documentElement.classList.add('theme-white', 'skin-line');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
