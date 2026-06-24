@@ -23,7 +23,7 @@ export function PerioCalCell({ tooth, site, value }: PerioCalCellProps) {
     <span
       aria-label={`Tooth ${tooth} ${PERIO_SITE_LABEL[site]} clinical attachment level`}
       data-testid="perio-cal-cell"
-      className="flex h-6 w-9 items-center justify-center text-xs tabular-nums text-muted-foreground"
+      className="flex h-6 w-9 items-center justify-center text-xs font-medium tabular-nums text-zinc-500"
     >
       {hasValue ? value : '–'}
     </span>

@@ -127,7 +127,7 @@ export function PerioToothColumn({
       data-perio-tooth-column={tooth}
       className="flex shrink-0 flex-col items-center gap-0.5 rounded-md px-1 py-1"
     >
-      <div className="text-[10px] font-semibold text-muted-foreground">{tooth}</div>
+      <div className="text-xs font-bold text-zinc-700">{tooth}</div>
 
       {/* Buccal: BOP / depth / GM / CAL */}
       {bopRow(BUCCAL_SITES)}
@@ -135,7 +135,7 @@ export function PerioToothColumn({
       {gmRow(BUCCAL_SITES)}
       {calRow(BUCCAL_SITES)}
 
-      <div className="my-0.5 h-px w-full bg-border" aria-hidden="true" />
+      <div className="my-0.5 h-px w-full bg-zinc-300" aria-hidden="true" />
 
       {/* Lingual: depth / GM / BOP */}
       {depthRow(LINGUAL_SITES)}
@@ -144,14 +144,14 @@ export function PerioToothColumn({
 
       {/* Per-tooth controls */}
       <div className="mt-1 flex flex-col items-stretch gap-0.5">
-        <label className="flex items-center justify-between gap-1 text-[9px] text-muted-foreground">
+        <label className="flex items-center justify-between gap-1 text-xs font-medium text-zinc-600">
           <span>Mob</span>
           <select
             aria-label={`Tooth ${tooth} mobility`}
             value={reading?.mobility ?? 0}
             disabled={readOnly}
             onChange={(e) => onPatch({ mobility: Number(e.target.value) })}
-            className="h-9 rounded border border-border bg-background text-[10px]"
+            className="h-9 rounded border border-zinc-300 bg-background text-xs text-foreground"
           >
             {[0, 1, 2, 3].map((g) => (
               <option key={g} value={g}>
@@ -162,7 +162,7 @@ export function PerioToothColumn({
         </label>
         <label
           className={cn(
-            'flex items-center justify-between gap-1 text-[9px] text-muted-foreground',
+            'flex items-center justify-between gap-1 text-xs font-medium text-zinc-600',
             singleRooted && 'opacity-40',
           )}
         >
@@ -172,7 +172,7 @@ export function PerioToothColumn({
             value={reading?.furcation ?? 0}
             disabled={readOnly || singleRooted}
             onChange={(e) => onPatch({ furcation: Number(e.target.value) })}
-            className="h-9 rounded border border-border bg-background text-[10px] disabled:bg-muted/30 disabled:cursor-not-allowed"
+            className="h-9 rounded border border-zinc-300 bg-background text-xs text-foreground disabled:bg-muted/30 disabled:cursor-not-allowed"
           >
             {[0, 1, 2, 3].map((g) => (
               <option key={g} value={g}>
@@ -189,8 +189,8 @@ export function PerioToothColumn({
             disabled={readOnly}
             onClick={() => onPatch({ plaque: !reading?.plaque })}
             className={cn(
-              'h-6 rounded px-1.5 text-[9px] font-semibold',
-              reading?.plaque ? 'bg-muted-foreground/20 text-foreground' : 'bg-muted text-muted-foreground',
+              'h-7 rounded px-2 text-xs font-bold',
+              reading?.plaque ? 'bg-zinc-700 text-white' : 'bg-muted text-zinc-600',
             )}
           >
             P
@@ -202,8 +202,8 @@ export function PerioToothColumn({
             disabled={readOnly}
             onClick={() => onPatch({ suppuration: !reading?.suppuration })}
             className={cn(
-              'h-6 rounded px-1.5 text-[9px] font-semibold',
-              reading?.suppuration ? 'bg-destructive/20 text-destructive' : 'bg-muted text-muted-foreground',
+              'h-7 rounded px-2 text-xs font-bold',
+              reading?.suppuration ? 'bg-destructive text-white' : 'bg-muted text-zinc-600',
             )}
           >
             S

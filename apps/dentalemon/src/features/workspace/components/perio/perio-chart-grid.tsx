@@ -91,7 +91,7 @@ export function PerioChartGrid({
   function renderArch(arch: readonly number[], label: string) {
     return (
       <div className="flex flex-col gap-1">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className="text-xs font-bold uppercase tracking-wide text-zinc-600">{label}</div>
         {/* Horizontal scroll affordance for narrow viewports (iPad): a thin scrollbar
             plus a subtle right-edge fade hinting there is more chart off-screen. */}
         <div className="relative">

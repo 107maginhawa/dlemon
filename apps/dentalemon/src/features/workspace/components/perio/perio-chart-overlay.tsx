@@ -271,7 +271,7 @@ export function PerioChartOverlay({
             />
 
             {/* Keyboard legend */}
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-zinc-600">
               Digits set depth · cells auto-advance · click a dot to toggle bleeding · over-threshold
               depths show in red.
             </p>

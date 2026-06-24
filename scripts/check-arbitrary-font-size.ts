@@ -28,7 +28,9 @@ import { join } from 'node:path';
 // when the AppointmentCard action buttons were de-duplicated into one shared class;
 // lowered to 343 when the workspace context strip + New Visit affordance moved to
 // the rem token scale (text-xs) during the workspace-first-slice UX pass.
-const BASELINE = 343;
+// lowered to 333 when imaging rail + perio chart legibility pass migrated tooth
+// numbers, arch/site labels, and the upload card to the rem token scale.
+const BASELINE = 333;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;
