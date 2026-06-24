@@ -61,6 +61,10 @@ export interface DentalChartProps {
   /** P0-A: FDI numbers with an open offline sync conflict — marked so the clinician
    *  knows a rejected edit needs resolving (resolve via the conflict banner). */
   conflictedToothNumbers?: Set<number>;
+  /** Fill mode: scale teeth to fill the chart's height (used by the carousel's
+   *  active card) so the odontogram fits any card size — no dead space, no clip —
+   *  instead of a fixed pixel tooth width that leaves the card half-empty. */
+  fluid?: boolean;
 }
 
 /**
@@ -86,6 +90,7 @@ export function DentalChart({
   declinedToothNumbers,
   carriedOverToothNumbers,
   conflictedToothNumbers,
+  fluid = false,
 }: DentalChartProps) {
   // ── Notation preference (QW-5) ───────────────────────────────────────────
   // Read from branch settings so the chart respects the locale/notation toggle
@@ -269,6 +274,7 @@ export function DentalChart({
           label={displayLabel}
           fillColor={getToothFillColor(state) || undefined}
           size={effectiveSize}
+          fill={fluid}
           interactive={false}
           showLabel={true}
         />

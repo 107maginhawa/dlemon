@@ -248,6 +248,22 @@
   height: min(46vh, 420px);
 }
 
+/* Roomy mode: an empty visit (charting phase, no breakdown to show) grows the
+   chart to use the space below instead of leaving a void; fill-mode teeth scale
+   up into the taller card. Reverts to the clamp once treatments populate. */
+.dental-swiper.is-roomy .swiper-slide {
+  height: min(64vh, 600px);
+}
+
+/* Fill-mode tooth: the injected SVG scales by HEIGHT (width follows aspect,
+   capped to the cell) so the odontogram fills the chart card top-to-bottom
+   regardless of card height — no fixed-width dead space, no clipping. */
+.universal-tooth-svg--fill svg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
 .dental-swiper .swiper-pagination-bullet {
   background: #C7C7CC;
   opacity: 1;
