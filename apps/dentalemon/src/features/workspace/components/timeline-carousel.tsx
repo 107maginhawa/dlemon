@@ -71,6 +71,12 @@ export interface TimelineCarouselProps {
   carriedOverToothNumbers?: Set<number>;
   /** P0-A: FDI numbers with an open offline conflict — marked on the active chart. */
   conflictedToothNumbers?: Set<number>;
+  /** Item 3: Compare is controlled by the consolidated context strip. When the
+   *  strip's Compare button is clicked the route flips this; the carousel still
+   *  owns the overlay (it has the fetched active-card teeth + reference options).
+   *  When omitted, the carousel falls back to its own internal compare button. */
+  compareOpen?: boolean;
+  onCompareOpenChange?: (open: boolean) => void;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -280,6 +286,8 @@ export function TimelineCarousel({
   declinedToothNumbers,
   carriedOverToothNumbers,
   conflictedToothNumbers,
+  compareOpen: compareOpenProp,
+  onCompareOpenChange,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
@@ -298,8 +306,15 @@ export function TimelineCarousel({
   const [activeIndex, setActiveIndex] = useState(initialSlide);
   const swiperRef = useRef<{ slideTo: (index: number) => void } | null>(null);
 
-  // P1-14: compare state
-  const [compareOpen, setCompareOpen] = useState(false);
+  // P1-14: compare state. Controlled by the context strip when onCompareOpenChange
+  // is supplied (Item 3); otherwise the carousel manages it internally.
+  const isCompareControlled = onCompareOpenChange !== undefined;
+  const [compareOpenInternal, setCompareOpenInternal] = useState(false);
+  const compareOpen = isCompareControlled ? !!compareOpenProp : compareOpenInternal;
+  const setCompareOpen = (open: boolean) => {
+    if (isCompareControlled) onCompareOpenChange!(open);
+    else setCompareOpenInternal(open);
+  };
   const [activeTeeth, setActiveTeeth] = useState<import('./dental-chart.helpers').ToothData[]>([]);
 
   // WR-02: when the selected visit changes (e.g. a freshly-created visit becomes
@@ -341,8 +356,9 @@ export function TimelineCarousel({
       className="flex flex-col gap-2 py-2 transition-all duration-300 relative"
       style={{ width: panelOpen ? 'calc(100% - 340px)' : '100%' }}
     >
-      {/* P1-14: Compare button — only shown when 2+ visits exist */}
-      {sorted.length >= 2 && (
+      {/* P1-14: Compare button — only shown when 2+ visits exist AND compare is
+          not controlled by the context strip (Item 3: the strip hosts the trigger). */}
+      {sorted.length >= 2 && !isCompareControlled && (
         <div className="flex justify-end px-4">
           <button
             type="button"

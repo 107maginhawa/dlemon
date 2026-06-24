@@ -60,8 +60,8 @@ import { TasksSheet } from '@/features/workspace/components/tasks-sheet';
 import { OcclusionScreeningSheet } from '@/features/workspace/components/occlusion-screening-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
-import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
 import { useChartConflicts } from '@/features/workspace/hooks/use-chart-conflicts';
+import { WorkspaceContextStrip } from '@/features/workspace/components/workspace-context-strip';
 import { ChartExportOverlay } from '@/features/workspace/components/chart-export-overlay';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
@@ -105,6 +105,9 @@ function WorkspacePage() {
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  // Item 3: Compare is triggered from the consolidated context strip; the
+  // carousel owns the overlay (it has the fetched active-card teeth).
+  const [compareOpen, setCompareOpen] = useState(false);
   // FIX-002: carry-over prompt shown at the new-visit entry point (returning patient).
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
@@ -474,29 +477,6 @@ function WorkspacePage() {
           data-testid="workspace-carousel-zone"
           className="shrink-0 border-b bg-background/80 backdrop-blur overflow-visible"
         >
-          {/* P0-A: data-integrity banner — rejected offline edits accumulate
-              invisibly without this. Surfaces + resolves them. */}
-          <ChartConflictBanner patientId={patientId} />
-          {openVisit && (
-            <div
-              data-testid="visit-in-progress-indicator"
-              className="flex items-center gap-2 px-4 pt-2 text-xs font-medium text-green-700"
-            >
-              <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden />
-              Visit in progress — finish or discard it to start a new one.
-              {orgRole === 'dentist_owner' && (
-                <button
-                  type="button"
-                  data-testid="discard-visit-btn"
-                  onClick={handleDiscardVisit}
-                  disabled={discardVisitMutation.isPending}
-                  className="ml-2 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                >
-                  Discard visit
-                </button>
-              )}
-            </div>
-          )}
           <TimelineCarousel
             visits={filteredVisits}
             patientId={patientId}
@@ -513,6 +493,8 @@ function WorkspacePage() {
             declinedToothNumbers={chartLayers.declined}
             carriedOverToothNumbers={chartLayers.carriedOver}
             conflictedToothNumbers={conflictedTeeth}
+            compareOpen={compareOpen}
+            onCompareOpenChange={setCompareOpen}
           />
         </div>
 
@@ -521,6 +503,28 @@ function WorkspacePage() {
           data-testid="workspace-table-zone"
           className="flex-1 min-w-0 bg-background overflow-auto"
         >
+          {/* Items 3 + 4: consolidated sticky context strip — visit-date anchor,
+              status/read-only, gated conflict banner, Compare trigger, and the
+              passive state-aware next-step guidance. Pinned at the top of the
+              single scroll region so the date stays visible while rows scroll. */}
+          <WorkspaceContextStrip
+            patientId={patientId}
+            visitDate={currentVisitDate}
+            currentVisitStatus={currentVisit?.status}
+            openVisit={openVisit ?? null}
+            currentIsOpen={!!currentVisit && currentVisit.id === openVisit?.id}
+            treatmentCount={treatments.length}
+            performedCount={
+              treatments.filter((t) => t.status === 'performed' || t.status === 'verified').length
+            }
+            conflictCount={conflictedTeeth.size}
+            canCompare={visits.length >= 2}
+            onCompare={() => setCompareOpen(true)}
+            onStartVisit={handleNewVisit}
+            onComplete={() => setChecklistOpen(true)}
+            onDiscard={handleDiscardVisit}
+            canDiscard={orgRole === 'dentist_owner'}
+          />
           {/* #13: apply a treatment template to populate the visit (reachable even
               when the table is empty — the primary apply case). Owner/associate-gated
               inside the component; only shown for an active, editable visit. */}
