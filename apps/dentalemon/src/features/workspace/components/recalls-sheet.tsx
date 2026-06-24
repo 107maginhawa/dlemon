@@ -72,6 +72,32 @@ function addMonths(base: Date, n: number): string {
   return `${target.getFullYear()}-${p(target.getMonth() + 1)}-${p(target.getDate())}`;
 }
 
+/** Whole-day difference (target − today), ignoring time-of-day. */
+function dayDiff(target: Date, now: Date): number {
+  const startOf = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((startOf(target) - startOf(now)) / (24 * 60 * 60 * 1000));
+}
+
+/** Human relative due text: "in 3 mo", "in 2 weeks", "tomorrow", "today",
+ *  "2 weeks overdue", "3 mo overdue". Pure FE date math. */
+function relativeDue(due: Date, now: Date): string {
+  const days = dayDiff(due, now);
+  const abs = Math.abs(days);
+  let phrase: string;
+  if (abs === 0) return 'today';
+  if (abs < 7) {
+    phrase = abs === 1 ? '1 day' : `${abs} days`;
+  } else if (abs < 30) {
+    const w = Math.round(abs / 7);
+    phrase = w === 1 ? '1 week' : `${w} weeks`;
+  } else {
+    const m = Math.round(abs / 30);
+    phrase = `${m} mo`;
+  }
+  if (days > 0) return abs === 1 ? 'tomorrow' : `in ${phrase}`;
+  return abs === 1 ? 'yesterday' : `${phrase} overdue`;
+}
+
 const RECALL_TYPE_LABELS: Record<RecallType, string> = {
   cleaning: 'Cleaning',
   checkup: 'Check-up',
@@ -92,6 +118,13 @@ interface RecallRowProps {
 function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
   const transitions = RECALL_TRANSITIONS[recall.status];
 
+  // Overdue only applies to still-actionable recalls; completed/cancelled
+  // are settled and never flagged.
+  const dueDate = new Date(recall.dueDate);
+  const isActionable = recall.status === 'pending' || recall.status === 'sent';
+  const isOverdue = isActionable && dayDiff(dueDate, new Date()) < 0;
+  const relative = relativeDue(dueDate, new Date());
+
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-background p-3">
       <div className="flex-1 min-w-0">
@@ -102,9 +135,17 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
           >
             {STATUS_LABELS[recall.status]}
           </span>
+          {isOverdue && (
+            <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+              Overdue
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Due: {new Date(recall.dueDate).toLocaleDateString()}
+          Due: {dueDate.toLocaleDateString()}{' '}
+          <span className={isOverdue ? 'text-destructive font-medium' : undefined}>
+            ({relative})
+          </span>
         </p>
         {recall.notes && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{recall.notes}</p>

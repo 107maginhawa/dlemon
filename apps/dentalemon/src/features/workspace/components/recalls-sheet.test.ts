@@ -220,6 +220,47 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('1.1: a past-due pending recall renders an "Overdue" badge', async () => {
+    // 30 days ago — comfortably in the past regardless of run date.
+    const past = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const f = installFetch([makeRecall({ status: 'pending', dueDate: past })]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Cleaning')).not.toBeNull());
+      expect(screen.getByText('Overdue')).not.toBeNull();
+      // relative text accompanies the absolute date
+      expect(screen.getByText(/overdue\)/i)).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('1.1: a future pending recall does NOT render "Overdue"', async () => {
+    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    const f = installFetch([makeRecall({ status: 'pending', dueDate: future })]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Cleaning')).not.toBeNull());
+      expect(screen.queryByText('Overdue')).toBeNull();
+      // relative text shows it's upcoming ("in …")
+      expect(screen.getByText(/\(in /i)).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('1.1: a completed recall never shows "Overdue" even when past due', async () => {
+    const past = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const f = installFetch([makeRecall({ status: 'completed', dueDate: past })]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Cleaning')).not.toBeNull());
+      expect(screen.queryByText('Overdue')).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('shows an error state when the recalls fetch fails', async () => {
     const original = global.fetch;
     global.fetch = mock(async () =>
