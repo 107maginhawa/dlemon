@@ -137,7 +137,7 @@ function VisitChartCard({
     <div
       data-testid="visit-slide"
       data-active-card={isActive ? '1' : undefined}
-      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-lemon-hover border-2 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_6px_rgba(0,0,0,0.04)]' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
+      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-lemon-hover border-2 shadow-card-active' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
     >
       {isActive && <div data-accent-bar className="h-1 rounded-full bg-lemon" />}
       {/* CHART-XV: name the scope so the cumulative active chart isn't misread as
@@ -240,12 +240,12 @@ function VisitChartCard({
           <span
             className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold capitalize ${
               visit.status === 'active'
-                ? 'bg-green-100 text-green-700'
+                ? 'bg-status-done text-status-done-foreground'
                 : visit.status === 'completed'
                 ? 'bg-blue-100 text-blue-700'
                 : visit.status === 'locked'
                 ? 'bg-purple-100 text-purple-700'
-                : 'bg-gray-100 text-gray-600'
+                : 'bg-status-planned text-status-planned-foreground'
             }`}
           >
             {visit.status}
