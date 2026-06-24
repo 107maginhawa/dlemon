@@ -164,7 +164,7 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-lg max-h-[85dvh]"
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl h-[85dvh]"
       >
         {/* The accessible dialog role comes from Radix on DialogContent; the
             stable test/E2E handle lives on this inner wrapper (the test harness

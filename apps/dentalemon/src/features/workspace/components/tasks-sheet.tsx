@@ -144,7 +144,7 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-lg max-h-[85dvh]"
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl h-[85dvh]"
       >
         {/* Radix supplies role=dialog on DialogContent; the test/E2E handle lives
             on this inner wrapper (the harness stubs Radix Content + drops props). */}
