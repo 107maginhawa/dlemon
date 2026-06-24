@@ -113,6 +113,36 @@ describe('OcclusionScreeningSheet — shipped component', () => {
     }
   });
 
+  test('#2: a screening row shows labeled metrics (overjet/overbite/midline/notes)', async () => {
+    const f = installFetch([
+      makeScreening({
+        angleClass: 'class_ii_div1',
+        overjetMm: 3,
+        overbiteMm: 2,
+        midlineDeviation: '2mm to the left',
+        crossbite: false,
+        crowding: false,
+        spacing: false,
+        notes: 'Monitor at recall',
+      }),
+    ]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Class II div 1')).not.toBeNull());
+      expect(screen.getByText('Overjet')).not.toBeNull();
+      expect(screen.getByText('3 mm')).not.toBeNull();
+      expect(screen.getByText('Overbite')).not.toBeNull();
+      expect(screen.getByText('Midline')).not.toBeNull();
+      expect(screen.getByText('2mm to the left')).not.toBeNull();
+      expect(screen.getByText('Notes')).not.toBeNull();
+      expect(screen.getByText('Monitor at recall')).not.toBeNull();
+      // no crossbite/crowding/spacing → Findings reads "None"
+      expect(screen.getByText('None')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('renders as a dialog with its testid preserved through the drawer conversion', async () => {
     const f = installFetch([]);
     try {

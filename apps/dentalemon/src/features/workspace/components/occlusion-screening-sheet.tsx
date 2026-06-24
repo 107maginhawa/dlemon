@@ -28,6 +28,15 @@ interface OcclusionScreeningSheetProps {
 // Row
 // ---------------------------------------------------------------------------
 
+function Metric({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
 function ScreeningRow({ screening }: { screening: OcclusionScreening }) {
   const flags = [
     screening.crossbite ? 'Crossbite' : null,
@@ -35,38 +44,49 @@ function ScreeningRow({ screening }: { screening: OcclusionScreening }) {
     screening.spacing ? 'Spacing' : null,
   ].filter(Boolean) as string[];
 
-  const metrics = [
-    screening.overjetMm != null ? `Overjet ${screening.overjetMm}mm` : null,
-    screening.overbiteMm != null ? `Overbite ${screening.overbiteMm}mm` : null,
-  ].filter(Boolean) as string[];
-
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border bg-background p-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4">
+      {/* Header: Angle class + date */}
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-sm font-semibold text-indigo-700">
           {OCCLUSION_CLASS_LABELS[screening.angleClass]}
         </span>
-        {flags.map((flag) => (
-          <span
-            key={flag}
-            className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"
-          >
-            {flag}
-          </span>
-        ))}
         <span className="ml-auto text-xs text-muted-foreground">
           {new Date(screening.createdAt).toLocaleDateString()}
         </span>
       </div>
-      {(metrics.length > 0 || screening.midlineDeviation) && (
-        <p className="text-xs text-muted-foreground">
-          {[...metrics, screening.midlineDeviation ? `Midline: ${screening.midlineDeviation}` : null]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      )}
+
+      {/* Labeled metric grid — every captured field reads explicitly, "—" when blank */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <Metric label="Overjet" value={screening.overjetMm != null ? `${screening.overjetMm} mm` : '—'} />
+        <Metric label="Overbite" value={screening.overbiteMm != null ? `${screening.overbiteMm} mm` : '—'} />
+        <Metric label="Midline" value={screening.midlineDeviation || '—'} />
+        <Metric
+          label="Findings"
+          value={
+            flags.length > 0 ? (
+              <span className="flex flex-wrap gap-1">
+                {flags.map((flag) => (
+                  <span
+                    key={flag}
+                    className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"
+                  >
+                    {flag}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">None</span>
+            )
+          }
+        />
+      </div>
+
       {screening.notes && (
-        <p className="text-xs text-muted-foreground line-clamp-2">{screening.notes}</p>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">Notes</span>
+          <p className="text-sm text-foreground">{screening.notes}</p>
+        </div>
       )}
     </div>
   );
