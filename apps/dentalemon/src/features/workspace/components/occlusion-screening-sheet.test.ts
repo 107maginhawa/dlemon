@@ -228,6 +228,26 @@ describe('OcclusionScreeningSheet — shipped component', () => {
     }
   });
 
+  test('7: Angle-classes legend is collapsed by default and reveals descriptions on toggle', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      const toggle = await screen.findByTestId('occlusion-angle-legend-toggle');
+      // Collapsed by default — class descriptions not in the DOM yet.
+      expect(screen.queryByText(/Normal molar relationship/i)).toBeNull();
+      await user.click(toggle);
+      // Expanded — each Angle class line is now visible.
+      expect(screen.getByText(/Normal molar relationship/i)).not.toBeNull();
+      expect(screen.getByText(/Retrognathic.*proclined/i)).not.toBeNull();
+      expect(screen.getByText(/retroclined/i)).not.toBeNull();
+      expect(screen.getByText(/Prognathic/i)).not.toBeNull();
+      expect(screen.getAllByText(/Edge-to-edge/i).length).toBeGreaterThan(0);
+    } finally {
+      f.restore();
+    }
+  });
+
   test('4: renders skeleton rows (occlusion-loading) while the fetch is in flight', () => {
     const original = global.fetch;
     global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;

@@ -8,7 +8,7 @@
  */
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, Skeleton } from '@monobase/ui';
-import { ArrowLeft, Activity, Plus } from 'lucide-react';
+import { ArrowLeft, Activity, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   useOcclusionScreenings,
   OCCLUSION_CLASSES,
@@ -33,6 +33,43 @@ function Metric({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex flex-col gap-0.5">
       <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
+// Solo-GP quick reference — one line per Angle class. Collapsed by default.
+const ANGLE_CLASS_REFERENCE: ReadonlyArray<{ label: string; description: string }> = [
+  { label: 'Class I', description: 'Normal molar relationship; malocclusion within the arch.' },
+  { label: 'Class II div 1', description: 'Retrognathic mandible; upper incisors proclined (overjet).' },
+  { label: 'Class II div 2', description: 'Retrognathic mandible; upper incisors retroclined (deep bite).' },
+  { label: 'Class III', description: 'Prognathic mandible; lower arch ahead of upper.' },
+  { label: 'Edge-to-edge', description: 'Incisors meet edge-to-edge with no vertical overlap.' },
+];
+
+function AngleClassLegend() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="shrink-0 border-t border-border px-4 py-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        data-testid="occlusion-angle-legend-toggle"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        Angle classes
+      </button>
+      {open && (
+        <dl className="mt-2 flex flex-col gap-1.5">
+          {ANGLE_CLASS_REFERENCE.map((c) => (
+            <div key={c.label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+              <dt className="text-xs font-semibold text-foreground sm:w-28 sm:shrink-0">{c.label}</dt>
+              <dd className="text-xs text-muted-foreground">{c.description}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }
@@ -337,6 +374,9 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
             </div>
           )}
         </div>
+
+        {/* Angle-class quick reference — collapsible solo-GP guidance. */}
+        <AngleClassLegend />
 
         {/* Permanent-record hint: no edit/delete endpoint exists, so make that explicit. */}
         <p className="shrink-0 border-t border-border px-4 py-2 text-xs text-muted-foreground">
