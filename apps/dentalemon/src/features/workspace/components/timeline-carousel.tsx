@@ -25,6 +25,7 @@ import 'swiper/css/pagination';
 import { useUpdateVisit } from '@/features/workspace/hooks/use-update-visit';
 import { useInitializeDentition } from '@/features/workspace/hooks/use-initialize-dentition';
 import { getDentitionType } from '@/features/workspace/components/dental-chart.helpers';
+import { findOpenVisit } from '@/features/workspace/lib/visit-status';
 import type { ToothData, DentitionType } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
 import { ChartCompareOverlay } from '@/features/workspace/components/chart-compare-overlay';
@@ -56,7 +57,13 @@ export interface TimelineCarouselProps {
   panelOpen?: boolean;
   /** Patient date of birth (ISO date string) — used to select dentition type */
   patientDateOfBirth?: string | null;
-  /** CHART-XV cumulative cross-visit layer sets — applied to the ACTIVE card only
+  /** P0-1: id of the genuine OPEN visit (status active|draft) — the living
+   *  document that owns the cumulative cross-visit overlay + "Current — all
+   *  visits" label. Bound here, NOT to whichever card is centered, so centering a
+   *  historical card never relabels it "Current" (provenance falsification).
+   *  Falls back to findOpenVisit(visits) when omitted. */
+  openVisitId?: string;
+  /** CHART-XV cumulative cross-visit layer sets — applied to the OPEN card only
    *  (the living document); historical cards stay per-visit snapshots. */
   completedToothNumbers?: Set<number>;
   proposedToothNumbers?: Set<number>;
@@ -70,6 +77,7 @@ export interface TimelineCarouselProps {
 function VisitChartCard({
   visit,
   isActive,
+  isOpenVisit,
   patientId,
   patientDateOfBirth,
   onSelectTooth,
@@ -85,6 +93,9 @@ function VisitChartCard({
 }: {
   visit: VisitCard;
   isActive: boolean;
+  /** P0-1: this card is the genuine open visit (living document) — owns the
+   *  cumulative overlay + "Current — all visits" label regardless of centering. */
+  isOpenVisit: boolean;
   patientId: string;
   patientDateOfBirth?: string | null;
   onSelectTooth?: (toothNumber: number) => void;
@@ -135,7 +146,7 @@ function VisitChartCard({
         data-testid="chart-scope-label"
         className="text-[10px] font-medium text-muted-foreground px-0.5"
       >
-        {isActive ? 'Current — all visits' : 'Visit snapshot'}
+        {isOpenVisit ? 'Current — all visits' : 'Visit snapshot'}
       </span>
       <div className="overflow-x-auto flex-1 min-h-0">
         {isLoading ? (
@@ -190,14 +201,18 @@ function VisitChartCard({
             onSelectTooth={isActive ? onSelectTooth : undefined}
             toothSize={isActive ? 'md' : 'xs'}
             showLegend={false}
-            showLayerToggle={isActive}
-            // CHART-XV: cumulative cross-visit layers apply only to the ACTIVE card
-            // (the living document); historical cards remain per-visit snapshots.
-            completedToothNumbers={isActive ? completedToothNumbers : undefined}
-            proposedToothNumbers={isActive ? proposedToothNumbers : undefined}
-            declinedToothNumbers={isActive ? declinedToothNumbers : undefined}
-            carriedOverToothNumbers={isActive ? carriedOverToothNumbers : undefined}
-            conflictedToothNumbers={isActive ? conflictedToothNumbers : undefined}
+            // P1-3: the open card (the working chart, rendered at 'md') gets the
+            // compact always-on state key; small historical 'xs' cards stay clean.
+            compactLegend={isOpenVisit}
+            showLayerToggle={isOpenVisit}
+            // P0-1: cumulative cross-visit layers + layer toggle apply only to the
+            // OPEN card (the living document), bound by visit identity — NOT by which
+            // card is centered. Historical cards remain honest per-visit snapshots.
+            completedToothNumbers={isOpenVisit ? completedToothNumbers : undefined}
+            proposedToothNumbers={isOpenVisit ? proposedToothNumbers : undefined}
+            declinedToothNumbers={isOpenVisit ? declinedToothNumbers : undefined}
+            carriedOverToothNumbers={isOpenVisit ? carriedOverToothNumbers : undefined}
+            conflictedToothNumbers={isOpenVisit ? conflictedToothNumbers : undefined}
             dentitionType={dentitionType}
           />
         )}
@@ -259,6 +274,7 @@ export function TimelineCarousel({
   onSelectTooth,
   panelOpen = false,
   patientDateOfBirth = null,
+  openVisitId,
   completedToothNumbers,
   proposedToothNumbers,
   declinedToothNumbers,
@@ -267,6 +283,10 @@ export function TimelineCarousel({
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
+  // P0-1: the cumulative scope binds to the genuine OPEN visit (single source of
+  // truth: findOpenVisit, same predicate the route uses), never to the centered
+  // card. The route passes openVisitId authoritatively; fall back when omitted.
+  const resolvedOpenVisitId = openVisitId ?? findOpenVisit(visits)?.id;
   // Sort oldest → newest so initialSlide = last index = most recent
   const sorted = [...visits].sort(
     (a, b) =>
@@ -370,6 +390,7 @@ export function TimelineCarousel({
               <VisitChartCard
                 visit={visit}
                 isActive={isActive}
+                isOpenVisit={visit.id === resolvedOpenVisitId}
                 patientId={patientId}
                 patientDateOfBirth={patientDateOfBirth}
                 onSelectTooth={onSelectTooth}

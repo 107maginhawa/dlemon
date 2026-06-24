@@ -25,6 +25,7 @@
  * are maintained independently and MUST agree. Changing precedence here requires the
  * same change in chart-export.ts (pinned in chart-export.test.ts).
  */
+import { statusToLayer, type TreatmentLayerStatus } from '../components/dental-chart.helpers';
 import type { TreatmentPlanData } from '../hooks/use-treatment-plan';
 
 export interface ChartLayerSets {
@@ -44,12 +45,17 @@ export function deriveChartLayerSets(plan: TreatmentPlanData | null | undefined)
     const n = t.toothNumber;
     if (n == null) continue;
     if (completed.has(n)) continue; // completed wins — never re-list as pending
-    if (t.status === 'diagnosed' || t.status === 'planned') {
+    // P0-2: derive the layer through the shared statusToLayer() fold so the chart
+    // and the treatment list can never disagree on what a tooth's status means.
+    const layer = statusToLayer(t.status as TreatmentLayerStatus);
+    if (layer === 'proposed') {
       proposed.add(n);
       if (t.carriedOver) carriedOver.add(n);
-    } else if (t.status === 'declined') {
+    } else if (layer === 'declined') {
       declined.add(n);
     }
+    // 'completed' here would come from completedToothNumbers (handled above);
+    // null (dismissed) is off-chart and intentionally skipped.
   }
 
   // proposed wins over declined for the same tooth (a fresh recommendation

@@ -23,6 +23,34 @@ import { useUpdateTreatment } from '../hooks/use-update-treatment';
 import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { DismissTreatmentPopover, DeclineTreatmentPopover } from './treatment-row-popovers';
+import { statusToLayer, getLayerLabel, type TreatmentLayerStatus } from './dental-chart.helpers';
+
+/**
+ * P2 — group treatments for the by-status presentation view, folded through the
+ * SAME statusToLayer projection the chart uses (single source of truth), so the
+ * presented plan and the chart can never disagree. diagnosed|planned → planned,
+ * performed|verified → completed, declined → declined; dismissed is struck from
+ * the plan (omitted, like off-chart).
+ */
+export interface StatusGroupedTreatments {
+  planned: Treatment[];
+  completed: Treatment[];
+  declined: Treatment[];
+}
+export function groupTreatmentsByStatusLayer(treatments: Treatment[]): StatusGroupedTreatments {
+  const planned: Treatment[] = [];
+  const completed: Treatment[] = [];
+  const declined: Treatment[] = [];
+  for (const t of treatments) {
+    switch (statusToLayer(t.status as TreatmentLayerStatus)) {
+      case 'proposed': planned.push(t); break;
+      case 'completed': completed.push(t); break;
+      case 'declined': declined.push(t); break;
+      // 'completed' here is the layer; null (dismissed) is struck from the plan.
+    }
+  }
+  return { planned, completed, declined };
+}
 
 interface TreatmentTableProps {
   visitId?: string;
@@ -117,6 +145,10 @@ export function TreatmentTable({
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   // TXTBL-05: completed toggle
   const [showCompleted, setShowCompleted] = useState(false);
+  // P2: view mode — the in-context working table (by-visit, default) vs the
+  // by-status/phase plan-presentation view (read-only; for patient presentation
+  // + pre-auth). Grouping folds through the shared statusToLayer projection.
+  const [viewMode, setViewMode] = useState<'by-visit' | 'by-status'>('by-visit');
   // TXTBL-03: dismiss popover state
   const [dismissReason, setDismissReason] = useState<Record<string, string>>({});
   const [openDismissId, setOpenDismissId] = useState<string | null>(null);
@@ -150,6 +182,7 @@ export function TreatmentTable({
   // would leak from one visit to the next.
   useEffect(() => {
     setShowCompleted(false);
+    setViewMode('by-visit');
   }, [visitId]);
 
   // While the parent is fetching, hold the table's footprint with a header strip +
@@ -269,24 +302,45 @@ export function TreatmentTable({
             </span>
           )}
         </span>
-        {/* Only show the toggle when it has a job: there is completed work to hide AND
-            pending work to fall back to. On an all-completed visit the rows are always
-            shown (effectiveShowCompleted), so a no-op toggle is hidden. Edge: if the last
-            pending item is marked done mid-session the toggle disappears and completed
-            rows stay visible — acceptable, the table is never left empty. */}
-        {hasPending && completedCount > 0 && (
-          <button
-            type="button"
-            data-testid="view-completed-btn"
-            onClick={() => setShowCompleted((v) => !v)}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            {showCompleted
-              ? `Hide Completed (${completedCount})`
-              : `View Completed (${completedCount})`}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Only show the completed toggle when it has a job (by-visit view only):
+              completed work to hide AND pending work to fall back to. */}
+          {viewMode === 'by-visit' && hasPending && completedCount > 0 && (
+            <button
+              type="button"
+              data-testid="view-completed-btn"
+              onClick={() => setShowCompleted((v) => !v)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              {showCompleted
+                ? `Hide Completed (${completedCount})`
+                : `View Completed (${completedCount})`}
+            </button>
+          )}
+          {/* P2: by-visit (working table) ⇄ by-status (plan presentation) toggle. */}
+          <div role="group" aria-label="Treatment view" className="inline-flex rounded-md border border-border/60 overflow-hidden text-xs">
+            <button
+              type="button"
+              data-testid="view-by-visit-btn"
+              onClick={() => setViewMode('by-visit')}
+              aria-pressed={viewMode === 'by-visit'}
+              className={`px-2 py-0.5 font-medium transition-colors ${viewMode === 'by-visit' ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:bg-muted/60'}`}
+            >
+              By Visit
+            </button>
+            <button
+              type="button"
+              data-testid="view-by-status-btn"
+              onClick={() => setViewMode('by-status')}
+              aria-pressed={viewMode === 'by-status'}
+              className={`px-2 py-0.5 font-medium transition-colors border-l border-border/60 ${viewMode === 'by-status' ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:bg-muted/60'}`}
+            >
+              By Status
+            </button>
+          </div>
+        </div>
       </div>
+      {viewMode === 'by-visit' && (
       <div className="overflow-auto max-h-[450px]">
       <table className="w-full text-sm" aria-label="Treatments">
         <thead className="sticky top-0 bg-muted/30 z-10">
@@ -556,9 +610,10 @@ export function TreatmentTable({
                     </td>
                     <td className="px-4 py-2" />
                     <td className="px-4 py-2">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold capitalize bg-gray-100 text-gray-500">
-                        {item.status}
-                      </span>
+                      {/* P0-2: real status colour (de-emphasised by the row's opacity +
+                          the Carried-Over section + the "from <date>" marker), NOT a flat
+                          gray that contradicted the chart's salient amber carried ring. */}
+                      <StatusBadge status={item.status as Treatment['status']} />
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">
                       {CURRENCY_SYMBOL}
@@ -611,6 +666,70 @@ export function TreatmentTable({
         </tbody>
       </table>
       </div>
+      )}
+
+      {/* P2: by-status/phase plan presentation (read-only). Rows are grouped via
+          the shared statusToLayer fold; declined items list their reason and each
+          group's subtotal is labelled Estimate (planned/declined) vs Charged
+          (completed) so staff never bill an estimate as a walkout charge. */}
+      {viewMode === 'by-status' && (() => {
+        const grouped = groupTreatmentsByStatusLayer(treatments);
+        const groups: { layer: 'proposed' | 'completed' | 'declined'; items: Treatment[] }[] = [
+          { layer: 'proposed', items: grouped.planned },
+          { layer: 'completed', items: grouped.completed },
+          { layer: 'declined', items: grouped.declined },
+        ];
+        const sumOf = (items: Treatment[]) => items.reduce((s, t) => s + (t.priceAmount ?? 0), 0);
+        const visible = groups.filter((g) => g.items.length > 0);
+        return (
+          <div data-testid="treatment-presentation" className="overflow-auto max-h-[450px] px-4 py-3 space-y-4">
+            {visible.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No treatments to present for this visit.</p>
+            ) : (
+              visible.map(({ layer, items }) => (
+                <section key={layer} aria-label={getLayerLabel(layer)}>
+                  <div
+                    data-testid={`status-group-${layer}`}
+                    className="flex items-center justify-between border-b border-border/40 pb-1 mb-2"
+                  >
+                    <span className="text-sm font-semibold">
+                      {getLayerLabel(layer)}{' '}
+                      <span className="font-normal text-muted-foreground tabular-nums">({items.length})</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {layer === 'completed' ? 'Charged ' : 'Estimate '}
+                      {CURRENCY_SYMBOL}
+                      {sumOf(items).toLocaleString(APP_LOCALE)}
+                    </span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {items.map((t) => (
+                      <li key={t.id} className="flex items-start justify-between gap-3 text-sm">
+                        <div className="min-w-0">
+                          <span className="font-medium tabular-nums mr-2">#{t.toothNumber ?? '—'}</span>
+                          <span className="text-muted-foreground">{t.description || '—'}</span>
+                          {t.cdtCode && (
+                            <span className="ml-2 rounded bg-muted px-1 text-xs text-muted-foreground tabular-nums">
+                              {t.cdtCode}
+                            </span>
+                          )}
+                          {layer === 'declined' && t.refusalReason && (
+                            <p className="text-xs italic text-muted-foreground/80">Reason: {t.refusalReason}</p>
+                          )}
+                        </div>
+                        <span className="tabular-nums text-muted-foreground">
+                          {CURRENCY_SYMBOL}
+                          {(t.priceAmount ?? 0).toLocaleString(APP_LOCALE)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

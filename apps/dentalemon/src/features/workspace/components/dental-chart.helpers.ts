@@ -162,6 +162,54 @@ export function getToothLayer(
 }
 
 /**
+ * The six treatment lifecycle statuses (matches the backend DentalTreatmentStatus).
+ * `diagnosed`/`planned` = pending; `performed`/`verified` = done; `declined` =
+ * patient refused; `dismissed` = struck from the plan (no longer on the chart).
+ */
+export type TreatmentLayerStatus =
+  | 'diagnosed'
+  | 'planned'
+  | 'performed'
+  | 'verified'
+  | 'declined'
+  | 'dismissed';
+
+/**
+ * P0-2 — SINGLE SOURCE OF TRUTH for the status→layer fold.
+ *
+ * The chart fill/edge AND the treatment list's group/badge derive from THIS one
+ * projection, so the two can differ in resolution (the list shows the raw 6
+ * statuses; the chart shows 4 layers) but can never contradict. Invariant: if the
+ * list shows a tooth has a Planned item, the chart paints that tooth Planned.
+ *
+ * Panel-locked fold:
+ *   diagnosed | planned   → 'proposed'   (pending — Planned)
+ *   performed | verified  → 'completed'  (done by us — billable/warranted)
+ *   declined              → 'declined'   (patient refused)
+ *   dismissed             → null         (off-chart; struck from the plan)
+ *
+ * A tooth with NO treatment record is 'baseline' (Existing) — handled by the
+ * absence of any status, not here. `deriveChartLayerSets` and the table list both
+ * consume this fold.
+ */
+export function statusToLayer(status: TreatmentLayerStatus): ChartLayer | null {
+  switch (status) {
+    case 'performed':
+    case 'verified':
+      return 'completed';
+    case 'diagnosed':
+    case 'planned':
+      return 'proposed';
+    case 'declined':
+      return 'declined';
+    case 'dismissed':
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
  * Resolve a tooth's effective chart layer from CUMULATIVE treatment status
  * (cross-visit sets fed by the patient treatment-plan aggregate), falling back to
  * the tooth's chart-native classification when no treatment record drives it.
@@ -179,6 +227,61 @@ export function resolveToothLayer(
   if (sets?.proposed?.has(toothNumber)) return 'proposed';
   if (sets?.declined?.has(toothNumber)) return 'declined';
   return getToothLayer(entryClassification);
+}
+
+/**
+ * P1-2 — the user-facing label for a chart layer (the demoted, renamed filter
+ * tabs). "Existing"/"Planned" replace the internal "Baseline"/"Proposed" to end
+ * the time/status double-encoding; "Completed" keeps the billing/walkout word and
+ * "Declined" stays. Tooth-level identity still uses the ChartLayer key.
+ */
+const LAYER_LABELS: Record<ChartLayer, string> = {
+  baseline: 'Existing',
+  proposed: 'Planned',
+  completed: 'Completed',
+  declined: 'Declined',
+};
+export function getLayerLabel(layer: ChartLayer): string {
+  return LAYER_LABELS[layer];
+}
+
+/**
+ * P1-1 — colour de-overload. The layer is encoded on the tooth EDGE
+ * (solid / dashed / none) in a NEUTRAL colour, so the fill stays the sole owner of
+ * clinical-state hue and lemon (`--primary`) is reserved for interaction
+ * (selection ring, active filter, CTA). Returns a CSS `outline` shorthand, or
+ * undefined when the fill alone carries the tooth (completed / baseline / existing).
+ *
+ *   proposed (this visit) → neutral dashed  (intended work, no competing hue)
+ *   proposed (carried)    → amber dashed     (the one hue exception — aging pending)
+ *   declined              → gray solid        (pairs with the diagonal hatch texture)
+ *   completed / baseline  → undefined         (fill owns it; "realized" reads via fill)
+ */
+const PROPOSED_EDGE_NEUTRAL = '#475569'; // slate-600 — legible on white AND in grayscale
+export function getLayerOutline(
+  layer: ChartLayer,
+  opts: { carriedOver: boolean },
+): string | undefined {
+  if (layer === 'proposed') {
+    return opts.carriedOver
+      ? '2px dashed #B8860A' // amber — carried over from a prior visit (salient)
+      : `1.5px dashed ${PROPOSED_EDGE_NEUTRAL}`;
+  }
+  if (layer === 'declined') {
+    return '1.5px solid #9CA3AF'; // gray — declined (with hatch texture)
+  }
+  return undefined; // completed / baseline — fill carries the tooth
+}
+
+/**
+ * P1-3 — colour-vision safety. caries-red (#FF3B30) and fractured-orange
+ * (#FF9500) collapse under protanopia (caries misread as fracture — a clinical
+ * miss). These states need a redundant NON-colour mark (stipple) so they stay
+ * distinguishable in grayscale / for CVD users. `missing` (dashed) and `declined`
+ * (hatch) already encode redundantly; this extends that discipline.
+ */
+export function stateNeedsCvdMark(state: ToothState): boolean {
+  return state === 'caries' || state === 'fractured';
 }
 
 /**

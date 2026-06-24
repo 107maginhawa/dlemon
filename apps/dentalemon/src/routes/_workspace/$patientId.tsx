@@ -507,6 +507,7 @@ function WorkspacePage() {
             onSelectTooth={selectTooth}
             panelOpen={false}
             patientDateOfBirth={patientProfile?.dateOfBirth}
+            openVisitId={openVisit?.id}
             completedToothNumbers={chartLayers.completed}
             proposedToothNumbers={chartLayers.proposed}
             declinedToothNumbers={chartLayers.declined}

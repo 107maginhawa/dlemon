@@ -16,8 +16,110 @@ import {
   universalToFdi,
   buildToothMap,
   getToothFillColor,
+  statusToLayer,
+  getLayerOutline,
+  stateNeedsCvdMark,
+  getLayerLabel,
   type ToothState,
 } from './dental-chart.helpers';
+
+// ─── getLayerLabel (P1-2: rename tabs → neutral filters) ───────────────────
+// The status tabs are demoted to neutral show/hide filters and renamed to the
+// clinical-provenance vocabulary. "Existing" (was Baseline) and "Planned" (was
+// Proposed) end the time/status double-encoding; "Completed" (B's billing
+// muscle-memory word) and "Declined" stay.
+
+describe('getLayerLabel', () => {
+  test('baseline reads as "Existing" (provenance, not the internal "Baseline")', () => {
+    expect(getLayerLabel('baseline')).toBe('Existing');
+  });
+  test('proposed reads as "Planned" (ends the time/status double-encoding)', () => {
+    expect(getLayerLabel('proposed')).toBe('Planned');
+  });
+  test('completed keeps the billing/walkout word "Completed"', () => {
+    expect(getLayerLabel('completed')).toBe('Completed');
+  });
+  test('declined stays "Declined"', () => {
+    expect(getLayerLabel('declined')).toBe('Declined');
+  });
+});
+
+// ─── getLayerOutline (P1-1: colour de-overload) ────────────────────────────
+// State owns the fill HUE; the layer is encoded on the EDGE (solid/dashed/hatch)
+// in a NEUTRAL colour — never lemon. Lemon (--primary) is reserved for
+// interaction (selection ring, active filter, CTA), so the proposed edge must not
+// borrow it. Carried-over keeps its salient amber dash (the one hue exception);
+// declined stays gray.
+
+describe('getLayerOutline', () => {
+  test('proposed (this-visit) is a dashed edge in a NEUTRAL colour — never lemon/--primary', () => {
+    const outline = getLayerOutline('proposed', { carriedOver: false });
+    expect(outline).toContain('dashed');
+    // The lemon-overload bug: proposed used var(--primary) which resolves to lemon.
+    expect(outline).not.toContain('--primary');
+    expect(outline?.toLowerCase()).not.toContain('ffe97d'); // lemon hex
+  });
+
+  test('carried-over proposed keeps the salient amber dash (the one hue exception)', () => {
+    const outline = getLayerOutline('proposed', { carriedOver: true });
+    expect(outline).toContain('dashed');
+    expect(outline?.toUpperCase()).toContain('B8860A'); // amber
+  });
+
+  test('declined is a solid gray edge (pairs with the hatch texture)', () => {
+    const outline = getLayerOutline('declined', { carriedOver: false });
+    expect(outline).toContain('solid');
+  });
+
+  test('completed and baseline carry no competing edge — fill owns them', () => {
+    expect(getLayerOutline('completed', { carriedOver: false })).toBeUndefined();
+    expect(getLayerOutline('baseline', { carriedOver: false })).toBeUndefined();
+  });
+});
+
+// ─── stateNeedsCvdMark (P1-3: colour-vision-safety redundancy) ──────────────
+// caries-red (#FF3B30) and fractured-orange (#FF9500) collapse under protanopia —
+// a clinical miss (caries read as fracture). These states need a redundant
+// non-colour mark (stipple) so they stay distinguishable in grayscale/CVD.
+
+describe('stateNeedsCvdMark', () => {
+  test('caries and fractured need a redundant non-colour mark', () => {
+    expect(stateNeedsCvdMark('caries')).toBe(true);
+    expect(stateNeedsCvdMark('fractured')).toBe(true);
+  });
+
+  test('states that are already colour-safe do not', () => {
+    expect(stateNeedsCvdMark('healthy')).toBe(false);
+    expect(stateNeedsCvdMark('filled')).toBe(false);
+    expect(stateNeedsCvdMark('crown')).toBe(false);
+  });
+});
+
+// ─── statusToLayer (P0-2: single source of truth) ──────────────────────────
+// The chart layer and the treatment-list group/badge derive from the SAME fold
+// of treatment status, so they can differ in resolution but never contradict.
+// Mapping (panel-locked): performed|verified → completed, diagnosed|planned →
+// proposed, declined → declined, dismissed → off-chart (null).
+
+describe('statusToLayer', () => {
+  test('performed and verified fold to the completed layer', () => {
+    expect(statusToLayer('performed')).toBe('completed');
+    expect(statusToLayer('verified')).toBe('completed');
+  });
+
+  test('diagnosed and planned fold to the proposed layer', () => {
+    expect(statusToLayer('diagnosed')).toBe('proposed');
+    expect(statusToLayer('planned')).toBe('proposed');
+  });
+
+  test('declined folds to the declined layer', () => {
+    expect(statusToLayer('declined')).toBe('declined');
+  });
+
+  test('dismissed is off-chart (null) — it never paints a tooth', () => {
+    expect(statusToLayer('dismissed')).toBeNull();
+  });
+});
 
 // ─── isValidFdiNumber ──────────────────────────────────────────────────────
 

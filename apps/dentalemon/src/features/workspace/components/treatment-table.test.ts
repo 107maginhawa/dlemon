@@ -18,8 +18,40 @@ import { render, screen, cleanup, renderHook, waitFor } from '@testing-library/r
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { freshClientWithMutations, makeWrapper as makeWrapperBase, jsonResponse } from '@/test-utils';
-import { TreatmentTable } from './treatment-table';
+import { TreatmentTable, groupTreatmentsByStatusLayer } from './treatment-table';
 import { useUpdateTreatment } from '../hooks/use-update-treatment';
+
+// ── P2: by-status presentation grouping ───────────────────────────────────
+// The treatment-plan presentation view groups the SAME treatments by status
+// phase, folded through statusToLayer (the single source of truth shared with the
+// chart). Planned = diagnosed|planned, Completed = performed|verified, Declined =
+// declined; dismissed is struck from the plan (omitted, like off-chart).
+
+describe('groupTreatmentsByStatusLayer (P2)', () => {
+  const t = (id: string, status: string) =>
+    ({ id, visitId: 'v1', toothNumber: 11, status, priceAmount: 100 }) as Parameters<
+      typeof groupTreatmentsByStatusLayer
+    >[0][number];
+
+  test('folds statuses into planned / completed / declined via statusToLayer', () => {
+    const g = groupTreatmentsByStatusLayer([
+      t('a', 'diagnosed'),
+      t('b', 'planned'),
+      t('c', 'performed'),
+      t('d', 'verified'),
+      t('e', 'declined'),
+    ]);
+    expect(g.planned.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(g.completed.map((x) => x.id)).toEqual(['c', 'd']);
+    expect(g.declined.map((x) => x.id)).toEqual(['e']);
+  });
+
+  test('dismissed treatments are struck from the presented plan (omitted)', () => {
+    const g = groupTreatmentsByStatusLayer([t('a', 'planned'), t('z', 'dismissed')]);
+    expect(g.planned.map((x) => x.id)).toEqual(['a']);
+    expect([...g.planned, ...g.completed, ...g.declined].some((x) => x.id === 'z')).toBe(false);
+  });
+});
 
 const _toastError = mock(() => {});
 mock.module('sonner', () => ({ toast: { error: _toastError, success: mock(() => {}) } }));
@@ -288,6 +320,39 @@ describe('TreatmentTable — Phase 3', () => {
     expect(screen.getByText(/Crown \(PFM\)/i)).not.toBeNull();
   });
 
+  // [P0-2] Sync contradiction fix: carried-over rows used to render a flat gray
+  // badge while the SAME teeth wear a salient amber ring on the chart — the chart
+  // said "urgent", the list said "muted". The badge must carry the REAL status
+  // colour (de-emphasis comes from the row opacity + the Carried-Over section),
+  // so chart and list never contradict.
+  test('[P0-2] carried-over badge uses the real status colour, not flat gray', () => {
+    const carried = {
+      id: 't-carried-color',
+      visitId: 'v-prev',
+      toothNumber: 36,
+      cdtCode: 'D2710',
+      description: 'Carried Crown',
+      status: 'diagnosed' as const, // → proposed layer → amber ring on the chart
+      priceCents: 600000,
+      surfaces: null,
+      conditionCode: null,
+      carriedOver: true,
+    };
+    render(
+      React.createElement(TreatmentTable, {
+        treatments: [],
+        carriedOverItems: [carried],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    const badge = screen.getByText('diagnosed');
+    // Must NOT use the muted flat-gray that contradicted the chart's amber ring.
+    expect(badge.className).not.toContain('text-gray-500');
+    expect(badge.className).not.toContain('bg-gray-100');
+    // Must carry the real status colour (diagnosed → amber), same family as the chart.
+    expect(badge.className).toContain('amber');
+  });
+
   // FIX-002 coherence: once carry-over actually runs, the copied rows live in the
   // CURRENT visit (so they arrive in `treatments` with carriedOver=true) AND surface
   // in the plan-derived `carriedOverItems`. The table must render + total each such
@@ -323,6 +388,45 @@ describe('TreatmentTable — Phase 3', () => {
     const total = screen.getByTestId('grand-total-row').textContent ?? '';
     expect(total).toContain('6,000');
     expect(total).not.toContain('12,000');
+  });
+});
+
+// ── P2: by-status presentation view (toggle) ──────────────────────────────────
+
+describe('by-status presentation view (P2)', () => {
+  const PLANNED = { id: 'p1', visitId: 'v-1', toothNumber: 11, status: 'planned' as const, priceAmount: 1000, currency: 'PHP', createdAt: '2024-01-10T09:00:00Z', description: 'Composite' };
+  const DONE = { id: 'd1', visitId: 'v-1', toothNumber: 24, status: 'performed' as const, priceAmount: 4000, currency: 'PHP', createdAt: '2024-01-10T09:00:00Z', description: 'Crown' };
+  const DECLINED = { id: 'x1', visitId: 'v-1', toothNumber: 36, status: 'declined' as const, priceAmount: 2000, currency: 'PHP', createdAt: '2024-01-10T09:00:00Z', description: 'Extraction', refusalReason: 'Wants to keep the tooth' };
+
+  test('defaults to the by-visit view (no status group headers)', () => {
+    render(
+      React.createElement(TreatmentTable, { visitId: 'v-1', treatments: [PLANNED, DONE, DECLINED] }),
+      { wrapper: makeWrapper() },
+    );
+    expect(screen.queryByTestId('status-group-proposed')).toBeNull();
+    expect(screen.getByTestId('view-by-status-btn')).not.toBeNull();
+  });
+
+  test('switching to By Status groups rows under Planned / Completed / Declined headers', async () => {
+    const user = userEvent.setup();
+    render(
+      React.createElement(TreatmentTable, { visitId: 'v-1', treatments: [PLANNED, DONE, DECLINED] }),
+      { wrapper: makeWrapper() },
+    );
+    await user.click(screen.getByTestId('view-by-status-btn'));
+    expect(screen.getByTestId('status-group-proposed').textContent).toMatch(/Planned/);
+    expect(screen.getByTestId('status-group-completed').textContent).toMatch(/Completed/);
+    expect(screen.getByTestId('status-group-declined').textContent).toMatch(/Declined/);
+  });
+
+  test('declined rows in the presentation list their refusal reason (pre-auth completeness)', async () => {
+    const user = userEvent.setup();
+    render(
+      React.createElement(TreatmentTable, { visitId: 'v-1', treatments: [PLANNED, DECLINED] }),
+      { wrapper: makeWrapper() },
+    );
+    await user.click(screen.getByTestId('view-by-status-btn'));
+    expect(screen.getByText(/Wants to keep the tooth/i)).not.toBeNull();
   });
 });
 

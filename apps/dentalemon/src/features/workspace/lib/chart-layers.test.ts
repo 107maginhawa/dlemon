@@ -11,6 +11,7 @@
  */
 import { describe, test, expect } from 'bun:test';
 import { deriveChartLayerSets } from './chart-layers';
+import { statusToLayer } from '../components/dental-chart.helpers';
 import type { TreatmentPlanData, TreatmentPlanItem } from '../hooks/use-treatment-plan';
 
 const item = (over: Partial<TreatmentPlanItem>): TreatmentPlanItem => ({
@@ -105,5 +106,31 @@ describe('deriveChartLayerSets', () => {
     expect(sets.proposed.size).toBe(0);
     expect(sets.declined.size).toBe(0);
     expect(sets.carriedOver.size).toBe(0);
+  });
+
+  // P0-2 single-source-of-truth: the chart's layer sets and the treatment list's
+  // group/badge must derive from the SAME fold. Pin deriveChartLayerSets to the
+  // shared statusToLayer() projection so the two can never silently diverge —
+  // a tooth the list shows Planned is painted proposed by the chart, etc.
+  test('classifies each non-completed tooth into the layer statusToLayer() returns for its status', () => {
+    const sets = deriveChartLayerSets(
+      plan({
+        treatments: [
+          item({ toothNumber: 11, status: 'planned' }),   // → proposed
+          item({ toothNumber: 12, status: 'diagnosed' }), // → proposed
+          item({ toothNumber: 21, status: 'declined' }),  // → declined
+          item({ toothNumber: 22, status: 'dismissed' }), // → off-chart (null)
+        ],
+      }),
+    );
+    // statusToLayer is the contract; deriveChartLayerSets must agree with it.
+    expect(sets.proposed.has(11)).toBe(statusToLayer('planned') === 'proposed');
+    expect(sets.proposed.has(12)).toBe(statusToLayer('diagnosed') === 'proposed');
+    expect(sets.declined.has(21)).toBe(statusToLayer('declined') === 'declined');
+    // dismissed → off-chart: tooth 22 appears in NO layer set.
+    expect(statusToLayer('dismissed')).toBeNull();
+    expect(sets.proposed.has(22)).toBe(false);
+    expect(sets.declined.has(22)).toBe(false);
+    expect(sets.completed.has(22)).toBe(false);
   });
 });
