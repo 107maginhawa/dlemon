@@ -42,17 +42,17 @@ export { formatPaymentPlanSubtitle, formatLabOrderSubtitle, countPendingTreatmen
 function DashboardSkeleton() {
   return (
     <div className="flex flex-col gap-4" data-testid="dashboard-skeleton" aria-busy="true" aria-label="Loading dashboard">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="rounded-2xl h-32" />
         ))}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="rounded-2xl h-24" />
         ))}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
         <Skeleton className="rounded-2xl h-48" />
         <Skeleton className="rounded-2xl h-48" />
       </div>
@@ -143,7 +143,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
       {!isLoading && !error && (
         <>
           {/* Row 1: Schedule, Collections, Overdue */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Today's Schedule */}
             <MetricCard
               title="Today's Schedule"
@@ -256,7 +256,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
           </div>
 
           {/* Row 2: Treatments, Plans, Lab */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* FR0.3: Pending Treatments (proxy via scheduled appointments) */}
             <MetricCard
               title="Pending Treatments"
@@ -309,7 +309,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
           </div>
 
           {/* Row 3: Tomorrow Preview + Reminders */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
             {/* Tomorrow Preview */}
             <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
               <div className="flex items-center justify-between mb-3">

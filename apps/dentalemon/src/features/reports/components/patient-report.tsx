@@ -38,15 +38,15 @@ export function PatientReport({ branchId }: PatientReportProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Patient Report</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="date"
             aria-label="Start date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="h-9 rounded-lg border border-border px-3 text-sm bg-background"
+            className="h-11 rounded-lg border border-border px-3 text-sm bg-background"
           />
           <span className="text-sm text-muted-foreground">to</span>
           <input
@@ -54,7 +54,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
             aria-label="End date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="h-9 rounded-lg border border-border px-3 text-sm bg-background"
+            className="h-11 rounded-lg border border-border px-3 text-sm bg-background"
           />
           <button
             type="button"
@@ -71,7 +71,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
       ) : isLoading ? (
         <>
           {/* Stats cards skeleton — matches the 3-up card grid below */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="rounded-xl border border-border p-4">
                 <Skeleton className="h-3 w-28" />
@@ -94,7 +94,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
       ) : (
         <>
           {/* Stats cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
                 Active Patients
@@ -119,7 +119,7 @@ export function PatientReport({ branchId }: PatientReportProps) {
           </div>
 
           {/* Patient list table */}
-          <div className="rounded-xl border border-border">
+          <div className="rounded-xl border border-border overflow-x-auto">
             <div className="px-4 py-3 border-b">
               <h3 className="text-sm font-semibold">
                 All Patients ({patients.length})

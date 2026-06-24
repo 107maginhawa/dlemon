@@ -111,12 +111,15 @@ function OverviewTab({ patientId }: { patientId: string }) {
   const { visits, isLoading } = useVisits({ patientId, branchId });
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Household / guarantor — P1-27 */}
-      <HouseholdCard patientId={patientId} />
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+      {/* Facts rail: household + insurance pinned beside the visit history at desktop */}
+      <div className="flex flex-col gap-4">
+        {/* Household / guarantor — P1-27 */}
+        <HouseholdCard patientId={patientId} />
 
-      {/* Insurance profiles — PP-2 (ISSUE-036) */}
-      <InsuranceCard patientId={patientId} />
+        {/* Insurance profiles — PP-2 (ISSUE-036) */}
+        <InsuranceCard patientId={patientId} />
+      </div>
 
       {/* Recent Visits — PROF-02 */}
       <div
@@ -377,7 +380,7 @@ export function PatientProfilePage({ patientId }: PatientProfilePageProps) {
         </button>
       </div>
 
-      <div className="p-6 flex flex-col gap-4 max-w-4xl mx-auto w-full">
+      <div className="p-6 flex flex-col gap-4 max-w-6xl mx-auto w-full">
 
         {/* Profile header card — PROF-01 */}
         <div className="rounded-xl border border-border bg-card p-5">
