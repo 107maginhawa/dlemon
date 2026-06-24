@@ -205,7 +205,11 @@ function VisitChartCard({
           <DentalChart
             teeth={teeth}
             onSelectTooth={isActive ? onSelectTooth : undefined}
-            toothSize={isActive ? 'md' : 'xs'}
+            // The carousel slide height is clamped (min(46vh,420px)); 'md' teeth
+            // were sized for the old fixed 560px card and overflowed/clipped under
+            // the clamp. 'sm' lets the full odontogram (crown + root + surfaces)
+            // fit the clamped height — scale the teeth with the card, don't crop.
+            toothSize={isActive ? 'sm' : 'xs'}
             showLegend={false}
             // P1-3: the open card (the working chart, rendered at 'md') gets the
             // compact always-on state key; small historical 'xs' cards stay clean.
@@ -350,6 +354,12 @@ export function TimelineCarousel({
       label: formatDate(v.activatedAt ?? v.createdAt),
     }));
 
+  // New Visit shows only when the most-recent card is centered — i.e. there is no
+  // newer card peeking on the right, so the empty right gutter is free to host it.
+  // Off the last card it's hidden; the sticky context strip carries Start-new-visit
+  // / the open-visit blocker in every state, so reachability is never lost.
+  const onLastCard = sorted.length > 0 && activeIndex === sorted.length - 1;
+
   return (
     <div
       data-testid="timeline-carousel"
@@ -427,42 +437,49 @@ export function TimelineCarousel({
         })}
       </Swiper>
 
-      {/* Item 5: New Visit is a solid, always-visible button — never a faint
-          dead tile. ENABLED → full-opacity lemon CTA, clearly inviting. DISABLED
-          (one-active-visit rule: an open visit exists, 409 ACTIVE_VISIT_EXISTS) →
-          a distinct-but-legible muted button with the reason rendered ON-SURFACE
-          (not hover-only, since touch has no hover) so the dentist instantly sees
-          "close the open visit first". */}
-      <div className="flex flex-col items-center gap-1 self-center">
-        <button
-          type="button"
-          data-testid="new-visit-btn"
-          onClick={onNewVisit}
-          disabled={!!newVisitDisabledHint}
-          aria-disabled={!!newVisitDisabledHint}
-          className={
-            newVisitDisabledHint
-              ? 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-border bg-muted px-5 py-2.5 text-sm font-semibold text-muted-foreground cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-              : 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-lemon px-5 py-2.5 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors'
-          }
-          aria-label="Start new visit"
+      {/* Item 5 (refined): New Visit lives in the empty RIGHT GUTTER beside the
+          carousel, shown ONLY when the most-recent card is centered (no next card
+          peeks on the right). Off the last card it's hidden — the sticky context
+          strip carries Start-new-visit / the open-visit blocker in every state, so
+          nothing is lost and the centered-below row is reclaimed.
+          ENABLED → full-opacity lemon CTA. DISABLED (one-active-visit rule: an open
+          visit exists, 409 ACTIVE_VISIT_EXISTS) → a distinct-but-legible muted
+          button with the reason rendered ON-SURFACE (touch has no hover). */}
+      {onLastCard && (
+        <div
+          data-testid="new-visit-gutter"
+          className="absolute right-1 top-1/2 z-10 flex w-28 -translate-y-1/2 flex-col items-center gap-1"
         >
-          {newVisitDisabledHint ? (
-            <Lock className="h-4 w-4" aria-hidden />
-          ) : (
-            <span className="text-lg leading-none">+</span>
-          )}
-          New Visit
-        </button>
-        {newVisitDisabledHint && (
-          <span
-            data-testid="new-visit-disabled-hint"
-            className="max-w-[16rem] text-center text-xs leading-tight text-muted-foreground"
+          <button
+            type="button"
+            data-testid="new-visit-btn"
+            onClick={onNewVisit}
+            disabled={!!newVisitDisabledHint}
+            aria-disabled={!!newVisitDisabledHint}
+            className={
+              newVisitDisabledHint
+                ? 'inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-muted-foreground cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                : 'inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl bg-lemon px-4 py-2.5 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors'
+            }
+            aria-label="Start new visit"
           >
-            {newVisitDisabledHint}
-          </span>
-        )}
-      </div>
+            {newVisitDisabledHint ? (
+              <Lock className="h-4 w-4" aria-hidden />
+            ) : (
+              <span className="text-lg leading-none">+</span>
+            )}
+            New Visit
+          </button>
+          {newVisitDisabledHint && (
+            <span
+              data-testid="new-visit-disabled-hint"
+              className="text-center text-xs leading-tight text-muted-foreground"
+            >
+              {newVisitDisabledHint}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

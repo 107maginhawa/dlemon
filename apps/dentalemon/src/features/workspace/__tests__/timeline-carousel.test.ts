@@ -446,6 +446,34 @@ describe('TimelineCarousel (Swiper)', () => {
       const hint = screen.getByTestId('new-visit-disabled-hint');
       expect(hint.textContent).toMatch(/finish or discard the open visit/i);
     });
+
+    // Refined placement: New Visit only occupies the right gutter when the
+    // most-recent card is centered. Initial render centers the last card → shown.
+    test('shows the New Visit gutter on initial render (last/most-recent card centered)', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.getByTestId('new-visit-gutter')).not.toBeNull();
+    });
+
+    // ...and is HIDDEN once an older card is centered (a newer card peeks right).
+    test('hides New Visit when an older (non-last) card is centered', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      // Slide to index 0 (oldest) — no longer the last card.
+      act(() => {
+        (getCaptures().onSlideChange as (s: { activeIndex: number }) => void)?.({ activeIndex: 0 });
+      });
+      expect(screen.queryByTestId('new-visit-gutter')).toBeNull();
+      expect(screen.queryByTestId('new-visit-btn')).toBeNull();
+    });
   });
 
   // ── P0-1: cumulative scope binds to the OPEN visit, not the centered card ──
