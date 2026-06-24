@@ -427,28 +427,42 @@ export function TimelineCarousel({
         })}
       </Swiper>
 
-      {/* One-active-visit rule: when the patient already has an open (active/draft)
-          visit, starting another is forbidden (409 ACTIVE_VISIT_EXISTS). Disable the
-          affordance with a reason instead of inviting a guaranteed-fail click —
-          the open visit is already auto-selected; resume it. */}
-      <button
-        type="button"
-        data-testid="new-visit-btn"
-        onClick={onNewVisit}
-        disabled={!!newVisitDisabledHint}
-        aria-disabled={!!newVisitDisabledHint}
-        title={newVisitDisabledHint}
-        className="self-center rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 px-6 py-3 opacity-60 hover:opacity-100 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
-        aria-label="Start new visit"
-      >
-        <span className="text-2xl text-muted-foreground leading-none">+</span>
-        <span className="text-xs text-muted-foreground font-medium">New Visit</span>
+      {/* Item 5: New Visit is a solid, always-visible button — never a faint
+          dead tile. ENABLED → full-opacity lemon CTA, clearly inviting. DISABLED
+          (one-active-visit rule: an open visit exists, 409 ACTIVE_VISIT_EXISTS) →
+          a distinct-but-legible muted button with the reason rendered ON-SURFACE
+          (not hover-only, since touch has no hover) so the dentist instantly sees
+          "close the open visit first". */}
+      <div className="flex flex-col items-center gap-1 self-center">
+        <button
+          type="button"
+          data-testid="new-visit-btn"
+          onClick={onNewVisit}
+          disabled={!!newVisitDisabledHint}
+          aria-disabled={!!newVisitDisabledHint}
+          className={
+            newVisitDisabledHint
+              ? 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-border bg-muted px-5 py-2.5 text-sm font-semibold text-muted-foreground cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+              : 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-lemon px-5 py-2.5 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors'
+          }
+          aria-label="Start new visit"
+        >
+          {newVisitDisabledHint ? (
+            <Lock className="h-4 w-4" aria-hidden />
+          ) : (
+            <span className="text-lg leading-none">+</span>
+          )}
+          New Visit
+        </button>
         {newVisitDisabledHint && (
-          <span data-testid="new-visit-disabled-hint" className="text-[10px] text-muted-foreground/80 max-w-[10rem] text-center leading-tight">
+          <span
+            data-testid="new-visit-disabled-hint"
+            className="max-w-[16rem] text-center text-xs leading-tight text-muted-foreground"
+          >
             {newVisitDisabledHint}
           </span>
         )}
-      </button>
+      </div>
     </div>
   );
 }

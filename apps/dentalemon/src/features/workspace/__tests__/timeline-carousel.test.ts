@@ -409,6 +409,43 @@ describe('TimelineCarousel (Swiper)', () => {
       await user.click(screen.getByTestId('new-visit-btn'));
       expect(clicked).toBe(true);
     });
+
+    // ── Item 5: solid, always-visible New Visit affordance ──────────────────
+    test('enabled: full-opacity solid lemon button, not a faint opacity-60 dead tile', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        // no newVisitDisabledHint → enabled
+      });
+      const btn = screen.getByTestId('new-visit-btn');
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
+      // solid inviting CTA in the lemon accent — never the faint resting opacity.
+      expect(btn.className).toContain('bg-lemon');
+      expect(btn.className).not.toContain('opacity-60');
+      // legible tap target
+      expect(btn.className).toContain('min-h-[44px]');
+    });
+
+    test('disabled: legible (not opacity-60) with the reason rendered ON-SURFACE', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        newVisitDisabledHint: 'Finish or discard the open visit to start a new one.',
+      });
+      const btn = screen.getByTestId('new-visit-btn');
+      expect((btn as HTMLButtonElement).disabled).toBe(true);
+      // distinct but legible — a muted surface, NOT the faint opacity-60/40 dead tile.
+      expect(btn.className).not.toContain('opacity-60');
+      expect(btn.className).not.toContain('opacity-40');
+      expect(btn.className).toContain('bg-muted');
+      // the reason is on-surface (visible text node), not hover/title-only.
+      const hint = screen.getByTestId('new-visit-disabled-hint');
+      expect(hint.textContent).toMatch(/finish or discard the open visit/i);
+    });
   });
 
   // ── P0-1: cumulative scope binds to the OPEN visit, not the centered card ──
