@@ -8,6 +8,8 @@
  */
 
 import { describe, test, expect, afterEach, beforeEach, mock } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
 import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -81,6 +83,33 @@ describe('TimelineCarousel (Swiper)', () => {
           onNewVisit: () => {},
         });
       expect(screen.getByTestId('timeline-carousel')).not.toBeNull();
+    });
+
+    // Item 2: the carousel must not claim >~45% of screen height. The fixed
+    // 560px slide is replaced by a viewport clamp in CSS and the carousel's own
+    // vertical padding is reduced from py-4.
+    test('carousel root uses reduced vertical padding (not py-4)', () => {
+      renderCarousel({
+          visits: THREE_VISITS,
+          patientId: 'test-patient',
+          onSelectVisit: () => {},
+          onNewVisit: () => {},
+        });
+      const root = screen.getByTestId('timeline-carousel');
+      expect(root.className).not.toContain('py-4');
+    });
+
+    test('globals.css clamps the swiper slide height to a viewport-relative value', () => {
+      const css = readFileSync(
+        resolvePath(import.meta.dir, '../../../styles/globals.css'),
+        'utf8',
+      );
+      const swiperSlide = css.match(/\.dental-swiper \.swiper-slide \{[^}]*\}/);
+      expect(swiperSlide).not.toBeNull();
+      const block = swiperSlide![0];
+      // No fixed 560px height; uses a clamp against the viewport (~min(46vh,420px)).
+      expect(block).not.toContain('560px');
+      expect(block).toMatch(/min\(\s*46vh\s*,\s*420px\s*\)/);
     });
   });
 

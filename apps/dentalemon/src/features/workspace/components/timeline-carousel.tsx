@@ -338,7 +338,7 @@ export function TimelineCarousel({
   return (
     <div
       data-testid="timeline-carousel"
-      className="flex flex-col gap-4 py-4 transition-all duration-300 relative"
+      className="flex flex-col gap-2 py-2 transition-all duration-300 relative"
       style={{ width: panelOpen ? 'calc(100% - 340px)' : '100%' }}
     >
       {/* P1-14: Compare button — only shown when 2+ visits exist */}
