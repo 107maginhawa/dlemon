@@ -33,4 +33,12 @@ A second, related gap: the chart layers and the treatment list each folded treat
 ## Not in scope (deliberately deferred)
 
 - **Unifying the chart's layer filters with the table's "Hide Completed" into one control.** Panel-endorsed, but it is a lift-state-to-route refactor entangled with the (now-done) filter-tab rework, with real regression surface on a clinical surface and modest launch value. Deferred to a dedicated follow-up; the chart filters and table completed-toggle remain independent for now.
+
+  **Why a naive merge is wrong (not just risky), discovered 2026-06-24:** the two filters have *opposite, intentionally-correct defaults*. The chart's `visibleLayers` defaults to **completed shown** (the odontogram is a reference — the full tooth history should be visible). The table's `showCompleted` defaults to **completed hidden** (the walkout list declutters to pending/to-bill work, and never goes empty via the `effectiveShowCompleted = showCompleted || !hasPending` guard). They share the word "completed" but encode different intents — "which layers do I want on the chart" vs "declutter my working list." Collapsing them into one flag forces a single default and degrades one surface (cluttered walkout list, or completed teeth hidden on the reference chart). The independent design is therefore *correct*, not debt.
+
+  **Revisit triggers (address when ANY fires — not on a calendar):**
+  1. A workspace layout co-locates the chart filter and table filter in one toolbar, so "one control" stops being a forced merge.
+  2. Real dentist feedback reports the cross-surface incoherence (today it is theoretical).
+  3. A global view-mode concept lands (Planning / Walkout / History) — completed-visibility becomes a mode property and unification falls out for free.
+  4. The write-time chart-sync migration (below) happens — it rewrites this filter plumbing anyway, so fold the unify in then instead of as a standalone risky refactor.
 - **Write-time chart sync** remains the durable end state per ADR-008; this ADR does not change that trajectory. `statusToLayer` is the natural seam to reuse when that migration happens.
