@@ -109,7 +109,10 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // iPad/desktop refine: a 4-col table for a handful of staff sprawled across
+    // the full desktop width. Cap the block (mirrors the calendar max-w cap) so
+    // columns stay readable; header + table cap together, left-aligned.
+    <div className="flex flex-col gap-4 max-w-5xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -158,7 +161,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
 
       {/* Table */}
       {!isLoading && members.length > 0 && (
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="rounded-xl border border-border overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-secondary/50">

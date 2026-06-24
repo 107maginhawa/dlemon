@@ -74,14 +74,14 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Revenue Report</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input type="date" aria-label="Start date" value={startDate} onChange={e => setStartDate(e.target.value)}
-            className="h-9 rounded-lg border border-border px-3 text-sm bg-background" />
+            className="h-11 rounded-lg border border-border px-3 text-sm bg-background" />
           <span className="text-sm text-muted-foreground">to</span>
           <input type="date" aria-label="End date" value={endDate} onChange={e => setEndDate(e.target.value)}
-            className="h-9 rounded-lg border border-border px-3 text-sm bg-background" />
+            className="h-11 rounded-lg border border-border px-3 text-sm bg-background" />
           <button type="button" onClick={handleExportCSV}
             className="h-11 px-4 rounded-lg border border-border text-sm hover:bg-secondary transition-colors">
             Export CSV
@@ -92,7 +92,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
       {loading ? (
         <>
           {/* Summary cards skeleton — matches the 4-up card grid below */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="rounded-xl border border-border p-4">
                 <Skeleton className="h-3 w-24" />
@@ -114,7 +114,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
         </>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Billed</p>
               <p className="text-2xl font-bold mt-1">{formatCents(totalBilled)}</p>
@@ -133,7 +133,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border">
+          <div className="rounded-xl border border-border overflow-x-auto">
             <div className="px-4 py-3 border-b">
               <h3 className="text-sm font-semibold">Daily Revenue</h3>
             </div>
@@ -163,7 +163,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
           </div>
 
           {/* RPT-01: individual invoices table — click a row to drilldown */}
-          <div className="rounded-xl border border-border">
+          <div className="rounded-xl border border-border overflow-x-auto">
             <div className="px-4 py-3 border-b">
               <h3 className="text-sm font-semibold">Invoices</h3>
             </div>

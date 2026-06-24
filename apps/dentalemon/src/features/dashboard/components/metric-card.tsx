@@ -44,15 +44,15 @@ export function MetricCard({
   return (
     <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground truncate min-w-0">
           {title}
         </span>
         {action && (
           <button
             type="button"
             onClick={action.onClick}
-            className="text-xs font-medium text-lemon-foreground hover:underline"
+            className="text-xs font-medium text-lemon-foreground hover:underline shrink-0"
           >
             {action.label}
           </button>

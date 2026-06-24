@@ -45,15 +45,15 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Treatment Report</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="date"
             aria-label="Start date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="h-9 rounded-lg border border-border px-3 text-sm bg-background"
+            className="h-11 rounded-lg border border-border px-3 text-sm bg-background"
           />
           <span className="text-sm text-muted-foreground">to</span>
           <input
@@ -61,7 +61,7 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
             aria-label="End date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="h-9 rounded-lg border border-border px-3 text-sm bg-background"
+            className="h-11 rounded-lg border border-border px-3 text-sm bg-background"
           />
           <button
             type="button"
@@ -78,7 +78,7 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
       ) : isLoading ? (
         <>
           {/* Summary cards skeleton — matches the 3-up card grid below */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="rounded-xl border border-border p-4">
                 <Skeleton className="h-3 w-24" />
@@ -101,7 +101,7 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
       ) : (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
                 Unique CDT Codes
@@ -123,7 +123,7 @@ export function TreatmentReport({ branchId }: TreatmentReportProps) {
           </div>
 
           {/* CDT grouping table */}
-          <div className="rounded-xl border border-border">
+          <div className="rounded-xl border border-border overflow-x-auto">
             <div className="px-4 py-3 border-b">
               <h3 className="text-sm font-semibold">Treatments by CDT Code</h3>
             </div>

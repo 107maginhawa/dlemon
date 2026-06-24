@@ -34,26 +34,36 @@ export function SettingsPage({ role }: SettingsPageProps) {
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-6">Settings</h1>
 
-      <div role="tablist" aria-label="Settings" className="flex gap-1 mb-6 bg-secondary/50 rounded-xl p-1 w-fit flex-wrap">
-        {SETTINGS_PANELS.map((p) => (
-          <button
-            key={p.key}
-            role="tab"
-            id={`settings-tab-${p.key}`}
-            aria-selected={activeKey === p.key}
-            aria-controls={`settings-tabpanel-${p.key}`}
-            onClick={() => setActiveKey(p.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeKey === p.key ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {/* iPad/desktop refine: 13 sections wrapped to 4-5 pill rows at narrow
+          widths and left the desktop right-half empty. Below lg the nav is a
+          single horizontally-scrollable row; at lg it becomes a sticky left
+          rail so the wide column is used and the panel sits beside it. */}
+      <div className="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
+        <div
+          role="tablist"
+          aria-label="Settings"
+          className="flex gap-1 mb-6 overflow-x-auto bg-secondary/50 rounded-xl p-1 lg:mb-0 lg:flex-col lg:overflow-visible lg:bg-transparent lg:p-0 lg:self-start lg:sticky lg:top-6"
+        >
+          {SETTINGS_PANELS.map((p) => (
+            <button
+              key={p.key}
+              role="tab"
+              id={`settings-tab-${p.key}`}
+              aria-selected={activeKey === p.key}
+              aria-controls={`settings-tabpanel-${p.key}`}
+              onClick={() => setActiveKey(p.key)}
+              className={`flex items-center min-h-[44px] px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors lg:w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                activeKey === p.key ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
 
-      <div role="tabpanel" id={`settings-tabpanel-${activeKey}`} aria-labelledby={`settings-tab-${activeKey}`}>
-        <ActiveComponent />
+        <div role="tabpanel" id={`settings-tabpanel-${activeKey}`} aria-labelledby={`settings-tab-${activeKey}`} className="min-w-0">
+          <ActiveComponent />
+        </div>
       </div>
     </div>
   );
