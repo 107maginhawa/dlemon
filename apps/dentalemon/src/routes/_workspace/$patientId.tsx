@@ -505,7 +505,7 @@ function WorkspacePage() {
 
       {/* Carousel + table zone */}
       <div
-        className="flex-1 flex flex-col overflow-visible"
+        className="flex-1 flex flex-col min-h-0 overflow-visible"
         style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen) ? 340 : 0, transition: 'padding-right 300ms ease-out' }}
       >
         {/* Carousel section */}

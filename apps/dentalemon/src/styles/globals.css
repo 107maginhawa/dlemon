@@ -382,9 +382,12 @@ html.theme-white {
   --muted: 0 0% 100%;
   --muted-foreground: 0 0% 49%;  /* #7C7C7C */
 
-  /* Lines: outlines drawn black (NOT brown) by skin-line; plain base
-     borders stay a light hairline grey where skin-line doesn't reach. */
-  --line: 0 0% 7%;               /* #111 black */
+  /* Lines: skin-line draws ONE uniform soft hairline for every outlined
+     surface. Previously #111 black, which read as glaring hard boxes the
+     moment the skin repainted a border (tooth cells, allergy pill, modal
+     panels, segmented chips, profile tabs). A light neutral grey keeps the
+     soft-line identity without the heavy-box look. */
+  --line: 0 0% 80%;              /* #CCCCCC soft hairline */
   --border: 0 0% 90%;            /* #E6E6E6 */
   --input: 0 0% 90%;
 
@@ -446,13 +449,43 @@ html.skin-line .font-display {
   font-family: "Shantell Sans", var(--font-display);
 }
 
-/* Thin --line-colored outlines everywhere a border already exists; no shadow.
-   `currentline` is resolved from the --line token (HSL triplet). */
-html.skin-line [class*="border"],
-html.skin-line .card,
-html.skin-line [class*="Card"] {
+/* Surface outlines for the skin — SURGICAL, not blanket.
+   ─────────────────────────────────────────────────────────────────────────
+   Two rules that the old blanket version broke, and why they matter:
+
+   1. COLOR ONLY — never force `border-width`. The previous rule set
+      `border-width: 1px` on every `[class*="border"]`, which turned a
+      one-sided divider (`border-r`, `border-b-2`) into a full 4-side box
+      (tooth cells became black grids; underline tabs became boxes) and gave
+      `border-transparent` a visible edge. By recoloring only, a directional
+      border stays directional and a transparent border stays invisible.
+
+   2. RECOLOR ONLY THE DESIGN-SYSTEM TOKEN BORDER — never colored borders.
+      Targeting `[class*="border"]` also captured `border-red-200`,
+      `border-amber-200`, etc. and flattened them to the line color (the
+      allergy pill became a hard box). We scope to `.border-border` / `.border`
+      (the neutral token borders that SHOULD read as the skin hairline) and
+      leave hued borders to keep their own color.
+
+   The `--line` token is now a soft grey hairline (see theme-white), so every
+   outlined surface reads with ONE uniform, gentle weight — no glaring black. */
+html.skin-line :where(.border-border, .border):not([class*="border-transparent"]):not([class*="border-foreground"]):not([class*="border-red"]):not([class*="border-amber"]):not([class*="border-green"]):not([class*="border-yellow"]):not([class*="border-blue"]):not([class*="border-orange"]):not([class*="border-lemon"]):not([class*="border-destructive"]):not([class*="border-primary"]),
+html.skin-line :where(.card, [class*="Card"]) {
   border-color: hsl(var(--line));
-  border-width: 1px;
+}
+
+/* Alpha-scaled token borders (border-border/20, /30, /50, foreground/25 …)
+   are intentionally subtle structural hairlines — the tooth-cell divider, the
+   chart-card edge, the segmented-control container/header. They already render
+   their authored color at a reduced alpha (a faint grey), so the skin leaves
+   them ENTIRELY alone: no recolor (keeps their gentle alpha) and no width
+   change (keeps them one-sided). This is what stops the odontogram and the
+   segmented control from reading as a cluster of black boxes. */
+
+/* Flatten elevation under the skin (kept from the original soft-line look). */
+html.skin-line .card,
+html.skin-line [class*="Card"],
+html.skin-line [class*="border"] {
   box-shadow: none;
 }
 

@@ -259,9 +259,9 @@ export function PatientList({
       )}
 
       {!isError && !isLoading && filtered.length > 0 && (
-        <div className="flex flex-wrap gap-4">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(192px,max-content))] auto-rows-fr">
           {filtered.map((p) => (
-            <div key={p.id} className="relative flex flex-col">
+            <div key={p.id} className="relative flex flex-col h-full">
               {/* Bulk select checkbox */}
               {showBulkSelect && (
                 <label

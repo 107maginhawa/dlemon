@@ -79,7 +79,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           onClick(patient)
         }
       }}
-      className="relative flex flex-col rounded-xl bg-card border border-border hover:border-primary/60 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer overflow-hidden w-48"
+      className="relative flex flex-col rounded-xl bg-card border border-border hover:border-primary/60 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer overflow-hidden w-full h-full"
     >
       {/* Manila folder tab strip */}
       <div
