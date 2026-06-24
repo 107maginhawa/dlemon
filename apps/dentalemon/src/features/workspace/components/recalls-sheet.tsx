@@ -58,6 +58,20 @@ const STATUS_BADGE_CLASS: Record<RecallStatus, string> = {
 
 const RECALL_TYPES: RecallType[] = ['cleaning', 'checkup', 'treatment', 'other'];
 
+// 1.3: quick-fill chips. Pre-fill dueDate only — the SDK request type does not
+// expose intervalMonths, so recurrence is out of scope (plan scope guard).
+const INTERVAL_CHIPS = [3, 6, 12] as const;
+
+/** today + n months as a YYYY-MM-DD date-input value, clamping day-of-month
+ *  (e.g. Aug 31 + 6mo -> Feb 28). */
+function addMonths(base: Date, n: number): string {
+  const target = new Date(base.getFullYear(), base.getMonth() + n, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(base.getDate(), lastDay));
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${target.getFullYear()}-${p(target.getMonth() + 1)}-${p(target.getDate())}`;
+}
+
 const RECALL_TYPE_LABELS: Record<RecallType, string> = {
   cleaning: 'Cleaning',
   checkup: 'Check-up',
@@ -213,6 +227,19 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
                 <label className="text-xs text-muted-foreground" htmlFor="recall-due">
                   Due Date
                 </label>
+                {/* 1.3: interval chips pre-fill the date; the field stays editable. */}
+                <div className="flex gap-1">
+                  {INTERVAL_CHIPS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setFormDueDate(addMonths(new Date(), n))}
+                      className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:border-lemon hover:text-foreground transition-colors"
+                    >
+                      {n} mo
+                    </button>
+                  ))}
+                </div>
                 <input
                   id="recall-due"
                   type="date"
