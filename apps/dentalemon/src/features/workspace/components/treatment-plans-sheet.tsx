@@ -269,7 +269,7 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl h-[85dvh]"
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl max-h-[85dvh]"
       >
         {/* Radix supplies role=dialog on DialogContent; the test/E2E handle lives
             on this inner wrapper (the harness stubs Radix Content + drops props). */}
@@ -307,6 +307,9 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
               New plan
             </button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Plan-level documents you present to the patient and track through approval.
+          </p>
         </DialogHeader>
 
         {/* Plan list */}
