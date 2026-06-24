@@ -143,7 +143,7 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent
-        aria-describedby={undefined}
+        aria-describedby="occlusion-desc"
         className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl max-h-[85dvh]"
       >
         {/* Radix supplies role=dialog on DialogContent; the test/E2E handle lives
@@ -180,7 +180,7 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
               New Screening
             </button>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p id="occlusion-desc" className="text-xs text-muted-foreground">
             Record the bite relationship — Angle class, overjet/overbite, and orthodontic findings.
           </p>
         </DialogHeader>

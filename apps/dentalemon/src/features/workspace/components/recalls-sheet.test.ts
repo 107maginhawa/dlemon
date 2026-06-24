@@ -261,6 +261,19 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('3: the header purpose line renders with id="recalls-desc" (a11y describedby target)', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('recalls-sheet')).not.toBeNull());
+      const desc = document.getElementById('recalls-desc');
+      expect(desc).not.toBeNull();
+      expect(desc!.textContent).toMatch(/recare visits/i);
+    } finally {
+      f.restore();
+    }
+  });
+
   test('shows an error state when the recalls fetch fails', async () => {
     const original = global.fetch;
     global.fetch = mock(async () =>
