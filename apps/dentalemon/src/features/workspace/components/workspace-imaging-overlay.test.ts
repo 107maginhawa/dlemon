@@ -89,4 +89,35 @@ describe('WorkspaceImagingOverlay — image/file coherence', () => {
     );
     expect(screen.queryByTestId('image-unavailable')).toBeNull();
   });
+
+  // L3: a drilled-in viewer must be leavable without closing the whole overlay.
+  test('shows a "Back to images" control once an image is selected', async () => {
+    const user = userEvent.setup();
+    renderOverlay();
+    expect(screen.queryByTestId('imaging-back-btn')).toBeNull();
+    await user.click(await screen.findByText('pano.jpg'));
+    const back = await screen.findByTestId('imaging-back-btn');
+    await user.click(back);
+    await waitFor(() => expect(screen.getByText('Select an image to view')).not.toBeNull());
+    // overlay itself stays mounted
+    expect(screen.getByTestId('imaging-overlay')).not.toBeNull();
+  });
+});
+
+describe('WorkspaceImagingOverlay — empty canvas (L1/L2)', () => {
+  test('with zero images the canvas hosts an upload state, not the no-op "Select an image" prompt', async () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0 })) as unknown as typeof fetch;
+    render(
+      React.createElement(WorkspaceImagingOverlay, {
+        patientId: 'pat-1',
+        branchId: 'br-1',
+        currentVisitId: null,
+        open: true,
+        onClose: () => {},
+      }),
+      { wrapper: makeWrapper() },
+    );
+    await waitFor(() => expect(screen.getByTestId('imaging-empty-canvas')).not.toBeNull());
+    expect(screen.queryByText('Select an image to view')).toBeNull();
+  });
 });

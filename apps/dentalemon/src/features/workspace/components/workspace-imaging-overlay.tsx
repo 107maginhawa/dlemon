@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
-import { X } from 'lucide-react';
+import { ArrowLeft, Upload, X } from 'lucide-react';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { PatientImageList } from '@/features/imaging/components/patient-image-list';
 import { ImagingWorkspace } from '@/features/imaging/components/imaging-workspace';
 import { ComparisonView } from '@/features/imaging/components/comparison-view';
-import type { PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies';
+import { ImageUpload } from '@/features/imaging/components/image-upload';
+import { useImagingStudies, type PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies';
 
 interface WorkspaceImagingOverlayProps {
   patientId: string;
@@ -24,6 +25,18 @@ export function WorkspaceImagingOverlay({
   const [selectedImageItem, setSelectedImageItem] = useState<PatientImageItem | null>(null);
   const [comparisonItems, setComparisonItems] = useState<[PatientImageItem, PatientImageItem] | null>(null);
 
+  // L1/L2: the canvas needs to know whether the patient has any images so it can
+  // host an upload state instead of a dead "select an image" prompt. Shares the
+  // list's react-query key (same patientId/branchId) — no extra fetch.
+  const { data, refetch } = useImagingStudies(patientId, branchId);
+  const hasImages = (data?.items.length ?? 0) > 0;
+  // L3: a comparison or single-image viewer is "drilled in" — offer Back-to-images.
+  const isDrilledIn = comparisonItems !== null || selectedImageItem !== null;
+  const backToImages = useCallback(() => {
+    setSelectedImageItem(null);
+    setComparisonItems(null);
+  }, []);
+
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus
   // restore. Reset local selection too, so Escape matches the × button's behavior.
   const handleClose = useCallback(() => {
@@ -38,7 +51,20 @@ export function WorkspaceImagingOverlay({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="imaging-overlay">
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-        <h2 className="text-sm font-semibold">Imaging</h2>
+        {/* L3: drilled-in viewers leave back to the list without closing the overlay. */}
+        {isDrilledIn ? (
+          <button
+            type="button"
+            onClick={backToImages}
+            data-testid="imaging-back-btn"
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft size={16} />
+            Back to images
+          </button>
+        ) : (
+          <h2 className="text-sm font-semibold">Imaging</h2>
+        )}
         <button
           type="button"
           onClick={handleClose}
@@ -83,6 +109,27 @@ export function WorkspaceImagingOverlay({
             >
               <p className="font-medium text-foreground">Image file unavailable</p>
               <p>“{selectedImageItem.fileName}” has no stored file to display.</p>
+            </div>
+          ) : !hasImages ? (
+            // L1/L2: zero images — don't waste the canvas on a no-op "select"
+            // prompt; host the primary upload affordance right here.
+            <div
+              data-testid="imaging-empty-canvas"
+              className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center"
+            >
+              <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                <Upload className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm font-medium text-foreground">No images yet</p>
+                <p className="text-sm">Upload the first X-ray or photo for this patient.</p>
+              </div>
+              <div className="w-full max-w-sm text-left">
+                <ImageUpload
+                  patientId={patientId}
+                  branchId={branchId}
+                  visitId={currentVisitId ?? undefined}
+                  onSuccess={() => { void refetch(); }}
+                />
+              </div>
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
