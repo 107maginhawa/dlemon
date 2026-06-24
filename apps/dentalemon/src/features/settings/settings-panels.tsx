@@ -13,6 +13,7 @@
  * write affordances internally (e.g. owner-only writes in ConsentTemplates).
  */
 import type { ComponentType } from 'react';
+import { AppearanceSettings } from './components/appearance-settings';
 import { ClinicSettings } from './components/clinic-settings';
 import { WorkingHours } from './components/working-hours';
 import { FeeSchedule } from './components/fee-schedule';
@@ -34,6 +35,7 @@ export interface SettingsPanel {
 }
 
 export const SETTINGS_PANELS: SettingsPanel[] = [
+  { key: 'appearance', label: 'Appearance', Component: AppearanceSettings },
   { key: 'clinic', label: 'Clinic', Component: ClinicSettings },
   { key: 'hours', label: 'Working Hours', Component: WorkingHours },
   { key: 'fees', label: 'Fee Schedule', Component: FeeSchedule },

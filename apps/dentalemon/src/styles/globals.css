@@ -346,54 +346,58 @@
 }
 
 /* ───────────────────────────────────────────────────────────────────────
-   COLOR PRESET — Clinic White (opt-in; OFF by default). Applied ONLY when
-   `theme-clinic-white` is on <html>. White surfaces, black lines, black
-   text, lemon CTA (dark ink on lemon — lemon TEXT is forbidden), green done,
-   neutral planned, lemon diagnosed. Top-level (NOT in @layer base) and
-   scoped under `html.` so the static build never tree-shakes it and the base
-   look stays untouched — mirrors the html.skin-line pattern below.
+   THEME — White (opt-in; OFF by default). Applied ONLY when `theme-white`
+   is on <html>. The product's "White" theme, ported from the design sample
+   (?theme=white): white surfaces, BLACK soft-line outlines (drawn by the
+   companion `skin-line` skin via --line), dark ink, lemon CTA (dark ink —
+   lemon TEXT is forbidden), green = done/positive, neutral grey planned,
+   lemon diagnosed. Pair with `skin-line` for the soft corners + Shantell/
+   Nunito type (the toggle applies both classes together).
+   Top-level (NOT in @layer base) and scoped under `html.` so the static
+   build never tree-shakes it and the base look stays untouched.
    ─────────────────────────────────────────────────────────────────────── */
-html.theme-clinic-white {
-  /* Surfaces → white; grouped background → white as well */
+html.theme-white {
+  /* Surfaces → white */
   --background: 0 0% 100%;
-  --foreground: 0 0% 0%;
+  --foreground: 0 0% 7%;        /* #111 ink */
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 0%;
+  --card-foreground: 0 0% 7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 0%;
+  --popover-foreground: 0 0% 7%;
   --secondary: 0 0% 100%;
-  --secondary-foreground: 0 0% 0%;
+  --secondary-foreground: 0 0% 7%;
   --muted: 0 0% 100%;
-  --muted-foreground: 0 0% 30%;
+  --muted-foreground: 0 0% 49%;  /* #7C7C7C */
 
-  /* Lines → black hairlines */
-  --line: 0 0% 0%;
-  --border: 0 0% 0%;
-  --input: 0 0% 0%;
+  /* Lines: outlines drawn black (NOT brown) by skin-line; plain base
+     borders stay a light hairline grey where skin-line doesn't reach. */
+  --line: 0 0% 7%;               /* #111 black */
+  --border: 0 0% 90%;            /* #E6E6E6 */
+  --input: 0 0% 90%;
 
-  /* Lemon CTA: lemon fill, dark ink (primary maps to lemon) */
+  /* Lemon CTA: lemon fill, near-black ink */
   --primary: 47 100% 74%;
-  --primary-foreground: 45 55% 19%;
+  --primary-foreground: 0 0% 10%;  /* #1A1A1A */
   --accent: 47 100% 92%;
-  --accent-foreground: 45 55% 19%;
+  --accent-foreground: 0 0% 10%;
   --ring: 47 100% 74%;
 
-  /* Lemon palette stays the brand hexes; ink on lemon stays dark */
+  /* Lemon palette stays the brand hexes; ink on lemon stays near-black */
   --lemon: #FFE97D;
   --lemon-hover: #F5DC60;
-  --lemon-foreground: #4A4018;
+  --lemon-foreground: #1A1A1A;
   --lemon-accent: #C8B800;
 
-  /* Status roles: green done, neutral planned, lemon diagnosed */
-  --status-done-bg: #dcfce7;
-  --status-done-fg: #15803d;
-  --status-planned-bg: #f3f4f6;
-  --status-planned-fg: #4b5563;
+  /* Status roles: green done/positive, neutral grey planned, lemon diagnosed */
+  --status-done-bg: #E7F3DC;
+  --status-done-fg: #3C7A2E;
+  --status-planned-bg: #F2F2F2;
+  --status-planned-fg: #6E6E6E;
   --status-diagnosed-bg: rgba(255, 233, 125, 0.40);
-  --status-diagnosed-fg: #4A4018;
+  --status-diagnosed-fg: #1A1A1A;
 
-  /* Flatter elevation to suit the crisp white/black look */
-  --card-shadow-active: 0 0 0 1px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  /* Soft-line look = no elevation (skin-line also flattens shadows). */
+  --card-shadow-active: none;
 }
 
 /* ───────────────────────────────────────────────────────────────────────

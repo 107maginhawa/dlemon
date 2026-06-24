@@ -12,6 +12,14 @@
       rel="stylesheet"
     />
     <title>Dentalemon</title>
+    <!-- Apply the saved theme BEFORE first paint (no flash). Mirrors the
+         classes in src/lib/appearance.ts. Default theme = no class. -->
+    <script>
+      try {
+        if (localStorage.getItem('dl-theme') === 'white')
+          document.documentElement.classList.add('theme-white', 'skin-line');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
