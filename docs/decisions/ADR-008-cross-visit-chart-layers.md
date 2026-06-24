@@ -16,7 +16,7 @@ Research into Open Dental, Dentrix/Eaglesoft, FHIR R4, and dental-charting conve
 - The FE derives `{ proposed, completed, declined, carriedOver }` tooth-number sets (`deriveChartLayerSets`) and the chart resolves each tooth's layer with precedence **completed > proposed > declined > entryClassification** (`resolveToothLayer`).
 - **`entryClassification = 'treatment_plan'` is no longer a chart-native "proposed" source.** Whether a tooth is proposed/completed lives on the treatment record; deriving it from the frozen chart classification resurrected stale red after a treatment was dismissed (two sources of truth disagreeing). Only `condition` (a finding that can exist before any treatment record) remains chart-native.
 - **Declined** is shown distinctly via a desaturated-gray diagonal hatch (a stroke/pattern, not a fourth saturated fill; the double-slash stays reserved for extraction) — legible in grayscale (WCAG 1.4.1).
-- The **active** chart is cumulative ("Current — all visits"); historical timeline-carousel cards stay per-visit snapshots ("Visit snapshot").
+- The **active** chart is cumulative ("Current — all visits"); historical timeline-carousel cards stay per-visit snapshots ("Visit snapshot"). **(Superseded by [ADR-009](./ADR-009-open-visit-scoped-cumulative-and-status-layer-spine.md): "active" here was read as the *centered* card, which mis-attributed today's status to centered historical visits. The cumulative overlay now binds to the genuine OPEN visit by identity, never the centered card.)**
 
 ## Consequences / Known limitation (why "interim")
 

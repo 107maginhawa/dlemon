@@ -22,6 +22,9 @@ import {
   getToothDisplayLabel,
   isToothVisible,
   resolveToothLayer,
+  getLayerOutline,
+  stateNeedsCvdMark,
+  getLayerLabel,
   DEFAULT_VISIBLE_LAYERS,
   getMixedDentitionTeeth,
 } from './dental-chart.helpers';
@@ -36,8 +39,12 @@ export interface DentalChartProps {
   onSelectTooth?: (toothNumber: number) => void;
   /** Size of each tooth SVG. Use 'xs' inside carousel cards, 'sm' for standalone. Default: 'sm' */
   toothSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  /** Show the color legend below the chart. Default: true */
+  /** Show the full interactive color/filter legend below the chart. Default: true */
   showLegend?: boolean;
+  /** P1-3: show a COMPACT, non-interactive state key (always-on inside carousel
+   *  cards, where the full legend is hidden). Decodes the main fills + the
+   *  Planned dashed edge so the chart is never an unlabeled wall of colour. */
+  compactLegend?: boolean;
   /** Permanent (32-tooth adult), primary (20-tooth pediatric), or mixed (dual-arch). Default: 'permanent' */
   dentitionType?: DentitionType;
   /** Show the baseline/proposed/completed layer toggle. Default: true (gate to active card in carousels). */
@@ -56,50 +63,14 @@ export interface DentalChartProps {
   conflictedToothNumbers?: Set<number>;
 }
 
-/** Layer chip config with color coding for multi-select (P1-15). */
-const CHART_LAYERS: { layer: ChartLayer; label: string; activeClass: string; dotClass: string }[] = [
-  {
-    layer: 'baseline',
-    label: 'Baseline',
-    activeClass: 'bg-blue-100 text-blue-700 border-blue-300',
-    dotClass: 'bg-blue-400',
-  },
-  {
-    layer: 'proposed',
-    label: 'Proposed',
-    activeClass: 'bg-lemon text-lemon-foreground border-lemon-hover',
-    dotClass: 'bg-lemon-hover',
-  },
-  {
-    layer: 'completed',
-    label: 'Completed',
-    activeClass: 'bg-green-100 text-green-700 border-green-300',
-    dotClass: 'bg-green-400',
-  },
-  {
-    // CHART-XV: declined = refused recommendation. Desaturated gray (not a 4th
-    // saturated fill); teeth render with a diagonal hatch (a stroke/pattern).
-    layer: 'declined',
-    label: 'Declined',
-    activeClass: 'bg-gray-200 text-gray-600 border-gray-300',
-    dotClass: 'bg-gray-400',
-  },
-];
-
 /**
- * Color ring shown at the base of a tooth to indicate its layer (P1-15).
- * Visible when multiple layers are shown simultaneously.
+ * P1-2: the status tabs are demoted to NEUTRAL show/hide filters (no hue) and
+ * renamed via getLayerLabel (Existing / Planned / Completed / Declined). Colour
+ * now lives only in the always-on state legend + the tooth fills, not the chips —
+ * this is the core of the lemon de-overload (the proposed chip was lemon). Lemon
+ * is reserved for interaction (selection ring, CTA), never status.
  */
-function LayerDot({ layer }: { layer: ChartLayer }) {
-  const config = CHART_LAYERS.find(c => c.layer === layer);
-  if (!config) return null;
-  return (
-    <span
-      aria-hidden="true"
-      className={`block w-1.5 h-1.5 rounded-full mx-auto mt-0.5 ${config.dotClass}`}
-    />
-  );
-}
+const LAYER_FILTER_ORDER: ChartLayer[] = ['baseline', 'proposed', 'completed', 'declined'];
 
 export function DentalChart({
   teeth,
@@ -107,6 +78,7 @@ export function DentalChart({
   onSelectTooth,
   toothSize = 'sm',
   showLegend = true,
+  compactLegend = false,
   dentitionType = 'permanent',
   showLayerToggle = true,
   completedToothNumbers,
@@ -228,9 +200,6 @@ export function DentalChart({
     lowerRight = TOOTH_NUMBERS.filter(n => n >= 41 && n <= 48).reverse(); // 48 → 41
   }
 
-  /** True when multiple layers are visible — enables layer color-coding dots. */
-  const showLayerDots = visibleLayers.size > 1;
-
   function renderTooth(toothNumber: number, isLastInQuadrant = false) {
     const state = toothMap.get(toothNumber) ?? 'healthy' as ToothState;
     const isSelected = selectedTooth === toothNumber;
@@ -249,13 +218,11 @@ export function DentalChart({
     // (a stroke/pattern, never a 4th saturated fill; the double-slash stays reserved
     // for extraction). Encodes state on a non-color channel for grayscale legibility.
     const isDeclinedOnLayer = toothLayer === 'declined' && !isLayerHidden;
-    const outlineFor = isCarriedOver
-      ? '2px dashed #B8860A' // amber — carried over from a prior visit
-      : isProposedOnLayer
-        ? '1.5px dashed var(--primary, #007AFF)'
-        : isDeclinedOnLayer
-          ? '1.5px solid #9CA3AF' // gray — declined
-          : undefined;
+    // P1-1: the layer is encoded on a NEUTRAL edge (lemon reserved for
+    // interaction). Only apply the edge when the layer is actually visible.
+    const outlineFor = isLayerHidden
+      ? undefined
+      : getLayerOutline(toothLayer, { carriedOver: isCarriedOver });
     // P0-A: this tooth has an open offline conflict (a rejected stale write).
     const isConflicted = !!conflictedToothNumbers?.has(toothNumber);
     // Display label for the current notation preference (QW-5).
@@ -305,7 +272,26 @@ export function DentalChart({
           interactive={false}
           showLabel={true}
         />
-        {showLayerDots && !isDimmed && <LayerDot layer={toothLayer} />}
+        {/* P1-3: CVD redundancy — caries (dot) and fractured (slash) get a
+            non-colour mark so they stay distinguishable in grayscale / under
+            protanopia, where caries-red and fractured-orange collapse together. */}
+        {stateNeedsCvdMark(state) && !isDimmed && (
+          state === 'caries' ? (
+            <span
+              data-testid={`tooth-cvd-mark-${toothNumber}`}
+              data-cvd-mark="caries"
+              aria-hidden="true"
+              className="absolute bottom-0.5 right-0.5 h-1 w-1 rounded-full bg-gray-900"
+            />
+          ) : (
+            <span
+              data-testid={`tooth-cvd-mark-${toothNumber}`}
+              data-cvd-mark="fractured"
+              aria-hidden="true"
+              className="absolute bottom-0.5 right-0.5 h-1.5 w-px rotate-45 bg-gray-900"
+            />
+          )
+        )}
         {isConflicted && (
           <span
             data-testid={`tooth-conflict-${toothNumber}`}
@@ -333,11 +319,11 @@ export function DentalChart({
           aria-label="Chart layers — toggle to show or hide"
           className="flex gap-1.5 px-2 py-1.5 border-b border-border/30 bg-background/60"
         >
-          {CHART_LAYERS
+          {LAYER_FILTER_ORDER
             // CHART-XV: only surface the Declined chip when refused work exists —
             // it's an uncommon state, so it stays out of the way until relevant.
-            .filter(({ layer }) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0)
-            .map(({ layer, label, activeClass }) => {
+            .filter((layer) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0)
+            .map((layer) => {
             const isActive = visibleLayers.has(layer);
             return (
               <button
@@ -348,12 +334,14 @@ export function DentalChart({
                 aria-pressed={isActive}
                 className={[
                   'flex-1 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
+                  // P1-2: neutral active state (no status hue). The chip is a
+                  // show/hide control; colour identity lives in the legend + fills.
                   isActive
-                    ? activeClass
+                    ? 'bg-foreground/10 text-foreground border-foreground/25'
                     : 'text-muted-foreground border-transparent hover:bg-muted/60',
                 ].join(' ')}
               >
-                {label}
+                {getLayerLabel(layer)}
               </button>
             );
           })}
@@ -387,6 +375,38 @@ export function DentalChart({
         <div style={{ width: 1, flexShrink: 0, borderRight: '1px dashed var(--border, #e5e7eb)' }} />
         {lowerLeft.map((n, i) => renderTooth(n, i === lowerLeft.length - 1))}
       </div>
+
+      {/* P1-3: compact always-on state key — used in carousel cards where the full
+          interactive legend is hidden, so the working chart is never an unlabeled
+          wall of colour. Non-interactive; decodes the main fills + the Planned edge. */}
+      {compactLegend && !showLegend && (
+        <div
+          data-testid="chart-compact-legend"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-xs text-muted-foreground border-t border-border/30 bg-background/50"
+        >
+          {([
+            { label: 'Caries',    state: 'caries' as const },
+            { label: 'Fractured', state: 'fractured' as const },
+            { label: 'Filled',    state: 'filled' as const },
+            { label: 'Crown',     state: 'crown' as const },
+          ]).map(({ label, state }) => (
+            <span key={state} className="flex items-center gap-1">
+              <span
+                className="w-3 h-3 rounded-sm inline-block flex-shrink-0"
+                style={{ backgroundColor: getToothFillColor(state) }}
+              />
+              {label}
+            </span>
+          ))}
+          <span className="flex items-center gap-1">
+            <span
+              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-dashed"
+              style={{ borderColor: '#475569' }}
+            />
+            Planned
+          </span>
+        </div>
+      )}
 
       {/* Legend */}
       {showLegend && (
