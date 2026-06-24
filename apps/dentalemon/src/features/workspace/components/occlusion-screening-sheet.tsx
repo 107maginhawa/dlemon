@@ -7,7 +7,7 @@
  * Create + list only — no update/delete endpoint exists. Mirrors RecallsSheet.
  */
 import React, { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, useIsMobile } from '@monobase/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@monobase/ui';
 import { Activity, Plus } from 'lucide-react';
 import {
   useOcclusionScreenings,
@@ -77,10 +77,8 @@ function ScreeningRow({ screening }: { screening: OcclusionScreening }) {
 // ---------------------------------------------------------------------------
 
 export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionScreeningSheetProps) {
-  // L5/L7: right-side drawer on tablet/desktop, bottom-sheet fallback on narrow
-  // screens. Radix Dialog handles Escape + focus restore.
-  const isMobile = useIsMobile();
-
+  // Centered modal — a focused record/list surface. Radix Dialog handles Escape,
+  // click-outside, focus trap + restore.
   const { screenings, isLoading, isError, createScreening, isCreating } =
     useOcclusionScreenings(patientId);
 
@@ -123,20 +121,19 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
   }
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent
-        side={isMobile ? 'bottom' : 'right'}
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
         aria-describedby={undefined}
-        className={`flex flex-col gap-0 p-0 ${isMobile ? 'max-h-[85dvh] rounded-t-2xl' : 'w-[360px] sm:max-w-[360px]'}`}
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-lg max-h-[85dvh]"
       >
-        {/* Radix supplies role=dialog on SheetContent; the test/E2E handle lives
+        {/* Radix supplies role=dialog on DialogContent; the test/E2E handle lives
             on this inner wrapper (the harness stubs Radix Content + drops props). */}
         <div data-testid="occlusion-screening-sheet" className="flex flex-1 flex-col min-h-0">
-        {/* Header (pr-10 clears the drawer's built-in close button) */}
-        <SheetHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
+        {/* Header (pr-10 clears the dialog's built-in close button) */}
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-muted-foreground" />
-            <SheetTitle className="text-sm font-semibold">Occlusion</SheetTitle>
+            <DialogTitle className="text-sm font-semibold">Occlusion</DialogTitle>
             {screenings.length > 0 && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {screenings.length}
@@ -152,7 +149,7 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
             <Plus className="h-3.5 w-3.5" />
             New Screening
           </button>
-        </SheetHeader>
+        </DialogHeader>
 
         {/* New screening form */}
         {showForm && (
@@ -303,7 +300,7 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
           )}
         </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -4,7 +4,7 @@
  * B3: List recalls, create new recall, update status via FSM buttons.
  */
 import React, { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, useIsMobile } from '@monobase/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@monobase/ui';
 import { CalendarClock, Plus } from 'lucide-react';
 import {
   useRecalls,
@@ -135,10 +135,8 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
 // ---------------------------------------------------------------------------
 
 export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
-  // L5/L7: right-side drawer on tablet/desktop (chart stays visible); fall back to
-  // the bottom sheet on narrow screens. Radix Dialog handles Escape + focus restore.
-  const isMobile = useIsMobile();
-
+  // Centered modal — a focused record/list surface. Radix Dialog handles Escape,
+  // click-outside, focus trap + restore.
   const { recalls, isLoading, isError, createRecall, updateRecall, isCreating, isUpdating } =
     useRecalls(patientId);
 
@@ -163,21 +161,20 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent
-        side={isMobile ? 'bottom' : 'right'}
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
         aria-describedby={undefined}
-        className={`flex flex-col gap-0 p-0 ${isMobile ? 'max-h-[85dvh] rounded-t-2xl' : 'w-[360px] sm:max-w-[360px]'}`}
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-lg max-h-[85dvh]"
       >
-        {/* The accessible dialog role comes from Radix on SheetContent; the
+        {/* The accessible dialog role comes from Radix on DialogContent; the
             stable test/E2E handle lives on this inner wrapper (the test harness
             stubs Radix Content and drops its props, so the testid must be here). */}
         <div data-testid="recalls-sheet" className="flex flex-1 flex-col min-h-0">
-        {/* Header (pr-10 clears the drawer's built-in close button) */}
-        <SheetHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
+        {/* Header (pr-10 clears the dialog's built-in close button) */}
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <div className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            <SheetTitle className="text-sm font-semibold">Recalls</SheetTitle>
+            <DialogTitle className="text-sm font-semibold">Recalls</DialogTitle>
             {recalls.length > 0 && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                 {recalls.length}
@@ -193,7 +190,7 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
             <Plus className="h-3.5 w-3.5" />
             New Recall
           </button>
-        </SheetHeader>
+        </DialogHeader>
 
         {/* New recall form */}
         {showForm && (
@@ -322,7 +319,7 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
           )}
         </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
