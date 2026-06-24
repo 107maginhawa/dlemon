@@ -498,33 +498,36 @@ function WorkspacePage() {
           />
         </div>
 
+        {/* Items 3 + 4: consolidated context strip — visit-date anchor,
+            status/read-only, gated conflict banner, Compare trigger, and the
+            passive state-aware next-step guidance. Rendered ABOVE the scroll
+            container (its root is shrink-0) so the date anchor stays visible while
+            rows scroll WITHOUT its sticky position overlapping the table's own
+            sticky thead (both would otherwise pin at top-0 of one scroller). */}
+        <WorkspaceContextStrip
+          patientId={patientId}
+          visitDate={currentVisitDate}
+          currentVisitStatus={currentVisit?.status}
+          openVisit={openVisit ?? null}
+          currentIsOpen={!!currentVisit && currentVisit.id === openVisit?.id}
+          treatmentCount={treatments.length}
+          performedCount={
+            treatments.filter((t) => t.status === 'performed' || t.status === 'verified').length
+          }
+          conflictCount={conflictedTeeth.size}
+          canCompare={visits.length >= 2}
+          onCompare={() => setCompareOpen(true)}
+          onStartVisit={handleNewVisit}
+          onComplete={() => setChecklistOpen(true)}
+          onDiscard={handleDiscardVisit}
+          canDiscard={orgRole === 'dentist_owner'}
+        />
+
         {/* Treatment table section */}
         <div
           data-testid="workspace-table-zone"
           className="flex-1 min-w-0 bg-background overflow-auto"
         >
-          {/* Items 3 + 4: consolidated sticky context strip — visit-date anchor,
-              status/read-only, gated conflict banner, Compare trigger, and the
-              passive state-aware next-step guidance. Pinned at the top of the
-              single scroll region so the date stays visible while rows scroll. */}
-          <WorkspaceContextStrip
-            patientId={patientId}
-            visitDate={currentVisitDate}
-            currentVisitStatus={currentVisit?.status}
-            openVisit={openVisit ?? null}
-            currentIsOpen={!!currentVisit && currentVisit.id === openVisit?.id}
-            treatmentCount={treatments.length}
-            performedCount={
-              treatments.filter((t) => t.status === 'performed' || t.status === 'verified').length
-            }
-            conflictCount={conflictedTeeth.size}
-            canCompare={visits.length >= 2}
-            onCompare={() => setCompareOpen(true)}
-            onStartVisit={handleNewVisit}
-            onComplete={() => setChecklistOpen(true)}
-            onDiscard={handleDiscardVisit}
-            canDiscard={orgRole === 'dentist_owner'}
-          />
           {/* #13: apply a treatment template to populate the visit (reachable even
               when the table is empty — the primary apply case). Owner/associate-gated
               inside the component; only shown for an active, editable visit. */}
