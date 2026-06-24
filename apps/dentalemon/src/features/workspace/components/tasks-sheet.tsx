@@ -7,8 +7,8 @@
  * done/cancelled). Mirrors RecallsSheet.
  */
 import React, { useState } from 'react';
-import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { X, CheckCircle2, Plus } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, useIsMobile } from '@monobase/ui';
+import { CheckCircle2, Plus } from 'lucide-react';
 import {
   usePatientTasks,
   TASK_TYPES,
@@ -112,8 +112,9 @@ function TaskRow({ task, onUpdateStatus, isUpdating }: TaskRowProps) {
 // ---------------------------------------------------------------------------
 
 export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
-  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  // L5/L7: right-side drawer on tablet/desktop, bottom-sheet fallback on narrow
+  // screens. Radix Dialog handles Escape + focus restore.
+  const isMobile = useIsMobile();
 
   const { tasks, isLoading, isError, createTask, updateTask, isCreating, isUpdating } =
     usePatientTasks(patientId);
@@ -141,55 +142,37 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
     setFormDescription('');
   }
 
-  if (!open) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
-
-      {/* Sheet */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Tasks"
-        data-testid="tasks-sheet"
-        className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85dvh] flex-col rounded-t-2xl bg-background shadow-2xl"
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        aria-describedby={undefined}
+        className={`flex flex-col gap-0 p-0 ${isMobile ? 'max-h-[85dvh] rounded-t-2xl' : 'w-[360px] sm:max-w-[360px]'}`}
       >
-        {/* Handle */}
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        {/* Radix supplies role=dialog on SheetContent; the test/E2E handle lives
+            on this inner wrapper (the harness stubs Radix Content + drops props). */}
+        <div data-testid="tasks-sheet" className="flex flex-1 flex-col min-h-0">
+        {/* Header (pr-10 clears the drawer's built-in close button) */}
+        <SheetHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Tasks</h2>
+            <SheetTitle className="text-sm font-semibold">Tasks</SheetTitle>
             {tasks.length > 0 && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {tasks.length}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowForm((v) => !v)}
-              aria-label="New task"
-              className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Task
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close tasks"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            aria-label="New task"
+            className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Task
+          </button>
+        </SheetHeader>
 
         {/* New task form */}
         {showForm && (
@@ -288,11 +271,21 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
               <p className="text-sm text-destructive">Couldn’t load tasks. Please try again.</p>
             </div>
           ) : tasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
               <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No tasks yet. Add a follow-up, referral, or lab order.
               </p>
+              {/* L6: co-locate the primary action with the empty state. */}
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                data-testid="tasks-empty-new-btn"
+                className="flex items-center gap-1 rounded-lg bg-lemon px-3 py-2 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Task
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -307,7 +300,8 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
             </div>
           )}
         </div>
-      </div>
-    </>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

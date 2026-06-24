@@ -108,6 +108,30 @@ describe('TasksSheet — shipped component', () => {
     }
   });
 
+  test('renders as a dialog with its testid preserved through the drawer conversion', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('tasks-sheet')).not.toBeNull());
+      expect(screen.getByRole('dialog')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('L6: empty state hosts a primary "New task" affordance that opens the form', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText(/No tasks/i)).not.toBeNull());
+      await user.click(screen.getByTestId('tasks-empty-new-btn'));
+      expect(screen.getByLabelText('Title')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('submits a POST /tasks with the entered fields from the new-task form', async () => {
     const user = userEvent.setup();
     const f = installFetch([]);

@@ -6,8 +6,8 @@
  */
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { X, ClipboardList } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, useIsMobile } from '@monobase/ui';
+import { ClipboardList, Plus } from 'lucide-react';
 import {
   useTreatmentPlans,
   type TreatmentPlanStatus,
@@ -53,7 +53,9 @@ const FSM: Record<TreatmentPlanStatus, TreatmentPlanStatus[]> = {
 
 const TRANSITION_LABELS: Record<TreatmentPlanStatus, string> = {
   draft: 'Draft',
-  presented: 'Present',
+  // N2: distinct from the "Present to patient" action below — this is the FSM
+  // transition that marks the plan presented (draft → presented).
+  presented: 'Mark presented',
   approved: 'Approve',
   rejected: 'Reject',
   scheduled: 'Schedule',
@@ -95,9 +97,11 @@ interface PlanRowProps {
   /** P1-20: mint a patient-facing case presentation for a presented plan. */
   onPresent?: (planId: string) => void;
   isPresenting?: boolean;
+  /** E1/N4: whether the current role may hand a plan to the patient. */
+  canPresent?: boolean;
 }
 
-function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting }: PlanRowProps) {
+function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting, canPresent }: PlanRowProps) {
   const transitions = FSM[plan.status];
 
   return (
@@ -127,16 +131,19 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting }: PlanRo
         )}
       </div>
 
-      {(transitions.length > 0 || (plan.status === 'presented' && onPresent)) && (
+      {(transitions.length > 0 || plan.status === 'presented') && (
         <div className="flex flex-col gap-1 shrink-0">
-          {/* P1-20: a presented plan can be handed to the patient as a case presentation. */}
-          {plan.status === 'presented' && onPresent && (
+          {/* P1-20: a presented plan can be handed to the patient as a case
+              presentation. N4: render it disabled (not hidden) for roles that
+              can't present, so the gate is explained rather than silent. */}
+          {plan.status === 'presented' && (
             <button
               type="button"
               data-testid="present-to-patient-btn"
-              disabled={isPresenting}
-              onClick={() => onPresent(plan.id)}
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 bg-lemon"
+              disabled={!canPresent || isPresenting}
+              title={!canPresent ? 'Requires treatment-coordinator role' : undefined}
+              onClick={() => { if (canPresent) onPresent?.(plan.id); }}
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-lemon"
             >
               {isPresenting ? 'Presenting…' : 'Present to patient'}
             </button>
@@ -226,17 +233,27 @@ function OptionGroupCard({ patientId, optionGroupId }: { patientId: string; opti
 // ---------------------------------------------------------------------------
 
 export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }: TreatmentPlansSheetProps) {
-  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  // L5/L7: right-side drawer on tablet/desktop, bottom-sheet fallback on narrow
+  // screens. Radix Dialog handles Escape + focus restore.
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  const { plans, isLoading, isError, updatePlan, isUpdating } = useTreatmentPlans(patientId);
+  const { plans, isLoading, isError, createPlan, updatePlan, isCreating, isUpdating } =
+    useTreatmentPlans(patientId);
   // P1-20: mint a patient-facing case presentation from a presented plan.
   const { present, isPresenting } = useCasePresentations(patientId);
   // E1: only the treatment-presentation roles (clinicians + treatment coordinator)
   // may hand a plan to the patient. Mirrors the backend createCasePresentation gate.
   const role = useOrgContextStore((s) => s.role) as DentalRole | null;
   const canPresent = role ? canPresentCase(role) : false;
+  // 1.1: createTreatmentPlan requires the authoring provider. Resolve it from the
+  // active org-context member (the same identity the Rx/consent flows use) — no
+  // provider picker. Without it we can't author a plan, so the action is disabled.
+  const providerId = useOrgContextStore((s) => s.memberId);
+  const handleCreatePlan = () => {
+    if (!providerId) return;
+    createPlan({ providerId });
+  };
 
   // After minting, navigate to the patient-facing surface so staff can hand the
   // operatory iPad to the patient to review + accept/decline the plan.
@@ -249,48 +266,39 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
     });
   };
 
-  if (!open) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/30"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Sheet */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Treatment Plans"
-        data-testid="treatment-plans-sheet"
-        className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85dvh] flex-col rounded-t-2xl bg-background shadow-2xl"
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        aria-describedby={undefined}
+        className={`flex flex-col gap-0 p-0 ${isMobile ? 'max-h-[85dvh] rounded-t-2xl' : 'w-[360px] sm:max-w-[360px]'}`}
       >
-        {/* Handle */}
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        {/* Radix supplies role=dialog on SheetContent; the test/E2E handle lives
+            on this inner wrapper (the harness stubs Radix Content + drops props). */}
+        <div data-testid="treatment-plans-sheet" className="flex flex-1 flex-col min-h-0">
+        {/* Header (pr-10 clears the drawer's built-in close button) */}
+        <SheetHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Treatment Plans</h2>
+            <SheetTitle className="text-sm font-semibold">Treatment Plans</SheetTitle>
             {plans.length > 0 && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                 {plans.length}
               </span>
             )}
           </div>
+          {/* 1.1: author a new draft plan. Disabled until provider context resolves. */}
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Close treatment plans"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
+            onClick={handleCreatePlan}
+            disabled={!providerId || isCreating}
+            aria-label="New plan"
+            className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
+            New plan
           </button>
-        </div>
+        </SheetHeader>
 
         {/* Plan list */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
@@ -302,11 +310,22 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
               <p className="text-sm text-destructive">Couldn’t load treatment plans. Please try again.</p>
             </div>
           ) : plans.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
               <ClipboardList className="h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No treatment plans. Create one to track approved treatment sequences.
               </p>
+              {/* 1.1 + L6: co-locate the primary create action with the empty state. */}
+              <button
+                type="button"
+                onClick={handleCreatePlan}
+                disabled={!providerId || isCreating}
+                data-testid="treatment-plans-empty-new-btn"
+                className="flex items-center gap-1 rounded-lg bg-lemon px-3 py-2 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {isCreating ? 'Creating…' : 'New plan'}
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -316,8 +335,9 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
                   plan={plan}
                   onUpdate={(id, body) => updatePlan(id, body)}
                   isUpdating={isUpdating}
-                  onPresent={canPresent ? (id) => { void presentAndOpen(id); } : undefined}
+                  onPresent={(id) => { void presentAndOpen(id); }}
                   isPresenting={isPresenting}
+                  canPresent={canPresent}
                 />
               ))}
             </div>
@@ -332,7 +352,8 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
             </div>
           )}
         </div>
-      </div>
-    </>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

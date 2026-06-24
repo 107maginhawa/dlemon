@@ -64,6 +64,7 @@ const _lucideMock = {
   ChevronsUpDown: _makeIcon('chevronsupsown'),
   Circle: _makeIcon('circle'),
   CircleDot: _makeIcon('circledot'),
+  ClipboardList: _makeIcon('clipboardlist'),
   Clock: _makeIcon('clock'),
   CreditCard: _makeIcon('creditcard'),
   Download: _makeIcon('download'),

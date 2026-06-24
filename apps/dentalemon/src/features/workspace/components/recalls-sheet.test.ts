@@ -111,6 +111,30 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('renders as a dialog (role) with its testid preserved through the drawer conversion', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('recalls-sheet')).not.toBeNull());
+      expect(screen.getByRole('dialog')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('L6: empty state hosts a primary "New recall" affordance that opens the form', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText(/No recalls yet/i)).not.toBeNull());
+      await user.click(screen.getByTestId('recalls-empty-new-btn'));
+      expect(screen.getByLabelText('Due Date')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('submits a POST /recalls with the entered fields from the new-recall form', async () => {
     const user = userEvent.setup();
     const f = installFetch([]);

@@ -4,8 +4,8 @@
  * B3: List recalls, create new recall, update status via FSM buttons.
  */
 import React, { useState } from 'react';
-import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { X, CalendarClock, Plus } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, useIsMobile } from '@monobase/ui';
+import { CalendarClock, Plus } from 'lucide-react';
 import {
   useRecalls,
   type RecallType,
@@ -121,8 +121,9 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
 // ---------------------------------------------------------------------------
 
 export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
-  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  // L5/L7: right-side drawer on tablet/desktop (chart stays visible); fall back to
+  // the bottom sheet on narrow screens. Radix Dialog handles Escape + focus restore.
+  const isMobile = useIsMobile();
 
   const { recalls, isLoading, isError, createRecall, updateRecall, isCreating, isUpdating } =
     useRecalls(patientId);
@@ -147,59 +148,38 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
     setFormType('cleaning');
   }
 
-  if (!open) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/30"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Sheet */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Recalls"
-        data-testid="recalls-sheet"
-        className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85dvh] flex-col rounded-t-2xl bg-background shadow-2xl"
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        aria-describedby={undefined}
+        className={`flex flex-col gap-0 p-0 ${isMobile ? 'max-h-[85dvh] rounded-t-2xl' : 'w-[360px] sm:max-w-[360px]'}`}
       >
-        {/* Handle */}
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        {/* The accessible dialog role comes from Radix on SheetContent; the
+            stable test/E2E handle lives on this inner wrapper (the test harness
+            stubs Radix Content and drops its props, so the testid must be here). */}
+        <div data-testid="recalls-sheet" className="flex flex-1 flex-col min-h-0">
+        {/* Header (pr-10 clears the drawer's built-in close button) */}
+        <SheetHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
           <div className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Recalls</h2>
+            <SheetTitle className="text-sm font-semibold">Recalls</SheetTitle>
             {recalls.length > 0 && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                 {recalls.length}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowForm((v) => !v)}
-              aria-label="New recall"
-              className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Recall
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close recalls"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            aria-label="New recall"
+            className="flex h-8 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Recall
+          </button>
+        </SheetHeader>
 
         {/* New recall form */}
         {showForm && (
@@ -285,11 +265,21 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
               <p className="text-sm text-destructive">Couldn’t load recalls. Please try again.</p>
             </div>
           ) : recalls.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
               <CalendarClock className="h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No recalls yet. Schedule a cleaning or follow-up.
               </p>
+              {/* L6: co-locate the primary action with the empty state. */}
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                data-testid="recalls-empty-new-btn"
+                className="flex items-center gap-1 rounded-lg bg-lemon px-3 py-2 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Recall
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -304,7 +294,8 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
             </div>
           )}
         </div>
-      </div>
-    </>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
