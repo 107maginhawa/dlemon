@@ -215,4 +215,18 @@ describe('OcclusionScreeningSheet — shipped component', () => {
       global.fetch = original;
     }
   });
+
+  test('4: renders skeleton rows (occlusion-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('occlusion-loading');
+      expect(loading).not.toBeNull();
+      expect(screen.queryByText(/Loading screenings/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
+    } finally {
+      global.fetch = original;
+    }
+  });
 });

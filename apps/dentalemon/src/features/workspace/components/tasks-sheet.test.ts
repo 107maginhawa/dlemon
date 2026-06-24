@@ -216,4 +216,18 @@ describe('TasksSheet — shipped component', () => {
       global.fetch = original;
     }
   });
+
+  test('4: renders skeleton rows (tasks-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('tasks-loading');
+      expect(loading).not.toBeNull();
+      expect(screen.queryByText(/Loading tasks/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
+    } finally {
+      global.fetch = original;
+    }
+  });
 });

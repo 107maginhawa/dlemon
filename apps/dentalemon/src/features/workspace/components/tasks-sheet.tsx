@@ -7,7 +7,7 @@
  * done/cancelled). Mirrors RecallsSheet.
  */
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@monobase/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Skeleton } from '@monobase/ui';
 import { ArrowLeft, CheckCircle2, Plus } from 'lucide-react';
 import {
   usePatientTasks,
@@ -287,7 +287,11 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
         {/* Task list */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-8">Loading tasks…</p>
+            <div data-testid="tasks-loading" className="flex flex-col gap-2">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
               <CheckCircle2 className="h-8 w-8 text-destructive/50" />

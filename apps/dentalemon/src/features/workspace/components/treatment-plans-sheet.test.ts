@@ -200,4 +200,18 @@ describe('TreatmentPlansSheet — shipped component', () => {
       f.restore();
     }
   });
+
+  test('4: renders skeleton rows (treatment-plans-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('treatment-plans-loading');
+      expect(loading).not.toBeNull();
+      expect(screen.queryByText(/Loading plans/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
+    } finally {
+      global.fetch = original;
+    }
+  });
 });

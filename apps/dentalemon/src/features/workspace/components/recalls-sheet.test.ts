@@ -286,4 +286,20 @@ describe('RecallsSheet — shipped component', () => {
       global.fetch = original;
     }
   });
+
+  test('4: renders skeleton rows (recalls-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    // Never-resolving fetch keeps the query in its loading state.
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('recalls-loading');
+      expect(loading).not.toBeNull();
+      // No plain "Loading recalls…" text — skeleton divs instead.
+      expect(screen.queryByText(/Loading recalls/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
+    } finally {
+      global.fetch = original;
+    }
+  });
 });
