@@ -107,9 +107,10 @@ describe('TimelineCarousel (Swiper)', () => {
       const swiperSlide = css.match(/\.dental-swiper \.swiper-slide \{[^}]*\}/);
       expect(swiperSlide).not.toBeNull();
       const block = swiperSlide![0];
-      // No fixed 560px height; uses a clamp against the viewport (~min(46vh,420px)).
+      // No fixed 560px height; one consistent viewport-relative height for every
+      // visit (~min(64vh,600px)) — fill-mode teeth scale to it, no per-visit resize.
       expect(block).not.toContain('560px');
-      expect(block).toMatch(/min\(\s*46vh\s*,\s*420px\s*\)/);
+      expect(block).toMatch(/min\(\s*64vh\s*,\s*600px\s*\)/);
     });
   });
 

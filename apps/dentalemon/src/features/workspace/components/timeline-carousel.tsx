@@ -77,11 +77,6 @@ export interface TimelineCarouselProps {
    *  When omitted, the carousel falls back to its own internal compare button. */
   compareOpen?: boolean;
   onCompareOpenChange?: (open: boolean) => void;
-  /** Roomy mode: when the current visit has no treatments yet (the charting
-   *  phase), grow the chart card to use the empty space below instead of leaving
-   *  a void; fill-mode teeth scale up into it. Off when the breakdown is populated
-   *  so the table stays above the fold. */
-  roomy?: boolean;
 }
 
 /** Per-card component that fetches its own chart data */
@@ -300,7 +295,6 @@ export function TimelineCarousel({
   conflictedToothNumbers,
   compareOpen: compareOpenProp,
   onCompareOpenChange,
-  roomy = false,
 }: TimelineCarouselProps) {
   const lockMutation = useUpdateVisit(patientId);
   const dentitionType = getDentitionType(patientDateOfBirth);
@@ -416,7 +410,7 @@ export function TimelineCarousel({
         coverflowEffect={{ rotate: 35, stretch: 0, depth: 200, modifier: 1, scale: 0.72, slideShadows: false }}
         pagination={{ clickable: true }}
         keyboard={{ enabled: true }}
-        className={roomy ? 'dental-swiper is-roomy' : 'dental-swiper'}
+        className="dental-swiper"
       >
         {sorted.map((visit, idx) => {
           const isActive = idx === activeIndex;

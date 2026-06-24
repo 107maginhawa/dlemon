@@ -495,10 +495,6 @@ function WorkspacePage() {
             conflictedToothNumbers={conflictedTeeth}
             compareOpen={compareOpen}
             onCompareOpenChange={setCompareOpen}
-            // Empty visit (charting phase) → let the chart grow into the space the
-            // empty breakdown would otherwise leave as a void; clamps back once
-            // treatments populate so the breakdown stays above the fold.
-            roomy={treatments.length === 0}
           />
         </div>
 

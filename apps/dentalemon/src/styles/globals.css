@@ -242,16 +242,10 @@
 .dental-swiper .swiper-slide {
   width: 75%;
   max-width: 920px;
-  /* Item 2: viewport-relative clamp so the chart never claims >~45% of screen
-     height on a typical iPad — replaces the former fixed height that pushed the
-     treatment breakdown below the fold. */
-  height: min(46vh, 420px);
-}
-
-/* Roomy mode: an empty visit (charting phase, no breakdown to show) grows the
-   chart to use the space below instead of leaving a void; fill-mode teeth scale
-   up into the taller card. Reverts to the clamp once treatments populate. */
-.dental-swiper.is-roomy .swiper-slide {
+  /* ONE consistent chart height across every visit (no per-visit resize on swipe).
+     Viewport-relative so it scales with the screen; fill-mode teeth fill it. On a
+     populated visit the breakdown sits a little lower and scrolls in the single
+     scroll region — an accepted trade for a chart that never changes size. */
   height: min(64vh, 600px);
 }
 
