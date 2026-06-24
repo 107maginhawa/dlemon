@@ -152,6 +152,20 @@ describe('PerioChartOverlay', () => {
     }
   });
 
+  test('N5: the gate counter reads as a minimum, not a target', async () => {
+    const f = installFetch({ getStatus: 200, chart: makeChart('draft', 10) });
+    try {
+      renderOverlay();
+      await waitFor(() => expect(screen.getByTestId('perio-complete-btn')).not.toBeNull());
+      // a full-mouth exam is ~28 teeth; "16/16" implied "done". The copy must
+      // frame 16 as the minimum to complete.
+      expect(screen.getByText(/minimum 16 to complete/i)).not.toBeNull();
+      expect(screen.queryByText('16/16 teeth charted')).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('Complete is disabled under 16 readings and enabled at 16', async () => {
     const f = installFetch({ getStatus: 200, chart: makeChart('draft', 10) });
     try {

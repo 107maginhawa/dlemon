@@ -311,8 +311,10 @@ export function PerioChartOverlay({
                 )}
 
                 <div className="flex items-center justify-end gap-3">
+                  {/* N5: a full-mouth exam is ~28 teeth; frame 16 as the minimum
+                      to complete, not a 16/16 target that implies "done". */}
                   <span className="text-xs text-muted-foreground">
-                    {readingCount}/{MIN_ADULT_READINGS} teeth charted
+                    {readingCount} charted · minimum {MIN_ADULT_READINGS} to complete
                   </span>
                   <button
                     type="button"
