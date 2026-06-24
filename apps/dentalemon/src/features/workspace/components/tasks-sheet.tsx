@@ -79,10 +79,22 @@ function TaskRow({ task, onUpdateStatus, isUpdating }: TaskRowProps) {
             {STATUS_LABELS[task.status]}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {TASK_TYPE_LABELS[task.taskType]}
-          {task.dueDate ? ` · Due ${new Date(task.dueDate).toLocaleDateString()}` : ''}
-        </p>
+        {/* Lightly labeled Type / Due — a compact version of the occlusion Metric
+            pattern so the metadata reads explicitly, not as a bare joined string. */}
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          <span className="inline-flex items-baseline gap-1 text-xs">
+            <span className="uppercase tracking-wide text-muted-foreground">Type</span>
+            <span className="font-medium text-foreground">{TASK_TYPE_LABELS[task.taskType]}</span>
+          </span>
+          {task.dueDate && (
+            <span className="inline-flex items-baseline gap-1 text-xs">
+              <span className="uppercase tracking-wide text-muted-foreground">Due</span>
+              <span className="font-medium text-foreground">
+                {new Date(task.dueDate).toLocaleDateString()}
+              </span>
+            </span>
+          )}
+        </div>
         {task.description && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
         )}

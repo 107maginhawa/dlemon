@@ -101,12 +101,21 @@ interface PlanRowProps {
   canPresent?: boolean;
 }
 
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
 function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting, canPresent }: PlanRowProps) {
   const transitions = FSM[plan.status];
 
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-background p-3">
-      <div className="flex-1 min-w-0">
+      <div className="flex flex-1 flex-col gap-3 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">
             Plan — {new Date(plan.createdAt).toLocaleDateString()}
@@ -117,17 +126,23 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting, canPrese
             {STATUS_DISPLAY[plan.status]}
           </span>
         </div>
-        {plan.totalEstimateCents !== undefined && plan.totalEstimateCents > 0 && (
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Estimate: {formatCents(plan.totalEstimateCents)}
-          </p>
-        )}
-        {/* P2-10: CDT code-set year stamp */}
-        {plan.cdtCodeSetYear !== undefined && (
-          <p className="mt-0.5 text-[11px] text-muted-foreground">CDT {plan.cdtCodeSetYear}</p>
-        )}
+        {/* Labeled field grid — mirrors the occlusion Metric pattern so every
+            captured field reads explicitly. "—" when blank. */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+          <Field label="Status" value={STATUS_DISPLAY[plan.status]} />
+          <Field
+            label="Estimate"
+            value={
+              plan.totalEstimateCents !== undefined && plan.totalEstimateCents > 0
+                ? formatCents(plan.totalEstimateCents)
+                : '—'
+            }
+          />
+          {/* P2-10: CDT code-set year stamp */}
+          <Field label="CDT year" value={plan.cdtCodeSetYear !== undefined ? plan.cdtCodeSetYear : '—'} />
+        </div>
         {plan.notes && (
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{plan.notes}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2">{plan.notes}</p>
         )}
       </div>
 

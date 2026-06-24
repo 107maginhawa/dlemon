@@ -30,7 +30,9 @@ import { join } from 'node:path';
 // the rem token scale (text-xs) during the workspace-first-slice UX pass.
 // lowered to 333 when imaging rail + perio chart legibility pass migrated tooth
 // numbers, arch/site labels, and the upload card to the rem token scale.
-const BASELINE = 333;
+// lowered to 332 when the treatment-plan CDT-year stamp moved into the labeled
+// field grid (rem token scale) during the record-tabs polish pass.
+const BASELINE = 332;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

@@ -189,6 +189,23 @@ describe('TasksSheet — shipped component', () => {
     }
   });
 
+  test('ITEM-2: lightly labels Type and Due alongside the values', async () => {
+    const f = installFetch([
+      makeTask({ title: 'Refer to ortho', taskType: 'referral', status: 'open', dueDate: '2026-08-15' as unknown as Date }),
+    ]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Refer to ortho')).not.toBeNull());
+      // Type / Due read as explicit labels next to their values (light version of
+      // the occlusion Metric pattern), not just a bare bullet-joined string.
+      expect(screen.getByText('Type')).not.toBeNull();
+      expect(screen.getByText('Due')).not.toBeNull();
+      expect(screen.getByText('Referral')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('shows an error state when the tasks fetch fails', async () => {
     const original = global.fetch;
     global.fetch = mock(async () => new Response('nope', { status: 500 })) as unknown as typeof fetch;

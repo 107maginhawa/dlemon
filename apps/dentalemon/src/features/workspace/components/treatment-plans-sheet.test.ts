@@ -179,4 +179,25 @@ describe('TreatmentPlansSheet — shipped component', () => {
       f.restore();
     }
   });
+
+  test('ITEM-2: surfaces Estimate and CDT as labeled fields (occlusion Metric pattern)', async () => {
+    useOrgContextStore.setState({ memberId: 'member-7', role: 'dentist_owner' });
+    const f = installFetch([
+      makePlan({ status: 'draft', totalEstimateCents: 125000, cdtCodeSetYear: 2025 }),
+    ]);
+    try {
+      renderSheet();
+      // The "Estimate" + "CDT" labels render as their own label cells, distinct
+      // from the formatted value (mirrors occlusion's <Metric label value> grid).
+      const estimateLabel = await screen.findByText('Estimate');
+      expect(estimateLabel).not.toBeNull();
+      const cdtLabel = await screen.findByText('CDT year');
+      expect(cdtLabel).not.toBeNull();
+      // Values render separately from the labels.
+      expect(screen.getByText('₱1,250.00')).not.toBeNull();
+      expect(screen.getByText('2025')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
 });
