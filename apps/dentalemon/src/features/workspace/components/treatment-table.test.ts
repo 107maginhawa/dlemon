@@ -391,6 +391,58 @@ describe('TreatmentTable — Phase 3', () => {
   });
 });
 
+// ── Item 1: single scroll region — no nested max-h-[450px] overflow ───────────
+// The breakdown must NOT introduce its own inner scroll region (a second
+// scrollbar on the same axis can strand the Grand Total). One outer scroll zone
+// owns the axis; the table keeps a sticky thead and pins the Grand Total row
+// sticky to the bottom so the money stays visible while rows scroll.
+describe('Item 1: single scroll region (no nested overflow)', () => {
+  test('by-visit table has no inner max-h-[450px] overflow-auto wrapper', () => {
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-1',
+        treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    // No element may carry the nested fixed-height inner scroll.
+    expect(document.querySelector('.max-h-\\[450px\\]')).toBeNull();
+    const table = screen.getByRole('table');
+    let el: HTMLElement | null = table.parentElement;
+    while (el) {
+      expect(el.className).not.toContain('overflow-auto');
+      el = el.parentElement;
+    }
+  });
+
+  test('thead stays sticky to the top', () => {
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-1',
+        treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    const thead = screen.getByRole('table').querySelector('thead');
+    expect(thead).not.toBeNull();
+    expect(thead!.className).toContain('sticky');
+    expect(thead!.className).toContain('top-0');
+  });
+
+  test('Grand Total row is pinned sticky to the bottom', () => {
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-1',
+        treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    const total = screen.getByTestId('grand-total-row');
+    expect(total.className).toContain('sticky');
+    expect(total.className).toContain('bottom-0');
+  });
+});
+
 // ── P2: by-status presentation view (toggle) ──────────────────────────────────
 
 describe('by-status presentation view (P2)', () => {

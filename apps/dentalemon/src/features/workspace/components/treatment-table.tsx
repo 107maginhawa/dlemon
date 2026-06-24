@@ -341,7 +341,6 @@ export function TreatmentTable({
         </div>
       </div>
       {viewMode === 'by-visit' && (
-      <div className="overflow-auto max-h-[450px]">
       <table className="w-full text-sm" aria-label="Treatments">
         <thead className="sticky top-0 bg-muted/30 z-10">
           <tr>
@@ -653,11 +652,14 @@ export function TreatmentTable({
 
           {/* Grand Total row */}
           {(nativeTreatments.length > 0 || carriedOverItems.length > 0) && (
-            <tr data-testid="grand-total-row" className="border-t-2 border-border font-semibold">
-              <td colSpan={7} className="px-4 py-2 text-right text-sm">
+            <tr
+              data-testid="grand-total-row"
+              className="sticky bottom-0 z-10 border-t-2 border-border font-semibold bg-card"
+            >
+              <td colSpan={7} className="px-4 py-2 text-right text-sm bg-card">
                 Grand Total
               </td>
-              <td className="px-4 py-2 text-right tabular-nums text-sm">
+              <td className="px-4 py-2 text-right tabular-nums text-sm bg-card">
                 {CURRENCY_SYMBOL}
                 {grandTotal.toLocaleString(APP_LOCALE)}
               </td>
@@ -665,7 +667,6 @@ export function TreatmentTable({
           )}
         </tbody>
       </table>
-      </div>
       )}
 
       {/* P2: by-status/phase plan presentation (read-only). Rows are grouped via
@@ -682,7 +683,7 @@ export function TreatmentTable({
         const sumOf = (items: Treatment[]) => items.reduce((s, t) => s + (t.priceAmount ?? 0), 0);
         const visible = groups.filter((g) => g.items.length > 0);
         return (
-          <div data-testid="treatment-presentation" className="overflow-auto max-h-[450px] px-4 py-3 space-y-4">
+          <div data-testid="treatment-presentation" className="px-4 py-3 space-y-4">
             {visible.length === 0 ? (
               <p className="text-sm text-muted-foreground">No treatments to present for this visit.</p>
             ) : (
