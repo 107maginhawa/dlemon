@@ -109,3 +109,121 @@ export function getInitials(name?: string): string {
     .toUpperCase()
     .slice(0, 2);
 }
+
+// ---------------------------------------------------------------------------
+// Dashboard-home redesign (first slice): timeline + attention-queue helpers
+// ---------------------------------------------------------------------------
+
+/** Ascending by scheduledAt. Returns a new array (does not mutate input). */
+export function sortByTime<T extends { scheduledAt: string }>(appointments: T[]): T[] {
+  return [...appointments].sort(
+    (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+  );
+}
+
+/**
+ * Index at which to insert the "now" divider in a time-sorted list — the index
+ * of the first appointment whose scheduledAt is strictly after `now`. Returns
+ * `-1` when every appointment is in the past (or the list is empty), i.e. no
+ * divider should be shown.
+ */
+export function nowLineIndex<T extends { scheduledAt: string }>(
+  sortedAppointments: T[],
+  now: Date,
+): number {
+  const nowMs = now.getTime();
+  const idx = sortedAppointments.findIndex(
+    (a) => new Date(a.scheduledAt).getTime() > nowMs,
+  );
+  return idx;
+}
+
+export type AttentionTone = 'info' | 'warning' | 'destructive';
+
+export interface AttentionItem {
+  id: string;
+  label: string;
+  count: number;
+  tone: AttentionTone;
+  route: string;
+}
+
+interface BuildAttentionItemsArgs {
+  appointments: { status: string }[];
+  overdueInvoices: { balanceCents: number }[];
+  overdueLabOrders: number | null;
+  paymentPlansBehind: number | null;
+  showFinancials: boolean;
+}
+
+/**
+ * Derive the "Needs attention" action items from already-fetched dashboard
+ * data. Financial items (overdue balances, lab due, plans behind) are omitted
+ * entirely when `showFinancials === false` — there is no financial data path
+ * for non-financial roles. Items with a zero count are dropped.
+ */
+export function buildAttentionItems({
+  appointments,
+  overdueInvoices,
+  overdueLabOrders,
+  paymentPlansBehind,
+  showFinancials,
+}: BuildAttentionItemsArgs): AttentionItem[] {
+  const items: AttentionItem[] = [];
+
+  const unconfirmed = appointments.filter((a) => a.status === 'scheduled').length;
+  if (unconfirmed > 0) {
+    items.push({
+      id: 'unconfirmed',
+      label: unconfirmed === 1 ? 'unconfirmed appointment' : 'unconfirmed appointments',
+      count: unconfirmed,
+      tone: 'info',
+      route: '/calendar',
+    });
+  }
+
+  const checkedIn = appointments.filter((a) => a.status === 'checked_in').length;
+  if (checkedIn > 0) {
+    items.push({
+      id: 'checked-in',
+      label: checkedIn === 1 ? 'patient checked in' : 'patients checked in',
+      count: checkedIn,
+      tone: 'info',
+      route: '/calendar',
+    });
+  }
+
+  if (showFinancials) {
+    if (overdueInvoices.length > 0) {
+      items.push({
+        id: 'overdue-balances',
+        label: overdueInvoices.length === 1 ? 'overdue balance' : 'overdue balances',
+        count: overdueInvoices.length,
+        tone: 'destructive',
+        route: '/billing',
+      });
+    }
+
+    if (overdueLabOrders != null && overdueLabOrders > 0) {
+      items.push({
+        id: 'lab-due',
+        label: overdueLabOrders === 1 ? 'lab case overdue' : 'lab cases overdue',
+        count: overdueLabOrders,
+        tone: 'warning',
+        route: '/billing',
+      });
+    }
+
+    if (paymentPlansBehind != null && paymentPlansBehind > 0) {
+      items.push({
+        id: 'plans-behind',
+        label: paymentPlansBehind === 1 ? 'payment plan behind' : 'payment plans behind',
+        count: paymentPlansBehind,
+        tone: 'warning',
+        route: '/billing',
+      });
+    }
+  }
+
+  return items;
+}

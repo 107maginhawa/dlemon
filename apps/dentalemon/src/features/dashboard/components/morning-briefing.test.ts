@@ -24,6 +24,11 @@ import {
   formatDailyCollections,
 } from './morning-briefing';
 import { MorningBriefing } from './morning-briefing';
+import {
+  sortByTime,
+  nowLineIndex,
+  buildAttentionItems,
+} from './morning-briefing.helpers';
 
 // ---------------------------------------------------------------------------
 // Local helpers not exported by the component
@@ -384,6 +389,140 @@ describe('MorningBriefing -- role-based access (rbac.ts)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// First-slice helpers: sortByTime, nowLineIndex, buildAttentionItems
+// ---------------------------------------------------------------------------
+
+describe('MorningBriefing -- sortByTime', () => {
+  test('sorts ascending by scheduledAt', () => {
+    const appts = [
+      { id: 'b', scheduledAt: '2026-06-25T11:00:00Z' },
+      { id: 'a', scheduledAt: '2026-06-25T09:00:00Z' },
+      { id: 'c', scheduledAt: '2026-06-25T14:00:00Z' },
+    ];
+    const result = sortByTime(appts);
+    expect(result.map((a) => a.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('does not mutate the input array', () => {
+    const appts = [
+      { id: 'b', scheduledAt: '2026-06-25T11:00:00Z' },
+      { id: 'a', scheduledAt: '2026-06-25T09:00:00Z' },
+    ];
+    const before = appts.map((a) => a.id);
+    sortByTime(appts);
+    expect(appts.map((a) => a.id)).toEqual(before);
+  });
+
+  test('empty array returns empty', () => {
+    expect(sortByTime([])).toEqual([]);
+  });
+});
+
+describe('MorningBriefing -- nowLineIndex', () => {
+  const sorted = [
+    { id: 'a', scheduledAt: '2026-06-25T09:00:00Z' },
+    { id: 'b', scheduledAt: '2026-06-25T11:00:00Z' },
+    { id: 'c', scheduledAt: '2026-06-25T14:00:00Z' },
+  ];
+
+  test('mid-day: index of first appointment after now', () => {
+    const now = new Date('2026-06-25T10:00:00Z');
+    expect(nowLineIndex(sorted, now)).toBe(1);
+  });
+
+  test('before all appointments: index 0', () => {
+    const now = new Date('2026-06-25T08:00:00Z');
+    expect(nowLineIndex(sorted, now)).toBe(0);
+  });
+
+  test('after all appointments: -1', () => {
+    const now = new Date('2026-06-25T15:00:00Z');
+    expect(nowLineIndex(sorted, now)).toBe(-1);
+  });
+
+  test('empty array: -1', () => {
+    expect(nowLineIndex([], new Date('2026-06-25T10:00:00Z'))).toBe(-1);
+  });
+});
+
+describe('MorningBriefing -- buildAttentionItems', () => {
+  const baseAppts = [
+    { id: '1', status: 'scheduled', scheduledAt: '2026-06-25T09:00:00Z' },
+    { id: '2', status: 'scheduled', scheduledAt: '2026-06-25T10:00:00Z' },
+    { id: '3', status: 'checked_in', scheduledAt: '2026-06-25T11:00:00Z' },
+    { id: '4', status: 'completed', scheduledAt: '2026-06-25T12:00:00Z' },
+  ];
+  const overdueInvoices = [
+    { id: 'i1', balanceCents: 500000 },
+    { id: 'i2', balanceCents: 300000 },
+  ];
+
+  test('financial role includes unconfirmed, checked-in, and financial items', () => {
+    const items = buildAttentionItems({
+      appointments: baseAppts,
+      overdueInvoices,
+      overdueLabOrders: 2,
+      paymentPlansBehind: 1,
+      showFinancials: true,
+    });
+    const ids = items.map((i) => i.id);
+    expect(ids).toContain('unconfirmed');
+    expect(ids).toContain('checked-in');
+    expect(ids).toContain('overdue-balances');
+    expect(ids).toContain('lab-due');
+    expect(ids).toContain('plans-behind');
+
+    const unconfirmed = items.find((i) => i.id === 'unconfirmed');
+    expect(unconfirmed?.count).toBe(2);
+    const checkedIn = items.find((i) => i.id === 'checked-in');
+    expect(checkedIn?.count).toBe(1);
+    const overdue = items.find((i) => i.id === 'overdue-balances');
+    expect(overdue?.count).toBe(2);
+  });
+
+  test('non-financial role omits all financial items', () => {
+    const items = buildAttentionItems({
+      appointments: baseAppts,
+      overdueInvoices,
+      overdueLabOrders: 2,
+      paymentPlansBehind: 1,
+      showFinancials: false,
+    });
+    const ids = items.map((i) => i.id);
+    expect(ids).toContain('unconfirmed');
+    expect(ids).toContain('checked-in');
+    expect(ids).not.toContain('overdue-balances');
+    expect(ids).not.toContain('lab-due');
+    expect(ids).not.toContain('plans-behind');
+  });
+
+  test('zero-state returns no items', () => {
+    const items = buildAttentionItems({
+      appointments: [{ id: 'x', status: 'completed', scheduledAt: '2026-06-25T09:00:00Z' }],
+      overdueInvoices: [],
+      overdueLabOrders: 0,
+      paymentPlansBehind: 0,
+      showFinancials: true,
+    });
+    expect(items).toEqual([]);
+  });
+
+  test('each item carries a route for click-through', () => {
+    const items = buildAttentionItems({
+      appointments: baseAppts,
+      overdueInvoices,
+      overdueLabOrders: 0,
+      paymentPlansBehind: 0,
+      showFinancials: true,
+    });
+    for (const item of items) {
+      expect(typeof item.route).toBe('string');
+      expect(item.route.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Render-level role gating + non-owner resilience (G-dashboard-*)
 //
 // The summary endpoint (getDashboardSummary) is OWNER-ONLY on the backend, but
@@ -429,7 +568,7 @@ describe('MorningBriefing -- render-level role gating', () => {
     global.fetch = originalFetch;
   });
 
-  test('non-owner: owner-only summary 403 does NOT blank the dashboard — schedule renders', async () => {
+  test('non-owner: owner-only summary 403 does NOT blank the dashboard — timeline renders', async () => {
     // calls: 0 today (ok), 1 tomorrow (ok), 2 summary (403, owner-only)
     global.fetch = renderErrorAt(2, [RENDER_TODAY, RENDER_TOMORROW]);
 
@@ -439,33 +578,17 @@ describe('MorningBriefing -- render-level role gating', () => {
     );
 
     // wait for post-load content; explicit timeout is robust under full-suite CPU load
-    await screen.findByText("Today's Schedule", undefined, { timeout: 5000 });
+    await screen.findByTestId('schedule-timeline', undefined, { timeout: 5000 });
+    // the command-center regions render
+    expect(screen.getByTestId('attention-queue')).toBeTruthy();
+    expect(screen.getByTestId('kpi-ribbon')).toBeTruthy();
     // schedule renders (NOT suppressed behind an error banner)
     expect(screen.getByText('Maria Santos')).toBeTruthy();
     // no error banner rendered
     expect(screen.queryByText(/error 403/i)).toBeNull();
   });
 
-  test('non-financial role (staff_full): financial cards omitted, non-financial shown', async () => {
-    global.fetch = renderFetch([RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY]);
-
-    render(
-      React.createElement(MorningBriefing, { role: 'staff_full', branchId: 'b1' }),
-      { wrapper: makeWrapper(freshClient()) },
-    );
-
-    await screen.findByText('Follow-ups', undefined, { timeout: 5000 });
-    // financial cards are NOT rendered for a non-financial role
-    expect(screen.queryByText('Daily Collections')).toBeNull();
-    expect(screen.queryByText('Overdue Alerts')).toBeNull();
-    expect(screen.queryByText('Payment Plans')).toBeNull();
-    // their non-financial substitutes ARE rendered
-    expect(screen.getByText('Follow-ups')).toBeTruthy();
-    expect(screen.getByText("Today's Completed")).toBeTruthy();
-    expect(screen.getByText('Checked In')).toBeTruthy();
-  });
-
-  test('financial role (dentist_owner): financial cards rendered', async () => {
+  test('new composition replaces the 6-card grid and Reminders block', async () => {
     global.fetch = renderFetch([
       RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY,
       { data: RENDER_OVERDUE }, { data: RENDER_ALL },
@@ -476,11 +599,46 @@ describe('MorningBriefing -- render-level role gating', () => {
       { wrapper: makeWrapper(freshClient()) },
     );
 
-    await screen.findByText('Daily Collections', undefined, { timeout: 5000 });
-    expect(screen.getByText('Overdue Alerts')).toBeTruthy();
-    expect(screen.getByText('Payment Plans')).toBeTruthy();
-    // non-financial substitutes are NOT shown for a financial role
-    expect(screen.queryByText('Follow-ups')).toBeNull();
+    await screen.findByTestId('schedule-timeline', undefined, { timeout: 5000 });
+    // the removed surfaces are gone
+    expect(screen.queryByText('Reminders')).toBeNull();
+    expect(screen.queryByText('Pending Treatments')).toBeNull();
+    expect(screen.queryByText('Lab Orders')).toBeNull();
+    // quick actions + tomorrow up-next are kept
+    expect(screen.getByTestId('quick-new-patient')).toBeTruthy();
+  });
+
+  test('non-financial role (staff_full): KPI ribbon omits collections; no financial leakage', async () => {
+    global.fetch = renderFetch([RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY]);
+
+    render(
+      React.createElement(MorningBriefing, { role: 'staff_full', branchId: 'b1' }),
+      { wrapper: makeWrapper(freshClient()) },
+    );
+
+    await screen.findByTestId('kpi-ribbon', undefined, { timeout: 5000 });
+    const ribbon = screen.getByTestId('kpi-ribbon');
+    // collections label is NOT present for a non-financial role
+    expect(ribbon.textContent).not.toContain('Collected');
+    // done / remaining ARE present
+    expect(ribbon.textContent).toContain('Done');
+    expect(ribbon.textContent).toContain('Remaining');
+  });
+
+  test('financial role (dentist_owner): KPI ribbon shows collections', async () => {
+    global.fetch = renderFetch([
+      RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY,
+      { data: RENDER_OVERDUE }, { data: RENDER_ALL },
+    ]);
+
+    render(
+      React.createElement(MorningBriefing, { role: 'dentist_owner', branchId: 'b1' }),
+      { wrapper: makeWrapper(freshClient()) },
+    );
+
+    await screen.findByTestId('kpi-ribbon', undefined, { timeout: 5000 });
+    const ribbon = screen.getByTestId('kpi-ribbon');
+    expect(ribbon.textContent).toContain('Collected');
   });
 });
 
