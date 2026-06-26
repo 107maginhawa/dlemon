@@ -115,6 +115,76 @@ export function deriveLayerSets(treatments: ChartExportTreatmentInput[]) {
   return { completed, proposed, declined };
 }
 
+/**
+ * Cumulative as-of layer derivation. Unlike deriveLayerSets (per-visit, status-only),
+ * this answers "what is each tooth's lifecycle layer AS OF a given visit date", across
+ * the patient's whole charted treatment history. Completed-as-of is exact via
+ * performedAt; proposed/declined-as-of use the origin/owning-visit date (no dedicated
+ * transition timestamp exists — see treatment.lifecycle.characterization.test.ts).
+ *
+ * `changed` = teeth whose layer transitioned IN the as-of visit (same-day), driving the
+ * "changed this visit" cue. Precedence is identical to deriveLayerSets (proposed wins
+ * over completed and declined) so the FE/BE contract holds.
+ */
+export interface AsOfTreatment {
+  toothNumber: number | null;
+  status: string;
+  performedAt: Date | null;
+  visitId: string;
+  sourceVisitId: string | null;
+  carriedOver: boolean;
+}
+
+export function deriveLayerSetsAsOf(
+  treatments: AsOfTreatment[],
+  asOf: Date,
+  visitDateById: Map<string, Date>,
+) {
+  const proposed = new Set<number>();
+  const completed = new Set<number>();
+  const declined = new Set<number>();
+  const changed = new Set<number>();
+
+  const dateOf = (id: string | null) => (id ? visitDateById.get(id) ?? null : null);
+  const onOrBefore = (d: Date | null) => d != null && d.getTime() <= asOf.getTime();
+  const sameDay = (d: Date | null) => d != null && d.getTime() === asOf.getTime();
+
+  for (const t of treatments) {
+    const n = t.toothNumber;
+    if (n == null) continue;
+    // "origin date" = when the work was first proposed (sourceVisitId for carry-overs,
+    // else the row's own visit).
+    const originDate = dateOf(t.sourceVisitId) ?? dateOf(t.visitId);
+    const visitDate = dateOf(t.visitId);
+
+    if (t.status === 'performed' || t.status === 'verified') {
+      if (onOrBefore(t.performedAt)) {
+        completed.add(n);
+        if (sameDay(t.performedAt)) changed.add(n);
+      } else if (onOrBefore(originDate)) {
+        // Performed in the FUTURE relative to as-of, but already proposed → Planned then.
+        proposed.add(n);
+        if (sameDay(originDate)) changed.add(n);
+      }
+      continue;
+    }
+    if (t.status === 'declined') {
+      if (onOrBefore(visitDate)) { declined.add(n); if (sameDay(visitDate)) changed.add(n); }
+      continue;
+    }
+    if (t.status === 'diagnosed' || t.status === 'planned') {
+      if (onOrBefore(originDate)) { proposed.add(n); if (sameDay(originDate)) changed.add(n); }
+      continue;
+    }
+    // dismissed → off-chart, skip.
+  }
+
+  // Precedence (LOCKED, must match deriveLayerSets + chart-layers.ts): a fresh proposal
+  // supersedes both a completed treatment and a prior refusal. Keep the sets disjoint.
+  for (const n of proposed) { completed.delete(n); declined.delete(n); }
+  return { proposed, completed, declined, changed };
+}
+
 export function buildChartExport(input: ChartExportInput): ChartExport {
   const { completed, proposed, declined } = deriveLayerSets(input.treatments);
 

@@ -9,7 +9,70 @@
  * matching the FE living-document chart. Written RED before implementation.
  */
 import { describe, test, expect } from 'bun:test';
-import { buildChartExport, CHART_EXPORT_LEGEND } from './chart-export';
+import { buildChartExport, CHART_EXPORT_LEGEND, deriveLayerSetsAsOf } from './chart-export';
+
+const D = (s: string) => new Date(s);
+const visitDates = new Map<string, Date>([
+  ['v1', D('2026-01-10')], ['v2', D('2026-03-05')], ['v3', D('2026-06-20')],
+]);
+
+describe('deriveLayerSetsAsOf — cumulative as-of-visit layers', () => {
+  test('as-of V1: tooth 36 caries planned → Planned only, changed this visit', () => {
+    const tx = [{ toothNumber: 36, status: 'planned', performedAt: null, visitId: 'v1', sourceVisitId: null, carriedOver: false }];
+    const r = deriveLayerSetsAsOf(tx, visitDates.get('v1')!, visitDates);
+    expect([...r.proposed]).toEqual([36]);
+    expect([...r.completed]).toEqual([]);
+    expect([...r.changed]).toEqual([36]);
+  });
+
+  test('as-of V2: filling performed → Treated, and Treated PERSISTS as-of later dates', () => {
+    const tx = [{ toothNumber: 36, status: 'performed', performedAt: D('2026-03-05'), visitId: 'v1', sourceVisitId: null, carriedOver: false }];
+    const atV2 = deriveLayerSetsAsOf(tx, visitDates.get('v2')!, visitDates);
+    expect([...atV2.completed]).toEqual([36]);
+    expect([...atV2.changed]).toEqual([36]);
+    const atV3 = deriveLayerSetsAsOf(tx, visitDates.get('v3')!, visitDates);
+    expect([...atV3.completed]).toEqual([36]); // STILL treated at V3 — the headline fix
+    expect([...atV3.changed]).toEqual([]);      // not changed at V3
+  });
+
+  test('as-of V3: prior performed filling + new RCT planned → Planned wins (precedence), changed=this visit', () => {
+    const tx = [
+      { toothNumber: 36, status: 'performed', performedAt: D('2026-03-05'), visitId: 'v1', sourceVisitId: null, carriedOver: false },
+      { toothNumber: 36, status: 'planned', performedAt: null, visitId: 'v3', sourceVisitId: null, carriedOver: false },
+    ];
+    const r = deriveLayerSetsAsOf(tx, visitDates.get('v3')!, visitDates);
+    expect([...r.proposed]).toEqual([36]);   // open work outranks completed
+    expect([...r.completed]).toEqual([]);    // proposed owns the tooth (disjoint)
+    expect([...r.changed]).toEqual([36]);    // re-flagged this visit
+  });
+
+  test('declined as-of the declining visit', () => {
+    const tx = [{ toothNumber: 14, status: 'declined', performedAt: null, visitId: 'v2', sourceVisitId: null, carriedOver: false }];
+    const r = deriveLayerSetsAsOf(tx, visitDates.get('v2')!, visitDates);
+    expect([...r.declined]).toEqual([14]);
+    expect([...r.changed]).toEqual([14]);
+  });
+
+  test('a treatment proposed AFTER the as-of date is invisible', () => {
+    const tx = [{ toothNumber: 21, status: 'planned', performedAt: null, visitId: 'v3', sourceVisitId: null, carriedOver: false }];
+    const r = deriveLayerSetsAsOf(tx, visitDates.get('v1')!, visitDates);
+    expect([...r.proposed]).toEqual([]); // not yet flagged at V1
+  });
+
+  test('a carried-over treatment uses its origin (sourceVisitId) date for proposed-as-of', () => {
+    // Carried into v3 but originally proposed at v1 → visible as-of v2 (after origin, before target).
+    const tx = [{ toothNumber: 26, status: 'planned', performedAt: null, visitId: 'v3', sourceVisitId: 'v1', carriedOver: true }];
+    const r = deriveLayerSetsAsOf(tx, visitDates.get('v2')!, visitDates);
+    expect([...r.proposed]).toEqual([26]);
+  });
+
+  test('performed in the FUTURE relative to as-of but already proposed → shows as Planned then', () => {
+    const tx = [{ toothNumber: 36, status: 'performed', performedAt: D('2026-06-20'), visitId: 'v1', sourceVisitId: null, carriedOver: false }];
+    const r = deriveLayerSetsAsOf(tx, visitDates.get('v2')!, visitDates);
+    expect([...r.proposed]).toEqual([36]); // it was still just planned at V2
+    expect([...r.completed]).toEqual([]);
+  });
+});
 
 const BASE = {
   patient: { id: 'pat-1', name: 'Maria Santos', dateOfBirth: '1990-02-01' },
