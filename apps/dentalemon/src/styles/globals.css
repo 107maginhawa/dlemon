@@ -262,10 +262,20 @@
   }
 }
 
-/* Dental chart carousel — responsive slide sizing for coverflow */
-.dental-swiper {
+/* Dental chart carousel — responsive slide sizing for coverflow.
+   NB: needs `.dental-swiper.swiper` (two classes) to beat Swiper's own
+   `.swiper { padding: 0 }` base rule, which loads after globals.css. */
+.dental-swiper.swiper {
   width: 100%;
-  padding: 8px 4vw 24px;
+  /* Extra bottom room so the pagination sits on its OWN row below the card,
+     not on top of the card-footer legend (item 3: legend/dots overlap). */
+  padding: 8px 4vw 44px;
+}
+
+/* Pagination on its own row, clearly BELOW the card footer/legend (item 3).
+   The container padding above gives it the room; pin it near the very bottom. */
+.dental-swiper {
+  --swiper-pagination-bottom: 10px;
 }
 
 .dental-swiper .swiper-slide {

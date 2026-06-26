@@ -21,7 +21,9 @@ Key files: `apps/dentalemon/src/features/workspace/components/{dental-chart.tsx,
 - Collision: tooth LAYER label "Completed" (`LAYER_LABELS`, `dental-chart.helpers.ts:238`) vs CARD/visit status "Completed" (`timeline-carousel.tsx:313-326`, visit status Active/Completed/Locked). Same word, two meanings on the same screen.
 - Decide the tooth-layer term (e.g. "Treated" / "Done") so it never reads as the visit status. Ripples: layer labels, legends, tooltip copy, slideout copy.
 
-### 3. Legend ⟷ carousel pagination dots overlap — DESIGN — TRIAGED
+### 3. Legend ⟷ carousel pagination dots overlap — DESIGN — **DONE**
+- FIX: the per-card footer legend and the Swiper pagination shared the same row (measured: both at y≈689). Root cause = the pager is absolute at the swiper's bottom and the swiper had no real bottom room — `.dental-swiper { padding: ...24px }` was DEAD because Swiper's own `.swiper { padding: 0 }` (same specificity, loads later) overrode it. Fixed by raising specificity to `.dental-swiper.swiper { padding: 8px 4vw 44px }` (+ `--swiper-pagination-bottom: 10px`) so the pager drops to its own row below the card (now 26px gap, verified live at 1440px). `src/styles/globals.css:266`. Carousel CSS test 42/0.
+- Original analysis below.
 - [Image 1] The per-card compact legend (`ChartCompactLegend`, `timeline-carousel.tsx:94-130`, rendered in the active-card footer ~`:417`) and the Swiper pagination bullets (`renderBullet`, `timeline-carousel.tsx:600-609`) share the bottom band and crowd/overlap on the right.
 - Fix is a layout/region-separation problem (give the legend and the pager their own rows/space, or reposition the pager). Resolve in the fix phase per UX spacing standards.
 
