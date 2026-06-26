@@ -467,7 +467,8 @@ describe('by-status presentation view (P2)', () => {
     );
     await user.click(screen.getByTestId('view-by-status-btn'));
     expect(screen.getByTestId('status-group-proposed').textContent).toMatch(/Planned/);
-    expect(screen.getByTestId('status-group-completed').textContent).toMatch(/Completed/);
+    // item 2: the 'completed' layer label is "Treated" (getLayerLabel), not "Completed".
+    expect(screen.getByTestId('status-group-completed').textContent).toMatch(/Treated/);
     expect(screen.getByTestId('status-group-declined').textContent).toMatch(/Declined/);
   });
 
