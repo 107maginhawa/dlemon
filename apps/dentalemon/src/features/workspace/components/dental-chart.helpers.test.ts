@@ -626,14 +626,16 @@ describe('resolveToothLayer (CHART-XV)', () => {
     declined: new Set(over.declined ?? []),
   });
 
-  test('completed set wins over everything', () => {
+  test('proposed wins over everything — outstanding work is never hidden behind a Treated ring (item 6 flip)', () => {
+    // Clinical safety: a tooth with BOTH a performed treatment AND new pending
+    // work must read as Planned so the dentist sees the outstanding work.
     expect(
       resolveToothLayer(26, 'treatment_plan', sets({ completed: [26], proposed: [26], declined: [26] })),
-    ).toBe('completed');
+    ).toBe('proposed');
   });
 
-  test('proposed set beats declined and entryClassification', () => {
-    expect(resolveToothLayer(11, 'existing', sets({ proposed: [11], declined: [11] }))).toBe('proposed');
+  test('completed beats declined and entryClassification', () => {
+    expect(resolveToothLayer(11, 'existing', sets({ completed: [11], declined: [11] }))).toBe('completed');
   });
 
   test('declined set beats entryClassification', () => {

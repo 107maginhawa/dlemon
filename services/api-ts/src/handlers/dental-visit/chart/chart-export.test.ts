@@ -3,9 +3,10 @@
  *
  * buildChartExport composes the portable export document: header, the odontogram
  * tooth/surface table with derived layers, the legend, and the proposed/completed/
- * declined treatment summary. Layer precedence is completed > proposed > declined,
- * then baseline (entryClassification), else unset — matching the FE living-document
- * chart. Written RED before implementation.
+ * declined treatment summary. Layer precedence is proposed > completed > declined
+ * (item 6 flip: outstanding planned/diagnosed work wins so it is never hidden
+ * behind a Treated layer), then baseline (entryClassification), else unset —
+ * matching the FE living-document chart. Written RED before implementation.
  */
 import { describe, test, expect } from 'bun:test';
 import { buildChartExport, CHART_EXPORT_LEGEND } from './chart-export';
@@ -32,7 +33,7 @@ describe('buildChartExport — header', () => {
   });
 });
 
-describe('buildChartExport — derived tooth layers (precedence completed > proposed > declined > baseline)', () => {
+describe('buildChartExport — derived tooth layers (precedence proposed > completed > declined > baseline)', () => {
   test('assigns each chart tooth its derived layer', () => {
     const out = buildChartExport({
       ...BASE,
@@ -59,9 +60,10 @@ describe('buildChartExport — derived tooth layers (precedence completed > prop
 
   // Shared layer-precedence contract pin (chart-export.ts ↔ FE chart-layers.ts):
   // when ONE tooth is referenced by completed AND proposed AND declined items at
-  // once, completed must win outright. This is the strongest statement of the
+  // once, proposed must win outright (item 6 flip) — outstanding planned work is
+  // never hidden behind a completed/Treated layer. Strongest statement of the
   // precedence both implementations must agree on.
-  test('a tooth referenced by completed + proposed + declined resolves to completed', () => {
+  test('a tooth referenced by completed + proposed + declined resolves to proposed', () => {
     const out = buildChartExport({
       ...BASE,
       chartTeeth: [{ toothNumber: 36, state: 'filled' }],
@@ -71,13 +73,13 @@ describe('buildChartExport — derived tooth layers (precedence completed > prop
         { toothNumber: 36, cdtCode: 'D2740', description: 'Onlay', status: 'verified', priceCents: 50000 },
       ],
     });
-    expect(out.teeth[0]!.layer).toBe('completed');
-    expect(out.summary.completedCount).toBe(1);
-    expect(out.summary.proposedCount).toBe(0);
+    expect(out.teeth[0]!.layer).toBe('proposed');
+    expect(out.summary.proposedCount).toBe(1);
+    expect(out.summary.completedCount).toBe(0);
     expect(out.summary.declinedCount).toBe(0);
   });
 
-  test('completed wins over a competing planned item on the same tooth', () => {
+  test('proposed wins over a competing completed item on the same tooth (item 6 flip)', () => {
     const out = buildChartExport({
       ...BASE,
       chartTeeth: [{ toothNumber: 16, state: 'filled' }],
@@ -86,7 +88,7 @@ describe('buildChartExport — derived tooth layers (precedence completed > prop
         { toothNumber: 16, cdtCode: 'D2391', description: 'Composite', status: 'planned', priceCents: 15000 },
       ],
     });
-    expect(out.teeth[0]!.layer).toBe('completed');
+    expect(out.teeth[0]!.layer).toBe('proposed');
   });
 });
 

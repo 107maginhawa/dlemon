@@ -8,13 +8,14 @@
  *
  * SHARED LAYER-PRECEDENCE CONTRACT (keep in sync with the FE living-document chart
  * `apps/dentalemon/src/features/workspace/lib/chart-layers.ts` → deriveChartLayerSets):
- *   precedence: completed > proposed > declined > baseline (else unset)
+ *   precedence: proposed > completed > declined > baseline (else unset)  [item 6 flip]
  *   completed = treatment status performed | verified
  *   proposed  = status diagnosed | planned ; declined = status declined
- * The two implementations can't share a function across the module boundary, so they
- * are maintained independently and MUST agree. The precedence is pinned in
- * chart-export.test.ts ("derived tooth layers" / "completed wins …"); changing it here
- * requires the same change in chart-layers.ts (and vice versa).
+ * Outstanding planned/diagnosed work wins so it is never hidden behind a completed
+ * (Treated) layer. The two implementations can't share a function across the module
+ * boundary, so they are maintained independently and MUST agree. The precedence is
+ * pinned in chart-export.test.ts ("derived tooth layers" / "proposed wins …");
+ * changing it here requires the same change in chart-layers.ts (and vice versa).
  * Kept pure (no DB) so the layer/summary logic is unit-tested directly.
  */
 import type { ToothChartState, ChartEntryClassification } from '../repos/dental-chart.schema';
@@ -96,12 +97,17 @@ export function deriveLayerSets(treatments: ChartExportTreatmentInput[]) {
   }
   for (const t of treatments) {
     const n = t.toothNumber;
-    if (n == null || completed.has(n)) continue; // completed wins
+    if (n == null) continue;
     if (t.status === 'diagnosed' || t.status === 'planned') proposed.add(n);
     else if (t.status === 'declined') declined.add(n);
   }
-  // proposed supersedes a declined item on the same tooth
-  for (const n of proposed) declined.delete(n);
+  // Item 6 flip — proposed wins: a planned/diagnosed item supersedes BOTH a
+  // completed treatment AND a declined item on the same tooth, so outstanding work
+  // is never hidden behind a completed (Treated) layer. Keep the sets disjoint.
+  for (const n of proposed) {
+    completed.delete(n);
+    declined.delete(n);
+  }
   return { completed, proposed, declined };
 }
 
@@ -109,8 +115,8 @@ export function buildChartExport(input: ChartExportInput): ChartExport {
   const { completed, proposed, declined } = deriveLayerSets(input.treatments);
 
   function layerFor(tooth: ToothChartState): string {
-    if (completed.has(tooth.toothNumber)) return 'completed';
     if (proposed.has(tooth.toothNumber)) return 'proposed';
+    if (completed.has(tooth.toothNumber)) return 'completed';
     if (declined.has(tooth.toothNumber)) return 'declined';
     if (tooth.entryClassification && BASELINE_CLASSES.has(tooth.entryClassification)) return 'baseline';
     return 'unset';

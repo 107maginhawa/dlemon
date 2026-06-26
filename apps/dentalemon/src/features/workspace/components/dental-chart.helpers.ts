@@ -214,17 +214,19 @@ export function statusToLayer(status: TreatmentLayerStatus): ChartLayer | null {
  * (cross-visit sets fed by the patient treatment-plan aggregate), falling back to
  * the tooth's chart-native classification when no treatment record drives it.
  *
- * Precedence (CHART-XV): completed > proposed > declined > entryClassification.
- * A tooth that has been treated is shown done even if a stale planned/declined
- * item still references it; a fresh proposal supersedes a prior declination.
+ * Precedence (item 6 flip): proposed > completed > declined > entryClassification.
+ * Outstanding planned/diagnosed work wins so a tooth with NEW pending work is shown
+ * Planned even when it also carries a performed treatment — clinical safety: the
+ * dentist must never see a green Treated ring hiding work still to be done. A fresh
+ * proposal also supersedes a prior declination.
  */
 export function resolveToothLayer(
   toothNumber: number,
   entryClassification: ChartEntryClassification | undefined,
   sets?: { completed?: ReadonlySet<number>; proposed?: ReadonlySet<number>; declined?: ReadonlySet<number> },
 ): ChartLayer {
-  if (sets?.completed?.has(toothNumber)) return 'completed';
   if (sets?.proposed?.has(toothNumber)) return 'proposed';
+  if (sets?.completed?.has(toothNumber)) return 'completed';
   if (sets?.declined?.has(toothNumber)) return 'declined';
   return getToothLayer(entryClassification);
 }

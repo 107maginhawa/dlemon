@@ -11,14 +11,14 @@
  *   - declined   = teeth whose recommended treatment the patient refused.
  *   - carriedOver = proposed teeth first proposed in a prior visit (carriedOver flag).
  *
- * Clinical precedence: completed > proposed > declined (> baseline). A tooth that
- * has been treated is shown done even if another planned/declined item still
- * references it (e.g. a second recommendation on the same tooth). This keeps the
- * chart honest — the Completed layer never double-counts a tooth as still pending.
+ * Clinical precedence: proposed > completed > declined (> baseline). A tooth with
+ * outstanding planned/diagnosed work is shown Planned even when it also carries a
+ * performed treatment, so new work is never hidden behind a Treated ring (item 6
+ * flip). A fresh proposal also supersedes a prior declination on the same tooth.
  *
  * SHARED LAYER-PRECEDENCE CONTRACT (keep in sync with the backend chart export
  * `services/api-ts/src/handlers/dental-visit/chart/chart-export.ts` → deriveLayerSets):
- *   precedence: completed > proposed > declined > baseline (else unset)
+ *   precedence: proposed > completed > declined > baseline (else unset)
  *   completed = treatment status performed | verified
  *   proposed  = status diagnosed | planned ; declined = status declined
  * The two implementations can't share a function across the module boundary, so they
@@ -44,7 +44,6 @@ export function deriveChartLayerSets(plan: TreatmentPlanData | null | undefined)
   for (const t of plan?.treatments ?? []) {
     const n = t.toothNumber;
     if (n == null) continue;
-    if (completed.has(n)) continue; // completed wins — never re-list as pending
     // P0-2: derive the layer through the shared statusToLayer() fold so the chart
     // and the treatment list can never disagree on what a tooth's status means.
     const layer = statusToLayer(t.status as TreatmentLayerStatus);
@@ -58,9 +57,14 @@ export function deriveChartLayerSets(plan: TreatmentPlanData | null | undefined)
     // null (dismissed) is off-chart and intentionally skipped.
   }
 
-  // proposed wins over declined for the same tooth (a fresh recommendation
-  // supersedes a refusal already in the list).
-  for (const n of proposed) declined.delete(n);
+  // Item 6 flip — proposed wins: a fresh planned/diagnosed item supersedes BOTH a
+  // completed treatment AND a prior refusal on the same tooth, so outstanding work
+  // is never hidden behind a Treated ring. Keep the sets disjoint (proposed owns
+  // the tooth) so the layer counts/visibility agree with resolveToothLayer.
+  for (const n of proposed) {
+    completed.delete(n);
+    declined.delete(n);
+  }
 
   return { proposed, completed, declined, carriedOver };
 }
