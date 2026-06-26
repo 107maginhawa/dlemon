@@ -21,7 +21,7 @@ Evidence: `scratchpad/p3-active-card.png`, `p3-chips.png`.
 ---
 
 ## Phase 4 — workflow/affordance batch (2026-06-26, 1440px, patient Juan / Dr. Maria Reyes)
-Items 7 + 9 + the two item-6 breakdown bugs (a/b) shipped as ONE fix (commit `4d941ff7`): the slideout "Treatment Breakdown" is now a truthful per-tooth timeline (Date column + active-visit rows + status-honest badges). Items 8 and 10 needed no code (8 was already resolved by prior per-visit-layers work; 10 is a documented "no browse gate" rule). Live-verified on tooth 36. **Out-of-scope find:** the `treatment-table` "by-status presentation" test (`switching to By Status groups rows under Planned / Completed / Declined`) fails on a clean tree (reproduced with this batch stashed) — pre-existing, unrelated to items 7–10, left for a separate fix.
+Items 7 + 9 + the two item-6 breakdown bugs (a/b) shipped as ONE fix (commit `4d941ff7`): the slideout "Treatment Breakdown" is now a truthful per-tooth timeline (Date column + active-visit rows + status-honest badges). Items 8 and 10 needed no code (8 was already resolved by prior per-visit-layers work; 10 is a documented "no browse gate" rule). Live-verified on tooth 36. **Also fixed (`39b3fb8e`):** a stale `treatment-table` by-status test that still asserted `/Completed/` for the group heading — fallout from item 2's "Completed"→"Treated" rename; now `/Treated/`. FE suite green at **2802 pass / 0 fail**.
 
 ---
 
