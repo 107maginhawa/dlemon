@@ -304,6 +304,8 @@ mock.module('@/features/workspace/components/dental-chart', () => ({
     completedToothNumbers?: Set<number>;
     proposedToothNumbers?: Set<number>;
     declinedToothNumbers?: Set<number>;
+    changedToothNumbers?: Set<number>;
+    terminalToothNumbers?: Set<number>;
     [key: string]: unknown;
   }) =>
     React.createElement('div', {
@@ -311,6 +313,8 @@ mock.module('@/features/workspace/components/dental-chart', () => ({
       'data-completed': [...(props.completedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
       'data-proposed': [...(props.proposedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
       'data-declined': [...(props.declinedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+      'data-changed': [...(props.changedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+      'data-terminal': [...(props.terminalToothNumbers ?? [])].sort((a, b) => a - b).join(','),
     }),
 }))
 

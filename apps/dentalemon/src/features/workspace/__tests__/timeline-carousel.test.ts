@@ -701,6 +701,43 @@ describe('TimelineCarousel (Swiper)', () => {
     });
   });
 
+  // ── Cumulative timeline: changed-this-visit + terminal cues ─────────────
+  // Every card feeds its own visit's cumulative as-of layers to the chart, PLUS
+  // the teeth that transitioned in that visit (changedThisVisit) and terminal
+  // (missing/extracted) teeth — so the card can cue "changed here" and paint a
+  // gone tooth without an actionable ring.
+
+  describe('changed-this-visit + terminal cues', () => {
+    test('a card forwards changedThisVisit and terminalTeeth to the chart', async () => {
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [
+                { toothNumber: 36, state: 'caries' },
+                { toothNumber: 47, state: 'extracted' },
+              ],
+              layers: { completed: [], proposed: [36], declined: [] },
+              changedThisVisit: [36],
+              terminalTeeth: [47],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      const stub = await screen.findByTestId('dental-chart-stub');
+      expect(stub.getAttribute('data-changed')).toBe('36');
+      expect(stub.getAttribute('data-terminal')).toBe('47');
+    });
+  });
+
   // ── Read-only layer key on historical cards (Task 6) ───────────────────
   // Historical cards show NO interactive tab strip, so users can't interpret
   // the snapshot's colors. A static read-only key (data-testid="chart-layer-key")

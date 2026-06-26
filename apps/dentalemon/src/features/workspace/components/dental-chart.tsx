@@ -67,6 +67,12 @@ export interface DentalChartProps {
   /** P0-A: FDI numbers with an open offline sync conflict — marked so the clinician
    *  knows a rejected edit needs resolving (resolve via the conflict banner). */
   conflictedToothNumbers?: Set<number>;
+  /** Cumulative-timeline: FDI numbers whose layer transitioned IN this visit — cued
+   *  with a "changed this visit" marker so the card reads as a point in the story. */
+  changedToothNumbers?: Set<number>;
+  /** Cumulative-timeline: FDI numbers in a terminal state (missing/extracted) as-of
+   *  this visit — painted by the fill, never given an actionable Planned/Treated ring. */
+  terminalToothNumbers?: Set<number>;
   /** Fill mode: scale teeth to fill the chart's height (used by the carousel's
    *  active card) so the odontogram fits any card size — no dead space, no clip —
    *  instead of a fixed pixel tooth width that leaves the card half-empty. */
@@ -96,6 +102,8 @@ export function DentalChart({
   declinedToothNumbers,
   carriedOverToothNumbers,
   conflictedToothNumbers,
+  changedToothNumbers,
+  terminalToothNumbers,
   fluid = false,
   visibleLayers: visibleLayersProp,
 }: DentalChartProps) {
@@ -239,6 +247,11 @@ export function DentalChart({
       : getLayerOutline(toothLayer, { carriedOver: isCarriedOver });
     // P0-A: this tooth has an open offline conflict (a rejected stale write).
     const isConflicted = !!conflictedToothNumbers?.has(toothNumber);
+    // Cumulative-timeline: this tooth's layer transitioned IN this visit — cue it so
+    // the card reads as a point in the story (a ✦ glyph: a SHAPE, CVD-safe, never
+    // colour-only). Terminal teeth (missing/extracted) are flagged for the title/data.
+    const isChanged = !isDimmed && !!changedToothNumbers?.has(toothNumber);
+    const isTerminal = !!terminalToothNumbers?.has(toothNumber);
     // Item 5 / Option B: this tooth carries ≥2 distinct surface conditions, so
     // the single dominant fill can't tell the whole story. Flag it with a
     // corner pip → "open for detail" (the slideout renders the per-surface map).
@@ -260,8 +273,10 @@ export function DentalChart({
         data-tooth-primary={isPrimaryTooth ? '1' : undefined}
         data-carried-over={isCarriedOver ? '1' : undefined}
         data-conflicted={isConflicted ? '1' : undefined}
+        data-changed={isChanged ? '1' : undefined}
+        data-terminal={isTerminal ? '1' : undefined}
         onClick={() => onSelectTooth?.(toothNumber)}
-        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer}${isCarriedOver ? ', carried over from a prior visit' : ''}${isConflicted ? ' — unsynced edit needs review' : ''})`}
+        title={`Tooth ${displayLabel} — ${name} (${state}, ${toothLayer}${isCarriedOver ? ', carried over from a prior visit' : ''}${isConflicted ? ' — unsynced edit needs review' : ''}${isChanged ? ' — changed this visit' : ''}${isTerminal ? ' — terminal (no further treatment)' : ''})`}
         style={{
           flex: '1 1 0',
           minWidth: 0,
@@ -328,6 +343,19 @@ export function DentalChart({
             className="absolute top-0 right-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-amber-500 text-[7px] font-bold text-white"
           >
             !
+          </span>
+        )}
+        {isChanged && (
+          <span
+            data-testid={`tooth-changed-${toothNumber}`}
+            data-changed-cue="1"
+            aria-label="Changed this visit"
+            title="Changed this visit"
+            // ✦ is a SHAPE cue (not colour-only) so it survives grayscale / CVD; the
+            // slate hue keeps lemon reserved for interaction.
+            className="pointer-events-none absolute -top-1 -left-1 text-[0.5rem] leading-none text-slate-700"
+          >
+            ✦
           </span>
         )}
       </button>

@@ -177,13 +177,21 @@ function VisitChartCard({
       const chart = raw as {
         teeth?: ToothData[];
         layers?: { proposed: number[]; completed: number[]; declined: number[] };
+        changedThisVisit?: number[];
+        terminalTeeth?: number[];
       } | null;
-      return { teeth: chart?.teeth ?? [], layers: chart?.layers };
+      return {
+        teeth: chart?.teeth ?? [],
+        layers: chart?.layers,
+        changedThisVisit: chart?.changedThisVisit,
+        terminalTeeth: chart?.terminalTeeth,
+      };
     },
   });
   const teeth = data?.teeth ?? [];
-  // Per-visit layer sets for HISTORICAL (non-open) snapshots. The open card keeps
-  // the cumulative cross-visit sets passed via props (living-document semantics).
+  // Cumulative as-of layer sets for HISTORICAL (non-open) snapshots. The open card
+  // keeps the cumulative cross-visit sets passed via props (living-document
+  // semantics; also handles the baseline-fallback path where the API omits layers).
   const perVisitLayers = data?.layers;
   const toSet = (xs?: number[]) => (xs && xs.length ? new Set(xs) : undefined);
 
@@ -428,6 +436,11 @@ function VisitChartCard({
             declinedToothNumbers={isOpenVisit ? declinedToothNumbers : toSet(perVisitLayers?.declined)}
             carriedOverToothNumbers={isOpenVisit ? carriedOverToothNumbers : undefined}
             conflictedToothNumbers={isOpenVisit ? conflictedToothNumbers : undefined}
+            // Cumulative-timeline cues (every card): teeth that transitioned IN this
+            // visit, and terminal (missing/extracted) teeth — both sourced from the
+            // visit's own as-of chart response.
+            changedToothNumbers={toSet(data?.changedThisVisit)}
+            terminalToothNumbers={toSet(data?.terminalTeeth)}
             dentitionType={dentitionType}
           />
         )}
