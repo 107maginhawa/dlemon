@@ -134,7 +134,9 @@ function WorkspacePage() {
   const handleReviewPending = useCallback(() => {
     const el = tableZoneRef.current;
     if (!el) return;
-    el.scrollTo({ top: 0, behavior: 'smooth' });
+    // The table now flows in the shared scroll container, so bring it into view
+    // (was scrollTo on its own scroller, now a no-op since it no longer scrolls).
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     el.focus();
   }, []);
 
@@ -511,9 +513,13 @@ function WorkspacePage() {
         )}
       </div>
 
-      {/* Carousel + table zone */}
+      {/* Carousel + table zone — ONE vertical scroll container. The chart is tall
+          (~64vh); on short viewports a separate inner table scroller collapsed the
+          Treatment Breakdown to an unreachable sliver. Scrolling the whole zone lets
+          the chart move up to reveal the table, so every treatment row (and its Mark
+          Done) can be brought fully into view. */}
       <div
-        className="flex-1 flex flex-col min-h-0 overflow-visible"
+        className="flex-1 flex flex-col min-h-0 overflow-y-auto"
         style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen) ? 340 : 0, transition: 'padding-right 300ms ease-out' }}
       >
         {/* Carousel section */}
@@ -567,12 +573,13 @@ function WorkspacePage() {
           canDiscard={orgRole === 'dentist_owner'}
         />
 
-        {/* Treatment table section */}
+        {/* Treatment table section — flows in the shared scroll container above
+            (no longer its own scroller), so it can be scrolled fully into view. */}
         <div
           ref={tableZoneRef}
           data-testid="workspace-table-zone"
           tabIndex={-1}
-          className="flex-1 min-w-0 bg-background overflow-auto focus-visible:outline-none"
+          className="shrink-0 min-w-0 bg-background focus-visible:outline-none"
         >
           {/* #13: apply a treatment template to populate the visit (reachable even
               when the table is empty — the primary apply case). Owner/associate-gated

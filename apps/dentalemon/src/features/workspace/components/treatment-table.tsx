@@ -351,7 +351,7 @@ export function TreatmentTable({
       </div>
       {viewMode === 'by-visit' && (
       <table className="w-full text-sm" aria-label="Treatments">
-        <thead className="sticky top-0 bg-muted/30 z-10">
+        <thead className="bg-muted/30">
           <tr>
             {/* TXTBL-04: chevron column */}
             <th className="px-2 py-2 w-6" />
@@ -378,7 +378,10 @@ export function TreatmentTable({
                   data-testid={`treatment-row-${t.id}`}
                   onClick={() => onSelectTreatment?.(t.id)}
                   className={[
-                    'border-t border-border/40 transition-colors',
+                    // scroll-mt clears the sticky context strip above the scroll
+                    // container, so scrolling a row into view (e.g. to click Mark
+                    // Done) leaves it below the strip instead of behind it.
+                    'scroll-mt-24 border-t border-border/40 transition-colors',
                     isSelected ? 'bg-muted' : 'hover:bg-lemon/10',
                     onSelectTreatment ? 'cursor-pointer' : '',
                   ].join(' ')}

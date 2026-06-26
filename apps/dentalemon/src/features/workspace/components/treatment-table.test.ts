@@ -415,7 +415,11 @@ describe('Item 1: single scroll region (no nested overflow)', () => {
     }
   });
 
-  test('thead stays sticky to the top', () => {
+  test('thead is NOT sticky (single outer scroll owns the axis; the sticky context strip sits above)', () => {
+    // The whole carousel+table zone is now one scroll container so the tall chart
+    // can scroll away to reveal the table. A sticky thead would pin under the
+    // sticky context strip (higher z) and be hidden, so the header scrolls with the
+    // rows instead. The Grand Total stays pinned to keep the money visible.
     render(
       React.createElement(TreatmentTable, {
         visitId: 'v-1',
@@ -425,8 +429,7 @@ describe('Item 1: single scroll region (no nested overflow)', () => {
     );
     const thead = screen.getByRole('table').querySelector('thead');
     expect(thead).not.toBeNull();
-    expect(thead!.className).toContain('sticky');
-    expect(thead!.className).toContain('top-0');
+    expect(thead!.className).not.toContain('sticky');
   });
 
   test('Grand Total row is pinned sticky to the bottom', () => {
