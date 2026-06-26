@@ -714,6 +714,21 @@ describe('resolveToothLayer (CHART-XV)', () => {
   test('undefined sets are treated as empty', () => {
     expect(resolveToothLayer(41, 'existing', undefined)).toBe('baseline');
   });
+
+  // Cumulative-timeline terminal precedence (mirror BE resolveTerminalTeeth):
+  // missing/extracted > proposed > completed > declined. A gone tooth has no
+  // actionable lifecycle, so it never gets a Planned/Treated/Declined ring — the
+  // fill (missing/extracted) owns it. resolved to 'baseline' (no edge).
+  test('terminal state (missing/extracted) overrides proposed/completed/declined', () => {
+    expect(resolveToothLayer(36, 'existing', sets({ proposed: [36] }), 'extracted')).toBe('baseline');
+    expect(resolveToothLayer(18, 'existing', sets({ completed: [18] }), 'missing')).toBe('baseline');
+    expect(resolveToothLayer(21, 'existing', sets({ declined: [21] }), 'extracted')).toBe('baseline');
+  });
+
+  test('a non-terminal state still resolves through the normal precedence', () => {
+    expect(resolveToothLayer(26, 'existing', sets({ proposed: [26] }), 'caries')).toBe('proposed');
+    expect(resolveToothLayer(27, 'existing', sets({ completed: [27] }), 'filled')).toBe('completed');
+  });
 });
 
 // ─── isToothVisible (P1-15: combinable layers) ────────────────────────────

@@ -35,7 +35,10 @@ export interface ChartLayerSets {
   carriedOver: Set<number>;
 }
 
-export function deriveChartLayerSets(plan: TreatmentPlanData | null | undefined): ChartLayerSets {
+export function deriveChartLayerSets(
+  plan: TreatmentPlanData | null | undefined,
+  terminalToothNumbers?: ReadonlySet<number>,
+): ChartLayerSets {
   const completed = new Set<number>(plan?.completedToothNumbers ?? []);
   const proposed = new Set<number>();
   const declined = new Set<number>();
@@ -64,6 +67,18 @@ export function deriveChartLayerSets(plan: TreatmentPlanData | null | undefined)
   for (const n of proposed) {
     completed.delete(n);
     declined.delete(n);
+  }
+
+  // Terminal precedence (LOCKED, mirror BE resolveTerminalTeeth + deriveLayerSetsAsOf):
+  // missing/extracted outrank every actionable layer — a gone tooth has no Planned/
+  // Treated/Declined lifecycle, so strip it from all sets.
+  if (terminalToothNumbers) {
+    for (const n of terminalToothNumbers) {
+      proposed.delete(n);
+      completed.delete(n);
+      declined.delete(n);
+      carriedOver.delete(n);
+    }
   }
 
   return { proposed, completed, declined, carriedOver };

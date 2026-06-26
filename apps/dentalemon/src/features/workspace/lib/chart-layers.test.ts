@@ -110,6 +110,27 @@ describe('deriveChartLayerSets', () => {
     expect(sets.carriedOver.size).toBe(0);
   });
 
+  // Cumulative-timeline terminal precedence (mirror BE resolveTerminalTeeth +
+  // chart-export deriveLayerSetsAsOf): missing/extracted > proposed > completed >
+  // declined. A terminal tooth is stripped from ALL actionable layers — a gone
+  // tooth has no Planned/Treated/Declined lifecycle.
+  test('terminal teeth (missing/extracted) are stripped from every actionable layer', () => {
+    const sets = deriveChartLayerSets(
+      plan({
+        completedToothNumbers: [18],
+        treatments: [
+          item({ toothNumber: 36, status: 'planned' }),
+          item({ toothNumber: 21, status: 'declined' }),
+        ],
+      }),
+      new Set([36, 18, 21]), // all three are terminal as-of this chart
+    );
+    expect(sets.proposed.has(36)).toBe(false);
+    expect(sets.completed.has(18)).toBe(false);
+    expect(sets.declined.has(21)).toBe(false);
+    expect(sets.carriedOver.has(36)).toBe(false);
+  });
+
   // P0-2 single-source-of-truth: the chart's layer sets and the treatment list's
   // group/badge must derive from the SAME fold. Pin deriveChartLayerSets to the
   // shared statusToLayer() projection so the two can never silently diverge —

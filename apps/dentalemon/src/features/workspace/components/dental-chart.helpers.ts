@@ -220,11 +220,22 @@ export function statusToLayer(status: TreatmentLayerStatus): ChartLayer | null {
  * dentist must never see a green Treated ring hiding work still to be done. A fresh
  * proposal also supersedes a prior declination.
  */
+/**
+ * Terminal tooth states (missing/extracted) have no actionable lifecycle — mirrors
+ * the BE resolveTerminalTeeth. A gone tooth is painted by its fill, never by a
+ * Planned/Treated/Declined edge.
+ */
+const TERMINAL_TOOTH_STATES: ReadonlySet<ToothState> = new Set<ToothState>(['missing', 'extracted']);
+
 export function resolveToothLayer(
   toothNumber: number,
   entryClassification: ChartEntryClassification | undefined,
   sets?: { completed?: ReadonlySet<number>; proposed?: ReadonlySet<number>; declined?: ReadonlySet<number> },
+  state?: ToothState,
 ): ChartLayer {
+  // Terminal precedence (LOCKED, mirror BE): missing/extracted outrank every
+  // actionable layer. The fill owns a gone tooth → 'baseline' (no edge ring).
+  if (state && TERMINAL_TOOTH_STATES.has(state)) return 'baseline';
   if (sets?.proposed?.has(toothNumber)) return 'proposed';
   if (sets?.completed?.has(toothNumber)) return 'completed';
   if (sets?.declined?.has(toothNumber)) return 'declined';

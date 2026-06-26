@@ -149,11 +149,17 @@ export function DentalChart({
    * (CHART-XV). Precedence completed > proposed > declined > entryClassification.
    */
   function toothLayerFor(toothNumber: number): ChartLayer {
-    return resolveToothLayer(toothNumber, toothByNumber.get(toothNumber)?.entryClassification, {
-      completed: completedToothNumbers,
-      proposed: proposedToothNumbers,
-      declined: declinedToothNumbers,
-    });
+    return resolveToothLayer(
+      toothNumber,
+      toothByNumber.get(toothNumber)?.entryClassification,
+      {
+        completed: completedToothNumbers,
+        proposed: proposedToothNumbers,
+        declined: declinedToothNumbers,
+      },
+      // Terminal precedence: a missing/extracted tooth never gets an actionable ring.
+      toothMap.get(toothNumber),
+    );
   }
 
   function toggleFilter(state: ToothState) {
