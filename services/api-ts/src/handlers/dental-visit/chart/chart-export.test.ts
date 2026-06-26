@@ -9,7 +9,20 @@
  * matching the FE living-document chart. Written RED before implementation.
  */
 import { describe, test, expect } from 'bun:test';
-import { buildChartExport, CHART_EXPORT_LEGEND, deriveLayerSetsAsOf } from './chart-export';
+import { buildChartExport, CHART_EXPORT_LEGEND, deriveLayerSetsAsOf, resolveTerminalTeeth } from './chart-export';
+
+describe('resolveTerminalTeeth — missing/extracted are terminal', () => {
+  test('extracted/missing teeth are terminal; other states are not', () => {
+    const teeth = [
+      { toothNumber: 36, state: 'extracted' },
+      { toothNumber: 18, state: 'missing' },
+      { toothNumber: 14, state: 'filled' },
+    ];
+    const terminal = resolveTerminalTeeth(teeth);
+    expect([...terminal].sort((a, b) => a - b)).toEqual([18, 36]);
+    expect(terminal.has(14)).toBe(false);
+  });
+});
 
 const D = (s: string) => new Date(s);
 const visitDates = new Map<string, Date>([

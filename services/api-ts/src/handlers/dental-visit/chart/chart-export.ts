@@ -185,6 +185,18 @@ export function deriveLayerSetsAsOf(
   return { proposed, completed, declined, changed };
 }
 
+/**
+ * Terminal tooth states have no actionable lifecycle: a missing/extracted tooth can't
+ * be Planned/Treated/Declined. Callers strip these from the actionable layers and paint
+ * them at top precedence (mirror of FE resolveToothLayer terminal handling).
+ */
+const TERMINAL_STATES = new Set(['missing', 'extracted']);
+export function resolveTerminalTeeth(teeth: Array<{ toothNumber: number; state: string }>): Set<number> {
+  const out = new Set<number>();
+  for (const t of teeth) if (TERMINAL_STATES.has(t.state)) out.add(t.toothNumber);
+  return out;
+}
+
 export function buildChartExport(input: ChartExportInput): ChartExport {
   const { completed, proposed, declined } = deriveLayerSets(input.treatments);
 
