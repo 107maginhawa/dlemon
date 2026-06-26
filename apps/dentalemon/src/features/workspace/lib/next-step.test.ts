@@ -27,7 +27,7 @@ describe('deriveNextStep', () => {
     expect(s.buttons[0].label).toMatch(/start visit/i);
   });
 
-  test('active + empty chart → tap a tooth, no buttons (template surfaced in table)', () => {
+  test('active + empty chart → tap a tooth, with Complete visit available (WF-012 escape hatch)', () => {
     const s = deriveNextStep({
       currentVisitStatus: 'active',
       openVisit: OPEN_VISIT,
@@ -37,10 +37,13 @@ describe('deriveNextStep', () => {
     });
     expect(s.kind).toBe('empty-chart');
     expect(s.message).toMatch(/tap a tooth/i);
-    expect(s.buttons).toHaveLength(0);
+    // Completing an open visit must always be reachable (the checklist gates it).
+    expect(s.buttons).toHaveLength(1);
+    expect(s.buttons[0]).toMatchObject({ action: 'complete', primary: false });
+    expect(s.buttons[0].label).toMatch(/complete visit/i);
   });
 
-  test('treatments but none performed → mark done / add notes', () => {
+  test('treatments but none performed → mark done / add notes, Complete still available', () => {
     const s = deriveNextStep({
       currentVisitStatus: 'active',
       openVisit: OPEN_VISIT,
@@ -50,10 +53,12 @@ describe('deriveNextStep', () => {
     });
     expect(s.kind).toBe('none-performed');
     expect(s.message).toMatch(/mark treatments done|add notes/i);
-    expect(s.buttons).toHaveLength(0);
+    expect(s.buttons).toHaveLength(1);
+    expect(s.buttons[0]).toMatchObject({ action: 'complete', primary: false });
+    expect(s.buttons[0].label).toMatch(/complete visit/i);
   });
 
-  test('work performed → Review & complete primary', () => {
+  test('work performed → Complete visit primary', () => {
     const s = deriveNextStep({
       currentVisitStatus: 'active',
       openVisit: OPEN_VISIT,
@@ -65,7 +70,7 @@ describe('deriveNextStep', () => {
     expect(s.message).toMatch(/review|complete/i);
     expect(s.buttons).toHaveLength(1);
     expect(s.buttons[0]).toMatchObject({ action: 'complete', primary: true });
-    expect(s.buttons[0].label).toMatch(/review.*complete/i);
+    expect(s.buttons[0].label).toMatch(/complete visit/i);
   });
 
   test('open visit exists but viewing another → explicit blocker with Complete + Discard', () => {

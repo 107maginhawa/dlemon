@@ -140,15 +140,17 @@ describe('WorkspaceContextStrip — Item 4 (guided next step)', () => {
     expect(started).toBe(true);
   });
 
-  test('empty chart: tap-a-tooth line, no action button', () => {
+  test('empty chart: tap-a-tooth line, with Complete visit available (WF-012)', () => {
     renderStrip({ treatmentCount: 0, performedCount: 0 });
     const msg = screen.getByTestId('next-step-message');
     expect(msg.getAttribute('data-next-step-kind')).toBe('empty-chart');
     expect(msg.textContent).toMatch(/tap a tooth/i);
-    expect(screen.queryByTestId('next-step-complete-btn')).toBeNull();
+    // Completing an open visit is always reachable (checklist gates it) — even an
+    // empty one — so the dentist is never trapped in an un-closeable visit.
+    expect(screen.queryByTestId('next-step-complete-btn')).not.toBeNull();
   });
 
-  test('work performed: Review & complete wired to onComplete', async () => {
+  test('work performed: Complete visit wired to onComplete', async () => {
     const user = userEvent.setup();
     let completed = false;
     renderStrip({ treatmentCount: 2, performedCount: 1, onComplete: () => { completed = true; } });

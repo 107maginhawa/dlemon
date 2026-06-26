@@ -208,13 +208,15 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader, errorSurface }) =>
     ).toBeGreaterThanOrEqual(200)
     expect(completeResp.status(), 'completion PATCH must be 2xx').toBeLessThan(300)
 
-    // User-visible reflection: the dialog closes and Complete-visit goes disabled
-    // (the visit is no longer active).
+    // User-visible reflection: the dialog closes and the Complete-visit affordance
+    // is no longer offered (the guided next-step strip removes it once the visit is
+    // completed — the patient now has no open visit, so the strip surfaces "Start
+    // new visit" instead). Either way the visit can no longer be re-completed.
     await expect(dialog, 'checklist dialog closes on success').toBeHidden({ timeout: 10_000 })
     await expect(
       completeBtn,
-      'Complete visit must become disabled once the visit is no longer active',
-    ).toBeDisabled({ timeout: 10_000 })
+      'Complete visit must no longer be offered once the visit is completed',
+    ).toBeHidden({ timeout: 10_000 })
 
     // Clause 2 + 4: independent read confirms the GOAL state (completed), and that
     // no ACTIVE visit remains for the patient.

@@ -112,28 +112,33 @@ export function deriveNextStep(input: DeriveNextStepInput): NextStep {
   }
 
   // From here the current visit is the open (editable) one.
-  // 4. Empty chart → tap a tooth.
+  // 4. Empty chart → tap a tooth. Complete stays available as a secondary action:
+  //    closing an open visit is a core flow (WF-012) and must not require charting
+  //    first — the pre-completion checklist gates whether it's actually allowed.
   if (treatmentCount === 0) {
     return {
       kind: 'empty-chart',
       message: 'Tap a tooth to chart, or apply a treatment template to get started.',
-      buttons: [],
+      buttons: [{ label: 'Complete visit', action: 'complete', primary: false }],
     };
   }
 
-  // 6. Some work performed → ready to review & complete.
+  // 6. Some work performed → ready to review & complete. One consistent label
+  //    ("Complete visit") across every state for the same action (it opens the
+  //    pre-completion review checklist); here it's the PRIMARY nudge.
   if (performedCount > 0) {
     return {
       kind: 'work-performed',
       message: 'Work recorded — review the visit and complete it.',
-      buttons: [{ label: 'Review & complete', action: 'complete', primary: true }],
+      buttons: [{ label: 'Complete visit', action: 'complete', primary: true }],
     };
   }
 
-  // 5. Treatments planned but none performed yet.
+  // 5. Treatments planned but none performed yet. Complete stays available as a
+  //    secondary action (same rationale as state 4 — the checklist is the gate).
   return {
     kind: 'none-performed',
     message: 'Mark treatments done or add notes as you work.',
-    buttons: [],
+    buttons: [{ label: 'Complete visit', action: 'complete', primary: false }],
   };
 }
