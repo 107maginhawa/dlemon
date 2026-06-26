@@ -61855,6 +61855,16 @@ export type ToothHistoryEntry = {
     surfaces?: Array<ToothSurfaceCode>;
     treatmentStatus?: DentalTreatmentStatus;
     treatmentPriceCents?: number;
+    /**
+     * Two-axis ledger discriminator: 'treatment' = a treatment event (one row per
+     * non-dismissed treatment), 'finding' = a condition-only event (tooth flagged
+     * that visit with no treatment). Lets the per-tooth panel read as a lifecycle ledger.
+     */
+    eventKind: 'finding' | 'treatment';
+    /**
+     * 'conflict' when the source chart row has an unreconciled offline edit; else absent.
+     */
+    syncStatus?: string;
 };
 
 export type ToothState = 'healthy' | 'caries' | 'fractured' | 'filled' | 'crown' | 'missing' | 'implant' | 'extracted' | 'watchlist';

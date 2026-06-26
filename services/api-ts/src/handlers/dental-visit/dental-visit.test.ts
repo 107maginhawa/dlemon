@@ -950,6 +950,71 @@ describe('getToothHistory handler', () => {
     expect(activeEntry.treatmentStatus).toBe('diagnosed');
     expect(activeEntry.treatmentDescription).toBe('Pulp cap');
   });
+
+  test('two non-dismissed treatments on the tooth in one visit yield two treatment entries', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'caries', conditionCode: 'K02.1' }],
+    });
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values([
+      { id: crypto.randomUUID(), visitId: completedVisit!.id, patientId: PATIENT_ID, toothNumber: 11, cdtCode: 'D2391', description: 'Resin composite', status: 'performed', priceCents: 12000, carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+      { id: crypto.randomUUID(), visitId: completedVisit!.id, patientId: PATIENT_ID, toothNumber: 11, cdtCode: 'D2950', description: 'Core buildup', status: 'planned', priceCents: 9000, carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id },
+    ]);
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/11`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const treatmentEntries = body.data.filter((e: any) => e.eventKind === 'treatment');
+    expect(treatmentEntries.length).toBe(2);
+    const cdts = treatmentEntries.map((e: any) => e.treatmentCdtCode).sort();
+    expect(cdts).toEqual(['D2391', 'D2950']);
+  });
+
+  test('a flagged tooth with no treatment yields a finding event (not a blank row)', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 21, state: 'caries', conditionCode: 'caries' }],
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/21`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].eventKind).toBe('finding');
+    expect(body.data[0].conditionCode).toBe('caries');
+    expect(body.data[0].treatmentCdtCode).toBeUndefined();
+  });
+
+  test('a treatment on a tooth absent from the visit chart snapshot is still returned (no silent drop)', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    // Chart snapshot has a DIFFERENT tooth — tooth 36 is not in it.
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'healthy' }],
+    });
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: completedVisit!.id, patientId: PATIENT_ID,
+      toothNumber: 36, cdtCode: 'D2740', description: 'Crown', status: 'performed',
+      priceCents: 50000, carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/36`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].eventKind).toBe('treatment');
+    expect(body.data[0].treatmentCdtCode).toBe('D2740');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -19370,7 +19370,9 @@ export const ToothHistoryEntrySchema = z.object({
   treatmentDescription: z.string().optional(),
   surfaces: z.array(ToothSurfaceCodeSchema).optional(),
   treatmentStatus: DentalTreatmentStatusSchema.optional(),
-  treatmentPriceCents: z.number().int().optional()
+  treatmentPriceCents: z.number().int().optional(),
+  eventKind: z.enum(["finding", "treatment"]),
+  syncStatus: z.string().optional()
 });
 
 export const TreatmentPlanItemSchema = z.object({

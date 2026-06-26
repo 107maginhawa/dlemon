@@ -533,6 +533,14 @@ model ToothHistoryEntry {
   surfaces?: ToothSurfaceCode[];
   treatmentStatus?: DentalTreatmentStatus;
   treatmentPriceCents?: int32;
+  /**
+   * Two-axis ledger discriminator: 'treatment' = a treatment event (one row per
+   * non-dismissed treatment), 'finding' = a condition-only event (tooth flagged
+   * that visit with no treatment). Lets the per-tooth panel read as a lifecycle ledger.
+   */
+  eventKind: "finding" | "treatment";
+  /** 'conflict' when the source chart row has an unreconciled offline edit; else absent. */
+  syncStatus?: string;
 }
 
 /** A single treatment item inside a treatment template (FR1.8). */
