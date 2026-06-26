@@ -25,6 +25,7 @@ import {
   getLayerOutline,
   stateNeedsCvdMark,
   getLayerLabel,
+  hasMultipleSurfaceConditions,
   DEFAULT_VISIBLE_LAYERS,
   getMixedDentitionTeeth,
 } from './dental-chart.helpers';
@@ -237,6 +238,11 @@ export function DentalChart({
       : getLayerOutline(toothLayer, { carriedOver: isCarriedOver });
     // P0-A: this tooth has an open offline conflict (a rejected stale write).
     const isConflicted = !!conflictedToothNumbers?.has(toothNumber);
+    // Item 5 / Option B: this tooth carries ≥2 distinct surface conditions, so
+    // the single dominant fill can't tell the whole story. Flag it with a
+    // corner pip → "open for detail" (the slideout renders the per-surface map).
+    const isMultiSurface =
+      !isDimmed && hasMultipleSurfaceConditions(toothByNumber.get(toothNumber)?.surfaceConditionMap);
     // Display label for the current notation preference (QW-5).
     const displayLabel = getToothDisplayLabel(toothNumber, notation);
     // Primary teeth in mixed dentition rendered at smaller size for visual distinction
@@ -304,6 +310,15 @@ export function DentalChart({
               className="absolute bottom-0.5 right-0.5 h-1.5 w-px rotate-45 bg-gray-900"
             />
           )
+        )}
+        {isMultiSurface && (
+          <span
+            data-testid={`tooth-multisurface-${toothNumber}`}
+            data-multisurface="1"
+            aria-label="Multiple surface conditions — open for detail"
+            title="Multiple surface conditions — open for detail"
+            className="absolute top-0 left-0 h-2 w-2 rounded-full border border-white bg-slate-700"
+          />
         )}
         {isConflicted && (
           <span

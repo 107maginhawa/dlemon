@@ -35,10 +35,30 @@ Key files: `apps/dentalemon/src/features/workspace/components/{dental-chart.tsx,
 
 ## GROUP B — Charting fidelity / data model
 
-### 5. Per-surface status, not whole-tooth — DESIGN + possible big build — TRIAGED
-- [Image 3 = tooth as a ring split into 5 surfaces: B/M/D/P/O] A tooth can have different conditions/statuses per surface. Today the odontogram paints ONE state/colour for the whole tooth: `renderTooth` reads a single `state` from `toothMap` and one `fillColor` (`dental-chart.tsx:216,282`).
-- BUT per-surface data already exists: `ToothChartState.surfaceConditionMap` + `toothSurfaceEnum` (`services/api-ts/.../repos/dental-chart.schema.ts`), and `ToothData.surfaceConditionMap` (`dental-chart.helpers.ts`). The renderer ignores it.
-- Most clinical odontograms ARE per-surface. This is potentially a large rendering change — treat as its own scoped proposal with an explicit go/no-go. Research global convention + assess `UniversalToothFdi` capability to paint per-surface.
+### 5. Per-surface status, not whole-tooth — DESIGN — **DECIDED: Option B (minimal multi-surface cue)**
+- **DECISION (2026-06-26, user):** Option B. Grid keeps whole-tooth dominant-condition fill; add a small corner pip on teeth with >1 distinct surface condition → "open for detail," routing to the slideout surfacemap (already live). No full grid swap. FE-only build: thread `surfaceConditionMap` through `buildToothMap` so `renderTooth` can mark multi-surface teeth. Status-layer edge cues, precedence, legend, and CVD marks stay whole-tooth (untouched). NOT a Phase-3 dependency now — the precedence/cue work in Phase 3 stays whole-tooth.
+- [Image 3 = tooth as a ring split into 5 surfaces: B/M/D/P/O] A tooth can have different conditions/statuses per surface. The odontogram GRID paints ONE state/colour for the whole tooth: `renderTooth` reads a single `state` from `toothMap` and one `fillColor` (`dental-chart.tsx:216,282`), default `variant='column'`.
+
+#### Convention research (cited)
+- Per-surface IS the global standard. Restorations/conditions are charted on the specific surface of an occlusal-view diagram in Open Dental ([Graphical Tooth Chart manual](https://www.opendental.com/manual/graphicaltoothchart.html)), Dentrix, Eaglesoft. 5 surfaces posterior (M/O/D/B + L), 4 anterior (M/I/D/B + L) — [Surfaces of the Teeth, dentalcare.com](https://www.dentalcare.com/en-us/ce-courses/ce500/surfaces-of-the-teeth).
+- Paper colour convention: red = work-to-be-done, blue = existing/completed ([dental charting color-coding](https://www.slideshare.net/slideshow/dental-charting-color-coding-and-symbols-class-activity/236728965)). Our system deliberately differs (fill = condition, edge = status, grayscale-safe) — keep ours; the relevant takeaway is only that per-surface placement is expected.
+
+#### Feasibility: LOW. The entire per-surface pipeline already exists and is partly LIVE.
+- Render component: `UniversalTooth` already accepts `surfacesStatus: SurfaceStatus[]` + `variant='surfacemap'` and paints each region via `applySurfaceColors` (`dental/universal-tooth.tsx:73`, `dental/svg-utils.ts:64`). 32 `tooth-N-surfacemap.svg` assets ship in `apps/dentalemon/public/teeth/`. `transformSvgIds` maps B/M/D/P(L)/O → SVG ids (`dental/types.ts:100`).
+- Data round-trips fully: BE `surfaceConditionMap` (`dental-chart.schema.ts:58`), written via `updateTooth.ts:56`, returned by `getDentalChart` (`...chart`), captured in the slideout (`tooth-slideout.tsx:209`), saved (`use-save-tooth-flow.ts:52`).
+- **Already LIVE in the slideout**: `tooth-overview-step.tsx:126-132` renders `<UniversalToothFdi variant="surfacemap" surfacesStatus={...}>` — the dentist already assigns and SEES per-surface conditions on the big single tooth while editing.
+- **The ONLY gap = the grid**: `buildToothMap` (`dental-chart.helpers.ts:345`) flattens API teeth to `Map<number, ToothState>` (one state/tooth) and drops `surfaceConditionMap`; `renderTooth` passes a single `fillColor` with default `column` variant. So a tooth with O-caries + M-filling shows as ONE winning colour in the grid (lie-by-omission), while the slideout shows it correctly.
+
+#### Blast radius if we change the GRID
+- Status LAYER cues (proposed dashed ring, completed green ring, declined gray hatch) ride the tooth EDGE/outline — orthogonal to per-surface FILL, so they survive untouched.
+- BUT: grid teeth are ~64px in a 32-tooth arch. The `surfacemap` "donut" is a blockier, less-anatomical shape than the `column` tooth and 5 regions at 64px hurt glanceability. Precedence (`resolveToothLayer`), the legend, and CVD redundancy marks (caries dot / fractured slash, `dental-chart.tsx:291`) all assume one whole-tooth state. Full grid swap = a redesign of the odontogram's visual identity, not just plumbing.
+
+#### Mock: `scratchpad/surface-mock.png` (whole-tooth vs per-surface vs the app's existing surfacemap asset).
+
+#### Recommendation (for go/no-go)
+- **B — Minimal multi-surface cue (recommended)**: grid stays whole-tooth (dominant condition) for glanceability; add a small corner pip on teeth with >1 distinct surface condition → "open for detail," routing to the slideout surfacemap that already renders per-surface. Removes the lie, preserves the grid, FE-only small build (pass `surfaceConditionMap` through `buildToothMap`).
+- **A — No-go / keep split**: do nothing; per-surface already lives in the slideout. Cheapest, but the grid keeps mis-painting multi-surface teeth.
+- **C — Full GO**: switch the whole grid to `surfacemap` per-surface. Biggest change; 64px legibility risk; touches precedence/legend/CVD; needs its own design pass.
 
 ### 6. Tooth 36 shows "Completed" but has Pending work — DATA/LOGIC (LOGIC) — **ROOT-CAUSED**
 - [Image 4] Right panel header: "Completed — a treatment on this tooth has been performed or verified", while the Treatment Breakdown lists Pending rows.

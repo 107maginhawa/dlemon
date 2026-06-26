@@ -351,6 +351,20 @@ export function buildToothMap(teeth: Array<{ toothNumber: number; state: ToothSt
 }
 
 /**
+ * Item 5 / Option B: true when a tooth carries ≥2 DISTINCT surface conditions,
+ * so the grid's single dominant-colour fill can't represent it (e.g. occlusal
+ * caries + mesial filling). Same condition on multiple surfaces stays false —
+ * one fill colour is still faithful. The grid uses this to show a corner pip
+ * that routes to the slideout's per-surface view.
+ */
+export function hasMultipleSurfaceConditions(
+  surfaceConditionMap?: Record<string, ToothState>,
+): boolean {
+  if (!surfaceConditionMap) return false;
+  return new Set(Object.values(surfaceConditionMap)).size >= 2;
+}
+
+/**
  * Map tooth state to Tailwind CSS color class.
  *
  * healthy → green

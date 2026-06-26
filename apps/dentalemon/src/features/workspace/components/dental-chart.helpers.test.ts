@@ -20,8 +20,35 @@ import {
   getLayerOutline,
   stateNeedsCvdMark,
   getLayerLabel,
+  hasMultipleSurfaceConditions,
   type ToothState,
 } from './dental-chart.helpers';
+
+// ─── hasMultipleSurfaceConditions (item 5 / Option B) ──────────────────────
+// The 32-tooth grid paints ONE dominant colour per tooth. When a tooth carries
+// two or more DISTINCT surface conditions (e.g. occlusal caries + mesial
+// filling), one fill colour can't tell the truth — the grid flags it with a
+// corner pip that routes to the slideout's per-surface view. The predicate is
+// "≥2 distinct condition VALUES" (same condition on two surfaces is still
+// faithfully represented by the single fill).
+describe('hasMultipleSurfaceConditions', () => {
+  test('undefined / empty map → false', () => {
+    expect(hasMultipleSurfaceConditions(undefined)).toBe(false);
+    expect(hasMultipleSurfaceConditions({})).toBe(false);
+  });
+
+  test('single surface condition → false', () => {
+    expect(hasMultipleSurfaceConditions({ occlusal: 'caries' })).toBe(false);
+  });
+
+  test('two surfaces, SAME condition → false (one fill is faithful)', () => {
+    expect(hasMultipleSurfaceConditions({ occlusal: 'caries', mesial: 'caries' })).toBe(false);
+  });
+
+  test('two surfaces, DISTINCT conditions → true (the lie case)', () => {
+    expect(hasMultipleSurfaceConditions({ occlusal: 'caries', mesial: 'filled' })).toBe(true);
+  });
+});
 
 // ─── getLayerLabel (P1-2: rename tabs → neutral filters) ───────────────────
 // The status tabs are demoted to neutral show/hide filters and renamed to the
