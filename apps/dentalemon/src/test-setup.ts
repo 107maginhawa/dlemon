@@ -300,7 +300,18 @@ mock.module('swiper/css/navigation', () => ({}))
 // ─── Workspace components (timeline-carousel deps) ────────────────────────
 
 mock.module('@/features/workspace/components/dental-chart', () => ({
-  DentalChart: () => React.createElement('div', { 'data-testid': 'dental-chart-stub' }),
+  DentalChart: (props: {
+    completedToothNumbers?: Set<number>;
+    proposedToothNumbers?: Set<number>;
+    declinedToothNumbers?: Set<number>;
+    [key: string]: unknown;
+  }) =>
+    React.createElement('div', {
+      'data-testid': 'dental-chart-stub',
+      'data-completed': [...(props.completedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+      'data-proposed': [...(props.proposedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+      'data-declined': [...(props.declinedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+    }),
 }))
 
 // NOTE: use-update-visit is intentionally NOT mocked here. Per the convention

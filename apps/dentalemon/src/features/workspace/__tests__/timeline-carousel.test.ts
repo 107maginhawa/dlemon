@@ -646,4 +646,40 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(screen.queryByText(/·/)).toBeNull();
     });
   });
+
+  // ── Per-visit layers on historical cards ────────────────────────────────
+  // Historical (non-open) carousel cards must paint their own per-visit
+  // completed/declined layers from chart.layers returned by the API — NOT the
+  // cumulative cross-visit sets that only the open card should receive.
+
+  describe('per-visit layers on historical cards', () => {
+    test('historical card paints per-visit completed/declined layers from chart.layers', async () => {
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [
+                { toothNumber: 11, state: 'crown' },
+                { toothNumber: 46, state: 'healthy' },
+              ],
+              layers: { completed: [11], proposed: [], declined: [46] },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      // VISIT_OLD is completed (historical) — no openVisitId, so isOpenVisit=false.
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      const stub = await screen.findByTestId('dental-chart-stub');
+      expect(stub.getAttribute('data-completed')).toBe('11');
+      expect(stub.getAttribute('data-declined')).toBe('46');
+      expect(stub.getAttribute('data-proposed')).toBe('');
+    });
+  });
 });

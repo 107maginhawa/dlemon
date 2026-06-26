@@ -166,11 +166,18 @@ function VisitChartCard({
   const { data, isLoading, isError, refetch } = useQuery({
     ...getDentalChartOptions({ path: { visitId: visit.id } }),
     select: (raw) => {
-      const chart = raw as { teeth?: ToothData[] } | null;
-      return chart?.teeth ?? [];
+      const chart = raw as {
+        teeth?: ToothData[];
+        layers?: { proposed: number[]; completed: number[]; declined: number[] };
+      } | null;
+      return { teeth: chart?.teeth ?? [], layers: chart?.layers };
     },
   });
-  const teeth = data ?? [];
+  const teeth = data?.teeth ?? [];
+  // Per-visit layer sets for HISTORICAL (non-open) snapshots. The open card keeps
+  // the cumulative cross-visit sets passed via props (living-document semantics).
+  const perVisitLayers = data?.layers;
+  const toSet = (xs?: number[]) => (xs && xs.length ? new Set(xs) : undefined);
 
   // Notify parent when active card loads teeth (for compare diff)
   useEffect(() => {
@@ -369,10 +376,11 @@ function VisitChartCard({
             visibleLayers={isOpenVisit ? visibleLayers : undefined}
             // P0-1: cumulative cross-visit layers + layer toggle apply only to the
             // OPEN card (the living document), bound by visit identity — NOT by which
-            // card is centered. Historical cards remain honest per-visit snapshots.
-            completedToothNumbers={isOpenVisit ? completedToothNumbers : undefined}
-            proposedToothNumbers={isOpenVisit ? proposedToothNumbers : undefined}
-            declinedToothNumbers={isOpenVisit ? declinedToothNumbers : undefined}
+            // card is centered. Historical cards render their per-visit snapshot layers
+            // sourced from chart.layers returned by the API.
+            completedToothNumbers={isOpenVisit ? completedToothNumbers : toSet(perVisitLayers?.completed)}
+            proposedToothNumbers={isOpenVisit ? proposedToothNumbers : toSet(perVisitLayers?.proposed)}
+            declinedToothNumbers={isOpenVisit ? declinedToothNumbers : toSet(perVisitLayers?.declined)}
             carriedOverToothNumbers={isOpenVisit ? carriedOverToothNumbers : undefined}
             conflictedToothNumbers={isOpenVisit ? conflictedToothNumbers : undefined}
             dentitionType={dentitionType}
