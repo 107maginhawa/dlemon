@@ -32,7 +32,8 @@ import { join } from 'node:path';
 // numbers, arch/site labels, and the upload card to the rem token scale.
 // lowered to 332 when the treatment-plan CDT-year stamp moved into the labeled
 // field grid (rem token scale) during the record-tabs polish pass.
-const BASELINE = 332;
+// lowered to 327 — layer key on historical cards uses text-xs (no new raw px).
+const BASELINE = 327;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

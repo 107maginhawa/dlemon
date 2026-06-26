@@ -266,9 +266,30 @@ function VisitChartCard({
             })}
           </div>
         ) : (
-          // Read-only snapshot: empty left slot keeps the context cluster
-          // right-aligned and the header height matched to the open card.
-          <div aria-hidden />
+          // Read-only snapshot: static layer key so users can interpret the
+          // snapshot's colors. Height is pinned via min-h-[44px] on the
+          // container row (set above on the flex wrapper) so the chart's top
+          // edge never jumps when paging between open and historical cards.
+          <div
+            data-testid="chart-layer-key"
+            aria-label="Chart layer key for this visit snapshot"
+            className="flex shrink-0 items-center gap-1"
+          >
+            {LAYER_TAB_ORDER
+              .filter(
+                (layer) =>
+                  layer !== 'declined' ||
+                  (perVisitLayers?.declined?.length ?? 0) > 0,
+              )
+              .map((layer) => (
+                <span
+                  key={layer}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground border border-transparent"
+                >
+                  {getLayerLabel(layer)}
+                </span>
+              ))}
+          </div>
         )}
         <div className="flex min-w-0 items-center justify-end gap-2">
           <span

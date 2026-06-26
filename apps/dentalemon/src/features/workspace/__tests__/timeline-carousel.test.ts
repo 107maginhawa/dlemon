@@ -682,4 +682,87 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(stub.getAttribute('data-proposed')).toBe('');
     });
   });
+
+  // ── Read-only layer key on historical cards (Task 6) ───────────────────
+  // Historical cards show NO interactive tab strip, so users can't interpret
+  // the snapshot's colors. A static read-only key (data-testid="chart-layer-key")
+  // lists Existing / Planned / Completed, and Declined only when that card has
+  // declined teeth.
+
+  describe('read-only layer key on historical cards', () => {
+    test('historical card renders a non-interactive layer key with Existing, Planned, Completed', async () => {
+      // No declined teeth — chart returns completed only
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [{ toothNumber: 11, state: 'crown' }],
+              layers: { completed: [11], proposed: [], declined: [] },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      // Single completed (historical) visit — isOpenVisit=false (no openVisitId match)
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      // Wait for chart data to load so perVisitLayers is populated
+      await screen.findByTestId('dental-chart-stub');
+
+      const key = screen.getByTestId('chart-layer-key');
+      expect(key).not.toBeNull();
+      expect(key.textContent).toMatch(/Existing/i);
+      expect(key.textContent).toMatch(/Planned/i);
+      expect(key.textContent).toMatch(/Completed/i);
+      // No declined teeth → Declined should NOT appear
+      expect(key.textContent).not.toMatch(/Declined/i);
+    });
+
+    test('layer key shows Declined when the card has declined teeth', async () => {
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [
+                { toothNumber: 11, state: 'crown' },
+                { toothNumber: 46, state: 'healthy' },
+              ],
+              layers: { completed: [11], proposed: [], declined: [46] },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      await screen.findByTestId('dental-chart-stub');
+
+      const key = screen.getByTestId('chart-layer-key');
+      expect(key.textContent).toMatch(/Declined/i);
+    });
+
+    test('open card does NOT render the static layer key (has interactive tabs instead)', () => {
+      renderCarousel({
+        visits: [VISIT_MID],
+        patientId: 'p',
+        openVisitId: VISIT_MID.id,
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      // The open card has the interactive toggle group, not the static key
+      expect(screen.queryByTestId('chart-layer-key')).toBeNull();
+      expect(screen.getByTestId('chart-layer-toggle')).not.toBeNull();
+    });
+  });
 });
