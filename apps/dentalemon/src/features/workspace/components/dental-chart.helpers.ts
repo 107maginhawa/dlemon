@@ -254,10 +254,20 @@ export function getLayerLabel(layer: ChartLayer): string {
  *
  *   proposed (this visit) → neutral dashed  (intended work, no competing hue)
  *   proposed (carried)    → amber dashed     (the one hue exception — aging pending)
+ *   completed             → green solid       (realized-work cue; "done = green")
  *   declined              → gray solid        (pairs with the diagonal hatch texture)
- *   completed / baseline  → undefined         (fill owns it; "realized" reads via fill)
+ *   baseline              → undefined         (fill owns it; existing dentition)
+ *
+ * Why completed gets its OWN edge (not "fill owns it"): the standard odontogram
+ * cue for done work is colour (paper convention: red = to-do, blue = done), but
+ * this chart's FILL already encodes clinical state (caries-red, filled-blue …), so
+ * a completed tooth with no recorded condition rendered blank — indistinguishable
+ * from untreated. Green is the one "done" hue that doesn't collide with any state
+ * fill (or with lemon, reserved for interaction). It rides the edge so it coexists
+ * with a restored fill instead of overpainting it.
  */
 const PROPOSED_EDGE_NEUTRAL = '#475569'; // slate-600 — legible on white AND in grayscale
+const COMPLETED_EDGE_GREEN = '#059669'; // emerald-600 — "done", CVD-distinct from gray/amber/red/orange
 export function getLayerOutline(
   layer: ChartLayer,
   opts: { carriedOver: boolean },
@@ -267,10 +277,13 @@ export function getLayerOutline(
       ? '2px dashed #B8860A' // amber — carried over from a prior visit (salient)
       : `1.5px dashed ${PROPOSED_EDGE_NEUTRAL}`;
   }
+  if (layer === 'completed') {
+    return `2px solid ${COMPLETED_EDGE_GREEN}`; // green — realized/performed work
+  }
   if (layer === 'declined') {
     return '1.5px solid #9CA3AF'; // gray — declined (with hatch texture)
   }
-  return undefined; // completed / baseline — fill carries the tooth
+  return undefined; // baseline — fill carries the tooth
 }
 
 /**

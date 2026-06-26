@@ -421,6 +421,13 @@ export function DentalChart({
             />
             Planned
           </span>
+          <span className="flex items-center gap-1">
+            <span
+              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-solid"
+              style={{ borderColor: '#059669' }}
+            />
+            Completed
+          </span>
         </div>
       )}
 

@@ -71,8 +71,14 @@ describe('getLayerOutline', () => {
     expect(outline).toContain('solid');
   });
 
-  test('completed and baseline carry no competing edge — fill owns them', () => {
-    expect(getLayerOutline('completed', { carriedOver: false })).toBeUndefined();
+  test('completed is a solid GREEN edge — the realized-work cue (done = green), distinct from declined gray and never lemon', () => {
+    const outline = getLayerOutline('completed', { carriedOver: false });
+    expect(outline).toContain('solid');
+    expect(outline?.toUpperCase()).toContain('059669'); // emerald — "done"
+    expect(outline?.toLowerCase()).not.toContain('ffe97d'); // lemon reserved for interaction
+  });
+
+  test('baseline carries no competing edge — fill owns it', () => {
     expect(getLayerOutline('baseline', { carriedOver: false })).toBeUndefined();
   });
 });
