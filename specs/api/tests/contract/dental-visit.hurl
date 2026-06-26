@@ -295,6 +295,16 @@ HTTP 200
 jsonpath "$.status" == "performed"
 
 
+# 10a. Get chart again — per-visit layers now reflect tooth 26 performed → completed
+GET {{api}}/dental/visits/{{visit_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.layers.completed" includes 26
+jsonpath "$.layers.proposed" count == 0
+jsonpath "$.layers.declined" count == 0
+
+
 # 11. Upsert visit notes (SOAP)
 POST {{api}}/dental/visits/{{visit_id}}/notes
 Cookie: better-auth.session_token={{session_token}}
