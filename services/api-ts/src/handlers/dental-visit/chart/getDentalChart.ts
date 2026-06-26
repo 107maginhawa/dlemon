@@ -13,8 +13,11 @@ import { DentalChartBaselineRepository } from '../repos/dental-chart-baseline.re
 import { VisitRepository } from '../repos/visit.repo';
 import { TreatmentRepository } from '../repos/treatment.repo';
 import { chartFromBaseline } from './chart-carryover';
-import { deriveLayerSets } from './chart-export';
+import { deriveLayerSetsAsOf, resolveTerminalTeeth } from './chart-export';
+import type { ToothChartState } from '../repos/dental-chart.schema';
 import type { User } from '@/types/auth';
+
+const CHARTED_VISIT_STATUSES = new Set(['active', 'completed', 'locked']);
 
 export async function getDentalChart(ctx: HandlerContext) {
   const user = ctx.get('user') as User | undefined;
@@ -32,17 +35,33 @@ export async function getDentalChart(ctx: HandlerContext) {
   const repo = new DentalChartRepository(db);
   const chart = await repo.findByVisit(visitId);
   if (chart) {
-    const treatments = await new TreatmentRepository(db).findByVisit(visitId);
-    const { completed, proposed, declined } = deriveLayerSets(
-      treatments.map((t) => ({
+    // Cumulative as-of layers: derive each tooth's lifecycle layer AS OF this visit's
+    // date across the patient's whole charted treatment history — so a historical card
+    // shows the chart state at that point in time, not just that visit's deltas.
+    const allVisits = await visitRepo.findMany({ patientId: visit.patientId });
+    const charted = allVisits.filter((v) => CHARTED_VISIT_STATUSES.has(v.status));
+    const visitDateById = new Map(charted.map((v) => [v.id, v.completedAt ?? v.createdAt] as const));
+    const asOf = visitDateById.get(visitId) ?? visit.completedAt ?? visit.createdAt;
+
+    const patientTreatments = await new TreatmentRepository(db).findByPatientCharted(visit.patientId);
+    const { proposed, completed, declined, changed } = deriveLayerSetsAsOf(
+      patientTreatments.map((t) => ({
         toothNumber: t.toothNumber,
-        cdtCode: t.cdtCode,
-        description: t.description,
-        surfaces: t.surfaces,
         status: t.status,
-        priceCents: t.priceCents,
+        performedAt: t.performedAt,
+        visitId: t.visitId,
+        sourceVisitId: t.sourceVisitId,
+        carriedOver: t.carriedOver,
       })),
+      asOf,
+      visitDateById,
     );
+
+    // Terminal teeth (missing/extracted) have no actionable lifecycle — strip them from
+    // the layers and surface them separately at top precedence.
+    const terminal = resolveTerminalTeeth(chart.teeth as ToothChartState[]);
+    for (const n of terminal) { proposed.delete(n); completed.delete(n); declined.delete(n); }
+
     return ctx.json({
       ...chart,
       layers: {
@@ -50,6 +69,8 @@ export async function getDentalChart(ctx: HandlerContext) {
         completed: [...completed].sort((a, b) => a - b),
         declined: [...declined].sort((a, b) => a - b),
       },
+      changedThisVisit: [...changed].sort((a, b) => a - b),
+      terminalTeeth: [...terminal].sort((a, b) => a - b),
     });
   }
 

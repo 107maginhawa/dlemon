@@ -61,6 +61,19 @@ export class TreatmentRepository {
   }
 
   /**
+   * Cumulative-timeline: all treatments for the patient across every visit. The as-of
+   * derivation (deriveLayerSetsAsOf) decides visibility per visit date + performedAt;
+   * visit-status filtering happens there (only active|completed|locked visits carry a
+   * date), so this stays a simple patient-scoped read.
+   */
+  async findByPatientCharted(patientId: string): Promise<DentalTreatment[]> {
+    return this.db
+      .select()
+      .from(dentalTreatments)
+      .where(eq(dentalTreatments.patientId, patientId));
+  }
+
+  /**
    * WFG-004: same as findByVisit but takes a row-level FOR UPDATE lock. The invoice
    * create path uses this INSIDE its transaction so two concurrent createDentalInvoice
    * for the same visit SERIALIZE on the visit's treatment rows: the loser blocks until

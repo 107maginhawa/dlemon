@@ -6,7 +6,7 @@
  * Derived via deriveLayerSets (chart-export.ts), same precedence contract used by
  * the FE chart-layers.ts.
  */
-import { describe, test, expect, afterAll, beforeAll } from 'bun:test';
+import { describe, test, expect, afterAll, afterEach, beforeAll } from 'bun:test';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { createDatabase } from '@/core/database';
@@ -55,6 +55,12 @@ beforeAll(async () => {
   }).onConflictDoNothing();
 });
 
+// Cumulative layers read patient-scoped treatments, so each test must start clean —
+// truncate visits (cascades to treatments + charts) between tests.
+afterEach(async () => {
+  await db.execute(sql`TRUNCATE TABLE dental_visit CASCADE`).catch(() => {});
+});
+
 afterAll(async () => {
   await db.execute(sql`TRUNCATE TABLE dental_visit CASCADE`).catch(() => {});
   await db.execute(sql`DELETE FROM dental_membership WHERE branch_id = ${BRANCH_ID}`).catch(() => {});
@@ -81,13 +87,18 @@ function app() {
   return a;
 }
 
-describe('getDentalChart — per-visit treatment layers', () => {
-  test('returns layers.completed=[11], layers.proposed=[21], layers.declined=[46] for matching treatments', async () => {
-    // Seed a visit
-    const visitRepo = new VisitRepository(db);
-    const visit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID });
+type LayersBody = {
+  layers: { completed: number[]; proposed: number[]; declined: number[] };
+  changedThisVisit?: number[];
+  terminalTeeth?: number[];
+};
 
-    // Seed a chart for the visit with teeth 11, 21, 46
+describe('getDentalChart — cumulative as-of treatment layers', () => {
+  test('returns layers.completed=[11], layers.proposed=[21], layers.declined=[46] for matching treatments', async () => {
+    // Single completed visit: its as-of derivation matches the per-visit result.
+    const visitRepo = new VisitRepository(db);
+    const visit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', completedAt: new Date('2026-02-01') });
+
     const chartRepo = new DentalChartRepository(db);
     await chartRepo.upsert({
       visitId: visit.id,
@@ -99,48 +110,30 @@ describe('getDentalChart — per-visit treatment layers', () => {
       ],
     });
 
-    // Seed treatments — insert at target status directly
     const treatRepo = new TreatmentRepository(db);
-    // tooth 11: performed (completed)
+    // tooth 11: performed (completed) — performedAt on/before the as-of visit date
     await treatRepo.createOne({
-      visitId: visit.id,
-      patientId: PATIENT_ID,
-      toothNumber: 11,
-      cdtCode: 'D2390',
-      description: 'Composite filling',
-      status: 'performed',
-      priceCents: 12000,
-      createdBy: OWNER.id,
-      updatedBy: OWNER.id,
+      visitId: visit.id, patientId: PATIENT_ID, toothNumber: 11,
+      cdtCode: 'D2390', description: 'Composite filling', status: 'performed',
+      performedAt: new Date('2026-02-01'), priceCents: 12000,
+      createdBy: OWNER.id, updatedBy: OWNER.id,
     });
     // tooth 21: planned (proposed)
     await treatRepo.createOne({
-      visitId: visit.id,
-      patientId: PATIENT_ID,
-      toothNumber: 21,
-      cdtCode: 'D2391',
-      description: 'Composite Class I',
-      status: 'planned',
-      priceCents: 15000,
-      createdBy: OWNER.id,
-      updatedBy: OWNER.id,
+      visitId: visit.id, patientId: PATIENT_ID, toothNumber: 21,
+      cdtCode: 'D2391', description: 'Composite Class I', status: 'planned',
+      priceCents: 15000, createdBy: OWNER.id, updatedBy: OWNER.id,
     });
     // tooth 46: declined
     await treatRepo.createOne({
-      visitId: visit.id,
-      patientId: PATIENT_ID,
-      toothNumber: 46,
-      cdtCode: 'D2750',
-      description: 'Full crown',
-      status: 'declined',
-      priceCents: 60000,
-      createdBy: OWNER.id,
-      updatedBy: OWNER.id,
+      visitId: visit.id, patientId: PATIENT_ID, toothNumber: 46,
+      cdtCode: 'D2750', description: 'Full crown', status: 'declined',
+      priceCents: 60000, createdBy: OWNER.id, updatedBy: OWNER.id,
     });
 
     const res = await app().request(`/dental/visits/${visit.id}/chart`);
     expect(res.status).toBe(200);
-    const body = await res.json() as { layers: { completed: number[]; proposed: number[]; declined: number[] } };
+    const body = await res.json() as LayersBody;
 
     expect(body.layers.completed).toEqual([11]);
     expect(body.layers.proposed).toEqual([21]);
@@ -149,7 +142,7 @@ describe('getDentalChart — per-visit treatment layers', () => {
 
   test('visit with chart but no treatments returns empty layers', async () => {
     const visitRepo = new VisitRepository(db);
-    const visit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID });
+    const visit = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', completedAt: new Date('2026-02-02') });
 
     const chartRepo = new DentalChartRepository(db);
     await chartRepo.upsert({
@@ -160,10 +153,64 @@ describe('getDentalChart — per-visit treatment layers', () => {
 
     const res = await app().request(`/dental/visits/${visit.id}/chart`);
     expect(res.status).toBe(200);
-    const body = await res.json() as { layers: { completed: number[]; proposed: number[]; declined: number[] } };
+    const body = await res.json() as LayersBody;
 
     expect(body.layers.completed).toEqual([]);
     expect(body.layers.proposed).toEqual([]);
     expect(body.layers.declined).toEqual([]);
+  });
+
+  test('cumulative: tooth 36 is Treated as-of V2 and Planned (re-flagged) as-of V3; changedThisVisit reflects the delta', async () => {
+    const visitRepo = new VisitRepository(db);
+    const treatRepo = new TreatmentRepository(db);
+    const chartRepo = new DentalChartRepository(db);
+
+    const v1 = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', completedAt: new Date('2026-01-10') });
+    const v2 = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', completedAt: new Date('2026-03-05') });
+    const v3 = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', completedAt: new Date('2026-06-20') });
+
+    await chartRepo.upsert({ visitId: v2.id, patientId: PATIENT_ID, teeth: [{ toothNumber: 36, state: 'filled' }] });
+    await chartRepo.upsert({ visitId: v3.id, patientId: PATIENT_ID, teeth: [{ toothNumber: 36, state: 'caries' }] });
+
+    // Filling performed (origin V1, completed by V2's date).
+    await treatRepo.createOne({
+      visitId: v1.id, patientId: PATIENT_ID, toothNumber: 36, cdtCode: 'D2392',
+      description: 'Composite filling', status: 'performed', performedAt: new Date('2026-03-05'),
+      priceCents: 12000, createdBy: OWNER.id, updatedBy: OWNER.id,
+    });
+    // New RCT planned at V3.
+    await treatRepo.createOne({
+      visitId: v3.id, patientId: PATIENT_ID, toothNumber: 36, cdtCode: 'D3330',
+      description: 'Root canal', status: 'planned', priceCents: 80000,
+      createdBy: OWNER.id, updatedBy: OWNER.id,
+    });
+
+    const atV2 = await (await app().request(`/dental/visits/${v2.id}/chart`)).json() as LayersBody;
+    expect(atV2.layers.completed).toContain(36);
+    expect(atV2.changedThisVisit).toContain(36);
+
+    const atV3 = await (await app().request(`/dental/visits/${v3.id}/chart`)).json() as LayersBody;
+    expect(atV3.layers.proposed).toContain(36);     // open RCT outranks completed filling
+    expect(atV3.layers.completed).not.toContain(36);
+    expect(atV3.changedThisVisit).toContain(36);
+  });
+
+  test('an extracted tooth appears in terminalTeeth and not in actionable layers', async () => {
+    const visitRepo = new VisitRepository(db);
+    const treatRepo = new TreatmentRepository(db);
+    const chartRepo = new DentalChartRepository(db);
+
+    const v = await visitRepo.createOne({ patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: MEMBER_ID, status: 'completed', completedAt: new Date('2026-08-01') });
+    await chartRepo.upsert({ visitId: v.id, patientId: PATIENT_ID, teeth: [{ toothNumber: 46, state: 'extracted' }] });
+    // A stale plan on the extracted tooth must be stripped (no actionable lifecycle).
+    await treatRepo.createOne({
+      visitId: v.id, patientId: PATIENT_ID, toothNumber: 46, cdtCode: 'D2750',
+      description: 'Crown', status: 'planned', priceCents: 60000,
+      createdBy: OWNER.id, updatedBy: OWNER.id,
+    });
+
+    const body = await (await app().request(`/dental/visits/${v.id}/chart`)).json() as LayersBody;
+    expect(body.terminalTeeth).toContain(46);
+    expect(body.layers.proposed).not.toContain(46);
   });
 });
