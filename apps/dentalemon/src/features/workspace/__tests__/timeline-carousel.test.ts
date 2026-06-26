@@ -184,9 +184,15 @@ describe('TimelineCarousel (Swiper)', () => {
           onSelectVisit: () => {},
           onNewVisit: () => {},
         });
-      expect(screen.getByText(/completed/i)).not.toBeNull();
-      expect(screen.getByText(/active/i)).not.toBeNull();
-      expect(screen.getByText(/draft/i)).not.toBeNull();
+      // Assert the per-visit status via the stable status-badge contract rather
+      // than loose text — the header now also hosts layer tabs (Existing / Planned
+      // / Completed / Declined) whose labels would otherwise collide with /completed/i.
+      const statuses = screen
+        .getAllByTestId('visit-status-badge')
+        .map((el) => el.textContent);
+      expect(statuses).toContain('completed');
+      expect(statuses).toContain('active');
+      expect(statuses).toContain('draft');
     });
 
     // CHART-XV: the active chart is cumulative (all visits); historical cards are
@@ -234,7 +240,11 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(lastSlide.getAttribute('data-active-card')).toBe('1');
     });
 
-    test('initial active slide has accent bar', () => {
+    test('non-active slides are not marked active', () => {
+      // The active card is distinguished via the stable `data-active-card`
+      // contract (which drives its border + shadow styling). We assert that
+      // contract rather than any decorative element or CSS class — only the
+      // most-recent slide is marked active, the rest are not.
       renderCarousel({
           visits: THREE_VISITS,
           patientId: 'test-patient',
@@ -242,23 +252,9 @@ describe('TimelineCarousel (Swiper)', () => {
           onNewVisit: () => {},
         });
       const slides = screen.getAllByTestId('visit-slide');
-      const activeSlide = slides[slides.length - 1];
-      const accentBar = activeSlide.querySelector('[data-accent-bar]');
-      expect(accentBar).not.toBeNull();
-    });
-
-    test('non-active slides do not have accent bar', () => {
-      renderCarousel({
-          visits: THREE_VISITS,
-          patientId: 'test-patient',
-          onSelectVisit: () => {},
-          onNewVisit: () => {},
-        });
-      const slides = screen.getAllByTestId('visit-slide');
-      // First two slides (index 0, 1) are not the most recent -> no accent bar
-      const firstSlide = slides[0];
-      const accentBar = firstSlide.querySelector('[data-accent-bar]');
-      expect(accentBar).toBeNull();
+      // First two slides (index 0, 1) are not the most recent -> not active.
+      expect(slides[0].getAttribute('data-active-card')).toBeNull();
+      expect(slides[slides.length - 1].getAttribute('data-active-card')).toBe('1');
     });
   });
 
@@ -617,6 +613,37 @@ describe('TimelineCarousel (Swiper)', () => {
       await user.click(screen.getByTestId('compare-btn'));
       // Diff summary should be visible in the overlay
       expect(screen.getByTestId('compare-diff-summary')).not.toBeNull();
+    });
+  });
+
+  // ── Change B: same-day encounter disambiguation ─────────────────────────────
+  // A visit = an encounter; same-day encounters are legitimate (no day-grouping).
+  // When two or more cards share a calendar day their date labels collide, so each
+  // gets a time suffix. Single-per-day visits stay date-only. The "·" separator we
+  // render before the time is the stable, decoration-free signal asserted here.
+  describe('same-day disambiguation (Change B)', () => {
+    test('appends a time to each card when two visits share a calendar day', () => {
+      // Both fall on May 2 2024 in any plausible runner timezone (UTC..UTC+8).
+      const SAME_DAY_A = { id: 'sd-a', status: 'completed' as const, createdAt: '2024-05-02T04:00:00Z' };
+      const SAME_DAY_B = { id: 'sd-b', status: 'completed' as const, createdAt: '2024-05-02T08:00:00Z' };
+      renderCarousel({
+        visits: [SAME_DAY_A, SAME_DAY_B],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      // One time suffix per same-day card.
+      expect(screen.getAllByText(/·/)).toHaveLength(2);
+    });
+
+    test('shows no time suffix when every visit falls on a distinct day', () => {
+      renderCarousel({
+        visits: THREE_VISITS, // Jan / Jun / Dec 2024 — all distinct days
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.queryByText(/·/)).toBeNull();
     });
   });
 });

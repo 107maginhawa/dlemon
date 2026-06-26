@@ -152,6 +152,21 @@ const daysFromNow = (n: number, h = 10) => {
 // Appointment slot times come from workingSlotISO (timezone- + working-hours-aware);
 // daysAgo/daysFromNow remain for non-validated date fields (visit/due/recall dates).
 
+// ─── Visit timestamp backdating ───────────────────────────────────────────────
+// The HTTP API stamps activated_at/completed_at = now() on the visit state machine
+// (draft→active→completed; see visit.repo.ts). The demo needs the REAL encounter
+// dates so the per-visit carousel timeline reads chronologically instead of every
+// card showing "today". Visit creation + state changes still go through the API
+// (gates, cascades intact); only these audit timestamps are corrected directly.
+// One shared handle, closed at the end of seed().
+const _seedDbUrl = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase'
+const seedDb = new Bun.SQL(_seedDbUrl)
+
+/** Backdate a visit's created_at + activated_at to a past encounter instant. */
+async function backdateVisitStart(visitId: string, iso: string) {
+  await seedDb`UPDATE dental_visit SET created_at = ${iso}, activated_at = ${iso} WHERE id = ${visitId}`
+}
+
 let _receiptSeq = 0
 const receipt = () => `OR-2026-${String(++_receiptSeq).padStart(4, '0')}`
 
@@ -332,6 +347,9 @@ async function activateVisit(
   }, cookie)
   if (!r.ok) { log(`  ⚠ Visit create (${r.status}): ${JSON.stringify(r.data).slice(0,100)}`); return null }
   await patch(`/dental/visits/${r.data.id}`, { status: 'active' }, cookie)
+  // Change B: backdate so the timeline is chronological. daysBack=0 is the genuine
+  // current/open visit — leave its activated_at at now().
+  if (daysBack > 0) await backdateVisitStart(r.data.id, daysAgo(daysBack))
   return r.data.id
 }
 
@@ -418,6 +436,9 @@ async function completeVisit(visitId: string, patientId: string, cookie: string)
 
   const r = await patch(`/dental/visits/${visitId}`, { status: 'completed' }, cookie)
   if (!r.ok) log(`  ⚠ Complete visit (${r.status}): ${JSON.stringify(r.data).slice(0, 120)}`)
+  // Change B: the API stamped completed_at = now(); pin it to the (backdated)
+  // activated day so each historical encounter reads as one day, not "completed today".
+  await seedDb`UPDATE dental_visit SET completed_at = activated_at + interval '2 hours' WHERE id = ${visitId} AND activated_at IS NOT NULL`
   await post(`/dental/visits/${visitId}/pmd`, { visitId, patientId }, cookie)
 }
 
@@ -1812,6 +1833,7 @@ async function seed() {
   await patchVisitForOfflineDemo()
 
   // ── Done ──────────────────────────────────────────────────────────────────
+  await seedDb.close()
   console.log('\n╔══════════════════════════════════════════════════════╗')
   console.log('║           Comprehensive Seed Complete!               ║')
   console.log('╠══════════════════════════════════════════════════════╣')

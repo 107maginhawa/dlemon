@@ -24,9 +24,14 @@ import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 import { useUpdateVisit } from '@/features/workspace/hooks/use-update-visit';
 import { useInitializeDentition } from '@/features/workspace/hooks/use-initialize-dentition';
-import { getDentitionType } from '@/features/workspace/components/dental-chart.helpers';
+import {
+  getDentitionType,
+  getLayerLabel,
+  getToothFillColor,
+  DEFAULT_VISIBLE_LAYERS,
+} from '@/features/workspace/components/dental-chart.helpers';
 import { findOpenVisit } from '@/features/workspace/lib/visit-status';
-import type { ToothData, DentitionType } from '@/features/workspace/components/dental-chart.helpers';
+import type { ToothData, DentitionType, ChartLayer } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
 import { ChartCompareOverlay } from '@/features/workspace/components/chart-compare-overlay';
 
@@ -79,11 +84,50 @@ export interface TimelineCarouselProps {
   onCompareOpenChange?: (open: boolean) => void;
 }
 
+// Change A: layer tabs lifted out of DentalChart into the card header (controls
+// LEFT, context cluster RIGHT). Neutral chips — lemon stays reserved for
+// interaction, never status. 'declined' only surfaces when refused work exists.
+const LAYER_TAB_ORDER: ChartLayer[] = ['baseline', 'proposed', 'completed', 'declined'];
+
+/** Change C: compact state key, relocated from inside the white chart to the card
+ *  footer. Decodes the main fills + the Planned dashed edge. */
+function ChartCompactLegend() {
+  return (
+    <div
+      data-testid="chart-compact-legend"
+      className="flex flex-nowrap items-center gap-x-3 text-[11px] text-muted-foreground"
+    >
+      {([
+        { label: 'Caries', state: 'caries' as const },
+        { label: 'Fractured', state: 'fractured' as const },
+        { label: 'Filled', state: 'filled' as const },
+        { label: 'Crown', state: 'crown' as const },
+      ]).map(({ label, state }) => (
+        <span key={state} className="flex items-center gap-1 whitespace-nowrap">
+          <span
+            className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-black/15"
+            style={{ backgroundColor: getToothFillColor(state) }}
+          />
+          {label}
+        </span>
+      ))}
+      <span className="flex items-center gap-1 whitespace-nowrap">
+        <span
+          className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-dashed"
+          style={{ borderColor: '#475569' }}
+        />
+        Planned
+      </span>
+    </div>
+  );
+}
+
 /** Per-card component that fetches its own chart data */
 function VisitChartCard({
   visit,
   isActive,
   isOpenVisit,
+  showTime,
   patientId,
   patientDateOfBirth,
   onSelectTooth,
@@ -99,6 +143,9 @@ function VisitChartCard({
 }: {
   visit: VisitCard;
   isActive: boolean;
+  /** Change B: this card shares a calendar day with another visit → show the time
+   *  alongside the date to keep same-day encounters distinguishable. */
+  showTime: boolean;
   /** P0-1: this card is the genuine open visit (living document) — owns the
    *  cumulative overlay + "Current — all visits" label regardless of centering. */
   isOpenVisit: boolean;
@@ -139,6 +186,28 @@ function VisitChartCard({
   const isEditable = visit.status === 'active' || visit.status === 'draft';
   const canInitDentition = isActive && isEditable && !!patientDateOfBirth && teeth.length === 0;
 
+  // Change A: layer-toggle state lifted here so the tabs can live in the header
+  // (LEFT) beside the date/status context cluster (RIGHT). Only the open card's
+  // tabs are interactive; historical snapshots render them static for height parity.
+  const [visibleLayers, setVisibleLayers] = useState<Set<ChartLayer>>(
+    () => new Set(DEFAULT_VISIBLE_LAYERS),
+  );
+  function toggleLayer(layer: ChartLayer) {
+    setVisibleLayers((prev) => {
+      const next = new Set(prev);
+      if (next.has(layer)) {
+        if (next.size === 1) return prev; // never empty the set
+        next.delete(layer);
+      } else {
+        next.add(layer);
+      }
+      return next;
+    });
+  }
+  const layerTabs = LAYER_TAB_ORDER.filter(
+    (layer) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0,
+  );
+
   return (
     <div
       data-testid="visit-slide"
@@ -147,15 +216,88 @@ function VisitChartCard({
       // and flattened so they read as context, not competing focus.
       className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-all ${isActive ? 'border-lemon-hover border-2 shadow-card-active' : 'border-border opacity-55 shadow-[0_2px_8px_rgba(0,0,0,0.05)]'}`}
     >
-      {isActive && <div data-accent-bar className="h-1 rounded-full bg-lemon" />}
-      {/* CHART-XV: name the scope so the cumulative active chart isn't misread as
-          data loss vs the per-visit historical snapshots. */}
-      <span
-        data-testid="chart-scope-label"
-        className="text-[10px] font-medium text-muted-foreground px-0.5"
-      >
-        {isOpenVisit ? 'Current — all visits' : 'Visit snapshot'}
-      </span>
+      {/* Change A: ONE header row, identical HEIGHT on every card. LEFT = layer
+          tabs, rendered ONLY on the open/living chart (historical visits are
+          read-only photos, no tabs). The row keeps the open card's height on every
+          card (min-h-[44px] + an empty left slot on snapshots) so the chart's top
+          edge never jumps when paging. RIGHT = context cluster (scope + date +
+          status), right-aligned, with the date the dominant element. */}
+      <div className="flex min-h-[44px] items-center justify-between gap-2 px-0.5">
+        {isOpenVisit ? (
+          <div
+            data-testid="chart-layer-toggle"
+            role="group"
+            // Change C: cumulative cue. The Existing / Planned / Completed layers are
+            // status-filtered views across ALL visits (see lib/chart-layers.ts), not
+            // this visit alone — so Completed/Planned aren't misread as current-visit
+            // only. Communicated without restyling the tabs or adding status hues:
+            // the visible "Current — all visits" scope label sits in the same row, and
+            // the group carries the scope in its aria-label + a reinforcing tooltip.
+            aria-label="Chart layers across all visits — toggle to show or hide"
+            title="These layers (Existing · Planned · Completed) span all visits, not just this one"
+            className="flex shrink-0 items-center gap-1"
+          >
+            {layerTabs.map((layer) => {
+              const layerActive = visibleLayers.has(layer);
+              return (
+                <button
+                  key={layer}
+                  type="button"
+                  data-testid={`chart-layer-${layer}`}
+                  aria-pressed={layerActive}
+                  onClick={() => toggleLayer(layer)}
+                  className={[
+                    'min-h-[44px] rounded-md px-2 text-xs font-medium border transition-colors',
+                    layerActive
+                      ? 'bg-foreground/10 text-foreground border-foreground/25'
+                      : 'text-muted-foreground border-transparent hover:bg-muted/60',
+                  ].join(' ')}
+                >
+                  {getLayerLabel(layer)}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          // Read-only snapshot: empty left slot keeps the context cluster
+          // right-aligned and the header height matched to the open card.
+          <div aria-hidden />
+        )}
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          <span
+            data-testid="chart-scope-label"
+            className="truncate text-[10px] font-medium text-muted-foreground"
+          >
+            {isOpenVisit ? 'Current — all visits' : 'Visit snapshot'}
+          </span>
+          <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+            {formatDate(visit.activatedAt ?? visit.createdAt)}
+            {/* Change B: a visit = an encounter; same-day encounters are legitimate
+                (no day-grouping). When two or more cards fall on the SAME calendar
+                day, append the time so they stay distinguishable. The date stays the
+                dominant element — the time is a smaller, muted suffix. */}
+            {showTime && (
+              <span className="ml-1 text-[11px] font-medium text-muted-foreground">
+                · {formatTime(visit.activatedAt ?? visit.createdAt)}
+              </span>
+            )}
+          </span>
+          <span
+            data-testid="visit-status-badge"
+            className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-semibold capitalize ${
+              visit.status === 'active'
+                ? 'bg-status-done text-status-done-foreground'
+                : visit.status === 'completed'
+                ? 'bg-blue-100 text-blue-700'
+                : visit.status === 'locked'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-status-planned text-status-planned-foreground'
+            }`}
+          >
+            {visit.status}
+          </span>
+        </div>
+      </div>
       <div className="overflow-x-auto flex-1 min-h-0">
         {isLoading ? (
           <div data-testid="visit-chart-loading" className="flex flex-col gap-2 p-2">
@@ -216,12 +358,15 @@ function VisitChartCard({
             // fit the clamped height — scale the teeth with the card, don't crop.
             toothSize={isActive ? 'sm' : 'xs'}
             showLegend={false}
-            // P1-3 / Issue 4: the compact always-on state key decodes the chart
-            // fills. Show it on the OPEN card AND on whichever card is centered, so a
-            // centered historical snapshot never shows unexplained colours. Small,
-            // off-center 'xs' cards stay clean.
-            compactLegend={isOpenVisit || isActive}
-            showLayerToggle={isOpenVisit}
+            // Change C: the compact legend now lives in the card footer (rendered by
+            // the carousel), not inside the white chart. DentalChart keeps the
+            // compactLegend capability for other consumers; here it stays off.
+            compactLegend={false}
+            // Change A: tabs are lifted to the header; the in-chart toggle is off.
+            // The open card's header tabs drive DentalChart via the controlled
+            // visibleLayers prop. Historical cards stay uncontrolled (all layers).
+            showLayerToggle={false}
+            visibleLayers={isOpenVisit ? visibleLayers : undefined}
             // P0-1: cumulative cross-visit layers + layer toggle apply only to the
             // OPEN card (the living document), bound by visit identity — NOT by which
             // card is centered. Historical cards remain honest per-visit snapshots.
@@ -234,9 +379,14 @@ function VisitChartCard({
           />
         )}
       </div>
-      <div className="flex items-center justify-between mt-1">
-        <span className="text-xs text-muted-foreground">{formatDate(visit.activatedAt ?? visit.createdAt)}</span>
-        <div className="flex items-center gap-1.5">
+      {/* Change C: footer strip — compact legend bottom-LEFT (active card only, so
+          exactly one in the DOM), Lock affordance right. The active card always
+          renders this row to carry the legend; non-active cards only when a lock
+          control applies. */}
+      {(isActive || visit.status === 'completed' || visit.status === 'locked') && (
+        <div className="flex items-center justify-between gap-3 mt-1 min-h-[20px]">
+          {isActive ? <ChartCompactLegend /> : <span />}
+          <div className="flex items-center justify-end">
           {visit.status === 'completed' && onLockVisit && (
             <button
               type="button"
@@ -254,21 +404,9 @@ function VisitChartCard({
           {visit.status === 'locked' && (
             <Lock className="size-3 text-muted-foreground" aria-label="Visit locked" />
           )}
-          <span
-            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold capitalize ${
-              visit.status === 'active'
-                ? 'bg-status-done text-status-done-foreground'
-                : visit.status === 'completed'
-                ? 'bg-blue-100 text-blue-700'
-                : visit.status === 'locked'
-                ? 'bg-purple-100 text-purple-700'
-                : 'bg-status-planned text-status-planned-foreground'
-            }`}
-          >
-            {visit.status}
-          </span>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -278,6 +416,13 @@ function formatDate(iso: string) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  });
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-PH', {
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
@@ -312,6 +457,14 @@ export function TimelineCarousel({
       new Date(a.activatedAt ?? a.createdAt).getTime() -
       new Date(b.activatedAt ?? b.createdAt).getTime(),
   );
+
+  // Change B: which cards share a calendar day. Key on the rendered date string so
+  // the disambiguation triggers exactly when two labels would otherwise read identical.
+  const dateCounts = new Map<string, number>();
+  for (const v of sorted) {
+    const key = formatDate(v.activatedAt ?? v.createdAt);
+    dateCounts.set(key, (dateCounts.get(key) ?? 0) + 1);
+  }
 
   const initialSlide = Math.max(0, sorted.length - 1);
   const [activeIndex, setActiveIndex] = useState(initialSlide);
@@ -436,6 +589,7 @@ export function TimelineCarousel({
                 visit={visit}
                 isActive={isActive}
                 isOpenVisit={visit.id === resolvedOpenVisitId}
+                showTime={(dateCounts.get(formatDate(visit.activatedAt ?? visit.createdAt)) ?? 0) > 1}
                 patientId={patientId}
                 patientDateOfBirth={patientDateOfBirth}
                 onSelectTooth={onSelectTooth}
