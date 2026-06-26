@@ -39,7 +39,12 @@ export async function getToothHistory(ctx: HandlerContext) {
   }
   await assertBranchAccess(db, user.id, visits[0]!.branchId);
 
-  const completedVisits = visits.filter(v => v.status === 'completed' || v.status === 'locked');
+  // Item 9 / bug-a: include the ACTIVE visit so its in-progress (diagnosed/planned)
+  // work shows in the per-tooth timeline, not just finished visits. Response shape
+  // (ToothHistoryEntry) is unchanged → no codegen. Draft/discarded stay excluded.
+  const chartedVisits = visits.filter(
+    v => v.status === 'completed' || v.status === 'locked' || v.status === 'active',
+  );
 
   // Build history entries in reverse chronological order
   const entries: Array<{
@@ -55,7 +60,7 @@ export async function getToothHistory(ctx: HandlerContext) {
     treatmentPriceCents?: number;
   }> = [];
 
-  for (const visit of completedVisits) {
+  for (const visit of chartedVisits) {
     const chart = await chartRepo.findByVisit(visit.id);
     if (!chart) continue;
 

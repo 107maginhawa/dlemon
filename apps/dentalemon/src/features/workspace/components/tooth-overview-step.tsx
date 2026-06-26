@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { getToothInfo, getToothFillColor } from './dental-chart.helpers';
+import { getToothInfo, getToothFillColor, getToothHistoryStatusBadge } from './dental-chart.helpers';
 import type { ToothState } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
 import type { SurfaceStatus } from './dental/types';
@@ -261,7 +261,9 @@ export function ToothOverviewStep({
       </div>
 
       {/* Treatment Breakdown table */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      {/* overflow-x-auto (not -hidden): the 6-col timeline can exceed the 340px
+          slideout; scroll rather than silently clip the Status/Total columns. */}
+      <div className="rounded-xl border border-border overflow-x-auto">
         <div className="px-3 py-2 bg-secondary/30 border-b border-border">
           <h3 className="text-sm font-bold text-foreground">Treatment Breakdown</h3>
         </div>
@@ -285,51 +287,73 @@ export function ToothOverviewStep({
         )}
 
         {!isLoading && !error && history.length > 0 && (
-          <table className="w-full text-xs">
+          <table className="w-full table-fixed text-xs">
+            {/* table-fixed + colgroup: the panel is 340px; fixed column widths keep
+                the headline Status/Total visible at rest instead of being pushed
+                off-screen by a long CDT name (which now wraps within its column). */}
+            <colgroup>
+              <col style={{ width: '19%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '17%' }} />
+              <col style={{ width: '22%' }} />
+            </colgroup>
             <thead>
               <tr className="bg-secondary/50">
-                <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Surface</th>
-                <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Condition</th>
-                <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Treatment</th>
-                <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Status</th>
-                <th className="px-3 py-2 text-right font-semibold text-muted-foreground">Total</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Date</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Surface</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Condition</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Treatment</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Status</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Total</th>
               </tr>
             </thead>
             <tbody>
-              {history.map((entry, idx) => (
+              {history.map((entry, idx) => {
+                // Item 9: provenance — when this tooth was charted (planned vs treated).
+                const badge = getToothHistoryStatusBadge(entry.treatmentStatus);
+                return (
                 <tr key={`${entry.visitId}-${idx}`} className="border-t border-border">
-                  <td className="px-3 py-2 text-foreground uppercase">
+                  <td className="px-2 py-2 text-muted-foreground tabular-nums">
+                    {entry.visitDate
+                      ? new Date(entry.visitDate).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric', year: '2-digit' })
+                      : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-foreground uppercase">
                     {entry.surfaces && entry.surfaces.length > 0
                       ? entry.surfaces.map(s => s.charAt(0).toUpperCase()).join('')
                       : '—'}
                   </td>
-                  <td className="px-3 py-2 text-foreground capitalize">{entry.state}</td>
-                  <td className="px-3 py-2 text-foreground">
+                  <td className="px-2 py-2 text-foreground capitalize">{entry.state}</td>
+                  {/* break-words so a long CDT name wraps within its fixed column
+                      instead of forcing the table wider; full text in the title. */}
+                  <td className="px-2 py-2 text-foreground break-words" title={entry.treatmentDescription || entry.treatmentCdtCode || undefined}>
                     {entry.treatmentDescription || entry.treatmentCdtCode || '—'}
                   </td>
-                  <td className="px-3 py-2">
-                    <span className={[
-                      'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold',
-                      entry.treatmentStatus === 'performed'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-dental-watchlist text-dental-watchlist-foreground',
-                    ].join(' ')}>
-                      {entry.treatmentStatus === 'performed' ? 'Done' : 'Pending'}
-                    </span>
+                  <td className="px-2 py-2">
+                    {badge ? (
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/40" aria-hidden>—</span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 text-foreground text-right font-medium">
+                  <td className="px-2 py-2 text-foreground text-right font-medium">
                     {entry.treatmentPriceCents
                       ? `₱${(entry.treatmentPriceCents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
                       : '—'}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
             {history.some(e => e.treatmentPriceCents) && (
               <tfoot>
                 <tr className="bg-secondary/30 border-t-2 border-border">
-                  <td colSpan={4} className="px-3 py-2 font-bold text-foreground">Total</td>
-                  <td className="px-3 py-2 font-bold text-foreground text-right">
+                  <td colSpan={5} className="px-2 py-2 font-bold text-foreground">Total</td>
+                  <td className="px-2 py-2 font-bold text-foreground text-right">
                     ₱{(history
                       .reduce((sum, e) => sum + (e.treatmentPriceCents || 0), 0) / 100)
                       .toLocaleString('en-PH', { minimumFractionDigits: 2 })}

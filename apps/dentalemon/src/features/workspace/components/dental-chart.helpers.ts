@@ -316,6 +316,32 @@ export function getLayerCueSwatch(layer: ChartLayer): { className: string; borde
 }
 
 /**
+ * Item 9 / bug-b — per-tooth timeline status badge (slideout Treatment Breakdown).
+ * The old `treatmentStatus === 'performed' ? 'Done' : 'Pending'` mislabelled
+ * `verified` work as Pending and slapped a false "Pending" badge on snapshot rows
+ * with NO treatment (undefined status). Map every status to a truthful label, and
+ * return `null` when there is no treatment that visit so the cell shows nothing.
+ */
+export function getToothHistoryStatusBadge(
+  status: string | undefined,
+): { label: string; className: string } | null {
+  switch (status) {
+    case 'performed':
+    case 'verified':
+      return { label: 'Done', className: 'bg-green-100 text-green-700' };
+    case 'diagnosed':
+    case 'planned':
+      return { label: 'Planned', className: 'bg-amber-100 text-amber-700' };
+    case 'declined':
+      return { label: 'Declined', className: 'bg-orange-100 text-orange-700' };
+    case 'dismissed':
+      return { label: 'Dismissed', className: 'bg-gray-100 text-gray-400' };
+    default:
+      return null; // no treatment recorded that visit — no badge, not a false "Pending"
+  }
+}
+
+/**
  * P1-3 — colour-vision safety. caries-red (#FF3B30) and fractured-orange
  * (#FF9500) collapse under protanopia (caries misread as fracture — a clinical
  * miss). These states need a redundant NON-colour mark (stipple) so they stay

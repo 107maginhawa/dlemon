@@ -147,6 +147,32 @@ describe('getLayerCueSwatch (item 4 chip/legend cue)', () => {
   });
 });
 
+// ─── getToothHistoryStatusBadge (item 9 / bug-b: timeline badge) ────────────
+// The old ternary mislabelled `verified` as Pending and slapped a false "Pending"
+// badge on snapshot rows with NO treatment. The badge must tell the truth.
+
+import { getToothHistoryStatusBadge } from './dental-chart.helpers';
+
+describe('getToothHistoryStatusBadge (item 9 / bug-b)', () => {
+  test('performed and verified both read "Done"', () => {
+    expect(getToothHistoryStatusBadge('performed')?.label).toBe('Done');
+    expect(getToothHistoryStatusBadge('verified')?.label).toBe('Done');
+  });
+
+  test('diagnosed and planned read "Planned"', () => {
+    expect(getToothHistoryStatusBadge('diagnosed')?.label).toBe('Planned');
+    expect(getToothHistoryStatusBadge('planned')?.label).toBe('Planned');
+  });
+
+  test('declined reads "Declined", not "Pending"', () => {
+    expect(getToothHistoryStatusBadge('declined')?.label).toBe('Declined');
+  });
+
+  test('no treatment (undefined) → no badge (not a false "Pending")', () => {
+    expect(getToothHistoryStatusBadge(undefined)).toBeNull();
+  });
+});
+
 // ─── stateNeedsCvdMark (P1-3: colour-vision-safety redundancy) ──────────────
 // caries-red (#FF3B30) and fractured-orange (#FF9500) collapse under protanopia —
 // a clinical miss (caries read as fracture). These states need a redundant
