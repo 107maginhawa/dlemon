@@ -12,10 +12,9 @@ Key files: `apps/dentalemon/src/features/workspace/components/{dental-chart.tsx,
 
 ## GROUP A — Chart visual / design system
 
-### 1. "Planned" tooth outline too subtle — DESIGN — TRIAGED
-- Current: `getLayerOutline('proposed')` → `1.5px dashed #475569` (slate); carried-over → `2px dashed #B8860A` (amber). `dental-chart.helpers.ts:265-268`.
-- Want: a more obvious dotted/broken line + globally-appropriate colour.
-- Tension to resolve in research: paper standard = **red** for to-be-done, but FILL already owns red (caries). Options: keep neutral but make it a true `dotted` (vs `dashed`) + heavier weight; or adopt a non-colliding "planned" hue. Decide alongside item 2/4 so the three layer cues read as a set (planned dashed/dotted · completed green ring · declined gray hatch).
+### 1. "Planned" tooth outline too subtle — DESIGN — **DONE**
+- **DECISION (2026-06-26, user):** keep the planned edge NEUTRAL (fill owns red = caries) but make it an obvious **2px dotted slate** `#475569`; carried-over → **2.5px dotted amber** `#B8860A`. Dotted (vs dashed) + heavier weight reads "provisional/planned" and is pattern-distinct from completed (solid green) and declined (solid gray) — the three cues now read as a set.
+- **FIX:** `getLayerOutline('proposed')` → `2px dotted #475569` / carried `2.5px dotted #B8860A` (`dental-chart.helpers.ts`). Legend swatches updated to `border-2 border-dotted` in the in-chart legend (`dental-chart.tsx`) and the carousel compact legend (`timeline-carousel.tsx`); copy comments dashed→dotted. Tests flipped: `getLayerOutline` "obvious DOTTED edge" + carried-over dotted (5 pass). Typecheck clean.
 
 ### 2. Terminology "Completed" vs "Treated" — DESIGN — TRIAGED
 - Collision: tooth LAYER label "Completed" (`LAYER_LABELS`, `dental-chart.helpers.ts:238`) vs CARD/visit status "Completed" (`timeline-carousel.tsx:313-326`, visit status Active/Completed/Locked). Same word, two meanings on the same screen.

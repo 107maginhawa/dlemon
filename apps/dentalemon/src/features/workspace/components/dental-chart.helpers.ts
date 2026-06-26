@@ -254,8 +254,8 @@ export function getLayerLabel(layer: ChartLayer): string {
  * (selection ring, active filter, CTA). Returns a CSS `outline` shorthand, or
  * undefined when the fill alone carries the tooth (completed / baseline / existing).
  *
- *   proposed (this visit) → neutral dashed  (intended work, no competing hue)
- *   proposed (carried)    → amber dashed     (the one hue exception — aging pending)
+ *   proposed (this visit) → neutral dotted  (intended work, no competing hue)
+ *   proposed (carried)    → amber dotted     (the one hue exception — aging pending)
  *   completed             → green solid       (realized-work cue; "done = green")
  *   declined              → gray solid        (pairs with the diagonal hatch texture)
  *   baseline              → undefined         (fill owns it; existing dentition)
@@ -275,9 +275,12 @@ export function getLayerOutline(
   opts: { carriedOver: boolean },
 ): string | undefined {
   if (layer === 'proposed') {
+    // Item 1: dotted + heavier weight makes "planned" obvious and pattern-distinct
+    // from the solid completed (green) and declined (gray) edges. Fill still owns
+    // red (caries), so the planned edge stays neutral slate to avoid collision.
     return opts.carriedOver
-      ? '2px dashed #B8860A' // amber — carried over from a prior visit (salient)
-      : `1.5px dashed ${PROPOSED_EDGE_NEUTRAL}`;
+      ? '2.5px dotted #B8860A' // amber — carried over from a prior visit (salient)
+      : `2px dotted ${PROPOSED_EDGE_NEUTRAL}`;
   }
   if (layer === 'completed') {
     return `2px solid ${COMPLETED_EDGE_GREEN}`; // green — realized/performed work

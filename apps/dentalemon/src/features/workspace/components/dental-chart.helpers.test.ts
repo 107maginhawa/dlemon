@@ -79,17 +79,20 @@ describe('getLayerLabel', () => {
 // declined stays gray.
 
 describe('getLayerOutline', () => {
-  test('proposed (this-visit) is a dashed edge in a NEUTRAL colour — never lemon/--primary', () => {
+  test('proposed (this-visit) is an obvious DOTTED edge in a NEUTRAL colour — never lemon/--primary (item 1)', () => {
     const outline = getLayerOutline('proposed', { carriedOver: false });
-    expect(outline).toContain('dashed');
+    // Item 1: dotted (not dashed) + heavier weight reads "provisional/planned"
+    // and is pattern-distinct from completed (solid green) and declined (solid gray).
+    expect(outline).toContain('dotted');
+    expect(outline).toContain('2px');
     // The lemon-overload bug: proposed used var(--primary) which resolves to lemon.
     expect(outline).not.toContain('--primary');
     expect(outline?.toLowerCase()).not.toContain('ffe97d'); // lemon hex
   });
 
-  test('carried-over proposed keeps the salient amber dash (the one hue exception)', () => {
+  test('carried-over proposed keeps the salient amber DOTTED edge (the one hue exception, item 1)', () => {
     const outline = getLayerOutline('proposed', { carriedOver: true });
-    expect(outline).toContain('dashed');
+    expect(outline).toContain('dotted');
     expect(outline?.toUpperCase()).toContain('B8860A'); // amber
   });
 

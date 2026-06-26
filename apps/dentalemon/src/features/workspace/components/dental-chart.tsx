@@ -44,7 +44,7 @@ export interface DentalChartProps {
   showLegend?: boolean;
   /** P1-3: show a COMPACT, non-interactive state key (always-on inside carousel
    *  cards, where the full legend is hidden). Decodes the main fills + the
-   *  Planned dashed edge so the chart is never an unlabeled wall of colour. */
+   *  Planned dotted edge so the chart is never an unlabeled wall of colour. */
   compactLegend?: boolean;
   /** Permanent (32-tooth adult), primary (20-tooth pediatric), or mixed (dual-arch). Default: 'permanent' */
   dentitionType?: DentitionType;
@@ -222,10 +222,10 @@ export function DentalChart({
     const isLayerHidden = !isToothVisible(toothLayer, visibleLayers);
     const isFilterDimmed = filterStates.size > 0 && !filterStates.has(state);
     const isDimmed = isFilterDimmed || isLayerHidden;
-    // Proposed work stays visually distinct (dashed outline) when its layer is visible — CHART-BR-006.
+    // Proposed work stays visually distinct (dotted outline) when its layer is visible — CHART-BR-006.
     const isProposedOnLayer = toothLayer === 'proposed' && !isLayerHidden;
     // CHART-XV: a proposed tooth first proposed in a PRIOR visit — surface it with
-    // an amber dashed ring so aging pending work stands out from today's proposals.
+    // an amber dotted ring so aging pending work stands out from today's proposals.
     const isCarriedOver = isProposedOnLayer && !!carriedOverToothNumbers?.has(toothNumber);
     // CHART-XV: declined = refused recommendation — desaturated gray diagonal hatch
     // (a stroke/pattern, never a 4th saturated fill; the double-slash stays reserved
@@ -431,7 +431,7 @@ export function DentalChart({
           ))}
           <span className="flex items-center gap-1">
             <span
-              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-dashed"
+              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-dotted"
               style={{ borderColor: '#475569' }}
             />
             Planned

@@ -90,7 +90,7 @@ export interface TimelineCarouselProps {
 const LAYER_TAB_ORDER: ChartLayer[] = ['baseline', 'proposed', 'completed', 'declined'];
 
 /** Change C: compact state key, relocated from inside the white chart to the card
- *  footer. Decodes the main fills + the Planned dashed edge. */
+ *  footer. Decodes the main fills + the Planned dotted edge. */
 function ChartCompactLegend() {
   return (
     <div
@@ -113,7 +113,7 @@ function ChartCompactLegend() {
       ))}
       <span className="flex items-center gap-1 whitespace-nowrap">
         <span
-          className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-dashed"
+          className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-dotted"
           style={{ borderColor: '#475569' }}
         />
         Planned
