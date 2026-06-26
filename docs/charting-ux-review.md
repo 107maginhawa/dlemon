@@ -27,9 +27,9 @@ Key files: `apps/dentalemon/src/features/workspace/components/{dental-chart.tsx,
 - [Image 1] The per-card compact legend (`ChartCompactLegend`, `timeline-carousel.tsx:94-130`, rendered in the active-card footer ~`:417`) and the Swiper pagination bullets (`renderBullet`, `timeline-carousel.tsx:600-609`) share the bottom band and crowd/overlap on the right.
 - Fix is a layout/region-separation problem (give the legend and the pager their own rows/space, or reposition the pager). Resolve in the fix phase per UX spacing standards.
 
-### 4. Layer tabs style — segmented control? — DESIGN — TRIAGED
-- [Image 2] Proposal: make Existing / Planned / Completed a segmented-control / pill group (macOS "Overview | Analytics | Reports | Settings" style).
-- Current: neutral chips (`timeline-carousel.tsx:247-266` interactive on open card; `dental-chart.tsx:335-360` the in-chart variant). Evaluate segmented-control vs chips for a multi-select (these are toggles, not single-select — segmented controls imply single-select, so confirm the interaction model first).
+### 4. Layer tabs style — segmented control? — DESIGN — **DONE**
+- **DECISION (2026-06-26, user):** these are MULTI-SELECT visibility toggles (combinable layers), so a segmented control (which implies pick-one) is the wrong model — REJECTED. Keep multi-select chips but restyle: **ON = filled chip, OFF = outline**, and add each layer's **cue swatch** (dotted slate / solid green / solid gray / plain neutral) to its chip so the filter doubles as the legend.
+- **FIX:** new pure helper `getLayerCueSwatch(layer)` (`dental-chart.helpers.ts`) returns the per-layer border class + colour, mirroring `getLayerOutline` so the chip cue == the tooth edge. Wired into all 3 render sites: the in-chart chips (`dental-chart.tsx`), the carousel interactive tabs, and the historical read-only layer key (`timeline-carousel.tsx`). ON/OFF clarified (active = neutral fill + solid border; inactive = transparent + visible `border-border` outline, swatch dimmed `opacity-50`). No status hue on the chip body (lemon stays interaction-only); identity rides the swatch. Test: `getLayerCueSwatch` 4 pass (dotted slate / solid green / gray / baseline no-colour). 25 layer-chip tests + 24 DentalChart + carousel/historical-key tests green; typecheck clean.
 
 ---
 

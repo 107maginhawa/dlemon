@@ -114,6 +114,39 @@ describe('getLayerOutline', () => {
   });
 });
 
+// ─── getLayerCueSwatch (item 4: the chip/legend cue glyph) ──────────────────
+// Each multi-select filter chip carries the layer's cue swatch so the filter
+// doubles as the legend. The swatch MUST mirror the tooth-edge cues: Planned =
+// dotted slate, Treated = solid green, Declined = solid gray, Existing = plain
+// neutral (fill owns it, no competing edge).
+
+import { getLayerCueSwatch } from './dental-chart.helpers';
+
+describe('getLayerCueSwatch (item 4 chip/legend cue)', () => {
+  test('proposed (Planned) → dotted slate, matching the tooth edge', () => {
+    const cue = getLayerCueSwatch('proposed');
+    expect(cue.className).toContain('dotted');
+    expect(cue.borderColor?.toUpperCase()).toBe('#475569');
+  });
+
+  test('completed (Treated) → solid green, matching the tooth edge', () => {
+    const cue = getLayerCueSwatch('completed');
+    expect(cue.className).toContain('solid');
+    expect(cue.borderColor?.toUpperCase()).toBe('#059669');
+  });
+
+  test('declined → solid gray', () => {
+    const cue = getLayerCueSwatch('declined');
+    expect(cue.className).toContain('solid');
+    expect(cue.borderColor).toBeTruthy();
+  });
+
+  test('baseline (Existing) carries no competing edge colour — fill owns it', () => {
+    const cue = getLayerCueSwatch('baseline');
+    expect(cue.borderColor).toBeUndefined();
+  });
+});
+
 // ─── stateNeedsCvdMark (P1-3: colour-vision-safety redundancy) ──────────────
 // caries-red (#FF3B30) and fractured-orange (#FF9500) collapse under protanopia —
 // a clinical miss (caries read as fracture). These states need a redundant

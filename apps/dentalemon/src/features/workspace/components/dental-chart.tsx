@@ -23,6 +23,7 @@ import {
   isToothVisible,
   resolveToothLayer,
   getLayerOutline,
+  getLayerCueSwatch,
   stateNeedsCvdMark,
   getLayerLabel,
   hasMultipleSurfaceConditions,
@@ -74,7 +75,7 @@ export interface DentalChartProps {
 
 /**
  * P1-2: the status tabs are demoted to NEUTRAL show/hide filters (no hue) and
- * renamed via getLayerLabel (Existing / Planned / Completed / Declined). Colour
+ * renamed via getLayerLabel (Existing / Planned / Treated / Declined). Colour
  * now lives only in the always-on state legend + the tooth fills, not the chips —
  * this is the core of the lemon de-overload (the proposed chip was lemon). Lemon
  * is reserved for interaction (selection ring, CTA), never status.
@@ -353,6 +354,7 @@ export function DentalChart({
             .filter((layer) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0)
             .map((layer) => {
             const isActive = visibleLayers.has(layer);
+            const cue = getLayerCueSwatch(layer);
             return (
               <button
                 key={layer}
@@ -361,14 +363,20 @@ export function DentalChart({
                 onClick={() => toggleLayer(layer)}
                 aria-pressed={isActive}
                 className={[
-                  'flex-1 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
-                  // P1-2: neutral active state (no status hue). The chip is a
-                  // show/hide control; colour identity lives in the legend + fills.
+                  'flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
+                  // Item 4: ON = filled chip, OFF = outline. Neutral fill (no status
+                  // hue; lemon reserved for interaction) — the per-chip cue swatch
+                  // carries the layer identity, so the filter doubles as the legend.
                   isActive
-                    ? 'bg-foreground/10 text-foreground border-foreground/25'
-                    : 'text-muted-foreground border-transparent hover:bg-muted/60',
+                    ? 'bg-foreground/10 text-foreground border-foreground/30'
+                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted/50',
                 ].join(' ')}
               >
+                <span
+                  aria-hidden
+                  className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className} ${isActive ? '' : 'opacity-50'}`}
+                  style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
+                />
                 {getLayerLabel(layer)}
               </button>
             );

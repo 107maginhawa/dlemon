@@ -27,6 +27,7 @@ import { useInitializeDentition } from '@/features/workspace/hooks/use-initializ
 import {
   getDentitionType,
   getLayerLabel,
+  getLayerCueSwatch,
   getToothFillColor,
   DEFAULT_VISIBLE_LAYERS,
 } from '@/features/workspace/components/dental-chart.helpers';
@@ -253,6 +254,7 @@ function VisitChartCard({
           >
             {layerTabs.map((layer) => {
               const layerActive = visibleLayers.has(layer);
+              const cue = getLayerCueSwatch(layer);
               return (
                 <button
                   key={layer}
@@ -261,12 +263,19 @@ function VisitChartCard({
                   aria-pressed={layerActive}
                   onClick={() => toggleLayer(layer)}
                   className={[
-                    'min-h-[44px] rounded-md px-2 text-xs font-medium border transition-colors',
+                    'min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-2 text-xs font-medium border transition-colors',
+                    // Item 4: ON = filled chip, OFF = outline; the cue swatch carries
+                    // the layer identity so the filter doubles as the legend.
                     layerActive
-                      ? 'bg-foreground/10 text-foreground border-foreground/25'
-                      : 'text-muted-foreground border-transparent hover:bg-muted/60',
+                      ? 'bg-foreground/10 text-foreground border-foreground/30'
+                      : 'bg-transparent text-muted-foreground border-border hover:bg-muted/50',
                   ].join(' ')}
                 >
+                  <span
+                    aria-hidden
+                    className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className} ${layerActive ? '' : 'opacity-50'}`}
+                    style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
+                  />
                   {getLayerLabel(layer)}
                 </button>
               );
@@ -288,14 +297,22 @@ function VisitChartCard({
                   layer !== 'declined' ||
                   (perVisitLayers?.declined?.length ?? 0) > 0,
               )
-              .map((layer) => (
-                <span
-                  key={layer}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground border border-transparent"
-                >
-                  {getLayerLabel(layer)}
-                </span>
-              ))}
+              .map((layer) => {
+                const cue = getLayerCueSwatch(layer);
+                return (
+                  <span
+                    key={layer}
+                    className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground border border-transparent"
+                  >
+                    <span
+                      aria-hidden
+                      className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className}`}
+                      style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
+                    />
+                    {getLayerLabel(layer)}
+                  </span>
+                );
+              })}
           </div>
         )}
         <div className="flex min-w-0 items-center justify-end gap-2">

@@ -294,6 +294,28 @@ export function getLayerOutline(
 }
 
 /**
+ * Item 4 — the per-layer cue swatch shown on each multi-select filter chip (and
+ * the inline legend), so the filter doubles as the legend. The swatch mirrors the
+ * tooth-EDGE cue from getLayerOutline: Planned = dotted slate, Treated = solid
+ * green, Declined = solid gray. Existing (baseline) carries no competing edge —
+ * the fill owns it — so it shows a plain neutral square (no borderColor).
+ * Returns Tailwind border classes + an optional inline borderColor.
+ */
+export function getLayerCueSwatch(layer: ChartLayer): { className: string; borderColor?: string } {
+  switch (layer) {
+    case 'proposed':
+      return { className: 'border-2 border-dotted', borderColor: PROPOSED_EDGE_NEUTRAL };
+    case 'completed':
+      return { className: 'border-2 border-solid', borderColor: COMPLETED_EDGE_GREEN };
+    case 'declined':
+      return { className: 'border-2 border-solid', borderColor: '#9CA3AF' };
+    case 'baseline':
+    default:
+      return { className: 'border border-black/20' }; // fill owns it — no edge hue
+  }
+}
+
+/**
  * P1-3 — colour-vision safety. caries-red (#FF3B30) and fractured-orange
  * (#FF9500) collapse under protanopia (caries misread as fracture — a clinical
  * miss). These states need a redundant NON-colour mark (stipple) so they stay
