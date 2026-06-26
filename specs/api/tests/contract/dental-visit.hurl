@@ -949,3 +949,184 @@ jsonpath "$.treatments" isCollection
 jsonpath "$.treatments" count >= 1
 jsonpath "$.treatments[0].cdtCode" isString
 jsonpath "$.completedToothNumbers" isCollection
+
+
+# ============================================================
+# CUMULATIVE AS-OF LAYERS + TERMINAL TEETH (carousel timeline)
+# Headline: a filling Treated in an earlier visit stays Treated on that
+# visit's card, while a later re-plan paints Planned (precedence) — and the
+# layer that transitioned in a visit is surfaced via changedThisVisit. An
+# extracted tooth is terminal: stripped from the actionable layers.
+# ============================================================
+
+# C1. Fresh patient for an isolated cumulative walk (avoids EC7 entanglement).
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "displayName": "Cumulative Timeline Patient", "consentGiven": true, "branchId": "{{branch_id}}" }
+HTTP 201
+[Captures]
+cum_patient_id: jsonpath "$.id"
+
+# C2. Visit A — plan + perform a filling on tooth 36.
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "patientId": "{{cum_patient_id}}", "branchId": "{{branch_id}}", "dentistMemberId": "{{dentist_member_id}}", "chiefComplaint": "Filling on 36" }
+HTTP 201
+[Captures]
+cumA_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{cumA_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+POST {{api}}/dental/visits/{{cumA_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{cumA_id}}", "patientId": "{{cum_patient_id}}", "teeth": [ { "toothNumber": 36, "state": "caries" } ] }
+HTTP 201
+
+POST {{api}}/dental/visits/{{cumA_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{cumA_id}}", "patientId": "{{cum_patient_id}}", "cdtCode": "D2392", "description": "Composite filling, two surface", "toothNumber": 36, "priceCents": 12000 }
+HTTP 201
+[Captures]
+cumT_a: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{cumA_id}}/treatments/{{cumT_a}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "planned" }
+HTTP 200
+
+POST {{api}}/dental/visits/{{cumA_id}}/consents
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{cumA_id}}", "patientId": "{{cum_patient_id}}", "templateId": "tmpl-restorative", "templateName": "Restorative Treatment Consent", "procedureNature": "Composite filling on #36", "benefits": "Restores tooth structure", "risks": "Post-operative sensitivity", "alternatives": "No treatment", "risksOfNonTreatment": "Caries progression" }
+HTTP 201
+[Captures]
+cum_consent_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits/{{cumA_id}}/consents/{{cum_consent_id}}/sign
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }
+HTTP 200
+
+PATCH {{api}}/dental/visits/{{cumA_id}}/treatments/{{cumT_a}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "performed" }
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "performed"
+
+PATCH {{api}}/dental/visits/{{cumA_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "completed" }
+HTTP 200
+
+# C3. Visit B — re-flag 36 and plan an RCT (a fresh proposal).
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "patientId": "{{cum_patient_id}}", "branchId": "{{branch_id}}", "dentistMemberId": "{{dentist_member_id}}", "chiefComplaint": "RCT on 36" }
+HTTP 201
+[Captures]
+cumB_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{cumB_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+POST {{api}}/dental/visits/{{cumB_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{cumB_id}}", "patientId": "{{cum_patient_id}}", "teeth": [ { "toothNumber": 36, "state": "caries" } ] }
+HTTP 201
+
+POST {{api}}/dental/visits/{{cumB_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{cumB_id}}", "patientId": "{{cum_patient_id}}", "cdtCode": "D3330", "description": "Endodontic therapy, molar", "toothNumber": 36, "priceCents": 80000 }
+HTTP 201
+[Captures]
+cumT_b: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{cumB_id}}/treatments/{{cumT_b}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "planned" }
+HTTP 200
+
+# C4. GET chart as-of Visit B — the fresh RCT plan wins precedence over the
+# earlier completed filling, and 36 is the layer that changed this visit.
+GET {{api}}/dental/visits/{{cumB_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.layers.proposed" includes 36
+jsonpath "$.layers.completed" not includes 36
+jsonpath "$.changedThisVisit" includes 36
+
+# C5. GET chart as-of Visit A — the filling reads Treated at its own visit
+# (cumulative persistence; not lost behind a per-visit delta).
+GET {{api}}/dental/visits/{{cumA_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.layers.completed" includes 36
+
+# C6. Terminal teeth — a fresh patient with an extracted tooth + a stale plan.
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "displayName": "Terminal Tooth Patient", "consentGiven": true, "branchId": "{{branch_id}}" }
+HTTP 201
+[Captures]
+term_patient_id: jsonpath "$.id"
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "patientId": "{{term_patient_id}}", "branchId": "{{branch_id}}", "dentistMemberId": "{{dentist_member_id}}", "chiefComplaint": "Extraction follow-up" }
+HTTP 201
+[Captures]
+termV_id: jsonpath "$.id"
+
+PATCH {{api}}/dental/visits/{{termV_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "status": "active" }
+HTTP 200
+
+# Record the plan BEFORE the extraction is charted — it becomes the stale plan the
+# terminal strip must remove (creating a treatment on an already-extracted tooth is
+# rejected, so order matters).
+POST {{api}}/dental/visits/{{termV_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{termV_id}}", "patientId": "{{term_patient_id}}", "cdtCode": "D2750", "description": "Crown (stale plan on later-extracted tooth)", "toothNumber": 47, "priceCents": 60000 }
+HTTP 201
+
+POST {{api}}/dental/visits/{{termV_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{ "visitId": "{{termV_id}}", "patientId": "{{term_patient_id}}", "teeth": [ { "toothNumber": 47, "state": "extracted" } ] }
+HTTP 201
+
+# C7. GET chart — the extracted tooth is terminal: surfaced in terminalTeeth and
+# stripped from the actionable layers (no Planned ring on a gone tooth).
+GET {{api}}/dental/visits/{{termV_id}}/chart
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.terminalTeeth" includes 47
+jsonpath "$.layers.proposed" not includes 47
