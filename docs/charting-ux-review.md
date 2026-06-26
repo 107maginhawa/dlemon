@@ -10,6 +10,16 @@ Key files: `apps/dentalemon/src/features/workspace/components/{dental-chart.tsx,
 
 ---
 
+## Phase 3 — live verification (2026-06-26, 1440px, patient Juan / Dr. Maria Reyes)
+The cue set (items 6 + 1 + 2 + 4) was verified together on the active cumulative chart:
+- **Item 6 flip:** tooth 36 (performed filling + diagnosed pulp cap) now resolves to **`proposed`** with a `rgb(71,85,105) dotted 2px` edge — NOT the old green Treated ring. The pending work is visible. The per-visit historical card still shows tooth 36 `completed` (green solid 2px), correct for that visit.
+- **Item 1:** Planned edge renders as an obvious 2px dotted slate (verified on teeth 17/36/38).
+- **Item 2:** the layer label reads **"Treated"** in the chips AND the bottom legend (no collision with the visit "Active/Completed" status).
+- **Item 4:** chips are multi-select (all `aria-pressed=true`), each carrying its cue swatch (Existing plain · Planned dotted · Treated green ring) so the filter doubles as the legend.
+Evidence: `scratchpad/p3-active-card.png`, `p3-chips.png`.
+
+---
+
 ## GROUP A — Chart visual / design system
 
 ### 1. "Planned" tooth outline too subtle — DESIGN — **DONE**
