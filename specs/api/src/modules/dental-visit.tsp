@@ -163,6 +163,18 @@ model ToothChartState {
   clock?: int32;
 }
 
+/**
+ * Per-visit treatment layer sets — FDI tooth numbers derived from THIS visit's
+ * own treatments (precedence completed > proposed > declined). Lets historical
+ * carousel snapshots paint Completed/Declined accurately as-of-that-visit,
+ * instead of defaulting every tooth to Existing/baseline.
+ */
+model DentalChartLayerSets {
+  proposed: int32[];
+  completed: int32[];
+  declined: int32[];
+}
+
 model DentalChart {
   id: UUID;
   createdAt: utcDateTime;
@@ -170,6 +182,8 @@ model DentalChart {
   visitId: UUID;
   patientId: UUID;
   teeth: ToothChartState[];
+  /** Per-visit status layers for this visit's recorded treatments (see DentalChartLayerSets). Omitted on the baseline-fallback path. */
+  layers?: DentalChartLayerSets;
 }
 
 model CreateDentalChartRequest {

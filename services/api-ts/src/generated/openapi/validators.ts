@@ -1557,7 +1557,18 @@ export const DentalChartSchema = z.object({
   updatedAt: z.string().datetime().transform((str) => new Date(str)),
   visitId: UUIDSchema,
   patientId: UUIDSchema,
-  teeth: z.array(ToothChartStateSchema)
+  teeth: z.array(ToothChartStateSchema),
+  layers: z.object({
+  proposed: z.array(z.number().int()),
+  completed: z.array(z.number().int()),
+  declined: z.array(z.number().int())
+}).optional()
+});
+
+export const DentalChartLayerSetsSchema = z.object({
+  proposed: z.array(z.number().int()),
+  completed: z.array(z.number().int()),
+  declined: z.array(z.number().int())
 });
 
 export const DentalClinicalOpsModuleAdjustmentTypeSchema = z.enum(["restock", "usage", "disposal", "correction"]);
