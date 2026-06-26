@@ -127,6 +127,10 @@ function WorkspacePage() {
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
+  // Task 10: a tooth clicked on a HISTORICAL (read-only) carousel card opens its
+  // lifecycle ledger scoped to that visit, without touching the active-visit edit
+  // selection. Null = no historical ledger open.
+  const [historyToothSel, setHistoryToothSel] = useState<{ toothNumber: number; visitId: string } | null>(null);
 
   // Issue 2: the footer "N pending" affordance routes here — scroll the Treatment
   // Breakdown (its own scroll region) to the top and move focus to it.
@@ -520,7 +524,7 @@ function WorkspacePage() {
           Done) can be brought fully into view. */}
       <div
         className="flex-1 flex flex-col min-h-0 overflow-y-auto"
-        style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen) ? 340 : 0, transition: 'padding-right 300ms ease-out' }}
+        style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen || historyToothSel !== null) ? 340 : 0, transition: 'padding-right 300ms ease-out' }}
       >
         {/* Carousel section */}
         <div
@@ -535,6 +539,7 @@ function WorkspacePage() {
             onNewVisit={handleNewVisit}
             newVisitDisabledHint={openVisit ? NEW_VISIT_DISABLED_HINT : undefined}
             onSelectTooth={selectTooth}
+            onSelectToothHistory={(toothNumber, visitId) => setHistoryToothSel({ toothNumber, visitId })}
             panelOpen={false}
             patientDateOfBirth={patientProfile?.dateOfBirth}
             openVisitId={openVisit?.id}
@@ -603,18 +608,26 @@ function WorkspacePage() {
         </div>
       </div>
 
-      {/* Tooth Slideout — fixed right sidebar */}
+      {/* Tooth Slideout — fixed right sidebar. A historical-card tooth click
+          (historyToothSel) opens it read-only, scoped to that visit, and takes
+          precedence over the active-visit edit selection while open. */}
       <ToothSlideout
-        toothNumber={selectedTooth}
+        toothNumber={historyToothSel ? historyToothSel.toothNumber : selectedTooth}
         patientId={patientId}
-        open={(selectedTooth !== null || slideoutKeepOpen) && currentVisitId !== null}
-        onClose={() => { clearSelection(); setSlideoutKeepOpen(false); }}
+        open={
+          historyToothSel !== null ||
+          ((selectedTooth !== null || slideoutKeepOpen) && currentVisitId !== null)
+        }
+        onClose={() => {
+          if (historyToothSel) setHistoryToothSel(null);
+          else { clearSelection(); setSlideoutKeepOpen(false); }
+        }}
         onSave={saveToothData}
         onSaveAndNext={handleSaveAndNext}
-        readOnly={isReadOnly}
-        visitId={currentVisitId ?? undefined}
-        originalRecordId={selectedToothRecordId}
-        layerExplanation={selectedToothLayerExplanation}
+        readOnly={historyToothSel ? true : isReadOnly}
+        visitId={historyToothSel ? historyToothSel.visitId : (currentVisitId ?? undefined)}
+        originalRecordId={historyToothSel ? undefined : selectedToothRecordId}
+        layerExplanation={historyToothSel ? undefined : selectedToothLayerExplanation}
       />
 
       {/* Footer */}

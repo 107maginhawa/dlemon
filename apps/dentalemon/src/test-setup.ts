@@ -306,16 +306,28 @@ mock.module('@/features/workspace/components/dental-chart', () => ({
     declinedToothNumbers?: Set<number>;
     changedToothNumbers?: Set<number>;
     terminalToothNumbers?: Set<number>;
+    onSelectTooth?: (toothNumber: number) => void;
     [key: string]: unknown;
   }) =>
-    React.createElement('div', {
-      'data-testid': 'dental-chart-stub',
-      'data-completed': [...(props.completedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
-      'data-proposed': [...(props.proposedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
-      'data-declined': [...(props.declinedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
-      'data-changed': [...(props.changedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
-      'data-terminal': [...(props.terminalToothNumbers ?? [])].sort((a, b) => a - b).join(','),
-    }),
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'dental-chart-stub',
+        'data-completed': [...(props.completedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+        'data-proposed': [...(props.proposedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+        'data-declined': [...(props.declinedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+        'data-changed': [...(props.changedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+        'data-terminal': [...(props.terminalToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+        // Expose whether tooth selection is enabled + a clickable proxy (tooth 36) so
+        // tests can verify click-through on any card without the real SVG.
+        'data-has-select': props.onSelectTooth ? '1' : '0',
+      },
+      React.createElement('button', {
+        type: 'button',
+        'data-testid': 'stub-select-tooth-36',
+        onClick: () => props.onSelectTooth?.(36),
+      }),
+    ),
 }))
 
 // NOTE: use-update-visit is intentionally NOT mocked here. Per the convention

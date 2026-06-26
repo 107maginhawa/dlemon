@@ -738,6 +738,54 @@ describe('TimelineCarousel (Swiper)', () => {
     });
   });
 
+  // ── Click any tooth on any card (Task 10) ───────────────────────────────
+  // A historical card's teeth are selectable too — clicking one opens its
+  // read-only per-tooth ledger (scoped to that visit), via onSelectToothHistory.
+  // The active card keeps the editable onSelectTooth path.
+
+  describe('tooth selection on any card', () => {
+    test('clicking a tooth on a historical card fires onSelectToothHistory(toothNumber, visitId)', async () => {
+      const user = userEvent.setup();
+      const historyCalls: Array<[number, string]> = [];
+      const activeCalls: number[] = [];
+      renderCarousel({
+        visits: [VISIT_OLD], // completed (historical), not the open visit
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        onSelectTooth: (n) => activeCalls.push(n),
+        onSelectToothHistory: (n, visitId) => historyCalls.push([n, visitId]),
+      });
+
+      await screen.findByTestId('dental-chart-stub');
+      await user.click(screen.getByTestId('stub-select-tooth-36'));
+
+      expect(historyCalls).toEqual([[36, VISIT_OLD.id]]);
+      expect(activeCalls).toEqual([]); // historical click does NOT hit the editable path
+    });
+
+    test('clicking a tooth on the active card fires the editable onSelectTooth', async () => {
+      const user = userEvent.setup();
+      const historyCalls: Array<[number, string]> = [];
+      const activeCalls: number[] = [];
+      renderCarousel({
+        visits: [VISIT_MID], // active
+        patientId: 'p',
+        openVisitId: VISIT_MID.id,
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        onSelectTooth: (n) => activeCalls.push(n),
+        onSelectToothHistory: (n, visitId) => historyCalls.push([n, visitId]),
+      });
+
+      await screen.findByTestId('dental-chart-stub');
+      await user.click(screen.getByTestId('stub-select-tooth-36'));
+
+      expect(activeCalls).toEqual([36]);
+      expect(historyCalls).toEqual([]);
+    });
+  });
+
   // ── Read-only layer key on historical cards (Task 6) ───────────────────
   // Historical cards show NO interactive tab strip, so users can't interpret
   // the snapshot's colors. A static read-only key (data-testid="chart-layer-key")

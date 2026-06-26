@@ -57,8 +57,11 @@ export interface TimelineCarouselProps {
    * forbidden by the one-active-visit rule. Resume/continue the open visit instead.
    */
   newVisitDisabledHint?: string;
-  /** Called when a tooth is selected on the active slide */
+  /** Called when a tooth is selected on the active slide (opens the editable slideout) */
   onSelectTooth?: (toothNumber: number) => void;
+  /** Called when a tooth is selected on a HISTORICAL (read-only) card — opens that
+   *  tooth's read-only lifecycle ledger scoped to the card's visit. */
+  onSelectToothHistory?: (toothNumber: number, visitId: string) => void;
   /** When true, narrows the carousel to make room for the slideout panel */
   panelOpen?: boolean;
   /** Patient date of birth (ISO date string) — used to select dentition type */
@@ -139,6 +142,7 @@ function VisitChartCard({
   patientId,
   patientDateOfBirth,
   onSelectTooth,
+  onSelectToothHistory,
   onLockVisit,
   lockPending,
   dentitionType,
@@ -160,6 +164,7 @@ function VisitChartCard({
   patientId: string;
   patientDateOfBirth?: string | null;
   onSelectTooth?: (toothNumber: number) => void;
+  onSelectToothHistory?: (toothNumber: number, visitId: string) => void;
   onLockVisit?: (visitId: string) => void;
   lockPending?: boolean;
   dentitionType: DentitionType;
@@ -411,7 +416,17 @@ function VisitChartCard({
             // Active card fills its (clamped) height so the odontogram scales to
             // the card instead of sitting small with dead space below.
             fluid={isActive}
-            onSelectTooth={isActive ? onSelectTooth : undefined}
+            // Every card's teeth are selectable. Routing keys on EDITABILITY, not
+            // centering: an editable (active/draft) visit opens the editable slideout;
+            // any non-editable card (completed/locked — even when centered) opens that
+            // tooth's read-only ledger scoped to this visit.
+            onSelectTooth={
+              isEditable
+                ? onSelectTooth
+                : onSelectToothHistory
+                  ? (toothNumber) => onSelectToothHistory(toothNumber, visit.id)
+                  : undefined
+            }
             // The carousel slide height is clamped (min(46vh,420px)); 'md' teeth
             // were sized for the old fixed 560px card and overflowed/clipped under
             // the clamp. 'sm' lets the full odontogram (crown + root + surfaces)
@@ -500,6 +515,7 @@ export function TimelineCarousel({
   onNewVisit,
   newVisitDisabledHint,
   onSelectTooth,
+  onSelectToothHistory,
   panelOpen = false,
   patientDateOfBirth = null,
   openVisitId,
@@ -659,6 +675,7 @@ export function TimelineCarousel({
                 patientId={patientId}
                 patientDateOfBirth={patientDateOfBirth}
                 onSelectTooth={onSelectTooth}
+                onSelectToothHistory={onSelectToothHistory}
                 onLockVisit={(visitId) =>
                   lockMutation.mutate({ path: { visitId }, body: { status: 'locked' } })
                 }
