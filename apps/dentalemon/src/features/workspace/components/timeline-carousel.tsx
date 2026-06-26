@@ -664,21 +664,27 @@ export function TimelineCarousel({
       </Swiper>
 
       {/* Item 5 (refined): New Visit lives in the empty RIGHT GUTTER beside the
-          carousel, shown ONLY when the most-recent card is centered (no next card
-          peeks on the right). Off the last card it's hidden — the sticky context
-          strip carries Start-new-visit / the open-visit blocker in every state, so
-          nothing is lost and the centered-below row is reclaimed.
+          carousel, shown when the most-recent card is centered (no next card peeks
+          on the right). Off the last card it's hidden — the sticky context strip
+          carries Start-new-visit / the open-visit blocker in every state.
+          ZERO-VISIT patients have no card to sit beside, so the affordance is
+          centered instead (a brand-new patient must still be able to start their
+          first visit — regression guard, journey J21).
           ENABLED → full-opacity lemon CTA. DISABLED (one-active-visit rule: an open
           visit exists, 409 ACTIVE_VISIT_EXISTS) → a distinct-but-legible muted
           button with the reason rendered ON-SURFACE (touch has no hover). */}
-      {onLastCard && (
+      {(onLastCard || sorted.length === 0) && (
         <div
           data-testid="new-visit-gutter"
-          // Span the exact right gutter (viewport minus the centered card) and
-          // center the CTA in it — so it sits in the empty space beside the last
-          // card without hugging the screen edge, at any width.
-          style={{ width: 'calc((100% - min(75%, 920px)) / 2)' }}
-          className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center px-2"
+          // With visits: span the exact right gutter (viewport minus the centered
+          // card) and center the CTA in it. With NO visits: there's no card, so
+          // center the CTA in the empty carousel row instead of a side strip.
+          style={sorted.length === 0 ? undefined : { width: 'calc((100% - min(75%, 920px)) / 2)' }}
+          className={
+            sorted.length === 0
+              ? 'flex items-center justify-center py-8'
+              : 'absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center px-2'
+          }
         >
           <div className="flex w-full max-w-[9rem] flex-col items-center gap-1">
           <button

@@ -457,6 +457,23 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(screen.getByTestId('new-visit-gutter')).not.toBeNull();
     });
 
+    // Regression (journey J21): a brand-new patient with ZERO visits has no card
+    // to sit beside, but MUST still be able to start their first visit. The button
+    // was previously gated behind onLastCard (sorted.length > 0), which hid it for
+    // zero-visit patients entirely. It must render and be enabled.
+    test('renders an ENABLED New Visit for a patient with zero visits', () => {
+      renderCarousel({
+        visits: [],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        // no newVisitDisabledHint → enabled (no open visit exists)
+      });
+      const btn = screen.getByTestId('new-visit-btn');
+      expect(btn).not.toBeNull();
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
+    });
+
     // ...and is HIDDEN once an older card is centered (a newer card peeks right).
     test('hides New Visit when an older (non-last) card is centered', () => {
       renderCarousel({
