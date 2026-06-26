@@ -16,6 +16,35 @@
   :root {
     /* Apple HIG Light Mode + Lemon Accent */
     --radius: 0.75rem;
+
+    /* Typography tokens — default = the current hardcoded Apple system stacks.
+       Tailwind fontFamily.sans/display and the body font all read these. */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+
+    /* Hairline / outline color token — default = the current border color
+       (240 6% 90% → #E5E5E7). Themes/skins re-point this. */
+    --line: 240 6% 90%;
+
+    /* Lemon brand palette — default = the current literal hexes. Tailwind
+       lemon.* reads these so a theme can re-point the whole palette. */
+    --lemon: #FFE97D;
+    --lemon-hover: #F5DC60;
+    --lemon-foreground: #4A4018;
+    --lemon-accent: #C8B800;
+
+    /* Status-badge roles — default = today's appearance.
+       done = green (Tailwind green-100/700), planned = neutral (gray-100/600),
+       diagnosed = lemon (pale lemon fill + dark lemon ink; NEVER lemon text). */
+    --status-done-bg: #dcfce7;
+    --status-done-fg: #15803d;
+    --status-planned-bg: #f3f4f6;
+    --status-planned-fg: #4b5563;
+    --status-diagnosed-bg: rgba(255, 233, 125, 0.40);
+    --status-diagnosed-fg: #4A4018;
+
+    /* Active visit-card elevation — default = the current literal shadow. */
+    --card-shadow-active: 0 8px 40px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.04);
     --background: 240 5% 96.9%; /* #F2F2F7 systemGroupedBackground */
     --foreground: 0 0% 0%; /* #000000 label */
     --card: 0 0% 100%; /* #FFFFFF systemBackground */
@@ -155,7 +184,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-variant-numeric: tabular-nums;
@@ -233,16 +262,39 @@
   }
 }
 
-/* Dental chart carousel — responsive slide sizing for coverflow */
-.dental-swiper {
+/* Dental chart carousel — responsive slide sizing for coverflow.
+   NB: needs `.dental-swiper.swiper` (two classes) to beat Swiper's own
+   `.swiper { padding: 0 }` base rule, which loads after globals.css. */
+.dental-swiper.swiper {
   width: 100%;
-  padding: 20px 4vw 48px;
+  /* Extra bottom room so the pagination sits on its OWN row below the card,
+     not on top of the card-footer legend (item 3: legend/dots overlap). */
+  padding: 8px 4vw 44px;
+}
+
+/* Pagination on its own row, clearly BELOW the card footer/legend (item 3).
+   The container padding above gives it the room; pin it near the very bottom. */
+.dental-swiper {
+  --swiper-pagination-bottom: 10px;
 }
 
 .dental-swiper .swiper-slide {
   width: 75%;
   max-width: 920px;
-  height: 560px;
+  /* ONE consistent chart height across every visit (no per-visit resize on swipe).
+     Viewport-relative so it scales with the screen; fill-mode teeth fill it. On a
+     populated visit the breakdown sits a little lower and scrolls in the single
+     scroll region — an accepted trade for a chart that never changes size. */
+  height: min(64vh, 600px);
+}
+
+/* Fill-mode tooth: the injected SVG scales by HEIGHT (width follows aspect,
+   capped to the cell) so the odontogram fills the chart card top-to-bottom
+   regardless of card height — no fixed-width dead space, no clipping. */
+.universal-tooth-svg--fill svg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
 }
 
 .dental-swiper .swiper-pagination-bullet {
@@ -314,4 +366,140 @@
     width: 100%;
     margin: 0 auto;
   }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   THEME — White (opt-in; OFF by default). Applied ONLY when `theme-white`
+   is on <html>. The product's "White" theme, ported from the design sample
+   (?theme=white): white surfaces, BLACK soft-line outlines (drawn by the
+   companion `skin-line` skin via --line), dark ink, lemon CTA (dark ink —
+   lemon TEXT is forbidden), green = done/positive, neutral grey planned,
+   lemon diagnosed. Pair with `skin-line` for the soft corners + Shantell/
+   Nunito type (the toggle applies both classes together).
+   Top-level (NOT in @layer base) and scoped under `html.` so the static
+   build never tree-shakes it and the base look stays untouched.
+   ─────────────────────────────────────────────────────────────────────── */
+html.theme-white {
+  /* Surfaces → white */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 7%;        /* #111 ink */
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 7%;
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 0 0% 7%;
+  --muted: 0 0% 100%;
+  --muted-foreground: 0 0% 49%;  /* #7C7C7C */
+
+  /* Lines: skin-line draws ONE uniform soft hairline for every outlined
+     surface. Previously #111 black, which read as glaring hard boxes the
+     moment the skin repainted a border (tooth cells, allergy pill, modal
+     panels, segmented chips, profile tabs). A light neutral grey keeps the
+     soft-line identity without the heavy-box look. */
+  --line: 0 0% 80%;              /* #CCCCCC soft hairline */
+  --border: 0 0% 90%;            /* #E6E6E6 */
+  --input: 0 0% 90%;
+
+  /* Lemon CTA: lemon fill, near-black ink */
+  --primary: 47 100% 74%;
+  --primary-foreground: 0 0% 10%;  /* #1A1A1A */
+  --accent: 47 100% 92%;
+  --accent-foreground: 0 0% 10%;
+  --ring: 47 100% 74%;
+
+  /* Lemon palette stays the brand hexes; ink on lemon stays near-black */
+  --lemon: #FFE97D;
+  --lemon-hover: #F5DC60;
+  --lemon-foreground: #1A1A1A;
+  --lemon-accent: #C8B800;
+
+  /* Status roles: green done/positive, neutral grey planned, lemon diagnosed */
+  --status-done-bg: #E7F3DC;
+  --status-done-fg: #3C7A2E;
+  --status-planned-bg: #F2F2F2;
+  --status-planned-fg: #6E6E6E;
+  --status-diagnosed-bg: rgba(255, 233, 125, 0.40);
+  --status-diagnosed-fg: #1A1A1A;
+
+  /* Soft-line look = no elevation (skin-line also flattens shadows). */
+  --card-shadow-active: none;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   SKIN — Line (opt-in; OFF by default). Activated ONLY when `skin-line` is
+   present on <html>. Reshapes the surface treatment without touching the
+   color tokens: straight-sided soft corners, thin --line-colored outlines,
+   no shadow, Shantell Sans on headings + buttons, Nunito for body text.
+   Because every rule is scoped under `html.skin-line`, the base look (no
+   class on <html>) is completely unaffected. Fonts come from the Google
+   Fonts <link> in index.html (no npm dependency).
+   ─────────────────────────────────────────────────────────────────────── */
+html.skin-line {
+  /* Soft, NOT pill: gentle corners on the radius scale. */
+  --radius: 0.375rem;
+  /* Body typeface */
+  font-family: "Nunito", var(--font-sans);
+}
+
+html.skin-line body {
+  font-family: "Nunito", var(--font-sans);
+}
+
+/* Headings + buttons → Shantell Sans (display face) */
+html.skin-line h1,
+html.skin-line h2,
+html.skin-line h3,
+html.skin-line h4,
+html.skin-line h5,
+html.skin-line h6,
+html.skin-line button,
+html.skin-line [role="button"],
+html.skin-line .font-display {
+  font-family: "Shantell Sans", var(--font-display);
+}
+
+/* Surface outlines for the skin — SURGICAL, not blanket.
+   ─────────────────────────────────────────────────────────────────────────
+   Two rules that the old blanket version broke, and why they matter:
+
+   1. COLOR ONLY — never force `border-width`. The previous rule set
+      `border-width: 1px` on every `[class*="border"]`, which turned a
+      one-sided divider (`border-r`, `border-b-2`) into a full 4-side box
+      (tooth cells became black grids; underline tabs became boxes) and gave
+      `border-transparent` a visible edge. By recoloring only, a directional
+      border stays directional and a transparent border stays invisible.
+
+   2. RECOLOR ONLY THE DESIGN-SYSTEM TOKEN BORDER — never colored borders.
+      Targeting `[class*="border"]` also captured `border-red-200`,
+      `border-amber-200`, etc. and flattened them to the line color (the
+      allergy pill became a hard box). We scope to `.border-border` / `.border`
+      (the neutral token borders that SHOULD read as the skin hairline) and
+      leave hued borders to keep their own color.
+
+   The `--line` token is now a soft grey hairline (see theme-white), so every
+   outlined surface reads with ONE uniform, gentle weight — no glaring black. */
+html.skin-line :where(.border-border, .border):not([class*="border-transparent"]):not([class*="border-foreground"]):not([class*="border-red"]):not([class*="border-amber"]):not([class*="border-green"]):not([class*="border-yellow"]):not([class*="border-blue"]):not([class*="border-orange"]):not([class*="border-lemon"]):not([class*="border-destructive"]):not([class*="border-primary"]),
+html.skin-line :where(.card, [class*="Card"]) {
+  border-color: hsl(var(--line));
+}
+
+/* Alpha-scaled token borders (border-border/20, /30, /50, foreground/25 …)
+   are intentionally subtle structural hairlines — the tooth-cell divider, the
+   chart-card edge, the segmented-control container/header. They already render
+   their authored color at a reduced alpha (a faint grey), so the skin leaves
+   them ENTIRELY alone: no recolor (keeps their gentle alpha) and no width
+   change (keeps them one-sided). This is what stops the odontogram and the
+   segmented control from reading as a cluster of black boxes. */
+
+/* Flatten elevation under the skin (kept from the original soft-line look). */
+html.skin-line .card,
+html.skin-line [class*="Card"],
+html.skin-line [class*="border"] {
+  box-shadow: none;
+}
+
+/* Flatten any elevation utilities the skin sits on top of. */
+html.skin-line [class*="shadow"] {
+  box-shadow: none;
 }

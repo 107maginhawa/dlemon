@@ -43,6 +43,39 @@ describe('WorkspacePage layout', () => {
     });
   });
 
+  // Phase 2 — workspace toolbar promotion (items 2.1, 2.2, 2.3, N1).
+  describe('toolbar (Phase 2)', () => {
+    test('every toolbar trigger testid is preserved', async () => {
+      const s = await src();
+      for (const id of [
+        'imaging-tab-btn', 'perio-tab-btn', 'occlusion-tab-btn', 'recalls-tab-btn',
+        'tasks-tab-btn', 'treatment-plans-tab-btn', 'chart-export-btn',
+      ]) {
+        expect(s).toContain(`data-testid="${id}"`);
+      }
+    });
+
+    test('2.1: triggers use the promoted icon+label button affordance', async () => {
+      const s = await src();
+      expect(s).toContain('WORKSPACE_TOOL_BTN');
+      // each tab trigger references the shared promoted-button class (7 triggers)
+      expect((s.match(/className=\{WORKSPACE_TOOL_BTN\}/g) ?? []).length).toBeGreaterThanOrEqual(7);
+    });
+
+    test('2.2: Export is always rendered (disabled + hinted), not conditionally hidden', async () => {
+      const s = await src();
+      expect(s).toContain('Select a visit to export the chart');
+    });
+
+    test('2.3: Perio exposes an inline disabled hint for touch devices', async () => {
+      expect(await src()).toContain('perio-disabled-hint');
+    });
+
+    test('N1: the plan-docs trigger is relabelled "Plan docs"', async () => {
+      expect(await src()).toContain('Plan docs');
+    });
+  });
+
   describe('zone data-testids', () => {
     test('carousel zone has data-testid="workspace-carousel-zone"', async () => {
       expect(await src()).toContain('data-testid="workspace-carousel-zone"');

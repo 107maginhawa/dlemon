@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Image as ImageIcon } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -64,38 +65,53 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
 
   return (
     <div className={`flex flex-col h-full border-r border-zinc-200 bg-white ${view === 'fmx' ? 'w-[460px]' : 'w-[280px]'}`}>
-      {/* Header with Upload trigger */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
+      {/* Header: title on its own row, actions below as a 2-col grid + a
+          full-width primary Upload — no longer crammed into one row. */}
+      <div className="flex flex-col gap-2 px-4 py-3 border-b border-zinc-100">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-zinc-800">Images</span>
-          {/* P2-5: list ↔ FMX anatomical mount toggle */}
+          {allItems.length > 0 && (
+            <span
+              data-testid="image-count-badge"
+              className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground"
+            >
+              {allItems.length}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {/* P2-5: list ↔ FMX anatomical mount toggle. N6: spell out the jargon. */}
           <button
             type="button"
             onClick={() => setView((v) => (v === 'list' ? 'fmx' : 'list'))}
             aria-pressed={view === 'fmx'}
             data-testid="fmx-toggle"
-            className="rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
+            title="Full-mouth X-ray layout"
+            className="flex h-9 items-center justify-center rounded-md border border-zinc-200 px-2 text-xs font-medium text-zinc-600 hover:border-lemon"
           >
             {view === 'fmx' ? 'List view' : 'FMX mount'}
           </button>
-        </div>
-        {selectedIds.size === 2 && (
+          {/* N3: Compare is a discoverable affordance — always visible, disabled
+              until exactly two 2-D images are selected (it enables at 2). */}
           <button
+            type="button"
             onClick={() => {
-              const selected = (data?.items ?? []).filter(i => selectedIds.has(i.id))
+              const selected = allItems.filter(i => selectedIds.has(i.id))
               if (selected.length === 2) {
                 onCompare?.([selected[0]!, selected[1]!])
               }
             }}
-            className="bg-lemon text-black text-xs font-semibold px-3 py-1.5 rounded-md"
+            disabled={selectedIds.size !== 2}
+            title="Select two images to compare"
+            className="flex h-9 items-center justify-center rounded-md border border-zinc-200 px-2 text-xs font-medium text-zinc-600 hover:border-lemon disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200"
             data-testid="compare-btn"
           >
-            Compare ▶
+            {selectedIds.size === 2 ? 'Compare ▶' : 'Compare (select 2)'}
           </button>
-        )}
+        </div>
         <Sheet open={uploadOpen} onOpenChange={setUploadOpen}>
           <SheetTrigger asChild>
-            <button className="bg-lemon text-black text-xs font-semibold px-3 py-1.5 rounded-md">
+            <button className="flex h-9 w-full items-center justify-center rounded-md bg-lemon text-black text-xs font-semibold hover:bg-lemon-hover">
               Upload Image
             </button>
           </SheetTrigger>
@@ -198,6 +214,24 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     className="shrink-0 accent-lemon"
                     data-testid={`select-image-${item.id}`}
                   />
+                  {/* 1.2: dated thumbnail. Never use the bare fileName as an
+                      <img> src (silent-blank bug) — render a placeholder icon
+                      when there is no stored file. */}
+                  {item.downloadUrl ? (
+                    <img
+                      src={item.downloadUrl}
+                      alt=""
+                      data-testid={`thumb-${item.id}`}
+                      className="h-10 w-10 shrink-0 rounded object-cover bg-zinc-100"
+                    />
+                  ) : (
+                    <div
+                      data-testid={`thumb-placeholder-${item.id}`}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-zinc-100 text-zinc-300"
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                  )}
                   <div
                     role="button"
                     tabIndex={0}
@@ -214,6 +248,10 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     <p className="text-sm text-zinc-900 truncate">{item.fileName}</p>
                     <p className="text-xs text-zinc-400 capitalize">
                       {item.modality.replace('_', ' ')}
+                    </p>
+                    {/* 1.2: capture date — pick X-rays by when, not just filename. */}
+                    <p className="text-xs text-zinc-400">
+                      {new Date(item.createdAt).toLocaleDateString()}
                     </p>
                     {/* G5: quality / diagnostic badges + tags + context-link badges */}
                     {(item.qualityStatus === 'retake' || !item.isDiagnostic || item.tags.length > 0 || item.links.length > 0) && (

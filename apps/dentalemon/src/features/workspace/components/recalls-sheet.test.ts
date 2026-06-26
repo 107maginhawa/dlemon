@@ -111,6 +111,43 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('renders as a dialog (role) with its testid preserved through the drawer conversion', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('recalls-sheet')).not.toBeNull());
+      expect(screen.getByRole('dialog')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('"Back to workspace" closes the modal', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    const f = installFetch([]);
+    try {
+      renderSheet({ onClose });
+      await user.click(await screen.findByTestId('recalls-back-btn'));
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('L6: empty state hosts a primary "New recall" affordance that opens the form', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText(/No recalls yet/i)).not.toBeNull());
+      await user.click(screen.getByTestId('recalls-empty-new-btn'));
+      expect(screen.getByLabelText('Due Date')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('submits a POST /recalls with the entered fields from the new-recall form', async () => {
     const user = userEvent.setup();
     const f = installFetch([]);
@@ -138,6 +175,33 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('1.3: clicking the "6 mo" interval chip pre-fills Due Date and stays editable', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    // Replicates the component's clamp-day addMonths so the expectation can't
+    // disagree with a different algorithm.
+    function addMonths(base: Date, n: number): string {
+      const target = new Date(base.getFullYear(), base.getMonth() + n, 1);
+      const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+      target.setDate(Math.min(base.getDate(), lastDay));
+      const p = (x: number) => String(x).padStart(2, '0');
+      return `${target.getFullYear()}-${p(target.getMonth() + 1)}-${p(target.getDate())}`;
+    }
+    try {
+      renderSheet();
+      await user.click(screen.getByRole('button', { name: /new recall/i }));
+      await user.click(screen.getByRole('button', { name: '6 mo' }));
+      const due = screen.getByLabelText('Due Date') as HTMLInputElement;
+      expect(due.value).toBe(addMonths(new Date(), 6));
+      // still editable — typing overrides the chip value
+      await user.clear(due);
+      await user.type(due, '2027-01-15');
+      expect(due.value).toBe('2027-01-15');
+    } finally {
+      f.restore();
+    }
+  });
+
   test('fires PATCH /recalls/:id with the next status on a transition button', async () => {
     const user = userEvent.setup();
     const f = installFetch([makeRecall({ id: 'r-42', status: 'pending' })]);
@@ -156,6 +220,60 @@ describe('RecallsSheet — shipped component', () => {
     }
   });
 
+  test('1.1: a past-due pending recall renders an "Overdue" badge', async () => {
+    // 30 days ago — comfortably in the past regardless of run date.
+    const past = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const f = installFetch([makeRecall({ status: 'pending', dueDate: past })]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Cleaning')).not.toBeNull());
+      expect(screen.getByText('Overdue')).not.toBeNull();
+      // relative text accompanies the absolute date
+      expect(screen.getByText(/overdue\)/i)).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('1.1: a future pending recall does NOT render "Overdue"', async () => {
+    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    const f = installFetch([makeRecall({ status: 'pending', dueDate: future })]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Cleaning')).not.toBeNull());
+      expect(screen.queryByText('Overdue')).toBeNull();
+      // relative text shows it's upcoming ("in …")
+      expect(screen.getByText(/\(in /i)).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('1.1: a completed recall never shows "Overdue" even when past due', async () => {
+    const past = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const f = installFetch([makeRecall({ status: 'completed', dueDate: past })]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Cleaning')).not.toBeNull());
+      expect(screen.queryByText('Overdue')).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('3: the header purpose line renders with id="recalls-desc" (a11y describedby target)', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('recalls-sheet')).not.toBeNull());
+      const desc = document.getElementById('recalls-desc');
+      expect(desc).not.toBeNull();
+      expect(desc!.textContent).toMatch(/recare visits/i);
+    } finally {
+      f.restore();
+    }
+  });
+
   test('shows an error state when the recalls fetch fails', async () => {
     const original = global.fetch;
     global.fetch = mock(async () =>
@@ -164,6 +282,22 @@ describe('RecallsSheet — shipped component', () => {
     try {
       renderSheet();
       await waitFor(() => expect(screen.getByText(/Couldn’t load recalls/i)).not.toBeNull());
+    } finally {
+      global.fetch = original;
+    }
+  });
+
+  test('4: renders skeleton rows (recalls-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    // Never-resolving fetch keeps the query in its loading state.
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('recalls-loading');
+      expect(loading).not.toBeNull();
+      // No plain "Loading recalls…" text — skeleton divs instead.
+      expect(screen.queryByText(/Loading recalls/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
     } finally {
       global.fetch = original;
     }

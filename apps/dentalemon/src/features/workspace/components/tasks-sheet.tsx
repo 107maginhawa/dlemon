@@ -7,8 +7,8 @@
  * done/cancelled). Mirrors RecallsSheet.
  */
 import React, { useState } from 'react';
-import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { X, CheckCircle2, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Skeleton } from '@monobase/ui';
+import { ArrowLeft, CheckCircle2, Plus } from 'lucide-react';
 import {
   usePatientTasks,
   TASK_TYPES,
@@ -79,10 +79,22 @@ function TaskRow({ task, onUpdateStatus, isUpdating }: TaskRowProps) {
             {STATUS_LABELS[task.status]}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {TASK_TYPE_LABELS[task.taskType]}
-          {task.dueDate ? ` · Due ${new Date(task.dueDate).toLocaleDateString()}` : ''}
-        </p>
+        {/* Lightly labeled Type / Due — a compact version of the occlusion Metric
+            pattern so the metadata reads explicitly, not as a bare joined string. */}
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          <span className="inline-flex items-baseline gap-1 text-xs">
+            <span className="uppercase tracking-wide text-muted-foreground">Type</span>
+            <span className="font-medium text-foreground">{TASK_TYPE_LABELS[task.taskType]}</span>
+          </span>
+          {task.dueDate && (
+            <span className="inline-flex items-baseline gap-1 text-xs">
+              <span className="uppercase tracking-wide text-muted-foreground">Due</span>
+              <span className="font-medium text-foreground">
+                {new Date(task.dueDate).toLocaleDateString()}
+              </span>
+            </span>
+          )}
+        </div>
         {task.description && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
         )}
@@ -112,9 +124,8 @@ function TaskRow({ task, onUpdateStatus, isUpdating }: TaskRowProps) {
 // ---------------------------------------------------------------------------
 
 export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
-  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
-
+  // Centered modal — a focused record/list surface. Radix Dialog handles Escape,
+  // click-outside, focus trap + restore.
   const { tasks, isLoading, isError, createTask, updateTask, isCreating, isUpdating } =
     usePatientTasks(patientId);
 
@@ -141,36 +152,36 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
     setFormDescription('');
   }
 
-  if (!open) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
-
-      {/* Sheet */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Tasks"
-        data-testid="tasks-sheet"
-        className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85dvh] flex-col rounded-t-2xl bg-background shadow-2xl"
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
+        aria-describedby="tasks-desc"
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl max-h-[85dvh]"
       >
-        {/* Handle */}
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Tasks</h2>
-            {tasks.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                {tasks.length}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
+        {/* Radix supplies role=dialog on DialogContent; the test/E2E handle lives
+            on this inner wrapper (the harness stubs Radix Content + drops props). */}
+        <div data-testid="tasks-sheet" className="flex flex-1 flex-col min-h-0">
+        {/* Header (pr-10 clears the dialog's built-in close button) */}
+        <DialogHeader className="flex flex-col gap-2 space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
+          <button
+            type="button"
+            onClick={onClose}
+            data-testid="tasks-back-btn"
+            className="flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to workspace
+          </button>
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <DialogTitle className="text-sm font-semibold">Tasks</DialogTitle>
+              {tasks.length > 0 && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                  {tasks.length}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setShowForm((v) => !v)}
@@ -180,16 +191,11 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
               <Plus className="h-3.5 w-3.5" />
               New Task
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close tasks"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
-        </div>
+          <p id="tasks-desc" className="text-xs text-muted-foreground">
+            Track follow-ups for this patient — referrals, lab orders, and callbacks.
+          </p>
+        </DialogHeader>
 
         {/* New task form */}
         {showForm && (
@@ -281,18 +287,32 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
         {/* Task list */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-8">Loading tasks…</p>
+            <div data-testid="tasks-loading" className="flex flex-col gap-2">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
               <CheckCircle2 className="h-8 w-8 text-destructive/50" />
               <p className="text-sm text-destructive">Couldn’t load tasks. Please try again.</p>
             </div>
           ) : tasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
               <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No tasks yet. Add a follow-up, referral, or lab order.
               </p>
+              {/* L6: co-locate the primary action with the empty state. */}
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                data-testid="tasks-empty-new-btn"
+                className="flex items-center gap-1 rounded-lg bg-lemon px-3 py-2 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Task
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -307,7 +327,8 @@ export function TasksSheet({ patientId, open, onClose }: TasksSheetProps) {
             </div>
           )}
         </div>
-      </div>
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

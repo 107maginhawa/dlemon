@@ -9,8 +9,14 @@ import { describe, test, expect } from 'bun:test';
 import { explainToothLayer } from './tooth-layer-explanation';
 
 describe('explainToothLayer', () => {
-  test('completed (performed/verified treatment) wins and is explained', () => {
+  test('proposed wins over completed and is explained (item 6 flip — outstanding work is never hidden)', () => {
     const e = explainToothLayer(16, undefined, { completed: new Set([16]), proposed: new Set([16]) });
+    expect(e.layer).toBe('proposed');
+    expect(e.reason.toLowerCase()).toContain('planned');
+  });
+
+  test('completed (performed/verified treatment, no pending work) is explained', () => {
+    const e = explainToothLayer(16, undefined, { completed: new Set([16]) });
     expect(e.layer).toBe('completed');
     expect(e.reason.toLowerCase()).toContain('performed');
   });

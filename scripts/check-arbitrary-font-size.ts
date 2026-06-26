@@ -25,8 +25,15 @@ import { join } from 'node:path';
 
 // Lower this as arbitrary font sizes are migrated to the token scale.
 // It must never increase. Current count at introduction: 348; lowered to 346
-// when the AppointmentCard action buttons were de-duplicated into one shared class.
-const BASELINE = 346;
+// when the AppointmentCard action buttons were de-duplicated into one shared class;
+// lowered to 343 when the workspace context strip + New Visit affordance moved to
+// the rem token scale (text-xs) during the workspace-first-slice UX pass.
+// lowered to 333 when imaging rail + perio chart legibility pass migrated tooth
+// numbers, arch/site labels, and the upload card to the rem token scale.
+// lowered to 332 when the treatment-plan CDT-year stamp moved into the labeled
+// field grid (rem token scale) during the record-tabs polish pass.
+// lowered to 327 — layer key on historical cards uses text-xs (no new raw px).
+const BASELINE = 327;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

@@ -918,6 +918,38 @@ describe('getToothHistory handler', () => {
     expect(body.data[0].treatmentStatus).toBe('performed');
     expect(body.data[0].treatmentPriceCents).toBe(12500);
   });
+
+  test('item 9 / bug-a: includes the ACTIVE visit so in-progress (diagnosed) work shows in the timeline', async () => {
+    // Active visit with a charted tooth + a still-pending (diagnosed) treatment —
+    // historically excluded (only completed/locked were scanned), so the slideout's
+    // per-tooth timeline never showed work in progress.
+    const visitRepo = new VisitRepository(db);
+    const draft = await visitRepo.createOne({
+      patientId: PATIENT_ID, branchId: BRANCH_ID, dentistMemberId: DENTIST_MEMBER_ID,
+    });
+    const activeVisit = await visitRepo.activate(draft.id);
+    const chartRepo = new DentalChartRepository(db);
+    await chartRepo.upsert({
+      visitId: activeVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'caries', conditionCode: 'K02.1' }],
+    });
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: activeVisit!.id, patientId: PATIENT_ID,
+      toothNumber: 11, cdtCode: 'D3120', description: 'Pulp cap',
+      surfaces: ['occlusal'], priceCents: 8200, status: 'diagnosed',
+      carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/11`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    const activeEntry = body.data.find((e: any) => e.visitId === activeVisit!.id);
+    expect(activeEntry).toBeDefined();
+    expect(activeEntry.treatmentStatus).toBe('diagnosed');
+    expect(activeEntry.treatmentDescription).toBe('Pulp cap');
+  });
 });
 
 // ---------------------------------------------------------------------------

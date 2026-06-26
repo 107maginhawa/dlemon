@@ -391,6 +391,61 @@ describe('TreatmentTable — Phase 3', () => {
   });
 });
 
+// ── Item 1: single scroll region — no nested max-h-[450px] overflow ───────────
+// The breakdown must NOT introduce its own inner scroll region (a second
+// scrollbar on the same axis can strand the Grand Total). One outer scroll zone
+// owns the axis; the table keeps a sticky thead and pins the Grand Total row
+// sticky to the bottom so the money stays visible while rows scroll.
+describe('Item 1: single scroll region (no nested overflow)', () => {
+  test('by-visit table has no inner max-h-[450px] overflow-auto wrapper', () => {
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-1',
+        treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    // No element may carry the nested fixed-height inner scroll.
+    expect(document.querySelector('.max-h-\\[450px\\]')).toBeNull();
+    const table = screen.getByRole('table');
+    let el: HTMLElement | null = table.parentElement;
+    while (el) {
+      expect(el.className).not.toContain('overflow-auto');
+      el = el.parentElement;
+    }
+  });
+
+  test('thead is NOT sticky (single outer scroll owns the axis; the sticky context strip sits above)', () => {
+    // The whole carousel+table zone is now one scroll container so the tall chart
+    // can scroll away to reveal the table. A sticky thead would pin under the
+    // sticky context strip (higher z) and be hidden, so the header scrolls with the
+    // rows instead. The Grand Total stays pinned to keep the money visible.
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-1',
+        treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    const thead = screen.getByRole('table').querySelector('thead');
+    expect(thead).not.toBeNull();
+    expect(thead!.className).not.toContain('sticky');
+  });
+
+  test('Grand Total row is pinned sticky to the bottom', () => {
+    render(
+      React.createElement(TreatmentTable, {
+        visitId: 'v-1',
+        treatments: [TREATMENT_PENDING, TREATMENT_COMPLETED],
+      }),
+      { wrapper: makeWrapper() },
+    );
+    const total = screen.getByTestId('grand-total-row');
+    expect(total.className).toContain('sticky');
+    expect(total.className).toContain('bottom-0');
+  });
+});
+
 // ── P2: by-status presentation view (toggle) ──────────────────────────────────
 
 describe('by-status presentation view (P2)', () => {
@@ -415,7 +470,8 @@ describe('by-status presentation view (P2)', () => {
     );
     await user.click(screen.getByTestId('view-by-status-btn'));
     expect(screen.getByTestId('status-group-proposed').textContent).toMatch(/Planned/);
-    expect(screen.getByTestId('status-group-completed').textContent).toMatch(/Completed/);
+    // item 2: the 'completed' layer label is "Treated" (getLayerLabel), not "Completed".
+    expect(screen.getByTestId('status-group-completed').textContent).toMatch(/Treated/);
     expect(screen.getByTestId('status-group-declined').textContent).toMatch(/Declined/);
   });
 

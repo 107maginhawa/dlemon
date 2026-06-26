@@ -15,7 +15,7 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { X, Activity } from 'lucide-react';
+import { ArrowLeft, X, Activity } from 'lucide-react';
 import { Skeleton } from '@monobase/ui';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { cn } from '@/lib/utils';
@@ -161,6 +161,15 @@ export function PerioChartOverlay({
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            data-testid="perio-back-btn"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to workspace
+          </button>
           <Activity className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">Periodontal chart</h2>
           {status && (
@@ -271,7 +280,7 @@ export function PerioChartOverlay({
             />
 
             {/* Keyboard legend */}
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-zinc-600">
               Digits set depth · cells auto-advance · click a dot to toggle bleeding · over-threshold
               depths show in red.
             </p>
@@ -311,8 +320,10 @@ export function PerioChartOverlay({
                 )}
 
                 <div className="flex items-center justify-end gap-3">
+                  {/* N5: a full-mouth exam is ~28 teeth; frame 16 as the minimum
+                      to complete, not a 16/16 target that implies "done". */}
                   <span className="text-xs text-muted-foreground">
-                    {readingCount}/{MIN_ADULT_READINGS} teeth charted
+                    {readingCount} charted · minimum {MIN_ADULT_READINGS} to complete
                   </span>
                   <button
                     type="button"

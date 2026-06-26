@@ -8,6 +8,8 @@
  */
 
 import { describe, test, expect, afterEach, beforeEach, mock } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
 import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -82,6 +84,34 @@ describe('TimelineCarousel (Swiper)', () => {
         });
       expect(screen.getByTestId('timeline-carousel')).not.toBeNull();
     });
+
+    // Item 2: the carousel must not claim >~45% of screen height. The fixed
+    // 560px slide is replaced by a viewport clamp in CSS and the carousel's own
+    // vertical padding is reduced from py-4.
+    test('carousel root uses reduced vertical padding (not py-4)', () => {
+      renderCarousel({
+          visits: THREE_VISITS,
+          patientId: 'test-patient',
+          onSelectVisit: () => {},
+          onNewVisit: () => {},
+        });
+      const root = screen.getByTestId('timeline-carousel');
+      expect(root.className).not.toContain('py-4');
+    });
+
+    test('globals.css clamps the swiper slide height to a viewport-relative value', () => {
+      const css = readFileSync(
+        resolvePath(import.meta.dir, '../../../styles/globals.css'),
+        'utf8',
+      );
+      const swiperSlide = css.match(/\.dental-swiper \.swiper-slide \{[^}]*\}/);
+      expect(swiperSlide).not.toBeNull();
+      const block = swiperSlide![0];
+      // No fixed 560px height; one consistent viewport-relative height for every
+      // visit (~min(64vh,600px)) — fill-mode teeth scale to it, no per-visit resize.
+      expect(block).not.toContain('560px');
+      expect(block).toMatch(/min\(\s*64vh\s*,\s*600px\s*\)/);
+    });
   });
 
   describe('slides', () => {
@@ -154,9 +184,16 @@ describe('TimelineCarousel (Swiper)', () => {
           onSelectVisit: () => {},
           onNewVisit: () => {},
         });
-      expect(screen.getByText(/completed/i)).not.toBeNull();
-      expect(screen.getByText(/active/i)).not.toBeNull();
-      expect(screen.getByText(/draft/i)).not.toBeNull();
+      // Assert the per-visit status via the stable status-badge contract rather
+      // than loose text — the header also hosts layer tabs (Existing / Planned /
+      // Treated / Declined); the layer label was renamed Completed→Treated (item 2)
+      // precisely so it can never collide with the visit "completed" status here.
+      const statuses = screen
+        .getAllByTestId('visit-status-badge')
+        .map((el) => el.textContent);
+      expect(statuses).toContain('completed');
+      expect(statuses).toContain('active');
+      expect(statuses).toContain('draft');
     });
 
     // CHART-XV: the active chart is cumulative (all visits); historical cards are
@@ -204,7 +241,11 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(lastSlide.getAttribute('data-active-card')).toBe('1');
     });
 
-    test('initial active slide has accent bar', () => {
+    test('non-active slides are not marked active', () => {
+      // The active card is distinguished via the stable `data-active-card`
+      // contract (which drives its border + shadow styling). We assert that
+      // contract rather than any decorative element or CSS class — only the
+      // most-recent slide is marked active, the rest are not.
       renderCarousel({
           visits: THREE_VISITS,
           patientId: 'test-patient',
@@ -212,23 +253,9 @@ describe('TimelineCarousel (Swiper)', () => {
           onNewVisit: () => {},
         });
       const slides = screen.getAllByTestId('visit-slide');
-      const activeSlide = slides[slides.length - 1];
-      const accentBar = activeSlide.querySelector('[data-accent-bar]');
-      expect(accentBar).not.toBeNull();
-    });
-
-    test('non-active slides do not have accent bar', () => {
-      renderCarousel({
-          visits: THREE_VISITS,
-          patientId: 'test-patient',
-          onSelectVisit: () => {},
-          onNewVisit: () => {},
-        });
-      const slides = screen.getAllByTestId('visit-slide');
-      // First two slides (index 0, 1) are not the most recent -> no accent bar
-      const firstSlide = slides[0];
-      const accentBar = firstSlide.querySelector('[data-accent-bar]');
-      expect(accentBar).toBeNull();
+      // First two slides (index 0, 1) are not the most recent -> not active.
+      expect(slides[0].getAttribute('data-active-card')).toBeNull();
+      expect(slides[slides.length - 1].getAttribute('data-active-card')).toBe('1');
     });
   });
 
@@ -380,6 +407,88 @@ describe('TimelineCarousel (Swiper)', () => {
       await user.click(screen.getByTestId('new-visit-btn'));
       expect(clicked).toBe(true);
     });
+
+    // ── Item 5: solid, always-visible New Visit affordance ──────────────────
+    test('enabled: full-opacity solid lemon button, not a faint opacity-60 dead tile', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        // no newVisitDisabledHint → enabled
+      });
+      const btn = screen.getByTestId('new-visit-btn');
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
+      // solid inviting CTA in the lemon accent — never the faint resting opacity.
+      expect(btn.className).toContain('bg-lemon');
+      expect(btn.className).not.toContain('opacity-60');
+      // legible tap target
+      expect(btn.className).toContain('min-h-[44px]');
+    });
+
+    test('disabled: legible (not opacity-60) with the reason rendered ON-SURFACE', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        newVisitDisabledHint: 'Finish or discard the open visit to start a new one.',
+      });
+      const btn = screen.getByTestId('new-visit-btn');
+      expect((btn as HTMLButtonElement).disabled).toBe(true);
+      // distinct but legible — a muted surface, NOT the faint opacity-60/40 dead tile.
+      expect(btn.className).not.toContain('opacity-60');
+      expect(btn.className).not.toContain('opacity-40');
+      expect(btn.className).toContain('bg-muted');
+      // the reason is on-surface (visible text node), not hover/title-only.
+      const hint = screen.getByTestId('new-visit-disabled-hint');
+      expect(hint.textContent).toMatch(/finish or discard the open visit/i);
+    });
+
+    // Refined placement: New Visit only occupies the right gutter when the
+    // most-recent card is centered. Initial render centers the last card → shown.
+    test('shows the New Visit gutter on initial render (last/most-recent card centered)', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.getByTestId('new-visit-gutter')).not.toBeNull();
+    });
+
+    // Regression (journey J21): a brand-new patient with ZERO visits has no card
+    // to sit beside, but MUST still be able to start their first visit. The button
+    // was previously gated behind onLastCard (sorted.length > 0), which hid it for
+    // zero-visit patients entirely. It must render and be enabled.
+    test('renders an ENABLED New Visit for a patient with zero visits', () => {
+      renderCarousel({
+        visits: [],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+        // no newVisitDisabledHint → enabled (no open visit exists)
+      });
+      const btn = screen.getByTestId('new-visit-btn');
+      expect(btn).not.toBeNull();
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    // ...and is HIDDEN once an older card is centered (a newer card peeks right).
+    test('hides New Visit when an older (non-last) card is centered', () => {
+      renderCarousel({
+        visits: THREE_VISITS,
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      // Slide to index 0 (oldest) — no longer the last card.
+      act(() => {
+        (getCaptures().onSlideChange as (s: { activeIndex: number }) => void)?.({ activeIndex: 0 });
+      });
+      expect(screen.queryByTestId('new-visit-gutter')).toBeNull();
+      expect(screen.queryByTestId('new-visit-btn')).toBeNull();
+    });
   });
 
   // ── P0-1: cumulative scope binds to the OPEN visit, not the centered card ──
@@ -522,6 +631,156 @@ describe('TimelineCarousel (Swiper)', () => {
       await user.click(screen.getByTestId('compare-btn'));
       // Diff summary should be visible in the overlay
       expect(screen.getByTestId('compare-diff-summary')).not.toBeNull();
+    });
+  });
+
+  // ── Change B: same-day encounter disambiguation ─────────────────────────────
+  // A visit = an encounter; same-day encounters are legitimate (no day-grouping).
+  // When two or more cards share a calendar day their date labels collide, so each
+  // gets a time suffix. Single-per-day visits stay date-only. The "·" separator we
+  // render before the time is the stable, decoration-free signal asserted here.
+  describe('same-day disambiguation (Change B)', () => {
+    test('appends a time to each card when two visits share a calendar day', () => {
+      // Both fall on May 2 2024 in any plausible runner timezone (UTC..UTC+8).
+      const SAME_DAY_A = { id: 'sd-a', status: 'completed' as const, createdAt: '2024-05-02T04:00:00Z' };
+      const SAME_DAY_B = { id: 'sd-b', status: 'completed' as const, createdAt: '2024-05-02T08:00:00Z' };
+      renderCarousel({
+        visits: [SAME_DAY_A, SAME_DAY_B],
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      // One time suffix per same-day card.
+      expect(screen.getAllByText(/·/)).toHaveLength(2);
+    });
+
+    test('shows no time suffix when every visit falls on a distinct day', () => {
+      renderCarousel({
+        visits: THREE_VISITS, // Jan / Jun / Dec 2024 — all distinct days
+        patientId: 'test-patient',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+      expect(screen.queryByText(/·/)).toBeNull();
+    });
+  });
+
+  // ── Per-visit layers on historical cards ────────────────────────────────
+  // Historical (non-open) carousel cards must paint their own per-visit
+  // completed/declined layers from chart.layers returned by the API — NOT the
+  // cumulative cross-visit sets that only the open card should receive.
+
+  describe('per-visit layers on historical cards', () => {
+    test('historical card paints per-visit completed/declined layers from chart.layers', async () => {
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [
+                { toothNumber: 11, state: 'crown' },
+                { toothNumber: 46, state: 'healthy' },
+              ],
+              layers: { completed: [11], proposed: [], declined: [46] },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      // VISIT_OLD is completed (historical) — no openVisitId, so isOpenVisit=false.
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      const stub = await screen.findByTestId('dental-chart-stub');
+      expect(stub.getAttribute('data-completed')).toBe('11');
+      expect(stub.getAttribute('data-declined')).toBe('46');
+      expect(stub.getAttribute('data-proposed')).toBe('');
+    });
+  });
+
+  // ── Read-only layer key on historical cards (Task 6) ───────────────────
+  // Historical cards show NO interactive tab strip, so users can't interpret
+  // the snapshot's colors. A static read-only key (data-testid="chart-layer-key")
+  // lists Existing / Planned / Completed, and Declined only when that card has
+  // declined teeth.
+
+  describe('read-only layer key on historical cards', () => {
+    test('historical card renders a non-interactive layer key with Existing, Planned, Treated', async () => {
+      // No declined teeth — chart returns completed only
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [{ toothNumber: 11, state: 'crown' }],
+              layers: { completed: [11], proposed: [], declined: [] },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      // Single completed (historical) visit — isOpenVisit=false (no openVisitId match)
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      // Wait for chart data to load so perVisitLayers is populated
+      await screen.findByTestId('dental-chart-stub');
+
+      const key = screen.getByTestId('chart-layer-key');
+      expect(key).not.toBeNull();
+      expect(key.textContent).toMatch(/Existing/i);
+      expect(key.textContent).toMatch(/Planned/i);
+      expect(key.textContent).toMatch(/Treated/i);
+      // No declined teeth → Declined should NOT appear
+      expect(key.textContent).not.toMatch(/Declined/i);
+    });
+
+    test('layer key shows Declined when the card has declined teeth', async () => {
+      global.fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              teeth: [
+                { toothNumber: 11, state: 'crown' },
+                { toothNumber: 46, state: 'healthy' },
+              ],
+              layers: { completed: [11], proposed: [], declined: [46] },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      renderCarousel({
+        visits: [VISIT_OLD],
+        patientId: 'p',
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      await screen.findByTestId('dental-chart-stub');
+
+      const key = screen.getByTestId('chart-layer-key');
+      expect(key.textContent).toMatch(/Declined/i);
+    });
+
+    test('open card does NOT render the static layer key (has interactive tabs instead)', () => {
+      renderCarousel({
+        visits: [VISIT_MID],
+        patientId: 'p',
+        openVisitId: VISIT_MID.id,
+        onSelectVisit: () => {},
+        onNewVisit: () => {},
+      });
+
+      // The open card has the interactive toggle group, not the static key
+      expect(screen.queryByTestId('chart-layer-key')).toBeNull();
+      expect(screen.getByTestId('chart-layer-toggle')).not.toBeNull();
     });
   });
 });

@@ -8,8 +8,17 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
-import React, { useState, useEffect, useCallback } from 'react';
+import { createFileRoute, Link, Outlet, useChildMatches } from '@tanstack/react-router';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Image as ImageIcon,
+  Activity,
+  Stethoscope,
+  CalendarClock,
+  ListChecks,
+  ClipboardList,
+  Download,
+} from 'lucide-react';
 import { TimelineCarousel } from '@/features/workspace/components/timeline-carousel';
 import { ToothSlideout } from '@/features/workspace/components/tooth-slideout';
 import { SoapNotesSheet } from '@/features/workspace/components/soap-notes-sheet';
@@ -60,13 +69,19 @@ import { TasksSheet } from '@/features/workspace/components/tasks-sheet';
 import { OcclusionScreeningSheet } from '@/features/workspace/components/occlusion-screening-sheet';
 import { TreatmentPlansSheet } from '@/features/workspace/components/treatment-plans-sheet';
 import { SyncStatusBadge } from '@/features/workspace/components/sync-status-badge';
-import { ChartConflictBanner } from '@/features/workspace/components/chart-conflict-banner';
 import { useChartConflicts } from '@/features/workspace/hooks/use-chart-conflicts';
+import { WorkspaceContextStrip } from '@/features/workspace/components/workspace-context-strip';
 import { ChartExportOverlay } from '@/features/workspace/components/chart-export-overlay';
 
 export const Route = createFileRoute('/_workspace/$patientId')({
   component: WorkspacePage,
 });
+
+// 2.1: shared workspace-toolbar button affordance — icon + label, subtle
+// border/background, clear hover/active and disabled states. Replaces the muted
+// text links that were indistinguishable from body copy on cold start.
+const WORKSPACE_TOOL_BTN =
+  'inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted active:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-background';
 
 function WorkspacePage() {
   const { patientId } = Route.useParams();
@@ -105,10 +120,25 @@ function WorkspacePage() {
   const [treatmentPlansOpen, setTreatmentPlansOpen] = useState(false);
   const [chartExportOpen, setChartExportOpen] = useState(false);
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  // Item 3: Compare is triggered from the consolidated context strip; the
+  // carousel owns the overlay (it has the fetched active-card teeth).
+  const [compareOpen, setCompareOpen] = useState(false);
   // FIX-002: carry-over prompt shown at the new-visit entry point (returning patient).
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
+
+  // Issue 2: the footer "N pending" affordance routes here — scroll the Treatment
+  // Breakdown (its own scroll region) to the top and move focus to it.
+  const tableZoneRef = useRef<HTMLDivElement>(null);
+  const handleReviewPending = useCallback(() => {
+    const el = tableZoneRef.current;
+    if (!el) return;
+    // The table now flows in the shared scroll container, so bring it into view
+    // (was scrollTo on its own scroller, now a no-op since it no longer scrolls).
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.focus();
+  }, []);
 
   // ISSUE-010: the inline Treatment Plan modal is hand-rolled (not Radix) → wire
   // Escape-to-dismiss + focus restore via the shared sheet-a11y hook (stable cb).
@@ -353,9 +383,7 @@ function WorkspacePage() {
         onAttachments={() => setAttachmentsOpen(true)}
         onNotes={() => setNotesSheetOpen(true)}
         onTreatmentPlan={() => setTreatmentPlanSheetOpen(true)}
-        onCompleteVisit={() => setChecklistOpen(true)}
         onAlerts={() => setAlertsOpen(true)}
-        visitStatus={currentVisit?.status}
       />
 
       {/* Year filter */}
@@ -365,35 +393,49 @@ function WorkspacePage() {
           selectedYear={yearFilter}
           onSelect={setYearFilter}
         />
+        {/* 2.1: toolbar features as real icon+label buttons (not muted text
+            links that read as body copy). Shared affordance class below. */}
         {/* Imaging tab trigger */}
         <button
           type="button"
           data-testid="imaging-tab-btn"
           onClick={() => setImagingOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <ImageIcon className="h-3.5 w-3.5" />
           Imaging
         </button>
 
         {/* P0-1: Perio tab trigger — per-visit, disabled without an active visit */}
-        <button
-          type="button"
-          data-testid="perio-tab-btn"
-          onClick={() => setPerioOpen(true)}
-          disabled={currentVisitId === null}
-          title={currentVisitId === null ? 'Select a visit to chart perio' : 'Periodontal chart'}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-        >
-          Perio
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            data-testid="perio-tab-btn"
+            onClick={() => setPerioOpen(true)}
+            disabled={currentVisitId === null}
+            title={currentVisitId === null ? 'Select a visit to chart perio' : 'Periodontal chart'}
+            aria-describedby={currentVisitId === null ? 'perio-disabled-hint' : undefined}
+            className={WORKSPACE_TOOL_BTN}
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Perio
+          </button>
+          {/* 2.3: touch devices can't hover a title tooltip — surface the reason inline. */}
+          {currentVisitId === null && (
+            <span id="perio-disabled-hint" className="text-xs text-muted-foreground">
+              Select a visit to chart
+            </span>
+          )}
+        </div>
 
         {/* PP-7 (ISSUE-044): Occlusion screening tab trigger */}
         <button
           type="button"
           data-testid="occlusion-tab-btn"
           onClick={() => setOcclusionOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <Stethoscope className="h-3.5 w-3.5" />
           Occlusion
         </button>
 
@@ -402,8 +444,9 @@ function WorkspacePage() {
           type="button"
           data-testid="recalls-tab-btn"
           onClick={() => setRecallsOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <CalendarClock className="h-3.5 w-3.5" />
           Recalls
         </button>
 
@@ -412,32 +455,38 @@ function WorkspacePage() {
           type="button"
           data-testid="tasks-tab-btn"
           onClick={() => setTasksOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
+          <ListChecks className="h-3.5 w-3.5" />
           Tasks
         </button>
 
-        {/* B4: Treatment Plans tab trigger */}
+        {/* B4: Treatment Plans tab trigger. N1: "Plan docs" disambiguates from the
+            top-bar "Treatment Plan" working list. */}
         <button
           type="button"
           data-testid="treatment-plans-tab-btn"
           onClick={() => setTreatmentPlansOpen(true)}
-          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
+          className={WORKSPACE_TOOL_BTN}
         >
-          Plans
+          <ClipboardList className="h-3.5 w-3.5" />
+          Plan docs
         </button>
 
-        {/* P0-B: structured chart export (print-ready) for the current visit */}
-        {currentVisitId && (
-          <button
-            type="button"
-            data-testid="chart-export-btn"
-            onClick={() => setChartExportOpen(true)}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors"
-          >
-            Export
-          </button>
-        )}
+        {/* P0-B: structured chart export (print-ready). 2.2: always rendered;
+            disabled + explained when no visit is selected (mirrors Perio) rather
+            than silently vanishing. */}
+        <button
+          type="button"
+          data-testid="chart-export-btn"
+          onClick={() => setChartExportOpen(true)}
+          disabled={currentVisitId === null}
+          title={currentVisitId === null ? 'Select a visit to export the chart' : 'Export the chart'}
+          className={WORKSPACE_TOOL_BTN}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export
+        </button>
 
         {/* B5: Sync status badge */}
         <SyncStatusBadge branchId={branchId ?? null} />
@@ -464,9 +513,13 @@ function WorkspacePage() {
         )}
       </div>
 
-      {/* Carousel + table zone */}
+      {/* Carousel + table zone — ONE vertical scroll container. The chart is tall
+          (~64vh); on short viewports a separate inner table scroller collapsed the
+          Treatment Breakdown to an unreachable sliver. Scrolling the whole zone lets
+          the chart move up to reveal the table, so every treatment row (and its Mark
+          Done) can be brought fully into view. */}
       <div
-        className="flex-1 flex flex-col overflow-visible"
+        className="flex-1 flex flex-col min-h-0 overflow-y-auto"
         style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen) ? 340 : 0, transition: 'padding-right 300ms ease-out' }}
       >
         {/* Carousel section */}
@@ -474,29 +527,6 @@ function WorkspacePage() {
           data-testid="workspace-carousel-zone"
           className="shrink-0 border-b bg-background/80 backdrop-blur overflow-visible"
         >
-          {/* P0-A: data-integrity banner — rejected offline edits accumulate
-              invisibly without this. Surfaces + resolves them. */}
-          <ChartConflictBanner patientId={patientId} />
-          {openVisit && (
-            <div
-              data-testid="visit-in-progress-indicator"
-              className="flex items-center gap-2 px-4 pt-2 text-xs font-medium text-green-700"
-            >
-              <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden />
-              Visit in progress — finish or discard it to start a new one.
-              {orgRole === 'dentist_owner' && (
-                <button
-                  type="button"
-                  data-testid="discard-visit-btn"
-                  onClick={handleDiscardVisit}
-                  disabled={discardVisitMutation.isPending}
-                  className="ml-2 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                >
-                  Discard visit
-                </button>
-              )}
-            </div>
-          )}
           <TimelineCarousel
             visits={filteredVisits}
             patientId={patientId}
@@ -513,13 +543,43 @@ function WorkspacePage() {
             declinedToothNumbers={chartLayers.declined}
             carriedOverToothNumbers={chartLayers.carriedOver}
             conflictedToothNumbers={conflictedTeeth}
+            compareOpen={compareOpen}
+            onCompareOpenChange={setCompareOpen}
           />
         </div>
 
-        {/* Treatment table section */}
+        {/* Items 3 + 4: consolidated context strip — visit-date anchor,
+            status/read-only, gated conflict banner, Compare trigger, and the
+            passive state-aware next-step guidance. Rendered ABOVE the scroll
+            container (its root is shrink-0) so the date anchor stays visible while
+            rows scroll WITHOUT its sticky position overlapping the table's own
+            sticky thead (both would otherwise pin at top-0 of one scroller). */}
+        <WorkspaceContextStrip
+          patientId={patientId}
+          visitDate={currentVisitDate}
+          currentVisitStatus={currentVisit?.status}
+          openVisit={openVisit ?? null}
+          currentIsOpen={!!currentVisit && currentVisit.id === openVisit?.id}
+          treatmentCount={treatments.length}
+          performedCount={
+            treatments.filter((t) => t.status === 'performed' || t.status === 'verified').length
+          }
+          conflictCount={conflictedTeeth.size}
+          canCompare={visits.length >= 2}
+          onCompare={() => setCompareOpen(true)}
+          onStartVisit={handleNewVisit}
+          onComplete={() => setChecklistOpen(true)}
+          onDiscard={handleDiscardVisit}
+          canDiscard={orgRole === 'dentist_owner'}
+        />
+
+        {/* Treatment table section — flows in the shared scroll container above
+            (no longer its own scroller), so it can be scrolled fully into view. */}
         <div
+          ref={tableZoneRef}
           data-testid="workspace-table-zone"
-          className="flex-1 min-w-0 bg-background overflow-auto"
+          tabIndex={-1}
+          className="shrink-0 min-w-0 bg-background focus-visible:outline-none"
         >
           {/* #13: apply a treatment template to populate the visit (reachable even
               when the table is empty — the primary apply case). Owner/associate-gated
@@ -562,6 +622,7 @@ function WorkspacePage() {
         treatments={treatments}
         isReadOnly={isReadOnly}
         onContinue={() => setPaymentModalOpen(true)}
+        onReviewPending={handleReviewPending}
       />
 
       {/* ── Sheet overlays ──────────────────────────────────────────────────── */}

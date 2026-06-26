@@ -9,7 +9,8 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard, AlertTriangle } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeft, Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, FileSignature, FlaskConical, IdCard, AlertTriangle } from 'lucide-react';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { useDentalAlerts, DENTAL_ALERT_TYPE_LABELS, type DentalAlertSeverity } from '@/features/workspace/hooks/use-dental-alerts';
@@ -26,9 +27,7 @@ interface WorkspaceTopBarProps {
   onAttachments: () => void;
   onNotes: () => void;
   onTreatmentPlan: () => void;
-  onCompleteVisit: () => void;
   onAlerts?: () => void;
-  visitStatus?: 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
 }
 
 // Severity colours for chairside dental-alert badges in the top bar.
@@ -53,6 +52,9 @@ function IconButton({
     <button
       type="button"
       aria-label={label}
+      // Sighted affordance: hover tooltip mirrors the screen-reader label so the
+      // unlabeled icons are no longer a guessing game (Issue 1).
+      title={label}
       onClick={onClick}
       disabled={disabled}
       className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40"
@@ -100,9 +102,7 @@ export function WorkspaceTopBar({
   onAttachments,
   onNotes,
   onTreatmentPlan,
-  onCompleteVisit,
   onAlerts,
-  visitStatus,
 }: WorkspaceTopBarProps) {
   const { data: profile } = usePatientProfile({ patientId });
   const { entries } = useMedicalHistory(patientId);
@@ -154,8 +154,16 @@ export function WorkspaceTopBar({
 
   return (
     <header className="h-14 shrink-0 flex items-center gap-3 px-4 border-b backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
-      {/* LEFT: Patient avatar + name */}
+      {/* LEFT: Back to patient list + avatar + name */}
       <div className="flex items-center gap-2 shrink-0">
+        <Link
+          to="/patients"
+          aria-label="Back to patients"
+          title="Back to patients"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-lemon/30 text-lemon-foreground"
           aria-label={`Patient avatar: ${displayName}`}
@@ -255,13 +263,10 @@ export function WorkspaceTopBar({
             <IdCard className="h-4 w-4" />
           </IconButton>
         )}
-        <IconButton
-          label="Complete visit"
-          onClick={onCompleteVisit}
-          disabled={visitStatus !== 'active'}
-        >
-          <CheckCircle2 className="h-4 w-4" />
-        </IconButton>
+        {/* Separate the clinical tool-launchers from the view control so Fullscreen
+            doesn't read as just another launcher icon (Issue 1). Complete-visit lives
+            in the context strip as the single primary action — not duplicated here. */}
+        <span className="mx-1 h-6 w-px bg-border" aria-hidden />
         <FullscreenButton />
       </div>
     </header>

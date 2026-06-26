@@ -214,17 +214,19 @@ export function statusToLayer(status: TreatmentLayerStatus): ChartLayer | null {
  * (cross-visit sets fed by the patient treatment-plan aggregate), falling back to
  * the tooth's chart-native classification when no treatment record drives it.
  *
- * Precedence (CHART-XV): completed > proposed > declined > entryClassification.
- * A tooth that has been treated is shown done even if a stale planned/declined
- * item still references it; a fresh proposal supersedes a prior declination.
+ * Precedence (item 6 flip): proposed > completed > declined > entryClassification.
+ * Outstanding planned/diagnosed work wins so a tooth with NEW pending work is shown
+ * Planned even when it also carries a performed treatment — clinical safety: the
+ * dentist must never see a green Treated ring hiding work still to be done. A fresh
+ * proposal also supersedes a prior declination.
  */
 export function resolveToothLayer(
   toothNumber: number,
   entryClassification: ChartEntryClassification | undefined,
   sets?: { completed?: ReadonlySet<number>; proposed?: ReadonlySet<number>; declined?: ReadonlySet<number> },
 ): ChartLayer {
-  if (sets?.completed?.has(toothNumber)) return 'completed';
   if (sets?.proposed?.has(toothNumber)) return 'proposed';
+  if (sets?.completed?.has(toothNumber)) return 'completed';
   if (sets?.declined?.has(toothNumber)) return 'declined';
   return getToothLayer(entryClassification);
 }
@@ -232,13 +234,15 @@ export function resolveToothLayer(
 /**
  * P1-2 — the user-facing label for a chart layer (the demoted, renamed filter
  * tabs). "Existing"/"Planned" replace the internal "Baseline"/"Proposed" to end
- * the time/status double-encoding; "Completed" keeps the billing/walkout word and
- * "Declined" stays. Tooth-level identity still uses the ChartLayer key.
+ * the time/status double-encoding; "Treated" (item 2 — was "Completed") names the
+ * performed-work layer without colliding with the visit/card "Completed" status
+ * shown on the same screen; "Declined" stays. The ChartLayer KEY stays 'completed'
+ * — only the displayed label changed.
  */
 const LAYER_LABELS: Record<ChartLayer, string> = {
   baseline: 'Existing',
   proposed: 'Planned',
-  completed: 'Completed',
+  completed: 'Treated',
   declined: 'Declined',
 };
 export function getLayerLabel(layer: ChartLayer): string {
@@ -252,25 +256,89 @@ export function getLayerLabel(layer: ChartLayer): string {
  * (selection ring, active filter, CTA). Returns a CSS `outline` shorthand, or
  * undefined when the fill alone carries the tooth (completed / baseline / existing).
  *
- *   proposed (this visit) → neutral dashed  (intended work, no competing hue)
- *   proposed (carried)    → amber dashed     (the one hue exception — aging pending)
+ *   proposed (this visit) → neutral dotted  (intended work, no competing hue)
+ *   proposed (carried)    → amber dotted     (the one hue exception — aging pending)
+ *   completed             → green solid       (realized-work cue; "done = green")
  *   declined              → gray solid        (pairs with the diagonal hatch texture)
- *   completed / baseline  → undefined         (fill owns it; "realized" reads via fill)
+ *   baseline              → undefined         (fill owns it; existing dentition)
+ *
+ * Why completed gets its OWN edge (not "fill owns it"): the standard odontogram
+ * cue for done work is colour (paper convention: red = to-do, blue = done), but
+ * this chart's FILL already encodes clinical state (caries-red, filled-blue …), so
+ * a completed tooth with no recorded condition rendered blank — indistinguishable
+ * from untreated. Green is the one "done" hue that doesn't collide with any state
+ * fill (or with lemon, reserved for interaction). It rides the edge so it coexists
+ * with a restored fill instead of overpainting it.
  */
 const PROPOSED_EDGE_NEUTRAL = '#475569'; // slate-600 — legible on white AND in grayscale
+const COMPLETED_EDGE_GREEN = '#059669'; // emerald-600 — "done", CVD-distinct from gray/amber/red/orange
 export function getLayerOutline(
   layer: ChartLayer,
   opts: { carriedOver: boolean },
 ): string | undefined {
   if (layer === 'proposed') {
+    // Item 1: dotted + heavier weight makes "planned" obvious and pattern-distinct
+    // from the solid completed (green) and declined (gray) edges. Fill still owns
+    // red (caries), so the planned edge stays neutral slate to avoid collision.
     return opts.carriedOver
-      ? '2px dashed #B8860A' // amber — carried over from a prior visit (salient)
-      : `1.5px dashed ${PROPOSED_EDGE_NEUTRAL}`;
+      ? '2.5px dotted #B8860A' // amber — carried over from a prior visit (salient)
+      : `2px dotted ${PROPOSED_EDGE_NEUTRAL}`;
+  }
+  if (layer === 'completed') {
+    return `2px solid ${COMPLETED_EDGE_GREEN}`; // green — realized/performed work
   }
   if (layer === 'declined') {
     return '1.5px solid #9CA3AF'; // gray — declined (with hatch texture)
   }
-  return undefined; // completed / baseline — fill carries the tooth
+  return undefined; // baseline — fill carries the tooth
+}
+
+/**
+ * Item 4 — the per-layer cue swatch shown on each multi-select filter chip (and
+ * the inline legend), so the filter doubles as the legend. The swatch mirrors the
+ * tooth-EDGE cue from getLayerOutline: Planned = dotted slate, Treated = solid
+ * green, Declined = solid gray. Existing (baseline) carries no competing edge —
+ * the fill owns it — so it shows a plain neutral square (no borderColor).
+ * Returns Tailwind border classes + an optional inline borderColor.
+ */
+export function getLayerCueSwatch(layer: ChartLayer): { className: string; borderColor?: string } {
+  switch (layer) {
+    case 'proposed':
+      return { className: 'border-2 border-dotted', borderColor: PROPOSED_EDGE_NEUTRAL };
+    case 'completed':
+      return { className: 'border-2 border-solid', borderColor: COMPLETED_EDGE_GREEN };
+    case 'declined':
+      return { className: 'border-2 border-solid', borderColor: '#9CA3AF' };
+    case 'baseline':
+    default:
+      return { className: 'border border-black/20' }; // fill owns it — no edge hue
+  }
+}
+
+/**
+ * Item 9 / bug-b — per-tooth timeline status badge (slideout Treatment Breakdown).
+ * The old `treatmentStatus === 'performed' ? 'Done' : 'Pending'` mislabelled
+ * `verified` work as Pending and slapped a false "Pending" badge on snapshot rows
+ * with NO treatment (undefined status). Map every status to a truthful label, and
+ * return `null` when there is no treatment that visit so the cell shows nothing.
+ */
+export function getToothHistoryStatusBadge(
+  status: string | undefined,
+): { label: string; className: string } | null {
+  switch (status) {
+    case 'performed':
+    case 'verified':
+      return { label: 'Done', className: 'bg-green-100 text-green-700' };
+    case 'diagnosed':
+    case 'planned':
+      return { label: 'Planned', className: 'bg-amber-100 text-amber-700' };
+    case 'declined':
+      return { label: 'Declined', className: 'bg-orange-100 text-orange-700' };
+    case 'dismissed':
+      return { label: 'Dismissed', className: 'bg-gray-100 text-gray-400' };
+    default:
+      return null; // no treatment recorded that visit — no badge, not a false "Pending"
+  }
 }
 
 /**
@@ -335,6 +403,20 @@ export function buildToothMap(teeth: Array<{ toothNumber: number; state: ToothSt
     map.set(tooth.toothNumber, tooth.state);
   }
   return map;
+}
+
+/**
+ * Item 5 / Option B: true when a tooth carries ≥2 DISTINCT surface conditions,
+ * so the grid's single dominant-colour fill can't represent it (e.g. occlusal
+ * caries + mesial filling). Same condition on multiple surfaces stays false —
+ * one fill colour is still faithful. The grid uses this to show a corner pip
+ * that routes to the slideout's per-surface view.
+ */
+export function hasMultipleSurfaceConditions(
+  surfaceConditionMap?: Record<string, ToothState>,
+): boolean {
+  if (!surfaceConditionMap) return false;
+  return new Set(Object.values(surfaceConditionMap)).size >= 2;
 }
 
 /**

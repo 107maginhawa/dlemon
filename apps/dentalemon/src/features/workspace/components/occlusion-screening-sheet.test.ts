@@ -113,6 +113,73 @@ describe('OcclusionScreeningSheet — shipped component', () => {
     }
   });
 
+  test('#2: a screening row shows labeled metrics (overjet/overbite/midline/notes)', async () => {
+    const f = installFetch([
+      makeScreening({
+        angleClass: 'class_ii_div1',
+        overjetMm: 3,
+        overbiteMm: 2,
+        midlineDeviation: '2mm to the left',
+        crossbite: false,
+        crowding: false,
+        spacing: false,
+        notes: 'Monitor at recall',
+      }),
+    ]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Class II div 1')).not.toBeNull());
+      expect(screen.getByText('Overjet')).not.toBeNull();
+      expect(screen.getByText('3 mm')).not.toBeNull();
+      expect(screen.getByText('Overbite')).not.toBeNull();
+      expect(screen.getByText('Midline')).not.toBeNull();
+      expect(screen.getByText('2mm to the left')).not.toBeNull();
+      expect(screen.getByText('Notes')).not.toBeNull();
+      expect(screen.getByText('Monitor at recall')).not.toBeNull();
+      // no crossbite/crowding/spacing → Findings reads "None"
+      expect(screen.getByText('None')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('renders as a dialog with its testid preserved through the drawer conversion', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('occlusion-screening-sheet')).not.toBeNull());
+      expect(screen.getByRole('dialog')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('"Back to workspace" closes the modal', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    const f = installFetch([]);
+    try {
+      renderSheet({ onClose });
+      await user.click(await screen.findByTestId('occlusion-back-btn'));
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('L6: empty state hosts a primary "New screening" affordance that opens the form', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText(/No occlusion screenings/i)).not.toBeNull());
+      await user.click(screen.getByTestId('occlusion-empty-new-btn'));
+      expect(screen.getByLabelText('Angle class')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('submits a POST with the entered clinical fields from the new-screening form', async () => {
     const user = userEvent.setup();
     const f = installFetch([]);
@@ -144,6 +211,52 @@ describe('OcclusionScreeningSheet — shipped component', () => {
     try {
       renderSheet();
       await waitFor(() => expect(screen.getByText(/Couldn’t load occlusion screenings/i)).not.toBeNull());
+    } finally {
+      global.fetch = original;
+    }
+  });
+
+  test('5: renders the permanent-record hint footer', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() =>
+        expect(screen.getByText(/permanent record and can.?t be edited/i)).not.toBeNull(),
+      );
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('7: Angle-classes legend is collapsed by default and reveals descriptions on toggle', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      const toggle = await screen.findByTestId('occlusion-angle-legend-toggle');
+      // Collapsed by default — class descriptions not in the DOM yet.
+      expect(screen.queryByText(/Normal molar relationship/i)).toBeNull();
+      await user.click(toggle);
+      // Expanded — each Angle class line is now visible.
+      expect(screen.getByText(/Normal molar relationship/i)).not.toBeNull();
+      expect(screen.getByText(/Retrognathic.*proclined/i)).not.toBeNull();
+      expect(screen.getByText(/retroclined/i)).not.toBeNull();
+      expect(screen.getByText(/Prognathic/i)).not.toBeNull();
+      expect(screen.getAllByText(/Edge-to-edge/i).length).toBeGreaterThan(0);
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('4: renders skeleton rows (occlusion-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('occlusion-loading');
+      expect(loading).not.toBeNull();
+      expect(screen.queryByText(/Loading screenings/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
     } finally {
       global.fetch = original;
     }

@@ -2976,6 +2976,26 @@ export type DentalChart = {
     visitId: Uuid;
     patientId: Uuid;
     teeth: Array<ToothChartState>;
+    /**
+     * Per-visit status layers for this visit's recorded treatments (see DentalChartLayerSets). Omitted on the baseline-fallback path.
+     */
+    layers?: {
+        proposed: Array<number>;
+        completed: Array<number>;
+        declined: Array<number>;
+    };
+};
+
+/**
+ * Per-visit treatment layer sets — FDI tooth numbers derived from THIS visit's
+ * own treatments (precedence completed > proposed > declined). Lets historical
+ * carousel snapshots paint Completed/Declined accurately as-of-that-visit,
+ * instead of defaulting every tooth to Existing/baseline.
+ */
+export type DentalChartLayerSets = {
+    proposed: Array<number>;
+    completed: Array<number>;
+    declined: Array<number>;
 };
 
 /**
@@ -68054,7 +68074,7 @@ export type CephMgmtPreviewCephSuperimpositionResponse = CephMgmtPreviewCephSupe
 export type CephMgmtGetCephSuperimpositionData = {
     body?: never;
     path: {
-        superimpositionId: string;
+        superimpositionId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/ceph/superimpositions/{superimpositionId}';
@@ -68081,7 +68101,7 @@ export type CephMgmtGetCephSuperimpositionResponse = CephMgmtGetCephSuperimposit
 export type ImagingFindingsMgmtDeleteFindingData = {
     body?: never;
     path: {
-        findingId: string;
+        findingId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/findings/{findingId}';
@@ -68112,7 +68132,7 @@ export type ImagingFindingsMgmtDeleteFindingResponse = ImagingFindingsMgmtDelete
 export type ImagingFindingsMgmtUpdateFindingData = {
     body: DentalImagingModuleUpdateFindingBody;
     path: {
-        findingId: string;
+        findingId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/findings/{findingId}';
@@ -68139,7 +68159,7 @@ export type ImagingFindingsMgmtUpdateFindingResponse = ImagingFindingsMgmtUpdate
 export type ImagingMgmtDeleteImageData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}';
@@ -68170,7 +68190,7 @@ export type ImagingMgmtDeleteImageResponse = ImagingMgmtDeleteImageResponses[key
 export type ImagingMgmtUpdateImageCalibrationData = {
     body: DentalImagingModuleUpdateCalibrationBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/calibration';
@@ -68197,7 +68217,7 @@ export type ImagingMgmtUpdateImageCalibrationResponse = ImagingMgmtUpdateImageCa
 export type CephMgmtGetCephAnalysisData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: {
         analysisType?: string;
@@ -68226,7 +68246,7 @@ export type CephMgmtGetCephAnalysisResponse = CephMgmtGetCephAnalysisResponses[k
 export type CephMgmtRecomputeCephAnalysisData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: {
         analysisType?: string;
@@ -68255,7 +68275,7 @@ export type CephMgmtRecomputeCephAnalysisResponse = CephMgmtRecomputeCephAnalysi
 export type CephMgmtListCephLandmarksData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks';
@@ -68282,7 +68302,7 @@ export type CephMgmtListCephLandmarksResponse = CephMgmtListCephLandmarksRespons
 export type CephMgmtBatchUpsertCephLandmarksData = {
     body: DentalImagingModuleBatchUpsertLandmarksBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks';
@@ -68309,7 +68329,7 @@ export type CephMgmtBatchUpsertCephLandmarksResponse = CephMgmtBatchUpsertCephLa
 export type CephMgmtDetectCephLandmarksData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks/detect';
@@ -68336,8 +68356,8 @@ export type CephMgmtDetectCephLandmarksResponse = CephMgmtDetectCephLandmarksRes
 export type CephMgmtGetCephLandmarkDetectionJobData = {
     body?: never;
     path: {
-        imageId: string;
-        jobId: string;
+        imageId: Uuid;
+        jobId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/landmarks/detect/{jobId}';
@@ -68364,7 +68384,7 @@ export type CephMgmtGetCephLandmarkDetectionJobResponse = CephMgmtGetCephLandmar
 export type CephMgmtDeleteCephLandmarkData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
         landmarkCode: DentalImagingModuleCephLandmarkCode;
     };
     query?: never;
@@ -68396,7 +68416,7 @@ export type CephMgmtDeleteCephLandmarkResponse = CephMgmtDeleteCephLandmarkRespo
 export type CephMgmtUpdateCephLandmarkData = {
     body: DentalImagingModuleUpdateLandmarkBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
         landmarkCode: DentalImagingModuleCephLandmarkCode;
     };
     query?: never;
@@ -68424,7 +68444,7 @@ export type CephMgmtUpdateCephLandmarkResponse = CephMgmtUpdateCephLandmarkRespo
 export type CephMgmtGetCephReportData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: {
         version?: number;
@@ -68453,7 +68473,7 @@ export type CephMgmtGetCephReportResponse = CephMgmtGetCephReportResponses[keyof
 export type CephMgmtCreateCephReportData = {
     body: DentalImagingModuleCreateCephReportBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/ceph/reports';
@@ -68480,7 +68500,7 @@ export type CephMgmtCreateCephReportResponse = CephMgmtCreateCephReportResponses
 export type ImagingFindingsMgmtListFindingsData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/findings';
@@ -68507,7 +68527,7 @@ export type ImagingFindingsMgmtListFindingsResponse = ImagingFindingsMgmtListFin
 export type ImagingFindingsMgmtCreateFindingData = {
     body: DentalImagingModuleCreateFindingBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/findings';
@@ -68534,7 +68554,7 @@ export type ImagingFindingsMgmtCreateFindingResponse = ImagingFindingsMgmtCreate
 export type ImagingMgmtListImageLinksData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/links';
@@ -68561,7 +68581,7 @@ export type ImagingMgmtListImageLinksResponse = ImagingMgmtListImageLinksRespons
 export type ImagingMgmtCreateImageLinkData = {
     body: DentalImagingModuleCreateImagingLinkBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/links';
@@ -68588,7 +68608,7 @@ export type ImagingMgmtCreateImageLinkResponse = ImagingMgmtCreateImageLinkRespo
 export type ImagingMgmtListMeasurementsData = {
     body?: never;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/measurements';
@@ -68615,7 +68635,7 @@ export type ImagingMgmtListMeasurementsResponse = ImagingMgmtListMeasurementsRes
 export type ImagingMgmtCreateMeasurementData = {
     body: DentalImagingModuleCreateMeasurementBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/measurements';
@@ -68642,7 +68662,7 @@ export type ImagingMgmtCreateMeasurementResponse = ImagingMgmtCreateMeasurementR
 export type ImagingMgmtUpdateImageMetadataData = {
     body: DentalImagingModuleUpdateImageMetadataBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/metadata';
@@ -68669,7 +68689,7 @@ export type ImagingMgmtUpdateImageMetadataResponse = ImagingMgmtUpdateImageMetad
 export type ImagingMgmtUpdateImageModalityData = {
     body: DentalImagingModuleUpdateImageModalityBody;
     path: {
-        imageId: string;
+        imageId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/images/{imageId}/modality';
@@ -68696,7 +68716,7 @@ export type ImagingMgmtUpdateImageModalityResponse = ImagingMgmtUpdateImageModal
 export type ImagingMgmtDeleteImageLinkData = {
     body?: never;
     path: {
-        linkId: string;
+        linkId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/links/{linkId}';
@@ -68727,7 +68747,7 @@ export type ImagingMgmtDeleteImageLinkResponse = ImagingMgmtDeleteImageLinkRespo
 export type ImagingMgmtDeleteMeasurementData = {
     body?: never;
     path: {
-        measurementId: string;
+        measurementId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/measurements/{measurementId}';
@@ -68758,7 +68778,7 @@ export type ImagingMgmtDeleteMeasurementResponse = ImagingMgmtDeleteMeasurementR
 export type CephMgmtListCephSuperimpositionsData = {
     body?: never;
     path: {
-        patientId: string;
+        patientId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/patients/{patientId}/ceph/superimpositions';
@@ -68810,7 +68830,7 @@ export type ImagingMgmtCreateImagingStudyResponse = ImagingMgmtCreateImagingStud
 export type ImagingMgmtGetImagingStudyData = {
     body?: never;
     path: {
-        studyId: string;
+        studyId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/studies/{studyId}';
@@ -68837,7 +68857,7 @@ export type ImagingMgmtGetImagingStudyResponse = ImagingMgmtGetImagingStudyRespo
 export type ImagingMgmtFinalizeCbctStudyData = {
     body: DentalImagingModuleFinalizeCbctStudyBody;
     path: {
-        studyId: string;
+        studyId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/studies/{studyId}/cbct/finalize';
@@ -68864,7 +68884,7 @@ export type ImagingMgmtFinalizeCbctStudyResponse = ImagingMgmtFinalizeCbctStudyR
 export type ImagingMgmtGetCbctViewerLinkData = {
     body?: never;
     path: {
-        studyId: string;
+        studyId: Uuid;
     };
     query?: never;
     url: '/dental/imaging/studies/{studyId}/cbct/viewer-link';
@@ -71140,7 +71160,7 @@ export type GetPatientHouseholdResponse = GetPatientHouseholdResponses[keyof Get
 export type PatientImageMgmtListPatientImagesData = {
     body?: never;
     path: {
-        patientId: string;
+        patientId: Uuid;
     };
     query: {
         branchId: string;

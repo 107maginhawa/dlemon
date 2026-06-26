@@ -80,6 +80,15 @@ function formatDate(iso: string) {
   });
 }
 
+// Issue 6: empty Tooth/Surface/Condition cells were loud em-dashes that made
+// rows read as "missing data". Render the placeholder faint + aria-hidden so the
+// eye (and AT) skips it and lands on the cells that actually carry information.
+const EMPTY_CELL = (
+  <span className="text-muted-foreground/40" aria-hidden>
+    —
+  </span>
+);
+
 function StatusBadge({ status }: { status: Treatment['status'] }) {
   const classes =
     status === 'performed'
@@ -341,9 +350,8 @@ export function TreatmentTable({
         </div>
       </div>
       {viewMode === 'by-visit' && (
-      <div className="overflow-auto max-h-[450px]">
       <table className="w-full text-sm" aria-label="Treatments">
-        <thead className="sticky top-0 bg-muted/30 z-10">
+        <thead className="bg-muted/30">
           <tr>
             {/* TXTBL-04: chevron column */}
             <th className="px-2 py-2 w-6" />
@@ -370,7 +378,10 @@ export function TreatmentTable({
                   data-testid={`treatment-row-${t.id}`}
                   onClick={() => onSelectTreatment?.(t.id)}
                   className={[
-                    'border-t border-border/40 transition-colors',
+                    // scroll-mt clears the sticky context strip above the scroll
+                    // container, so scrolling a row into view (e.g. to click Mark
+                    // Done) leaves it below the strip instead of behind it.
+                    'scroll-mt-24 border-t border-border/40 transition-colors',
                     isSelected ? 'bg-muted' : 'hover:bg-lemon/10',
                     onSelectTreatment ? 'cursor-pointer' : '',
                   ].join(' ')}
@@ -394,16 +405,16 @@ export function TreatmentTable({
                     </button>
                   </td>
                   <td className="px-4 py-2 font-medium tabular-nums">
-                    {t.toothNumber ?? '—'}
+                    {t.toothNumber ?? EMPTY_CELL}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground text-xs">
-                    {t.surfaces?.join(', ') || '—'}
+                    {t.surfaces?.join(', ') || EMPTY_CELL}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground text-xs truncate max-w-[120px]">
-                    {t.conditionCode ?? '—'}
+                    {t.conditionCode ?? EMPTY_CELL}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
-                    {t.description || '—'}
+                    {t.description || EMPTY_CELL}
                   </td>
                   <td className="px-4 py-2 text-center">
                     {t.status === 'performed' || t.status === 'verified' ? (
@@ -594,16 +605,16 @@ export function TreatmentTable({
                   >
                     <td className="px-2 py-2 w-6" />
                     <td className="px-4 py-2 font-medium tabular-nums">
-                      {item.toothNumber ?? '—'}
+                      {item.toothNumber ?? EMPTY_CELL}
                     </td>
                     <td className="px-4 py-2 text-muted-foreground text-xs">
-                      {item.surfaces?.join(', ') || '—'}
+                      {item.surfaces?.join(', ') || EMPTY_CELL}
                     </td>
                     <td className="px-4 py-2 text-muted-foreground text-xs truncate max-w-[120px]">
-                      {item.conditionCode ?? '—'}
+                      {item.conditionCode ?? EMPTY_CELL}
                     </td>
                     <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
-                      <span>{item.description ?? '—'}</span>
+                      <span>{item.description ?? EMPTY_CELL}</span>
                       <span className="ml-2 text-[10px] italic text-muted-foreground/60">
                         {fromLabel}
                       </span>
@@ -628,7 +639,10 @@ export function TreatmentTable({
           {/* TXTBL-01: dual subtotal rows above grand total */}
           {/* thisVisitTotal is always the grand total of ALL visit treatments (financial total), */}
           {/* regardless of the showCompleted filter — this is intentional for complete billing visibility */}
-          {nativeTreatments.length > 0 && (
+          {/* Issue 6: only break out the "This Visit" subtotal when there's a Carried-Over
+              total to distinguish it from — otherwise it just duplicates the Grand Total
+              row beneath it (two stacked identical totals). */}
+          {nativeTreatments.length > 0 && carriedOverItems.length > 0 && (
             <tr data-testid="subtotal-this-visit-row" className="border-t border-border/40">
               <td colSpan={7} className="px-4 py-1.5 text-right text-xs text-muted-foreground">
                 This Visit (all)
@@ -653,11 +667,14 @@ export function TreatmentTable({
 
           {/* Grand Total row */}
           {(nativeTreatments.length > 0 || carriedOverItems.length > 0) && (
-            <tr data-testid="grand-total-row" className="border-t-2 border-border font-semibold">
-              <td colSpan={7} className="px-4 py-2 text-right text-sm">
+            <tr
+              data-testid="grand-total-row"
+              className="sticky bottom-0 z-10 border-t-2 border-border font-semibold bg-card"
+            >
+              <td colSpan={7} className="px-4 py-2 text-right text-sm bg-card">
                 Grand Total
               </td>
-              <td className="px-4 py-2 text-right tabular-nums text-sm">
+              <td className="px-4 py-2 text-right tabular-nums text-sm bg-card">
                 {CURRENCY_SYMBOL}
                 {grandTotal.toLocaleString(APP_LOCALE)}
               </td>
@@ -665,7 +682,6 @@ export function TreatmentTable({
           )}
         </tbody>
       </table>
-      </div>
       )}
 
       {/* P2: by-status/phase plan presentation (read-only). Rows are grouped via
@@ -682,7 +698,7 @@ export function TreatmentTable({
         const sumOf = (items: Treatment[]) => items.reduce((s, t) => s + (t.priceAmount ?? 0), 0);
         const visible = groups.filter((g) => g.items.length > 0);
         return (
-          <div data-testid="treatment-presentation" className="overflow-auto max-h-[450px] px-4 py-3 space-y-4">
+          <div data-testid="treatment-presentation" className="px-4 py-3 space-y-4">
             {visible.length === 0 ? (
               <p className="text-sm text-muted-foreground">No treatments to present for this visit.</p>
             ) : (

@@ -24,6 +24,7 @@ const INVOICE = {
   id: 'inv-1',
   invoiceNumber: 'INV-001',
   patientId: 'pat-1',
+  visitId: 'visit-1',
   subtotalCents: 20000,
   discountCents: 0,
   taxCents: 0,
@@ -217,6 +218,33 @@ describe('WorkspacePaymentModal', () => {
       // Subtotal row should not be visible
       expect(screen.queryByTestId('subtotal-row')).toBeNull();
     });
+  });
+
+  it('ignores an invoice that belongs to a DIFFERENT visit — bills the CURRENT visit instead (item 11)', async () => {
+    // Regression: the modal used the patient's latest invoice across ALL visits, so
+    // a prior visit's paid invoice surfaced on the current (unbilled) visit — a
+    // dead-end "Record Payment" on the wrong invoice + a Paid banner contradicting
+    // the current visit's pending line items. Scope the invoice to props.visitId.
+    const priorVisitInvoice = {
+      ...INVOICE,
+      id: 'inv-prior',
+      invoiceNumber: 'INV-PRIOR',
+      visitId: 'visit-OTHER',
+      status: 'paid',
+      paidCents: 350000,
+      balanceCents: 0,
+    };
+    mockFetch.mockImplementation(() => invoiceListResponse([priorVisitInvoice]));
+
+    renderModal({ visitId: 'visit-1' });
+    await waitFor(() => {
+      // No banner for the other visit's invoice…
+      expect(screen.queryByTestId('invoice-banner')).toBeNull();
+      // …and the current visit's create-invoice path is offered (no dead-end).
+      expect(screen.getByTestId('create-invoice-btn')).not.toBeNull();
+    });
+    // The stale invoice number must not appear anywhere in the modal.
+    expect(screen.queryByText('INV-PRIOR')).toBeNull();
   });
 
   it('filters out voided invoices when determining active invoice (PAY-02) [BR-011] [BR-012]', async () => {

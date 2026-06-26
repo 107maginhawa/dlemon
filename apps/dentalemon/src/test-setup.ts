@@ -48,6 +48,7 @@ const _lucideMock = {
   Bell: _makeIcon('bell'),
   Calendar: _makeIcon('calendar'),
   CalendarClock: _makeIcon('calendarclock'),
+  CalendarDays: _makeIcon('calendardays'),
   CalendarIcon: _makeIcon('calendaricon'),
   Camera: _makeIcon('camera'),
   Check: _makeIcon('check'),
@@ -62,6 +63,8 @@ const _lucideMock = {
   ChevronUp: _makeIcon('chevronup'),
   ChevronsUpDown: _makeIcon('chevronsupsown'),
   Circle: _makeIcon('circle'),
+  CircleDot: _makeIcon('circledot'),
+  ClipboardList: _makeIcon('clipboardlist'),
   Clock: _makeIcon('clock'),
   CreditCard: _makeIcon('creditcard'),
   Download: _makeIcon('download'),
@@ -297,7 +300,18 @@ mock.module('swiper/css/navigation', () => ({}))
 // ─── Workspace components (timeline-carousel deps) ────────────────────────
 
 mock.module('@/features/workspace/components/dental-chart', () => ({
-  DentalChart: () => React.createElement('div', { 'data-testid': 'dental-chart-stub' }),
+  DentalChart: (props: {
+    completedToothNumbers?: Set<number>;
+    proposedToothNumbers?: Set<number>;
+    declinedToothNumbers?: Set<number>;
+    [key: string]: unknown;
+  }) =>
+    React.createElement('div', {
+      'data-testid': 'dental-chart-stub',
+      'data-completed': [...(props.completedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+      'data-proposed': [...(props.proposedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+      'data-declined': [...(props.declinedToothNumbers ?? [])].sort((a, b) => a - b).join(','),
+    }),
 }))
 
 // NOTE: use-update-visit is intentionally NOT mocked here. Per the convention

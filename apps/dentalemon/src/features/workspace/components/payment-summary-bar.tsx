@@ -16,15 +16,22 @@ interface PaymentSummaryBarProps {
   treatments: Treatment[];
   isReadOnly: boolean;
   onContinue: () => void;
+  /** Issue 2: jump the dentist to the pending treatments (scrolls/focuses the
+   *  Treatment Breakdown). Optional — when absent the count is plain text. */
+  onReviewPending?: () => void;
 }
 
-export function PaymentSummaryBar({ treatments, isReadOnly, onContinue }: PaymentSummaryBarProps) {
+export function PaymentSummaryBar({ treatments, isReadOnly, onContinue, onReviewPending }: PaymentSummaryBarProps) {
   // Billable set == exactly what WorkspacePaymentModal receives as lineItems.
   const billableCount = treatments.length;
   const pendingCount = treatments.filter(
     (t) => t.status === 'diagnosed' || t.status === 'planned',
   ).length;
   const totalAmount = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
+
+  // Issue 2: name WHAT is pending, and when there's anything pending make it a
+  // clickable affordance that routes to the Treatment Breakdown.
+  const pendingLabel = `${pendingCount} treatment${pendingCount === 1 ? '' : 's'} pending`;
 
   return (
     <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
@@ -33,7 +40,19 @@ export function PaymentSummaryBar({ treatments, isReadOnly, onContinue }: Paymen
           'No treatments yet'
         ) : (
           <>
-            {pendingCount} pending ·{' '}
+            {pendingCount > 0 && onReviewPending ? (
+              <button
+                type="button"
+                data-testid="review-pending-btn"
+                onClick={onReviewPending}
+                title="Review pending treatments"
+                className="rounded px-1 -mx-1 font-medium text-foreground underline decoration-dotted underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {pendingLabel}
+              </button>
+            ) : (
+              pendingLabel
+            )}{' · '}
             <span className="font-semibold text-foreground" data-testid="treatment-total">
               {CURRENCY_SYMBOL}
               {totalAmount.toLocaleString(APP_LOCALE)} total

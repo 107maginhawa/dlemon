@@ -70,7 +70,9 @@ function toAppointment(a: DentalAppointment): DashboardAppointment {
     scheduledAt: startAt,
     durationMinutes,
     status: a.status,
-    serviceType: (a as DentalAppointment & { serviceType?: string }).serviceType,
+    // The wire DTO exposes visitType (general/checkup/emergency/…), not a
+    // free-text serviceType — surface it as the row's service label.
+    serviceType: a.visitType,
   };
 }
 

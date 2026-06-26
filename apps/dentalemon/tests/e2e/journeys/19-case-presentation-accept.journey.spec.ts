@@ -109,8 +109,8 @@ async function presentToPatient(page: Page, sheet: Locator): Promise<string> {
   const presentBtn = sheet.getByTestId('present-to-patient-btn').first()
   if (!(await presentBtn.isVisible().catch(() => false))) {
     // Plan is still 'draft' — move it to 'presented' first (the FSM transition the
-    // PlanRow exposes as a "Present" button; exact match avoids "Present to patient").
-    const transition = sheet.getByRole('button', { name: 'Present', exact: true }).first()
+    // PlanRow exposes as a "Mark presented" button; distinct from "Present to patient").
+    const transition = sheet.getByRole('button', { name: 'Mark presented', exact: true }).first()
     await expect(transition, 'a draft plan must offer a Present transition').toBeVisible({
       timeout: 10_000,
     })

@@ -428,7 +428,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
               {/* Invoice info */}
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/50">Invoice</p>
+                  <p className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/60">Invoice</p>
                   <p className="text-xl font-semibold tracking-tight tabular-nums">{invoice.invoiceNumber}</p>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold mt-1 ${getStatusBadgeClass(invoice.status)}`}>
                     {formatStatus(invoice.status)}
@@ -436,18 +436,18 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                 </div>
                 <div className="text-right text-[13px] space-y-1">
                   <div>
-                    <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50 block">Bill To</span>
+                    <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/60 block">Bill To</span>
                     <span className="font-medium">{invoice.patientName ?? invoice.patientId}</span>
                   </div>
                   {invoice.visitDate && (
                     <div>
-                      <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50 block">Visit Date</span>
+                      <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/60 block">Visit Date</span>
                       <span>{formatInvoiceDate(invoice.visitDate)}</span>
                     </div>
                   )}
                   {invoice.dueDate && (
                     <div>
-                      <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50 block">Due Date</span>
+                      <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/60 block">Due Date</span>
                       <span>{formatInvoiceDate(invoice.dueDate)}</span>
                     </div>
                   )}
@@ -737,7 +737,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
         {/* Footer */}
         {invoice && !loading && (
-          <div className="flex items-center gap-3 px-5 h-16 border-t flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-t flex-shrink-0 [&>button]:whitespace-nowrap">
             {showIssueButton(invoice.status, canWrite) && (
               <button type="button" onClick={handleIssue} disabled={saving} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">Issue Invoice</button>
             )}
@@ -759,8 +759,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
             {showMarkUncollectibleButton(invoice.status, canWrite) && !showUncollectibleForm && (
               <button type="button" data-testid="mark-uncollectible-btn" onClick={() => { setShowUncollectibleForm(true); setUncollectibleError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">Mark Uncollectible</button>
             )}
-            <div className="flex-1" />
-            <button type="button" onClick={handleClose} className="h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Close</button>
+            <button type="button" onClick={handleClose} className="ml-auto h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Close</button>
           </div>
         )}
       </div>

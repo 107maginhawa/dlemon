@@ -212,4 +212,81 @@ test.describe('Living-document chart — cumulative cross-visit layers', () => {
       .toHaveAttribute('data-tooth-layer', 'declined');
     await expect(page.getByTestId('chart-layer-declined')).toBeVisible();
   });
+
+  test('historical card shows per-visit completed layer for performed tooth and read-only layer key', async ({ page }) => {
+    const { branchId, memberId } = await signUpOnboardAndUnlock(page, { tier: 'solo', label: 'HistCard' });
+    const { patientId, visitAId } = await buildLivingDocumentScenario(page, { branchId, memberId });
+
+    // Initialize Visit A's dentition chart so the historical snapshot card has teeth
+    // in the database. Without this, getDentalChart returns 404 for the completed Visit A
+    // and the historical carousel card shows an error state (no teeth rendered in the DOM).
+    // The patient DOB is 1980-04-12 → adult (age > 12) → permanent dentition.
+    // initializeDentition has no visit-status gate, so this works on a completed visit.
+    await page.evaluate(
+      async ({ api, patientId, visitAId }) => {
+        const res = await fetch(`${api}/dental/patients/${patientId}/dentition`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ visitId: visitAId, dateOfBirth: '1980-04-12' }),
+        });
+        if (!res.ok) throw new Error(`initDentition-A failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+      },
+      { api: API, patientId, visitAId },
+    );
+
+    await spaNavigate(page, `/${patientId}`);
+
+    // The carousel starts on the most-recent slide (Visit B, the open visit).
+    // Wait for the active card to be ready first.
+    const activeCard = page.locator('[data-active-card="1"]');
+    await expect(activeCard).toBeVisible({ timeout: 15000 });
+    await expect(activeCard.getByText('Current — all visits')).toBeVisible();
+
+    // Also initialise the active chart so the active card's chart request completes
+    // (otherwise the API's chart endpoint for Visit B may not exist yet, causing
+    // network noise that slows the test without affecting the assertion target).
+    await ensureActiveChart(page);
+
+    // Navigate to Visit A (historical, completed) by clicking the first Swiper
+    // pagination bullet — Visit A is sorted first (oldest) so it lands at index 0.
+    // Swiper renders clickable bullets with `swiper-pagination-bullet` class.
+    const carousel = page.getByTestId('timeline-carousel');
+    await expect(carousel).toBeVisible({ timeout: 15000 });
+    const firstBullet = carousel.locator('.swiper-pagination-bullet').first();
+    await expect(firstBullet).toBeVisible({ timeout: 10000 });
+    await firstBullet.click();
+
+    // After clicking the first bullet, Visit A's card becomes the active (centred)
+    // slide and the previous Visit B card is no longer active. We identify the
+    // historical card as the slide that carries `data-testid="chart-layer-key"`
+    // (historical snapshots) rather than `chart-layer-toggle` (open/living card).
+    // Using `not([data-active-card])` would also work, but the layer-key testid is
+    // more semantically explicit and directly validates the UI element under test.
+    //
+    // Wait for the centred card to flip: after paging, Visit A becomes active
+    // ([data-active-card="1"]) and its chart should load. Scope assertions to that
+    // card to avoid matching the off-screen Visit B slide.
+    await expect(activeCard).toBeVisible({ timeout: 15000 });
+
+    // The historical card (now centred) must render the read-only layer key —
+    // NOT the interactive layer-toggle group that appears only on the open card.
+    const historicalCard = page.locator('[data-active-card="1"]');
+    const layerKey = historicalCard.getByTestId('chart-layer-key');
+    await expect(layerKey).toBeVisible({ timeout: 15000 });
+
+    // The layer key spans baseline/proposed/completed (declined only when declined
+    // work exists in that visit's snapshot, which Visit A doesn't have).
+    await expect(layerKey).toContainText('Existing');
+    await expect(layerKey).toContainText('Planned');
+    await expect(layerKey).toContainText('Completed');
+
+    // Regression: before this slice, a historical card's per-visit snapshot would
+    // fall back to `baseline` for every tooth (the cumulative cross-visit sets were
+    // not applied, and perVisitLayers was ignored). Now, tooth 16 — which was
+    // performed (crown placed) in Visit A — must carry `data-tooth-layer="completed"`
+    // on Visit A's snapshot card, proving the per-visit layer is painted correctly.
+    const tooth16InHistoricalCard = historicalCard.getByTestId(`tooth-${TOOTH_COMPLETED}`);
+    await expect(tooth16InHistoricalCard).toHaveAttribute('data-tooth-layer', 'completed', { timeout: 15000 });
+  });
 });

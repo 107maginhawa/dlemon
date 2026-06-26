@@ -17,7 +17,7 @@ export interface ToothLayerExplanation {
 const LABELS: Record<ChartLayer, string> = {
   baseline: 'Baseline',
   proposed: 'Proposed',
-  completed: 'Completed',
+  completed: 'Treated', // item 2 — never reads as the visit/card "Completed" status
   declined: 'Declined',
 };
 

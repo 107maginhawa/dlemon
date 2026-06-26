@@ -20,14 +20,42 @@ import {
   getLayerOutline,
   stateNeedsCvdMark,
   getLayerLabel,
+  hasMultipleSurfaceConditions,
   type ToothState,
 } from './dental-chart.helpers';
+
+// ─── hasMultipleSurfaceConditions (item 5 / Option B) ──────────────────────
+// The 32-tooth grid paints ONE dominant colour per tooth. When a tooth carries
+// two or more DISTINCT surface conditions (e.g. occlusal caries + mesial
+// filling), one fill colour can't tell the truth — the grid flags it with a
+// corner pip that routes to the slideout's per-surface view. The predicate is
+// "≥2 distinct condition VALUES" (same condition on two surfaces is still
+// faithfully represented by the single fill).
+describe('hasMultipleSurfaceConditions', () => {
+  test('undefined / empty map → false', () => {
+    expect(hasMultipleSurfaceConditions(undefined)).toBe(false);
+    expect(hasMultipleSurfaceConditions({})).toBe(false);
+  });
+
+  test('single surface condition → false', () => {
+    expect(hasMultipleSurfaceConditions({ occlusal: 'caries' })).toBe(false);
+  });
+
+  test('two surfaces, SAME condition → false (one fill is faithful)', () => {
+    expect(hasMultipleSurfaceConditions({ occlusal: 'caries', mesial: 'caries' })).toBe(false);
+  });
+
+  test('two surfaces, DISTINCT conditions → true (the lie case)', () => {
+    expect(hasMultipleSurfaceConditions({ occlusal: 'caries', mesial: 'filled' })).toBe(true);
+  });
+});
 
 // ─── getLayerLabel (P1-2: rename tabs → neutral filters) ───────────────────
 // The status tabs are demoted to neutral show/hide filters and renamed to the
 // clinical-provenance vocabulary. "Existing" (was Baseline) and "Planned" (was
-// Proposed) end the time/status double-encoding; "Completed" (B's billing
-// muscle-memory word) and "Declined" stay.
+// Proposed) end the time/status double-encoding; "Treated" (item 2: was
+// "Completed" — renamed so the tooth LAYER never reads as the visit/card
+// "Completed" status) and "Declined" stay.
 
 describe('getLayerLabel', () => {
   test('baseline reads as "Existing" (provenance, not the internal "Baseline")', () => {
@@ -36,8 +64,8 @@ describe('getLayerLabel', () => {
   test('proposed reads as "Planned" (ends the time/status double-encoding)', () => {
     expect(getLayerLabel('proposed')).toBe('Planned');
   });
-  test('completed keeps the billing/walkout word "Completed"', () => {
-    expect(getLayerLabel('completed')).toBe('Completed');
+  test('completed layer reads as "Treated" (item 2 — never collides with the visit/card "Completed" status)', () => {
+    expect(getLayerLabel('completed')).toBe('Treated');
   });
   test('declined stays "Declined"', () => {
     expect(getLayerLabel('declined')).toBe('Declined');
@@ -52,17 +80,20 @@ describe('getLayerLabel', () => {
 // declined stays gray.
 
 describe('getLayerOutline', () => {
-  test('proposed (this-visit) is a dashed edge in a NEUTRAL colour — never lemon/--primary', () => {
+  test('proposed (this-visit) is an obvious DOTTED edge in a NEUTRAL colour — never lemon/--primary (item 1)', () => {
     const outline = getLayerOutline('proposed', { carriedOver: false });
-    expect(outline).toContain('dashed');
+    // Item 1: dotted (not dashed) + heavier weight reads "provisional/planned"
+    // and is pattern-distinct from completed (solid green) and declined (solid gray).
+    expect(outline).toContain('dotted');
+    expect(outline).toContain('2px');
     // The lemon-overload bug: proposed used var(--primary) which resolves to lemon.
     expect(outline).not.toContain('--primary');
     expect(outline?.toLowerCase()).not.toContain('ffe97d'); // lemon hex
   });
 
-  test('carried-over proposed keeps the salient amber dash (the one hue exception)', () => {
+  test('carried-over proposed keeps the salient amber DOTTED edge (the one hue exception, item 1)', () => {
     const outline = getLayerOutline('proposed', { carriedOver: true });
-    expect(outline).toContain('dashed');
+    expect(outline).toContain('dotted');
     expect(outline?.toUpperCase()).toContain('B8860A'); // amber
   });
 
@@ -71,9 +102,74 @@ describe('getLayerOutline', () => {
     expect(outline).toContain('solid');
   });
 
-  test('completed and baseline carry no competing edge — fill owns them', () => {
-    expect(getLayerOutline('completed', { carriedOver: false })).toBeUndefined();
+  test('completed is a solid GREEN edge — the realized-work cue (done = green), distinct from declined gray and never lemon', () => {
+    const outline = getLayerOutline('completed', { carriedOver: false });
+    expect(outline).toContain('solid');
+    expect(outline?.toUpperCase()).toContain('059669'); // emerald — "done"
+    expect(outline?.toLowerCase()).not.toContain('ffe97d'); // lemon reserved for interaction
+  });
+
+  test('baseline carries no competing edge — fill owns it', () => {
     expect(getLayerOutline('baseline', { carriedOver: false })).toBeUndefined();
+  });
+});
+
+// ─── getLayerCueSwatch (item 4: the chip/legend cue glyph) ──────────────────
+// Each multi-select filter chip carries the layer's cue swatch so the filter
+// doubles as the legend. The swatch MUST mirror the tooth-edge cues: Planned =
+// dotted slate, Treated = solid green, Declined = solid gray, Existing = plain
+// neutral (fill owns it, no competing edge).
+
+import { getLayerCueSwatch } from './dental-chart.helpers';
+
+describe('getLayerCueSwatch (item 4 chip/legend cue)', () => {
+  test('proposed (Planned) → dotted slate, matching the tooth edge', () => {
+    const cue = getLayerCueSwatch('proposed');
+    expect(cue.className).toContain('dotted');
+    expect(cue.borderColor?.toUpperCase()).toBe('#475569');
+  });
+
+  test('completed (Treated) → solid green, matching the tooth edge', () => {
+    const cue = getLayerCueSwatch('completed');
+    expect(cue.className).toContain('solid');
+    expect(cue.borderColor?.toUpperCase()).toBe('#059669');
+  });
+
+  test('declined → solid gray', () => {
+    const cue = getLayerCueSwatch('declined');
+    expect(cue.className).toContain('solid');
+    expect(cue.borderColor).toBeTruthy();
+  });
+
+  test('baseline (Existing) carries no competing edge colour — fill owns it', () => {
+    const cue = getLayerCueSwatch('baseline');
+    expect(cue.borderColor).toBeUndefined();
+  });
+});
+
+// ─── getToothHistoryStatusBadge (item 9 / bug-b: timeline badge) ────────────
+// The old ternary mislabelled `verified` as Pending and slapped a false "Pending"
+// badge on snapshot rows with NO treatment. The badge must tell the truth.
+
+import { getToothHistoryStatusBadge } from './dental-chart.helpers';
+
+describe('getToothHistoryStatusBadge (item 9 / bug-b)', () => {
+  test('performed and verified both read "Done"', () => {
+    expect(getToothHistoryStatusBadge('performed')?.label).toBe('Done');
+    expect(getToothHistoryStatusBadge('verified')?.label).toBe('Done');
+  });
+
+  test('diagnosed and planned read "Planned"', () => {
+    expect(getToothHistoryStatusBadge('diagnosed')?.label).toBe('Planned');
+    expect(getToothHistoryStatusBadge('planned')?.label).toBe('Planned');
+  });
+
+  test('declined reads "Declined", not "Pending"', () => {
+    expect(getToothHistoryStatusBadge('declined')?.label).toBe('Declined');
+  });
+
+  test('no treatment (undefined) → no badge (not a false "Pending")', () => {
+    expect(getToothHistoryStatusBadge(undefined)).toBeNull();
   });
 });
 
@@ -593,14 +689,16 @@ describe('resolveToothLayer (CHART-XV)', () => {
     declined: new Set(over.declined ?? []),
   });
 
-  test('completed set wins over everything', () => {
+  test('proposed wins over everything — outstanding work is never hidden behind a Treated ring (item 6 flip)', () => {
+    // Clinical safety: a tooth with BOTH a performed treatment AND new pending
+    // work must read as Planned so the dentist sees the outstanding work.
     expect(
       resolveToothLayer(26, 'treatment_plan', sets({ completed: [26], proposed: [26], declined: [26] })),
-    ).toBe('completed');
+    ).toBe('proposed');
   });
 
-  test('proposed set beats declined and entryClassification', () => {
-    expect(resolveToothLayer(11, 'existing', sets({ proposed: [11], declined: [11] }))).toBe('proposed');
+  test('completed beats declined and entryClassification', () => {
+    expect(resolveToothLayer(11, 'existing', sets({ completed: [11], declined: [11] }))).toBe('completed');
   });
 
   test('declined set beats entryClassification', () => {

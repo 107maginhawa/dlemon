@@ -7,8 +7,8 @@
  * Create + list only — no update/delete endpoint exists. Mirrors RecallsSheet.
  */
 import React, { useState } from 'react';
-import { useSheetA11y } from '@/hooks/use-sheet-a11y';
-import { X, Activity, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Skeleton } from '@monobase/ui';
+import { ArrowLeft, Activity, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   useOcclusionScreenings,
   OCCLUSION_CLASSES,
@@ -28,6 +28,52 @@ interface OcclusionScreeningSheetProps {
 // Row
 // ---------------------------------------------------------------------------
 
+function Metric({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
+// Solo-GP quick reference — one line per Angle class. Collapsed by default.
+const ANGLE_CLASS_REFERENCE: ReadonlyArray<{ label: string; description: string }> = [
+  { label: 'Class I', description: 'Normal molar relationship; malocclusion within the arch.' },
+  { label: 'Class II div 1', description: 'Retrognathic mandible; upper incisors proclined (overjet).' },
+  { label: 'Class II div 2', description: 'Retrognathic mandible; upper incisors retroclined (deep bite).' },
+  { label: 'Class III', description: 'Prognathic mandible; lower arch ahead of upper.' },
+  { label: 'Edge-to-edge', description: 'Incisors meet edge-to-edge with no vertical overlap.' },
+];
+
+function AngleClassLegend() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="shrink-0 border-t border-border px-4 py-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        data-testid="occlusion-angle-legend-toggle"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        Angle classes
+      </button>
+      {open && (
+        <dl className="mt-2 flex flex-col gap-1.5">
+          {ANGLE_CLASS_REFERENCE.map((c) => (
+            <div key={c.label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+              <dt className="text-xs font-semibold text-foreground sm:w-28 sm:shrink-0">{c.label}</dt>
+              <dd className="text-xs text-muted-foreground">{c.description}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
 function ScreeningRow({ screening }: { screening: OcclusionScreening }) {
   const flags = [
     screening.crossbite ? 'Crossbite' : null,
@@ -35,38 +81,49 @@ function ScreeningRow({ screening }: { screening: OcclusionScreening }) {
     screening.spacing ? 'Spacing' : null,
   ].filter(Boolean) as string[];
 
-  const metrics = [
-    screening.overjetMm != null ? `Overjet ${screening.overjetMm}mm` : null,
-    screening.overbiteMm != null ? `Overbite ${screening.overbiteMm}mm` : null,
-  ].filter(Boolean) as string[];
-
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border bg-background p-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4">
+      {/* Header: Angle class + date */}
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-sm font-semibold text-indigo-700">
           {OCCLUSION_CLASS_LABELS[screening.angleClass]}
         </span>
-        {flags.map((flag) => (
-          <span
-            key={flag}
-            className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"
-          >
-            {flag}
-          </span>
-        ))}
         <span className="ml-auto text-xs text-muted-foreground">
           {new Date(screening.createdAt).toLocaleDateString()}
         </span>
       </div>
-      {(metrics.length > 0 || screening.midlineDeviation) && (
-        <p className="text-xs text-muted-foreground">
-          {[...metrics, screening.midlineDeviation ? `Midline: ${screening.midlineDeviation}` : null]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      )}
+
+      {/* Labeled metric grid — every captured field reads explicitly, "—" when blank */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <Metric label="Overjet" value={screening.overjetMm != null ? `${screening.overjetMm} mm` : '—'} />
+        <Metric label="Overbite" value={screening.overbiteMm != null ? `${screening.overbiteMm} mm` : '—'} />
+        <Metric label="Midline" value={screening.midlineDeviation || '—'} />
+        <Metric
+          label="Findings"
+          value={
+            flags.length > 0 ? (
+              <span className="flex flex-wrap gap-1">
+                {flags.map((flag) => (
+                  <span
+                    key={flag}
+                    className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"
+                  >
+                    {flag}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">None</span>
+            )
+          }
+        />
+      </div>
+
       {screening.notes && (
-        <p className="text-xs text-muted-foreground line-clamp-2">{screening.notes}</p>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">Notes</span>
+          <p className="text-sm text-foreground">{screening.notes}</p>
+        </div>
       )}
     </div>
   );
@@ -77,9 +134,8 @@ function ScreeningRow({ screening }: { screening: OcclusionScreening }) {
 // ---------------------------------------------------------------------------
 
 export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionScreeningSheetProps) {
-  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
-
+  // Centered modal — a focused record/list surface. Radix Dialog handles Escape,
+  // click-outside, focus trap + restore.
   const { screenings, isLoading, isError, createScreening, isCreating } =
     useOcclusionScreenings(patientId);
 
@@ -121,36 +177,36 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
     resetForm();
   }
 
-  if (!open) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
-
-      {/* Sheet */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Occlusion screenings"
-        data-testid="occlusion-screening-sheet"
-        className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85dvh] flex-col rounded-t-2xl bg-background shadow-2xl"
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
+        aria-describedby="occlusion-desc"
+        className="flex flex-col gap-0 overflow-hidden p-0 w-[calc(100%-2rem)] max-w-4xl max-h-[85dvh]"
       >
-        {/* Handle */}
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Occlusion</h2>
-            {screenings.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                {screenings.length}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
+        {/* Radix supplies role=dialog on DialogContent; the test/E2E handle lives
+            on this inner wrapper (the harness stubs Radix Content + drops props). */}
+        <div data-testid="occlusion-screening-sheet" className="flex flex-1 flex-col min-h-0">
+        {/* Header (pr-10 clears the dialog's built-in close button) */}
+        <DialogHeader className="flex flex-col gap-2 space-y-0 px-4 py-3 border-b shrink-0 pr-10 text-left">
+          <button
+            type="button"
+            onClick={onClose}
+            data-testid="occlusion-back-btn"
+            className="flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to workspace
+          </button>
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-muted-foreground" />
+              <DialogTitle className="text-sm font-semibold">Occlusion</DialogTitle>
+              {screenings.length > 0 && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                  {screenings.length}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setShowForm((v) => !v)}
@@ -160,16 +216,11 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
               <Plus className="h-3.5 w-3.5" />
               New Screening
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close occlusion screenings"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
-        </div>
+          <p id="occlusion-desc" className="text-xs text-muted-foreground">
+            Record the bite relationship — Angle class, overjet/overbite, and orthodontic findings.
+          </p>
+        </DialogHeader>
 
         {/* New screening form */}
         {showForm && (
@@ -288,18 +339,32 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
         {/* Screening list */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-8">Loading screenings…</p>
+            <div data-testid="occlusion-loading" className="flex flex-col gap-2">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
               <Activity className="h-8 w-8 text-destructive/50" />
               <p className="text-sm text-destructive">Couldn’t load occlusion screenings. Please try again.</p>
             </div>
           ) : screenings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
               <Activity className="h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No occlusion screenings yet. Record the Angle class and bite findings.
               </p>
+              {/* L6: co-locate the primary action with the empty state. */}
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                data-testid="occlusion-empty-new-btn"
+                className="flex items-center gap-1 rounded-lg bg-lemon px-3 py-2 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Screening
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -309,7 +374,16 @@ export function OcclusionScreeningSheet({ patientId, open, onClose }: OcclusionS
             </div>
           )}
         </div>
-      </div>
-    </>
+
+        {/* Angle-class quick reference — collapsible solo-GP guidance. */}
+        <AngleClassLegend />
+
+        {/* Permanent-record hint: no edit/delete endpoint exists, so make that explicit. */}
+        <p className="shrink-0 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+          Screenings are a permanent record and can’t be edited.
+        </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

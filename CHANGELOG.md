@@ -31,6 +31,17 @@ decisions see [docs/decisions/](./docs/decisions/). No version has been cut yet
   baseline carry-over into new visits); condition-vocabulary findings that drive
   treatments; selected-tooth context panel; structured chart export; an
   append-only `dental_chart_version` audit table.
+- **Workspace & charting UX pass** (`ux/workspace-first-slice`): a command-center
+  dashboard Home (schedule timeline with now-line, attention queue, KPI ribbon); a
+  Default↔clinic-white theme toggle; and a chart-readability sweep so the odontogram
+  never lies at a glance — chart-layer precedence flipped to proposed > completed (a
+  tooth with new pending work reads Planned, not a green Treated ring), an obvious
+  dotted "Planned" tooth edge, the tooth layer relabeled "Completed" → "Treated",
+  multi-select layer chips that carry their own cue swatch (filter doubles as legend),
+  per-visit status layers painted on historical carousel cards, a multi-surface pip on
+  the grid, the payment modal scoped to the current visit's invoice, and the per-tooth
+  slideout "Treatment Breakdown" turned into a truthful timeline (date column, active
+  visit's in-progress work included, status-honest badges).
 - **Periodontal**: periodontal charting (MVP), read-only Clinical Attachment
   Level per site, 2017 AAP/EFP staging/grading/extent assistance, multi-exam
   comparison (History view), and voice/hands-free charting.

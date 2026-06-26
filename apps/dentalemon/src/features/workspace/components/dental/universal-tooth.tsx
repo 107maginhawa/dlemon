@@ -14,6 +14,10 @@ export interface UniversalToothProps {
   showLabel?: boolean;
   interactive?: boolean;
   onClick?: (toothNumber: number) => void;
+  /** Fill mode: drop the fixed maxWidth and scale the SVG to fill the available
+   *  height (the parent cell), so the tooth grows/shrinks with its container
+   *  instead of sitting at a fixed pixel width. `size` then acts as a max cap. */
+  fill?: boolean;
 }
 
 export function UniversalTooth({
@@ -26,6 +30,7 @@ export function UniversalTooth({
   showLabel = true,
   interactive = true,
   onClick,
+  fill = false,
 }: UniversalToothProps) {
   const [baseSvg, setBaseSvg] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -78,10 +83,16 @@ export function UniversalTooth({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        // Fill mode fills the cell top-to-bottom and centers; fixed mode keeps the
+        // teeth bottom-aligned at their preset width.
+        justifyContent: fill ? 'center' : 'flex-end',
         gap: 2,
         position: 'relative',
         width: '100%',
+        height: fill ? '100%' : undefined,
+        minHeight: 0,
+        // Fill mode: `size` caps the width but the SVG scales by height; fixed mode
+        // pins the width to the preset.
         maxWidth: dimensions.width,
         cursor: interactive ? 'pointer' : 'default',
       }}
@@ -103,8 +114,12 @@ export function UniversalTooth({
 
       {!isLoading && !hasError && coloredSvg && (
         <div
-          className="universal-tooth-svg"
-          style={{ width: '100%', height: 'auto', overflow: 'hidden' }}
+          className={fill ? 'universal-tooth-svg universal-tooth-svg--fill' : 'universal-tooth-svg'}
+          style={
+            fill
+              ? { flex: '1 1 0', minHeight: 0, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }
+              : { width: '100%', height: 'auto', overflow: 'hidden' }
+          }
           // SVG content is from our own controlled static files
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: coloredSvg }}

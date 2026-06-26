@@ -46,8 +46,6 @@ function renderBar(role: DentalRole) {
         onAttachments: NOOP,
         onNotes: NOOP,
         onTreatmentPlan: NOOP,
-        onCompleteVisit: NOOP,
-        visitStatus: 'active',
       }),
     ),
   );
@@ -92,9 +90,8 @@ describe('WorkspaceTopBar — dental alerts (PP-7 / ISSUE-042)', () => {
         React.createElement(WorkspaceTopBar, {
           patientId: 'p-1',
           onRx: NOOP, onConsent: NOOP, onLab: NOOP, onPmd: NOOP,
-          onAttachments: NOOP, onNotes: NOOP, onTreatmentPlan: NOOP, onCompleteVisit: NOOP,
+          onAttachments: NOOP, onNotes: NOOP, onTreatmentPlan: NOOP,
           onAlerts,
-          visitStatus: 'active',
         }),
       ),
     );
@@ -171,8 +168,7 @@ function renderBarWithSpies(role: DentalRole) {
         onRx: NOOP, onConsent: NOOP,
         onLab: () => { calls.lab++; },
         onPmd: () => { calls.pmd++; },
-        onAttachments: NOOP, onNotes: NOOP, onTreatmentPlan: NOOP, onCompleteVisit: NOOP,
-        visitStatus: 'active',
+        onAttachments: NOOP, onNotes: NOOP, onTreatmentPlan: NOOP,
       }),
     ),
   );

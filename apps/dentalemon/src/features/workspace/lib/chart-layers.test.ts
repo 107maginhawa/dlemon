@@ -5,9 +5,10 @@
  * Declined layers are status-filtered views of the patient's treatments across
  * ALL visits — not the current visit alone. `deriveChartLayerSets` turns the
  * already-fetched cumulative treatment-plan aggregate into the per-layer tooth
- * sets the chart renders, applying the clinical precedence completed > proposed
- * > declined (a tooth that has been performed is shown done, even if another
- * planned/declined item also references it).
+ * sets the chart renders, applying the clinical precedence proposed > completed
+ * > declined (item 6 flip: outstanding planned/diagnosed work is shown Planned
+ * even when the tooth also has a performed treatment, so new work is never
+ * hidden behind a Treated ring).
  */
 import { describe, test, expect } from 'bun:test';
 import { deriveChartLayerSets } from './chart-layers';
@@ -65,7 +66,7 @@ describe('deriveChartLayerSets', () => {
     expect(sets.proposed.has(21)).toBe(false);
   });
 
-  test('precedence: a completed tooth is never also proposed or declined', () => {
+  test('precedence (item 6 flip): a tooth with a planned item wins as proposed, even when also completed/declined', () => {
     const sets = deriveChartLayerSets(
       plan({
         completedToothNumbers: [26],
@@ -75,8 +76,9 @@ describe('deriveChartLayerSets', () => {
         ],
       }),
     );
-    expect(sets.completed.has(26)).toBe(true);
-    expect(sets.proposed.has(26)).toBe(false);
+    // proposed wins → tooth 26 reads as Planned; not also listed as completed/declined.
+    expect(sets.proposed.has(26)).toBe(true);
+    expect(sets.completed.has(26)).toBe(false);
     expect(sets.declined.has(26)).toBe(false);
   });
 

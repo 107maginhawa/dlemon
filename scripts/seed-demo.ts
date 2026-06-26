@@ -152,6 +152,21 @@ const daysFromNow = (n: number, h = 10) => {
 // Appointment slot times come from workingSlotISO (timezone- + working-hours-aware);
 // daysAgo/daysFromNow remain for non-validated date fields (visit/due/recall dates).
 
+// ─── Visit timestamp backdating ───────────────────────────────────────────────
+// The HTTP API stamps activated_at/completed_at = now() on the visit state machine
+// (draft→active→completed; see visit.repo.ts). The demo needs the REAL encounter
+// dates so the per-visit carousel timeline reads chronologically instead of every
+// card showing "today". Visit creation + state changes still go through the API
+// (gates, cascades intact); only these audit timestamps are corrected directly.
+// One shared handle, closed at the end of seed().
+const _seedDbUrl = process.env.DATABASE_URL ?? 'postgres://postgres:password@localhost:5432/monobase'
+const seedDb = new Bun.SQL(_seedDbUrl)
+
+/** Backdate a visit's created_at + activated_at to a past encounter instant. */
+async function backdateVisitStart(visitId: string, iso: string) {
+  await seedDb`UPDATE dental_visit SET created_at = ${iso}, activated_at = ${iso} WHERE id = ${visitId}`
+}
+
 let _receiptSeq = 0
 const receipt = () => `OR-2026-${String(++_receiptSeq).padStart(4, '0')}`
 
@@ -332,6 +347,9 @@ async function activateVisit(
   }, cookie)
   if (!r.ok) { log(`  ⚠ Visit create (${r.status}): ${JSON.stringify(r.data).slice(0,100)}`); return null }
   await patch(`/dental/visits/${r.data.id}`, { status: 'active' }, cookie)
+  // Change B: backdate so the timeline is chronological. daysBack=0 is the genuine
+  // current/open visit — leave its activated_at at now().
+  if (daysBack > 0) await backdateVisitStart(r.data.id, daysAgo(daysBack))
   return r.data.id
 }
 
@@ -418,6 +436,9 @@ async function completeVisit(visitId: string, patientId: string, cookie: string)
 
   const r = await patch(`/dental/visits/${visitId}`, { status: 'completed' }, cookie)
   if (!r.ok) log(`  ⚠ Complete visit (${r.status}): ${JSON.stringify(r.data).slice(0, 120)}`)
+  // Change B: the API stamped completed_at = now(); pin it to the (backdated)
+  // activated day so each historical encounter reads as one day, not "completed today".
+  await seedDb`UPDATE dental_visit SET completed_at = activated_at + interval '2 hours' WHERE id = ${visitId} AND activated_at IS NOT NULL`
   await post(`/dental/visits/${visitId}/pmd`, { visitId, patientId }, cookie)
 }
 
@@ -465,7 +486,10 @@ async function makeInvoice(
   if (!invR.ok) { log(`  ⚠ Invoice (${invR.status}): ${JSON.stringify(invR.data).slice(0,100)}`); return }
   const inv = invR.data
   if (opts.state === 'draft') { log(`  ₱ Draft invoice`); return }
-  await post(`/dental/billing/invoices/${inv.id}/issue`, {}, cookie)
+  // The issue route is PATCH-only — a POST here 405s and silently strands every
+  // invoice at `draft` (which zeroed the demo owner's collected/paid figures).
+  const issR = await patch(`/dental/billing/invoices/${inv.id}/issue`, {}, cookie)
+  if (!issR.ok) { log(`  ⚠ Issue (${issR.status}): ${JSON.stringify(issR.data).slice(0,100)}`); return }
   if (opts.state === 'overdue') { log(`  ₱ Overdue invoice issued (unpaid)`); return }
   if (opts.withPlan) {
     const planR = await post(`/dental/billing/invoices/${inv.id}/plan`, {
@@ -1697,6 +1721,7 @@ async function seed() {
   const now = new Date()
   const apptDefs: Array<{ pidx: number; day: number; hour: number; min?: number; dur: number; service: string; status?: string; reason?: string }> = [
     // Today
+    { pidx: 2, day: 0,   hour: 8,           dur: 30, service: 'Routine Cleaning', status: 'completed' }, // earlier slot, already done today
     { pidx: 0, day: 0,   hour: 9,           dur: 60, service: 'Annual Checkup + X-rays' },
     { pidx: 1, day: 0,   hour: 10, min: 30, dur: 30, service: 'Follow-up: Dental Sensitivity' },
     { pidx: 8, day: 0,   hour: 14,          dur: 45, service: 'Emergency: Acute Toothache' }, // → check-in
@@ -1730,10 +1755,14 @@ async function seed() {
     apptIds[a.pidx].push(apptId)
 
     if (a.status === 'completed') {
-      // Step through: scheduled → checked_in → completed (PATCH, not check-in endpoint)
-      await patch(`/dental/appointments/${apptId}`, { status: 'checked_in' }, cookie)
-      await patch(`/dental/appointments/${apptId}`, { status: 'completed' }, cookie)
-      log(`  ✓ ${p.displayName} — ${a.service} (completed)`)
+      // scheduled→checked_in via PATCH is a silent no-op (check-in is its own
+      // endpoint, gated on the patient having no active visit) and scheduled→
+      // completed is rejected by the FSM. The no_show→completed edge ("patient
+      // turned up late") is the only PATCH-only route to a completed appointment
+      // and it skips the check-in/active-visit gate — so it works for any patient.
+      await patch(`/dental/appointments/${apptId}`, { status: 'no_show' }, cookie)
+      const cR = await patch(`/dental/appointments/${apptId}`, { status: 'completed' }, cookie)
+      log(cR.ok ? `  ✓ ${p.displayName} — ${a.service} (completed)` : `  ⚠ Complete appt (${cR.status}): ${JSON.stringify(cR.data).slice(0,100)}`)
     } else if (a.status === 'cancelled') {
       await patch(`/dental/appointments/${apptId}`, { status: 'cancelled', cancellationReason: a.reason }, cookie)
       log(`  ✓ ${p.displayName} — ${a.service} (cancelled)`)
@@ -1804,6 +1833,7 @@ async function seed() {
   await patchVisitForOfflineDemo()
 
   // ── Done ──────────────────────────────────────────────────────────────────
+  await seedDb.close()
   console.log('\n╔══════════════════════════════════════════════════════╗')
   console.log('║           Comprehensive Seed Complete!               ║')
   console.log('╠══════════════════════════════════════════════════════╣')

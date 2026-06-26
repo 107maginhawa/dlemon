@@ -108,6 +108,43 @@ describe('TasksSheet — shipped component', () => {
     }
   });
 
+  test('renders as a dialog with its testid preserved through the drawer conversion', async () => {
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByTestId('tasks-sheet')).not.toBeNull());
+      expect(screen.getByRole('dialog')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('"Back to workspace" closes the modal', async () => {
+    const user = userEvent.setup();
+    const onClose = mock(() => {});
+    const f = installFetch([]);
+    try {
+      renderSheet({ onClose });
+      await user.click(await screen.findByTestId('tasks-back-btn'));
+      expect(onClose).toHaveBeenCalled();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('L6: empty state hosts a primary "New task" affordance that opens the form', async () => {
+    const user = userEvent.setup();
+    const f = installFetch([]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText(/No tasks/i)).not.toBeNull());
+      await user.click(screen.getByTestId('tasks-empty-new-btn'));
+      expect(screen.getByLabelText('Title')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('submits a POST /tasks with the entered fields from the new-task form', async () => {
     const user = userEvent.setup();
     const f = installFetch([]);
@@ -152,12 +189,43 @@ describe('TasksSheet — shipped component', () => {
     }
   });
 
+  test('ITEM-2: lightly labels Type and Due alongside the values', async () => {
+    const f = installFetch([
+      makeTask({ title: 'Refer to ortho', taskType: 'referral', status: 'open', dueDate: '2026-08-15' as unknown as Date }),
+    ]);
+    try {
+      renderSheet();
+      await waitFor(() => expect(screen.getByText('Refer to ortho')).not.toBeNull());
+      // Type / Due read as explicit labels next to their values (light version of
+      // the occlusion Metric pattern), not just a bare bullet-joined string.
+      expect(screen.getByText('Type')).not.toBeNull();
+      expect(screen.getByText('Due')).not.toBeNull();
+      expect(screen.getByText('Referral')).not.toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
   test('shows an error state when the tasks fetch fails', async () => {
     const original = global.fetch;
     global.fetch = mock(async () => new Response('nope', { status: 500 })) as unknown as typeof fetch;
     try {
       renderSheet();
       await waitFor(() => expect(screen.getByText(/Couldn’t load tasks/i)).not.toBeNull());
+    } finally {
+      global.fetch = original;
+    }
+  });
+
+  test('4: renders skeleton rows (tasks-loading) while the fetch is in flight', () => {
+    const original = global.fetch;
+    global.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    try {
+      renderSheet();
+      const loading = screen.getByTestId('tasks-loading');
+      expect(loading).not.toBeNull();
+      expect(screen.queryByText(/Loading tasks/i)).toBeNull();
+      expect(loading.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2);
     } finally {
       global.fetch = original;
     }

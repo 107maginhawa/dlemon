@@ -23,8 +23,10 @@ import {
   isToothVisible,
   resolveToothLayer,
   getLayerOutline,
+  getLayerCueSwatch,
   stateNeedsCvdMark,
   getLayerLabel,
+  hasMultipleSurfaceConditions,
   DEFAULT_VISIBLE_LAYERS,
   getMixedDentitionTeeth,
 } from './dental-chart.helpers';
@@ -43,12 +45,16 @@ export interface DentalChartProps {
   showLegend?: boolean;
   /** P1-3: show a COMPACT, non-interactive state key (always-on inside carousel
    *  cards, where the full legend is hidden). Decodes the main fills + the
-   *  Planned dashed edge so the chart is never an unlabeled wall of colour. */
+   *  Planned dotted edge so the chart is never an unlabeled wall of colour. */
   compactLegend?: boolean;
   /** Permanent (32-tooth adult), primary (20-tooth pediatric), or mixed (dual-arch). Default: 'permanent' */
   dentitionType?: DentitionType;
   /** Show the baseline/proposed/completed layer toggle. Default: true (gate to active card in carousels). */
   showLayerToggle?: boolean;
+  /** Controlled visible-layer set. When provided it overrides the internal toggle
+   *  state — used when the layer tabs are lifted into a parent (the carousel header
+   *  hosts them so controls sit left of the date/status context cluster). */
+  visibleLayers?: ReadonlySet<ChartLayer>;
   /** CHART-XV cumulative cross-visit sets (from the patient treatment-plan aggregate). */
   /** FDI numbers with a performed/verified treatment — drives the 'completed' layer (cumulative). */
   completedToothNumbers?: Set<number>;
@@ -61,11 +67,15 @@ export interface DentalChartProps {
   /** P0-A: FDI numbers with an open offline sync conflict — marked so the clinician
    *  knows a rejected edit needs resolving (resolve via the conflict banner). */
   conflictedToothNumbers?: Set<number>;
+  /** Fill mode: scale teeth to fill the chart's height (used by the carousel's
+   *  active card) so the odontogram fits any card size — no dead space, no clip —
+   *  instead of a fixed pixel tooth width that leaves the card half-empty. */
+  fluid?: boolean;
 }
 
 /**
  * P1-2: the status tabs are demoted to NEUTRAL show/hide filters (no hue) and
- * renamed via getLayerLabel (Existing / Planned / Completed / Declined). Colour
+ * renamed via getLayerLabel (Existing / Planned / Treated / Declined). Colour
  * now lives only in the always-on state legend + the tooth fills, not the chips —
  * this is the core of the lemon de-overload (the proposed chip was lemon). Lemon
  * is reserved for interaction (selection ring, CTA), never status.
@@ -86,6 +96,8 @@ export function DentalChart({
   declinedToothNumbers,
   carriedOverToothNumbers,
   conflictedToothNumbers,
+  fluid = false,
+  visibleLayers: visibleLayersProp,
 }: DentalChartProps) {
   // ── Notation preference (QW-5) ───────────────────────────────────────────
   // Read from branch settings so the chart respects the locale/notation toggle
@@ -102,10 +114,12 @@ export function DentalChart({
   const [filterStates, setFilterStates] = useState<Set<ToothState>>(new Set());
 
   // P1-15: multi-select layers (Set<ChartLayer>) instead of single activeLayer.
-  // Default shows all three layers simultaneously.
-  const [visibleLayers, setVisibleLayers] = useState<Set<ChartLayer>>(
+  // Default shows all three layers simultaneously. When the parent supplies a
+  // controlled set (visibleLayersProp), it wins — the lifted carousel tabs drive it.
+  const [internalVisibleLayers, setVisibleLayers] = useState<Set<ChartLayer>>(
     new Set(DEFAULT_VISIBLE_LAYERS),
   );
+  const visibleLayers = visibleLayersProp ?? internalVisibleLayers;
 
   /** Toggle a layer on/off. Never empties the set — if the last layer is clicked, keep it. */
   function toggleLayer(layer: ChartLayer) {
@@ -209,10 +223,10 @@ export function DentalChart({
     const isLayerHidden = !isToothVisible(toothLayer, visibleLayers);
     const isFilterDimmed = filterStates.size > 0 && !filterStates.has(state);
     const isDimmed = isFilterDimmed || isLayerHidden;
-    // Proposed work stays visually distinct (dashed outline) when its layer is visible — CHART-BR-006.
+    // Proposed work stays visually distinct (dotted outline) when its layer is visible — CHART-BR-006.
     const isProposedOnLayer = toothLayer === 'proposed' && !isLayerHidden;
     // CHART-XV: a proposed tooth first proposed in a PRIOR visit — surface it with
-    // an amber dashed ring so aging pending work stands out from today's proposals.
+    // an amber dotted ring so aging pending work stands out from today's proposals.
     const isCarriedOver = isProposedOnLayer && !!carriedOverToothNumbers?.has(toothNumber);
     // CHART-XV: declined = refused recommendation — desaturated gray diagonal hatch
     // (a stroke/pattern, never a 4th saturated fill; the double-slash stays reserved
@@ -225,6 +239,11 @@ export function DentalChart({
       : getLayerOutline(toothLayer, { carriedOver: isCarriedOver });
     // P0-A: this tooth has an open offline conflict (a rejected stale write).
     const isConflicted = !!conflictedToothNumbers?.has(toothNumber);
+    // Item 5 / Option B: this tooth carries ≥2 distinct surface conditions, so
+    // the single dominant fill can't tell the whole story. Flag it with a
+    // corner pip → "open for detail" (the slideout renders the per-surface map).
+    const isMultiSurface =
+      !isDimmed && hasMultipleSurfaceConditions(toothByNumber.get(toothNumber)?.surfaceConditionMap);
     // Display label for the current notation preference (QW-5).
     const displayLabel = getToothDisplayLabel(toothNumber, notation);
     // Primary teeth in mixed dentition rendered at smaller size for visual distinction
@@ -258,7 +277,7 @@ export function DentalChart({
         }}
         className={[
           'relative flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
-          !isLastInQuadrant ? 'border-r border-border/20' : '',
+          !isLastInQuadrant ? 'border-r border-slate-200' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
         aria-label={`Tooth ${displayLabel}: ${name}, ${state}, ${toothLayer}`}
@@ -269,6 +288,7 @@ export function DentalChart({
           label={displayLabel}
           fillColor={getToothFillColor(state) || undefined}
           size={effectiveSize}
+          fill={fluid}
           interactive={false}
           showLabel={true}
         />
@@ -292,6 +312,15 @@ export function DentalChart({
             />
           )
         )}
+        {isMultiSurface && (
+          <span
+            data-testid={`tooth-multisurface-${toothNumber}`}
+            data-multisurface="1"
+            aria-label="Multiple surface conditions — open for detail"
+            title="Multiple surface conditions — open for detail"
+            className="absolute top-0 left-0 h-2 w-2 rounded-full border border-white bg-slate-700"
+          />
+        )}
         {isConflicted && (
           <span
             data-testid={`tooth-conflict-${toothNumber}`}
@@ -309,7 +338,7 @@ export function DentalChart({
     <div
       data-testid="dental-chart"
       data-dentition={dentitionType}
-      className="h-full flex flex-col rounded-md overflow-hidden border border-border/50 bg-muted/30"
+      className="h-full flex flex-col rounded-md overflow-hidden border border-border bg-white"
     >
       {/* P1-15: Multi-select layer chips — baseline / proposed / completed */}
       {showLayerToggle && (
@@ -317,7 +346,7 @@ export function DentalChart({
           data-testid="chart-layer-toggle"
           role="group"
           aria-label="Chart layers — toggle to show or hide"
-          className="flex gap-1.5 px-2 py-1.5 border-b border-border/30 bg-background/60"
+          className="flex gap-1.5 px-2 py-1.5 border-b border-border/60 bg-muted/40"
         >
           {LAYER_FILTER_ORDER
             // CHART-XV: only surface the Declined chip when refused work exists —
@@ -325,6 +354,7 @@ export function DentalChart({
             .filter((layer) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0)
             .map((layer) => {
             const isActive = visibleLayers.has(layer);
+            const cue = getLayerCueSwatch(layer);
             return (
               <button
                 key={layer}
@@ -333,14 +363,20 @@ export function DentalChart({
                 onClick={() => toggleLayer(layer)}
                 aria-pressed={isActive}
                 className={[
-                  'flex-1 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
-                  // P1-2: neutral active state (no status hue). The chip is a
-                  // show/hide control; colour identity lives in the legend + fills.
+                  'flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
+                  // Item 4: ON = filled chip, OFF = outline. Neutral fill (no status
+                  // hue; lemon reserved for interaction) — the per-chip cue swatch
+                  // carries the layer identity, so the filter doubles as the legend.
                   isActive
-                    ? 'bg-foreground/10 text-foreground border-foreground/25'
-                    : 'text-muted-foreground border-transparent hover:bg-muted/60',
+                    ? 'bg-foreground/10 text-foreground border-foreground/30'
+                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted/50',
                 ].join(' ')}
               >
+                <span
+                  aria-hidden
+                  className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className} ${isActive ? '' : 'opacity-50'}`}
+                  style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
+                />
                 {getLayerLabel(layer)}
               </button>
             );
@@ -352,7 +388,7 @@ export function DentalChart({
       {isMixed && (
         <div
           data-testid="mixed-dentition-banner"
-          className="px-2 py-0.5 text-[10px] text-muted-foreground bg-background/40 border-b border-border/20 text-center"
+          className="px-2 py-0.5 text-[10px] text-muted-foreground bg-muted/40 border-b border-border/50 text-center"
           aria-label="Mixed dentition: primary and permanent teeth shown together"
         >
           Mixed dentition — primary (smaller) + permanent teeth
@@ -360,19 +396,22 @@ export function DentalChart({
       )}
 
       {/* Upper arch */}
-      <div
-        className="flex flex-1 min-h-0"
-        style={{ borderBottom: '2px dashed var(--border, #e5e7eb)' }}
-      >
+      <div className="flex flex-1 min-h-0">
         {upperRight.map((n, i) => renderTooth(n, i === upperRight.length - 1))}
-        <div style={{ width: 1, flexShrink: 0, borderRight: '1px dashed var(--border, #e5e7eb)' }} />
+        <div style={{ width: 1, flexShrink: 0, borderRight: '1px dashed #cbd5e1' }} />
         {upperLeft.map((n, i) => renderTooth(n, i === upperLeft.length - 1))}
       </div>
+
+      {/* Arch midline — standalone (was a borderBottom glued to the upper arch,
+          which pulled the lower numbers visually tighter to their teeth). As its
+          own element between two equal flex-1 arches it keeps the number↔tooth
+          spacing symmetric across arches. Darkened for the white surface. */}
+      <div aria-hidden className="mx-1 border-t-2 border-dashed border-slate-300" />
 
       {/* Lower arch */}
       <div className="flex flex-1 min-h-0">
         {lowerRight.map((n, i) => renderTooth(n, i === lowerRight.length - 1))}
-        <div style={{ width: 1, flexShrink: 0, borderRight: '1px dashed var(--border, #e5e7eb)' }} />
+        <div style={{ width: 1, flexShrink: 0, borderRight: '1px dashed #cbd5e1' }} />
         {lowerLeft.map((n, i) => renderTooth(n, i === lowerLeft.length - 1))}
       </div>
 
@@ -382,7 +421,7 @@ export function DentalChart({
       {compactLegend && !showLegend && (
         <div
           data-testid="chart-compact-legend"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-xs text-muted-foreground border-t border-border/30 bg-background/50"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-xs text-muted-foreground border-t border-border/60 bg-muted/40"
         >
           {([
             { label: 'Caries',    state: 'caries' as const },
@@ -392,7 +431,7 @@ export function DentalChart({
           ]).map(({ label, state }) => (
             <span key={state} className="flex items-center gap-1">
               <span
-                className="w-3 h-3 rounded-sm inline-block flex-shrink-0"
+                className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-black/15"
                 style={{ backgroundColor: getToothFillColor(state) }}
               />
               {label}
@@ -400,17 +439,24 @@ export function DentalChart({
           ))}
           <span className="flex items-center gap-1">
             <span
-              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border border-dashed"
+              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-dotted"
               style={{ borderColor: '#475569' }}
             />
             Planned
+          </span>
+          <span className="flex items-center gap-1">
+            <span
+              className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-solid"
+              style={{ borderColor: '#059669' }}
+            />
+            Treated
           </span>
         </div>
       )}
 
       {/* Legend */}
       {showLegend && (
-        <div className="flex flex-wrap gap-3 px-3 py-2 text-xs text-muted-foreground border-t border-border/30 bg-background/50">
+        <div className="flex flex-wrap gap-3 px-3 py-2 text-xs text-muted-foreground border-t border-border/60 bg-muted/40">
           {([
             { label: 'Healthy',   state: 'healthy' as const },
             { label: 'Caries',    state: 'caries' as const },
@@ -434,7 +480,7 @@ export function DentalChart({
                 aria-pressed={isActive}
               >
                 <span
-                  className={`w-3 h-3 rounded-sm inline-block flex-shrink-0${bordered ? ' border border-dashed border-gray-400' : ''}`}
+                  className={`w-3 h-3 rounded-sm inline-block flex-shrink-0 ${bordered ? 'border border-dashed border-gray-400' : 'border border-black/15'}`}
                   style={{ backgroundColor: getToothFillColor(state) }}
                 />
                 {label}

@@ -108,10 +108,10 @@ export function PerioSiteCell({
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       className={cn(
-        'h-11 w-9 min-h-[44px] rounded-md border border-border bg-background text-center text-sm tabular-nums',
+        'h-11 w-9 min-h-[44px] rounded-md border border-zinc-300 bg-background text-center text-base font-medium text-foreground tabular-nums',
         'focus:outline-none focus:ring-2 focus:ring-lemon-focus focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring',
         'disabled:opacity-50 read-only:bg-muted/40 read-only:cursor-default',
-        over && 'text-destructive font-semibold border-destructive/40',
+        over && 'text-destructive font-bold border-destructive',
         active && 'ring-2 ring-info ring-offset-1 border-info',
       )}
     />
