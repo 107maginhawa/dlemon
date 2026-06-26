@@ -53,8 +53,9 @@ describe('hasMultipleSurfaceConditions', () => {
 // ─── getLayerLabel (P1-2: rename tabs → neutral filters) ───────────────────
 // The status tabs are demoted to neutral show/hide filters and renamed to the
 // clinical-provenance vocabulary. "Existing" (was Baseline) and "Planned" (was
-// Proposed) end the time/status double-encoding; "Completed" (B's billing
-// muscle-memory word) and "Declined" stay.
+// Proposed) end the time/status double-encoding; "Treated" (item 2: was
+// "Completed" — renamed so the tooth LAYER never reads as the visit/card
+// "Completed" status) and "Declined" stay.
 
 describe('getLayerLabel', () => {
   test('baseline reads as "Existing" (provenance, not the internal "Baseline")', () => {
@@ -63,8 +64,8 @@ describe('getLayerLabel', () => {
   test('proposed reads as "Planned" (ends the time/status double-encoding)', () => {
     expect(getLayerLabel('proposed')).toBe('Planned');
   });
-  test('completed keeps the billing/walkout word "Completed"', () => {
-    expect(getLayerLabel('completed')).toBe('Completed');
+  test('completed layer reads as "Treated" (item 2 — never collides with the visit/card "Completed" status)', () => {
+    expect(getLayerLabel('completed')).toBe('Treated');
   });
   test('declined stays "Declined"', () => {
     expect(getLayerLabel('declined')).toBe('Declined');

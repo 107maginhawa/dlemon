@@ -234,13 +234,15 @@ export function resolveToothLayer(
 /**
  * P1-2 — the user-facing label for a chart layer (the demoted, renamed filter
  * tabs). "Existing"/"Planned" replace the internal "Baseline"/"Proposed" to end
- * the time/status double-encoding; "Completed" keeps the billing/walkout word and
- * "Declined" stays. Tooth-level identity still uses the ChartLayer key.
+ * the time/status double-encoding; "Treated" (item 2 — was "Completed") names the
+ * performed-work layer without colliding with the visit/card "Completed" status
+ * shown on the same screen; "Declined" stays. The ChartLayer KEY stays 'completed'
+ * — only the displayed label changed.
  */
 const LAYER_LABELS: Record<ChartLayer, string> = {
   baseline: 'Existing',
   proposed: 'Planned',
-  completed: 'Completed',
+  completed: 'Treated',
   declined: 'Declined',
 };
 export function getLayerLabel(layer: ChartLayer): string {

@@ -123,7 +123,7 @@ function ChartCompactLegend() {
           className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-solid"
           style={{ borderColor: '#059669' }}
         />
-        Completed
+        Treated
       </span>
     </div>
   );
@@ -241,14 +241,14 @@ function VisitChartCard({
           <div
             data-testid="chart-layer-toggle"
             role="group"
-            // Change C: cumulative cue. The Existing / Planned / Completed layers are
+            // Change C: cumulative cue. The Existing / Planned / Treated layers are
             // status-filtered views across ALL visits (see lib/chart-layers.ts), not
-            // this visit alone — so Completed/Planned aren't misread as current-visit
+            // this visit alone — so Treated/Planned aren't misread as current-visit
             // only. Communicated without restyling the tabs or adding status hues:
             // the visible "Current — all visits" scope label sits in the same row, and
             // the group carries the scope in its aria-label + a reinforcing tooltip.
             aria-label="Chart layers across all visits — toggle to show or hide"
-            title="These layers (Existing · Planned · Completed) span all visits, not just this one"
+            title="These layers (Existing · Planned · Treated) span all visits, not just this one"
             className="flex shrink-0 items-center gap-1"
           >
             {layerTabs.map((layer) => {

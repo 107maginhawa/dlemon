@@ -185,8 +185,9 @@ describe('TimelineCarousel (Swiper)', () => {
           onNewVisit: () => {},
         });
       // Assert the per-visit status via the stable status-badge contract rather
-      // than loose text — the header now also hosts layer tabs (Existing / Planned
-      // / Completed / Declined) whose labels would otherwise collide with /completed/i.
+      // than loose text — the header also hosts layer tabs (Existing / Planned /
+      // Treated / Declined); the layer label was renamed Completed→Treated (item 2)
+      // precisely so it can never collide with the visit "completed" status here.
       const statuses = screen
         .getAllByTestId('visit-status-badge')
         .map((el) => el.textContent);
@@ -690,7 +691,7 @@ describe('TimelineCarousel (Swiper)', () => {
   // declined teeth.
 
   describe('read-only layer key on historical cards', () => {
-    test('historical card renders a non-interactive layer key with Existing, Planned, Completed', async () => {
+    test('historical card renders a non-interactive layer key with Existing, Planned, Treated', async () => {
       // No declined teeth — chart returns completed only
       global.fetch = () =>
         Promise.resolve(
@@ -718,7 +719,7 @@ describe('TimelineCarousel (Swiper)', () => {
       expect(key).not.toBeNull();
       expect(key.textContent).toMatch(/Existing/i);
       expect(key.textContent).toMatch(/Planned/i);
-      expect(key.textContent).toMatch(/Completed/i);
+      expect(key.textContent).toMatch(/Treated/i);
       // No declined teeth → Declined should NOT appear
       expect(key.textContent).not.toMatch(/Declined/i);
     });

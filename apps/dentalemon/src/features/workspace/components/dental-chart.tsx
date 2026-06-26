@@ -441,7 +441,7 @@ export function DentalChart({
               className="w-3 h-3 rounded-sm inline-block flex-shrink-0 border-2 border-solid"
               style={{ borderColor: '#059669' }}
             />
-            Completed
+            Treated
           </span>
         </div>
       )}
