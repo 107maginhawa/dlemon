@@ -8,8 +8,8 @@
  * Wireframe: docs/prd/context/wireframes/workspace-wireframe.html
  */
 
-import { createFileRoute, useNavigate, Link, Outlet, useChildMatches } from '@tanstack/react-router';
-import React, { useState, useEffect, useCallback } from 'react';
+import { createFileRoute, Link, Outlet, useChildMatches } from '@tanstack/react-router';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Image as ImageIcon,
   Activity,
@@ -127,6 +127,16 @@ function WorkspacePage() {
   const [carryOverPromptOpen, setCarryOverPromptOpen] = useState(false);
   // When Save & Next is used: keep slideout panel open while user taps the next tooth
   const [slideoutKeepOpen, setSlideoutKeepOpen] = useState(false);
+
+  // Issue 2: the footer "N pending" affordance routes here — scroll the Treatment
+  // Breakdown (its own scroll region) to the top and move focus to it.
+  const tableZoneRef = useRef<HTMLDivElement>(null);
+  const handleReviewPending = useCallback(() => {
+    const el = tableZoneRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+    el.focus();
+  }, []);
 
   // ISSUE-010: the inline Treatment Plan modal is hand-rolled (not Radix) → wire
   // Escape-to-dismiss + focus restore via the shared sheet-a11y hook (stable cb).
@@ -371,9 +381,7 @@ function WorkspacePage() {
         onAttachments={() => setAttachmentsOpen(true)}
         onNotes={() => setNotesSheetOpen(true)}
         onTreatmentPlan={() => setTreatmentPlanSheetOpen(true)}
-        onCompleteVisit={() => setChecklistOpen(true)}
         onAlerts={() => setAlertsOpen(true)}
-        visitStatus={currentVisit?.status}
       />
 
       {/* Year filter */}
@@ -561,8 +569,10 @@ function WorkspacePage() {
 
         {/* Treatment table section */}
         <div
+          ref={tableZoneRef}
           data-testid="workspace-table-zone"
-          className="flex-1 min-w-0 bg-background overflow-auto"
+          tabIndex={-1}
+          className="flex-1 min-w-0 bg-background overflow-auto focus-visible:outline-none"
         >
           {/* #13: apply a treatment template to populate the visit (reachable even
               when the table is empty — the primary apply case). Owner/associate-gated
@@ -605,6 +615,7 @@ function WorkspacePage() {
         treatments={treatments}
         isReadOnly={isReadOnly}
         onContinue={() => setPaymentModalOpen(true)}
+        onReviewPending={handleReviewPending}
       />
 
       {/* ── Sheet overlays ──────────────────────────────────────────────────── */}

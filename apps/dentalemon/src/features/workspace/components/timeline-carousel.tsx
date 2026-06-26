@@ -143,7 +143,9 @@ function VisitChartCard({
     <div
       data-testid="visit-slide"
       data-active-card={isActive ? '1' : undefined}
-      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-shadow ${isActive ? 'border-lemon-hover border-2 shadow-card-active' : 'border-border shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]'}`}
+      // Issue 3: make the active visit unmistakably primary — neighbors are dimmed
+      // and flattened so they read as context, not competing focus.
+      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-all ${isActive ? 'border-lemon-hover border-2 shadow-card-active' : 'border-border opacity-55 shadow-[0_2px_8px_rgba(0,0,0,0.05)]'}`}
     >
       {isActive && <div data-accent-bar className="h-1 rounded-full bg-lemon" />}
       {/* CHART-XV: name the scope so the cumulative active chart isn't misread as
@@ -214,9 +216,11 @@ function VisitChartCard({
             // fit the clamped height — scale the teeth with the card, don't crop.
             toothSize={isActive ? 'sm' : 'xs'}
             showLegend={false}
-            // P1-3: the open card (the working chart, rendered at 'md') gets the
-            // compact always-on state key; small historical 'xs' cards stay clean.
-            compactLegend={isOpenVisit}
+            // P1-3 / Issue 4: the compact always-on state key decodes the chart
+            // fills. Show it on the OPEN card AND on whichever card is centered, so a
+            // centered historical snapshot never shows unexplained colours. Small,
+            // off-center 'xs' cards stay clean.
+            compactLegend={isOpenVisit || isActive}
             showLayerToggle={isOpenVisit}
             // P0-1: cumulative cross-visit layers + layer toggle apply only to the
             // OPEN card (the living document), bound by visit identity — NOT by which
@@ -408,7 +412,19 @@ export function TimelineCarousel({
         onSwiper={(s: { slideTo: (index: number) => void }) => { swiperRef.current = s; }}
         onSlideChange={handleSlideChange}
         coverflowEffect={{ rotate: 35, stretch: 0, depth: 200, modifier: 1, scale: 0.72, slideShadows: false }}
-        pagination={{ clickable: true }}
+        // Issue 3: bullets were tiny and unlabeled. Give each a per-visit aria-label
+        // (date + status) and a larger, tappable hit target so the row reads — and
+        // operates — as a real timeline.
+        pagination={{
+          clickable: true,
+          renderBullet: (index: number, className: string) => {
+            const v = sorted[index];
+            const label = v
+              ? `Visit ${index + 1} of ${sorted.length}: ${formatDate(v.activatedAt ?? v.createdAt)}, ${v.status}`
+              : `Visit ${index + 1}`;
+            return `<span class="${className}" role="button" tabindex="0" aria-label="${label}" title="${label}" style="width:11px;height:11px;margin:0 5px;"></span>`;
+          },
+        }}
         keyboard={{ enabled: true }}
         className="dental-swiper"
       >

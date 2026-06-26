@@ -25,7 +25,10 @@ export function DismissTreatmentPopover({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onOpenChange(true); }}
-          className="text-[10px] text-destructive hover:underline"
+          // Issue 6: demoted out of the hot path — quiet/muted at rest so it doesn't
+          // sit one accidental tap from Mark Done, destructive only on hover/focus.
+          // (The action itself stays reason-gated in the popover below.)
+          className="text-[10px] font-medium text-muted-foreground/70 hover:text-destructive hover:underline focus-visible:text-destructive"
           aria-label="Dismiss treatment"
         >
           Dismiss
