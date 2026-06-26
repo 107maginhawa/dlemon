@@ -86,7 +86,7 @@ export const CHART_EXPORT_LEGEND: Array<{ key: string; label: string }> = [
 const BASELINE_CLASSES = new Set<ChartEntryClassification>(['existing', 'existing_other']);
 
 /** Derive the proposed/completed/declined tooth-number sets from the treatments. */
-function deriveLayerSets(treatments: ChartExportTreatmentInput[]) {
+export function deriveLayerSets(treatments: ChartExportTreatmentInput[]) {
   const completed = new Set<number>();
   const proposed = new Set<number>();
   const declined = new Set<number>();
