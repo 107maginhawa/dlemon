@@ -339,7 +339,9 @@ export function getToothHistoryStatusBadge(
   switch (status) {
     case 'performed':
     case 'verified':
-      return { label: 'Done', className: 'bg-green-100 text-green-700' };
+      // Locked vocab: "Treated" (not "Done") — matches the chart layer label so the
+      // panel, chips, legend, and PDF all speak the same six words.
+      return { label: 'Treated', className: 'bg-green-100 text-green-700' };
     case 'diagnosed':
     case 'planned':
       return { label: 'Planned', className: 'bg-amber-100 text-amber-700' };

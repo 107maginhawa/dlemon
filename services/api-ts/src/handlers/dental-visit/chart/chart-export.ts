@@ -82,7 +82,7 @@ export const CHART_EXPORT_LEGEND: Array<{ key: string; label: string }> = [
   // proposed→Planned, completed→Treated) so the printed legend matches what the
   // dentist sees. Keys are unchanged. BE can't import the FE helper across the
   // module boundary, so this constant is the BE source of truth.
-  { key: 'baseline', label: 'Existing / baseline' },
+  { key: 'baseline', label: 'Existing' },
   { key: 'proposed', label: 'Planned' },
   { key: 'completed', label: 'Treated' },
   { key: 'declined', label: 'Declined' },

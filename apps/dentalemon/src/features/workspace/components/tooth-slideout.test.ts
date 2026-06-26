@@ -120,8 +120,8 @@ describe('ToothSlideout', () => {
 
     // Surface initials: mesial + occlusal → "MO"
     expect(await screen.findByText('MO')).not.toBeNull();
-    // Status badge for a performed treatment
-    expect(screen.getByText('Done')).not.toBeNull();
+    // Status badge for a performed treatment — locked vocab "Treated" (was "Done")
+    expect(screen.getByText('Treated')).not.toBeNull();
     // ₱125.00 appears in the row and the Total footer (12500 cents / 100)
     expect(screen.getAllByText(/₱125\.00/).length).toBeGreaterThanOrEqual(2);
   });

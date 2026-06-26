@@ -14,9 +14,11 @@ export interface ToothLayerExplanation {
   reason: string;
 }
 
+// Locked 6-word vocabulary — identical to LAYER_LABELS (Existing / Planned / Treated /
+// Declined). The ChartLayer KEYS stay baseline/proposed/completed; only labels changed.
 const LABELS: Record<ChartLayer, string> = {
-  baseline: 'Baseline',
-  proposed: 'Proposed',
+  baseline: 'Existing',
+  proposed: 'Planned',
   completed: 'Treated', // item 2 — never reads as the visit/card "Completed" status
   declined: 'Declined',
 };

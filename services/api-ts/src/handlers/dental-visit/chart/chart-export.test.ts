@@ -95,6 +95,18 @@ const BASE = {
   generatedAt: new Date('2026-06-10T10:00:00Z'),
 };
 
+describe('CHART_EXPORT_LEGEND — locked 6-word vocabulary (PDF parity)', () => {
+  // The printed legend must speak the SAME six patient-facing words as the on-screen
+  // chart: Existing · Flagged · Planned · Treated · Declined · Missing. No drift
+  // ("Proposed" / "Completed" / "baseline" / "Pending").
+  const TOOTH_VOCAB = new Set(['Existing', 'Flagged', 'Planned', 'Treated', 'Declined', 'Missing']);
+  test('every export legend label is one of the six words', () => {
+    for (const entry of CHART_EXPORT_LEGEND) {
+      expect(TOOTH_VOCAB.has(entry.label)).toBe(true);
+    }
+  });
+});
+
 describe('buildChartExport — header', () => {
   test('carries patient/provider/branch/date + FDI notation + generated timestamp', () => {
     const out = buildChartExport({ ...BASE, chartTeeth: [], treatments: [] });

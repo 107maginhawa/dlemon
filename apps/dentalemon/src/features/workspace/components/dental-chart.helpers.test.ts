@@ -151,7 +151,41 @@ describe('getLayerCueSwatch (item 4 chip/legend cue)', () => {
 // The old ternary mislabelled `verified` as Pending and slapped a false "Pending"
 // badge on snapshot rows with NO treatment. The badge must tell the truth.
 
-import { getToothHistoryStatusBadge, getToothHistoryEventBadge } from './dental-chart.helpers';
+import { getToothHistoryStatusBadge, getToothHistoryEventBadge, getLayerLabel } from './dental-chart.helpers';
+import { explainToothLayer } from './tooth-layer-explanation';
+
+// The LOCKED 6-word patient-facing tooth vocabulary. Identical on tooth, legend,
+// chips, panel, and PDF export. No "Proposed"/"Completed"/"Baseline"/"Pending"/"Done".
+const TOOTH_VOCAB = new Set(['Existing', 'Flagged', 'Planned', 'Treated', 'Declined', 'Missing']);
+
+describe('locked 6-word tooth vocabulary', () => {
+  test('every chart layer label (chips/legend) is one of the six words', () => {
+    for (const layer of ['baseline', 'proposed', 'completed', 'declined'] as const) {
+      expect(TOOTH_VOCAB.has(getLayerLabel(layer))).toBe(true);
+    }
+  });
+
+  test('the per-tooth layer explanation labels use the six words (no Baseline/Proposed drift)', () => {
+    const labels = [
+      explainToothLayer(11, 'existing', {}).label,
+      explainToothLayer(11, undefined, { proposed: new Set([11]) }).label,
+      explainToothLayer(11, undefined, { completed: new Set([11]) }).label,
+      explainToothLayer(11, undefined, { declined: new Set([11]) }).label,
+    ];
+    for (const label of labels) expect(TOOTH_VOCAB.has(label)).toBe(true);
+    expect(labels).not.toContain('Baseline');
+    expect(labels).not.toContain('Proposed');
+  });
+
+  test('the panel status badge reads "Treated" (not "Done") for performed work', () => {
+    expect(getToothHistoryStatusBadge('performed')?.label).toBe('Treated');
+    expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'verified' })?.label).toBe('Treated');
+  });
+
+  test('"Flagged" is surfaced for finding events', () => {
+    expect(getToothHistoryEventBadge({ eventKind: 'finding' })?.label).toBe('Flagged');
+  });
+});
 
 describe('getToothHistoryEventBadge (two-axis ledger: finding vs treatment)', () => {
   test('a finding event reads "Flagged" — never a blank row', () => {
@@ -161,16 +195,16 @@ describe('getToothHistoryEventBadge (two-axis ledger: finding vs treatment)', ()
   });
 
   test('a treatment event reads its lifecycle status badge', () => {
-    expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'performed' })?.label).toBe('Done');
+    expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'performed' })?.label).toBe('Treated');
     expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'planned' })?.label).toBe('Planned');
     expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'declined' })?.label).toBe('Declined');
   });
 });
 
 describe('getToothHistoryStatusBadge (item 9 / bug-b)', () => {
-  test('performed and verified both read "Done"', () => {
-    expect(getToothHistoryStatusBadge('performed')?.label).toBe('Done');
-    expect(getToothHistoryStatusBadge('verified')?.label).toBe('Done');
+  test('performed and verified both read "Treated" (locked vocab)', () => {
+    expect(getToothHistoryStatusBadge('performed')?.label).toBe('Treated');
+    expect(getToothHistoryStatusBadge('verified')?.label).toBe('Treated');
   });
 
   test('diagnosed and planned read "Planned"', () => {
