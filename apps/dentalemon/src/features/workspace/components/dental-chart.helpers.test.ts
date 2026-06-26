@@ -151,7 +151,21 @@ describe('getLayerCueSwatch (item 4 chip/legend cue)', () => {
 // The old ternary mislabelled `verified` as Pending and slapped a false "Pending"
 // badge on snapshot rows with NO treatment. The badge must tell the truth.
 
-import { getToothHistoryStatusBadge } from './dental-chart.helpers';
+import { getToothHistoryStatusBadge, getToothHistoryEventBadge } from './dental-chart.helpers';
+
+describe('getToothHistoryEventBadge (two-axis ledger: finding vs treatment)', () => {
+  test('a finding event reads "Flagged" — never a blank row', () => {
+    expect(getToothHistoryEventBadge({ eventKind: 'finding' })?.label).toBe('Flagged');
+    // even with a stray status, a finding stays Flagged (it rides the condition axis)
+    expect(getToothHistoryEventBadge({ eventKind: 'finding', treatmentStatus: 'planned' })?.label).toBe('Flagged');
+  });
+
+  test('a treatment event reads its lifecycle status badge', () => {
+    expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'performed' })?.label).toBe('Done');
+    expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'planned' })?.label).toBe('Planned');
+    expect(getToothHistoryEventBadge({ eventKind: 'treatment', treatmentStatus: 'declined' })?.label).toBe('Declined');
+  });
+});
 
 describe('getToothHistoryStatusBadge (item 9 / bug-b)', () => {
   test('performed and verified both read "Done"', () => {

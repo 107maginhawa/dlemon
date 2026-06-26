@@ -353,6 +353,24 @@ export function getToothHistoryStatusBadge(
 }
 
 /**
+ * Two-axis lifecycle ledger (per-tooth panel): the status badge for ONE ledger row.
+ * A FINDING event (the tooth was flagged with a condition, no treatment that visit)
+ * reads "Flagged" so the row is never blank — findings ride the condition axis. A
+ * TREATMENT event rides the lifecycle axis and reads its status badge (Planned /
+ * Done / Declined …) via getToothHistoryStatusBadge.
+ */
+export function getToothHistoryEventBadge(
+  entry: { eventKind?: 'finding' | 'treatment'; treatmentStatus?: string },
+): { label: string; className: string } | null {
+  if (entry.eventKind === 'finding') {
+    // Distinct hue from Planned (amber) / Declined (orange) / Done (green): a
+    // flagged condition is an attention cue on the condition axis.
+    return { label: 'Flagged', className: 'bg-red-100 text-red-700' };
+  }
+  return getToothHistoryStatusBadge(entry.treatmentStatus);
+}
+
+/**
  * P1-3 — colour-vision safety. caries-red (#FF3B30) and fractured-orange
  * (#FF9500) collapse under protanopia (caries misread as fracture — a clinical
  * miss). These states need a redundant NON-colour mark (stipple) so they stay

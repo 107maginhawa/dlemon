@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { getToothInfo, getToothFillColor, getToothHistoryStatusBadge } from './dental-chart.helpers';
+import { getToothInfo, getToothFillColor, getToothHistoryEventBadge } from './dental-chart.helpers';
 import type { ToothState } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
 import type { SurfaceStatus } from './dental/types';
@@ -287,6 +287,7 @@ export function ToothOverviewStep({
         )}
 
         {!isLoading && !error && history.length > 0 && (
+          <div className="overflow-x-auto">
           <table className="w-full table-fixed text-xs">
             {/* table-fixed + colgroup: the panel is 340px; fixed column widths keep
                 the headline Status/Total visible at rest instead of being pushed
@@ -311,8 +312,12 @@ export function ToothOverviewStep({
             </thead>
             <tbody>
               {history.map((entry, idx) => {
-                // Item 9: provenance — when this tooth was charted (planned vs treated).
-                const badge = getToothHistoryStatusBadge(entry.treatmentStatus);
+                // Two-axis ledger: a finding event reads "Flagged"; a treatment event
+                // reads its lifecycle status — so a finding-only row is never blank.
+                const badge = getToothHistoryEventBadge({
+                  eventKind: (entry as { eventKind?: 'finding' | 'treatment' }).eventKind,
+                  treatmentStatus: entry.treatmentStatus,
+                });
                 return (
                 <tr key={`${entry.visitId}-${idx}`} className="border-t border-border">
                   <td className="px-2 py-2 text-muted-foreground tabular-nums">
@@ -362,6 +367,7 @@ export function ToothOverviewStep({
               </tfoot>
             )}
           </table>
+          </div>
         )}
       </div>
     </div>
