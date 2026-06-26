@@ -83,6 +83,9 @@ describe('useDashboardSummary', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.todayAppointments).toHaveLength(2);
     expect(result.current.data?.tomorrowAppointments).toHaveLength(1);
+    // serviceType is sourced from the wire DTO's visitType (no free-text field)
+    expect(result.current.data?.todayAppointments[0]?.serviceType).toBe('checkup');
+    expect(result.current.data?.todayAppointments[1]?.serviceType).toBe('cleaning');
   });
 
   test('returns summary metrics (activePaymentPlans, pendingLabOrders)', async () => {

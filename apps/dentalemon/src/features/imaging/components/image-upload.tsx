@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Upload } from 'lucide-react'
 import { Button, Input, Label } from '@monobase/ui'
 import { useImagingUpload } from '@/features/imaging/hooks/use-imaging-upload'
 import { DICOM_MIME_TYPE, isDicomMimeType } from '@/features/imaging/lib/dicom'
@@ -110,7 +111,7 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
         </select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="image-upload-tooth">Tooth Number (optional)</Label>
+        <Label htmlFor="image-upload-tooth">Tooth number (optional)</Label>
         <Input
           id="image-upload-tooth"
           type="number"
@@ -118,27 +119,33 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
           max={32}
           value={toothNumber}
           onChange={(e) => setToothNumber(e.target.value)}
-          placeholder="1–32"
+          placeholder="e.g. 14"
         />
+        <p className="text-xs text-muted-foreground">Link this image to a tooth (1–32). Leave blank for full-mouth or extraoral.</p>
       </div>
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-4 text-center"
+        className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 p-5 text-center"
       >
-        <Label className="mb-2 block">Image File</Label>
+        <Upload className="h-7 w-7 text-muted-foreground/60" aria-hidden="true" />
+        <Label htmlFor="image-upload-file" className="cursor-pointer text-sm font-medium text-foreground">
+          Drag &amp; drop, or choose a file
+        </Label>
         <input
+          id="image-upload-file"
           type="file"
           accept=".jpg,.jpeg,.png,.tif,.tiff,.bmp,.dcm,application/dicom"
           onChange={handleFileChange}
           className="mx-auto block text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted"
         />
-        {file && (
-          <p className="mt-2 text-xs text-foreground">
+        {file ? (
+          <p className="text-xs font-medium text-foreground">
             {file.name} — {(file.size / 1024).toFixed(0)} KB
           </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">JPEG, PNG, TIFF, BMP or DICOM · up to 100 MB</p>
         )}
-        <p className="mt-1 text-xs text-muted-foreground">or drag and drop here</p>
       </div>
       {isUploading && (
         <div className="h-2 w-full rounded-full bg-muted">

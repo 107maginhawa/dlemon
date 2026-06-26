@@ -9,7 +9,8 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard, AlertTriangle } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeft, Pill, Pencil, Paperclip, List, Maximize2, Minimize2, ChevronDown, CheckCircle2, FileSignature, FlaskConical, IdCard, AlertTriangle } from 'lucide-react';
 import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-history';
 import { useDentalAlerts, DENTAL_ALERT_TYPE_LABELS, type DentalAlertSeverity } from '@/features/workspace/hooks/use-dental-alerts';
@@ -154,8 +155,16 @@ export function WorkspaceTopBar({
 
   return (
     <header className="h-14 shrink-0 flex items-center gap-3 px-4 border-b backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
-      {/* LEFT: Patient avatar + name */}
+      {/* LEFT: Back to patient list + avatar + name */}
       <div className="flex items-center gap-2 shrink-0">
+        <Link
+          to="/patients"
+          aria-label="Back to patients"
+          title="Back to patients"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-lemon/30 text-lemon-foreground"
           aria-label={`Patient avatar: ${displayName}`}

@@ -78,8 +78,14 @@ export interface ConsentSheetProps {
 
 export function ConsentSheet({ visitId, patientId, currentMemberId, templates, canRevoke = false, open, onClose, onSaved }: ConsentSheetProps) {
   const usingFallbackTemplates = !(templates && templates.length > 0);
-  const templateOptions: ReadonlyArray<ConsentTemplateOption> =
-    usingFallbackTemplates ? CONSENT_TEMPLATES : templates!;
+  // Dedupe by name for the picker: dirty data (legacy reseeds left 20+ identical
+  // rows per branch) would otherwise flood the dropdown with repeats. Keep the
+  // first of each name — the Settings management screen still shows every row.
+  const templateOptions: ReadonlyArray<ConsentTemplateOption> = (() => {
+    const source = usingFallbackTemplates ? CONSENT_TEMPLATES : templates!;
+    const seen = new Set<string>();
+    return source.filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
+  })();
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 

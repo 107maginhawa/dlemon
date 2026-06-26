@@ -88,12 +88,18 @@ export function WorkspaceImagingOverlay({
         </button>
       </div>
       <div className="flex flex-1 min-h-0">
-        <PatientImageList
-          patientId={patientId}
-          branchId={branchId}
-          onSelectImage={(item) => setSelectedImageItem(item)}
-          onCompare={(items) => { setComparisonItems(items); setSelectedImageItem(null); }}
-        />
+        {/* The library sidebar only earns its space once images exist. With zero
+            images it was a dead column (disabled FMX/Compare, a second "Upload
+            Image" button, a duplicate "No images yet") competing with the canvas
+            upload form — so the empty state now lives in ONE place: the canvas. */}
+        {hasImages && (
+          <PatientImageList
+            patientId={patientId}
+            branchId={branchId}
+            onSelectImage={(item) => setSelectedImageItem(item)}
+            onCompare={(items) => { setComparisonItems(items); setSelectedImageItem(null); }}
+          />
+        )}
         <div className="flex-1 min-w-0">
           {comparisonItems ? (
             <ComparisonView

@@ -89,24 +89,24 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
       />
 
       {/* Card body */}
-      <div className="flex items-start gap-3 p-3">
+      <div className="flex items-center gap-3 p-4 pl-8">
         {/* Avatar */}
         <div
           data-testid="patient-avatar"
-          className="w-10 h-10 shrink-0 rounded-full bg-lemon/30 flex items-center justify-center text-sm font-bold text-lemon-foreground select-none"
+          className="w-12 h-12 shrink-0 rounded-full bg-lemon/30 flex items-center justify-center text-base font-bold text-lemon-foreground select-none"
         >
           {initials(patient.displayName)}
         </div>
 
         {/* Meta */}
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold tracking-wide truncate text-foreground">
+          <p className="text-base font-bold leading-tight tracking-tight truncate text-foreground">
             {lastName}
           </p>
           {firstName && (
-            <p className="text-xs text-muted-foreground truncate">{firstName}</p>
+            <p className="text-sm text-muted-foreground truncate">{firstName}</p>
           )}
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             {patient.visitCount} {patient.visitCount === 1 ? 'visit' : 'visits'}
           </p>
         </div>
@@ -119,7 +119,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
           aria-label={`View profile for ${patient.displayName}`}
           onClick={(e) => { e.stopPropagation(); onProfile(patient); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onProfile(patient); } }}
-          className="mx-3 mb-1 min-h-[44px] flex items-center py-2 text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
+          className="mx-4 mb-1 min-h-[44px] flex items-center py-2 text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline text-left"
         >
           View Profile
         </button>
@@ -127,7 +127,7 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
 
       {/* Status badges */}
       {(patient.needsFollowUp || patient.hasBalance) && (
-        <div className="flex gap-1 px-3 pb-2">
+        <div className="flex gap-1 px-4 pb-2">
           {patient.needsFollowUp && (
             <span
               data-testid="follow-up-indicator"
@@ -155,8 +155,8 @@ export function PatientFolderCard({ patient, onClick, onProfile }: PatientFolder
       )}
 
       {/* Last visit */}
-      <div className="px-3 pb-2.5">
-        <p className="text-[10px] text-muted-foreground/70">{formatLastVisit(patient.lastVisit)}</p>
+      <div className="px-4 pb-3">
+        <p className="text-xs text-muted-foreground/70">{formatLastVisit(patient.lastVisit)}</p>
       </div>
     </div>
   );
