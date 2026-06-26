@@ -181,9 +181,15 @@ export function WorkspacePaymentModal({
 
   const subtotalCents = lineItems.reduce((sum, item) => sum + item.priceCents, 0);
 
-  // Most recent non-voided invoice
-  const latestInvoice = invoices
-    .filter((inv) => inv.status !== 'voided')
+  // THIS visit's invoice (one invoice per visit). Previously this took the patient's
+  // most-recent non-voided invoice across ALL visits, so a prior visit's PAID invoice
+  // surfaced on the current (unbilled) visit: the banner showed "Paid / balance 0"
+  // while the body listed this visit's pending treatments (summary-vs-body mismatch),
+  // and "Record Payment" re-opened that paid invoice — a dead-end with no way to bill
+  // the current work (item 11). visitId is on the wire (DentalInvoice.visitId), so
+  // scope to it: no invoice for this visit → the Create-Invoice path is offered.
+  const visitInvoice = invoices
+    .filter((inv) => inv.status !== 'voided' && inv.visitId === visitId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   async function handleCreateInvoice() {
@@ -243,15 +249,15 @@ export function WorkspacePaymentModal({
               <div className="flex h-14 items-center justify-center">
                 <span className="text-sm text-muted-foreground">Checking invoices…</span>
               </div>
-            ) : latestInvoice ? (
+            ) : visitInvoice ? (
               <InvoiceBanner
-                invoiceId={latestInvoice.id}
-                invoiceNumber={latestInvoice.invoiceNumber}
-                status={latestInvoice.status}
-                totalCents={latestInvoice.totalCents}
-                paidCents={latestInvoice.paidCents}
-                balanceCents={latestInvoice.balanceCents}
-                onViewDetail={() => setInvoiceDetailId(latestInvoice.id)}
+                invoiceId={visitInvoice.id}
+                invoiceNumber={visitInvoice.invoiceNumber}
+                status={visitInvoice.status}
+                totalCents={visitInvoice.totalCents}
+                paidCents={visitInvoice.paidCents}
+                balanceCents={visitInvoice.balanceCents}
+                onViewDetail={() => setInvoiceDetailId(visitInvoice.id)}
               />
             ) : null}
 
@@ -308,10 +314,10 @@ export function WorkspacePaymentModal({
 
           {/* Footer actions */}
           <div className="shrink-0 border-t border-border px-5 py-4">
-            {latestInvoice ? (
+            {visitInvoice ? (
               <button
                 type="button"
-                onClick={() => setInvoiceDetailId(latestInvoice.id)}
+                onClick={() => setInvoiceDetailId(visitInvoice.id)}
                 data-testid="open-invoice-detail-btn"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px]"
               >
