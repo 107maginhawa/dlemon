@@ -1562,7 +1562,9 @@ export const DentalChartSchema = z.object({
   proposed: z.array(z.number().int()),
   completed: z.array(z.number().int()),
   declined: z.array(z.number().int())
-}).optional()
+}).optional(),
+  changedThisVisit: z.array(z.number().int()).optional(),
+  terminalTeeth: z.array(z.number().int()).optional()
 });
 
 export const DentalChartLayerSetsSchema = z.object({

@@ -2977,20 +2977,29 @@ export type DentalChart = {
     patientId: Uuid;
     teeth: Array<ToothChartState>;
     /**
-     * Per-visit status layers for this visit's recorded treatments (see DentalChartLayerSets). Omitted on the baseline-fallback path.
+     * Cumulative as-of status layers for this visit (see DentalChartLayerSets). Omitted on the baseline-fallback path.
      */
     layers?: {
         proposed: Array<number>;
         completed: Array<number>;
         declined: Array<number>;
     };
+    /**
+     * FDI tooth numbers whose layer transitioned IN this visit (drives the "changed this visit" cue).
+     */
+    changedThisVisit?: Array<number>;
+    /**
+     * FDI tooth numbers in a terminal state (missing/extracted) as-of this visit — stripped from the actionable layers, painted at top precedence.
+     */
+    terminalTeeth?: Array<number>;
 };
 
 /**
- * Per-visit treatment layer sets — FDI tooth numbers derived from THIS visit's
- * own treatments (precedence completed > proposed > declined). Lets historical
- * carousel snapshots paint Completed/Declined accurately as-of-that-visit,
- * instead of defaulting every tooth to Existing/baseline.
+ * Cumulative as-of treatment layer sets — FDI tooth numbers derived from the
+ * patient's whole charted treatment history AS OF this visit's date (precedence
+ * proposed > completed > declined). Lets each historical carousel card paint the
+ * chart state at that point in time (e.g. a filling stays Treated on later cards),
+ * instead of only this visit's deltas.
  */
 export type DentalChartLayerSets = {
     proposed: Array<number>;
