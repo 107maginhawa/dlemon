@@ -31,6 +31,15 @@ export function PaymentSummaryBar({ treatments, isReadOnly, onContinue, onReview
   ).length;
   const totalAmount = billable.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
 
+  // Estimate = active planned work (diagnosed|planned). Non-payable, but a
+  // first-class object the dentist can review/present (Square/Stripe). When
+  // nothing is billable yet, the CTA opens this estimate instead of dead-ending.
+  const estimateAmount = treatments
+    .filter((t) => t.status === 'diagnosed' || t.status === 'planned')
+    .reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
+  const hasEstimate = estimateAmount > 0;
+  const estimateOnly = billableCount === 0 && hasEstimate;
+
   // Issue 2: name WHAT is pending, and when there's anything pending make it a
   // clickable affordance that routes to the Treatment Breakdown.
   const pendingLabel = `${pendingCount} treatment${pendingCount === 1 ? '' : 's'} pending`;
@@ -55,12 +64,15 @@ export function PaymentSummaryBar({ treatments, isReadOnly, onContinue, onReview
         {treatments.length === 0 ? (
           'No treatments yet'
         ) : billableCount === 0 ? (
-          // Nothing billable yet: explain WHY (planned, not performed) — never a
-          // payable total. This is the all-pending state that used to 422 on click.
+          // Nothing billable yet: show the (non-payable) estimate total + WHY,
+          // never a payable "billable" total. Used to 422 on click; now reviewable.
           <>
             {pendingNode}
             {' · '}
-            <span>not yet billable</span>
+            <span className="font-semibold text-foreground" data-testid="estimate-amount">
+              {CURRENCY_SYMBOL}
+              {estimateAmount.toLocaleString(APP_LOCALE)} estimate
+            </span>
           </>
         ) : (
           <>
@@ -81,12 +93,16 @@ export function PaymentSummaryBar({ treatments, isReadOnly, onContinue, onReview
       {/* PAY-01/PAY-02: open payment modal inline */}
       <button
         type="button"
-        disabled={billableCount === 0 && !isReadOnly}
+        disabled={billableCount === 0 && !hasEstimate && !isReadOnly}
         onClick={onContinue}
         className="rounded-lg bg-lemon px-5 py-2 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover min-h-[44px] disabled:opacity-50"
         data-testid="continue-to-payment-btn"
       >
-        {isReadOnly ? 'View Invoice' : `Continue to Payment (${billableCount})`}
+        {isReadOnly
+          ? 'View Invoice'
+          : estimateOnly
+            ? 'Review Estimate'
+            : `Continue to Payment (${billableCount})`}
       </button>
     </footer>
   );

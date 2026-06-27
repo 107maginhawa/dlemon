@@ -42,17 +42,20 @@ function buttonCount(): number {
 }
 
 describe('PaymentSummaryBar — footer figures match the billable (performed|verified) set', () => {
-  test('all-pending visit: nothing billable → no payable total, disabled pay button, pending context', () => {
+  test('all-pending visit: no payable total, but an actionable "Review Estimate" (not a dead-end)', () => {
     const treatments = [tx('diagnosed', 1000), tx('planned', 4500)];
     render(<PaymentSummaryBar treatments={treatments} isReadOnly={false} onContinue={() => {}} />);
 
-    // No payable total is advertised when nothing is billable.
+    // No payable "billable" total is advertised when nothing is billable…
     expect(screen.queryByTestId('treatment-total')).toBeNull();
-    // The user is told WHY (planned, not yet billable) rather than shown a 422-bound CTA.
-    expect(screen.getByTestId('treatment-summary').textContent ?? '').toMatch(/pending|not yet billable/i);
-    // Button is disabled and counts 0 billable.
-    expect((screen.getByTestId('continue-to-payment-btn') as HTMLButtonElement).disabled).toBe(true);
-    expect(buttonCount()).toBe(0);
+    // …but the estimate is surfaced and the button is an enabled, non-payable
+    // "Review Estimate" (Square/Stripe: estimates are viewable, never dead-ends).
+    expect(screen.getByTestId('estimate-amount').textContent ?? '').toMatch(/5,500|5500/);
+    const btn = screen.getByTestId('continue-to-payment-btn') as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+    expect(btn.textContent ?? '').toMatch(/review estimate/i);
+    // It is NOT labelled as a payable "Continue to Payment (N)".
+    expect(btn.textContent ?? '').not.toMatch(/continue to payment \(/i);
   });
 
   test('mixed visit: count + total are the BILLABLE subset, not every treatment', () => {
