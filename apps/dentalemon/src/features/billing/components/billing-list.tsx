@@ -85,9 +85,18 @@ export function summarizeInvoices(invoices: Invoice[]): {
     if (inv.status === 'overdue') {
       overdueAmount += inv.balanceCents;
     }
-    const created = new Date(inv.createdAt);
-    if (created.getMonth() === currentMonth && created.getFullYear() === currentYear) {
-      collectedThisMonth += inv.paidCents;
+    // G9: "collected this month" must bucket by when money was COLLECTED, not when
+    // the invoice was created. `paidAt` is stamped (server addPayment) when the
+    // invoice closes (balance→0) and nulled on void, so it's the collection date.
+    // ponytail: counts an invoice's full paidCents in its close month — correct for
+    // full payments (the clinic norm); partial payments aren't recognized until the
+    // invoice closes. Upgrade path: a server payments-by-date KPI for partial-accurate
+    // recognition. (clinic-local month; cross-tz exactness deferred with that KPI.)
+    if (inv.paidAt) {
+      const paid = new Date(inv.paidAt);
+      if (paid.getMonth() === currentMonth && paid.getFullYear() === currentYear) {
+        collectedThisMonth += inv.paidCents;
+      }
     }
   }
 
