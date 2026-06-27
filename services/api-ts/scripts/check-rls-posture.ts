@@ -72,6 +72,12 @@ const EXPECTED_RLS_TABLES: readonly string[] = [
   'dental_occlusion_screening',
   // P6 (0115) — chart-anchored perio reading (per-site probing depths / BOP / CAL)
   'dental_perio_tooth_reading',
+  // Deposit-invoice work (0116) — money tables the deposit/credit path writes to.
+  // dental_patient_credit (the prepaid wallet) and dental_payment_refund (refund
+  // records) carry PHI + money and were previously unarmed; armed here so the
+  // deposit reconciliation/refund path enforces branch scope as a second wall.
+  'dental_patient_credit',
+  'dental_payment_refund',
 ];
 
 interface PostureRow {
