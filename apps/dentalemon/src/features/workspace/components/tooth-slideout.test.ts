@@ -281,6 +281,48 @@ describe('ToothSlideout', () => {
     expect(screen.getByText('✓ Treated')).not.toBeNull();
   });
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // P2-B — the Overview/Treatment/Review stepper is the ADD-A-NEW-ENTRY wizard.
+  // It must show ONLY when recording on an OPEN chart (!readOnly && visitId).
+  // When readOnly OR no visitId (reading history / closed chart) the stepper
+  // indicator is hidden and only the Overview content renders.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  test('P2-B: shows the stepper indicator when chart is open (!readOnly && visitId)', () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.getByTestId('tooth-stepper-indicator')).not.toBeNull();
+  });
+
+  test('P2-B: hides the stepper indicator when readOnly (closed chart)', () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.queryByTestId('tooth-stepper-indicator')).toBeNull();
+  });
+
+  test('P2-B: hides the stepper indicator when no visitId is present (reading history)', () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+    expect(screen.queryByTestId('tooth-stepper-indicator')).toBeNull();
+  });
+
+  // P2-B: even with the stepper hidden, the Overview content (breakdown cards) still
+  // renders — hiding the wizard chrome must not hide the read content.
+  test('P2-B: still renders Overview breakdown content when the stepper is hidden (readOnly)', async () => {
+    global.fetch = mock(() => jsonResponse({
+      data: [{
+        visitId: 'v1', visitDate: '2026-06-27T00:00:00Z', toothNumber: 11,
+        state: 'watchlist', treatmentDescription: 'Periodic oral evaluation',
+        surfaces: [], treatmentStatus: 'planned', treatmentPriceCents: 80000,
+        eventKind: 'treatment',
+      }],
+      pagination: { totalCount: 1, limit: 20, offset: 0 },
+    })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    expect(screen.queryByTestId('tooth-stepper-indicator')).toBeNull();
+    expect(await screen.findByTestId('breakdown-card-v1-0')).not.toBeNull();
+  });
+
   // P2-E: a closed chart (readOnly) renders NO Edit toggle and NO per-card actions,
   // and shows a visible "Chart closed — corrections via Amendment" banner so the
   // locked state is legible (not just an absence of buttons).

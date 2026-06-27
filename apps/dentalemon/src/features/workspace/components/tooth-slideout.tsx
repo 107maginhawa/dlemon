@@ -283,8 +283,14 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
         </div>
       )}
 
-      {/* Step indicator — numbered circles with connecting lines */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      {/* Step indicator — numbered circles with connecting lines.
+          P2-B: the Overview→Treatment→Review stepper is the ADD-A-NEW-ENTRY wizard.
+          Show it ONLY when recording a new entry on an OPEN chart (!readOnly && visitId).
+          When readOnly OR no visitId (reading history / closed chart) hide the wizard
+          chrome entirely and render the Overview content full-height. The footer
+          Continue/Back nav is already gated on !readOnly. */}
+      {!readOnly && visitId && (
+      <div data-testid="tooth-stepper-indicator" className="flex items-center justify-between px-4 py-3 border-b">
         {steps.map((s, i) => {
           const isActive = step === s;
           const isCompleted = i < stepIdx;
@@ -325,6 +331,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
           );
         })}
       </div>
+      )}
 
       {/* Step content */}
       <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
