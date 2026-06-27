@@ -44,6 +44,13 @@ export async function applyCreditToInvoice(
     throw new BusinessLogicError('Cannot apply credit to a voided invoice', 'INVOICE_VOIDED');
   }
 
+  // §g F-07: a deposit invoice is itself the source of a deposit credit; applying
+  // credit TO it would let the deposit pay itself (circular). Credit is applied
+  // only to standard (performed-work) invoices.
+  if (invoice.kind === 'deposit') {
+    throw new BusinessLogicError('Cannot apply credit to a deposit invoice', 'INVOICE_IS_DEPOSIT');
+  }
+
   const result = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
     const invoiceRepo = new DentalInvoiceRepository(tx);
     const creditRepo = new DentalPatientCreditRepository(tx);

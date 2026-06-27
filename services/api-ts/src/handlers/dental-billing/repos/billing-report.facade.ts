@@ -31,6 +31,9 @@ export async function getOutstandingInvoicesForAging(
 ) {
   const conditions: SQL<unknown>[] = [
     ne(dentalInvoices.status, 'voided'),
+    // §g DQ3 / F-04: deposit invoices are advances, not service receivables —
+    // excluded from AR aging so a prepaid/unpaid deposit is never chased as AR.
+    ne(dentalInvoices.kind, 'deposit'),
     gt(dentalInvoices.balanceCents, 0),
   ];
   if (branchId) {
@@ -68,7 +71,14 @@ export async function getInvoicesForKpis(
   branchId?: string,
   allowedBranchIds?: string[],
 ) {
-  const conditions: SQL<unknown>[] = [ne(dentalInvoices.status, 'voided')];
+  const conditions: SQL<unknown>[] = [
+    ne(dentalInvoices.status, 'voided'),
+    // §g DQ3 / F-04: deposit invoices are excluded from revenue/collections KPIs
+    // (billed, collected, AR, aging). A deposit is unearned revenue; its cash
+    // re-enters the KPI as the credit-application on the performed-work invoice's
+    // paidCents, so excluding deposits avoids double-counting the same peso.
+    ne(dentalInvoices.kind, 'deposit'),
+  ];
   if (branchId) {
     conditions.push(eq(dentalInvoices.branchId, branchId));
   } else if (allowedBranchIds) {

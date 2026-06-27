@@ -2132,6 +2132,22 @@ export type CreateDentalVisitRequest = {
     localId?: string;
 };
 
+export type CreateDepositInvoiceRequest = {
+    visitId: Uuid;
+    patientId: Uuid;
+    branchId: Uuid;
+    dentistMemberId: Uuid;
+    /**
+     * Deposit amount in cents (≥ 1). Capped at the visit's planned estimate total
+     * in the handler. VAT is carved out of this gross per the branch tax mode.
+     */
+    depositCents: number;
+    /**
+     * Optional client-generated id for offline-first idempotent replay (F-06).
+     */
+    localId?: string;
+};
+
 export type CreateFindingRequest = {
     toothNumber: number;
     surface?: ToothSurfaceCode;
@@ -3912,6 +3928,11 @@ export type DentalInvoice = {
     dentistMemberId: Uuid;
     invoiceNumber: string;
     status: DentalInvoiceStatus;
+    /**
+     * §g DQ3: `standard` (default) or `deposit`. Deposit invoices are advance
+     * payments on planned work, excluded from recognized revenue/AR.
+     */
+    kind: 'standard' | 'deposit';
     subtotalCents: number;
     discountCents: number;
     taxCents: number;
@@ -3939,6 +3960,8 @@ export type DentalInvoice = {
     createdAt: Date;
     updatedAt: Date;
 };
+
+export type DentalInvoiceKind = 'standard' | 'deposit';
 
 export type DentalInvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue' | 'voided' | 'uncollectible';
 
@@ -65890,6 +65913,43 @@ export type CreateDentalInvoiceResponses = {
 };
 
 export type CreateDentalInvoiceResponse = CreateDentalInvoiceResponses[keyof CreateDentalInvoiceResponses];
+
+export type CreateDentalDepositInvoiceData = {
+    body: CreateDepositInvoiceRequest;
+    path?: never;
+    query?: never;
+    url: '/dental/billing/invoices/deposit';
+};
+
+export type CreateDentalDepositInvoiceErrors = {
+    /**
+     * Validation error response
+     */
+    400: ValidationError;
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+    /**
+     * Resource not found response
+     */
+    404: NotFoundError;
+    /**
+     * Conflict response
+     */
+    409: ConflictError;
+};
+
+export type CreateDentalDepositInvoiceError = CreateDentalDepositInvoiceErrors[keyof CreateDentalDepositInvoiceErrors];
+
+export type CreateDentalDepositInvoiceResponses = {
+    /**
+     * Resource created response
+     */
+    201: DentalInvoice;
+};
+
+export type CreateDentalDepositInvoiceResponse = CreateDentalDepositInvoiceResponses[keyof CreateDentalDepositInvoiceResponses];
 
 export type GetDentalInvoiceData = {
     body?: never;
