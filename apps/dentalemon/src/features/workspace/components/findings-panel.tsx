@@ -140,7 +140,7 @@ export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanel
       {/* Active findings list */}
       <ul className="mt-3 flex flex-col gap-1.5">
         {activeFindings.length === 0 && (
-          <li className="text-[11px] text-muted-foreground">No active findings on this tooth.</li>
+          <li className="text-[11px] text-muted-foreground">No new findings to record on this tooth. Past flagged findings appear in the Treatment Breakdown.</li>
         )}
         {activeFindings.map((f) => (
           <li key={f.id} data-testid={`finding-row-${f.id}`} className="rounded border p-2">

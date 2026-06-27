@@ -17,7 +17,18 @@ import { getSurfacesForTooth, isAnteriorTooth } from './five-surface-selector.he
 import type { ToothSurface } from './five-surface-selector.helpers';
 import { useToothHistory } from '../hooks/use-tooth-history';
 import type { ChartEntryClassification } from './dental-chart.helpers';
+import { findingLabel } from './findings-vocabulary';
+import type { ConditionCode } from '@monobase/sdk-ts/generated';
 import { APP_LOCALE } from '@/constants/brand';
+
+// Two-axis split of the odontogram `state`: `watchlist` is a disposition (State
+// axis); every other clinical value (caries / fractured / …) is a Condition. This
+// is presentational categorisation of the EXISTING state value — no new derivation.
+const STATE_AXIS_VALUES = new Set<ToothState>(['watchlist']);
+
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 const ENTRY_CLASSIFICATIONS: { value: ChartEntryClassification; label: string; ariaLabel: string; description: string }[] = [
   { value: 'existing',       label: 'Existing',        ariaLabel: 'Existing',        description: 'Pre-existing condition' },
@@ -260,10 +271,11 @@ export function ToothOverviewStep({
         </span>
       </div>
 
-      {/* Treatment Breakdown table */}
-      {/* overflow-x-auto (not -hidden): the 6-col timeline can exceed the 340px
-          slideout; scroll rather than silently clip the Status/Total columns. */}
-      <div className="rounded-xl border border-border overflow-x-auto">
+      {/* Treatment Breakdown — stacked card list (one card per visit-event).
+          Phase 1: replaced the cramped 6-column table with iPad-friendly cards so
+          the colgroup overlap / mid-word wrap is structurally gone. Condition and
+          State are SEPARATE labeled fields per the two-axis model. */}
+      <div className="rounded-xl border border-border overflow-hidden">
         <div className="px-3 py-2 bg-secondary/30 border-b border-border">
           <h3 className="text-sm font-bold text-foreground">Treatment Breakdown</h3>
         </div>
@@ -287,86 +299,90 @@ export function ToothOverviewStep({
         )}
 
         {!isLoading && !error && history.length > 0 && (
-          <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-xs">
-            {/* table-fixed + colgroup: the panel is 340px; fixed column widths keep
-                the headline Status/Total visible at rest instead of being pushed
-                off-screen by a long CDT name (which now wraps within its column). */}
-            <colgroup>
-              <col style={{ width: '19%' }} />
-              <col style={{ width: '8%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '17%' }} />
-              <col style={{ width: '22%' }} />
-            </colgroup>
-            <thead>
-              <tr className="bg-secondary/50">
-                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Date</th>
-                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Surface</th>
-                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Condition</th>
-                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Treatment</th>
-                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Status</th>
-                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((entry, idx) => {
-                // Two-axis ledger: a finding event reads "Flagged"; a treatment event
-                // reads its lifecycle status — so a finding-only row is never blank.
-                const badge = getToothHistoryEventBadge({
-                  eventKind: (entry as { eventKind?: 'finding' | 'treatment' }).eventKind,
-                  treatmentStatus: entry.treatmentStatus,
-                });
-                return (
-                <tr key={`${entry.visitId}-${idx}`} className="border-t border-border">
-                  <td className="px-2 py-2 text-muted-foreground tabular-nums">
-                    {entry.visitDate
-                      ? new Date(entry.visitDate).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric', year: '2-digit' })
-                      : '—'}
-                  </td>
-                  <td className="px-2 py-2 text-foreground uppercase">
-                    {entry.surfaces && entry.surfaces.length > 0
-                      ? entry.surfaces.map(s => s.charAt(0).toUpperCase()).join('')
-                      : '—'}
-                  </td>
-                  <td className="px-2 py-2 text-foreground capitalize">{entry.state}</td>
-                  {/* break-words so a long CDT name wraps within its fixed column
-                      instead of forcing the table wider; full text in the title. */}
-                  <td className="px-2 py-2 text-foreground break-words" title={entry.treatmentDescription || entry.treatmentCdtCode || undefined}>
-                    {entry.treatmentDescription || entry.treatmentCdtCode || '—'}
-                  </td>
-                  <td className="px-2 py-2">
-                    {badge ? (
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${badge.className}`}>
-                        {badge.label}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/40" aria-hidden>—</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-2 text-foreground text-right font-medium">
-                    {entry.treatmentPriceCents
-                      ? `₱${(entry.treatmentPriceCents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
-                      : '—'}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
+          <div className="flex flex-col gap-2 p-2">
+            {history.map((entry, idx) => {
+              // Two-axis ledger: a finding event reads "Flagged"; a treatment event
+              // reads its lifecycle status — so a finding-only row is never blank.
+              const badge = getToothHistoryEventBadge({
+                eventKind: (entry as { eventKind?: 'finding' | 'treatment' }).eventKind,
+                treatmentStatus: entry.treatmentStatus,
+              });
+              const isStateAxis = STATE_AXIS_VALUES.has(entry.state);
+              // Condition axis: prefer the curated finding vocab label, else the
+              // odontogram state — but only when the state is itself a condition.
+              const conditionLabel = entry.conditionCode
+                ? findingLabel(entry.conditionCode as ConditionCode)
+                : !isStateAxis
+                  ? titleCase(entry.state)
+                  : null;
+              const stateLabel = isStateAxis ? titleCase(entry.state) : null;
+              const surfaceInitials = entry.surfaces && entry.surfaces.length > 0
+                ? entry.surfaces.map(s => s.charAt(0).toUpperCase()).join('')
+                : null;
+              const treatmentText = entry.treatmentDescription || entry.treatmentCdtCode || null;
+              return (
+                <div
+                  key={`${entry.visitId}-${idx}`}
+                  data-testid={`breakdown-card-${entry.visitId}-${idx}`}
+                  className="rounded-lg border border-border bg-card p-3 flex flex-col gap-1.5"
+                >
+                  {/* Row 1: date left · status badge + price right */}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {entry.visitDate
+                        ? new Date(entry.visitDate).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—'}
+                      {surfaceInitials && (
+                        <span className="ml-1.5 uppercase text-foreground/70">{surfaceInitials}</span>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {badge && (
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      )}
+                      {entry.treatmentPriceCents ? (
+                        <span className="text-sm font-medium text-foreground tabular-nums">
+                          ₱{(entry.treatmentPriceCents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Row 2: treatment description (omit the line when there is none) */}
+                  {treatmentText && (
+                    <p className="text-sm font-medium text-foreground break-words">{treatmentText}</p>
+                  )}
+
+                  {/* Row 3: two-axis labeled fields — Condition and State, "—" when absent */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+                    <span className="text-muted-foreground">
+                      <span className="font-semibold">Condition</span>
+                      {': '}
+                      <span className="text-foreground">{conditionLabel ?? '—'}</span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      <span className="font-semibold">State</span>
+                      {': '}
+                      <span className="text-foreground">{stateLabel ?? '—'}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Total footer — unchanged sum over treatmentPriceCents */}
             {history.some(e => e.treatmentPriceCents) && (
-              <tfoot>
-                <tr className="bg-secondary/30 border-t-2 border-border">
-                  <td colSpan={5} className="px-2 py-2 font-bold text-foreground">Total</td>
-                  <td className="px-2 py-2 font-bold text-foreground text-right">
-                    ₱{(history
-                      .reduce((sum, e) => sum + (e.treatmentPriceCents || 0), 0) / 100)
-                      .toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              </tfoot>
+              <div className="mt-1 flex items-center justify-between rounded-lg bg-secondary/30 border border-border px-3 py-2">
+                <span className="text-sm font-bold text-foreground">Total</span>
+                <span className="text-sm font-bold text-foreground tabular-nums">
+                  ₱{(history
+                    .reduce((sum, e) => sum + (e.treatmentPriceCents || 0), 0) / 100)
+                    .toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
             )}
-          </table>
           </div>
         )}
       </div>

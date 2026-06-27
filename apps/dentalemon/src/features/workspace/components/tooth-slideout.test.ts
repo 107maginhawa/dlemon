@@ -126,6 +126,34 @@ describe('ToothSlideout', () => {
     expect(screen.getAllByText(/₱125\.00/).length).toBeGreaterThanOrEqual(2);
   });
 
+  // Phase-1 card layout: the Treatment Breakdown is a stacked card list (not a
+  // 6-column table). Each visit-event is a card that labels the two axes
+  // SEPARATELY — a "Condition" field AND a "State" field — per the two-axis model.
+  // The old table emits a single "Condition" column header and NO "State" label,
+  // so this fails on the table and passes once cards render.
+  test('Phase-1: breakdown renders per-visit cards with separately-labeled Condition and State', async () => {
+    global.fetch = mock(() => jsonResponse({
+      data: [{
+        visitId: 'v1', visitDate: '2026-06-27T00:00:00Z', toothNumber: 11,
+        state: 'watchlist', treatmentDescription: 'Periodic oral evaluation',
+        surfaces: [], treatmentStatus: 'planned', treatmentPriceCents: 80000,
+        eventKind: 'treatment',
+      }],
+      pagination: { totalCount: 1, limit: 20, offset: 0 },
+    })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps()), { wrapper: makeWrapper() });
+
+    // One card per visit-event (testid the table never emitted)
+    const card = await screen.findByTestId('breakdown-card-v1-0');
+    expect(card).not.toBeNull();
+    // Two-axis model: BOTH a "Condition" and a "State" labeled field WITHIN the card.
+    // The table only had a "Condition" column header and never a "State" label.
+    const within = (label: string) =>
+      Array.from(card.querySelectorAll('span')).some((el) => el.textContent === label);
+    expect(within('State')).toBe(true);
+    expect(within('Condition')).toBe(true);
+  });
+
   // P4 + FIX-007: the read-only Add-Amendment affordance must render only when a
   // visitId AND a resolvable originalRecordId are supplied. The amendment validator
   // requires originalRecordId to be a real UUID, so showing the button without one
