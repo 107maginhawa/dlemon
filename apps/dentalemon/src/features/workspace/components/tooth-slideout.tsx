@@ -338,6 +338,13 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             onAssignCondition={handleAssignCondition}
             entryClassification={entryClassification}
             onSelectEntryClassification={setEntryClassification}
+            // P2-D/P2-E: the Treatment Breakdown card list needs the visit context to
+            // gate in-panel edit actions. readOnly hides all live mutations (closed
+            // chart → amendment path); visitId is the PATCH handle. When the chart is
+            // open WITHOUT a visit (no active visit), force read so no mutation can
+            // fire against an empty visitId (mirrors treatment-table.tsx:148).
+            readOnly={readOnly || !visitId}
+            visitId={visitId}
           />
         )}
 

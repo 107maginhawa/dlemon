@@ -992,6 +992,46 @@ describe('getToothHistory handler', () => {
     expect(body.data[0].treatmentCdtCode).toBeUndefined();
   });
 
+  test('P2-C: treatment-kind entries carry treatmentId; finding-kind entries omit it', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    // Tooth 11: flagged with a treatment (treatment-kind row → must carry treatmentId).
+    // Tooth 21: flagged with NO treatment (finding-kind row → treatmentId omitted).
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [
+        { toothNumber: 11, state: 'caries', conditionCode: 'K02.1' },
+        { toothNumber: 21, state: 'caries', conditionCode: 'caries' },
+      ],
+    });
+    const treatmentId = crypto.randomUUID();
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values({
+      id: treatmentId, visitId: completedVisit!.id, patientId: PATIENT_ID,
+      toothNumber: 11, cdtCode: 'D2391', description: 'Resin composite',
+      surfaces: ['occlusal'], priceCents: 12500, status: 'planned',
+      carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+
+    const app = buildTestApp(TEST_USER);
+
+    // Treatment-kind row on tooth 11 → treatmentId === the treatment's id.
+    const treatRes = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/11`);
+    expect(treatRes.status).toBe(200);
+    const treatBody = await treatRes.json() as any;
+    const treatEntry = treatBody.data.find((e: any) => e.eventKind === 'treatment');
+    expect(treatEntry).toBeDefined();
+    expect(treatEntry.treatmentId).toBe(treatmentId);
+
+    // Finding-kind row on tooth 21 → no treatment, treatmentId omitted.
+    const findRes = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/21`);
+    expect(findRes.status).toBe(200);
+    const findBody = await findRes.json() as any;
+    const findEntry = findBody.data.find((e: any) => e.eventKind === 'finding');
+    expect(findEntry).toBeDefined();
+    expect(findEntry.treatmentId).toBeUndefined();
+  });
+
   test('a treatment on a tooth absent from the visit chart snapshot is still returned (no silent drop)', async () => {
     const completedVisit = await seedCompletedVisit();
     const chartRepo = new DentalChartRepository(db);

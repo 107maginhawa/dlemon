@@ -8,7 +8,7 @@
  * Spec:      docs/superpowers/specs/2026-05-09-workspace-reconciliation-design.md §4.3
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { getToothInfo, getToothFillColor, getToothHistoryEventBadge } from './dental-chart.helpers';
 import type { ToothState } from './dental-chart.helpers';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
@@ -16,10 +16,18 @@ import type { SurfaceStatus } from './dental/types';
 import { getSurfacesForTooth, isAnteriorTooth } from './five-surface-selector.helpers';
 import type { ToothSurface } from './five-surface-selector.helpers';
 import { useToothHistory } from '../hooks/use-tooth-history';
+import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
+import { useUpdateTreatment } from '../hooks/use-update-treatment';
+import { DeclineTreatmentPopover, DismissTreatmentPopover } from './treatment-row-popovers';
 import type { ChartEntryClassification } from './dental-chart.helpers';
 import { findingLabel } from './findings-vocabulary';
 import type { ConditionCode } from '@monobase/sdk-ts/generated';
 import { APP_LOCALE } from '@/constants/brand';
+
+// Treatment lifecycle statuses the panel can act on. Mirrors the FSM source of
+// truth (treatment.schema.ts) — the panel walks diagnosed→planned→performed via
+// useMarkTreatmentDone (two-step; never a single jump, which 422s).
+type TreatmentStatus = 'diagnosed' | 'planned' | 'performed' | 'verified' | 'dismissed' | 'declined';
 
 // Two-axis split of the odontogram `state`: `watchlist` is a disposition (State
 // axis); every other clinical value (caries / fractured / …) is a Condition. This
@@ -46,6 +54,13 @@ interface ToothOverviewStepProps {
   onAssignCondition: (state: ToothState) => void;
   entryClassification?: ChartEntryClassification;
   onSelectEntryClassification: (c: ChartEntryClassification) => void;
+  /** P2-E: closed chart (or no active visit) → no live edit actions; the breakdown
+   *  shows a "Chart closed — corrections via Amendment" banner instead. Defaults to
+   *  read-only so the card list can never mutate unless a caller opts in. */
+  readOnly?: boolean;
+  /** P2-D: the active visit id; the PATCH handle for in-panel Advance/Decline/Dismiss
+   *  (PATCH /dental/visits/{visitId}/treatments/{treatmentId}). */
+  visitId?: string;
 }
 
 const TOOTH_STATES = [
@@ -96,10 +111,50 @@ export function ToothOverviewStep({
   onAssignCondition,
   entryClassification,
   onSelectEntryClassification,
+  readOnly = true,
+  visitId,
 }: ToothOverviewStepProps) {
   const { name, type } = getToothInfo(toothNumber);
   const surfaces = getSurfacesForTooth(toothNumber);
   const { history, isLoading, error } = useToothHistory({ patientId, toothNumber });
+
+  // P2-D: in-panel edit mode. Read is the DEFAULT — the card list stays a pure read
+  // surface until the clinician deliberately taps "Edit" (protects against an
+  // accidental gloved tap mutating a clinical record). Live actions can only fire
+  // when the chart is open AND a visit is set.
+  const canEdit = !readOnly && !!visitId;
+  const [editing, setEditing] = useState(false);
+  // Reset edit mode when the chart context changes (tooth/visit) or it goes read-only,
+  // so a stale "Edit" choice never leaks across teeth or after a visit closes.
+  useEffect(() => {
+    if (!canEdit) setEditing(false);
+  }, [canEdit, toothNumber, visitId]);
+
+  // Mutation hooks — reuse the proven surfaces from treatment-table.tsx; NO new
+  // mutation logic. markDone walks the FSM in two steps (diagnosed→planned→performed).
+  const {
+    markDone,
+    isPending: isMarkDonePending,
+    isError: isMarkDoneError,
+  } = useMarkTreatmentDone();
+  const updateMutation = useUpdateTreatment(visitId ?? '');
+  // Inline error surfacing — which card triggered a 422 (e.g. consent on →performed).
+  const [markDoneErrorId, setMarkDoneErrorId] = useState<string | null>(null);
+  // Decline / Dismiss popover state, keyed by treatment id (mirrors treatment-table).
+  const [openDeclineId, setOpenDeclineId] = useState<string | null>(null);
+  const [refusalReason, setRefusalReason] = useState<Record<string, string>>({});
+  const [openDismissId, setOpenDismissId] = useState<string | null>(null);
+  const [dismissReason, setDismissReason] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isMarkDoneError) setMarkDoneErrorId(null);
+  }, [isMarkDoneError]);
+
+  // Is there any treatment-kind row to act on? The Edit toggle only appears when
+  // there is (a finding-only ledger has nothing to advance/decline/dismiss).
+  const hasTreatmentRow = history.some(
+    (e) => (e as { eventKind?: 'finding' | 'treatment' }).eventKind === 'treatment',
+  );
 
   // Build SurfaceStatus[] for the SVG diagram from surfaceConditions
   const surfacesStatus: SurfaceStatus[] = Object.entries(surfaceConditions).map(
@@ -276,9 +331,36 @@ export function ToothOverviewStep({
           the colgroup overlap / mid-word wrap is structurally gone. Condition and
           State are SEPARATE labeled fields per the two-axis model. */}
       <div className="rounded-xl border border-border overflow-hidden">
-        <div className="px-3 py-2 bg-secondary/30 border-b border-border">
+        <div className="px-3 py-2 bg-secondary/30 border-b border-border flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-foreground">Treatment Breakdown</h3>
+          {/* P2-D: deliberate Edit/Done toggle — read is default. Only when the chart
+              is open, a visit is set, and there is a treatment row to act on. */}
+          {canEdit && hasTreatmentRow && (
+            <button
+              type="button"
+              data-testid="breakdown-edit-toggle"
+              onClick={() => setEditing((v) => !v)}
+              aria-pressed={editing}
+              className="min-h-[44px] px-3 -my-1 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+            >
+              {editing ? 'Done' : 'Edit'}
+            </button>
+          )}
         </div>
+
+        {/* P2-E: closed chart (read-only) → a visible banner so the locked state is
+            legible (not just an absence of buttons). Corrections route to the
+            append-only amendment path surfaced in the slideout footer. */}
+        {readOnly && (
+          <div
+            data-testid="chart-closed-banner"
+            role="status"
+            className="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b border-border text-xs text-muted-foreground"
+          >
+            <span aria-hidden>ⓘ</span>
+            <span>Chart closed — corrections via Amendment</span>
+          </div>
+        )}
 
         {isLoading && (
           <div className="p-3 flex flex-col gap-2">
@@ -320,6 +402,19 @@ export function ToothOverviewStep({
                 ? entry.surfaces.map(s => s.charAt(0).toUpperCase()).join('')
                 : null;
               const treatmentText = entry.treatmentDescription || entry.treatmentCdtCode || null;
+              // P2-D: per-card action gating. Actions exist only in edit mode, only on
+              // TREATMENT cards that carry a treatmentId (P2-C — the PATCH handle).
+              const eventKind = (entry as { eventKind?: 'finding' | 'treatment' }).eventKind;
+              const treatmentId = (entry as { treatmentId?: string }).treatmentId;
+              const status = entry.treatmentStatus as TreatmentStatus | undefined;
+              const isPerformed = status === 'performed' || status === 'verified';
+              const isTerminal = isPerformed || status === 'declined' || status === 'dismissed';
+              const showCardActions =
+                editing && eventKind === 'treatment' && !!treatmentId && !!visitId;
+              // Advance is two-step (FSM-safe): diagnosed → "Mark Planned", planned →
+              // "Mark Done". Never offered on performed/verified (Treated is sticky).
+              const advanceLabel =
+                status === 'diagnosed' ? 'Mark Planned' : status === 'planned' ? 'Mark Done' : null;
               return (
                 <div
                   key={`${entry.visitId}-${idx}`}
@@ -368,6 +463,104 @@ export function ToothOverviewStep({
                       <span className="text-foreground">{stateLabel ?? '—'}</span>
                     </span>
                   </div>
+
+                  {/* P2-D: per-card action row — only in edit mode, only on treatment
+                      cards with a PATCH handle. flex-wrap + ≥44px targets so three
+                      buttons never crowd at 340px and a gloved miss never lands
+                      between two targets. Reuses the proven mutation surfaces. */}
+                  {showCardActions && treatmentId && (
+                    <div className="mt-1 pt-2 border-t border-border/60 flex flex-col gap-1.5">
+                      {isPerformed ? (
+                        // Treated is sticky — no advance/decline; static affordance.
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-600">
+                          ✓ Treated
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {advanceLabel && (
+                            <button
+                              type="button"
+                              data-testid="card-action-mark-done"
+                              disabled={isMarkDonePending}
+                              onClick={() => {
+                                setMarkDoneErrorId(treatmentId);
+                                markDone(
+                                  treatmentId,
+                                  visitId,
+                                  status as Parameters<typeof markDone>[2],
+                                );
+                              }}
+                              className="min-h-[44px] px-3 inline-flex items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+                            >
+                              {advanceLabel}
+                            </button>
+                          )}
+                          {/* Decline — patient refused; reason-gated. Only on diagnosed|planned. */}
+                          {(status === 'diagnosed' || status === 'planned') && (
+                            <span
+                              data-testid="card-action-decline"
+                              className="min-h-[44px] inline-flex items-center rounded-lg border border-border px-3"
+                            >
+                              <DeclineTreatmentPopover
+                                treatmentId={treatmentId}
+                                open={openDeclineId === treatmentId}
+                                reason={refusalReason[treatmentId] ?? ''}
+                                isPending={updateMutation.isPending}
+                                onOpenChange={(o) => setOpenDeclineId(o ? treatmentId : null)}
+                                onReasonChange={(v) =>
+                                  setRefusalReason((prev) => ({ ...prev, [treatmentId]: v }))
+                                }
+                                onConfirm={() => {
+                                  const reason = (refusalReason[treatmentId] ?? '').trim();
+                                  updateMutation.mutate(
+                                    {
+                                      path: { visitId, treatmentId },
+                                      body: { status: 'declined', refusalReason: reason },
+                                    },
+                                    { onSuccess: () => setOpenDeclineId(null) },
+                                  );
+                                }}
+                              />
+                            </span>
+                          )}
+                          {/* Dismiss (mistake-eraser) — soft-hide; row vanishes after refetch. */}
+                          {!isTerminal && (
+                            <span
+                              data-testid="card-action-dismiss"
+                              className="min-h-[44px] inline-flex items-center rounded-lg border border-border px-3"
+                            >
+                              <DismissTreatmentPopover
+                                treatmentId={treatmentId}
+                                open={openDismissId === treatmentId}
+                                reason={dismissReason[treatmentId] ?? ''}
+                                isPending={updateMutation.isPending}
+                                onOpenChange={(o) => setOpenDismissId(o ? treatmentId : null)}
+                                onReasonChange={(v) =>
+                                  setDismissReason((prev) => ({ ...prev, [treatmentId]: v }))
+                                }
+                                onConfirm={() => {
+                                  const reason = (dismissReason[treatmentId] ?? '').trim();
+                                  updateMutation.mutate(
+                                    {
+                                      path: { visitId, treatmentId },
+                                      body: { status: 'dismissed', dismissReason: reason },
+                                    },
+                                    { onSuccess: () => setOpenDismissId(null) },
+                                  );
+                                }}
+                              />
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {/* Inline 422 surface — e.g. consent on →performed (same copy as the table). */}
+                      {isMarkDoneError && markDoneErrorId === treatmentId && (
+                        <p className="text-xs text-destructive">
+                          Consent required — ask patient to sign before completing.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

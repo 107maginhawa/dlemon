@@ -63,6 +63,7 @@ export async function getToothHistory(ctx: HandlerContext) {
     surfaces?: string[];
     treatmentStatus?: string;
     treatmentPriceCents?: number;
+    treatmentId?: string;
     eventKind: 'finding' | 'treatment';
     syncStatus?: string;
   }> = [];
@@ -101,6 +102,10 @@ export async function getToothHistory(ctx: HandlerContext) {
           surfaces: t.surfaces ?? undefined,
           treatmentStatus: t.status,
           treatmentPriceCents: t.priceCents,
+          // P2-C: surface the treatment id so the per-tooth panel can PATCH it
+          // (advance / decline / dismiss). Additive to the OUTPUT only — does
+          // not touch the finding-vs-treatment emit rule.
+          treatmentId: t.id,
           eventKind: 'treatment',
           syncStatus,
         });

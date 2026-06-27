@@ -61856,6 +61856,12 @@ export type ToothHistoryEntry = {
     treatmentStatus?: DentalTreatmentStatus;
     treatmentPriceCents?: number;
     /**
+     * Id of the underlying dental treatment for a treatment-kind row, so the
+     * per-tooth panel can PATCH it (advance / decline / dismiss). Absent on
+     * finding-kind rows (a condition charted with no treatment).
+     */
+    treatmentId?: string;
+    /**
      * Two-axis ledger discriminator: 'treatment' = a treatment event (one row per
      * non-dismissed treatment), 'finding' = a condition-only event (tooth flagged
      * that visit with no treatment). Lets the per-tooth panel read as a lifecycle ledger.

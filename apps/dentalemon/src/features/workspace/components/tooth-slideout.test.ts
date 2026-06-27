@@ -199,4 +199,103 @@ describe('ToothSlideout', () => {
     render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
     expect(screen.queryByTestId('amendments-list')).toBeNull();
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // P2-D / P2-E — in-panel edit mode (Advance / Decline / Dismiss), gated.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // A single treatment-kind entry with a treatmentId (P2-C) so the panel has a
+  // PATCH handle. Used by the edit-mode tests below.
+  function treatmentHistoryResponse(overrides: Record<string, unknown> = {}) {
+    return jsonResponse({
+      data: [{
+        visitId: 'v1', visitDate: '2026-06-27T00:00:00Z', toothNumber: 11,
+        state: 'caries', treatmentDescription: 'Resin composite restoration',
+        surfaces: ['buccal'], treatmentStatus: 'planned', treatmentPriceCents: 80000,
+        eventKind: 'treatment', treatmentId: 't-1000',
+        ...overrides,
+      }],
+      pagination: { totalCount: 1, limit: 20, offset: 0 },
+    });
+  }
+
+  // P2-D: the Edit toggle appears only when the chart is open (!readOnly && visitId)
+  // AND there is at least one treatment-kind row to act on. With an open chart and a
+  // treatment row, the deliberate "Edit" toggle is present (read is default).
+  test('P2-D: shows an Edit toggle when chart is open, a visitId is set, and a treatment row exists', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse()) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    // Wait for the breakdown card to load, then the Edit toggle must exist.
+    await screen.findByTestId('breakdown-card-v1-0');
+    expect(screen.getByTestId('breakdown-edit-toggle')).not.toBeNull();
+    // Read is default — no per-card action row until Edit is tapped.
+    expect(screen.queryByTestId('card-action-mark-done')).toBeNull();
+  });
+
+  // P2-D: with NO treatment rows (only a finding), the Edit toggle is hidden —
+  // there is nothing to advance/decline/dismiss.
+  test('P2-D: hides the Edit toggle when the only history row is a finding', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse({ eventKind: 'finding', treatmentId: undefined, treatmentStatus: undefined })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    expect(screen.queryByTestId('breakdown-edit-toggle')).toBeNull();
+  });
+
+  // P2-D: tapping Edit reveals per-card actions on TREATMENT cards only. A planned
+  // treatment shows "Mark Done" (the next FSM step), plus Decline and Dismiss.
+  test('P2-D: edit mode reveals Advance/Decline/Dismiss on a planned treatment card', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse()) as unknown as typeof fetch;
+    const user = userEvent.setup();
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    await user.click(screen.getByTestId('breakdown-edit-toggle'));
+    // status='planned' → the advance button reads "Mark Done" (single FSM step).
+    expect(screen.getByTestId('card-action-mark-done')).not.toBeNull();
+    expect(screen.getByText('Mark Done')).not.toBeNull();
+    // Decline + Dismiss reuse the proven popover triggers.
+    expect(screen.getByTestId('card-action-decline')).not.toBeNull();
+    expect(screen.getByTestId('card-action-dismiss')).not.toBeNull();
+  });
+
+  // P2-D: a diagnosed treatment advances in TWO FSM steps — the first step is
+  // labelled "Mark Planned" (never a single jump to performed, which 422s).
+  test('P2-D: a diagnosed treatment shows "Mark Planned" as the first advance step', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse({ treatmentStatus: 'diagnosed' })) as unknown as typeof fetch;
+    const user = userEvent.setup();
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    await user.click(screen.getByTestId('breakdown-edit-toggle'));
+    expect(screen.getByText('Mark Planned')).not.toBeNull();
+  });
+
+  // P2-D: a performed treatment exposes no advance/decline action — it reads a
+  // static "Treated" affordance instead (Treated is sticky; never reverts).
+  test('P2-D: a performed treatment shows no advance/decline action in edit mode', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse({ treatmentStatus: 'performed' })) as unknown as typeof fetch;
+    const user = userEvent.setup();
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    await user.click(screen.getByTestId('breakdown-edit-toggle'));
+    expect(screen.queryByTestId('card-action-mark-done')).toBeNull();
+    expect(screen.queryByTestId('card-action-decline')).toBeNull();
+    expect(screen.getByText('✓ Treated')).not.toBeNull();
+  });
+
+  // P2-E: a closed chart (readOnly) renders NO Edit toggle and NO per-card actions,
+  // and shows a visible "Chart closed — corrections via Amendment" banner so the
+  // locked state is legible (not just an absence of buttons).
+  test('P2-E: readOnly hides all edit affordances and shows the chart-closed banner', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse()) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    // No edit toggle, no actions.
+    expect(screen.queryByTestId('breakdown-edit-toggle')).toBeNull();
+    expect(screen.queryByTestId('card-action-mark-done')).toBeNull();
+    expect(screen.queryByTestId('card-action-decline')).toBeNull();
+    expect(screen.queryByTestId('card-action-dismiss')).toBeNull();
+    // Visible banner routing to the amendment path.
+    const banner = screen.getByTestId('chart-closed-banner');
+    expect(banner).not.toBeNull();
+    expect(banner.textContent).toContain('Chart closed');
+  });
 });
