@@ -389,15 +389,18 @@ export function ToothOverviewStep({
                 eventKind: (entry as { eventKind?: 'finding' | 'treatment' }).eventKind,
                 treatmentStatus: entry.treatmentStatus,
               });
-              const isStateAxis = STATE_AXIS_VALUES.has(entry.state);
-              // Condition axis: prefer the curated finding vocab label, else the
-              // odontogram state — but only when the state is itself a condition.
+              // State axis is gated on a present state value — a snapshot-less
+              // treatment row (P3-D) carries no `state`, so neither axis fabricates.
+              const isStateAxis = !!entry.state && STATE_AXIS_VALUES.has(entry.state);
+              // Condition axis: ONLY the curated finding-vocab label from a real
+              // conditionCode, else "—". Never print a bare odontogram `state` as a
+              // Condition — a restored 'filled'/'crown' is not a diagnosis, and a
+              // snapshot-less row has no state at all (titleCase(undefined) would throw).
+              // The restoration surfaces via the colored odontogram + the status badge.
               const conditionLabel = entry.conditionCode
                 ? findingLabel(entry.conditionCode as ConditionCode)
-                : !isStateAxis
-                  ? titleCase(entry.state)
-                  : null;
-              const stateLabel = isStateAxis ? titleCase(entry.state) : null;
+                : null;
+              const stateLabel = isStateAxis && entry.state ? titleCase(entry.state) : null;
               const surfaceInitials = entry.surfaces && entry.surfaces.length > 0
                 ? entry.surfaces.map(s => s.charAt(0).toUpperCase()).join('')
                 : null;

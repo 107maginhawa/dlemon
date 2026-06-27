@@ -842,6 +842,22 @@ jsonpath "$.cdtCode" == "D2391"
 jsonpath "$.status" == "diagnosed"
 
 
+# P3-D — wire-shape lock: a treatment row with NO chart snapshot for the tooth
+# must OMIT `state` (the handler no longer synthesises a fabricated clinical
+# state from treatment status — a charting hazard). Tooth 21 here has a
+# `diagnosed` treatment (converted from the finding above) but was never charted
+# into a chart snapshot for this visit, so its history row is snapshot-less and
+# `state` must be absent at the wire. (Real-server proof, MANDATORY per plan R3.)
+GET {{api}}/dental/visits/history/{{finding_patient_id}}/teeth/21
+Cookie: better-auth.session_token={{session_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+jsonpath "$.data[0].eventKind" == "treatment"
+jsonpath "$.data[0].treatmentStatus" == "diagnosed"
+jsonpath "$.data[0].state" not exists
+
+
 # ============================================================
 # FIX-001 (GAP-6) — contract pins for the reconciled shapes.
 # Handlers are ground truth; these lock the REAL wire shapes so the

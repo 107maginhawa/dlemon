@@ -154,6 +154,68 @@ describe('ToothSlideout', () => {
     expect(within('Condition')).toBe(true);
   });
 
+  // P3-D (a) snapshot-less treatment row — `state` is absent (the handler no longer
+  // synthesises a fabricated 'filled'/'caries'). The row must STILL be a FULL
+  // informative row: date + a real "Treated" status badge + the treatment description,
+  // with BOTH axes "—" (no fabricated Condition, no fabricated State). It must NOT throw
+  // on `state: undefined` (titleCase(undefined) would crash). Asserting absence of the
+  // fabrication is insufficient — assert presence of the disposition too.
+  test('P3-D: snapshot-less treatment row stays informative (Treated + Crown + Condition/State "—"), no fabricated condition', async () => {
+    global.fetch = mock(() => jsonResponse({
+      data: [{
+        visitId: 'v1', visitDate: '2026-06-27T00:00:00Z', toothNumber: 36,
+        // state OMITTED — snapshot-less treatment row (the P3-D shape).
+        treatmentDescription: 'Crown',
+        surfaces: [], treatmentStatus: 'performed', treatmentPriceCents: 800000,
+        eventKind: 'treatment',
+      }],
+      pagination: { totalCount: 1, limit: 20, offset: 0 },
+    })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ toothNumber: 36 })), { wrapper: makeWrapper() });
+
+    const card = await screen.findByTestId('breakdown-card-v1-0');
+    // Date present (Jun 27, 2026).
+    expect(card.textContent).toContain('2026');
+    // Real disposition badge — "Treated" (performed). Presence, not just absence.
+    expect(card.textContent).toContain('Treated');
+    // Treatment description present.
+    expect(card.textContent).toContain('Crown');
+    // Both axes blank — NO fabricated condition. The card must read Condition: — / State: —.
+    const fieldRow = Array.from(card.querySelectorAll('div')).find(
+      (el) => el.textContent?.includes('Condition') && el.textContent?.includes('State'),
+    );
+    expect(fieldRow, 'two-axis field row must exist').not.toBeUndefined();
+    // The Condition value cell must be "—", never "Crown"/"Filled".
+    expect(card.textContent).not.toContain('Condition: Crown');
+    expect(card.textContent).not.toContain('Filled');
+    // Exactly two em-dashes for the two empty axes.
+    expect((card.textContent?.match(/—/g) ?? []).length).toBe(2);
+  });
+
+  // P3-D (b) snapshot-PRESENT treatment row, `state: 'filled'`, NO conditionCode — the
+  // common "you just filled the tooth" case. The odontogram state must NOT be printed as
+  // a Condition; the Condition axis must read "—" (the restoration surfaces via the
+  // colored odontogram + the "Treated" badge, never as a fabricated diagnosis).
+  test('P3-D: snapshot-present treatment row with state "filled" does NOT render "Filled" as a Condition', async () => {
+    global.fetch = mock(() => jsonResponse({
+      data: [{
+        visitId: 'v1', visitDate: '2026-06-27T00:00:00Z', toothNumber: 36,
+        state: 'filled', treatmentDescription: 'Resin composite',
+        surfaces: [], treatmentStatus: 'performed', treatmentPriceCents: 12500,
+        eventKind: 'treatment',
+      }],
+      pagination: { totalCount: 1, limit: 20, offset: 0 },
+    })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ toothNumber: 36 })), { wrapper: makeWrapper() });
+
+    const card = await screen.findByTestId('breakdown-card-v1-0');
+    // The bare odontogram state must never be printed as a Condition.
+    expect(card.textContent).not.toContain('Condition: Filled');
+    expect(card.textContent).not.toContain('Filled');
+    // 'filled' is not a State-axis value (only 'watchlist' is) → State reads "—" too.
+    expect((card.textContent?.match(/—/g) ?? []).length).toBe(2);
+  });
+
   // P4 + FIX-007: the read-only Add-Amendment affordance must render only when a
   // visitId AND a resolvable originalRecordId are supplied. The amendment validator
   // requires originalRecordId to be a real UUID, so showing the button without one

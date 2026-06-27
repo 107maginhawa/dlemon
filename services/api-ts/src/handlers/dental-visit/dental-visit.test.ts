@@ -1055,6 +1055,79 @@ describe('getToothHistory handler', () => {
     expect(body.data[0].eventKind).toBe('treatment');
     expect(body.data[0].treatmentCdtCode).toBe('D2740');
   });
+
+  // P3-D: a treatment row on a tooth with NO chart snapshot must NOT fabricate a
+  // clinical state. The handler used to synthesise 'filled' (performed) / 'caries'
+  // (pending) — a charting hazard (a guessed diagnosis in the State axis). state
+  // must now be OMITTED (undefined) for snapshot-less treatment rows.
+  test('P3-D: snapshot-less PERFORMED treatment row omits state (no synth filled)', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    // Snapshot charts a DIFFERENT tooth — tooth 36 has no snapshot this visit.
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'healthy' }],
+    });
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: completedVisit!.id, patientId: PATIENT_ID,
+      toothNumber: 36, cdtCode: 'D2740', description: 'Crown', status: 'performed',
+      priceCents: 50000, carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/36`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].eventKind).toBe('treatment');
+    expect(body.data[0].treatmentStatus).toBe('performed');
+    // The fix: no fabricated 'filled' state.
+    expect(body.data[0].state).toBeUndefined();
+  });
+
+  test('P3-D: snapshot-less PLANNED treatment row omits state (no synth caries)', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 11, state: 'healthy' }],
+    });
+    const { dentalTreatments } = await import('./repos/treatment.schema');
+    await db.insert(dentalTreatments).values({
+      id: crypto.randomUUID(), visitId: completedVisit!.id, patientId: PATIENT_ID,
+      toothNumber: 36, cdtCode: 'D2391', description: 'Resin composite', status: 'planned',
+      priceCents: 12500, carriedOver: false, createdBy: TEST_USER.id, updatedBy: TEST_USER.id,
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/36`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].eventKind).toBe('treatment');
+    expect(body.data[0].treatmentStatus).toBe('planned');
+    // The fix: no fabricated 'caries' state.
+    expect(body.data[0].state).toBeUndefined();
+  });
+
+  test('P3-D: a finding row still carries its real charted state (optionality only bites snapshot-less treatment rows)', async () => {
+    const completedVisit = await seedCompletedVisit();
+    const chartRepo = new DentalChartRepository(db);
+    // Tooth 21: flagged watchlist, NO treatment → finding row must keep its real state.
+    await chartRepo.upsert({
+      visitId: completedVisit!.id, patientId: PATIENT_ID,
+      teeth: [{ toothNumber: 21, state: 'watchlist' }],
+    });
+
+    const app = buildTestApp(TEST_USER);
+    const res = await app.request(`/dental/visits/history/${PATIENT_ID}/teeth/21`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].eventKind).toBe('finding');
+    expect(body.data[0].state).toBe('watchlist');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -19364,7 +19364,7 @@ export const ToothHistoryEntrySchema = z.object({
   visitId: UUIDSchema,
   visitDate: z.string().datetime().transform((str) => new Date(str)),
   toothNumber: z.number().int(),
-  state: ToothStateSchema,
+  state: z.enum(["healthy", "caries", "fractured", "filled", "crown", "missing", "implant", "extracted", "watchlist"]).optional(),
   conditionCode: z.string().optional(),
   treatmentCdtCode: z.string().optional(),
   treatmentDescription: z.string().optional(),

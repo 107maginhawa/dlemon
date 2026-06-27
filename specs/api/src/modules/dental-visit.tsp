@@ -523,7 +523,15 @@ model ToothHistoryEntry {
   visitId: UUID;
   visitDate: utcDateTime;
   toothNumber: int32;
-  state: ToothState;
+  /**
+   * The tooth's charted clinical state on the visit, sourced ONLY from the
+   * per-visit chart snapshot. Absent on a treatment row that has no chart
+   * snapshot for that visit — the handler no longer synthesises a fabricated
+   * state (e.g. 'filled'/'caries') from treatment status, since a guessed
+   * diagnosis in this axis is a charting hazard. Finding rows always carry a
+   * real state. (P3-D)
+   */
+  state?: ToothState;
   conditionCode?: string;
   treatmentCdtCode?: string;
   treatmentDescription?: string;

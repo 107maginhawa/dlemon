@@ -56,7 +56,10 @@ export async function getToothHistory(ctx: HandlerContext) {
     visitId: string;
     visitDate: Date;
     toothNumber: number;
-    state: string;
+    // P3-D: optional — sourced ONLY from the per-visit chart snapshot. Omitted
+    // (undefined) for a treatment row with no snapshot for that visit; the
+    // handler no longer fabricates a clinical state from treatment status.
+    state?: string;
     conditionCode?: string;
     treatmentCdtCode?: string;
     treatmentDescription?: string;
@@ -67,12 +70,6 @@ export async function getToothHistory(ctx: HandlerContext) {
     eventKind: 'finding' | 'treatment';
     syncStatus?: string;
   }> = [];
-
-  // ponytail: naive state synthesis when a treatment has no chart snapshot for the
-  // tooth — performed work reads as filled, pending as caries. Refine if richer
-  // inference is ever needed.
-  const synthState = (status: string) =>
-    (status === 'performed' || status === 'verified') ? 'filled' : 'caries';
 
   for (const visit of chartedVisits) {
     const chart = await chartRepo.findByVisit(visit.id);
@@ -93,7 +90,12 @@ export async function getToothHistory(ctx: HandlerContext) {
           visitId: visit.id,
           visitDate,
           toothNumber,
-          state: tooth?.state ?? synthState(t.status),
+          // P3-D: state comes ONLY from the per-visit chart snapshot. When the
+          // tooth has no snapshot this visit, state is omitted (undefined) rather
+          // than synthesised from treatment status — a guessed clinical state in
+          // this axis is a charting hazard. The neutral disposition rides the
+          // existing treatmentStatus badge ("Treated"/"Planned") instead.
+          state: tooth?.state,
           conditionCode: tooth?.conditionCode ?? t.conditionCode ?? undefined,
           treatmentCdtCode: t.cdtCode,
           treatmentDescription: t.description,
