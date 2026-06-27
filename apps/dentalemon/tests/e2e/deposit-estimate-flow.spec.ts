@@ -134,7 +134,11 @@ test.describe('Estimate → deposit → pay → receipt → reconcile (§g)', ()
     await page.locator('#pay-receipt').fill(`R-DEP-${Date.now()}`);
     await sheet.getByRole('button', { name: 'Record', exact: true }).click();
 
-    // Paid via independent read (robust to Task 3's auto-close-on-paid).
+    // Full payment auto-dismisses the sheet — the user lands back on the workspace
+    // instead of stranding on a paid invoice.
+    await expect(sheet).toHaveCount(0, { timeout: 15000 });
+
+    // Paid via independent read (the sheet is gone; read durable truth).
     await expect.poll(async () => (await readInvoice(req, depositInvoiceId)).status, { timeout: 15000 }).toBe('paid');
     const depPaid = await readInvoice(req, depositInvoiceId);
     expect(depPaid.balanceCents).toBe(0);
