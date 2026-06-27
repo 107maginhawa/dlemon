@@ -203,6 +203,15 @@ export function WorkspacePaymentModal({
   const hasBillable = billableItems.length > 0;
   const subtotalCents = billableItems.reduce((sum, item) => sum + item.priceCents, 0);
 
+  // Estimate surface (Square/Stripe two-object model): planned work is presented
+  // as a non-payable Estimate — distinct from the payable Subtotal, with no Pay
+  // action. This is where non-billable money belongs (billing-audit D1=1a).
+  // Excludes dismissed/declined (not part of the active plan).
+  const estimateCents = lineItems
+    .filter((item) => item.status === 'diagnosed' || item.status === 'planned')
+    .reduce((sum, item) => sum + item.priceCents, 0);
+  const hasEstimate = estimateCents > 0;
+
   // THIS visit's invoice (one invoice per visit). Previously this took the patient's
   // most-recent non-voided invoice across ALL visits, so a prior visit's PAID invoice
   // surfaced on the current (unbilled) visit: the banner showed "Paid / balance 0"
@@ -329,6 +338,25 @@ export function WorkspacePaymentModal({
                   className="text-[15px] font-bold tabular-nums text-lemon-foreground"
                 >
                   {formatCents(subtotalCents)}
+                </span>
+              </div>
+            )}
+
+            {/* Estimate (planned work) — non-payable, distinct from Subtotal. */}
+            {hasEstimate && (
+              <div
+                data-testid="estimate-row"
+                className="mx-0 flex items-center justify-between border-y border-border bg-muted/40 px-5 py-3"
+              >
+                <span className="text-sm font-medium text-muted-foreground">
+                  Estimate (planned){' '}
+                  <span className="font-normal">· not yet payable</span>
+                </span>
+                <span
+                  data-testid="estimate-amount"
+                  className="text-sm font-semibold tabular-nums text-muted-foreground"
+                >
+                  {formatCents(estimateCents)}
                 </span>
               </div>
             )}

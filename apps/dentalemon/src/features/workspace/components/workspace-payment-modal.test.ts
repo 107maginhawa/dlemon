@@ -251,6 +251,27 @@ describe('WorkspacePaymentModal', () => {
     expect(screen.getByTestId('line-item-li-1')).not.toBeNull();
   });
 
+  it('shows an Estimate total for planned work, distinct from the payable Subtotal (item 11)', async () => {
+    // performed ₱120 (billable) + planned ₱900 (estimate)
+    renderModal({ lineItems: MIXED_ITEMS });
+    const subtotal = screen.getByTestId('subtotal-amount');
+    expect(subtotal.textContent).toContain('120'); // payable
+    const estimate = screen.getByTestId('estimate-amount');
+    expect(estimate.textContent).toContain('900'); // planned, NOT in subtotal
+    // The estimate is explicitly not payable.
+    expect(screen.getByTestId('estimate-row').textContent ?? '').toMatch(/estimate|not.*payable/i);
+  });
+
+  it('estimate-only visit: Estimate total shown, no payable Subtotal, disabled CTA (item 11)', async () => {
+    // diagnosed ₱800 + planned ₱4,500 = ₱5,300 estimate, nothing billable
+    renderModal({ lineItems: NON_BILLABLE_ITEMS });
+    await waitFor(() => {
+      expect(screen.getByTestId('estimate-amount').textContent).toContain('5,300');
+      expect(screen.queryByTestId('subtotal-row')).toBeNull();
+      expect((screen.getByTestId('create-invoice-btn') as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
+
   it('shows empty state when no line items and no invoice', async () => {
     renderModal({ lineItems: [] });
     await waitFor(() => {
