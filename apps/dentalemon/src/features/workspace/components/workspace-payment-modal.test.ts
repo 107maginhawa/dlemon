@@ -237,18 +237,19 @@ describe('WorkspacePaymentModal', () => {
     expect(amount.textContent).not.toContain('1,020');
   });
 
-  it('no payable subtotal + disabled Pay + reason when nothing is billable (G4 — the ₱6,300 bug)', async () => {
+  it('planned-only visit: no payable subtotal, deposit panel + enabled Collect Deposit (no dead-end, G4)', async () => {
     renderModal({ lineItems: NON_BILLABLE_ITEMS });
     await waitFor(() => {
-      // No payable subtotal advertised for planned-only work…
+      // No payable subtotal advertised for planned-only work (no post-click 422)…
       expect(screen.queryByTestId('subtotal-row')).toBeNull();
-      // …the CTA is disabled BEFORE any click (no post-click 422)…
-      expect((screen.getByTestId('create-invoice-btn') as HTMLButtonElement).disabled).toBe(true);
-      // …and the user is told why.
-      expect(screen.getByTestId('no-billable-notice')).not.toBeNull();
+      // …and the old dead-end (disabled Create Invoice) is replaced by a REAL
+      // action: collect a deposit against the estimate (§g).
+      expect(screen.getByTestId('deposit-panel')).not.toBeNull();
+      expect((screen.getByTestId('collect-deposit-btn') as HTMLButtonElement).disabled).toBe(false);
     });
-    // Planned rows are still shown as context.
+    // Planned rows are still shown as context; no dead disabled Create-Invoice CTA.
     expect(screen.getByTestId('line-item-li-1')).not.toBeNull();
+    expect(screen.queryByTestId('create-invoice-btn')).toBeNull();
   });
 
   it('shows an Estimate total for planned work, distinct from the payable Subtotal (item 11)', async () => {
@@ -262,13 +263,44 @@ describe('WorkspacePaymentModal', () => {
     expect(screen.getByTestId('estimate-row').textContent ?? '').toMatch(/estimate|not.*payable/i);
   });
 
-  it('estimate-only visit: Estimate total shown, no payable Subtotal, disabled CTA (item 11)', async () => {
+  it('estimate-only visit: Estimate total shown, no payable Subtotal, Collect Deposit defaults to full estimate (§g)', async () => {
     // diagnosed ₱800 + planned ₱4,500 = ₱5,300 estimate, nothing billable
     renderModal({ lineItems: NON_BILLABLE_ITEMS });
     await waitFor(() => {
       expect(screen.getByTestId('estimate-amount').textContent).toContain('5,300');
       expect(screen.queryByTestId('subtotal-row')).toBeNull();
-      expect((screen.getByTestId('create-invoice-btn') as HTMLButtonElement).disabled).toBe(true);
+      const btn = screen.getByTestId('collect-deposit-btn') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+      // Default deposit = pay-in-full (the whole estimate).
+      expect(btn.textContent).toContain('5,300');
+    });
+  });
+
+  it('Full estimate button fills the deposit input with the estimate total (§g DQ1)', async () => {
+    const user = userEvent.setup();
+    renderModal({ lineItems: NON_BILLABLE_ITEMS });
+    const input = (await screen.findByTestId('deposit-amount-input')) as HTMLInputElement;
+    await user.click(screen.getByTestId('deposit-full-estimate-btn'));
+    expect(input.value).toBe('5300.00');
+  });
+
+  it('Collect Deposit POSTs to /invoices/deposit then opens the deposit invoice for payment (§g)', async () => {
+    const user = userEvent.setup();
+    const DEPOSIT_INV = { ...INVOICE, id: 'inv-dep', invoiceNumber: 'INV-DEP', kind: 'deposit', status: 'issued', totalCents: 530000, balanceCents: 530000 };
+    mockFetch.mockImplementation((input: Request | string) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = input instanceof Request ? input.method : 'GET';
+      if (method === 'POST' && url.includes('/invoices/deposit')) return jsonResponse(DEPOSIT_INV);
+      if (url.includes('/dental/billing/invoices/inv-dep')) return jsonResponse(DEPOSIT_INV);
+      return invoiceListResponse([]);
+    });
+    renderModal({ lineItems: NON_BILLABLE_ITEMS });
+    await waitFor(() => expect((screen.getByTestId('collect-deposit-btn') as HTMLButtonElement).disabled).toBe(false));
+    await user.click(screen.getByTestId('collect-deposit-btn'));
+    await waitFor(() => {
+      const calls = mockFetch.mock.calls as [Request | string, RequestInit?][];
+      const depositPost = calls.find(([input]) => input instanceof Request && input.method === 'POST' && input.url.includes('/invoices/deposit'));
+      expect(depositPost).not.toBeUndefined();
     });
   });
 
