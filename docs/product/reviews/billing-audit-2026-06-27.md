@@ -4,6 +4,13 @@
 **Branch (work off):** new branch off `main`
 **Status:** Phase-0 plan — APPROVED 2026-06-27 (decisions resolved below; deposit path 1b still needs explicit go). Tranche 0 cleared to build.
 
+### Build status (2026-06-27) — branch `feat/billing-coherence-pos` off `main`, 4 commits, NOT pushed
+- **Tranche 0 — SHIPPED.** Items 1–5 (`b71a903f`): billable-only subtotal/footer, non-billable rows as muted context, pre-click disabled CTA + reason, per-row FSM status, `uncollectible` badge. Items 6–7 (`ba7d3c77`): devtools→bottom-left, table `overflow-x-auto`. **Item 8 SKIPPED** (by-status view already labels Charged/Estimate; by-visit Grand Total is an intentional case-total, not a pay surface). Verified: 2805 FE tests pass, typecheck+lint+pre-commit green; independent code-reviewer vetted predicate (no FSM/money/RLS/tax change).
+- **Item 11 — SHIPPED** (`4f67b1c2`): non-payable Estimate surface for planned work in the payment modal (D1=1a foundation).
+- **Item 10 — DEFERRED by D3=3a** (assume one invoice per visit; chooser only if reissue-after-uncollectible proves real).
+- **Item 9 — DEFERRED (documented):** correct fix = server-computed "collected this month" KPI bucketed by `dental_payment.paymentDate` (clinic-local month, Asia/Manila). No existing KPI endpoint and the invoice-list shape carries no payment dates → a full TypeSpec→BE→Hurl→SDK→FE slice. Disproportionate to a single dashboard sum; greenlight separately.
+- **Item 12 (deposit, D1=1b) — NEXT, needs focused design + expert review.** Open design Qs before build: how a deposit reconciles when the work is later performed (credit toward the performed-work invoice?), refund-on-cancel, the deposit-invoice FSM/status, and audit of the new payable path. Reuses existing payment-plan machinery; never loosens `createDentalInvoice`'s performed|verified filter.
+
 ### Decisions resolved (2026-06-27) — "what would Square/Stripe do, best for dentist long-term"
 - **D1 = 1a now** (keep performed-only invoicing + add non-payable Estimate surface). **1b (deposit-invoice for planned work) = FLAGGED**: real & dentist-friendly, but a new payable path → needs explicit user go before building (money-semantics guardrail).
 - **D2 = 2a** (explanatory copy + deep-link to treatment row; no in-checkout FSM auto-advance).
