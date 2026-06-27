@@ -354,6 +354,10 @@ async function activateVisit(
 }
 
 async function addChart(visitId: string, patientId: string, teeth: any[], cookie: string) {
+  // Per-visit snapshot only. Standing conditions are carried forward across a patient's
+  // whole timeline by a single direct-DB post-pass in seed-supplement (runs last in
+  // db:reseed) — see docs/product/CAROUSEL_TIMELINE.md (I1). Doing it there, not here,
+  // also fills charts for visits whose API chart-write silently failed (e.g. imaging).
   if (teeth.length) await post(`/dental/visits/${visitId}/chart`, { visitId, patientId, teeth }, cookie)
 }
 
@@ -1444,9 +1448,13 @@ async function seed() {
 
     // V3 — perio
     const v3tpl = TEMPLATES.perio('all four quadrants')
+    // Isabel's #46 was extracted in V2 — the generic perio template flags 46, but a perio
+    // exam can't re-flag a tooth that's gone (I3). Drop it; the extracted state carries
+    // forward on its own via the carry-forward pass. See docs/product/CAROUSEL_TIMELINE.md.
+    const v3teeth = v3tpl.teeth.filter((t: any) => t.toothNumber !== 46)
     const v3id = await activateVisit(p9.id, branch.id, ownerMember.id, 270, v3tpl.complaint, cookie)
     if (v3id) {
-      await addChart(v3id, p9.id, v3tpl.teeth, cookie)
+      await addChart(v3id, p9.id, v3teeth, cookie)
       await addTreatments(v3id, p9.id, v3tpl.treatments, cookie, 'mixed')
       await addNotes(v3id, v3tpl.soap, cookie)
       await completeVisit(v3id, p9.id, cookie)
@@ -1831,6 +1839,21 @@ async function seed() {
   // P2-005 — one visit with syncStatus='pending' for offline-first demo
   section('13. Offline visit demo row (P2-005)')
   await patchVisitForOfflineDemo()
+
+  // Backdate performed_at to each treatment's visit date — see
+  // docs/product/CAROUSEL_TIMELINE.md (I2). Treatments are driven to `performed` via
+  // the HTTP API, which hardcodes performed_at = new Date() (updateDentalTreatment.ts)
+  // and refuses a client value, collapsing every Treated cue onto the reseed day. Fix it
+  // directly here, after all status transitions, so the cumulative as-of layer lights up
+  // on the visit the work was actually done. Data-only; FSM gates status, not performed_at.
+  section('14. Backdate performed_at to visit date (I2)')
+  await seedDb`
+    UPDATE dental_treatment t
+    SET performed_at = v.completed_at
+    FROM dental_visit v
+    WHERE t.visit_id = v.id
+      AND t.status IN ('performed', 'verified')
+      AND v.completed_at IS NOT NULL`
 
   // ── Done ──────────────────────────────────────────────────────────────────
   await seedDb.close()

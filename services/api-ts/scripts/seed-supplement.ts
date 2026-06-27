@@ -62,6 +62,64 @@ const daysFromNow = (n: number, h = 10) => {
 // daysAgo/daysFromNow remain for non-appointment date fields (invoice issued/due/paid).
 
 function log(msg: string) { console.log(`  ${msg}`); }
+
+/**
+ * carryStandingFindingsForAll — cross-visit standing-condition carry-forward (I1).
+ * See docs/product/CAROUSEL_TIMELINE.md. Chart snapshots are PER-VISIT and don't carry,
+ * so a tooth charted non-healthy on visit N would vanish on later cards (the flicker
+ * bug). For every patient, walk charted visits oldest→newest, accumulate each tooth's
+ * latest non-healthy snapshot, and write the merged snapshot back to every visit —
+ * creating a chart row where one is missing (e.g. imaging-only visits whose API
+ * chart-write silently failed). An explicit `healthy` snapshot resolves a tooth (stops
+ * carrying). Runs last in db:reseed so it covers BOTH seed-demo and supplement patients.
+ * Direct-DB + idempotent over a fresh reseed.
+ */
+async function carryStandingFindingsForAll() {
+  const CHARTED = new Set(['active', 'completed', 'locked']);
+  const allVisits = (await db.select().from(dentalVisits)).filter(v => CHARTED.has(v.status));
+  const allCharts = await db.select().from(dentalCharts);
+  const chartByVisit = new Map(allCharts.map(c => [c.visitId, c]));
+
+  const byPatient = new Map<string, typeof allVisits>();
+  for (const v of allVisits) {
+    const list = byPatient.get(v.patientId) ?? [];
+    list.push(v);
+    byPatient.set(v.patientId, list);
+  }
+
+  let extended = 0, created = 0;
+  for (const [patientId, visits] of byPatient) {
+    visits.sort((a, b) => (a.completedAt ?? a.createdAt).getTime() - (b.completedAt ?? b.createdAt).getTime());
+    const standing = new Map<number, ToothChartState>();
+    for (const v of visits) {
+      const chart = chartByVisit.get(v.id) ?? null;
+      const teeth = (chart?.teeth as ToothChartState[] | undefined) ?? [];
+      const merged = new Map<number, ToothChartState>(standing);
+      for (const t of teeth) merged.set(t.toothNumber, t); // this visit's explicit snapshot wins
+      for (const [n, t] of merged) {
+        if (t.state === 'healthy') standing.delete(n);
+        else standing.set(n, t);
+      }
+      const mergedTeeth = [...merged.values()];
+      if (chart) {
+        if (mergedTeeth.length !== teeth.length) {
+          await db.update(dentalCharts).set({ teeth: mergedTeeth as any, updatedAt: new Date() }).where(eq(dentalCharts.id, chart.id));
+          extended++;
+        }
+      } else if (mergedTeeth.length) {
+        await db.insert(dentalCharts).values({
+          id: detUuid(`carry-chart:${v.id}`),
+          visitId: v.id,
+          patientId,
+          layer: 'completed',
+          teeth: mergedTeeth as any,
+        });
+        created++;
+      }
+    }
+  }
+  log(`✓ Carry-forward (I1): ${extended} charts extended, ${created} chart rows created`);
+}
 function section(title: string) { console.log(`\n▶ ${title}`); }
 
 async function seed() {
@@ -885,7 +943,9 @@ async function seed() {
         };
         await db.insert(dentalVisits).values(visitRow).onConflictDoNothing();
 
-        // Insert dental chart
+        // Insert dental chart (per-visit snapshot). Cross-visit carry-forward is applied
+        // uniformly to ALL patients by carryStandingFindingsForAll() at the end of this
+        // script — see docs/product/CAROUSEL_TIMELINE.md (I1).
         const chartRow: NewDentalChart = {
           id: detUuid(`chart:${vs.key}`),
           visitId,
@@ -1181,6 +1241,10 @@ async function seed() {
     log(`  ✓ ${spec.key} — plan ${spec.status}${spec.withPresentation ? ' + presentation' : ''} (₱${(total / 100).toLocaleString()})`);
   }
   log(`  Σ Case-presentation: ${cpPlans} plans, ${cpPresentations} presentations`);
+
+  // ── Cross-visit standing-condition carry-forward (I1) — runs last, all patients ──
+  section('Timeline coherence: carry standing conditions forward (I1)');
+  await carryStandingFindingsForAll();
 
   console.log('\n✓ Supplement seed complete.\n');
 }
