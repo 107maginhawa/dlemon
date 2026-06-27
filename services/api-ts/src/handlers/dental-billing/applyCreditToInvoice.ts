@@ -71,7 +71,14 @@ export async function applyCreditToInvoice(
       throw new BusinessLogicError('Invoice has no outstanding balance', 'INVOICE_SETTLED');
     }
 
-    const available = await creditRepo.getBalance(live.patientId);
+    // §g F-02: the patient credit wallet is intentionally GLOBAL (cross-branch,
+    // like getPatientCredits). dental_patient_credit is now RLS-armed (branch-
+    // scoped), so reading getBalance on `tx` (app_rls) would truncate the wallet
+    // to the invoice's branch. Read the cap on `db` (superuser) so the global
+    // balance is seen; the consuming write stays on `tx` (branch in scope). The
+    // 1001 per-patient lock held above serializes apply/refund, so the committed
+    // db-read is consistent with the about-to-commit tx-write.
+    const available = await new DentalPatientCreditRepository(db).getBalance(live.patientId);
     if (available <= 0) throw new BusinessLogicError('Patient has no available credit', 'NO_CREDIT');
 
     // BR-052: cap at both the invoice balance and the available credit.
