@@ -20,10 +20,12 @@
  *  - `kind='deposit'` excludes it from recognized-revenue / AR totals (DQ3).
  */
 
+import { and, eq, ne, sql } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
+import { dentalInvoices } from './repos/dental-invoice.schema';
 import { getVisitForBilling, getTreatmentsForInvoice } from '@/handlers/dental-visit/repos/visit-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getBranchOrgId, getBranchTaxConfig } from '@/handlers/dental-org/repos/org-billing.facade';
@@ -69,6 +71,16 @@ export async function createDentalDepositInvoice(
     if (visit.patientId !== body.patientId) {
       throw new BusinessLogicError('Visit does not belong to this patient', 'VISIT_PATIENT_MISMATCH');
     }
+    // F-06 (re-review #2): a deposit is for FUTURE work — not on a completed visit
+    // (service already delivered → use the standard invoice).
+    if (visit.completedAt) {
+      throw new BusinessLogicError('Cannot take a deposit on a completed visit', 'VISIT_ALREADY_COMPLETED');
+    }
+
+    // F-03 (re-review #2): serialize deposit creation for this visit so two
+    // concurrent deposits can't each pass the cumulative cap below (released at
+    // commit). classid 1003 namespaces deposit-create locks.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1003, hashtext(${body.visitId}))`);
 
     // DQ1: cap the deposit at the active treatment-plan estimate (sum over all
     // non-dismissed / non-declined treatments — the case value the patient is
@@ -80,9 +92,21 @@ export async function createDentalDepositInvoice(
     if (estimateCents <= 0) {
       throw new BusinessLogicError('No planned work to take a deposit against', 'NO_PLANNED_WORK');
     }
-    if (body.depositCents > estimateCents) {
+    // F-03: the cap is CUMULATIVE — existing non-voided deposits on this visit plus
+    // the new one must not exceed the estimate, or a clinic could over-collect via
+    // multiple deposits and strand un-appliable credit.
+    const [existing] = await tx
+      .select({ sum: sql<number>`COALESCE(SUM(${dentalInvoices.totalCents}), 0)` })
+      .from(dentalInvoices)
+      .where(and(
+        eq(dentalInvoices.visitId, body.visitId),
+        eq(dentalInvoices.kind, 'deposit'),
+        ne(dentalInvoices.status, 'voided'),
+      ));
+    const existingDepositCents = Number(existing?.sum ?? 0);
+    if (existingDepositCents + body.depositCents > estimateCents) {
       throw new BusinessLogicError(
-        `Deposit (${body.depositCents}) exceeds the planned estimate (${estimateCents})`,
+        `Deposit (${body.depositCents}) plus existing deposits (${existingDepositCents}) exceeds the planned estimate (${estimateCents})`,
         'DEPOSIT_EXCEEDS_ESTIMATE',
       );
     }

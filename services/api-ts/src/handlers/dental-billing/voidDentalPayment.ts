@@ -7,10 +7,12 @@
 
 import type { ValidatedContext } from '@/types/app';
 import type { VoidDentalPaymentBody, VoidDentalPaymentParams } from '@/generated/openapi/validators';
+import { sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { DentalPatientCreditRepository } from './repos/dental-patient-credit.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getActiveMembershipId, getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { withTenantTx } from '@/core/tenant-tx';
@@ -41,6 +43,12 @@ export async function voidDentalPayment(
     throw new BusinessLogicError('Payment is already voided', 'ALREADY_VOIDED');
   }
 
+  // §g F-01 (re-review #2): voiding a DEPOSIT payment must reverse the mirrored
+  // deposit credit — exactly like refundDentalPayment — or the patient keeps the
+  // spendable credit while the invoice is restored to unpaid (money from nothing).
+  const invoice = await new DentalInvoiceRepository(db).findOneById(invoiceId);
+  const isDeposit = invoice?.kind === 'deposit';
+
   // Resolve membership ID from personId + branchId
   const membership = await getActiveMembershipId(db, session.userId, payment.branchId);
   if (!membership) {
@@ -61,6 +69,29 @@ export async function voidDentalPayment(
       throw new BusinessLogicError('Payment is already voided', 'ALREADY_VOIDED');
     }
     await new DentalInvoiceRepository(tx).removePayment(invoiceId, payment.amountCents);
+
+    // F-01: reverse the mirrored deposit credit (capped at the still-available
+    // global wallet; blocked if already applied — refund/un-apply from the
+    // performed invoice instead). Same conservation rule as refundDentalPayment.
+    if (isDeposit) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${payment.patientId}))`);
+      const availableCredit = await new DentalPatientCreditRepository(db).getBalance(payment.patientId);
+      if (availableCredit < payment.amountCents) {
+        throw new BusinessLogicError(
+          `Deposit already applied — its credit (only ${Math.max(0, availableCredit)} cents left) can no longer be voided; reverse it from the performed-work invoice`,
+          'DEPOSIT_ALREADY_APPLIED',
+        );
+      }
+      await new DentalPatientCreditRepository(tx).create({
+        patientId: payment.patientId,
+        branchId: payment.branchId,
+        amountCents: -payment.amountCents,
+        source: 'deposit_reversed',
+        invoiceId,
+        createdBy: session.userId,
+        updatedBy: session.userId,
+      });
+    }
     return txVoided;
   });
 

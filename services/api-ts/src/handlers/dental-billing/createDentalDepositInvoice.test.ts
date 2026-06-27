@@ -142,6 +142,25 @@ describe('§g createDentalDepositInvoice', () => {
     expect(body.code).toBe('NO_PLANNED_WORK');
   });
 
+  // F-03 (re-review #2): the estimate cap is CUMULATIVE across deposits.
+  test('caps deposits cumulatively across multiple deposits on the visit', async () => {
+    const visitId = await seedPlannedVisit(6300);
+    expect((await postDeposit(visitId, 4000)).status).toBe(201);  // 4000 ≤ 6300
+    const second = await postDeposit(visitId, 3000);              // 4000+3000 > 6300
+    expect(second.status).toBe(422);
+    expect((await second.json() as any).code).toBe('DEPOSIT_EXCEEDS_ESTIMATE');
+    expect((await postDeposit(visitId, 2000)).status).toBe(201);  // 4000+2000 = 6300 ok
+  });
+
+  // F-06 (re-review #2): no deposit on a completed visit (service delivered).
+  test('rejects a deposit on a completed visit', async () => {
+    const visitId = await seedPlannedVisit(6300);
+    await db.execute(sql`UPDATE dental_visit SET completed_at = now() WHERE id = ${visitId}`);
+    const res = await postDeposit(visitId, 1000);
+    expect(res.status).toBe(422);
+    expect((await res.json() as any).code).toBe('VISIT_ALREADY_COMPLETED');
+  });
+
   test('is idempotent on localId (double-tap returns the SAME invoice, no duplicate)', async () => {
     const visitId = await seedPlannedVisit(6300);
     const first = await postDeposit(visitId, 3000, 'dep-local-1');

@@ -112,7 +112,11 @@ export async function getStatementInvoices(
   db: DatabaseInstance,
   filters: { branchId?: string; patientIds?: string[]; allowedBranchIds?: string[] },
 ) {
-  const conditions: SQL<unknown>[] = [];
+  const conditions: SQL<unknown>[] = [
+    // §g DQ3 / F-05: deposit invoices are advances, not service debts — never on
+    // a patient statement.
+    ne(dentalInvoices.kind, 'deposit'),
+  ];
   if (filters.branchId) {
     conditions.push(eq(dentalInvoices.branchId, filters.branchId));
   } else if (filters.allowedBranchIds) {

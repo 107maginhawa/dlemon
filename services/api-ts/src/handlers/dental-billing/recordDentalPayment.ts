@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { RecordDentalPaymentBody, RecordDentalPaymentParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
@@ -166,6 +167,12 @@ export async function recordDentalPayment(
     // credit, so it needs no per-patient lock (a concurrent apply can only under-
     // apply against a momentarily smaller balance, never over-draw).
     if (invoice.kind === 'deposit') {
+      // F-07 (re-review #2): take the per-patient credit lock (1001) so a
+      // concurrent applyCreditToInvoice/refund can't read a stale wallet between
+      // this mirror insert and its commit (would surface a transient false
+      // NO_CREDIT). Money was already safe (the mirror only adds); this removes
+      // the stale-read UX window and matches the apply/refund locking.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${invoice.patientId}))`);
       await new DentalPatientCreditRepository(tx).create({
         patientId: invoice.patientId,
         branchId: invoice.branchId,

@@ -31,11 +31,13 @@ import { createDentalInvoice } from './createDentalInvoice';
 import { issueDentalInvoice } from './issueDentalInvoice';
 import { recordDentalPayment } from './recordDentalPayment';
 import { refundDentalPayment } from './refundDentalPayment';
+import { voidDentalPayment } from './voidDentalPayment';
 import { applyCreditToInvoice } from './applyCreditToInvoice';
 import {
   CreateDentalDepositInvoiceBody, CreateDentalInvoiceBody, IssueDentalInvoiceParams,
   RecordDentalPaymentBody, RecordDentalPaymentParams,
   RefundDentalPaymentBody, RefundDentalPaymentParams,
+  VoidDentalPaymentBody, VoidDentalPaymentParams,
   ApplyCreditToInvoiceBody, ApplyCreditToInvoiceParams,
 } from '@/generated/openapi/validators';
 
@@ -84,6 +86,7 @@ function buildApp() {
   app.post('/dental/billing/invoices/:invoiceId/payments', zValidator('param', RecordDentalPaymentParams, ve), zValidator('json', RecordDentalPaymentBody, ve), recordDentalPayment as any);
   app.post('/dental/billing/invoices/:invoiceId/apply-credit', zValidator('param', ApplyCreditToInvoiceParams, ve), zValidator('json', ApplyCreditToInvoiceBody, ve), applyCreditToInvoice as any);
   app.post('/dental/billing/payments/:paymentId/refund', zValidator('param', RefundDentalPaymentParams, ve), zValidator('json', RefundDentalPaymentBody, ve), refundDentalPayment as any);
+  app.post('/dental/billing/invoices/:invoiceId/payments/:paymentId/void', zValidator('param', VoidDentalPaymentParams, ve), zValidator('json', VoidDentalPaymentBody, ve), voidDentalPayment as any);
   return app;
 }
 const app = buildApp();
@@ -207,6 +210,20 @@ describe('§g S-D deposit reconciliation', () => {
     });
     expect(refund.status).toBe(422);
     expect((await refund.json() as any).code).toBe('DEPOSIT_ALREADY_APPLIED');
+  });
+
+  test('F-01 (void path): voiding a deposit payment reverses the mirrored credit', async () => {
+    const visitId = await seedPlannedVisit(6300);
+    const dep = await (await makeDeposit(visitId, 3000)).json() as any;
+    const payment = await (await pay(dep.id, 3000)).json() as any;
+    expect(await balance()).toBe(3000);
+
+    const voided = await app.request(`/dental/billing/invoices/${dep.id}/payments/${payment.id}/void`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voidReason: 'Wrong amount entered' }),
+    });
+    expect(voided.status).toBe(200);
+    expect(await balance()).toBe(0);                          // mirror reversed — no money from nothing
   });
 
   test('F-07: credit cannot be applied to a deposit invoice (no self-application)', async () => {
