@@ -30,8 +30,36 @@ export const FINDINGS_VOCABULARY: readonly FindingVocabEntry[] = [
 /** Codes that require a free-text note before they can be saved. */
 export const NOTE_REQUIRED_CODES = new Set<ConditionCode>(['other']);
 
-export function findingLabel(code: ConditionCode): string {
-  return FINDINGS_VOCABULARY.find((e) => e.code === code)?.label ?? code;
+/**
+ * Small ICD-10 prefix → curated-finding map. Treatments carry ICD-10
+ * `conditionCode`s (e.g. K02.1) that are NOT in the curated `ConditionCode` vocab,
+ * so the breakdown panel would otherwise print a raw "K02.1". Cover only the dental
+ * ranges that actually occur (K02–K08), not all of ICD-10 — keep it small.
+ */
+const ICD10_PREFIX_TO_FINDING: Record<string, ConditionCode> = {
+  K02: 'caries', // dental caries
+  K03: 'wear_erosion', // other diseases of hard tissues (attrition/erosion/abrasion)
+  K04: 'abscess', // diseases of pulp & periapical tissues (incl. periapical abscess)
+  K08: 'retained_root', // other disorders of teeth & supporting structures (retained root)
+};
+
+/** Matches a leading ICD-10 letter+2-digit prefix, e.g. "K02.1" → "K02". */
+const ICD10_CODE = /^([A-Z]\d{2})/;
+
+export function findingLabel(code: ConditionCode | string): string {
+  const direct = FINDINGS_VOCABULARY.find((e) => e.code === code)?.label;
+  if (direct) return direct;
+
+  // Resolve an ICD-10 code to its curated finding label via the prefix map.
+  const icdPrefix = ICD10_CODE.exec(code)?.[1];
+  if (icdPrefix) {
+    const mapped = ICD10_PREFIX_TO_FINDING[icdPrefix];
+    if (mapped) return findingLabel(mapped);
+    // Unknown ICD code — never surface the raw "K99.9"; fall back to a clean value.
+    return 'Other';
+  }
+
+  return code;
 }
 
 /** Group the vocabulary for a sectioned picker (stable order). */

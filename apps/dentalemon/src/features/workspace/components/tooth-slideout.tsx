@@ -58,9 +58,15 @@ export interface ToothSlideoutProps {
   /** P0-D: why this tooth shows its current odontogram layer/color (derived from
    *  the same resolveToothLayer the chart uses, so it can't disagree). */
   layerExplanation?: { layer: string; label: string; reason: string };
+  /** Fix #2: this read-only view is a PAST visit card opened while the current visit is
+   *  still active — distinct from a genuinely-closed chart. Drives the breakdown banner
+   *  copy ("Switch to the active chart to edit" vs "corrections via Amendment"). */
+  isHistoricalView?: boolean;
+  /** Formatted date of the historical visit (e.g. "Mar 1, 2026") for the banner copy. */
+  historicalVisitDate?: string;
 }
 
-export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId, layerExplanation }: ToothSlideoutProps) {
+export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, onSaveAndNext, readOnly, visitId, originalRecordId, layerExplanation, isHistoricalView, historicalVisitDate }: ToothSlideoutProps) {
   // WCAG 2.4.3: Escape closes the slideout; focus returns to the opener on close.
   useSheetA11y({ open, onClose });
 
@@ -352,6 +358,8 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
             // fire against an empty visitId (mirrors treatment-table.tsx:148).
             readOnly={readOnly || !visitId}
             visitId={visitId}
+            isHistoricalView={isHistoricalView}
+            historicalVisitDate={historicalVisitDate}
           />
         )}
 

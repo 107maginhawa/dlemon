@@ -61,6 +61,12 @@ interface ToothOverviewStepProps {
   /** P2-D: the active visit id; the PATCH handle for in-panel Advance/Decline/Dismiss
    *  (PATCH /dental/visits/{visitId}/treatments/{treatmentId}). */
   visitId?: string;
+  /** Fix #2: this tooth is being viewed on a PAST visit card while the current visit is
+   *  still active — read-only for a different reason than a genuinely-closed chart. The
+   *  banner then explains how to return to editing instead of pointing at Amendments. */
+  isHistoricalView?: boolean;
+  /** Formatted date of the historical visit (e.g. "Mar 1, 2026"), shown in the banner. */
+  historicalVisitDate?: string;
 }
 
 const TOOTH_STATES = [
@@ -113,6 +119,8 @@ export function ToothOverviewStep({
   onSelectEntryClassification,
   readOnly = true,
   visitId,
+  isHistoricalView = false,
+  historicalVisitDate,
 }: ToothOverviewStepProps) {
   const { name, type } = getToothInfo(toothNumber);
   const surfaces = getSurfacesForTooth(toothNumber);
@@ -150,10 +158,14 @@ export function ToothOverviewStep({
     if (!isMarkDoneError) setMarkDoneErrorId(null);
   }, [isMarkDoneError]);
 
-  // Is there any treatment-kind row to act on? The Edit toggle only appears when
-  // there is (a finding-only ledger has nothing to advance/decline/dismiss).
-  const hasTreatmentRow = history.some(
-    (e) => (e as { eventKind?: 'finding' | 'treatment' }).eventKind === 'treatment',
+  // Is there any ACTIONABLE treatment row? The Edit toggle only appears when at least
+  // one treatment is diagnosed|planned — the statuses that render Advance/Decline/
+  // Dismiss. A ledger of only terminal rows (performed/verified/declined/dismissed)
+  // or only findings has nothing to act on, so the toggle would be a dead end.
+  const hasActionableTreatment = history.some(
+    (e) =>
+      (e as { eventKind?: 'finding' | 'treatment' }).eventKind === 'treatment' &&
+      (e.treatmentStatus === 'diagnosed' || e.treatmentStatus === 'planned'),
   );
 
   // Build SurfaceStatus[] for the SVG diagram from surfaceConditions
@@ -303,7 +315,7 @@ export function ToothOverviewStep({
                 ].join(' ')}
               >
                 <span className="text-xs font-semibold" aria-hidden="true">{label}</span>
-                <span className="text-[10px] text-muted-foreground" aria-hidden="true">{description}</span>
+                <span className="text-xs text-muted-foreground" aria-hidden="true">{description}</span>
               </button>
             );
           })}
@@ -335,7 +347,7 @@ export function ToothOverviewStep({
           <h3 className="text-sm font-bold text-foreground">Treatment Breakdown</h3>
           {/* P2-D: deliberate Edit/Done toggle — read is default. Only when the chart
               is open, a visit is set, and there is a treatment row to act on. */}
-          {canEdit && hasTreatmentRow && (
+          {canEdit && hasActionableTreatment && (
             <button
               type="button"
               data-testid="breakdown-edit-toggle"
@@ -348,17 +360,24 @@ export function ToothOverviewStep({
           )}
         </div>
 
-        {/* P2-E: closed chart (read-only) → a visible banner so the locked state is
-            legible (not just an absence of buttons). Corrections route to the
-            append-only amendment path surfaced in the slideout footer. */}
+        {/* Read-only banner — a visible cue so the locked state is legible (not just an
+            absence of buttons). Two distinct reasons:
+            • Fix #2 historical view: viewing a PAST visit while the current chart is open →
+              the fix is to switch back to the active chart, NOT to file an amendment.
+            • P2-E genuinely-closed CURRENT chart: corrections route to the append-only
+              amendment path surfaced in the slideout footer. */}
         {readOnly && (
           <div
             data-testid="chart-closed-banner"
             role="status"
-            className="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b border-border text-xs text-muted-foreground"
+            className="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b border-border text-sm text-muted-foreground"
           >
             <span aria-hidden>ⓘ</span>
-            <span>Chart closed — corrections via Amendment</span>
+            <span>
+              {isHistoricalView
+                ? `Viewing the ${historicalVisitDate ?? 'earlier'} visit (read-only). Switch to the active chart to edit.`
+                : 'Chart closed — corrections via Amendment'}
+            </span>
           </div>
         )}
 
@@ -426,7 +445,7 @@ export function ToothOverviewStep({
                 >
                   {/* Row 1: date left · status badge + price right */}
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs text-muted-foreground tabular-nums">
+                    <span className="text-sm text-muted-foreground tabular-nums">
                       {entry.visitDate
                         ? new Date(entry.visitDate).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' })
                         : '—'}
@@ -454,7 +473,7 @@ export function ToothOverviewStep({
                   )}
 
                   {/* Row 3: two-axis labeled fields — Condition and State, "—" when absent */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
                     <span className="text-muted-foreground">
                       <span className="font-semibold">Condition</span>
                       {': '}

@@ -33,7 +33,9 @@ import { join } from 'node:path';
 // lowered to 332 when the treatment-plan CDT-year stamp moved into the labeled
 // field grid (rem token scale) during the record-tabs polish pass.
 // lowered to 327 — layer key on historical cards uses text-xs (no new raw px).
-const BASELINE = 327;
+// lowered to 326 — per-tooth breakdown entry-classification description moved off
+// text-[10px] to the text-xs rem token during the iPad legibility pass.
+const BASELINE = 326;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

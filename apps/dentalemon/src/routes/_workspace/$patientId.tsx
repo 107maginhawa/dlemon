@@ -374,6 +374,22 @@ function WorkspacePage() {
       })
     : undefined;
 
+  // Fix #2: the formatted date of the historical visit being viewed (a past card opened
+  // while the current visit is still active). Looked up from the same visits array, so it
+  // can't disagree with the carousel card it was opened from.
+  const historicalVisitDate = historyToothSel
+    ? (() => {
+        const v = visits.find((vv) => vv.id === historyToothSel.visitId);
+        return v
+          ? new Date(v.createdAt).toLocaleDateString('en-PH', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : undefined;
+      })()
+    : undefined;
+
   return (
     <div className="flex h-full flex-col">
       {/* Top bar with patient avatar + safety floor */}
@@ -628,6 +644,8 @@ function WorkspacePage() {
         visitId={historyToothSel ? historyToothSel.visitId : (currentVisitId ?? undefined)}
         originalRecordId={historyToothSel ? undefined : selectedToothRecordId}
         layerExplanation={historyToothSel ? undefined : selectedToothLayerExplanation}
+        isHistoricalView={historyToothSel !== null}
+        historicalVisitDate={historicalVisitDate}
       />
 
       {/* Footer */}

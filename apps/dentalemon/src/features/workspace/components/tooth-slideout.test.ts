@@ -303,6 +303,24 @@ describe('ToothSlideout', () => {
     expect(screen.queryByTestId('breakdown-edit-toggle')).toBeNull();
   });
 
+  // Fix #1: with ONLY terminal treatment rows (all 'performed'/'verified'), the Edit
+  // toggle must be HIDDEN — there is nothing to advance/decline/dismiss, so revealing
+  // the toggle would be a dead end (confirmed live on tooth 36).
+  test('Fix #1: hides the Edit toggle when the only treatment row is performed (terminal)', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse({ treatmentStatus: 'performed' })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    expect(screen.queryByTestId('breakdown-edit-toggle')).toBeNull();
+  });
+
+  // Fix #1: an ACTIONABLE treatment row (diagnosed|planned) DOES show the Edit toggle.
+  test('Fix #1: shows the Edit toggle when an actionable (diagnosed) treatment row exists', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse({ treatmentStatus: 'diagnosed' })) as unknown as typeof fetch;
+    render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
+    await screen.findByTestId('breakdown-card-v1-0');
+    expect(screen.getByTestId('breakdown-edit-toggle')).not.toBeNull();
+  });
+
   // P2-D: tapping Edit reveals per-card actions on TREATMENT cards only. A planned
   // treatment shows "Mark Done" (the next FSM step), plus Decline and Dismiss.
   test('P2-D: edit mode reveals Advance/Decline/Dismiss on a planned treatment card', async () => {
@@ -330,17 +348,37 @@ describe('ToothSlideout', () => {
     expect(screen.getByText('Mark Planned')).not.toBeNull();
   });
 
-  // P2-D: a performed treatment exposes no advance/decline action — it reads a
-  // static "Treated" affordance instead (Treated is sticky; never reverts).
+  // P2-D / Fix #1: a performed treatment exposes no advance/decline action — it reads a
+  // static "Treated" affordance instead (Treated is sticky; never reverts). The Edit
+  // toggle only appears because a SECOND, actionable (planned) treatment exists on this
+  // tooth (Fix #1 — a performed-ONLY tooth shows no toggle; see the dedicated test).
   test('P2-D: a performed treatment shows no advance/decline action in edit mode', async () => {
-    global.fetch = mock(() => treatmentHistoryResponse({ treatmentStatus: 'performed' })) as unknown as typeof fetch;
+    global.fetch = mock(() => jsonResponse({
+      data: [
+        {
+          visitId: 'v1', visitDate: '2026-06-27T00:00:00Z', toothNumber: 11,
+          state: 'filled', treatmentDescription: 'Resin composite restoration',
+          surfaces: ['buccal'], treatmentStatus: 'performed', treatmentPriceCents: 80000,
+          eventKind: 'treatment', treatmentId: 't-perf',
+        },
+        {
+          visitId: 'v2', visitDate: '2026-06-27T00:00:00Z', toothNumber: 11,
+          state: 'caries', treatmentDescription: 'Crown',
+          surfaces: ['occlusal'], treatmentStatus: 'planned', treatmentPriceCents: 800000,
+          eventKind: 'treatment', treatmentId: 't-plan',
+        },
+      ],
+      pagination: { totalCount: 2, limit: 20, offset: 0 },
+    })) as unknown as typeof fetch;
     const user = userEvent.setup();
     render(React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })), { wrapper: makeWrapper() });
     await screen.findByTestId('breakdown-card-v1-0');
     await user.click(screen.getByTestId('breakdown-edit-toggle'));
-    expect(screen.queryByTestId('card-action-mark-done')).toBeNull();
-    expect(screen.queryByTestId('card-action-decline')).toBeNull();
-    expect(screen.getByText('✓ Treated')).not.toBeNull();
+    // The performed card (index 0) has no advance action and reads the static "Treated".
+    const performedCard = screen.getByTestId('breakdown-card-v1-0');
+    expect(performedCard.querySelector('[data-testid="card-action-mark-done"]')).toBeNull();
+    expect(performedCard.querySelector('[data-testid="card-action-decline"]')).toBeNull();
+    expect(performedCard.textContent).toContain('✓ Treated');
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -401,5 +439,41 @@ describe('ToothSlideout', () => {
     const banner = screen.getByTestId('chart-closed-banner');
     expect(banner).not.toBeNull();
     expect(banner.textContent).toContain('Chart closed');
+  });
+
+  // Fix #2: viewing a tooth on a PAST visit card (while the current visit is still
+  // active) is read-only for a DIFFERENT reason than a genuinely-closed chart. With
+  // isHistoricalView, the banner reads "Viewing the {date} visit … active chart to
+  // edit" and NOT the "Chart closed — corrections via Amendment" copy.
+  test('Fix #2: readOnly + isHistoricalView shows the historical-view banner, not chart-closed', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse()) as unknown as typeof fetch;
+    render(
+      React.createElement(ToothSlideout, baseProps({
+        readOnly: true,
+        visitId: 'v1',
+        isHistoricalView: true,
+        historicalVisitDate: 'Mar 1, 2026',
+      })),
+      { wrapper: makeWrapper() },
+    );
+    await screen.findByTestId('breakdown-card-v1-0');
+    const banner = screen.getByTestId('chart-closed-banner');
+    expect(banner.textContent).toContain('Viewing the Mar 1, 2026 visit');
+    expect(banner.textContent).toContain('active chart to edit');
+    expect(banner.textContent).not.toContain('Chart closed');
+  });
+
+  // Fix #2: a genuinely-closed CURRENT chart (readOnly + !isHistoricalView) keeps the
+  // "Chart closed — corrections via Amendment" copy.
+  test('Fix #2: readOnly + !isHistoricalView keeps the chart-closed banner', async () => {
+    global.fetch = mock(() => treatmentHistoryResponse()) as unknown as typeof fetch;
+    render(
+      React.createElement(ToothSlideout, baseProps({ readOnly: true, visitId: 'v1' })),
+      { wrapper: makeWrapper() },
+    );
+    await screen.findByTestId('breakdown-card-v1-0');
+    const banner = screen.getByTestId('chart-closed-banner');
+    expect(banner.textContent).toContain('Chart closed');
+    expect(banner.textContent).not.toContain('Viewing the');
   });
 });
