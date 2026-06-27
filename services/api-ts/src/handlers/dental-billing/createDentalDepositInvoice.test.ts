@@ -111,7 +111,8 @@ describe('§g createDentalDepositInvoice', () => {
     expect(inv.status).toBe('issued');          // payable now (not draft)
     expect(inv.totalCents).toBe(3000);
     expect(inv.balanceCents).toBe(3000);
-    expect(inv.dueDate).toBeTruthy();            // due-on-receipt (never overdue)
+    // Due-on-receipt: NO dueDate (never overdue; no TZ-drifting Due Date shown).
+    expect(inv.dueDate == null).toBe(true);
     expect(inv.lineItems).toHaveLength(1);
     expect(inv.lineItems[0].treatmentId == null).toBe(true);  // non-treatment line
     expect(inv.lineItems[0].amountCents).toBe(3000);

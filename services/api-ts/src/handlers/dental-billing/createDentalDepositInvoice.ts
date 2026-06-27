@@ -129,7 +129,12 @@ export async function createDentalDepositInvoice(
       dentistMemberId: body.dentistMemberId,
       invoiceNumber,
       kind: 'deposit',
-      // Born issued + due-on-receipt (F-03): payable now, never overdue.
+      // Born issued, payable now. A deposit is DUE ON RECEIPT (paid at
+      // collection), so it carries NO dueDate: (1) markOverdueInvoices uses
+      // `lte(dueDate, asOf)`, which a NULL dueDate never matches → never overdue;
+      // (2) a deposit has no meaningful "due date", and storing `now()` as one
+      // displayed a raw timestamp that drifted a calendar day across timezones
+      // (the OR/payment date vs a spurious Due Date). No dueDate → no drift.
       status: 'issued',
       subtotalCents: body.depositCents,
       taxCents: tax.taxCents,
@@ -137,7 +142,6 @@ export async function createDentalDepositInvoice(
       totalCents: body.depositCents,
       balanceCents: body.depositCents,
       issuedAt: now,
-      dueDate: now,
       localId: body.localId,
     });
 

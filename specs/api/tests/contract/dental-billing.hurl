@@ -217,7 +217,6 @@ jsonpath "$.kind" == "deposit"
 jsonpath "$.status" == "issued"
 jsonpath "$.totalCents" == 10000
 jsonpath "$.balanceCents" == 10000
-jsonpath "$.dueDate" exists
 jsonpath "$.lineItems" count == 1
 
 
