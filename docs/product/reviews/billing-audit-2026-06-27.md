@@ -198,3 +198,47 @@ Each item is tagged `[presentation]` (FE-only render/disable/copy), `[logic]` (d
 **D5 — Estimate object scope (only if D1=1a/1b).** Reuse the existing `treatment-plan.totalEstimateCents` + `estimateClaimCoverage` read-only as the Estimate surface (recommended, no new table), or introduce a first-class Quote object with its own status machine (larger). **Recommendation: reuse existing reads now; first-class Quote only if the product needs accept/expire lifecycle.**
 
 **Guardrails reaffirmed:** no silent change to billable set / tax-BIR math (BR-054/055) / RLS / treatment FSM / `performed`-`verified` immutability; P17 + P18 preserved; every money mutation audited.
+
+---
+
+## (g) Deposit-invoice design — "Review Estimate" dead-end fix (Phase-0, 2026-06-27)
+
+### The verified dead-end
+Footer shows **"Review Estimate · ₱6,300"** (correct — `payment-summary-bar.tsx:103-105`, `estimateOnly`). Click → `WorkspacePaymentModal`: planned line items + **"Estimate (planned) · not yet payable ₱6,300"** + the `no-billable-notice` (`workspace-payment-modal.tsx:366-375`) + a **disabled** "Create Invoice & Pay" (`:394`, `disabled={… || !hasBillable …}`). On a planned-only visit `hasBillable === false` ⇒ **every control is dead**. The dentist's only escape is to leave the modal and advance treatments. **Confirmed, not trusted.**
+
+### What we reuse (verified by reading source — NO reinvention)
+| Need | Existing machinery | File |
+|------|--------------------|------|
+| Collect money + **BIR OR** | `recordDentalPayment` → `getDentalPaymentReceipt` (VAT split from stored `invoice.taxRate/taxCents`, BR-055) | `recordDentalPayment.ts`, `getDentalPaymentReceipt.ts` |
+| Correct VAT on the deposit | `computeInvoiceTax({subtotal, taxMode, vatRate})` — identical to standard invoices (BR-054) | `utils/tax.ts` |
+| **Refund** an un-applied deposit | `refundDentalPayment` (partial/full, owner-only, `bookAsCredit`, audited, advisory-locked) | `refundDentalPayment.ts` |
+| **Reconcile** to the later performed invoice | `addPatientCredit` (source) → `applyCreditToInvoice` (atomic, advisory-locked, capped) | `addPatientCredit.ts`, `applyCreditToInvoice.ts` |
+| Issue-before-payable | `recordDentalPayment` rejects `draft` (`:56-61`); invoices issue via `issueDentalInvoice` | `issueDentalInvoice.ts` |
+
+### Design (satisfies all 5 acceptance criteria; reuses the table above)
+A **deposit invoice is a real `dental_invoice`**, NOT a patient-credit shortcut (the expert-rejected path fails RECEIPT — `addPatientCredit` issues no OR — and RLS — see below):
+1. **New handler `createDentalDepositInvoice`** (`POST /dental/billing/visits/:visitId/deposit-invoice`). Mints a `dental_invoice` with **`kind='deposit'`** (new discriminator column), one **non-treatment** line item ("Deposit — treatment plan", `treatmentId=null`, already nullable `dental-invoice.schema.ts:63`), `subtotal/total = depositCents`, tax via `computeInvoiceTax`. **Creates AND issues atomically** so it is payable now. **Does NOT touch `dental_treatment` / `markTreatmentsAsBilled` / the `performed|verified` filter** — the FSM and `createDentalInvoice` are untouched.
+2. **Pay** → existing `recordDentalPayment` → existing `getDentalPaymentReceipt` ⇒ **RECEIPT ✓** (VAT-correct for VAT & non-VAT clinics, the OR is the advance receipt).
+3. **On full payment, mirror the cash to the patient credit ledger** (`source='deposit'`, `invoiceId=depositInvoice.id`) so it becomes ordinary available credit. **RECONCILIATION ✓**: when treatments are later `performed`, `createDentalInvoice` mints the performed-work invoice (unchanged); dentist clicks **"Apply deposit"** → `applyCreditToInvoice` (no second OR, no double-charge: deposit OR = ₱3,150, final cash OR = balance; total ORs = job total).
+4. **REFUND ✓**: un-applied deposit → `refundDentalPayment` on the deposit payment (cash-out or `bookAsCredit`). Money never stranded.
+5. **RLS ✓**: deposit invoice lives on `dental_invoice` (already armed). **Arm `dental_patient_credit`** (migration: `ENABLE+FORCE RLS` + branch policy) **and add it to `EXPECTED_RLS_TABLES`** in `check-rls-posture.ts` — it is currently **absent** (pre-existing gap this work must close).
+
+### Why `kind='deposit'` (the one schema change)
+Without a discriminator, revenue/AR reports (`getArAging`, `collectedThisMonth`, revenue KPIs) would sum the deposit invoice **and** the performed invoice ⇒ double-counted recognized revenue. The `kind` column lets reports **exclude `deposit` from recognized-revenue/invoiced totals while counting the deposit cash once**. This is an accounting-policy choice → flagged as **DQ3** below.
+
+### Phase-1 vertical slices (TDD: test RED → impl GREEN; expert-review BEFORE any FSM/money/RLS/tax change; atomic commit per slice)
+- **S-A `[presentation, FE-only, no policy]` Kill the literal dead-end first.** Estimate modal/footer always offers a real action: **"Present / Print Estimate"** (read-only patient-facing estimate) + keep the advance deep-link. No money, no BE. *Gate: FE (typecheck+lint+`bun test src/`+Playwright).* — ships even if the deposit decisions stall.
+- **S-B `[migration]` `kind` column + arm `dental_patient_credit` RLS.** `dental_invoice.kind` enum `standard|deposit` default `standard`; migration `ENABLE+FORCE RLS`+policy on `dental_patient_credit`; add to `check-rls-posture.ts`. *Gate: BE (typecheck+lint+`DATABASE_URL=…/monobase_test bun run test`+`check:boundaries`) + `check-rls-posture.ts` green.* **Expert-review (RLS) before impl.**
+- **S-C `[vertical-slice]` `createDentalDepositInvoice` (TypeSpec→codegen→BE→Hurl→SDK).** New endpoint, create+issue, non-treatment line, tax via `computeInvoiceTax`, audited, advisory-locked idempotent (reuse `localId` pattern). Excludes deposits from revenue/AR (`kind` filter). *Gate: full BE + Hurl contract suite + `check-timeline-coherence.ts` (reseed first).* **Expert-review (new payable path + tax + money) before impl.**
+- **S-D `[vertical-slice]` Deposit→credit mirror on full payment + "Apply deposit" reconciliation.** Mirror deposit cash to `dental_patient_credit` (source `deposit`); performed-invoice modal surfaces available deposit + one-click `applyCreditToInvoice`. Refund reverses the mirrored credit. *Gate: full BE + Hurl + coherence.* **Expert-review (reconciliation/refund money-paths) before impl.**
+- **S-E `[presentation]` Estimate→deposit FE.** Modal "Collect Deposit" (amount entry per DQ1) → `createDentalDepositInvoice` → existing payment capture → OR. Disabled controls always carry a reason; no enabled-but-useless control anywhere in the flow. *Gate: FE + Playwright (collect deposit → receipt; reconcile on performed).*
+- **Re-review before merge** on every slice touching money/FSM/RLS/tax.
+
+**Ordering rationale:** S-A removes the dead-end with zero policy risk. S-B/C/D are the gated payable path (build only after the §g checkpoint approval). S-E is the FE that lights it up.
+
+### §g CHECKPOINT — APPROVED 2026-06-27 (user)
+- **DQ-model = APPROVED** deposit-invoice model (S-B..S-E as specced; reuse patient-credit bridge; performed-only filter + FSM untouched).
+- **DQ1 = free amount, capped at estimate, + "Full estimate" shortcut.**
+- **DQ3 = add `kind='deposit'`; exclude deposits from recognized revenue/AR-invoiced, count the deposit cash once.**
+- **DQ4 (reconciliation) = reuse patient-credit bridge** (deposit cash → available credit `source='deposit'` → `applyCreditToInvoice` at performed time).
+- Build order: S-A → S-B → S-C → S-D → S-E. Independent expert-review before any FSM/money/RLS/tax change; re-review before merge.
