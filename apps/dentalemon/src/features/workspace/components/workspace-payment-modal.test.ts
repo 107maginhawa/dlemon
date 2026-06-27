@@ -15,9 +15,23 @@ import { jsonResponse, freshClientWithMutations } from '@/test-utils';
 const originalFetch = global.fetch;
 const mockFetch = mock(() => jsonResponse({ data: [] }));
 
+// Real treatment FSM statuses — the server bills `performed`/`verified` only.
 const LINE_ITEMS: PaymentLineItem[] = [
-  { id: 'li-1', description: 'Composite Filling', cdtCode: 'D2391', toothNumber: 14, priceCents: 12000, status: 'pending' },
-  { id: 'li-2', description: 'Scaling', priceCents: 8000, status: 'done' },
+  { id: 'li-1', description: 'Composite Filling', cdtCode: 'D2391', toothNumber: 14, priceCents: 12000, status: 'performed' },
+  { id: 'li-2', description: 'Scaling', priceCents: 8000, status: 'verified' },
+];
+
+// All non-billable (diagnosed/planned) — the "₱6,300 + Pay button over planned
+// work that 422s" bug (billing-audit-2026-06-27 G3/G4).
+const NON_BILLABLE_ITEMS: PaymentLineItem[] = [
+  { id: 'li-1', description: 'Periodic oral eval', cdtCode: 'D0120', toothNumber: 38, priceCents: 80000, status: 'diagnosed' },
+  { id: 'li-2', description: 'Resin composite', cdtCode: 'D2392', toothNumber: 17, priceCents: 450000, status: 'planned' },
+];
+
+// One billable, one planned — subtotal must reflect only the billable row.
+const MIXED_ITEMS: PaymentLineItem[] = [
+  { id: 'li-1', description: 'Composite Filling', cdtCode: 'D2391', toothNumber: 14, priceCents: 12000, status: 'performed' },
+  { id: 'li-2', description: 'Crown (planned)', cdtCode: 'D2740', toothNumber: 19, priceCents: 90000, status: 'planned' },
 ];
 
 const INVOICE = {
@@ -210,6 +224,31 @@ describe('WorkspacePaymentModal', () => {
       });
       expect(postCall).not.toBeNull();
     });
+  });
+
+  it('subtotal reflects only billable rows; non-billable rows shown as context (G3)', async () => {
+    renderModal({ lineItems: MIXED_ITEMS });
+    // Both rows visible (planned row is context, not hidden)…
+    expect(screen.getByTestId('line-item-li-1')).not.toBeNull();
+    expect(screen.getByTestId('line-item-li-2')).not.toBeNull();
+    // …but the payable subtotal is the billable row only (₱120.00), not ₱1,020.00.
+    const amount = screen.getByTestId('subtotal-amount');
+    expect(amount.textContent).toContain('120');
+    expect(amount.textContent).not.toContain('1,020');
+  });
+
+  it('no payable subtotal + disabled Pay + reason when nothing is billable (G4 — the ₱6,300 bug)', async () => {
+    renderModal({ lineItems: NON_BILLABLE_ITEMS });
+    await waitFor(() => {
+      // No payable subtotal advertised for planned-only work…
+      expect(screen.queryByTestId('subtotal-row')).toBeNull();
+      // …the CTA is disabled BEFORE any click (no post-click 422)…
+      expect((screen.getByTestId('create-invoice-btn') as HTMLButtonElement).disabled).toBe(true);
+      // …and the user is told why.
+      expect(screen.getByTestId('no-billable-notice')).not.toBeNull();
+    });
+    // Planned rows are still shown as context.
+    expect(screen.getByTestId('line-item-li-1')).not.toBeNull();
   });
 
   it('shows empty state when no line items and no invoice', async () => {

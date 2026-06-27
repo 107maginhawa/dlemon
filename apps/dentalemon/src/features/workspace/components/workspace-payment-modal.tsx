@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
+import { isBillableTreatment } from '../hooks/use-treatments';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { InvoiceDetail } from '@/features/billing/components/invoice-detail';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
@@ -58,8 +59,26 @@ function statusConfig(status: string): { label: string; className: string } {
     paid: { label: 'Paid', className: 'bg-success/15 text-success-foreground' },
     overdue: { label: 'Overdue', className: 'bg-destructive/15 text-destructive-emphasis' },
     voided: { label: 'Voided', className: 'bg-muted text-muted-foreground' },
+    // G10: the enum carries `uncollectible`; without this it fell through to the
+    // raw-string default branch with neutral styling.
+    uncollectible: { label: 'Uncollectible', className: 'bg-destructive/15 text-destructive-emphasis' },
   };
   return map[status] ?? { label: status, className: 'bg-muted text-muted-foreground' };
+}
+
+// Per-row treatment-status display. Only `performed`/`verified` are billable
+// (server gate); everything else is context, rendered muted so the user can see
+// their planned work without it reading as payable.
+function treatmentRowStatus(status: string): { label: string; billable: boolean } {
+  const map: Record<string, string> = {
+    performed: 'Performed',
+    verified: 'Verified',
+    planned: 'Planned',
+    diagnosed: 'Diagnosed',
+    dismissed: 'Dismissed',
+    declined: 'Declined',
+  };
+  return { label: map[status] ?? status, billable: isBillableTreatment(status) };
 }
 
 // ---------------------------------------------------------------------------
@@ -67,11 +86,13 @@ function statusConfig(status: string): { label: string; className: string } {
 // ---------------------------------------------------------------------------
 
 function LineItemRow({ item }: { item: PaymentLineItem }) {
-  const isDone = item.status === 'done' || item.status === 'completed';
+  // G5/G8: the old check tested `'done'`/`'completed'` — neither is ever a real
+  // treatment status, so even billable rows rendered "Pending". Map the real FSM.
+  const { label, billable } = treatmentRowStatus(item.status);
   return (
     <div
       data-testid={`line-item-${item.id}`}
-      className="grid gap-1 border-b border-border py-2.5 last:border-0"
+      className={`grid gap-1 border-b border-border py-2.5 last:border-0 ${billable ? '' : 'opacity-60'}`}
       style={{ gridTemplateColumns: '1fr 72px 64px 80px', alignItems: 'center' }}
     >
       <div>
@@ -81,24 +102,20 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
           {item.toothNumber && <span>T{item.toothNumber}</span>}
         </p>
       </div>
-      <div
-        className="text-right"
-        role="img"
-        aria-label={isDone ? 'Status: completed' : 'Status: pending'}
-      >
-        {isDone ? (
+      <div className="text-right" role="img" aria-label={`Status: ${label.toLowerCase()}`}>
+        {billable ? (
           <CheckCircle2 className="ml-auto h-5 w-5 text-success" />
         ) : (
           <Clock className="ml-auto h-5 w-5 text-muted-foreground" />
         )}
       </div>
       <div className="text-right">
-        <span className={`text-[11px] font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
-          {isDone ? 'Done' : 'Pending'}
+        <span className={`text-[11px] font-medium ${billable ? 'text-success-foreground' : 'text-muted-foreground'}`}>
+          {label}
         </span>
       </div>
       <div className="text-right">
-        <span className={`text-[14px] font-medium tabular-nums ${item.priceCents === 0 ? 'text-muted-foreground' : ''}`}>
+        <span className={`text-[14px] font-medium tabular-nums ${billable && item.priceCents !== 0 ? '' : 'text-muted-foreground'}`}>
           {formatCents(item.priceCents)}
         </span>
       </div>
@@ -179,7 +196,12 @@ export function WorkspacePaymentModal({
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
   useSheetA11y({ open, onClose });
 
-  const subtotalCents = lineItems.reduce((sum, item) => sum + item.priceCents, 0);
+  // Only billable (performed|verified) rows feed the payable subtotal — the modal
+  // mirrors the server gate so the advertised total === what the server will mint
+  // (billing-audit-2026-06-27 G3/G4). Non-billable rows still render as context.
+  const billableItems = lineItems.filter((item) => isBillableTreatment(item.status));
+  const hasBillable = billableItems.length > 0;
+  const subtotalCents = billableItems.reduce((sum, item) => sum + item.priceCents, 0);
 
   // THIS visit's invoice (one invoice per visit). Previously this took the patient's
   // most-recent non-voided invoice across ALL visits, so a prior visit's PAID invoice
@@ -295,8 +317,8 @@ export function WorkspacePaymentModal({
               </div>
             )}
 
-            {/* Subtotal */}
-            {lineItems.length > 0 && (
+            {/* Subtotal — only when there is something billable to pay for. */}
+            {hasBillable && (
               <div
                 data-testid="subtotal-row"
                 className="mx-0 flex items-center justify-between bg-lemon-soft px-5 py-3 border-y border-border"
@@ -308,6 +330,19 @@ export function WorkspacePaymentModal({
                 >
                   {formatCents(subtotalCents)}
                 </span>
+              </div>
+            )}
+
+            {/* Nothing billable yet: explain why, pre-click — no payable total, no
+                422-bound CTA. (G4 — the "₱6,300 + Pay over planned work" bug.) */}
+            {lineItems.length > 0 && !hasBillable && !visitInvoice && (
+              <div
+                data-testid="no-billable-notice"
+                className="mx-5 my-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+              >
+                No treatments are ready to bill on this visit yet. Mark a treatment as
+                <span className="font-medium text-foreground"> performed</span> (and sign consent)
+                to add it to an invoice.
               </div>
             )}
           </div>
@@ -328,7 +363,7 @@ export function WorkspacePaymentModal({
               <button
                 type="button"
                 onClick={handleCreateInvoice}
-                disabled={createInvoice.isPending || lineItems.length === 0 || !visitId}
+                disabled={createInvoice.isPending || !hasBillable || !visitId}
                 data-testid="create-invoice-btn"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
               >

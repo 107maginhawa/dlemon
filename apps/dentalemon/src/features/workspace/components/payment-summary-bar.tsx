@@ -2,15 +2,15 @@
  * PaymentSummaryBar — the workspace footer summary + payment CTA.
  *
  * Extracted from the route so its cross-element coherence is independently
- * testable. The figures it shows MUST describe the billable set — every
- * treatment in the visit — because that is exactly what WorkspacePaymentModal
- * renders as line items and bills. `pendingCount` (diagnosed|planned) is shown as
- * informational context only; it never drives the total or the button count, or
- * the footer would read "Continue to Payment (0)" / "No pending treatments" on an
- * all-performed visit that still bills ₱X.
+ * testable. The figures it shows describe the BILLABLE set — only `performed`/
+ * `verified` treatments — because that is exactly what the server mints into an
+ * invoice (createDentalInvoice.ts:79). Showing the all-status total here was the
+ * bug (billing-audit-2026-06-27 G1/G2/G7): it advertised a payable ₱X + an
+ * enabled "Continue to Payment (N)" that the server 422s on. `pendingCount`
+ * (diagnosed|planned) is informational context only — never a payable total.
  */
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
-import type { Treatment } from '../hooks/use-treatments';
+import { isBillableTreatment, type Treatment } from '../hooks/use-treatments';
 
 interface PaymentSummaryBarProps {
   treatments: Treatment[];
@@ -22,40 +22,57 @@ interface PaymentSummaryBarProps {
 }
 
 export function PaymentSummaryBar({ treatments, isReadOnly, onContinue, onReviewPending }: PaymentSummaryBarProps) {
-  // Billable set == exactly what WorkspacePaymentModal receives as lineItems.
-  const billableCount = treatments.length;
+  // Billable set == the server's invoice gate (performed|verified) == exactly
+  // what WorkspacePaymentModal will bill. Anything else is context, not money.
+  const billable = treatments.filter((t) => isBillableTreatment(t.status));
+  const billableCount = billable.length;
   const pendingCount = treatments.filter(
     (t) => t.status === 'diagnosed' || t.status === 'planned',
   ).length;
-  const totalAmount = treatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
+  const totalAmount = billable.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
 
   // Issue 2: name WHAT is pending, and when there's anything pending make it a
   // clickable affordance that routes to the Treatment Breakdown.
   const pendingLabel = `${pendingCount} treatment${pendingCount === 1 ? '' : 's'} pending`;
+  const pendingNode =
+    pendingCount > 0 && onReviewPending ? (
+      <button
+        type="button"
+        data-testid="review-pending-btn"
+        onClick={onReviewPending}
+        title="Review pending treatments"
+        className="rounded px-1 -mx-1 font-medium text-foreground underline decoration-dotted underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {pendingLabel}
+      </button>
+    ) : (
+      pendingLabel
+    );
 
   return (
     <footer className="flex h-14 shrink-0 items-center justify-between border-t px-4 backdrop-blur-xl bg-white/70 supports-[backdrop-filter]:bg-white/70">
       <span className="text-sm text-muted-foreground" data-testid="treatment-summary">
-        {billableCount === 0 ? (
+        {treatments.length === 0 ? (
           'No treatments yet'
+        ) : billableCount === 0 ? (
+          // Nothing billable yet: explain WHY (planned, not performed) — never a
+          // payable total. This is the all-pending state that used to 422 on click.
+          <>
+            {pendingNode}
+            {' · '}
+            <span>not yet billable</span>
+          </>
         ) : (
           <>
-            {pendingCount > 0 && onReviewPending ? (
-              <button
-                type="button"
-                data-testid="review-pending-btn"
-                onClick={onReviewPending}
-                title="Review pending treatments"
-                className="rounded px-1 -mx-1 font-medium text-foreground underline decoration-dotted underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {pendingLabel}
-              </button>
-            ) : (
-              pendingLabel
-            )}{' · '}
+            {pendingCount > 0 && (
+              <>
+                {pendingNode}
+                {' · '}
+              </>
+            )}
             <span className="font-semibold text-foreground" data-testid="treatment-total">
               {CURRENCY_SYMBOL}
-              {totalAmount.toLocaleString(APP_LOCALE)} total
+              {totalAmount.toLocaleString(APP_LOCALE)} billable
             </span>
           </>
         )}
