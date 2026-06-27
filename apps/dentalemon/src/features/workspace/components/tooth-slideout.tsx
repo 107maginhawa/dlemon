@@ -111,7 +111,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
     return (
       <aside
         data-testid="tooth-slideout"
-        className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl z-30"
+        className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl overflow-y-auto z-30 max-lg:bottom-0 max-lg:top-0 max-lg:w-full max-lg:z-50 max-lg:pb-[env(safe-area-inset-bottom)]"
         aria-label="Select next tooth"
       >
         <div className="flex items-center justify-between p-4 border-b">
@@ -303,7 +303,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
                 type="button"
                 onClick={() => navigable && setStep(s)}
                 aria-disabled={!navigable}
-                className={`flex flex-col items-center gap-1 shrink-0 ${navigable ? '' : 'opacity-50 cursor-not-allowed'}`}
+                className={`flex flex-col items-center justify-center gap-1 shrink-0 min-w-[44px] min-h-[44px] ${navigable ? '' : 'opacity-50 cursor-not-allowed'}`}
               >
                 <span
                   className={[
@@ -311,13 +311,13 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
                     isActive
                       ? 'bg-lemon text-foreground'
                       : isCompleted
-                        ? 'bg-green-400 text-white'
+                        ? 'bg-green-600 text-white'
                         : 'bg-muted text-muted-foreground',
                   ].join(' ')}
                 >
                   {isCompleted ? '✓' : i + 1}
                 </span>
-                <span className={`text-[10px] font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                <span className={`text-[11px] font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {stepLabels[s]}
                 </span>
               </button>
