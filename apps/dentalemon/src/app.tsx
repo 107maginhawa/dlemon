@@ -148,7 +148,9 @@ function App() {
       <InnerApp />
       {import.meta.env.DEV && (
         <TanStackDevtools
-          config={{ position: 'bottom-right' }}
+          // bottom-left: bottom-right collides with the workspace footer's
+          // "Continue to Payment" CTA (billing-audit-2026-06-27 B1).
+          config={{ position: 'bottom-left' }}
           plugins={[
             {
               name: 'TanStack Query',

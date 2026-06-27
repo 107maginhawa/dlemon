@@ -350,7 +350,14 @@ export function TreatmentTable({
         </div>
       </div>
       {viewMode === 'by-visit' && (
-      <table className="w-full text-sm" aria-label="Treatments">
+      // overflow-x-auto: the 8-column table out-grows iPad widths and the parent
+      // card is overflow-hidden, so the right-most Total column was clipped
+      // (billing-audit-2026-06-27 B2). ponytail: the sticky grand-total degrades
+      // to "rendered at table end" inside this scroller rather than pinned to the
+      // viewport — acceptable; the clip was the actual bug. Upgrade path: lift the
+      // total to a sticky footer outside the scroller if pinning is wanted back.
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm" aria-label="Treatments">
         <thead className="bg-muted/30">
           <tr>
             {/* TXTBL-04: chevron column */}
@@ -682,6 +689,7 @@ export function TreatmentTable({
           )}
         </tbody>
       </table>
+      </div>
       )}
 
       {/* P2: by-status/phase plan presentation (read-only). Rows are grouped via
