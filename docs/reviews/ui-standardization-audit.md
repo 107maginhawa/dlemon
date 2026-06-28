@@ -99,11 +99,11 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 ### From module 5 — scheduling ✅
 - Migrated 15 off-scale literals (calendar day/week/month, appointment-card, recall-due-list, queue-board) → text-xs/sm/base. Tokenized light-surface status palette in appointment-card, calendar-week/month, waitlist-panel → secondary/muted/border tokens. Baseline 178 → 163.
 - **appointment-modal** (1 literal) left untouched — it's the second DESIGN-exempt transactional panel; folded into **B2** (handle both exempt panels together in a verified pass).
-- **B11** Appointment/calendar cards use **side-stripe status borders** (`border-l-*`), which impeccable flags as an anti-pattern. It's the calendar's established status language; replacing it (full borders / bg tints / leading status dot) is a redesign needing design review, not a token swap. Colors are now tokenized; the pattern decision is deferred. P2.
+- **B11** ✅ CLOSED (keep) — colored left-accent borders on **calendar events** are a universal calendar convention (Google/Apple/Outlook). impeccable's side-stripe ban targets cards/callouts/alerts, not calendar events. Colors are tokenized; pattern kept by decision.
 
 ### From module 6 — dashboard ✅
 - Migrated 14 off-scale literals (metric-card, morning-briefing, attention-queue, kpi-ribbon, schedule-timeline) → text-xs/sm. Baseline 163 → 149. Palette already clean (the morning-briefing hex is JS chart data, not className).
-- **B12** Dashboard home has no error-state UI for its data fetches (schedule/kpi/attention; only morning-briefing handles error). Adding error/empty fallbacks is feature work (needs error UI + wiring), scoped separately from the token sweep. P1.
+- **B12** ✅ DONE — dashboard data is fetched centrally in `MorningBriefing` (the other widgets are presentational). It already had a loading skeleton + a raw `error.message` banner; upgraded the error path to the shared `ListErrorState` with plain-language copy ("We couldn't load your dashboard just now. Please try again.") + a Retry wired to the hook's `refetch` (PRODUCT.md voice). Happy path unchanged.
 
 ### From module 7 — remaining light modules ✅ (batched, each audited individually)
 Audited every remaining module for font/palette/className-hex deviations before touching anything; most were already clean.
@@ -115,4 +115,7 @@ Audited every remaining module for font/palette/className-hex deviations before 
 
 Baseline 149 → 136. Residual whole-app literals are text-[10px] (Micro role, no rem token) + the deferred B2 dense panels.
 
-### Status: all 12 module groups swept. Remaining work = the tracked backlog (B1–B12) only.
+### Status: all 12 module groups swept; backlog B1–B12 resolved.
+- **Done (code):** B2, B3, B4, B6, B7, B8, B12. Plus the 7-module sweep.
+- **Closed by decision (no change):** B1 (categorical role badges), B5 (print surface), B9 (imaging dark viewer), B11 (calendar event stripes).
+- **Deferred (low value, tracked):** B10 — imaging empty-state coverage. Most of the 28 imaging files are sub-components that don't warrant empty states; revisit only if imaging UX feedback calls for it.
