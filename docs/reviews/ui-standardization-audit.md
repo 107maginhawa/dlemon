@@ -69,3 +69,27 @@ Ordered by (impact × deviation density). Highest-traffic + most-deviated first.
 5. Atomic commit, then STOP and report before the next module.
 
 **Recommendation:** start with **staff** (only P0, smallest blast radius) to validate the protocol end-to-end, then proceed down the table.
+
+---
+
+## Deferred backlog (do later)
+
+Tracked here so nothing is silently dropped. None block shipping; each needs its own visually-verified pass.
+
+### From module 1 — staff ✅ (commit `5d045bd6`)
+- **B1** Role-badge categorical colors in `staff-list.tsx` (`getRoleBadgeClass`: amber/blue/green/purple per role) left as raw palette — there is no token set for categorical role hues. Candidate: add a `role-*` token group if we want these on-system. P2.
+- **Audit correction:** "staff error=0" was a false grep signal; `staff-list.tsx` already has error/loading/empty states. No work.
+
+### From module 2 — workspace ✅ (commit `344241c0`)
+- **B2** `workspace-payment-modal.tsx` — 15 off-scale literals incl. 3 `text-[15px]`. Intentional dense money panel + `getByRole('dialog',{name})` tests; needs an individually-verified pass. P1 (ratchet).
+- **B3** `dental-chart.tsx` — canvas glyph colors (`bg-gray-900`/`slate-700` tooth markers) + 6 palette uses. Mostly legitimate visual encoding; verify the non-canvas spots only. P2.
+- **B4** Perio dense-grid internals — `perio-tooth-column.tsx` (`bg-zinc-700` dark "plaque present" chip + ~8 palette uses), `perio-site-cell`, `perio-chart-grid`, `perio-cal-cell`. Dedicated legibility pass already touched these; re-tokenizing needs per-grid visual verification. P2.
+- **B5** `chart-export-view.tsx` — 7 palette uses; it's a print surface, tokenize against print styles. P2.
+
+### Cross-cutting (whole-app, after the module sweep)
+- **B6** `focus-visible` coverage gap — ~73 of 131 interactive files lack a visible keyboard-focus ring (X5). Best done as one consistent sweep once per-module passes settle the markup. P1.
+- **B7** Sub-44px interactive targets (X7, ~9 sites) — spot-fixed opportunistically per module; do a final grep sweep to catch stragglers. P1.
+- **B8** Untrapped overlay triage (X4) — `apply-template-button`, `reports/invoice-detail-sheet`, `patients/patient-statement` (verify real-modal vs print); `chart-export-overlay` is a `window.print` surface, likely exempt. P2.
+
+### Remaining modules (not yet swept)
+billing (next) → imaging → scheduling → dashboard → patients → settings → reports → portal → case-presentation → onboarding/auth/booking. Imaging carries the worst raw-palette density (17 files) and thin empty-state coverage (1/28).
