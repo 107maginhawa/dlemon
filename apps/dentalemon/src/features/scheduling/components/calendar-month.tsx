@@ -69,7 +69,7 @@ const STATUS_DOT_COLOR: Record<string, string> = {
   scheduled: 'bg-blue-400',
   checkedIn: 'bg-teal-400',
   completed: 'bg-green-400',
-  cancelled: 'bg-gray-300',
+  cancelled: 'bg-muted-foreground/40',
   noShow: 'bg-red-400',
 };
 
@@ -127,7 +127,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
         {DAY_HEADERS.map((name) => (
           <div
             key={name}
-            className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground py-2"
+            className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2"
             role="columnheader"
           >
             {name}
@@ -165,7 +165,7 @@ export function CalendarMonth({ selectedDate, appointments, onDayClick }: Calend
                 className={[
                   'inline-flex items-center justify-center text-sm font-semibold tabular-nums',
                   isToday
-                    ? 'bg-lemon text-lemon-foreground w-7 h-7 rounded-full text-[13px]'
+                    ? 'bg-lemon text-lemon-foreground w-7 h-7 rounded-full text-sm'
                     : overflow
                       ? 'text-muted-foreground/60'
                       : 'text-foreground',

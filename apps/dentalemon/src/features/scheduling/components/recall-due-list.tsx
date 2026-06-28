@@ -75,7 +75,7 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
   return (
     <Card data-testid="recall-due-list">
       <CardHeader>
-        <CardTitle className="text-[15px] font-semibold tracking-tight">Recare due</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">Recare due</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {isLoading && (
@@ -119,7 +119,7 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
                   variant="ghost"
                   onClick={() => void handleReachOut(recall)}
                   disabled={busyId === recall.id}
-                  className="h-8 px-3 rounded-lg border border-border text-[13px] font-medium hover:bg-secondary transition-colors disabled:opacity-50"
+                  className="h-8 px-3 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
                   aria-label={`Reach out to ${recall.patientName}`}
                 >
                   {busyId === recall.id ? '…' : 'Reach out'}
@@ -129,7 +129,7 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
                 type="button"
                 variant="ghost"
                 onClick={() => onSchedule?.(recall)}
-                className="h-8 px-3 rounded-lg bg-lemon hover:bg-lemon-hover text-lemon-foreground text-[13px] font-semibold transition-colors"
+                className="h-8 px-3 rounded-lg bg-lemon hover:bg-lemon-hover text-lemon-foreground text-sm font-semibold transition-colors"
                 aria-label={`Schedule ${recall.patientName}`}
               >
                 Schedule

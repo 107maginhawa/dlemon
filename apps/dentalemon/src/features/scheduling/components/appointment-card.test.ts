@@ -58,10 +58,10 @@ describe('getStatusBadgeProps — label mapping', () => {
     expect(props.className).toContain('green');
   });
 
-  test('cancelled → "Cancelled" with gray classes', () => {
+  test('cancelled → "Cancelled" with neutral muted token', () => {
     const props = getStatusBadgeProps('cancelled');
     expect(props.label).toBe('Cancelled');
-    expect(props.className).toContain('gray');
+    expect(props.className).toContain('muted-foreground');
   });
 
   test('no_show → "No Show" with red classes', () => {
@@ -73,7 +73,7 @@ describe('getStatusBadgeProps — label mapping', () => {
   test('unknown status returns the raw status string', () => {
     const props = getStatusBadgeProps('some_future_status');
     expect(props.label).toBe('some_future_status');
-    expect(props.className).toContain('gray');
+    expect(props.className).toContain('muted-foreground');
   });
 });
 

@@ -93,8 +93,13 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 
 ### From module 4 — imaging ✅ (safe slice only)
 - **Audit correction:** the "worst palette offender, 17 files" flag was a false signal. ~240 raw-palette uses are an **intentional dark PACS/radiology viewer theme** (bg-zinc-800/900/950, border-zinc-700, light text on dark, lemon active accent) — a deliberate convention so X-rays/ceph pop, not sloppy deviation. Confirmed in `imaging-workspace.tsx` (dark toolbar + buttons). Only the 5 off-scale font literals and 2 light-Dialog Cancel buttons were genuine deviations; those are fixed.
-- **B9** Make the imaging dark viewer **theme-able**: replace the ~53 hardcoded dark `zinc-700/800/900` surfaces (13 files) with a viewer dark-surface token set (or adopt the app dark-mode tokens). This is a **design-system decision, not a mechanical swap** — bulk-migrating to the light app tokens would invert and break the viewer. Needs product/design sign-off on whether the viewer stays hardcoded-dark or becomes tokenized-dark. P2.
+- **B9** ~~Make the imaging dark viewer theme-able~~ — **DECIDED 2026-06-28: leave hardcoded-dark.** The dark PACS viewer is an intentional, coherent radiology convention; tokenizing 53 surfaces for theme-ability that's unlikely to be needed is speculative effort with real regression risk. Won't-do unless an app-wide dark mode or a real viewer-theming requirement lands. Closed.
 - **B10** Imaging empty-state coverage is thin (1/28). Adding empty states is a feature addition beyond standardization; scope separately. P2.
 
+### From module 5 — scheduling ✅
+- Migrated 15 off-scale literals (calendar day/week/month, appointment-card, recall-due-list, queue-board) → text-xs/sm/base. Tokenized light-surface status palette in appointment-card, calendar-week/month, waitlist-panel → secondary/muted/border tokens. Baseline 178 → 163.
+- **appointment-modal** (1 literal) left untouched — it's the second DESIGN-exempt transactional panel; folded into **B2** (handle both exempt panels together in a verified pass).
+- **B11** Appointment/calendar cards use **side-stripe status borders** (`border-l-*`), which impeccable flags as an anti-pattern. It's the calendar's established status language; replacing it (full borders / bg tints / leading status dot) is a redesign needing design review, not a token swap. Colors are now tokenized; the pattern decision is deferred. P2.
+
 ### Remaining modules (not yet swept)
-scheduling → dashboard → patients → settings → reports → portal → case-presentation → onboarding/auth/booking.
+dashboard → patients → settings → reports → portal → case-presentation → onboarding/auth/booking.

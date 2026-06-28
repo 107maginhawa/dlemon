@@ -49,7 +49,11 @@ import { join } from 'node:path';
 // lowered to 178 — imaging safe slice: patient-image-list, CbctStudyCard and
 // SuperimpositionPanel 11px labels -> text-xs. The imaging viewer's broader
 // palette is an intentional dark PACS theme, deferred (see B9 in the audit).
-const BASELINE = 178;
+// lowered to 163 — scheduling pass: calendar day/week/month, appointment-card,
+// recall-due-list and queue-board 11/13/15px literals -> text-xs/sm/base. The
+// appointment-modal (DESIGN-exempt transactional panel) keeps its 1 literal,
+// deferred with the workspace-payment-modal (B2).
+const BASELINE = 163;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;
