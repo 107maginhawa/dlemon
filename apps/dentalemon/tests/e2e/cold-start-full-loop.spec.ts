@@ -205,7 +205,9 @@ test.describe('Cold-start full loop', () => {
 
       // Overview: focus a surface, assign a condition.
       await page.getByTestId('surface-occlusal').click();
-      await page.getByRole('button', { name: 'Caries', exact: true }).click();
+      // testid, not role+name: "Caries" matches both the condition button and the
+      // finding-code chip (strict-mode violation). Target the condition picker.
+      await page.getByTestId('condition-caries').click();
 
       // Advance to the treatment (CDT) step.
       await page.getByRole('button', { name: /^next$/i }).click();

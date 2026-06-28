@@ -14,7 +14,7 @@
  * server — an omitted/blank sub-field is sent through and merged).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -80,6 +80,20 @@ export function PatientEditForm({
   const [email, setEmail] = useState(initial.email);
   const [phone, setPhone] = useState(initial.phone);
   const [fieldError, setFieldError] = useState<string | null>(null);
+
+  // Sync fields to the `initial` prop each open (the panel stays mounted), so
+  // reopening for a different patient never shows the previous patient's values.
+  useEffect(() => {
+    if (!open) return;
+    setFirstName(initial.firstName);
+    setLastName(initial.lastName);
+    setDateOfBirth(initial.dateOfBirth);
+    setGender(initial.gender);
+    setEmail(initial.email);
+    setPhone(initial.phone);
+    setFieldError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   function validate(): boolean {
     if (!firstName.trim()) {

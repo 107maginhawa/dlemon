@@ -7,7 +7,7 @@
  * Wireframe: docs/prd/context/wireframes/patient-registration.html
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +57,19 @@ export function PatientRegistrationModal({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset to a clean form each open (the panel stays mounted while `open` toggles),
+  // so a prior abandoned registration's fields/errors don't carry over.
+  useEffect(() => {
+    if (!open) return;
+    setDisplayName('');
+    setDateOfBirth('');
+    setGender('');
+    setConsentGiven(false);
+    setChannelConsent({ sms: false, email: false, phone: false, marketing: false });
+    setErrors({});
+    setIsSubmitting(false);
+  }, [open]);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
