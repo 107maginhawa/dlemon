@@ -179,6 +179,7 @@ export async function recordDentalPayment(
         amountCents: body.amountCents,
         source: 'deposit',
         invoiceId,
+        createdByMemberId: body.recordedByMemberId, // attribute the mirror to the collecting staff
         createdBy: session.userId,
         updatedBy: session.userId,
       });

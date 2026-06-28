@@ -16,7 +16,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { getBranchOrgId, getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -96,12 +96,16 @@ export async function applyCreditToInvoice(
     }
 
     const updated = await invoiceRepo.addPayment(invoiceId, body.amountCents);
+    // Attribute the consuming row to the acting staff member (best-effort, like
+    // addPatientCredit — never blocks the draw-down if no membership resolves).
+    const member = await getActiveMembershipId(db, user.id, live.branchId);
     await creditRepo.create({
       patientId: live.patientId,
       branchId: live.branchId,
       amountCents: -body.amountCents, // consuming row
       source: 'applied',
       invoiceId,
+      createdByMemberId: member?.id ?? null,
       createdBy: user.id,
       updatedBy: user.id,
     });

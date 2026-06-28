@@ -88,6 +88,7 @@ export async function voidDentalPayment(
         amountCents: -payment.amountCents,
         source: 'deposit_reversed',
         invoiceId,
+        createdByMemberId: membership.id, // attribute the reversal to the voiding staff
         createdBy: session.userId,
         updatedBy: session.userId,
       });

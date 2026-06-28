@@ -138,6 +138,7 @@ export async function refundDentalPayment(
         amountCents: -body.amountCents, // negative: remove the deposit credit
         source: 'deposit_reversed',
         invoiceId: payment.invoiceId,
+        createdByMemberId: membership?.id ?? null, // attribute the reversal to the refunding staff
         createdBy: session.userId,
         updatedBy: session.userId,
       });

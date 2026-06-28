@@ -132,6 +132,13 @@ async function balance(): Promise<number> {
   return new DentalPatientCreditRepository(db).getBalance(PATIENT);
 }
 
+/** The acting-member attribution on the most recent credit ledger row of a
+ *  given source. Null until the deposit credit paths record it. */
+async function creditMember(source: string): Promise<string | null> {
+  const r = await db.execute(sql`SELECT created_by_member_id AS m FROM dental_patient_credit WHERE source = ${source} ORDER BY created_at DESC LIMIT 1`);
+  return (((r as any).rows ?? r)[0])?.m ?? null;
+}
+
 describe('§g S-D deposit reconciliation', () => {
   test('paying a deposit mirrors the cash into the patient credit wallet', async () => {
     const visitId = await seedPlannedVisit(6300);
@@ -224,6 +231,35 @@ describe('§g S-D deposit reconciliation', () => {
     });
     expect(voided.status).toBe(200);
     expect(await balance()).toBe(0);                          // mirror reversed — no money from nothing
+  });
+
+  test('audit attribution: the deposit mirror and the applied (consuming) credit rows record the acting member', async () => {
+    const visitId = await seedPlannedVisit(6300);
+    const dep = await (await makeDeposit(visitId, 3000)).json() as any;
+    await pay(dep.id, 3000);
+    expect(await creditMember('deposit')).toBe(MEMBER);        // mirror attributed to staff
+
+    await performAndConsent(visitId);
+    const perf = await (await app.request('/dental/billing/invoices', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId, patientId: PATIENT, branchId: BRANCH, dentistMemberId: MEMBER }),
+    })).json() as any;
+    await app.request(`/dental/billing/invoices/${perf.id}/issue`, { method: 'PATCH' });
+    await app.request(`/dental/billing/invoices/${perf.id}/apply-credit`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amountCents: 3000 }),
+    });
+    expect(await creditMember('applied')).toBe(MEMBER);        // consuming row attributed to staff
+  });
+
+  test('audit attribution: voiding a deposit attributes the reversal row to the acting member', async () => {
+    const visitId = await seedPlannedVisit(6300);
+    const dep = await (await makeDeposit(visitId, 3000)).json() as any;
+    const payment = await (await pay(dep.id, 3000)).json() as any;
+    await app.request(`/dental/billing/invoices/${dep.id}/payments/${payment.id}/void`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voidReason: 'Wrong amount entered' }),
+    });
+    expect(await creditMember('deposit_reversed')).toBe(MEMBER);
   });
 
   test('F-07: credit cannot be applied to a deposit invoice (no self-application)', async () => {
