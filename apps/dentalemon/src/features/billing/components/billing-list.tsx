@@ -79,6 +79,12 @@ export function summarizeInvoices(invoices: Invoice[]): {
   let overdueAmount = 0;
 
   for (const inv of invoices) {
+    // §g DQ3: a deposit is an advance-payment instrument, not a service charge.
+    // Exclude it so these cards match the canonical backend (getPatientBalance /
+    // getCollectionsSummary both exclude kind='deposit'); the deposit cash is
+    // recognized when it's applied to the performed-work invoice — counting it
+    // here too would double-count the same peso and overstate what the patient owes.
+    if (inv.kind === 'deposit') continue;
     if (inv.status !== 'voided' && inv.status !== 'paid') {
       totalOutstanding += inv.balanceCents;
     }
@@ -262,6 +268,13 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
                   >
                     <td className="px-4 py-0 h-12 align-middle pl-5">
                       <span className="text-xs font-semibold text-lemon-foreground">{inv.invoiceNumber}</span>
+                      {inv.kind === 'deposit' && (
+                        // §g DQ3: mark deposits so the visible rows reconcile to the summary
+                        // cards (which exclude deposits as advance instruments, not service charges).
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-muted text-muted-foreground">
+                          Deposit
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium">
                       {inv.patientName ?? inv.patientId}

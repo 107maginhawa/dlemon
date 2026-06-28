@@ -110,6 +110,22 @@ describe('BillingList -- summarizeInvoices', () => {
     expect(result.collectedThisMonth).toBe(12000);
   });
 
+  test('summarizeInvoices excludes deposit invoices — an advance instrument, not a service charge (§g DQ3)', () => {
+    const now = new Date().toISOString();
+    const invoices = [
+      // Service work outstanding — counts.
+      { status: 'issued' as const, totalCents: 10000, balanceCents: 10000, paidCents: 0, createdAt: now },
+      // Unpaid deposit — must NOT inflate outstanding (it's a slice of the job, recognized on the performed invoice).
+      { status: 'issued' as const, kind: 'deposit' as const, totalCents: 3000, balanceCents: 3000, paidCents: 0, createdAt: now },
+      // Paid deposit — its cash must NOT double-count in collected here (recognized when applied to the performed invoice).
+      { status: 'paid' as const, kind: 'deposit' as const, totalCents: 3000, balanceCents: 0, paidCents: 3000, createdAt: now, paidAt: now },
+    ];
+    const result = summarizeInvoices(invoices);
+    expect(result.totalOutstanding).toBe(10000); // deposit's 3000 excluded
+    expect(result.collectedThisMonth).toBe(0);   // deposit cash not counted here
+    expect(result.overdueAmount).toBe(0);
+  });
+
   test('summarizeInvoices buckets collected by PAYMENT date, not creation date (G9)', () => {
     const now = new Date();
     const thisMonth = now.toISOString();
