@@ -32,6 +32,7 @@ import { checkSingleClinicInvariantAdvisory } from '@/core/single-clinic-invaria
 
 // Routes
 import { registerRoutes as registerOpenAPIRoutes } from '@/generated/openapi/routes';
+import { mountProdDisabledRoutes } from '@/core/disabled-routes';
 import { registerRoutes as registerHealthRoutes } from '@/core/health';
 import { registerRoutes as registerAuthRoutes } from '@/core/auth';
 import { registerRoutes as registerDocsRoutes } from '@/core/openapi';
@@ -240,6 +241,11 @@ export function createApp(config: Config): App {
   // EM-CLI-001: revokeConsentForm is now declared in TypeSpec and registered via
   // the generated OpenAPI routes (PATCH /dental/visits/:visitId/consents/:cid/revoke).
   // The former hand-registration here was removed to avoid a duplicate route.
+
+  // Production attack-surface guard (task #37): 404 base-template endpoints that
+  // are live+authed but unreachable from the dentalemon product. Prod-only; must
+  // be registered BEFORE the generated routes so it wraps them. See disabled-routes.ts.
+  mountProdDisabledRoutes(app, process.env['NODE_ENV'] === 'production');
 
   // Register API routes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- registerOpenAPIRoutes accepts Hono<any>; generated function uses a broader type than App
