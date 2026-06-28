@@ -77,7 +77,7 @@ Ordered by (impact × deviation density). Highest-traffic + most-deviated first.
 Tracked here so nothing is silently dropped. None block shipping; each needs its own visually-verified pass.
 
 ### From module 1 — staff ✅ (commit `5d045bd6`)
-- **B1** Role-badge categorical colors in `staff-list.tsx` (`getRoleBadgeClass`: amber/blue/green/purple per role) left as raw palette — there is no token set for categorical role hues. Candidate: add a `role-*` token group if we want these on-system. P2.
+- **B1** ✅ CLOSED (keep categorical) — `staff-list.tsx` `getRoleBadgeClass` uses amber/blue/green/purple per role. These are categorical hues with no semantic-token equivalent, are AA (light-100 bg + dark-700/800 text), and always pair with the role label text (color is never the sole signal). A dedicated `role-*` token set for one badge function is speculative scope; left as-is by decision.
 - **Audit correction:** "staff error=0" was a false grep signal; `staff-list.tsx` already has error/loading/empty states. No work.
 
 ### From module 2 — workspace ✅ (commit `344241c0`)
