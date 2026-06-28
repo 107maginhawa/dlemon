@@ -170,6 +170,16 @@ Apple's native design language: iOS system colors, grouped backgrounds, glass ba
 - Sticky bottom
 - CTA button right-aligned
 
+### Dialogs / Modals (centered)
+- **Always compose the shared primitive** `@monobase/ui` `Dialog` — never hand-roll a `position:fixed` overlay or import `@radix-ui/react-dialog` directly. The primitive provides the overlay, focus trap, Escape-to-close, focus return, entrance animation, and a top-right `✕` close. Reference: `apps/dentalemon/src/features/imaging/components/calibration-dialog.tsx`.
+- Shape: `<Dialog open onOpenChange><DialogContent><DialogHeader><DialogTitle/><DialogDescription/></DialogHeader> …body… <DialogFooter/></DialogContent></Dialog>`.
+- Container: white surface, `rounded-lg`, `shadow-lg`, `bg-black/80` overlay (all from the primitive — don't override). Width via `className` (`sm:max-w-sm` compact, `sm:max-w-md` standard).
+- **Escape / overlay / ✕ map to the non-destructive default** (cancel / keep / skip) — wire `onOpenChange={(o) => { if (!o) onClose() }}`.
+- Buttons: `rounded-lg`, 44px min height, explicit `focus-visible:ring-2 focus-visible:ring-ring` (destructive → `ring-destructive`). Confirm tone: lemon (primary) · `bg-destructive` (destructive) · `bg-amber-100/text-amber-900` (caution override). Cancel: outline or muted text.
+- **Test harness note:** the test setup stubs Radix `Dialog` to plain divs and **drops `data-testid`/`className` on `DialogContent`/`DialogTitle`**. Put any container-level `data-testid` on an **inner `<div>`**, and assert on real elements (buttons, inputs, text). Escape/focus behavior is the primitive's job — not unit-testable here, covered by e2e.
+- Used by (centered confirm/form dialogs): pre-completion checklist, discard-visit, carry-over (workspace); cancel-appointment (scheduling); patient-registration, patient-edit (patients); calibration, annotation (imaging).
+- **NOT for transactional panels.** `workspace-payment-modal` and `appointment-modal` are 520px header / scroll-body / footer panels with a custom close and internal scroll — a different pattern. They intentionally do NOT use this primitive (forcing it needs `p-0`/`gap-0`/remove-close overrides and breaks their `getByRole('dialog',{name})` tests under the harness stub). If a third such panel appears, extract a separate `DialogPanel` primitive rather than overriding this one.
+
 ## 5. Layout Principles
 
 ### Spacing System
@@ -255,3 +265,4 @@ Shadow philosophy: warm-tinted, subtle. No heavy drop shadows. Depth comes from 
 | 2026-05-01 | Moss Green #6B8A6B replaces Sage #8A9E6E | Warmer green. More organic/natural. |
 | 2026-05-01 | White-dominant confirmed over cream | User tested cream (#FFFDF7) and white (#FFFFFF). Chose white. Color is punctuation. |
 | 2026-05-01 | Apple HIG + Lemon #FFE97D replaces custom palette | Full Apple HIG system colors (grouped bg #F2F2F7, systemRed/Green/Orange/Teal), brand lemon #FFE97D as the only custom accent replacing Apple Blue. Honey Gold #D4A43A and Moss Green #6B8A6B retired. Explored 6 wireframe variants before deciding. |
+| 2026-06-28 | Workspace confirm modals adopt shared `@monobase/ui` Dialog | pre-completion (raw Radix), discard + carry-over (hand-rolled overlays) had each drifted on radius/shadow/overlay. Unified on the system primitive; deleted hand-rolled overlay + `useSheetA11y` wiring. Escape/focus now from Radix. |

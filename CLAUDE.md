@@ -2,6 +2,14 @@
 
 This file provides AI-specific guidance for Claude Code when working with the Monobase Healthcare Platform (a healthcare-focused fork of `mono-js-lf`).
 
+## Design Context
+
+Design source of truth for the product app (`apps/dentalemon`):
+- **`apps/dentalemon/PRODUCT.md`** — strategic: register (`product`), users, purpose, brand personality (warm/friendly voice on a clinical canvas), anti-references, design principles, a11y bar (WCAG AA, 44px touch).
+- **`apps/dentalemon/DESIGN.md`** → `docs/architecture/DESIGN.md` — visual system: Apple HIG + lemon (`#FFE97D`) accent, tokens, typography, components, decisions log.
+
+Read both before any UI work. Impeccable (`/impeccable`) commands consume them.
+
 ## Documentation Map
 
 For detailed information, refer to:
