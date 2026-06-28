@@ -286,7 +286,7 @@ export function BillingList({ branchId, onInvoiceClick, onRecordPayment }: Billi
                               e.stopPropagation();
                               onRecordPayment(inv);
                             }}
-                            className="text-xs font-semibold text-lemon-foreground hover:underline"
+                            className="text-xs font-semibold text-lemon-foreground hover:underline coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
                           >
                             Record payment
                           </button>
@@ -297,7 +297,7 @@ export function BillingList({ branchId, onInvoiceClick, onRecordPayment }: Billi
                             e.stopPropagation();
                             onInvoiceClick?.(inv);
                           }}
-                          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
                         >
                           View
                         </button>

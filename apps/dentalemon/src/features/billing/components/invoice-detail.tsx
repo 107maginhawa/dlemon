@@ -586,7 +586,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                               <button
                                 type="button"
                                 onClick={() => setReceiptPaymentId(pmt.id)}
-                                className="text-xs text-foreground/70 hover:text-foreground transition-colors"
+                                className="text-xs text-foreground/70 hover:text-foreground transition-colors coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
                               >
                                 Receipt
                               </button>
@@ -597,7 +597,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   disabled={saving}
                                   title="Reverse this payment entry — use when it was posted in error (no money changes hands)."
                                   onClick={() => { setVoidingPaymentId(pmt.id); setPaymentVoidReason(''); setPaymentVoidError(null); }}
-                                  className="text-xs text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
+                                  className="text-xs text-red-600 hover:text-red-700 transition-colors disabled:opacity-50 coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
                                 >
                                   Void
                                 </button>
@@ -610,7 +610,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   disabled={saving}
                                   title="Give money back to the patient for this payment (cash refund or store as credit)."
                                   onClick={() => { setRefundingPaymentId(pmt.id); setRefundAmount((pmt.amountCents / 100).toFixed(2)); setRefundReason(''); setRefundAsCredit(false); setRefundError(null); }}
-                                  className="text-xs text-foreground/70 hover:text-foreground transition-colors disabled:opacity-50"
+                                  className="text-xs text-foreground/70 hover:text-foreground transition-colors disabled:opacity-50 coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
                                 >
                                   Refund
                                 </button>
@@ -649,7 +649,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                     <div className="flex border border-border rounded-xl overflow-hidden bg-secondary/30 p-0.5 gap-0.5" role="group">
                       {PAYMENT_METHODS.map((m) => (
                         <button key={m} type="button" onClick={() => setPaymentMethod(m)} aria-pressed={paymentMethod === m}
-                          className={`flex-1 h-9 text-[13px] font-medium rounded-lg transition-colors ${paymentMethod === m ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
+                          className={`flex-1 h-9 coarse:h-11 text-[13px] font-medium rounded-lg transition-colors ${paymentMethod === m ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
                           {METHOD_LABELS[m]}
                         </button>
                       ))}
@@ -855,7 +855,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setReceiptPaymentId(null)} />
           <div className="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-background shadow-2xl p-5">
             <div className="no-print flex justify-end mb-2">
-              <button type="button" onClick={() => setReceiptPaymentId(null)} aria-label="Close receipt" className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"><X className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => setReceiptPaymentId(null)} aria-label="Close receipt" className="w-7 h-7 coarse:w-11 coarse:h-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"><X className="h-3.5 w-3.5" /></button>
             </div>
             <PaymentReceipt invoiceId={invoice.id} paymentId={receiptPaymentId} />
           </div>
