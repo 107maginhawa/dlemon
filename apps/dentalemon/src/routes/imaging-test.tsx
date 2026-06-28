@@ -29,6 +29,7 @@ import { PatientImageList } from '@/features/imaging/components/patient-image-li
 import { ImagingWorkspace } from '@/features/imaging/components/imaging-workspace'
 import { ComparisonView } from '@/features/imaging/components/comparison-view'
 import type { PatientImageItem } from '@/features/imaging/hooks/use-imaging-studies'
+import { useOrgContextStore } from '@/stores/org-context.store'
 import {
   TEST_IDS,
   studiesFixture,
@@ -100,6 +101,16 @@ function makeSeededClient(): QueryClient {
 
 function ImagingTestHarness() {
   const { modality } = useSearch({ strict: false }) as HarnessSearch
+  // G4-B: the ceph "Generate Report" / finalize controls only render for a
+  // finalizing (dentist) role (CephWorkspacePanel canFinalize gate). The org
+  // context defaults to role=null, so without this the finalize controls never
+  // mount and the imaging-ceph E2E specs can't reach the report flow. Mirror the
+  // CephWorkspacePanel unit test's default. Set synchronously on first render so
+  // the button is present before the workspace-ready gate resolves.
+  useState(() => {
+    useOrgContextStore.setState({ role: 'dentist_owner' })
+    return null
+  })
   const [queryClient] = useState(makeSeededClient)
   const { imageA } = comparisonFixtures()
   const [cacheCleared, setCacheCleared] = useState(false)
