@@ -6,7 +6,9 @@
  */
 
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { canAccess, type DentalRole, type DentalModule } from '@/lib/rbac';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useStaffMutations } from '../hooks/use-staff-members';
 
 // ---------------------------------------------------------------------------
@@ -131,6 +133,8 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
   const [confirmPin, setConfirmPin] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  const { containerRef } = useSheetA11y({ open, onClose: handleClose });
+
   if (!open) return null;
 
   function handleClose() {
@@ -165,10 +169,11 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-40 flex items-end"
       role="dialog"
       aria-modal="true"
-      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
+      aria-label="Add staff member"
     >
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
@@ -190,9 +195,10 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
           <button
             type="button"
             onClick={handleClose}
-            className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
+            aria-label="Close"
+            className="-mr-2 h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            X
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -218,6 +224,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
             <input
               id="staff-name"
               type="text"
+              autoFocus
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               placeholder="e.g. Dr. Maria Santos"
@@ -237,7 +244,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
                   type="button"
                   disabled={opt.disabled}
                   onClick={() => !opt.disabled && setRole(opt.value)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
+                  className={`w-full text-left px-4 py-3 rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     opt.disabled
                       ? 'border-border bg-secondary/50 opacity-50 cursor-not-allowed'
                       : role === opt.value
@@ -277,9 +284,9 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
                           <td className="px-3 py-2 text-sm">{MODULE_LABELS[mod]}</td>
                           <td className="px-3 py-2">
                             {hasAccess ? (
-                              <span className="text-green-600 text-xs font-medium">Full Access</span>
+                              <span className="text-success-foreground text-xs font-medium">Full Access</span>
                             ) : (
-                              <span className="text-gray-400 text-xs">No Access</span>
+                              <span className="text-muted-foreground text-xs">No Access</span>
                             )}
                           </td>
                         </tr>
@@ -330,7 +337,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
+            className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Cancel
           </button>
@@ -338,7 +345,7 @@ export function StaffCreateModal({ branchId, open, onClose, onCreated }: StaffCr
             type="button"
             onClick={handleSubmit}
             disabled={isCreating}
-            className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+            className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {isCreating ? 'Creating...' : 'Create Staff Member'}
           </button>
