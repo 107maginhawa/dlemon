@@ -77,6 +77,7 @@ describe('InvoiceDetail — void requires a reason', () => {
     try {
       renderDetail();
       // Wait for the invoice to load (Void action visible).
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       const voidBtn = await screen.findByRole('button', { name: /^void$/i });
       await user.click(voidBtn);
 
@@ -98,6 +99,7 @@ describe('InvoiceDetail — void requires a reason', () => {
     const f = installFetch();
     try {
       renderDetail();
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       const voidBtn = await screen.findByRole('button', { name: /^void$/i });
       await user.click(voidBtn);
 

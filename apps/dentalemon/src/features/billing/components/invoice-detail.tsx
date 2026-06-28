@@ -7,7 +7,8 @@
  * Wireframe: docs/prd/context/wireframes/invoice-detail.html
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { toast } from 'sonner';
@@ -51,22 +52,33 @@ export interface InvoiceDetailProps {
   open: boolean;
   onClose: () => void;
   onUpdated?: () => void;
-  /** Called when the user clicks "View Payment Plan" */
+  /** Called when the user clicks "View payment plan" */
   onViewPlan?: () => void;
   /**
    * Whether the current role may perform billing WRITE lifecycle actions
    * (issue / void). Defaults to `true` to preserve existing callers; the
    * billing route passes `canWriteBilling(role)` so roles like `staff_full`
-   * and `billing_staff` see "Record Payment" but NOT "Issue"/"Void"
+   * and `billing_staff` see "Record payment" but NOT "Issue"/"Void"
    * (J-RBAC-001). Recording a payment is always allowed when the invoice
    * status permits it.
    */
   canWrite?: boolean;
+  /**
+   * Quick-pay: when the sheet is opened straight from the billing list's
+   * "Record payment" row action, jump directly to the payment form so the
+   * front desk doesn't have to find it in the footer first.
+   */
+  openToPayment?: boolean;
 }
 
-export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true }: InvoiceDetailProps) {
+export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true, openToPayment = false }: InvoiceDetailProps) {
   useSheetA11y({ open, onClose });
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+
+  // Quick-pay: auto-open the payment form when launched from the list row action.
+  useEffect(() => {
+    if (open && openToPayment) setShowPaymentForm(true);
+  }, [open, openToPayment]);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [receiptNumber, setReceiptNumber] = useState('');
@@ -95,6 +107,9 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [refundError, setRefundError] = useState<string | null>(null);
   // FIX-005: payment-plan create dialog open state.
   const [showPlanCreate, setShowPlanCreate] = useState(false);
+  // Footer overflow: rare/secondary actions collapse into a "More" menu so the
+  // primary action (Record payment / Issue) isn't lost in a row of 7 buttons.
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const qc = useQueryClient();
   // The recording staff member comes from the PIN-authenticated org context.
@@ -372,7 +387,38 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     setPaymentVoidReason('');
     setPaymentVoidError(null);
     setShowPlanCreate(false);
+    setMoreOpen(false);
     onClose();
+  }
+
+  // Secondary/rare footer actions, collapsed behind the "More" menu. Built from
+  // the same show*() gates that previously rendered each footer button inline, so
+  // RBAC + status gating is unchanged; only the placement (menu vs row) differs.
+  type SecondaryAction = {
+    key: string;
+    label: string;
+    onClick: () => void;
+    destructive?: boolean;
+    testid?: string;
+    title?: string;
+  };
+  const secondaryActions: SecondaryAction[] = [];
+  if (invoice) {
+    if (onViewPlan) {
+      secondaryActions.push({ key: 'view-plan', label: 'View payment plan', onClick: () => onViewPlan() });
+    }
+    if (showCreatePlanButton(invoice.status, canWrite, invoice.balanceCents)) {
+      secondaryActions.push({ key: 'create-plan', label: 'Create payment plan', onClick: () => setShowPlanCreate(true) });
+    }
+    if (showDiscountButton(invoice.status, canDiscount) && !showDiscountForm) {
+      secondaryActions.push({ key: 'discount', label: 'Apply discount', onClick: () => { setShowDiscountForm(true); setDiscountErrors([]); } });
+    }
+    if (showVoidButton(invoice.status, canWrite) && !showVoidForm) {
+      secondaryActions.push({ key: 'void', label: 'Void', destructive: true, title: 'Cancel this whole invoice (e.g. created in error). A reason is recorded.', onClick: () => { setShowVoidForm(true); setVoidError(null); } });
+    }
+    if (showMarkUncollectibleButton(invoice.status, canWrite) && !showUncollectibleForm) {
+      secondaryActions.push({ key: 'uncollectible', label: 'Mark uncollectible', testid: 'mark-uncollectible-btn', title: "Write this invoice off as unpayable (give up on collecting it). This can't be undone.", onClick: () => { setShowUncollectibleForm(true); setUncollectibleError(null); } });
+    }
   }
 
   return (
@@ -388,8 +434,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           <h2 className="text-[17px] font-semibold tracking-tight">
             {invoice ? `Invoice ${invoice.invoiceNumber}` : 'Invoice Detail'}
           </h2>
-          <button type="button" onClick={handleClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">
-            ✕
+          <button type="button" onClick={handleClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -549,6 +595,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   type="button"
                                   data-testid={`void-payment-${pmt.id}`}
                                   disabled={saving}
+                                  title="Reverse this payment entry — use when it was posted in error (no money changes hands)."
                                   onClick={() => { setVoidingPaymentId(pmt.id); setPaymentVoidReason(''); setPaymentVoidError(null); }}
                                   className="text-xs text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
                                 >
@@ -561,6 +608,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   type="button"
                                   data-testid={`refund-payment-${pmt.id}`}
                                   disabled={saving}
+                                  title="Give money back to the patient for this payment (cash refund or store as credit)."
                                   onClick={() => { setRefundingPaymentId(pmt.id); setRefundAmount((pmt.amountCents / 100).toFixed(2)); setRefundReason(''); setRefundAsCredit(false); setRefundError(null); }}
                                   className="text-xs text-foreground/70 hover:text-foreground transition-colors disabled:opacity-50"
                                 >
@@ -576,16 +624,17 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                 )}
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
                   <span className="text-sm font-semibold text-muted-foreground">Balance Remaining</span>
-                  <span className={`text-2xl font-bold tabular-nums ${invoice.balanceCents > 0 ? 'text-destructive-emphasis' : 'text-success-foreground'}`}>
+                  {/* Reserve red for genuinely overdue money; a normal owed balance is neutral ink, paid is green. */}
+                  <span className={`text-2xl font-bold tabular-nums ${invoice.balanceCents <= 0 ? 'text-success-foreground' : invoice.status === 'overdue' ? 'text-destructive-emphasis' : 'text-foreground'}`}>
                     {formatCents(invoice.balanceCents)}
                   </span>
                 </div>
               </div>
 
-              {/* Record Payment inline form */}
+              {/* Record payment inline form */}
               {showPaymentForm && (
                 <div className="rounded-xl border border-border p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold">Record Payment</h4>
+                  <h4 className="text-sm font-semibold">Record payment</h4>
                   {paymentErrors.length > 0 && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
                       {paymentErrors.map((e) => <p key={e}>{e}</p>)}
@@ -622,7 +671,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
               {/* Void reason form — the void contract requires an auditable reason */}
               {showVoidForm && (
                 <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-red-600">Void Invoice</h4>
+                  <h4 className="text-sm font-semibold text-red-600">Void invoice</h4>
                   {voidError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{voidError}</div>
                   )}
@@ -633,7 +682,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowVoidForm(false); setVoidReason(''); setVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
                     <button type="button" onClick={handleVoid} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
-                      {saving ? 'Voiding...' : 'Confirm Void'}
+                      {saving ? 'Voiding...' : 'Confirm void'}
                     </button>
                   </div>
                 </div>
@@ -642,7 +691,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
               {/* BR-013: write-off confirmation — terminal, owner-only */}
               {showUncollectibleForm && (
                 <div data-testid="uncollectible-confirm" className="rounded-xl border border-gray-300 p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-gray-700">Mark Uncollectible</h4>
+                  <h4 className="text-sm font-semibold text-gray-700">Mark uncollectible</h4>
                   <p className="text-sm text-muted-foreground">This writes off the invoice as uncollectible. This cannot be undone.</p>
                   {uncollectibleError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{uncollectibleError}</div>
@@ -650,7 +699,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowUncollectibleForm(false); setUncollectibleError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
                     <button type="button" onClick={handleMarkUncollectible} disabled={saving} className="flex-1 h-11 rounded-xl border border-gray-300 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50">
-                      {saving ? 'Writing off...' : 'Confirm Write-Off'}
+                      {saving ? 'Writing off...' : 'Confirm write-off'}
                     </button>
                   </div>
                 </div>
@@ -661,7 +710,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                    totals and returns the updated invoice. */}
               {showDiscountForm && (
                 <div className="rounded-xl border border-border p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold">Apply Discount</h4>
+                  <h4 className="text-sm font-semibold">Apply discount</h4>
                   {discountErrors.length > 0 && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
                       {discountErrors.map((e) => <p key={e}>{e}</p>)}
@@ -687,7 +736,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
               {/* FIX-004: per-payment void form — owner-only, reason-bearing soft-delete. */}
               {voidingPaymentId && (
                 <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-red-600">Void Payment</h4>
+                  <h4 className="text-sm font-semibold text-red-600">Void payment</h4>
                   {paymentVoidError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{paymentVoidError}</div>
                   )}
@@ -698,7 +747,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setVoidingPaymentId(null); setPaymentVoidReason(''); setPaymentVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
                     <button type="button" data-testid="confirm-payment-void" onClick={handleVoidPayment} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
-                      {saving ? 'Voiding...' : 'Confirm Void'}
+                      {saving ? 'Voiding...' : 'Confirm void'}
                     </button>
                   </div>
                 </div>
@@ -707,7 +756,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
               {/* BR-053: per-payment refund form — owner-only, reason-required. */}
               {refundingPaymentId && (
                 <div className="rounded-xl border border-border p-4 flex flex-col gap-3" data-testid="refund-payment-form">
-                  <h4 className="text-sm font-semibold">Refund Payment</h4>
+                  <h4 className="text-sm font-semibold">Refund payment</h4>
                   {refundError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{refundError}</div>
                   )}
@@ -726,7 +775,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setRefundingPaymentId(null); setRefundError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
                     <button type="button" data-testid="confirm-payment-refund" onClick={handleRefundPayment} disabled={saving || refundMutation.isPending} className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">
-                      {refundMutation.isPending ? 'Refunding...' : 'Confirm Refund'}
+                      {refundMutation.isPending ? 'Refunding...' : 'Confirm refund'}
                     </button>
                   </div>
                 </div>
@@ -739,26 +788,50 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
         {invoice && !loading && (
           <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-t flex-shrink-0 [&>button]:whitespace-nowrap">
             {showIssueButton(invoice.status, canWrite) && (
-              <button type="button" onClick={handleIssue} disabled={saving} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">Issue Invoice</button>
+              <button type="button" onClick={handleIssue} disabled={saving} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50">Issue invoice</button>
             )}
             {showRecordButton(invoice.status) && !showPaymentForm && (
-              <button type="button" onClick={() => setShowPaymentForm(true)} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors">Record Payment</button>
+              <button type="button" onClick={() => setShowPaymentForm(true)} className="h-11 px-5 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors">Record payment</button>
             )}
-            {onViewPlan && (
-              <button type="button" onClick={onViewPlan} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">View Payment Plan</button>
+
+            {/* Secondary/rare actions collapse into one "More" menu (keeps the
+                primary action prominent instead of a 7-button wall). */}
+            {secondaryActions.length > 0 && (
+              <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setMoreOpen(false); }}>
+                <button
+                  type="button"
+                  data-testid="invoice-more-btn"
+                  aria-haspopup="true"
+                  aria-expanded={moreOpen}
+                  disabled={saving}
+                  onClick={() => setMoreOpen((o) => !o)}
+                  className="h-11 px-4 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  More
+                </button>
+                {moreOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" aria-hidden onClick={() => setMoreOpen(false)} />
+                    <div className="absolute bottom-full right-0 mb-2 z-50 min-w-[208px] rounded-xl border border-border bg-background shadow-lg p-1">
+                      {secondaryActions.map((a) => (
+                        <button
+                          key={a.key}
+                          type="button"
+                          data-testid={a.testid}
+                          title={a.title}
+                          disabled={saving}
+                          onClick={() => { a.onClick(); setMoreOpen(false); }}
+                          className={`flex w-full items-center min-h-[44px] px-3 rounded-lg text-sm text-left transition-colors disabled:opacity-50 ${a.destructive ? 'text-red-600 hover:bg-red-50' : 'hover:bg-secondary'}`}
+                        >
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
-            {showCreatePlanButton(invoice.status, canWrite, invoice.balanceCents) && (
-              <button type="button" onClick={() => setShowPlanCreate(true)} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">Create Payment Plan</button>
-            )}
-            {showDiscountButton(invoice.status, canDiscount) && !showDiscountForm && (
-              <button type="button" onClick={() => { setShowDiscountForm(true); setDiscountErrors([]); }} className="h-11 px-5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors">Apply Discount</button>
-            )}
-            {showVoidButton(invoice.status, canWrite) && !showVoidForm && (
-              <button type="button" onClick={() => { setShowVoidForm(true); setVoidError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">Void</button>
-            )}
-            {showMarkUncollectibleButton(invoice.status, canWrite) && !showUncollectibleForm && (
-              <button type="button" data-testid="mark-uncollectible-btn" onClick={() => { setShowUncollectibleForm(true); setUncollectibleError(null); }} disabled={saving} className="h-11 px-5 rounded-xl border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">Mark Uncollectible</button>
-            )}
+
             <button type="button" onClick={handleClose} className="ml-auto h-11 px-5 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Close</button>
           </div>
         )}
@@ -782,7 +855,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
           <div className="absolute inset-0 bg-black/40 no-print" onClick={() => setReceiptPaymentId(null)} />
           <div className="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-background shadow-2xl p-5">
             <div className="no-print flex justify-end mb-2">
-              <button type="button" onClick={() => setReceiptPaymentId(null)} aria-label="Close receipt" className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">X</button>
+              <button type="button" onClick={() => setReceiptPaymentId(null)} aria-label="Close receipt" className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"><X className="h-3.5 w-3.5" /></button>
             </div>
             <PaymentReceipt invoiceId={invoice.id} paymentId={receiptPaymentId} />
           </div>

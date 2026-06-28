@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useInvoices, type Invoice } from '../hooks/use-invoices';
 import { ListErrorState } from '@/components/list-error-state';
 import { formatCents } from '@/lib/format-currency';
+import { showRecordButton } from './invoice-detail.helpers';
 
 // ---------------------------------------------------------------------------
 // Types — Invoice is the single SDK-derived type (see use-invoices); no local
@@ -21,6 +22,8 @@ import { formatCents } from '@/lib/format-currency';
 export interface BillingListProps {
   branchId?: string;
   onInvoiceClick?: (invoice: Invoice) => void;
+  /** Quick-pay: jump straight to the payment form for a recordable invoice. */
+  onRecordPayment?: (invoice: Invoice) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,7 +65,9 @@ export function getStatusBadgeClass(status: string): string {
 export { formatCents };
 
 export function getBalanceClass(balanceCents: number): string {
-  return balanceCents > 0 ? 'text-destructive-emphasis font-bold' : 'text-success-foreground font-bold';
+  // A normal owed balance is neutral ink, not alarm-red — the red "Overdue" status
+  // badge carries the at-risk signal. Zero/credit balances read green (settled).
+  return balanceCents > 0 ? 'text-foreground font-bold' : 'text-success-foreground font-bold';
 }
 
 export function summarizeInvoices(invoices: Invoice[]): {
@@ -114,7 +119,7 @@ const FILTER_LABELS: Record<FilterTab, string> = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
+export function BillingList({ branchId, onInvoiceClick, onRecordPayment }: BillingListProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
@@ -145,7 +150,7 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
           <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
             Total Outstanding
           </span>
-          <span className="text-3xl font-bold tracking-tight tabular-nums text-destructive-emphasis">
+          <span className="text-3xl font-bold tracking-tight tabular-nums text-foreground">
             {formatCents(summary.totalOutstanding)}
           </span>
         </div>
@@ -272,16 +277,31 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
                       </span>
                     </td>
                     <td className="px-4 py-0 h-12 align-middle text-right pr-5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onInvoiceClick?.(inv);
-                        }}
-                        className="text-xs font-medium text-lemon-foreground hover:underline"
-                      >
-                        View
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        {onRecordPayment && showRecordButton(inv.status) && (
+                          <button
+                            type="button"
+                            data-testid={`record-payment-${inv.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRecordPayment(inv);
+                            }}
+                            className="text-xs font-semibold text-lemon-foreground hover:underline"
+                          >
+                            Record payment
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onInvoiceClick?.(inv);
+                          }}
+                          className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          View
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

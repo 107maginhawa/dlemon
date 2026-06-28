@@ -99,6 +99,7 @@ describe('InvoiceDetail — apply discount (owner-only)', () => {
     const f = installFetch();
     try {
       renderDetail();
+      await userEvent.setup().click(await screen.findByTestId('invoice-more-btn'));
       expect(await screen.findByRole('button', { name: /apply discount/i })).not.toBeNull();
     } finally {
       f.restore();
@@ -113,6 +114,8 @@ describe('InvoiceDetail — apply discount (owner-only)', () => {
       // Record Payment is role-independent for an issued invoice — use it as the
       // "invoice loaded" signal, then assert the owner-only discount is absent.
       await screen.findByRole('button', { name: /record payment/i });
+      // Open the More menu so the assertion is "RBAC hides it", not "menu is closed".
+      await userEvent.setup().click(await screen.findByTestId('invoice-more-btn'));
       expect(screen.queryByRole('button', { name: /apply discount/i })).toBeNull();
     } finally {
       f.restore();
@@ -124,6 +127,7 @@ describe('InvoiceDetail — apply discount (owner-only)', () => {
     const f = installFetch();
     try {
       renderDetail();
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       await user.click(await screen.findByRole('button', { name: /apply discount/i }));
       // fireEvent.change sets the controlled number input atomically — userEvent.type
       // char-by-char races the controlled re-render and can transiently misread the rate.
@@ -142,6 +146,7 @@ describe('InvoiceDetail — apply discount (owner-only)', () => {
     const f = installFetch();
     try {
       renderDetail();
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       await user.click(await screen.findByRole('button', { name: /apply discount/i }));
       fireEvent.change(screen.getByLabelText(/discount %/i), { target: { value: '150' } });
       await user.type(screen.getByLabelText(/discount reason/i), 'Senior citizen discount');
@@ -159,6 +164,7 @@ describe('InvoiceDetail — apply discount (owner-only)', () => {
     const f = installFetch();
     try {
       const { onUpdated } = renderDetail();
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       await user.click(await screen.findByRole('button', { name: /apply discount/i }));
       fireEvent.change(screen.getByLabelText(/discount %/i), { target: { value: '10' } });
       await user.type(screen.getByLabelText(/discount reason/i), 'Senior citizen discount');

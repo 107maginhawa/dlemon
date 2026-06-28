@@ -71,8 +71,9 @@ describe('BillingList -- formatCents', () => {
 });
 
 describe('BillingList -- getBalanceClass', () => {
-  test('getBalanceClass(1000) includes "text-destructive"', () => {
-    expect(getBalanceClass(1000)).toContain('text-destructive');
+  test('getBalanceClass(1000) is neutral ink (red is reserved for the Overdue badge)', () => {
+    expect(getBalanceClass(1000)).toContain('text-foreground');
+    expect(getBalanceClass(1000)).not.toContain('text-destructive');
   });
 
   test('getBalanceClass(0) includes "text-success"', () => {
