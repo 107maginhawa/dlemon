@@ -85,7 +85,7 @@ export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanel
             onClick={() => setCode(entry.code)}
             aria-pressed={code === entry.code}
             className={[
-              'rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors',
+              'rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
               code === entry.code ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted/50',
             ].join(' ')}
           >
@@ -97,7 +97,7 @@ export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanel
       {code != null && (
         <div className="mt-2 flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <label className="text-[11px] text-muted-foreground">Surface (optional)</label>
+            <label className="text-xs text-muted-foreground">Surface (optional)</label>
             <select
               data-testid="finding-surface-select"
               value={surface}
@@ -122,14 +122,14 @@ export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanel
               data-testid="finding-add-btn"
               disabled={!canAdd}
               onClick={handleAdd}
-              className="rounded bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground disabled:opacity-50"
+              className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
             >
               Add finding
             </button>
             <button
               type="button"
               onClick={() => { setCode(null); setNote(''); setSurface(''); }}
-              className="rounded border px-2 py-0.5 text-[11px] font-medium"
+              className="rounded border px-2 py-0.5 text-xs font-medium"
             >
               Cancel
             </button>
@@ -140,14 +140,14 @@ export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanel
       {/* Active findings list */}
       <ul className="mt-3 flex flex-col gap-1.5">
         {activeFindings.length === 0 && (
-          <li className="text-[11px] text-muted-foreground">No active findings on this tooth.</li>
+          <li className="text-xs text-muted-foreground">No active findings on this tooth.</li>
         )}
         {activeFindings.map((f) => (
           <li key={f.id} data-testid={`finding-row-${f.id}`} className="rounded border p-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-medium">
                 {findingLabel(f.conditionCode)}
-                {f.surface ? <span className="ml-1 text-[11px] text-muted-foreground">({f.surface})</span> : null}
+                {f.surface ? <span className="ml-1 text-xs text-muted-foreground">({f.surface})</span> : null}
                 {f.linkedTreatmentId ? <span className="ml-1 text-[10px] text-green-700">• linked to treatment</span> : null}
               </span>
               <div className="flex gap-1.5">
@@ -174,7 +174,7 @@ export function FindingsPanel({ visitId, toothNumber, patientId }: FindingsPanel
               </div>
             </div>
 
-            {f.note && <p className="mt-1 text-[11px] text-muted-foreground">{f.note}</p>}
+            {f.note && <p className="mt-1 text-xs text-muted-foreground">{f.note}</p>}
 
             {convertingId === f.id && (
               <div className="mt-2 flex flex-col gap-1.5 border-t pt-2">

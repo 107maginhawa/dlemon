@@ -96,14 +96,14 @@ function StatusBadge({ status }: { status: Treatment['status'] }) {
       : status === 'verified'
       ? 'bg-teal-100 text-teal-700'
       : status === 'dismissed'
-      ? 'bg-gray-100 text-gray-400'
+      ? 'bg-secondary text-muted-foreground'
       : status === 'declined'
       ? 'bg-orange-100 text-orange-700'
       : status === 'diagnosed'
       ? 'bg-amber-100 text-amber-700'
       : status === 'planned'
       ? 'bg-blue-100 text-blue-700'
-      : 'bg-gray-100 text-gray-500';
+      : 'bg-secondary text-muted-foreground';
   return (
     <span
       className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold capitalize ${classes}`}

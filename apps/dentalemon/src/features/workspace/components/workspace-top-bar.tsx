@@ -34,7 +34,7 @@ interface WorkspaceTopBarProps {
 const ALERT_SEVERITY_BADGE: Record<DentalAlertSeverity, string> = {
   high: 'bg-red-100 text-red-700 border-red-200',
   medium: 'bg-amber-100 text-amber-700 border-amber-200',
-  low: 'bg-slate-100 text-slate-600 border-slate-200',
+  low: 'bg-secondary text-muted-foreground border-border',
 };
 
 function IconButton({
@@ -183,7 +183,7 @@ export function WorkspaceTopBar({
                 <span
                   key={item.id}
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                    badgeColor[item.entryType] ?? 'bg-gray-100 text-gray-600 border-gray-200'
+                    badgeColor[item.entryType] ?? 'bg-secondary text-muted-foreground border-border'
                   }`}
                   title={`${item.entryType}: ${item.displayName}`}
                 >

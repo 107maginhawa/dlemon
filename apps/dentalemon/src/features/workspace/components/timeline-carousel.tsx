@@ -95,7 +95,7 @@ function ChartCompactLegend() {
   return (
     <div
       data-testid="chart-compact-legend"
-      className="flex flex-nowrap items-center gap-x-3 text-[11px] text-muted-foreground"
+      className="flex flex-nowrap items-center gap-x-3 text-xs text-muted-foreground"
     >
       {([
         { label: 'Caries', state: 'caries' as const },
@@ -303,7 +303,7 @@ function VisitChartCard({
                 day, append the time so they stay distinguishable. The date stays the
                 dominant element — the time is a smaller, muted suffix. */}
             {showTime && (
-              <span className="ml-1 text-[11px] font-medium text-muted-foreground">
+              <span className="ml-1 text-xs font-medium text-muted-foreground">
                 · {formatTime(visit.activatedAt ?? visit.createdAt)}
               </span>
             )}

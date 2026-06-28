@@ -177,10 +177,10 @@ export function PerioChartOverlay({
             <span
               data-testid="perio-status-badge"
               className={cn(
-                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                'rounded-full px-2 py-0.5 text-xs font-semibold',
                 status === 'draft' && 'bg-yellow-100 text-yellow-800',
                 status === 'completed' && 'bg-green-100 text-green-800',
-                status === 'locked' && 'bg-gray-100 text-gray-500',
+                status === 'locked' && 'bg-secondary text-muted-foreground',
               )}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -281,7 +281,7 @@ export function PerioChartOverlay({
             />
 
             {/* Keyboard legend */}
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-muted-foreground">
               Digits set depth · cells auto-advance · click a dot to toggle bleeding · over-threshold
               depths show in red.
             </p>

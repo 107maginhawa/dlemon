@@ -36,7 +36,7 @@ function DeltaBadge({ delta }: { delta: MetricDelta | null }) {
   const Icon = delta.dir === 'down' ? ChevronDown : ChevronUp;
   const cls = delta.better ? 'text-success-foreground' : 'text-destructive-emphasis';
   return (
-    <span className={`ml-1 inline-flex items-center text-[11px] font-medium ${cls}`}>
+    <span className={`ml-1 inline-flex items-center text-xs font-medium ${cls}`}>
       <Icon className="h-3 w-3" />
       {Math.abs(delta.amount).toFixed(delta.amount % 1 === 0 ? 0 : 1)}
     </span>

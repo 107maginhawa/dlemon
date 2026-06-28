@@ -30,7 +30,7 @@ interface DentalAlertsSheetProps {
 export const SEVERITY_BADGE_CLASS: Record<DentalAlertSeverity, string> = {
   high: 'bg-red-100 text-red-700 border-red-200',
   medium: 'bg-amber-100 text-amber-700 border-amber-200',
-  low: 'bg-slate-100 text-slate-600 border-slate-200',
+  low: 'bg-secondary text-muted-foreground border-border',
 };
 
 // ---------------------------------------------------------------------------

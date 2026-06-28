@@ -34,7 +34,14 @@ import { join } from 'node:path';
 // field grid (rem token scale) during the record-tabs polish pass.
 // lowered to 327 — layer key on historical cards uses text-xs (no new raw px).
 // lowered to 326 — carousel header scope chips (#4) use text-xs, not text-[10px].
-const BASELINE = 326;
+// lowered to 286 — workspace UI-standardization pass migrated 11px/13px literals
+// in the discrete sheets/banners/badges/panels (chart-conflict-banner,
+// findings-panel, attachments-sheet, treatment-plans-sheet, sync-status-badge,
+// recalls-sheet, timeline-carousel, chart-export-view, and the perio
+// summary/comparison/overlay/voice surfaces) to the rem token scale (text-xs /
+// text-sm). The workspace-payment-modal dense money panel and the dental-chart
+// canvas glyphs are intentionally left for a dedicated, individually-verified pass.
+const BASELINE = 286;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;
