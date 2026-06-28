@@ -206,8 +206,8 @@ describe('TimelineCarousel (Swiper)', () => {
           onNewVisit: () => {},
         });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
-      expect(labels).toContain('Current — all visits');
-      expect(labels.filter((t) => t === 'Visit snapshot').length).toBe(THREE_VISITS.length - 1);
+      expect(labels).toContain('CurrentAll visits');
+      expect(labels.filter((t) => t === 'Snapshot').length).toBe(THREE_VISITS.length - 1);
     });
 
     test('renders a DentalChart stub inside each slide', async () => {
@@ -517,8 +517,8 @@ describe('TimelineCarousel (Swiper)', () => {
       });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
       // DOM/sorted order: [H1, H2, OPEN]
-      expect(labels[2]).toBe('Current — all visits');
-      expect(labels.filter((t) => t === 'Current — all visits')).toHaveLength(1);
+      expect(labels[2]).toBe('CurrentAll visits');
+      expect(labels.filter((t) => t === 'CurrentAll visits')).toHaveLength(1);
     });
 
     test('centering a historical card does NOT relabel it "Current" — the open visit keeps it', () => {
@@ -535,11 +535,11 @@ describe('TimelineCarousel (Swiper)', () => {
       });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
       // The centered historical card (H1) must remain a dated snapshot...
-      expect(labels[0]).toBe('Visit snapshot');
+      expect(labels[0]).toBe('Snapshot');
       // ...and the genuine open visit keeps the cumulative label — never acquired
       // by centering a historical card.
-      expect(labels[2]).toBe('Current — all visits');
-      expect(labels.filter((t) => t === 'Current — all visits')).toHaveLength(1);
+      expect(labels[2]).toBe('CurrentAll visits');
+      expect(labels.filter((t) => t === 'CurrentAll visits')).toHaveLength(1);
     });
 
     test('with no open visit, no card is labeled "Current — all visits" (all snapshots)', () => {
@@ -551,8 +551,8 @@ describe('TimelineCarousel (Swiper)', () => {
         onNewVisit: () => {},
       });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
-      expect(labels.every((t) => t === 'Visit snapshot')).toBe(true);
-      expect(labels.filter((t) => t === 'Current — all visits')).toHaveLength(0);
+      expect(labels.every((t) => t === 'Snapshot')).toBe(true);
+      expect(labels.filter((t) => t === 'CurrentAll visits')).toHaveLength(0);
     });
   });
 
