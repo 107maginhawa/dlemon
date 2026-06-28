@@ -76,8 +76,11 @@ export async function applyCreditToInvoice(
     // scoped), so reading getBalance on `tx` (app_rls) would truncate the wallet
     // to the invoice's branch. Read the cap on `db` (superuser) so the global
     // balance is seen; the consuming write stays on `tx` (branch in scope). The
-    // 1001 per-patient lock held above serializes apply/refund, so the committed
-    // db-read is consistent with the about-to-commit tx-write.
+    // 1001 per-patient lock held above serializes apply/refund/void, so the
+    // committed db-read is consistent with the about-to-commit tx-write. The lock
+    // is on `tx` and the read on `db` (a different connection) — still safe:
+    // EVERY credit mutator takes the same 1001 lock, so no competing write can
+    // COMMIT while we hold it, regardless of which connection observes the wallet.
     const available = await new DentalPatientCreditRepository(db).getBalance(live.patientId);
     if (available <= 0) throw new BusinessLogicError('Patient has no available credit', 'NO_CREDIT');
 

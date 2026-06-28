@@ -75,6 +75,9 @@ export async function voidDentalPayment(
     // performed invoice instead). Same conservation rule as refundDentalPayment.
     if (isDeposit) {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${payment.patientId}))`);
+      // Read on db (superuser, global wallet) while holding the 1001 lock on tx.
+      // Cross-connection is safe: every credit mutator takes the same per-patient
+      // 1001 lock, so no competing write commits while we hold it. Not a race.
       const availableCredit = await new DentalPatientCreditRepository(db).getBalance(payment.patientId);
       if (availableCredit < payment.amountCents) {
         throw new BusinessLogicError(

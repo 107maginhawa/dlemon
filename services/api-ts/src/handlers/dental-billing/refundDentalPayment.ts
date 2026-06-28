@@ -104,7 +104,11 @@ export async function refundDentalPayment(
       await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${payment.patientId}))`);
     }
     // F-02: the wallet is patient-GLOBAL — read it on db (superuser) so branch-
-    // scoped RLS on dental_patient_credit does not truncate it.
+    // scoped RLS on dental_patient_credit does not truncate it. The read is on a
+    // DIFFERENT connection than the 1001 lock above, but that is safe: EVERY
+    // credit mutator (apply/refund/void) takes the same per-patient 1001 lock, so
+    // no competing write can COMMIT while we hold it — whichever connection reads
+    // the balance, it cannot observe an uncommitted competing change. Not a race.
     const availableCreditBefore = await new DentalPatientCreditRepository(db).getBalance(payment.patientId);
     // F-01 conservation: a deposit's cash is refundable only while its mirrored
     // credit is still in the wallet. If the deposit was already applied to a
@@ -150,7 +154,8 @@ export async function refundDentalPayment(
         branchId: payment.branchId,
         amountCents: body.amountCents, // positive: credit to the patient
         source: 'refund',
-        invoiceId: payment.invoiceId,
+        invoiceId: null, // non-consuming (positive) row — invoiceId is only for consuming rows
+        createdByMemberId: membership?.id ?? null, // attribute the refund-to-credit to the acting staff
         createdBy: session.userId,
         updatedBy: session.userId,
       });
