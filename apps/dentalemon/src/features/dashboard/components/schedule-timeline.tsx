@@ -42,17 +42,19 @@ interface StatusPillStyle {
   className: string;
 }
 
-const SCHEDULED_PILL: StatusPillStyle = { label: 'Scheduled', className: 'bg-muted text-muted-foreground' };
-
+// Pill only for states that carry signal beyond the default. A timeline of
+// identical "Scheduled" badges is unearned chrome (PRODUCT.md: chrome is earned,
+// the interface recedes) — you scan a day for the exceptions (checked in, done,
+// no-show), so only those get a pill. Default/unknown → no pill.
 const STATUS_PILL: Record<string, StatusPillStyle> = {
   completed: { label: 'Done', className: 'bg-success/15 text-success-foreground' },
   checked_in: { label: 'Checked in', className: 'bg-info/15 text-info-foreground' },
   no_show: { label: 'No show', className: 'bg-muted text-muted-foreground' },
-  scheduled: SCHEDULED_PILL,
 };
 
 function StatusPill({ status }: { status: string }) {
-  const pill = STATUS_PILL[status] ?? SCHEDULED_PILL;
+  const pill = STATUS_PILL[status];
+  if (!pill) return null;
   return (
     <span
       className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${pill.className}`}
