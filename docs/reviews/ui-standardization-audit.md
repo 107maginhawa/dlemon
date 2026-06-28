@@ -87,7 +87,7 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 - **B5** `chart-export-view.tsx` — 7 palette uses; it's a print surface, tokenize against print styles. P2.
 
 ### Cross-cutting (whole-app, after the module sweep)
-- **B6** `focus-visible` coverage gap — ~73 of 131 interactive files lack a visible keyboard-focus ring (X5). Best done as one consistent sweep once per-module passes settle the markup. P1.
+- **B6** ✅ DONE — `focus-visible` coverage gap (~69 hand-rolled-button files lacked a keyboard ring). Fixed with ONE `@layer base` rule in `globals.css` (`a/button/[role=button]/tab/menuitem/switch/option/summary :focus-visible → 2px lemon outline + offset`). shadcn/Radix primitives keep their own ring (their `focus-visible:outline-none` in the utilities layer wins by @layer order), so no double-ring. Verified: bare buttons get the outline, primitives don't. Note: lemon-on-white outline is low-contrast by the app's existing focus aesthetic — strengthening the focus indicator app-wide (darker/companion ring for WCAG 2.4.11) is a separate design-system call if wanted.
 - **B7** Sub-44px interactive targets (X7, ~9 sites) — spot-fixed opportunistically per module; do a final grep sweep to catch stragglers. P1.
 - **B8** Untrapped overlay triage (X4) — `apply-template-button`, `reports/invoice-detail-sheet`, `patients/patient-statement` (verify real-modal vs print); `chart-export-overlay` is a `window.print` surface, likely exempt. P2.
 
