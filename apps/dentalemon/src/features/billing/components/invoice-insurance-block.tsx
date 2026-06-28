@@ -32,10 +32,10 @@ export function InvoiceInsuranceBlock({
       <span className="text-xs font-semibold tracking-wider uppercase text-lemon-foreground/70">
         Insurance estimate
       </span>
-      <span className="text-[14px] font-semibold text-lemon-foreground" data-testid="coverage-split">
+      <span className="text-sm font-semibold text-lemon-foreground" data-testid="coverage-split">
         {coverageSplitLabel(estimatedCoveredCents, estimatedPatientPortionCents)}
       </span>
-      <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span>HMO: <span className="tabular-nums">{formatPeso(estimatedCoveredCents)}</span></span>
         <span>Patient: <span className="tabular-nums font-medium text-foreground">{formatPeso(estimatedPatientPortionCents)}</span></span>
         {claimNumber ? <span data-testid="claim-ref">Claim {claimNumber}</span> : null}

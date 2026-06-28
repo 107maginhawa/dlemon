@@ -141,7 +141,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
             role="tab"
             aria-selected={statusFilter === f.value}
             onClick={() => setStatusFilter(f.value)}
-            className={`h-7 px-3 rounded-lg text-[12px] font-medium transition-colors ${
+            className={`h-7 px-3 rounded-lg text-xs font-medium transition-colors ${
               statusFilter === f.value ? 'bg-foreground text-background' : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -201,7 +201,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                           <button
                             type="button"
                             onClick={() => setActionFor(actionFor === claim.id ? null : claim.id)}
-                            className="h-7 px-3 rounded-lg bg-secondary/60 text-[12px] font-medium hover:bg-secondary"
+                            className="h-7 px-3 rounded-lg bg-secondary/60 text-xs font-medium hover:bg-secondary"
                             data-testid={`claim-action-${claim.id}`}
                           >
                             {actionFor === claim.id ? 'Close' : 'Manage'}
@@ -213,7 +213,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                       <tr className="bg-secondary/20">
                         <td colSpan={6} className="px-5 py-4">
                           <div className="flex flex-wrap items-end gap-3">
-                            <label className="flex flex-col gap-1 text-[12px]">
+                            <label className="flex flex-col gap-1 text-xs">
                               <span className="text-muted-foreground">Payer reference</span>
                               <input
                                 value={payerReference}
@@ -236,7 +236,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                             )}
                             {canRecordRemittance(claim.status) && (
                               <>
-                                <label className="flex flex-col gap-1 text-[12px]">
+                                <label className="flex flex-col gap-1 text-xs">
                                   <span className="text-muted-foreground">Payer paid (₱)</span>
                                   <input
                                     value={remitAmount}
@@ -247,7 +247,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                                     data-testid="remit-amount-input"
                                   />
                                 </label>
-                                <label className="flex flex-col gap-1 text-[12px]">
+                                <label className="flex flex-col gap-1 text-xs">
                                   <span className="text-muted-foreground">Disallowed (₱)</span>
                                   <input
                                     value={disallowAmount}

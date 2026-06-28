@@ -76,7 +76,7 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
     >
       <div>
         <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
-        <p className="text-[12px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {item.cdtCode && <span className="mr-1">{item.cdtCode}</span>}
           {item.toothNumber && <span>T{item.toothNumber}</span>}
         </p>
@@ -98,7 +98,7 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
         </span>
       </div>
       <div className="text-right">
-        <span className={`text-[14px] font-medium tabular-nums ${item.priceCents === 0 ? 'text-muted-foreground' : ''}`}>
+        <span className={`text-sm font-medium tabular-nums ${item.priceCents === 0 ? 'text-muted-foreground' : ''}`}>
           {formatCents(item.priceCents)}
         </span>
       </div>
@@ -140,7 +140,7 @@ function InvoiceBanner({
             {cfg.label}
           </span>
         </div>
-        <span className="text-[12px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           Balance: {formatCents(balanceCents)} / {formatCents(totalCents)}
         </span>
       </div>
