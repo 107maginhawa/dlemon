@@ -135,7 +135,7 @@ export function PerioToothColumn({
       {gmRow(BUCCAL_SITES)}
       {calRow(BUCCAL_SITES)}
 
-      <div className="my-0.5 h-px w-full bg-zinc-300" aria-hidden="true" />
+      <div className="my-0.5 h-px w-full bg-border" aria-hidden="true" />
 
       {/* Lingual: depth / GM / BOP */}
       {depthRow(LINGUAL_SITES)}
@@ -151,7 +151,7 @@ export function PerioToothColumn({
             value={reading?.mobility ?? 0}
             disabled={readOnly}
             onChange={(e) => onPatch({ mobility: Number(e.target.value) })}
-            className="h-9 rounded border border-zinc-300 bg-background text-xs text-foreground"
+            className="h-9 rounded border border-border bg-background text-xs text-foreground"
           >
             {[0, 1, 2, 3].map((g) => (
               <option key={g} value={g}>
@@ -172,7 +172,7 @@ export function PerioToothColumn({
             value={reading?.furcation ?? 0}
             disabled={readOnly || singleRooted}
             onChange={(e) => onPatch({ furcation: Number(e.target.value) })}
-            className="h-9 rounded border border-zinc-300 bg-background text-xs text-foreground disabled:bg-muted/30 disabled:cursor-not-allowed"
+            className="h-9 rounded border border-border bg-background text-xs text-foreground disabled:bg-muted/30 disabled:cursor-not-allowed"
           >
             {[0, 1, 2, 3].map((g) => (
               <option key={g} value={g}>
@@ -190,7 +190,7 @@ export function PerioToothColumn({
             onClick={() => onPatch({ plaque: !reading?.plaque })}
             className={cn(
               'h-7 rounded px-2 text-xs font-bold',
-              reading?.plaque ? 'bg-zinc-700 text-white' : 'bg-muted text-zinc-600',
+              reading?.plaque ? 'bg-foreground text-background' : 'bg-muted text-zinc-600',
             )}
           >
             P
