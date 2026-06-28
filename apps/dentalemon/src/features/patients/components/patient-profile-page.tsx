@@ -63,7 +63,7 @@ function statusBadge(status: string) {
     'in-session': 'In Session',
   };
   return (
-    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${styles[status] ?? styles['active']}`}>
+    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? styles['active']}`}>
       {label[status] ?? 'Active'}
     </span>
   );
@@ -148,7 +148,7 @@ function OverviewTab({ patientId }: { patientId: string }) {
                   <p className="text-sm font-medium truncate">
                     {v.chiefComplaint || 'Visit'}
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {new Date(v.createdAt).toLocaleDateString(APP_LOCALE, {
                       month: 'short',
                       day: 'numeric',
@@ -230,7 +230,7 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
       ) : (
         <>
           {/* Table header */}
-          <div className="grid grid-cols-[1fr_2fr_auto_auto_auto] gap-x-4 px-4 py-2 text-[11px] font-medium text-muted-foreground border-b border-border">
+          <div className="grid grid-cols-[1fr_2fr_auto_auto_auto] gap-x-4 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">
             <span>Date</span>
             <span>Invoice</span>
             <span className="text-right">Amount</span>

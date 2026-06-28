@@ -330,3 +330,4 @@ skills-lock.json
 
 # Phase 0 coverage-ledger intermediate fragments (regenerable; assembled into coverage-ledger.json)
 docs/testing/coverage/.ledger-parts/
+.impeccable/

@@ -15,7 +15,7 @@ import { useWaitlist, type WaitlistEntry, type WaitlistUrgency } from '../hooks/
 import { buildTimeRange, DURATION_OPTIONS, VISIT_TYPE_OPTIONS } from './appointment-modal';
 
 const URGENCY_STYLE: Record<WaitlistUrgency, string> = {
-  routine: 'bg-gray-100 text-gray-600',
+  routine: 'bg-secondary text-muted-foreground',
   soon: 'bg-amber-100 text-amber-700',
   asap: 'bg-red-100 text-red-700',
 };

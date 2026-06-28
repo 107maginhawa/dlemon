@@ -9,6 +9,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useInvoiceDetail } from '@/features/billing/hooks/use-invoice-detail';
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,7 @@ const METHOD_LABELS: Record<string, string> = {
 
 export function InvoiceDetailSheet({ invoiceId, open, onClose }: InvoiceDetailSheetProps) {
   const { invoice, isLoading, error } = useInvoiceDetail(open ? invoiceId : null);
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   if (!open) return null;
 
@@ -81,6 +83,7 @@ export function InvoiceDetailSheet({ invoiceId, open, onClose }: InvoiceDetailSh
 
       {/* Sheet */}
       <div
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Invoice Detail"

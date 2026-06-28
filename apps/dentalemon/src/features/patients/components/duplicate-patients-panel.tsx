@@ -104,7 +104,7 @@ export function DuplicatePatientsPanel({ branchId }: { branchId: string | null }
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{p.displayName}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {formatDob(p.dateOfBirth)}
                     {p.phone ? ` · ${p.phone}` : ''}
                     {p.email ? ` · ${p.email}` : ''}

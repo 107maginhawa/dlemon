@@ -79,7 +79,7 @@ const statusChipStyle: Record<string, string> = {
   scheduled: 'bg-blue-50/80 border-l-blue-500',
   checkedIn: 'bg-teal-50/80 border-l-teal-500',
   completed: 'bg-green-50/80 border-l-green-500',
-  cancelled: 'bg-gray-50/60 border-l-gray-300 opacity-50',
+  cancelled: 'bg-muted/60 border-l-border opacity-50',
   noShow: 'bg-red-50/80 border-l-red-500',
 };
 
@@ -130,13 +130,13 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
               aria-label={`${DAY_NAMES[i]} ${dayNum}${isToday ? ', today' : ''}`}
               onClick={() => onDayClick(d)}
             >
-              <span className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? 'text-lemon-foreground' : 'text-muted-foreground'}`}>
+              <span className={`text-xs font-semibold uppercase tracking-wide ${isToday ? 'text-lemon-foreground' : 'text-muted-foreground'}`}>
                 {DAY_NAMES[i]}
               </span>
               <span
                 className={`text-lg font-bold tabular-nums leading-none ${
                   isToday
-                    ? 'bg-lemon text-lemon-foreground w-[30px] h-[30px] rounded-full flex items-center justify-center text-[15px]'
+                    ? 'bg-lemon text-lemon-foreground w-[30px] h-[30px] rounded-full flex items-center justify-center text-base'
                     : ''
                 }`}
               >
@@ -161,7 +161,7 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                   className="flex items-start justify-end pr-2 pt-1 border-b border-border/40"
                   style={{ height: isLast ? SLOT_HEIGHT_PX : SLOT_HEIGHT_PX }}
                 >
-                  <span className="text-[11px] font-medium tabular-nums whitespace-nowrap" style={{ color: isHour ? undefined : 'transparent' }}>
+                  <span className="text-xs font-medium tabular-nums whitespace-nowrap" style={{ color: isHour ? undefined : 'transparent' }}>
                     {isHour ? `${slot.hour > 12 ? slot.hour - 12 : slot.hour} ${slot.hour >= 12 ? 'PM' : 'AM'}` : '.'}
                   </span>
                 </div>
@@ -216,7 +216,7 @@ export function CalendarWeek({ weekStart, appointments, onAppointmentClick, onDa
                       onClick={() => onAppointmentClick(appt)}
                       onKeyDown={activateOnKey(() => onAppointmentClick(appt))}
                     >
-                      <div className="text-[11px] font-semibold truncate">{chipLabel(appt)}</div>
+                      <div className="text-xs font-semibold truncate">{chipLabel(appt)}</div>
                       <div className="text-[10px] text-muted-foreground tabular-nums">{formatChipTime(appt.scheduledAt)}</div>
                     </div>
                   );

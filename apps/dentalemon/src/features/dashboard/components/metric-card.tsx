@@ -45,7 +45,7 @@ export function MetricCard({
     <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground truncate min-w-0">
+        <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground truncate min-w-0">
           {title}
         </span>
         {action && (
@@ -66,7 +66,7 @@ export function MetricCard({
         </span>
         {trend && (
           <span
-            className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-semibold tabular-nums mb-1 ${getTrendClass(trend)}`}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold tabular-nums mb-1 ${getTrendClass(trend)}`}
           >
             {trend}
           </span>
@@ -75,7 +75,7 @@ export function MetricCard({
 
       {/* Subtitle */}
       {subtitle && (
-        <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       )}
 
       {/* Children slot for extra content */}

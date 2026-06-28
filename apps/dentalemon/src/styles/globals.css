@@ -197,6 +197,24 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* B6 — app-wide keyboard focus ring (WCAG 2.4.7). Lands ONLY on hand-rolled
+     interactive elements: shadcn/Radix primitives set `focus-visible:outline-none`
+     in the utilities layer, which wins over this base-layer rule by @layer order,
+     so they keep their own ring. Everything else (raw <button>, role=button divs,
+     bare <a>) gets the lemon focus outline instead of nothing. Pointer/mouse use
+     is unaffected — :focus-visible only fires for keyboard focus. */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="menuitem"]:focus-visible,
+  [role="switch"]:focus-visible,
+  [role="option"]:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   .hairline {
     border-width: 0.5px;
   }

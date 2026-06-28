@@ -121,7 +121,7 @@ export function AuditLog() {
               {events.map((e) => (
                 <tr key={e.id} data-testid="audit-log-row">
                   <td className="px-3 py-2 whitespace-nowrap">{fmt(e.timestamp ?? e.createdAt)}</td>
-                  <td className="px-3 py-2 font-mono text-[11px]">{e.actorId}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{e.actorId}</td>
                   <td className="px-3 py-2">{e.actorRole ?? '—'}</td>
                   <td className="px-3 py-2">{e.eventType}</td>
                   <td className="px-3 py-2 font-medium">{e.action}</td>

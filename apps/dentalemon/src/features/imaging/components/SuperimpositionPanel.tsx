@@ -206,7 +206,7 @@ function LandmarkDeltasTable({ result }: { result: CephSuperimposition }) {
         Landmark displacement{showMm ? ' (mm)' : ' (px — uncalibrated)'}
       </h4>
       {!showMm && (
-        <p className="text-[11px] text-zinc-400" data-testid="superimposition-uncalibrated">
+        <p className="text-xs text-zinc-400" data-testid="superimposition-uncalibrated">
           One or both timepoints are uncalibrated — showing pixel displacement only.
         </p>
       )}

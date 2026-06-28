@@ -52,6 +52,7 @@ describe('InvoiceDetail — Create Payment Plan entry point', () => {
     const f = installFetch();
     try {
       renderDetail(true);
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       const btn = await screen.findByRole('button', { name: /create payment plan/i });
       await user.click(btn);
       // The create dialog (balance to split + Create Plan action) opens.

@@ -19,6 +19,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Skeleton } from '@monobase/ui';
 import { canViewFinancials } from '@/lib/rbac';
 import type { DentalRole } from '@/lib/rbac';
+import { ListErrorState } from '@/components/list-error-state';
 import { useDashboardSummary } from '../hooks/use-dashboard-summary';
 import { ScheduleTimeline } from './schedule-timeline';
 import { AttentionQueue } from './attention-queue';
@@ -66,7 +67,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const navigate = useNavigate();
   const showFinancials = canViewFinancials(role);
 
-  const { data, isLoading, error } = useDashboardSummary({ branchId, showFinancials });
+  const { data, isLoading, error, refetch } = useDashboardSummary({ branchId, showFinancials });
 
   const now = new Date();
   const greeting = getGreeting(now.getHours());
@@ -126,11 +127,12 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
         </button>
       </div>
 
-      {/* Error */}
+      {/* Error — plain-language fallback + retry (PRODUCT.md voice) */}
       {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-          {error.message}
-        </div>
+        <ListErrorState
+          message="We couldn’t load your dashboard just now. Please try again."
+          onRetry={() => { void refetch(); }}
+        />
       )}
 
       {/* Loading skeleton */}
@@ -165,7 +167,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
           {/* Up next -- Tomorrow preview (kept, shrunk) */}
           <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+              <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
                 Up next &mdash; Tomorrow{' '}
                 <span className="normal-case tracking-normal text-muted-foreground/80">
                   {new Date(Date.now() + 86400000).toLocaleDateString('en-US', {
@@ -200,10 +202,10 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                   <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
                     {getInitials(appt.patientName)}
                   </div>
-                  <span className="text-[13px] font-medium truncate">
+                  <span className="text-sm font-medium truncate">
                     {appt.patientName ?? appt.patientId}
                   </span>
-                  <span className="text-[11px] text-muted-foreground ml-auto whitespace-nowrap">
+                  <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
                     {appt.serviceType ?? '—'}
                   </span>
                 </div>

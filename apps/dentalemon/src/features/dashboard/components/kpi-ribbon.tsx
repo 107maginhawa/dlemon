@@ -19,7 +19,7 @@ export interface KpiRibbonProps {
 function Kpi({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+      <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
         {label}
       </span>
       <span className="text-lg font-bold tracking-tight tabular-nums leading-none">{value}</span>

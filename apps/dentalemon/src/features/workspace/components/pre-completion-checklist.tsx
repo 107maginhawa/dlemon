@@ -7,7 +7,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@monobase/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
@@ -57,7 +63,7 @@ async function checkNoUnstartedTreatments(visitId: string): Promise<CheckResult>
     pass: unfinished.length === 0,
     message:
       unfinished.length > 0
-        ? `${unfinished.length} treatment(s) still diagnosed or planned`
+        ? `${unfinished.length} treatment${unfinished.length === 1 ? '' : 's'} not done yet — mark done or dismiss`
         : undefined,
   };
 }
@@ -89,7 +95,7 @@ async function checkNoOpenLabOrders(visitId: string): Promise<CheckResult> {
   return {
     label: 'No open lab orders',
     pass: openOrders.length === 0,
-    message: openOrders.length > 0 ? `${openOrders.length} lab order(s) still open` : undefined,
+    message: openOrders.length > 0 ? `${openOrders.length} lab order${openOrders.length === 1 ? '' : 's'} still open` : undefined,
   };
 }
 
@@ -123,7 +129,7 @@ export function PreCompletionChecklist({
       const msg = e?.body?.message ?? e?.message;
       setError(
         code === 'VISIT_HAS_OPEN_TREATMENTS'
-          ? 'This visit still has open treatments. Mark them performed or dismiss them before completing.'
+          ? 'This visit still has open treatments. Mark them done or dismiss them before completing.'
           : (msg || 'Could not complete the visit. Please try again.'),
       );
     },
@@ -164,35 +170,29 @@ export function PreCompletionChecklist({
   const isPending = completeMutation.isPending;
 
   return (
-    <Dialog.Root open={open} onOpenChange={v => !v && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <Dialog.Content
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-full bg-background rounded-2xl p-6 z-50 shadow-2xl focus:outline-none"
-          aria-describedby="pre-completion-description"
-        >
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
           {/* Header */}
-          <Dialog.Title className="text-base font-semibold">
-            Complete Visit
-          </Dialog.Title>
-          <p
-            id="pre-completion-description"
-            className="text-xs text-muted-foreground mt-1 mb-5"
-          >
-            {loading
-              ? 'Checking visit readiness…'
-              : 'Review the items below before completing.'}
-          </p>
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base font-semibold">
+              Complete visit
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {loading
+                ? 'Checking visit readiness…'
+                : 'A few quick checks before you complete this visit.'}
+            </DialogDescription>
+          </DialogHeader>
 
           {/* Error banner */}
           {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive mb-4">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
 
           {/* Check rows */}
-          <div className="mb-5">
+          <div>
             {loading ? (
               <>
                 <div className="h-8 bg-muted animate-pulse rounded-lg mb-2" />
@@ -207,9 +207,9 @@ export function PreCompletionChecklist({
                   className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0"
                 >
                   {check.pass ? (
-                    <CheckCircle2 className="size-4 text-success flex-shrink-0" />
+                    <CheckCircle2 className="size-4 text-success shrink-0" />
                   ) : (
-                    <AlertTriangle className="size-4 text-warning flex-shrink-0" />
+                    <AlertTriangle className="size-4 text-warning shrink-0" />
                   )}
                   <div>
                     <p className="text-sm">{check.label}</p>
@@ -229,9 +229,9 @@ export function PreCompletionChecklist({
                 type="button"
                 onClick={onClose}
                 disabled={isPending}
-                className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50"
+                className="flex-1 h-11 rounded-lg border border-border text-sm hover:bg-secondary transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Go Back
+                Not yet
               </button>
               {/* CR-02: the four checks are warnings, not hard blocks (BR-014 allows
                   owner override). When warnings exist, offer an explicit
@@ -241,7 +241,7 @@ export function PreCompletionChecklist({
                   type="button"
                   onClick={handleComplete}
                   disabled={isPending || checks.length === 0}
-                  className="flex-1 h-11 rounded-xl bg-amber-100 text-amber-900 text-sm font-semibold hover:bg-amber-200 transition-colors disabled:opacity-50"
+                  className="flex-1 h-11 rounded-lg bg-amber-100 text-amber-900 text-sm font-semibold hover:bg-amber-200 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 >
                   {isPending ? 'Completing…' : 'Complete anyway'}
                 </button>
@@ -250,15 +250,14 @@ export function PreCompletionChecklist({
                   type="button"
                   onClick={handleComplete}
                   disabled={isPending || checks.length === 0}
-                  className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+                  className="flex-1 h-11 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {isPending ? 'Completing…' : 'Complete Visit'}
+                  {isPending ? 'Completing…' : 'Complete visit'}
                 </button>
               )}
             </div>
           )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -121,7 +121,7 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting, canPrese
             Plan — {new Date(plan.createdAt).toLocaleDateString()}
           </span>
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_BADGE_CLASS[plan.status]}`}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE_CLASS[plan.status]}`}
           >
             {STATUS_DISPLAY[plan.status]}
           </span>
@@ -158,7 +158,7 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting, canPrese
               disabled={!canPresent || isPresenting}
               title={!canPresent ? 'Requires treatment-coordinator role' : undefined}
               onClick={() => { if (canPresent) onPresent?.(plan.id); }}
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-lemon"
+              className="rounded px-2 py-1 text-xs font-semibold text-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-lemon"
             >
               {isPresenting ? 'Presenting…' : 'Present to patient'}
             </button>
@@ -169,7 +169,7 @@ function PlanRow({ plan, onUpdate, isUpdating, onPresent, isPresenting, canPrese
               type="button"
               disabled={isUpdating}
               onClick={() => onUpdate(plan.id, { status: next })}
-              className={`rounded px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+              className={`rounded px-2 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
                 next === 'cancelled' || next === 'rejected'
                   ? 'bg-destructive/10 text-destructive-emphasis hover:bg-destructive/15'
                   : 'bg-muted hover:bg-muted/80 text-foreground'
@@ -230,7 +230,7 @@ function OptionGroupCard({ patientId, optionGroupId }: { patientId: string; opti
                   type="button"
                   disabled={isAccepting}
                   onClick={() => acceptOption(opt.id)}
-                  className="shrink-0 rounded bg-muted px-2 py-1 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/80 disabled:opacity-50"
+                  className="shrink-0 rounded bg-muted px-2 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted/80 disabled:opacity-50"
                 >
                   Accept
                 </button>
@@ -305,7 +305,7 @@ export function TreatmentPlansSheet({ patientId, open, onClose, optionGroupIds }
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
               <DialogTitle className="text-sm font-semibold">Treatment Plans</DialogTitle>
               {plans.length > 0 && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   {plans.length}
                 </span>
               )}

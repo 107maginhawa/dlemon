@@ -299,7 +299,7 @@ export function DentalChart({
         }}
         className={[
           'relative flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
-          !isLastInQuadrant ? 'border-r border-slate-200' : '',
+          !isLastInQuadrant ? 'border-r border-border' : '',
           isSelected ? 'bg-primary/10 ring-2 ring-primary/50' : 'hover:bg-muted/50',
         ].join(' ')}
         aria-label={`Tooth ${displayLabel}: ${name}, ${state}, ${toothLayer}`}
@@ -410,7 +410,7 @@ export function DentalChart({
           which pulled the lower numbers visually tighter to their teeth). As its
           own element between two equal flex-1 arches it keeps the number↔tooth
           spacing symmetric across arches. Darkened for the white surface. */}
-      <div aria-hidden className="mx-1 border-t-2 border-dashed border-slate-300" />
+      <div aria-hidden className="mx-1 border-t-2 border-dashed border-border" />
 
       {/* Lower arch */}
       <div className="flex flex-1 min-h-0">
@@ -484,7 +484,7 @@ export function DentalChart({
                 aria-pressed={isActive}
               >
                 <span
-                  className={`w-3 h-3 rounded-sm inline-block flex-shrink-0 ${bordered ? 'border border-dashed border-gray-400' : 'border border-black/15'}`}
+                  className={`w-3 h-3 rounded-sm inline-block flex-shrink-0 ${bordered ? 'border border-dashed border-muted-foreground' : 'border border-black/15'}`}
                   style={{ backgroundColor: getToothFillColor(state) }}
                 />
                 {label}

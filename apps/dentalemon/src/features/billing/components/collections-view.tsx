@@ -82,22 +82,22 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
           const pct = bucketPct(cents, summary?.totalOutstandingCents ?? 0);
           return (
             <div key={b.key} className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
-              <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+              <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
                 {b.label}
               </span>
               <span className="text-2xl font-bold tracking-tight tabular-nums">{formatCents(cents)}</span>
-              <span className="text-[11px] text-muted-foreground">{pct}% · {b.sublabel}</span>
+              <span className="text-xs text-muted-foreground">{pct}% · {b.sublabel}</span>
             </div>
           );
         })}
         <div className="bg-lemon/30 rounded-2xl shadow-sm p-5 flex flex-col gap-1">
-          <span className="text-[11px] font-semibold tracking-wider uppercase text-lemon-foreground/70">
+          <span className="text-xs font-semibold tracking-wider uppercase text-lemon-foreground/70">
             Total AR
           </span>
           <span className="text-2xl font-bold tracking-tight tabular-nums text-lemon-foreground">
             {formatCents(summary?.totalOutstandingCents ?? 0)}
           </span>
-          <span className="text-[11px] text-lemon-foreground/70">
+          <span className="text-xs text-lemon-foreground/70">
             {summary?.patientCount ?? 0} patient{(summary?.patientCount ?? 0) !== 1 ? 's' : ''}
           </span>
         </div>
@@ -129,13 +129,13 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
             <table className="w-full min-w-[760px] border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pl-5">Patient</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Current</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">31–60</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">61–90</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">90+</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Total</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Oldest</th>
+                  <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pl-5">Patient</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Current</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">31–60</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">61–90</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">90+</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Total</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Oldest</th>
                   <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border pr-5">Statement</th>
                 </tr>
               </thead>
@@ -155,13 +155,13 @@ export function CollectionsView({ branchId }: CollectionsViewProps) {
                 {!isLoading &&
                   patients.map((p: AgingRow) => (
                     <tr key={p.patientId} className="border-t border-border first:border-t-0">
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium pl-5">{p.patientName}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatCents(p.currentCents)}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatCents(p.days30Cents)}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatCents(p.days60Cents)}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-semibold text-red-700">{formatCents(p.days90PlusCents)}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-bold">{formatCents(p.totalOutstandingCents)}</td>
-                      <td className={`px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right ${agingRiskClass(agingRisk(p.oldestInvoiceDays))}`}>
+                      <td className="px-4 py-0 h-12 align-middle text-sm font-medium pl-5">{p.patientName}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right">{formatCents(p.currentCents)}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right">{formatCents(p.days30Cents)}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right">{formatCents(p.days60Cents)}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right font-semibold text-red-700">{formatCents(p.days90PlusCents)}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right font-bold">{formatCents(p.totalOutstandingCents)}</td>
+                      <td className={`px-4 py-0 h-12 align-middle text-sm tabular-nums text-right ${agingRiskClass(agingRisk(p.oldestInvoiceDays))}`}>
                         {p.oldestInvoiceDays}d
                       </td>
                       <td className="px-4 py-0 h-12 align-middle text-right pr-5">

@@ -133,7 +133,7 @@ export function ChartExportView({ exportDoc: data }: ChartExportViewProps) {
       </section>
 
       {/* Legend */}
-      <section data-testid="export-legend" className="mt-4 flex flex-wrap gap-3 border-t pt-2 text-[11px] text-gray-600">
+      <section data-testid="export-legend" className="mt-4 flex flex-wrap gap-3 border-t pt-2 text-xs text-gray-600">
         {data.legend.map((l) => (
           <span key={l.key}>{l.label}</span>
         ))}

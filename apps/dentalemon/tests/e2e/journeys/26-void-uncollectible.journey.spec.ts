@@ -50,6 +50,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     // ── VOID ──────────────────────────────────────────────────────────────────
     let detail = await openInvoice(page, toVoid.invoiceId)
+    await detail.getByTestId('invoice-more-btn').click()
     await detail.getByRole('button', { name: 'Void', exact: true }).click()
     await page.locator('#void-reason').fill('J26 duplicate invoice — voided in test')
     const [voidResp] = await Promise.all([
@@ -59,7 +60,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
           r.request().method() === 'POST',
         { timeout: 15_000 },
       ),
-      detail.getByRole('button', { name: 'Confirm Void' }).click(),
+      detail.getByRole('button', { name: 'Confirm void' }).click(),
     ])
     expect(voidResp.status(), 'void POST must be 2xx').toBeGreaterThanOrEqual(200)
     expect(voidResp.status(), 'void POST must be 2xx').toBeLessThan(300)
@@ -77,6 +78,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
 
     // ── MARK UNCOLLECTIBLE ──────────────────────────────────────────────────────
     detail = await openInvoice(page, toWriteOff.invoiceId)
+    await detail.getByTestId('invoice-more-btn').click()
     await detail.getByTestId('mark-uncollectible-btn').click()
     const confirm = page.getByTestId('uncollectible-confirm')
     await expect(confirm, 'write-off confirmation must appear').toBeVisible({ timeout: 10_000 })
@@ -87,7 +89,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
           r.request().method() === 'POST',
         { timeout: 15_000 },
       ),
-      confirm.getByRole('button', { name: 'Confirm Write-Off' }).click(),
+      confirm.getByRole('button', { name: 'Confirm write-off' }).click(),
     ])
     expect(uncollResp.status(), 'uncollectible POST must be 2xx').toBeGreaterThanOrEqual(200)
     expect(uncollResp.status(), 'uncollectible POST must be 2xx').toBeLessThan(300)

@@ -58,7 +58,7 @@ export function ChartConflictBanner({ patientId }: ChartConflictBannerProps) {
                   <li
                     key={`${c.visitId}-${t.toothNumber}-${i}`}
                     data-testid="conflict-tooth-row"
-                    className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium"
+                    className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium"
                   >
                     #{t.toothNumber} {t.state}
                   </li>
@@ -81,14 +81,14 @@ export function ChartConflictBanner({ patientId }: ChartConflictBannerProps) {
                       data-testid={`conflict-dismiss-confirm-${c.visitId}`}
                       disabled={reason.trim().length < 5 || isResolving}
                       onClick={() => handleResolve(c.visitId, 'dismiss', reason.trim())}
-                      className="rounded bg-amber-600 px-2 py-0.5 text-[11px] font-medium text-white disabled:opacity-50"
+                      className="rounded bg-amber-600 px-2 py-0.5 text-xs font-medium text-white disabled:opacity-50"
                     >
                       Confirm dismiss
                     </button>
                     <button
                       type="button"
                       onClick={() => { setDismissingVisitId(null); setReason(''); }}
-                      className="rounded border border-amber-300 px-2 py-0.5 text-[11px] font-medium"
+                      className="rounded border border-amber-300 px-2 py-0.5 text-xs font-medium"
                     >
                       Cancel
                     </button>
@@ -101,7 +101,7 @@ export function ChartConflictBanner({ patientId }: ChartConflictBannerProps) {
                     data-testid={`conflict-accept-${c.visitId}`}
                     disabled={isResolving}
                     onClick={() => handleResolve(c.visitId, 'accept')}
-                    className="rounded bg-amber-600 px-2 py-0.5 text-[11px] font-medium text-white disabled:opacity-50"
+                    className="rounded bg-amber-600 px-2 py-0.5 text-xs font-medium text-white disabled:opacity-50"
                   >
                     Accept offline edit
                   </button>
@@ -109,7 +109,7 @@ export function ChartConflictBanner({ patientId }: ChartConflictBannerProps) {
                     type="button"
                     data-testid={`conflict-dismiss-${c.visitId}`}
                     onClick={() => setDismissingVisitId(c.visitId)}
-                    className="rounded border border-amber-300 px-2 py-0.5 text-[11px] font-medium"
+                    className="rounded border border-amber-300 px-2 py-0.5 text-xs font-medium"
                   >
                     Dismiss
                   </button>

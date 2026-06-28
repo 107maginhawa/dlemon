@@ -230,6 +230,7 @@ test.describe('Billing (FR4.x)', () => {
 
     // InvoiceDetail opens — apply the owner-only discount.
     await expect(page.getByTestId('invoice-detail')).toBeVisible();
+    await page.getByTestId('invoice-more-btn').click();
     await page.getByRole('button', { name: /apply discount/i }).click();
     await page.getByLabel(/discount %/i).fill('10');
     await page.getByLabel(/discount reason/i).fill('Senior citizen discount');
@@ -253,6 +254,7 @@ test.describe('Billing (FR4.x)', () => {
     await page.getByTestId(`invoice-row-${invoiceId}`).click();
     await expect(page.getByTestId('invoice-detail')).toBeVisible();
 
+    await page.getByTestId('invoice-more-btn').click();
     await page.getByRole('button', { name: /create payment plan/i }).click();
     await expect(page.getByTestId('payment-plan-create')).toBeVisible();
     await page.getByLabel(/start date/i).fill('2026-07-01');
@@ -261,6 +263,7 @@ test.describe('Billing (FR4.x)', () => {
     // Dialog closes on success → open the plan view and assert the schedule rendered
     // (default 6 installments, derived "Installments" stat + "Installment Schedule").
     await expect(page.getByTestId('payment-plan-create')).toBeHidden({ timeout: 7000 });
+    await page.getByTestId('invoice-more-btn').click();
     await page.getByRole('button', { name: /view payment plan/i }).click();
     await expect(page.getByTestId('payment-plan-view')).toBeVisible();
     await expect(page.getByText('Installment Schedule')).toBeVisible();

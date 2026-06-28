@@ -185,7 +185,8 @@ test.describe('Payment Plan', () => {
     await spaNavigate(page, '/billing');
     await page.getByTestId(`invoice-row-${invoiceId}`).click();
     await expect(page.getByTestId('invoice-detail')).toBeVisible();
-    await page.getByRole('button', { name: 'View Payment Plan' }).click();
+    await page.getByTestId('invoice-more-btn').click();
+    await page.getByRole('button', { name: 'View payment plan' }).click();
 
     // The plan's 3 installments must RENDER (not just exist in the API response).
     const planView = page.getByTestId('payment-plan-view');

@@ -29,8 +29,8 @@ describe('getThumbnailPipClass', () => {
     expect(getThumbnailPipClass('crown' as ToothState)).toBe('bg-dental-crown');
   });
 
-  test('extracted → border border-dashed border-gray-600 bg-transparent', () => {
-    expect(getThumbnailPipClass('extracted' as ToothState)).toBe('border border-dashed border-gray-600 bg-transparent');
+  test('extracted → dashed muted-border placeholder', () => {
+    expect(getThumbnailPipClass('extracted' as ToothState)).toBe('border border-dashed border-muted-foreground bg-transparent');
   });
 
   test('missing → bg-dental-missing/50', () => {

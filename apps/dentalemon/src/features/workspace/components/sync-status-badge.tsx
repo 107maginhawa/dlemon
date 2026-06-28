@@ -19,7 +19,7 @@ export function SyncStatusBadge({ branchId }: SyncStatusBadgeProps) {
   if (failedCount > 0) {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700"
+        className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive-emphasis"
         title={`${failedCount} sync failure${failedCount > 1 ? 's' : ''}`}
       >
         ⚠ {failedCount} failed
@@ -30,7 +30,7 @@ export function SyncStatusBadge({ branchId }: SyncStatusBadgeProps) {
   if (pendingCount > 0) {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700"
+        className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning-foreground"
         title={`${pendingCount} item${pendingCount > 1 ? 's' : ''} pending sync`}
       >
         ↑ {pendingCount} pending
@@ -42,10 +42,10 @@ export function SyncStatusBadge({ branchId }: SyncStatusBadgeProps) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700"
+      className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success-foreground"
       title="All items synced"
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block" />
+      <span className="h-1.5 w-1.5 rounded-full bg-success inline-block" />
       Synced
     </span>
   );
