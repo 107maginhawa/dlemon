@@ -7,7 +7,7 @@
  * Wireframe: docs/prd/context/wireframes/invoice-detail.html
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
@@ -79,6 +79,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   useEffect(() => {
     if (open && openToPayment) setShowPaymentForm(true);
   }, [open, openToPayment]);
+
+  const panelRef = useRef<HTMLDivElement>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [receiptNumber, setReceiptNumber] = useState('');
@@ -110,6 +112,36 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   // Footer overflow: rare/secondary actions collapse into a "More" menu so the
   // primary action (Record payment / Issue) isn't lost in a row of 7 buttons.
   const [moreOpen, setMoreOpen] = useState(false);
+
+  // Focus trap (a11y): this is a hand-rolled overlay, so Tab can otherwise escape
+  // the sheet to the page behind it. Keep focus inside the panel while open. Stand
+  // down while a nested modal (plan-create / receipt) owns focus so we don't fight it.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      if (showPlanCreate || receiptPaymentId) return; // nested modal owns focus
+      const root = panelRef.current;
+      if (!root) return;
+      const focusables = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+      if (focusables.length === 0) return;
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, showPlanCreate, receiptPaymentId]);
 
   const qc = useQueryClient();
   // The recording staff member comes from the PIN-authenticated org context.
@@ -426,6 +458,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       <div
+        ref={panelRef}
         data-testid="invoice-detail"
         className="relative w-full max-w-[640px] max-h-[calc(100vh-80px)] bg-background rounded-2xl shadow-2xl flex flex-col"
       >
