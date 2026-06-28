@@ -67,7 +67,7 @@ export function PerioChartOverlay({
   speechProvider,
   voiceEnabled,
 }: PerioChartOverlayProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const {
     chart,
@@ -152,6 +152,7 @@ export function PerioChartOverlay({
 
   return (
     <div
+      ref={containerRef}
       role="dialog"
       aria-modal="true"
       aria-label="Periodontal chart"

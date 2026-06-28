@@ -267,7 +267,7 @@ type Tab = 'visit' | 'all';
 
 export function AttachmentsSheet({ visitId, patientId, open, onClose }: AttachmentsSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const [tab, setTab] = useState<Tab>('visit');
   const [imageType, setImageType] = useState<AttachmentImageType>('xray');
@@ -299,6 +299,7 @@ export function AttachmentsSheet({ visitId, patientId, open, onClose }: Attachme
 
       {/* Sheet */}
       <div
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Attachments"

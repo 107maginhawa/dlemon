@@ -147,7 +147,7 @@ function formatInstallmentStatus(status: string): string {
 // ---------------------------------------------------------------------------
 
 export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const planQuery = useQuery({
     ...getDentalPaymentPlanOptions({ path: { invoiceId } }),
     enabled: open && !!invoiceId,
@@ -202,7 +202,7 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Payment Plan">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Payment Plan">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div

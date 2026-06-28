@@ -87,7 +87,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
     return source.filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
   })();
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const [mode, setMode] = useState<SheetMode>('consent');
 
@@ -328,6 +328,7 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-40 flex items-end"
       role="dialog"
       aria-modal="true"

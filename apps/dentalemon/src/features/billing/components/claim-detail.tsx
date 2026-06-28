@@ -41,7 +41,7 @@ function pesoToCents(v: string): number {
 }
 
 export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId }: ClaimDetailProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const { claim, isLoading } = useClaimDetail(open ? claimId : null);
   const { addLine, updateLine, isMutating } = useClaimLineMutations(claimId, branchId);
   const { estimate, result: estimateResult, isEstimating } = useCoverageEstimate();
@@ -89,7 +89,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Insurance Claim Detail">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Insurance Claim Detail">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div data-testid="claim-detail" className="relative w-full max-w-[640px] max-h-[88vh] bg-background rounded-2xl shadow-2xl flex flex-col">

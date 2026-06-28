@@ -143,7 +143,7 @@ function WorkspacePage() {
   // ISSUE-010: the inline Treatment Plan modal is hand-rolled (not Radix) → wire
   // Escape-to-dismiss + focus restore via the shared sheet-a11y hook (stable cb).
   const closeTreatmentPlanSheet = useCallback(() => setTreatmentPlanSheetOpen(false), []);
-  useSheetA11y({ open: treatmentPlanSheetOpen, onClose: closeTreatmentPlanSheet });
+  const { containerRef: treatmentPlanSheetRef } = useSheetA11y({ open: treatmentPlanSheetOpen, onClose: closeTreatmentPlanSheet });
 
   // prescriberMemberId for RxSheet (WBAR-02) — reactive selector
   const prescriberMemberId = useOrgContextStore(s => s.memberId) ?? '';
@@ -650,7 +650,7 @@ function WorkspacePage() {
 
       {/* Treatment Plan sheet (from top bar) */}
       {treatmentPlanSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={closeTreatmentPlanSheet}>
+        <div ref={treatmentPlanSheetRef} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={closeTreatmentPlanSheet}>
           <div
             className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl max-h-[85vh] overflow-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}

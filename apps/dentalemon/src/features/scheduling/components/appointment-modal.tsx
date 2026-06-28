@@ -142,7 +142,7 @@ export function extractDoubleBookingWarning(appointment: unknown): boolean {
 }
 
 export function AppointmentModal({ open, onClose, onSaved, initialDate, appointmentId, appointment }: AppointmentModalProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const storeBranchId = useOrgContextStore((s) => s.branchId) ?? '';
   const [patientId, setPatientId] = useState('');
   const [dentistMemberId, setDentistMemberId] = useState('');
@@ -271,7 +271,7 @@ export function AppointmentModal({ open, onClose, onSaved, initialDate, appointm
   const title = isEdit ? 'Edit Appointment' : 'New Appointment';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title}>
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       <div

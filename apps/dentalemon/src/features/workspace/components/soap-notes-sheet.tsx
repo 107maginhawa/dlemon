@@ -61,7 +61,7 @@ export function SoapNotesSheet({
   visitType = 'general',
 }: SoapNotesSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const { notes, isLoading, save, isSaving, sign, isSigning, addendum, isAddingAddendum, history } =
     useVisitNotes(visitId);
@@ -182,6 +182,7 @@ export function SoapNotesSheet({
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-40 flex items-end"
       role="dialog"
       aria-modal="true"

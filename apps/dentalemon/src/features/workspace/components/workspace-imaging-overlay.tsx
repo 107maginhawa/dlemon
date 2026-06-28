@@ -44,12 +44,12 @@ export function WorkspaceImagingOverlay({
     setSelectedImageItem(null);
     setComparisonItems(null);
   }, [onClose]);
-  useSheetA11y({ open, onClose: handleClose });
+  const { containerRef } = useSheetA11y({ open, onClose: handleClose });
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="imaging-overlay">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="imaging-overlay">
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
           {/* A back control is ALWAYS present: drilled-in viewers step back to the

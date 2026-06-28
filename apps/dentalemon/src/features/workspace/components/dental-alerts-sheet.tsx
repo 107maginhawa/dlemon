@@ -89,7 +89,7 @@ function AlertRow({ alert, onDeactivate, isUpdating }: AlertRowProps) {
 
 export function DentalAlertsSheet({ patientId, open, onClose }: DentalAlertsSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const { alerts, isLoading, isError, createAlert, deactivateAlert, isCreating, isUpdating } =
     useDentalAlerts(patientId);
@@ -122,6 +122,7 @@ export function DentalAlertsSheet({ patientId, open, onClose }: DentalAlertsShee
 
       {/* Sheet */}
       <div
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Dental alerts"

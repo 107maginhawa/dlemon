@@ -43,7 +43,7 @@ export interface PaymentPlanCreateProps {
 }
 
 export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, onClose, onCreated }: PaymentPlanCreateProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const [installments, setInstallments] = useState('6');
   const [frequency, setFrequency] = useState<PlanFrequency>('monthly');
   const [startDate, setStartDate] = useState('');
@@ -81,7 +81,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Create Payment Plan">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Create Payment Plan">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div data-testid="payment-plan-create" className="relative w-full max-w-[440px] bg-background rounded-2xl shadow-2xl flex flex-col">

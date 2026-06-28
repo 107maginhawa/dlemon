@@ -177,7 +177,7 @@ export function WorkspacePaymentModal({
   const createInvoice = useCreateInvoice(patientId);
 
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const subtotalCents = lineItems.reduce((sum, item) => sum + item.priceCents, 0);
 
@@ -217,6 +217,7 @@ export function WorkspacePaymentModal({
 
       {/* Modal */}
       <div
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Payment"

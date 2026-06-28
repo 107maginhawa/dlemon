@@ -193,7 +193,7 @@ function InsuranceProfileForm({
   profile: InsuranceProfile | null;
   onClose: () => void;
 }) {
-  useSheetA11y({ open: true, onClose });
+  const { containerRef } = useSheetA11y({ open: true, onClose });
   const isEdit = !!profile;
   const { create, update, isSaving } = useInsuranceProfileMutations(patientId);
   const [form, setForm] = useState<InsuranceFormValues>(() => (profile ? profileToForm(profile) : emptyInsuranceForm()));
@@ -226,7 +226,7 @@ function InsuranceProfileForm({
   const title = isEdit ? 'Edit Insurance' : 'Add Insurance';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title}>
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div data-testid="insurance-form" className="relative w-full max-w-[480px] max-h-[calc(100vh-80px)] bg-background rounded-2xl shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 h-[52px] border-b flex-shrink-0">
