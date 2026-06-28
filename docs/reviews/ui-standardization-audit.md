@@ -81,7 +81,7 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 - **Audit correction:** "staff error=0" was a false grep signal; `staff-list.tsx` already has error/loading/empty states. No work.
 
 ### From module 2 — workspace ✅ (commit `344241c0`)
-- **B2** `workspace-payment-modal.tsx` — 15 off-scale literals incl. 3 `text-[15px]`. Intentional dense money panel + `getByRole('dialog',{name})` tests; needs an individually-verified pass. P1 (ratchet).
+- **B2** ✅ DONE — the 2 exempt transactional panels: `workspace-payment-modal` (15 literals incl. 3 `text-[15px]` totals/CTA → text-base) and `appointment-modal` (1 literal) migrated to the rem scale. Structure/Dialog-exemption untouched. Baseline 136 → 120. Browser-verified the payment panel: treatment table aligned, Subtotal + "Create Invoice & Pay" read cleanly at text-base, no overflow.
 - **B3** `dental-chart.tsx` — canvas glyph colors (`bg-gray-900`/`slate-700` tooth markers) + 6 palette uses. Mostly legitimate visual encoding; verify the non-canvas spots only. P2.
 - **B4** Perio dense-grid internals — `perio-tooth-column.tsx` (`bg-zinc-700` dark "plaque present" chip + ~8 palette uses), `perio-site-cell`, `perio-chart-grid`, `perio-cal-cell`. Dedicated legibility pass already touched these; re-tokenizing needs per-grid visual verification. P2.
 - **B5** `chart-export-view.tsx` — 7 palette uses; it's a print surface, tokenize against print styles. P2.

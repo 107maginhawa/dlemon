@@ -75,7 +75,7 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
       style={{ gridTemplateColumns: '1fr 72px 64px 80px', alignItems: 'center' }}
     >
       <div>
-        <p className="text-[13px] font-medium text-foreground truncate">{item.description}</p>
+        <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
         <p className="text-[12px] text-muted-foreground">
           {item.cdtCode && <span className="mr-1">{item.cdtCode}</span>}
           {item.toothNumber && <span>T{item.toothNumber}</span>}
@@ -93,7 +93,7 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
         )}
       </div>
       <div className="text-right">
-        <span className={`text-[11px] font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
+        <span className={`text-xs font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
           {isDone ? 'Done' : 'Pending'}
         </span>
       </div>
@@ -135,8 +135,8 @@ function InvoiceBanner({
     >
       <div className="flex flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          <span className="text-[13px] font-semibold">{invoiceNumber}</span>
-          <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${cfg.className}`}>
+          <span className="text-sm font-semibold">{invoiceNumber}</span>
+          <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${cfg.className}`}>
             {cfg.label}
           </span>
         </div>
@@ -148,7 +148,7 @@ function InvoiceBanner({
         type="button"
         onClick={onViewDetail}
         data-testid="view-invoice-btn"
-        className="flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
+        className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         View Invoice
         <ChevronRight className="h-3.5 w-3.5" />
@@ -230,7 +230,7 @@ export function WorkspacePaymentModal({
             <div>
               <h2 className="text-[17px] font-semibold tracking-tight">Payment</h2>
               {patientName && (
-                <p className="text-[13px] text-muted-foreground">{patientName}</p>
+                <p className="text-sm text-muted-foreground">{patientName}</p>
               )}
             </div>
             <button
@@ -270,14 +270,14 @@ export function WorkspacePaymentModal({
                   className="grid border-b border-border pb-1.5 pt-3"
                   style={{ gridTemplateColumns: '1fr 72px 64px 80px' }}
                 >
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Treatment
                   </span>
-                  <span className="text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" />
-                  <span className="text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground" />
+                  <span className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Status
                   </span>
-                  <span className="text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Amount
                   </span>
                 </div>
@@ -290,7 +290,7 @@ export function WorkspacePaymentModal({
             {lineItems.length === 0 && !invoicesLoading && (
               <div className="flex h-24 flex-col items-center justify-center gap-1 px-5 text-center">
                 <CreditCard className="h-6 w-6 text-muted-foreground/50" />
-                <p className="text-[13px] text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   No treatment items yet. Add treatments on the odontogram to generate a payment.
                 </p>
               </div>
@@ -302,10 +302,10 @@ export function WorkspacePaymentModal({
                 data-testid="subtotal-row"
                 className="mx-0 flex items-center justify-between bg-lemon-soft px-5 py-3 border-y border-border"
               >
-                <span className="text-[13px] font-semibold text-lemon-foreground">Subtotal</span>
+                <span className="text-sm font-semibold text-lemon-foreground">Subtotal</span>
                 <span
                   data-testid="subtotal-amount"
-                  className="text-[15px] font-bold tabular-nums text-lemon-foreground"
+                  className="text-base font-bold tabular-nums text-lemon-foreground"
                 >
                   {formatCents(subtotalCents)}
                 </span>
@@ -320,7 +320,7 @@ export function WorkspacePaymentModal({
                 type="button"
                 onClick={() => setInvoiceDetailId(visitInvoice.id)}
                 data-testid="open-invoice-detail-btn"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px]"
               >
                 <CreditCard className="h-4 w-4" />
                 Record Payment
@@ -331,7 +331,7 @@ export function WorkspacePaymentModal({
                 onClick={handleCreateInvoice}
                 disabled={createInvoice.isPending || lineItems.length === 0 || !visitId}
                 data-testid="create-invoice-btn"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-[15px] font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
               >
                 <CreditCard className="h-4 w-4" />
                 {createInvoice.isPending ? 'Creating Invoice…' : 'Create Invoice & Pay'}

@@ -59,7 +59,11 @@ import { join } from 'node:path';
 // duplicate-panel, settings data-erasure/audit-log, notifications bell) 11/13px
 // -> text-xs/sm. The residual literals are text-[10px] (Micro, no rem token) and
 // the deferred dense panels (B2: workspace-payment-modal + appointment-modal).
-const BASELINE = 136;
+// lowered to 120 — B2 done: the two exempt transactional panels
+// (workspace-payment-modal, appointment-modal) migrated 11/13px -> text-xs/sm
+// and 15px totals/CTAs -> text-base, browser-verified no overflow. Residual
+// literals are text-[10px] (Micro) + dense chart internals (B3/B4/B5).
+const BASELINE = 120;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;
