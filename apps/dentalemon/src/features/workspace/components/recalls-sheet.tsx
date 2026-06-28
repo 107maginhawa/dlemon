@@ -50,10 +50,10 @@ const TRANSITION_BUTTON_LABELS: Record<RecallStatus, string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<RecallStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
+  pending: 'bg-warning/15 text-warning-foreground',
   sent: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-gray-100 text-gray-500',
+  completed: 'bg-success/15 text-success-foreground',
+  cancelled: 'bg-muted text-muted-foreground',
 };
 
 const RECALL_TYPES: RecallType[] = ['cleaning', 'checkup', 'treatment', 'other'];

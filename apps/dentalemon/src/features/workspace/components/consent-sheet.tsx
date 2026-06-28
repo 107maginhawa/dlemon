@@ -667,10 +667,10 @@ export function ConsentSheet({ visitId, patientId, currentMemberId, templates, c
                     const status = consentStatus(form);
                     const statusStyle =
                       status === 'signed'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-success/15 text-success-foreground'
                         : status === 'revoked'
                           ? 'bg-destructive/15 text-destructive'
-                          : 'bg-amber-100 text-amber-800';
+                          : 'bg-warning/15 text-warning-foreground';
                     return (
                       <div
                         key={form.id}

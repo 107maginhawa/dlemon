@@ -631,10 +631,10 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                 const status = rx.status;
                 const statusStyle =
                   status === 'dispensed'
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-success/15 text-success-foreground'
                     : status === 'cancelled'
                       ? 'bg-destructive/15 text-destructive'
-                      : 'bg-amber-100 text-amber-800';
+                      : 'bg-warning/15 text-warning-foreground';
                 const subtitle = [rx.dosage, rx.frequency].filter(Boolean).join(' · ');
                 return (
                   <div

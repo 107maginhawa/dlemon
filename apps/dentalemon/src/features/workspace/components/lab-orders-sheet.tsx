@@ -33,9 +33,9 @@ export const STATUS_LABELS: Record<LabOrderStatus, string> = {
 const STATUS_COLORS: Record<LabOrderStatus, string> = {
   ordered: 'bg-blue-100 text-blue-700',
   in_fabrication: 'bg-orange-100 text-orange-700',
-  delivered: 'bg-green-100 text-green-700',
+  delivered: 'bg-success/15 text-success-foreground',
   fitted: 'bg-lemon text-lemon-foreground',
-  cancelled: 'bg-gray-100 text-gray-500',
+  cancelled: 'bg-muted text-muted-foreground',
 };
 
 export const NEXT_STATUS: Record<LabOrderStatus, LabOrderStatus | null> = {
