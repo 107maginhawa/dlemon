@@ -29,7 +29,7 @@ export function InvoiceInsuranceBlock({
 
   return (
     <div className="bg-lemon/20 rounded-xl px-4 py-3 flex flex-col gap-1" data-testid="invoice-insurance-block">
-      <span className="text-[11px] font-semibold tracking-wider uppercase text-lemon-foreground/70">
+      <span className="text-xs font-semibold tracking-wider uppercase text-lemon-foreground/70">
         Insurance estimate
       </span>
       <span className="text-[14px] font-semibold text-lemon-foreground" data-testid="coverage-split">

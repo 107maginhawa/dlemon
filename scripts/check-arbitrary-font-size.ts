@@ -41,7 +41,12 @@ import { join } from 'node:path';
 // summary/comparison/overlay/voice surfaces) to the rem token scale (text-xs /
 // text-sm). The workspace-payment-modal dense money panel and the dental-chart
 // canvas glyphs are intentionally left for a dedicated, individually-verified pass.
-const BASELINE = 286;
+// lowered to 183 — billing UI-standardization pass migrated the dense financial
+// tables (billing-list, invoice-detail, claims-worklist, collections-view,
+// payment-plan-view/create, invoice-insurance-block): 11px column headers ->
+// text-xs, 13px chips/cells -> text-sm, 15px bold totals -> text-base. Verified
+// in-browser at iPad/desktop that the money columns don't overflow.
+const BASELINE = 183;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

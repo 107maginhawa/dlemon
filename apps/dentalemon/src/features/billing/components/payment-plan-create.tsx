@@ -99,8 +99,8 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
 
           {/* Balance is split server-side — shown read-only so the user knows the total. */}
           <div className="flex justify-between items-center rounded-xl border border-border px-3 py-2.5">
-            <span className="text-[13px] text-muted-foreground">Balance to split</span>
-            <span className="text-[15px] font-bold tabular-nums">{formatCents(balanceCents)}</span>
+            <span className="text-sm text-muted-foreground">Balance to split</span>
+            <span className="text-base font-bold tabular-nums">{formatCents(balanceCents)}</span>
           </div>
 
           <div>
@@ -113,7 +113,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
             <div className="flex border border-border rounded-xl overflow-hidden bg-secondary/30 p-0.5 gap-0.5" role="group" aria-label="Frequency">
               {FREQUENCIES.map((f) => (
                 <button key={f.value} type="button" onClick={() => setFrequency(f.value)} aria-pressed={frequency === f.value}
-                  className={`flex-1 h-9 text-[13px] font-medium rounded-lg transition-colors ${frequency === f.value ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
+                  className={`flex-1 h-9 text-sm font-medium rounded-lg transition-colors ${frequency === f.value ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
                   {f.label}
                 </button>
               ))}
@@ -126,7 +126,7 @@ export function PaymentPlanCreate({ invoiceId, patientId, balanceCents, open, on
           </div>
 
           {perInstallment > 0 && (
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               ≈ <span className="font-semibold tabular-nums text-foreground">{formatCents(perInstallment)}</span> per installment
             </p>
           )}

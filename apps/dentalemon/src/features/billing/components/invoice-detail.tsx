@@ -518,26 +518,26 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
               {/* Invoice info */}
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/60">Invoice</p>
+                  <p className="text-xs font-bold tracking-widest uppercase text-muted-foreground/60">Invoice</p>
                   <p className="text-xl font-semibold tracking-tight tabular-nums">{invoice.invoiceNumber}</p>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold mt-1 ${getStatusBadgeClass(invoice.status)}`}>
                     {formatStatus(invoice.status)}
                   </span>
                 </div>
-                <div className="text-right text-[13px] space-y-1">
+                <div className="text-right text-sm space-y-1">
                   <div>
-                    <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/60 block">Bill To</span>
+                    <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground/60 block">Bill To</span>
                     <span className="font-medium">{invoice.patientName ?? invoice.patientId}</span>
                   </div>
                   {invoice.visitDate && (
                     <div>
-                      <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/60 block">Visit Date</span>
+                      <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground/60 block">Visit Date</span>
                       <span>{formatInvoiceDate(invoice.visitDate)}</span>
                     </div>
                   )}
                   {invoice.dueDate && (
                     <div>
-                      <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/60 block">Due Date</span>
+                      <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground/60 block">Due Date</span>
                       <span>{formatInvoiceDate(invoice.dueDate)}</span>
                     </div>
                   )}
@@ -546,12 +546,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
               {/* Line Items */}
               <div>
-                <h3 className="text-[13px] font-semibold tracking-wider uppercase text-muted-foreground mb-3">Services & Procedures</h3>
+                <h3 className="text-sm font-semibold tracking-wider uppercase text-muted-foreground mb-3">Services & Procedures</h3>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
                       {['#', 'Description', 'CDT', 'Tooth', 'Amount'].map((h, i) => (
-                        <th key={h} className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 4 ? 'text-right' : 'text-left'}`}>{h}</th>
+                        <th key={h} className={`text-xs font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 4 ? 'text-right' : 'text-left'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -559,12 +559,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                     {invoice.lineItems.map((item, idx) => (
                       <tr key={item.id} className="border-b border-border last:border-b-0">
                         <td className="px-3 py-2.5 text-xs text-muted-foreground">{idx + 1}</td>
-                        <td className="px-3 py-2.5 text-[13px] font-medium">{item.description}</td>
+                        <td className="px-3 py-2.5 text-sm font-medium">{item.description}</td>
                         <td className="px-3 py-2.5">
-                          {item.cdtCode && <span className="text-[11px] font-semibold text-info-foreground bg-info/15 px-1.5 py-0.5 rounded">{item.cdtCode}</span>}
+                          {item.cdtCode && <span className="text-xs font-semibold text-info-foreground bg-info/15 px-1.5 py-0.5 rounded">{item.cdtCode}</span>}
                         </td>
-                        <td className="px-3 py-2.5 text-[13px] text-muted-foreground">{item.toothNumber ? `#${item.toothNumber}` : '--'}</td>
-                        <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(item.priceCents)}</td>
+                        <td className="px-3 py-2.5 text-sm text-muted-foreground">{item.toothNumber ? `#${item.toothNumber}` : '--'}</td>
+                        <td className="px-3 py-2.5 text-sm font-semibold text-right tabular-nums">{formatCents(item.priceCents)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -572,24 +572,24 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
                 {/* Totals */}
                 <div className="flex flex-col gap-1.5 mt-4 pt-4 border-t border-border">
-                  <div className="flex justify-between text-[13px]">
+                  <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium tabular-nums">{formatCents(invoice.subtotalCents)}</span>
                   </div>
                   {invoice.discountCents > 0 && (
-                    <div className="flex justify-between text-[13px]">
+                    <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Discount</span>
                       <span className="font-medium tabular-nums text-success-foreground">-{formatCents(invoice.discountCents)}</span>
                     </div>
                   )}
                   {invoice.taxCents > 0 && (
-                    <div className="flex justify-between text-[13px]">
+                    <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Tax</span>
                       <span className="font-medium tabular-nums">{formatCents(invoice.taxCents)}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-2.5 border-t border-border mt-1">
-                    <span className="text-[15px] font-bold">Total</span>
+                    <span className="text-base font-bold">Total</span>
                     <span className="text-xl font-bold tabular-nums">{formatCents(invoice.totalCents)}</span>
                   </div>
                 </div>
@@ -597,7 +597,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
               {/* Payments */}
               <div>
-                <h3 className="text-[13px] font-semibold tracking-wider uppercase text-muted-foreground mb-3">Payments Received</h3>
+                <h3 className="text-sm font-semibold tracking-wider uppercase text-muted-foreground mb-3">Payments Received</h3>
                 {invoice.payments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
                 ) : (
@@ -605,7 +605,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                     <thead>
                       <tr>
                         {['Receipt #', 'Date', 'Method', 'Amount', ''].map((h, i) => (
-                          <th key={h || 'actions'} className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 3 ? 'text-right' : i === 4 ? 'text-right' : 'text-left'}`}>{h}</th>
+                          <th key={h || 'actions'} className={`text-xs font-semibold tracking-wider uppercase text-muted-foreground px-3 py-2 border-b border-border ${i === 3 ? 'text-right' : i === 4 ? 'text-right' : 'text-left'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -613,15 +613,15 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                       {invoice.payments.map((pmt) => (
                         <tr key={pmt.id} className={pmt.isVoid ? 'opacity-60' : undefined}>
                           <td className="px-3 py-2.5 text-xs font-semibold text-lemon-foreground">{pmt.receiptNumber}</td>
-                          <td className="px-3 py-2.5 text-[13px] tabular-nums">{new Date(pmt.createdAt).toLocaleDateString()}</td>
-                          <td className="px-3 py-2.5 text-[13px]">{METHOD_LABELS[pmt.method] ?? pmt.method}</td>
-                          <td className="px-3 py-2.5 text-[13px] font-semibold text-right tabular-nums">{formatCents(pmt.amountCents)}</td>
+                          <td className="px-3 py-2.5 text-sm tabular-nums">{new Date(pmt.createdAt).toLocaleDateString()}</td>
+                          <td className="px-3 py-2.5 text-sm">{METHOD_LABELS[pmt.method] ?? pmt.method}</td>
+                          <td className="px-3 py-2.5 text-sm font-semibold text-right tabular-nums">{formatCents(pmt.amountCents)}</td>
                           <td className="px-3 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2.5">
                               {/* FIX-004: a voided payment stays in the list as a reversal row. */}
                               {pmt.isVoid && (
                                 <span
-                                  className="text-[11px] font-semibold uppercase tracking-wide text-destructive"
+                                  className="text-xs font-semibold uppercase tracking-wide text-destructive"
                                   title={pmt.voidReason ?? undefined}
                                 >
                                   Voided
@@ -693,7 +693,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                     <div className="flex border border-border rounded-xl overflow-hidden bg-secondary/30 p-0.5 gap-0.5" role="group">
                       {PAYMENT_METHODS.map((m) => (
                         <button key={m} type="button" onClick={() => setPaymentMethod(m)} aria-pressed={paymentMethod === m}
-                          className={`flex-1 h-9 coarse:h-11 text-[13px] font-medium rounded-lg transition-colors ${paymentMethod === m ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
+                          className={`flex-1 h-9 coarse:h-11 text-sm font-medium rounded-lg transition-colors ${paymentMethod === m ? 'bg-lemon text-lemon-foreground font-semibold' : 'text-muted-foreground hover:bg-background'}`}>
                           {METHOD_LABELS[m]}
                         </button>
                       ))}

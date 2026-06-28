@@ -31,20 +31,22 @@ describe('PaymentPlanView -- formatFrequency', () => {
 });
 
 describe('PaymentPlanView -- getPlanStatusClass', () => {
-  test('getPlanStatusClass("on_track") includes "green"', () => {
-    expect(getPlanStatusClass('on_track')).toContain('green');
+  // Assert the semantic token role per status (not a raw palette name) so the
+  // design system can re-point the token without breaking these tests.
+  test('getPlanStatusClass("on_track") uses the done/success token', () => {
+    expect(getPlanStatusClass('on_track')).toContain('status-done');
   });
 
-  test('getPlanStatusClass("behind") includes "red"', () => {
-    expect(getPlanStatusClass('behind')).toContain('red');
+  test('getPlanStatusClass("behind") uses the destructive token', () => {
+    expect(getPlanStatusClass('behind')).toContain('destructive');
   });
 
-  test('getPlanStatusClass("completed") includes "green"', () => {
-    expect(getPlanStatusClass('completed')).toContain('green');
+  test('getPlanStatusClass("completed") uses the done/success token', () => {
+    expect(getPlanStatusClass('completed')).toContain('status-done');
   });
 
-  test('getPlanStatusClass("cancelled") includes "gray"', () => {
-    expect(getPlanStatusClass('cancelled')).toContain('gray');
+  test('getPlanStatusClass("cancelled") uses the neutral muted token', () => {
+    expect(getPlanStatusClass('cancelled')).toContain('muted-foreground');
   });
 });
 

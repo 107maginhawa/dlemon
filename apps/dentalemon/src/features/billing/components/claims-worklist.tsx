@@ -102,25 +102,25 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
       {/* Payer-AR aging summary */}
       {aging?.payers && aging.payers.length > 0 && (
         <div className="bg-background rounded-2xl shadow-sm overflow-hidden" data-testid="payer-aging">
-          <div className="px-5 py-3 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground border-b border-border">
+          <div className="px-5 py-3 text-xs font-semibold tracking-wider uppercase text-muted-foreground border-b border-border">
             AR by payer · {formatPeso(aging.summary.totalOutstandingCents)} outstanding across {aging.summary.payerCount} payer{aging.summary.payerCount !== 1 ? 's' : ''}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2 pl-5">Payer</th>
+                  <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2 pl-5">Payer</th>
                   {PAYER_AGING_COLS.map((c) => (
-                    <th key={c.key} className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2">{c.label}</th>
+                    <th key={c.key} className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2">{c.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {aging.payers.map((p) => (
                   <tr key={p.insuranceProfileId} className="border-t border-border">
-                    <td className="px-4 py-0 h-11 align-middle text-[13px] font-medium pl-5">{p.payerName}</td>
+                    <td className="px-4 py-0 h-11 align-middle text-sm font-medium pl-5">{p.payerName}</td>
                     {PAYER_AGING_COLS.map((c) => (
-                      <td key={c.key} className={`px-4 py-0 h-11 align-middle text-[13px] tabular-nums text-right ${c.key === 'days90PlusCents' ? 'text-red-700 font-semibold' : ''}`}>
+                      <td key={c.key} className={`px-4 py-0 h-11 align-middle text-sm tabular-nums text-right ${c.key === 'days90PlusCents' ? 'text-red-700 font-semibold' : ''}`}>
                         {formatPeso(p[c.key] as number)}
                       </td>
                     ))}
@@ -160,12 +160,12 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
             <table className="w-full min-w-[820px] border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 pl-5 border-b border-border">Claim</th>
-                  <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Status</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Billed</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Payer paid</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Outstanding</th>
-                  <th className="text-right text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 pr-5 border-b border-border">Actions</th>
+                  <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 pl-5 border-b border-border">Claim</th>
+                  <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Status</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Billed</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Payer paid</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 border-b border-border">Outstanding</th>
+                  <th className="text-right text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-3 pr-5 border-b border-border">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,7 +178,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                 {!isLoading && claims.map((claim) => (
                   <React.Fragment key={claim.id}>
                     <tr className="border-t border-border first:border-t-0">
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium pl-5">
+                      <td className="px-4 py-0 h-12 align-middle text-sm font-medium pl-5">
                         <button
                           type="button"
                           data-testid={`claim-open-${claim.id}`}
@@ -189,13 +189,13 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                         </button>
                       </td>
                       <td className="px-4 py-0 h-12 align-middle">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${claimStatusClass(claim.status)}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${claimStatusClass(claim.status)}`}>
                           {CLAIM_STATUS_LABELS[claim.status]}
                         </span>
                       </td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatPeso(claim.billedAmountCents)}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right">{formatPeso(claim.paidByPayerCents)}</td>
-                      <td className="px-4 py-0 h-12 align-middle text-[13px] tabular-nums text-right font-semibold">{formatPeso(claimOutstandingCents(claim))}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right">{formatPeso(claim.billedAmountCents)}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right">{formatPeso(claim.paidByPayerCents)}</td>
+                      <td className="px-4 py-0 h-12 align-middle text-sm tabular-nums text-right font-semibold">{formatPeso(claimOutstandingCents(claim))}</td>
                       <td className="px-4 py-0 h-12 align-middle text-right pr-5">
                         {canWrite && (canSubmitClaim(claim.status) || canRecordRemittance(claim.status) || claim.status === 'draft') ? (
                           <button
@@ -218,7 +218,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                               <input
                                 value={payerReference}
                                 onChange={(e) => setPayerReference(e.target.value)}
-                                className="h-8 px-2 rounded-lg border border-border text-[13px] w-44"
+                                className="h-8 px-2 rounded-lg border border-border text-sm w-44"
                                 placeholder="HMO ref #"
                                 data-testid="payer-reference-input"
                               />
@@ -228,7 +228,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                                 type="button"
                                 onClick={() => handleSubmit(claim)}
                                 disabled={isSubmitting}
-                                className="h-8 px-4 rounded-lg bg-lemon text-lemon-foreground text-[13px] font-semibold hover:bg-lemon-hover disabled:opacity-50"
+                                className="h-8 px-4 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover disabled:opacity-50"
                                 data-testid="submit-claim-btn"
                               >
                                 {isSubmitting ? 'Submitting…' : 'Mark submitted'}
@@ -242,7 +242,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                                     value={remitAmount}
                                     onChange={(e) => setRemitAmount(e.target.value)}
                                     inputMode="decimal"
-                                    className="h-8 px-2 rounded-lg border border-border text-[13px] w-28 tabular-nums"
+                                    className="h-8 px-2 rounded-lg border border-border text-sm w-28 tabular-nums"
                                     placeholder="0.00"
                                     data-testid="remit-amount-input"
                                   />
@@ -253,7 +253,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                                     value={disallowAmount}
                                     onChange={(e) => setDisallowAmount(e.target.value)}
                                     inputMode="decimal"
-                                    className="h-8 px-2 rounded-lg border border-border text-[13px] w-28 tabular-nums"
+                                    className="h-8 px-2 rounded-lg border border-border text-sm w-28 tabular-nums"
                                     placeholder="0.00"
                                     data-testid="disallow-amount-input"
                                   />
@@ -262,7 +262,7 @@ export function ClaimsWorklist({ branchId, canWrite = false }: ClaimsWorklistPro
                                   type="button"
                                   onClick={() => handleRemit(claim)}
                                   disabled={isRemitting}
-                                  className="h-8 px-4 rounded-lg bg-secondary text-[13px] font-semibold hover:bg-secondary/80 disabled:opacity-50"
+                                  className="h-8 px-4 rounded-lg bg-secondary text-sm font-semibold hover:bg-secondary/80 disabled:opacity-50"
                                   data-testid="record-remittance-btn"
                                 >
                                   {isRemitting ? 'Posting…' : 'Post remittance'}
