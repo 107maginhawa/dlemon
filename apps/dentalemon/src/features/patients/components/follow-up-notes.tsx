@@ -65,7 +65,7 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring/30 placeholder:text-muted-foreground"
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {isPending
               ? 'Saving...'
               : trimmedLength > 0 && trimmedLength < 5
@@ -124,13 +124,13 @@ export function FollowUpNotes({ patientId }: FollowUpNotesProps) {
               >
                 <p className="text-sm whitespace-pre-wrap">{note.text}</p>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formatTimestamp(note.createdAt)}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     &middot;
                   </span>
-                  <span className="text-[11px] font-medium text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {note.createdBy}
                   </span>
                 </div>

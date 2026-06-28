@@ -154,15 +154,15 @@ export function DataErasurePanel({
                 return (
                   <tr key={r.id} data-testid="data-erasure-row">
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(r.createdAt)}</td>
-                    <td className="px-3 py-2 font-mono text-[11px]" title={r.subjectPersonId}>{short(r.subjectPersonId)}</td>
-                    <td className="px-3 py-2 font-mono text-[11px]" title={r.tenantId}>{short(r.tenantId)}</td>
+                    <td className="px-3 py-2 font-mono text-xs" title={r.subjectPersonId}>{short(r.subjectPersonId)}</td>
+                    <td className="px-3 py-2 font-mono text-xs" title={r.tenantId}>{short(r.tenantId)}</td>
                     <td className="px-3 py-2 text-muted-foreground max-w-[18rem] truncate" title={r.reason}>{r.reason}</td>
                     <td className="px-3 py-2">
                       <span data-testid="data-erasure-status" className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status] ?? 'bg-muted text-muted-foreground'}`}>
                         {r.status}
                       </span>
                       {r.legalHoldBlocked ? (
-                        <span data-testid="data-erasure-hold" className="ml-1 text-[11px] text-red-700">legal hold</span>
+                        <span data-testid="data-erasure-hold" className="ml-1 text-xs text-red-700">legal hold</span>
                       ) : null}
                     </td>
                     <td className="px-3 py-2">

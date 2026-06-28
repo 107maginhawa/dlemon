@@ -55,7 +55,11 @@ import { join } from 'node:path';
 // deferred with the workspace-payment-modal (B2).
 // lowered to 149 — dashboard pass: metric-card, morning-briefing,
 // attention-queue, kpi-ribbon, schedule-timeline 11/13px -> text-xs/sm.
-const BASELINE = 149;
+// lowered to 136 — remaining light modules (patients follow-up-notes/profile/
+// duplicate-panel, settings data-erasure/audit-log, notifications bell) 11/13px
+// -> text-xs/sm. The residual literals are text-[10px] (Micro, no rem token) and
+// the deferred dense panels (B2: workspace-payment-modal + appointment-modal).
+const BASELINE = 136;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

@@ -105,5 +105,14 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 - Migrated 14 off-scale literals (metric-card, morning-briefing, attention-queue, kpi-ribbon, schedule-timeline) → text-xs/sm. Baseline 163 → 149. Palette already clean (the morning-briefing hex is JS chart data, not className).
 - **B12** Dashboard home has no error-state UI for its data fetches (schedule/kpi/attention; only morning-briefing handles error). Adding error/empty fallbacks is feature work (needs error UI + wiring), scoped separately from the token sweep. P1.
 
-### Remaining modules (not yet swept)
-patients → settings → reports → portal → case-presentation → onboarding/auth/booking.
+### From module 7 — remaining light modules ✅ (batched, each audited individually)
+Audited every remaining module for font/palette/className-hex deviations before touching anything; most were already clean.
+- **patients** — 8 literals (follow-up-notes, patient-profile-page, duplicate-patients-panel) → text-xs/sm; `dental-chart-thumbnail` dashed placeholder `border-gray-600` → `border-muted-foreground`.
+- **settings** — 4 literals (data-erasure, audit-log) → text-xs/sm.
+- **pmd** — `pmd-viewer` superseded badge `bg-gray-100 text-gray-500` → `bg-secondary text-muted-foreground`.
+- **notifications** — `notification-bell` 1 literal → text-xs.
+- **reports, portal, case-presentation, onboarding, booking, person, org, auth** — audited, **0 deviations** (clean). The earlier "hex" flags (signature-pad, patient-folder-card, dental-chart) are JS/canvas draw colors, not className — legitimate, left as-is.
+
+Baseline 149 → 136. Residual whole-app literals are text-[10px] (Micro role, no rem token) + the deferred B2 dense panels.
+
+### Status: all 12 module groups swept. Remaining work = the tracked backlog (B1–B12) only.

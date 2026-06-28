@@ -157,7 +157,7 @@ export function NotificationBell() {
                       </button>
                     </div>
                     <span className="text-sm text-muted-foreground">{n.message}</span>
-                    <span className="text-[11px] text-muted-foreground">{fmt(n.createdAt)}</span>
+                    <span className="text-xs text-muted-foreground">{fmt(n.createdAt)}</span>
                   </li>
                 ))}
               </ul>
