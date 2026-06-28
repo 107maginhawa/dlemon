@@ -33,6 +33,8 @@ export interface ScheduleTimelineProps {
   dateLabel?: string;
   /** When provided, each row becomes a button that opens that patient's workspace. */
   onSelectAppointment?: (patientId: string) => void;
+  /** Whether to render the "Now" divider. Defaults true; false for a future day (nothing is "now"). */
+  showNowLine?: boolean;
 }
 
 interface StatusPillStyle {
@@ -121,9 +123,10 @@ export function ScheduleTimeline({
   title = 'Today',
   dateLabel,
   onSelectAppointment,
+  showNowLine = true,
 }: ScheduleTimelineProps) {
   const sorted = sortByTime(appointments);
-  const nowIdx = nowLineIndex(sorted, now);
+  const nowIdx = showNowLine ? nowLineIndex(sorted, now) : -1;
   const resolvedDate =
     dateLabel ?? now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 

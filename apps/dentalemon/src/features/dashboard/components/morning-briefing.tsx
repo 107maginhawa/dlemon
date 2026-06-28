@@ -165,6 +165,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
               showFinancials={showFinancials}
               title={heroTitle}
               dateLabel={heroDateLabel}
+              showNowLine={hero.isToday}
               onSelectAppointment={openPatient}
               onAdd={() => navigate({ to: '/calendar' })}
               onViewWeek={() => navigate({ to: '/calendar' })}
