@@ -27,6 +27,12 @@ export interface ScheduleTimelineProps {
   showFinancials: boolean;
   onAdd: () => void;
   onViewWeek: () => void;
+  /** Section label — defaults to "Today". The context-aware Home passes "Tomorrow" etc. */
+  title?: string;
+  /** Right-aligned date label — defaults to today's weekday/month/day. */
+  dateLabel?: string;
+  /** When provided, each row becomes a button that opens that patient's workspace. */
+  onSelectAppointment?: (patientId: string) => void;
 }
 
 interface StatusPillStyle {
@@ -47,10 +53,62 @@ function StatusPill({ status }: { status: string }) {
   const pill = STATUS_PILL[status] ?? SCHEDULED_PILL;
   return (
     <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap ${pill.className}`}
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${pill.className}`}
     >
       {pill.label}
     </span>
+  );
+}
+
+function Row({
+  appt,
+  showFinancials,
+  onSelect,
+}: {
+  appt: TimelineAppointment;
+  showFinancials: boolean;
+  onSelect?: (patientId: string) => void;
+}) {
+  const inner = (
+    <>
+      <span className="text-xs font-medium text-muted-foreground tabular-nums w-[64px] flex-shrink-0">
+        {formatTime(appt.scheduledAt)}
+      </span>
+      <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+        {getInitials(appt.patientName)}
+      </div>
+      <span className="text-sm font-medium truncate min-w-0">
+        {appt.patientName ?? appt.patientId}
+      </span>
+      <span className="text-xs text-muted-foreground whitespace-nowrap ml-auto">
+        {appt.serviceType ?? '—'}
+      </span>
+      <StatusPill status={appt.status} />
+      {showFinancials && appt.balanceCents != null && appt.balanceCents > 0 && (
+        <span
+          data-testid={`appt-balance-flag-${appt.id}`}
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold tabular-nums bg-destructive/15 text-destructive-emphasis whitespace-nowrap"
+        >
+          {formatCents(appt.balanceCents)}
+        </span>
+      )}
+    </>
+  );
+
+  const base = 'flex items-center gap-3 py-2.5 border-b border-border last:border-b-0';
+
+  if (!onSelect) {
+    return <div className={base}>{inner}</div>;
+  }
+  return (
+    <button
+      type="button"
+      data-testid={`timeline-row-${appt.id}`}
+      onClick={() => onSelect(appt.patientId)}
+      className={`${base} w-full text-left -mx-2 px-2 rounded-lg hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors`}
+    >
+      {inner}
+    </button>
   );
 }
 
@@ -60,9 +118,14 @@ export function ScheduleTimeline({
   showFinancials,
   onAdd,
   onViewWeek,
+  title = 'Today',
+  dateLabel,
+  onSelectAppointment,
 }: ScheduleTimelineProps) {
   const sorted = sortByTime(appointments);
   const nowIdx = nowLineIndex(sorted, now);
+  const resolvedDate =
+    dateLabel ?? now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
     <div
@@ -70,17 +133,17 @@ export function ScheduleTimeline({
       data-testid="schedule-timeline"
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
-          Today
+        <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+          {title}
         </span>
         <span className="text-xs text-muted-foreground tabular-nums">
-          {now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          {resolvedDate}
         </span>
       </div>
 
       {sorted.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-6">
-          <p className="text-sm text-muted-foreground">No appointments today.</p>
+          <p className="text-sm text-muted-foreground">No appointments {title.toLowerCase()}.</p>
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               type="button"
@@ -116,29 +179,11 @@ export function ScheduleTimeline({
                   <div className="flex-1 h-px bg-lemon" />
                 </div>
               )}
-              <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-b-0">
-                <span className="text-xs font-medium text-muted-foreground tabular-nums w-[64px] flex-shrink-0">
-                  {formatTime(appt.scheduledAt)}
-                </span>
-                <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                  {getInitials(appt.patientName)}
-                </div>
-                <span className="text-[13px] font-medium truncate min-w-0">
-                  {appt.patientName ?? appt.patientId}
-                </span>
-                <span className="text-[11px] text-muted-foreground whitespace-nowrap ml-auto">
-                  {appt.serviceType ?? '—'}
-                </span>
-                <StatusPill status={appt.status} />
-                {showFinancials && appt.balanceCents != null && appt.balanceCents > 0 && (
-                  <span
-                    data-testid={`appt-balance-flag-${appt.id}`}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums bg-destructive/15 text-destructive-emphasis whitespace-nowrap"
-                  >
-                    {formatCents(appt.balanceCents)}
-                  </span>
-                )}
-              </div>
+              <Row
+                appt={appt}
+                showFinancials={showFinancials}
+                onSelect={onSelectAppointment}
+              />
             </React.Fragment>
           ))}
         </div>

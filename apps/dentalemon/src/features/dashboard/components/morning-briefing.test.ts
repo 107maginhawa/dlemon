@@ -28,7 +28,55 @@ import {
   sortByTime,
   nowLineIndex,
   buildAttentionItems,
+  pickHeroDay,
 } from './morning-briefing.helpers';
+
+describe('MorningBriefing -- pickHeroDay (context-aware hero)', () => {
+  const now = new Date('2026-06-28T18:00:00Z');
+  const future = (h: number) => new Date(now.getTime() + h * 3600000).toISOString();
+  const past = (h: number) => new Date(now.getTime() - h * 3600000).toISOString();
+
+  test('shows today when today still has a future appointment', () => {
+    const r = pickHeroDay(
+      [{ status: 'scheduled', scheduledAt: future(2) }],
+      [{ status: 'scheduled', scheduledAt: future(20) }],
+      now,
+    );
+    expect(r.which).toBe('today');
+    expect(r.isToday).toBe(true);
+  });
+
+  test('promotes tomorrow when today is over (all past/done) but tomorrow has work', () => {
+    const r = pickHeroDay(
+      [{ status: 'completed', scheduledAt: past(3) }],
+      [{ status: 'scheduled', scheduledAt: future(20) }],
+      now,
+    );
+    expect(r.which).toBe('tomorrow');
+    expect(r.isToday).toBe(false);
+    expect(r.appointments).toHaveLength(1);
+  });
+
+  test('promotes tomorrow on an empty today (closed day)', () => {
+    const r = pickHeroDay([], [{ status: 'scheduled', scheduledAt: future(20) }], now);
+    expect(r.which).toBe('tomorrow');
+  });
+
+  test('empty when neither today nor tomorrow has appointments', () => {
+    const r = pickHeroDay([], [], now);
+    expect(r.which).toBe('empty');
+    expect(r.appointments).toHaveLength(0);
+  });
+
+  test('checked-in patient keeps today the hero even with no future slots', () => {
+    const r = pickHeroDay(
+      [{ status: 'checked_in', scheduledAt: past(1) }],
+      [{ status: 'scheduled', scheduledAt: future(20) }],
+      now,
+    );
+    expect(r.which).toBe('today');
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Local helpers not exported by the component
@@ -581,7 +629,6 @@ describe('MorningBriefing -- render-level role gating', () => {
     await screen.findByTestId('schedule-timeline', undefined, { timeout: 5000 });
     // the command-center regions render
     expect(screen.getByTestId('attention-queue')).toBeTruthy();
-    expect(screen.getByTestId('kpi-ribbon')).toBeTruthy();
     // schedule renders (NOT suppressed behind an error banner)
     expect(screen.getByText('Maria Santos')).toBeTruthy();
     // no error banner rendered
@@ -608,7 +655,7 @@ describe('MorningBriefing -- render-level role gating', () => {
     expect(screen.getByTestId('quick-new-patient')).toBeTruthy();
   });
 
-  test('non-financial role (staff_full): KPI ribbon omits collections; no financial leakage', async () => {
+  test('non-financial role (staff_full): no money panel; no financial leakage', async () => {
     global.fetch = renderFetch([RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY]);
 
     render(
@@ -616,16 +663,14 @@ describe('MorningBriefing -- render-level role gating', () => {
       { wrapper: makeWrapper(freshClient()) },
     );
 
-    await screen.findByTestId('kpi-ribbon', undefined, { timeout: 5000 });
-    const ribbon = screen.getByTestId('kpi-ribbon');
-    // collections label is NOT present for a non-financial role
-    expect(ribbon.textContent).not.toContain('Collected');
-    // done / remaining ARE present
-    expect(ribbon.textContent).toContain('Done');
-    expect(ribbon.textContent).toContain('Remaining');
+    // operational queue renders for everyone
+    await screen.findByTestId('attention-queue', undefined, { timeout: 5000 });
+    // the money panel (collections + balances) is omitted entirely for a non-financial role
+    expect(screen.queryByTestId('money-panel')).toBeNull();
+    expect(screen.queryByText(/Collected/)).toBeNull();
   });
 
-  test('financial role (dentist_owner): KPI ribbon shows collections', async () => {
+  test('financial role (dentist_owner): money panel shows month-to-date collections', async () => {
     global.fetch = renderFetch([
       RENDER_TODAY, RENDER_TOMORROW, RENDER_SUMMARY,
       { data: RENDER_OVERDUE }, { data: RENDER_ALL },
@@ -636,9 +681,8 @@ describe('MorningBriefing -- render-level role gating', () => {
       { wrapper: makeWrapper(freshClient()) },
     );
 
-    await screen.findByTestId('kpi-ribbon', undefined, { timeout: 5000 });
-    const ribbon = screen.getByTestId('kpi-ribbon');
-    expect(ribbon.textContent).toContain('Collected');
+    await screen.findByTestId('money-panel', undefined, { timeout: 5000 });
+    expect(screen.getByTestId('money-panel').textContent).toContain('Collected');
   });
 });
 
