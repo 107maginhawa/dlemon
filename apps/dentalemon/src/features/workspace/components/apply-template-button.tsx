@@ -11,6 +11,7 @@
  */
 import React, { useState } from 'react';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useTreatmentTemplates, type TreatmentTemplate } from '@/features/settings/hooks/use-treatment-templates';
 import { useApplyTemplate } from '../hooks/use-apply-template';
@@ -41,6 +42,9 @@ function ApplyTemplateMenu({ visitId, patientId }: ApplyTemplateButtonProps) {
   const { applyTemplate, isPending } = useApplyTemplate({ visitId, patientId, branchId: branchId ?? null });
 
   const [open, setOpen] = useState(false);
+  // Wire the Escape-to-close + focus-return the header promises (and trap Tab
+  // behind the click-away backdrop while the listbox is open).
+  const { containerRef } = useSheetA11y({ open, onClose: () => setOpen(false) });
 
   async function handleApply(templateId: string) {
     try {
@@ -69,6 +73,7 @@ function ApplyTemplateMenu({ visitId, patientId }: ApplyTemplateButtonProps) {
           {/* click-away backdrop */}
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} aria-hidden />
           <div
+            ref={containerRef}
             role="listbox"
             aria-label="Treatment templates"
             className="absolute left-0 z-30 mt-1 w-72 max-h-72 overflow-auto rounded-xl border border-border bg-popover shadow-lg p-1"

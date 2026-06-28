@@ -2,10 +2,11 @@
  * ChartExportOverlay — P0-B: fetches a visit's structured chart export and shows
  * it in a print-ready overlay (window.print()). The toolbar is hidden in print.
  */
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { exportDentalChartOptions } from '@monobase/sdk-ts/generated/react-query';
 import type { ChartExport } from '@monobase/sdk-ts/generated';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { ChartExportView } from './chart-export-view';
 
 export interface ChartExportOverlayProps {
@@ -20,13 +21,9 @@ export function ChartExportOverlay({ visitId, open, onClose }: ChartExportOverla
     enabled: open,
   });
 
-  // WCAG 2.1.2 / 2.4.3: Escape closes the print overlay (matches the other sheets).
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  // WCAG 2.1.2 / 2.4.3: Escape closes + Tab is trapped within the overlay,
+  // focus returns to the opener on close (matches the other sheets).
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   if (!open) return null;
 
@@ -34,6 +31,7 @@ export function ChartExportOverlay({ visitId, open, onClose }: ChartExportOverla
 
   return (
     <div
+      ref={containerRef}
       data-testid="chart-export-overlay"
       role="dialog"
       aria-modal="true"

@@ -7,6 +7,7 @@
  */
 import React from 'react';
 import { usePatientStatement } from '../hooks/use-patient-statement';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useSendStatement } from '@/features/billing/hooks/use-collections';
 import { PrintableDocument } from '@/components/print/printable-document';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
@@ -28,11 +29,14 @@ export interface PatientStatementProps {
 export function PatientStatement({ patientId, branchId, onClose }: PatientStatementProps) {
   const { statement, isLoading, error } = usePatientStatement(patientId);
   const { send, sendingPatientId, lastSent } = useSendStatement({ branchId });
+  // Parent mounts this only while open, so the sheet is always "open" here.
+  const { containerRef } = useSheetA11y({ open: true, onClose });
 
   const emailed = lastSent?.patientId === patientId;
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4 no-print"
       role="dialog"
       aria-modal="true"
