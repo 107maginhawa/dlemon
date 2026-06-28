@@ -610,7 +610,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                               {/* FIX-004: a voided payment stays in the list as a reversal row. */}
                               {pmt.isVoid && (
                                 <span
-                                  className="text-[11px] font-semibold uppercase tracking-wide text-red-600"
+                                  className="text-[11px] font-semibold uppercase tracking-wide text-destructive"
                                   title={pmt.voidReason ?? undefined}
                                 >
                                   Voided
@@ -630,7 +630,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                                   disabled={saving}
                                   title="Reverse this payment entry — use when it was posted in error (no money changes hands)."
                                   onClick={() => { setVoidingPaymentId(pmt.id); setPaymentVoidReason(''); setPaymentVoidError(null); }}
-                                  className="text-xs text-red-600 hover:text-red-700 transition-colors disabled:opacity-50 coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
+                                  className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50 coarse:inline-flex coarse:items-center coarse:min-h-[44px]"
                                 >
                                   Void
                                 </button>
@@ -703,8 +703,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
               {/* Void reason form — the void contract requires an auditable reason */}
               {showVoidForm && (
-                <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-red-600">Void invoice</h4>
+                <div className="rounded-xl border border-destructive/30 p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-destructive">Void invoice</h4>
                   {voidError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{voidError}</div>
                   )}
@@ -714,7 +714,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowVoidForm(false); setVoidReason(''); setVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
-                    <button type="button" onClick={handleVoid} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
+                    <button type="button" onClick={handleVoid} disabled={saving} className="flex-1 h-11 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors disabled:opacity-50">
                       {saving ? 'Voiding...' : 'Confirm void'}
                     </button>
                   </div>
@@ -723,15 +723,15 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
               {/* BR-013: write-off confirmation — terminal, owner-only */}
               {showUncollectibleForm && (
-                <div data-testid="uncollectible-confirm" className="rounded-xl border border-gray-300 p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-gray-700">Mark uncollectible</h4>
+                <div data-testid="uncollectible-confirm" className="rounded-xl border border-border p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-foreground">Mark uncollectible</h4>
                   <p className="text-sm text-muted-foreground">This writes off the invoice as uncollectible. This cannot be undone.</p>
                   {uncollectibleError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{uncollectibleError}</div>
                   )}
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setShowUncollectibleForm(false); setUncollectibleError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
-                    <button type="button" onClick={handleMarkUncollectible} disabled={saving} className="flex-1 h-11 rounded-xl border border-gray-300 bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50">
+                    <button type="button" onClick={handleMarkUncollectible} disabled={saving} className="flex-1 h-11 rounded-xl border border-border bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition-colors disabled:opacity-50">
                       {saving ? 'Writing off...' : 'Confirm write-off'}
                     </button>
                   </div>
@@ -768,8 +768,8 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
               {/* FIX-004: per-payment void form — owner-only, reason-bearing soft-delete. */}
               {voidingPaymentId && (
-                <div className="rounded-xl border border-red-200 p-4 flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-red-600">Void payment</h4>
+                <div className="rounded-xl border border-destructive/30 p-4 flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold text-destructive">Void payment</h4>
                   {paymentVoidError && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">{paymentVoidError}</div>
                   )}
@@ -779,7 +779,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => { setVoidingPaymentId(null); setPaymentVoidReason(''); setPaymentVoidError(null); }} className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors">Cancel</button>
-                    <button type="button" data-testid="confirm-payment-void" onClick={handleVoidPayment} disabled={saving} className="flex-1 h-11 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
+                    <button type="button" data-testid="confirm-payment-void" onClick={handleVoidPayment} disabled={saving} className="flex-1 h-11 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors disabled:opacity-50">
                       {saving ? 'Voiding...' : 'Confirm void'}
                     </button>
                   </div>
@@ -854,7 +854,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
                           title={a.title}
                           disabled={saving}
                           onClick={() => { a.onClick(); setMoreOpen(false); }}
-                          className={`flex w-full items-center min-h-[44px] px-3 rounded-lg text-sm text-left transition-colors disabled:opacity-50 ${a.destructive ? 'text-red-600 hover:bg-red-50' : 'hover:bg-secondary'}`}
+                          className={`flex w-full items-center min-h-[44px] px-3 rounded-lg text-sm text-left transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${a.destructive ? 'text-destructive hover:bg-destructive/10' : 'hover:bg-secondary'}`}
                         >
                           {a.label}
                         </button>
