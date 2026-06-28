@@ -26,6 +26,16 @@ export type Treatment = DentalTreatment & {
   priceAmount: number;
 };
 
+/**
+ * Billable predicate — mirrors the server's invoice gate exactly
+ * (createDentalInvoice.ts:79 bills ONLY `performed`/`verified`). The single
+ * source of truth for "will this treatment go on an invoice" across the FE, so
+ * the UI never advertises a payable total the server will reject with a 422.
+ */
+export function isBillableTreatment(status?: string | null): boolean {
+  return status === 'performed' || status === 'verified';
+}
+
 interface UseTreatmentsOptions {
   visitId: string | null;
 }

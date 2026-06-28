@@ -122,6 +122,9 @@ describe('refundDentalPayment (BR-053)', () => {
     expect(credits).toHaveLength(1);
     expect(credits[0]!.amountCents).toBe(4000);
     expect(credits[0]!.source).toBe('refund');
+    // A positive (non-consuming) row carries NO invoiceId — that column is reserved
+    // for consuming (negative) rows naming the invoice the credit was drawn against.
+    expect(credits[0]!.invoiceId).toBeNull();
   });
 
   test('BR-053: refund > paid amount → 422, invoice untouched', async () => {

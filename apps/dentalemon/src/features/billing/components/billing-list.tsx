@@ -79,15 +79,30 @@ export function summarizeInvoices(invoices: Invoice[]): {
   let overdueAmount = 0;
 
   for (const inv of invoices) {
+    // §g DQ3: a deposit is an advance-payment instrument, not a service charge.
+    // Exclude it so these cards match the canonical backend (getPatientBalance /
+    // getCollectionsSummary both exclude kind='deposit'); the deposit cash is
+    // recognized when it's applied to the performed-work invoice — counting it
+    // here too would double-count the same peso and overstate what the patient owes.
+    if (inv.kind === 'deposit') continue;
     if (inv.status !== 'voided' && inv.status !== 'paid') {
       totalOutstanding += inv.balanceCents;
     }
     if (inv.status === 'overdue') {
       overdueAmount += inv.balanceCents;
     }
-    const created = new Date(inv.createdAt);
-    if (created.getMonth() === currentMonth && created.getFullYear() === currentYear) {
-      collectedThisMonth += inv.paidCents;
+    // G9: "collected this month" must bucket by when money was COLLECTED, not when
+    // the invoice was created. `paidAt` is stamped (server addPayment) when the
+    // invoice closes (balance→0) and nulled on void, so it's the collection date.
+    // ponytail: counts an invoice's full paidCents in its close month — correct for
+    // full payments (the clinic norm); partial payments aren't recognized until the
+    // invoice closes. Upgrade path: a server payments-by-date KPI for partial-accurate
+    // recognition. (clinic-local month; cross-tz exactness deferred with that KPI.)
+    if (inv.paidAt) {
+      const paid = new Date(inv.paidAt);
+      if (paid.getMonth() === currentMonth && paid.getFullYear() === currentYear) {
+        collectedThisMonth += inv.paidCents;
+      }
     }
   }
 
@@ -253,6 +268,13 @@ export function BillingList({ branchId, onInvoiceClick }: BillingListProps) {
                   >
                     <td className="px-4 py-0 h-12 align-middle pl-5">
                       <span className="text-xs font-semibold text-lemon-foreground">{inv.invoiceNumber}</span>
+                      {inv.kind === 'deposit' && (
+                        // §g DQ3: mark deposits so the visible rows reconcile to the summary
+                        // cards (which exclude deposits as advance instruments, not service charges).
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-muted text-muted-foreground">
+                          Deposit
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-0 h-12 align-middle text-[13px] font-medium">
                       {inv.patientName ?? inv.patientId}

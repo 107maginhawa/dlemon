@@ -6,12 +6,14 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import type { ValidatedContext } from '@/types/app';
 import type { RecordDentalPaymentBody, RecordDentalPaymentParams } from '@/generated/openapi/validators';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ConflictError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentRepository } from './repos/dental-payment.repo';
+import { DentalPatientCreditRepository } from './repos/dental-patient-credit.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { withTenantTx } from '@/core/tenant-tx';
@@ -155,6 +157,34 @@ export async function recordDentalPayment(
         'PAYMENT_EXCEEDS_BALANCE',
       );
     }
+
+    // §g S-D: a deposit invoice's cash is mirrored into the patient credit wallet
+    // (source='deposit') so it can later be applied to the performed-work invoice
+    // via applyCreditToInvoice (the reconciliation bridge). Mirrors per payment so
+    // the wallet always equals the deposit cash collected; refundDentalPayment
+    // reverses the mirror (F-01) so the cash and the credit can never both be kept.
+    // The write is on `tx` (branch_id = invoice branch, in RLS scope). It only ADDS
+    // credit, so it needs no per-patient lock (a concurrent apply can only under-
+    // apply against a momentarily smaller balance, never over-draw).
+    if (invoice.kind === 'deposit') {
+      // F-07 (re-review #2): take the per-patient credit lock (1001) so a
+      // concurrent applyCreditToInvoice/refund can't read a stale wallet between
+      // this mirror insert and its commit (would surface a transient false
+      // NO_CREDIT). Money was already safe (the mirror only adds); this removes
+      // the stale-read UX window and matches the apply/refund locking.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${invoice.patientId}))`);
+      await new DentalPatientCreditRepository(tx).create({
+        patientId: invoice.patientId,
+        branchId: invoice.branchId,
+        amountCents: body.amountCents,
+        source: 'deposit',
+        invoiceId,
+        createdByMemberId: body.recordedByMemberId, // attribute the mirror to the collecting staff
+        createdBy: session.userId,
+        updatedBy: session.userId,
+      });
+    }
+
     return { payment: txPayment, updatedInvoice: txInvoice };
   });
 

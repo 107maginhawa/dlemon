@@ -94,9 +94,10 @@ describe('BillingList -- summarizeInvoices', () => {
 
     const invoices = [
       { status: 'issued' as const, totalCents: 10000, balanceCents: 10000, paidCents: 0, createdAt: thisMonth },
+      // Partial: paidCents but not yet closed (paidAt null) → not "collected" until the invoice closes.
       { status: 'partial' as const, totalCents: 20000, balanceCents: 5000, paidCents: 15000, createdAt: thisMonth },
       { status: 'overdue' as const, totalCents: 8000, balanceCents: 8000, paidCents: 0, createdAt: thisMonth },
-      { status: 'paid' as const, totalCents: 12000, balanceCents: 0, paidCents: 12000, createdAt: thisMonth },
+      { status: 'paid' as const, totalCents: 12000, balanceCents: 0, paidCents: 12000, createdAt: thisMonth, paidAt: thisMonth },
       { status: 'voided' as const, totalCents: 2000, balanceCents: 2000, paidCents: 0, createdAt: thisMonth },
     ];
 
@@ -105,7 +106,39 @@ describe('BillingList -- summarizeInvoices', () => {
     expect(result.totalOutstanding).toBe(23000);
     // overdue = 8000
     expect(result.overdueAmount).toBe(8000);
-    // collected this month = 0 + 15000 + 0 + 12000 + 0 = 27000
-    expect(result.collectedThisMonth).toBe(27000);
+    // collected this month = only the invoice CLOSED (paidAt) this month = 12000
+    expect(result.collectedThisMonth).toBe(12000);
+  });
+
+  test('summarizeInvoices excludes deposit invoices — an advance instrument, not a service charge (§g DQ3)', () => {
+    const now = new Date().toISOString();
+    const invoices = [
+      // Service work outstanding — counts.
+      { status: 'issued' as const, totalCents: 10000, balanceCents: 10000, paidCents: 0, createdAt: now },
+      // Unpaid deposit — must NOT inflate outstanding (it's a slice of the job, recognized on the performed invoice).
+      { status: 'issued' as const, kind: 'deposit' as const, totalCents: 3000, balanceCents: 3000, paidCents: 0, createdAt: now },
+      // Paid deposit — its cash must NOT double-count in collected here (recognized when applied to the performed invoice).
+      { status: 'paid' as const, kind: 'deposit' as const, totalCents: 3000, balanceCents: 0, paidCents: 3000, createdAt: now, paidAt: now },
+    ];
+    const result = summarizeInvoices(invoices);
+    expect(result.totalOutstanding).toBe(10000); // deposit's 3000 excluded
+    expect(result.collectedThisMonth).toBe(0);   // deposit cash not counted here
+    expect(result.overdueAmount).toBe(0);
+  });
+
+  test('summarizeInvoices buckets collected by PAYMENT date, not creation date (G9)', () => {
+    const now = new Date();
+    const thisMonth = now.toISOString();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 15).toISOString();
+
+    const invoices = [
+      // Created last month, COLLECTED this month → counts this month.
+      { status: 'paid' as const, totalCents: 5000, balanceCents: 0, paidCents: 5000, createdAt: lastMonth, paidAt: thisMonth },
+      // Created this month, COLLECTED last month → does NOT count this month.
+      { status: 'paid' as const, totalCents: 7000, balanceCents: 0, paidCents: 7000, createdAt: thisMonth, paidAt: lastMonth },
+    ];
+
+    const result = summarizeInvoices(invoices);
+    expect(result.collectedThisMonth).toBe(5000);
   });
 });

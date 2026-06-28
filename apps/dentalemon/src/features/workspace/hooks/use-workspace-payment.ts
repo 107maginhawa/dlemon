@@ -9,7 +9,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { createDentalInvoice } from '@monobase/sdk-ts/generated';
+import { createDentalInvoice, createDentalDepositInvoice } from '@monobase/sdk-ts/generated';
 import { toastError } from '@/lib/error-toast';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { type Invoice } from '@/features/billing/hooks/use-invoices';
@@ -81,6 +81,51 @@ export function useCreateInvoice(patientId: string | null) {
     // V-FE-ERR-001: surface invoice-creation failures instead of swallowing them.
     onError: (err) => {
       toastError(err, 'Failed to create invoice. Please try again.');
+    },
+  });
+}
+
+export interface CreateDepositInput {
+  visitId: string;
+  /** Deposit amount in cents (≥ 1, capped server-side at the planned estimate). */
+  depositCents: number;
+}
+
+/**
+ * §g: collect a deposit / pay-in-full against a PLANNED estimate. Mints a
+ * finalized kind='deposit' invoice (server: born issued, due-on-receipt). The
+ * caller then opens InvoiceDetail on it to record payment → BIR receipt; the
+ * collected cash mirrors into the patient credit wallet and is later applied to
+ * the performed-work invoice via the existing apply-credit UI. A per-submission
+ * localId makes a double-tap idempotent.
+ */
+export function useCreateDepositInvoice(patientId: string | null) {
+  const qc = useQueryClient();
+  const branchId = useOrgContextStore((s) => s.branchId);
+  const dentistMemberId = useOrgContextStore((s) => s.memberId);
+  return useMutation({
+    mutationFn: async (input: CreateDepositInput) => {
+      if (!patientId || !branchId || !dentistMemberId) {
+        throw new Error('Missing patient, branch, or member context — cannot collect a deposit.');
+      }
+      const { data } = await createDentalDepositInvoice({
+        body: {
+          patientId,
+          visitId: input.visitId,
+          branchId,
+          dentistMemberId,
+          depositCents: input.depositCents,
+          localId: crypto.randomUUID(),
+        },
+        throwOnError: true,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listDentalInvoicesQueryKey({ query: { patientId: patientId ?? undefined } }) });
+    },
+    onError: (err) => {
+      toastError(err, 'Failed to collect deposit. Please try again.');
     },
   });
 }

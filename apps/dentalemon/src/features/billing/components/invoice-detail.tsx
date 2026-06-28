@@ -200,7 +200,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   // ---------------------------------------------------------------------------
   const recordPaymentMutation = useMutation({
     ...recordDentalPaymentMutation(),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       setShowPaymentForm(false);
       setPaymentAmount('');
       setPaymentMethod('cash');
@@ -208,6 +208,14 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
       invalidateInvoice();
       onUpdated?.();
       toast.success('Payment recorded');
+      // Auto-close on full payment: the server caps amount at the outstanding
+      // balance (recordDentalPayment guards amount > balance), so a payment equal
+      // to the pre-payment balance settles the invoice → dismiss the sheet (back
+      // to the workspace). Partial payments leave it open to record the next one.
+      const paidCents = (variables as { body?: { amountCents?: number } })?.body?.amountCents ?? 0;
+      if (invoice && invoice.balanceCents > 0 && paidCents >= invoice.balanceCents) {
+        handleClose();
+      }
     },
     onError: (err) => {
       setPaymentErrors([err instanceof Error ? err.message : 'Failed']);

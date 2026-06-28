@@ -194,6 +194,65 @@ HTTP 200
 jsonpath "$.status" == "planned"
 
 
+# 5c. §g DEPOSIT: with both treatments PLANNED (estimate 23500) and none yet
+# performed, collect a deposit against the estimate. Mints a finalized
+# kind='deposit' invoice (born issued, due-on-receipt) with one non-treatment
+# line — payable now via the normal payment path. Does NOT touch the treatments.
+POST {{api}}/dental/billing/invoices/deposit
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "depositCents": 10000,
+  "localId": "contract-deposit-1"
+}
+HTTP 201
+[Captures]
+deposit_invoice_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.kind" == "deposit"
+jsonpath "$.status" == "issued"
+jsonpath "$.totalCents" == 10000
+jsonpath "$.balanceCents" == 10000
+jsonpath "$.lineItems" count == 1
+
+
+# 5d. §g DEPOSIT cap: a deposit exceeding the planned estimate (23500) is rejected.
+POST {{api}}/dental/billing/invoices/deposit
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "depositCents": 99000
+}
+HTTP 422
+[Asserts]
+jsonpath "$.code" == "DEPOSIT_EXCEEDS_ESTIMATE"
+
+
+# 5e. §g DEPOSIT idempotency: replaying the same localId echoes the SAME invoice.
+POST {{api}}/dental/billing/invoices/deposit
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{visit_id}}",
+  "patientId": "{{patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "depositCents": 10000,
+  "localId": "contract-deposit-1"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.id" == "{{deposit_invoice_id}}"
+
+
 # 5. Mark treatment 1 as performed (planned → performed)
 PATCH {{api}}/dental/visits/{{visit_id}}/treatments/{{treatment_id_1}}
 Cookie: better-auth.session_token={{session_token}}
