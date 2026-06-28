@@ -138,6 +138,39 @@ export function nowLineIndex<T extends { scheduledAt: string }>(
   return idx;
 }
 
+/**
+ * Context-aware hero day. The Home hero should never be a dead "nothing today"
+ * box while real work is one tap away: if today still has actionable
+ * appointments (a future slot or someone scheduled/checked-in) show today;
+ * otherwise promote tomorrow; if neither has anything, it's a genuine empty day.
+ */
+export type HeroWhich = 'today' | 'tomorrow' | 'empty';
+
+export function pickHeroDay<T extends { status: string; scheduledAt: string }>(
+  today: T[],
+  tomorrow: T[],
+  now: Date,
+): { which: HeroWhich; appointments: T[]; isToday: boolean } {
+  const nowMs = now.getTime();
+  const todayHasRemaining = today.some((a) => {
+    const future = new Date(a.scheduledAt).getTime() > nowMs;
+    const active = a.status === 'scheduled' || a.status === 'checked_in';
+    return future || active;
+  });
+
+  if (today.length > 0 && todayHasRemaining) {
+    return { which: 'today', appointments: today, isToday: true };
+  }
+  if (tomorrow.length > 0) {
+    return { which: 'tomorrow', appointments: tomorrow, isToday: false };
+  }
+  if (today.length > 0) {
+    // Today is over (all done) and nothing tomorrow — still show today's record.
+    return { which: 'today', appointments: today, isToday: true };
+  }
+  return { which: 'empty', appointments: [], isToday: true };
+}
+
 export type AttentionTone = 'info' | 'warning' | 'destructive';
 
 export interface AttentionItem {
@@ -154,6 +187,13 @@ interface BuildAttentionItemsArgs {
   overdueLabOrders: number | null;
   paymentPlansBehind: number | null;
   showFinancials: boolean;
+  /**
+   * Whether to include the "overdue balances" item. Defaults true. The redesigned
+   * Home sets this false because the MoneyPanel owns overdue balances (with names
+   * + amounts), so the attention queue carries only the operational + non-balance
+   * financial items and never double-counts them.
+   */
+  includeOverdueBalances?: boolean;
 }
 
 /**
@@ -168,6 +208,7 @@ export function buildAttentionItems({
   overdueLabOrders,
   paymentPlansBehind,
   showFinancials,
+  includeOverdueBalances = true,
 }: BuildAttentionItemsArgs): AttentionItem[] {
   const items: AttentionItem[] = [];
 
@@ -194,7 +235,7 @@ export function buildAttentionItems({
   }
 
   if (showFinancials) {
-    if (overdueInvoices.length > 0) {
+    if (includeOverdueBalances && overdueInvoices.length > 0) {
       items.push({
         id: 'overdue-balances',
         label: overdueInvoices.length === 1 ? 'overdue balance' : 'overdue balances',

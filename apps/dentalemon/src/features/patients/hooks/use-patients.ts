@@ -77,12 +77,14 @@ export interface UsePatientsOptions {
   searchQuery?: string;
   status?: PatientStatusFilter;
   needsFollowUp?: boolean;
+  /** Defaults true. Set false to hold the fetch (e.g. a typeahead with no query yet). */
+  enabled?: boolean;
 }
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
 export function usePatients(options: UsePatientsOptions) {
-  const { branchId, searchQuery, status, needsFollowUp } = options;
+  const { branchId, searchQuery, status, needsFollowUp, enabled = true } = options;
 
   // branchId is required by the API contract (GET /dental/patients); pass through
   // (empty when unset) to satisfy the generated type — the runtime 400-guard and
@@ -107,6 +109,7 @@ export function usePatients(options: UsePatientsOptions) {
             : [];
       return items.map(toPatientCard);
     },
+    enabled,
   });
 
   return {

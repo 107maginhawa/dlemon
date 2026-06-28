@@ -10,6 +10,7 @@ import {
   listAppointments,
   getDashboardSummary,
   listDentalInvoices,
+  getCollectionsSummary,
 } from '@monobase/sdk-ts/generated';
 import type { DentalAppointment, DentalInvoice } from '@monobase/sdk-ts/generated';
 
@@ -42,6 +43,8 @@ export interface DashboardSummary {
   overdueInvoices: DashboardInvoice[];
   /** Total peso-cents collected today; null when showFinancials=false */
   dailyCollectionsCents: number | null;
+  /** Total peso-cents collected month-to-date (the momentum number); null when showFinancials=false */
+  monthCollectedCents: number | null;
   activePaymentPlans: number | null;
   /** Number of payment plans with "behind" status */
   paymentPlansBehind: number | null;
@@ -124,6 +127,20 @@ async function fetchDashboardSummary(
     ? listDentalInvoices({ query: { branchId }, throwOnError: true })
     : null;
 
+  // Month-to-date collected — the motivating "how are we doing" number. Reuses
+  // the existing collections-summary endpoint (period=month → totalCollectedCents).
+  // Fully isolated: this enhancement must NEVER reject the main query or blank the
+  // page, so it swallows sync throws and rejections alike → null.
+  const monthCollectedPromise: Promise<number | null> = (async () => {
+    if (!showFinancials) return null;
+    try {
+      const r = await getCollectionsSummary({ query: { branchId, period: 'month' } });
+      return (r as { data?: { totalCollectedCents?: number } }).data?.totalCollectedCents ?? null;
+    } catch {
+      return null;
+    }
+  })();
+
   // Await the schedule + financial fetches together so any rejection is jointly
   // handled (a sequential await would orphan a sibling's rejection). The
   // owner-only summary is awaited separately — it never rejects (own .catch).
@@ -134,6 +151,7 @@ async function fetchDashboardSummary(
     allInvoicesPromise ?? Promise.resolve(null),
   ]);
   const summaryData = await summaryPromise;
+  const monthCollectedCents = await monthCollectedPromise;
 
   const todayData = (todayResult as { data: unknown }).data;
   const tomorrowData = (tomorrowResult as { data: unknown }).data;
@@ -175,6 +193,7 @@ async function fetchDashboardSummary(
     tomorrowAppointments,
     overdueInvoices,
     dailyCollectionsCents,
+    monthCollectedCents,
     activePaymentPlans,
     paymentPlansBehind,
     pendingLabOrders,
