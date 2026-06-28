@@ -20,7 +20,7 @@ export const dentalPatientCredits = pgTable('dental_patient_credit', {
   branchId: uuid('branch_id').notNull().references(() => dentalBranches.id),
   // Signed: > 0 adds credit, < 0 consumes it.
   amountCents: integer('amount_cents').notNull(),
-  // manual | overpayment | refund | applied
+  // deposit | deposit_reversed | refund | applied | manual | overpayment
   source: text('source').notNull(),
   // Set on a consuming (negative) row: the invoice the credit was applied to.
   invoiceId: uuid('invoice_id').references(() => dentalInvoices.id),
