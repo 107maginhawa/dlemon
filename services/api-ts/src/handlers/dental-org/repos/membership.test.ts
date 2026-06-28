@@ -160,6 +160,37 @@ describe('MembershipRepository', () => {
   });
 
   // --------------------------------------------------------------------------
+  // PIN LOCKOUT — recordFailedPinAttempt
+  // --------------------------------------------------------------------------
+
+  describe('recordFailedPinAttempt lockout', () => {
+    test('escalates: 5th consecutive fail locks for ~30s', async () => {
+      const m = await repo.createOne({ branchId: BRANCH_ID, displayName: 'Locky', role: 'staff_full', status: 'active', pinFailedAttempts: 0 });
+      let updated;
+      for (let i = 0; i < 5; i++) updated = await repo.recordFailedPinAttempt(m.id);
+      expect(updated!.pinFailedAttempts).toBe(5);
+      expect(updated!.pinLockedUntil).not.toBeNull();
+      expect(repo.isLockedOut(updated!)).toBe(true);
+    });
+
+    test('after an EXPIRED lockout, a new fail starts a fresh count (no instant re-lock)', async () => {
+      // Reproduces the staff PIN bug: once a member hit the threshold, every later
+      // single mistake re-locked them because the counter never decayed.
+      const m = await repo.createOne({ branchId: BRANCH_ID, displayName: 'Stuck', role: 'staff_full', status: 'active', pinFailedAttempts: 0 });
+      // Simulate a member who was locked out, but the window has fully elapsed.
+      await db.update(dentalMemberships)
+        .set({ pinFailedAttempts: 10, pinLockedUntil: new Date(Date.now() - 60_000) })
+        .where(eq(dentalMemberships.id, m.id));
+
+      const updated = await repo.recordFailedPinAttempt(m.id);
+
+      expect(updated!.pinFailedAttempts).toBe(1);       // fresh cycle, not 11
+      expect(updated!.pinLockedUntil).toBeNull();        // not re-locked on a single fail
+      expect(repo.isLockedOut(updated!)).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // DEACTIVATION
   // --------------------------------------------------------------------------
 
