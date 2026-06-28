@@ -46,7 +46,10 @@ import { join } from 'node:path';
 // payment-plan-view/create, invoice-insurance-block): 11px column headers ->
 // text-xs, 13px chips/cells -> text-sm, 15px bold totals -> text-base. Verified
 // in-browser at iPad/desktop that the money columns don't overflow.
-const BASELINE = 183;
+// lowered to 178 — imaging safe slice: patient-image-list, CbctStudyCard and
+// SuperimpositionPanel 11px labels -> text-xs. The imaging viewer's broader
+// palette is an intentional dark PACS theme, deferred (see B9 in the audit).
+const BASELINE = 178;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

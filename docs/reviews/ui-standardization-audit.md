@@ -91,5 +91,10 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 - **B7** Sub-44px interactive targets (X7, ~9 sites) — spot-fixed opportunistically per module; do a final grep sweep to catch stragglers. P1.
 - **B8** Untrapped overlay triage (X4) — `apply-template-button`, `reports/invoice-detail-sheet`, `patients/patient-statement` (verify real-modal vs print); `chart-export-overlay` is a `window.print` surface, likely exempt. P2.
 
+### From module 4 — imaging ✅ (safe slice only)
+- **Audit correction:** the "worst palette offender, 17 files" flag was a false signal. ~240 raw-palette uses are an **intentional dark PACS/radiology viewer theme** (bg-zinc-800/900/950, border-zinc-700, light text on dark, lemon active accent) — a deliberate convention so X-rays/ceph pop, not sloppy deviation. Confirmed in `imaging-workspace.tsx` (dark toolbar + buttons). Only the 5 off-scale font literals and 2 light-Dialog Cancel buttons were genuine deviations; those are fixed.
+- **B9** Make the imaging dark viewer **theme-able**: replace the ~53 hardcoded dark `zinc-700/800/900` surfaces (13 files) with a viewer dark-surface token set (or adopt the app dark-mode tokens). This is a **design-system decision, not a mechanical swap** — bulk-migrating to the light app tokens would invert and break the viewer. Needs product/design sign-off on whether the viewer stays hardcoded-dark or becomes tokenized-dark. P2.
+- **B10** Imaging empty-state coverage is thin (1/28). Adding empty states is a feature addition beyond standardization; scope separately. P2.
+
 ### Remaining modules (not yet swept)
-billing (next) → imaging → scheduling → dashboard → patients → settings → reports → portal → case-presentation → onboarding/auth/booking. Imaging carries the worst raw-palette density (17 files) and thin empty-state coverage (1/28).
+scheduling → dashboard → patients → settings → reports → portal → case-presentation → onboarding/auth/booking.

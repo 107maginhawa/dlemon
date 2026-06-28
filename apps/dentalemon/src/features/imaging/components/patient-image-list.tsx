@@ -133,7 +133,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
 
       {/* G5: library filters (list view only, once there are images) */}
       {!isLoading && !error && allItems.length > 0 && view === 'list' && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-100 text-[11px]">
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-100 text-xs">
           <label className="flex items-center gap-1 text-zinc-600">
             <input
               type="checkbox"
@@ -317,7 +317,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                       }}
                       data-testid={`edit-image-${item.id}`}
                       aria-label={`Edit ${item.fileName}`}
-                      className="shrink-0 rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600 hover:border-lemon"
+                      className="shrink-0 rounded-md border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600 hover:border-lemon"
                     >
                       Edit
                     </button>
