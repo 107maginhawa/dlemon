@@ -87,8 +87,8 @@ export interface LabOrdersSheetProps {
 }
 
 export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersSheetProps) {
-  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close + trapped within.
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const [form, setForm] = useState<CreateForm>({ labName: '', description: '', shade: '', material: '', dueDate: '', expectedDeliveryDate: '' });
   const [formErrors, setFormErrors] = useState<string[]>([]);
@@ -161,7 +161,7 @@ export function LabOrdersSheet({ visitId, patientId, open, onClose }: LabOrdersS
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true" aria-label="Lab orders sheet">
+    <div ref={containerRef} className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true" aria-label="Lab orders sheet">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div
