@@ -7,6 +7,7 @@
 
 import type { ToothSurface } from '@/features/workspace/components/five-surface-selector.helpers';
 import type { ToothState } from '@/lib/dental-chart-types';
+import type { SurfaceStatus } from '@/features/workspace/components/dental/types';
 
 // ToothState now lives in the neutral lib layer (shared with the patients
 // feature). Re-exported here so existing workspace consumers keep their import.
@@ -417,6 +418,53 @@ export function hasMultipleSurfaceConditions(
 ): boolean {
   if (!surfaceConditionMap) return false;
   return new Set(Object.values(surfaceConditionMap)).size >= 2;
+}
+
+/**
+ * #5: states that live on a specific tooth SURFACE — they get painted on the
+ * affected surface(s) only, never as a full-tooth fill. Everything else
+ * (crown, missing, extracted, implant, healthy, watchlist) is a whole-tooth
+ * condition and keeps the single fill.
+ */
+const SURFACE_LOCALIZED_STATES: ReadonlySet<ToothState> = new Set<ToothState>([
+  'caries',
+  'fractured',
+  'filled',
+]);
+
+/**
+ * #5: build the per-surface colour list for a tooth, or undefined when the tooth
+ * should use a whole-tooth fill. "Surface-only always" — a single surface-localized
+ * condition paints just its surface(s), consistent with the multi-condition case.
+ * Precedence of sources:
+ *   1. surfaceConditionMap (richest — explicit per-surface conditions)
+ *   2. surfaces[] + a surface-localized state (one condition, specific surfaces)
+ *   3. undefined → caller uses the single fill (whole-tooth states, or legacy rows
+ *      with no surface data, which have nowhere to localize the colour)
+ */
+export function buildToothSurfaceStatus(
+  state: ToothState,
+  surfaces: string[] | undefined,
+  surfaceConditionMap: Record<string, ToothState> | undefined,
+): SurfaceStatus[] | undefined {
+  if (surfaceConditionMap && Object.keys(surfaceConditionMap).length > 0) {
+    return Object.entries(surfaceConditionMap).map(([surface, surfaceState]) => ({
+      surface,
+      colorCoding: getToothFillColor(surfaceState) || '#FFFFFF',
+      statusDesc: surfaceState,
+      surfaceName: surface,
+    }));
+  }
+  if (SURFACE_LOCALIZED_STATES.has(state) && surfaces && surfaces.length > 0) {
+    const color = getToothFillColor(state) || '#FFFFFF';
+    return surfaces.map((surface) => ({
+      surface,
+      colorCoding: color,
+      statusDesc: state,
+      surfaceName: surface,
+    }));
+  }
+  return undefined;
 }
 
 /**

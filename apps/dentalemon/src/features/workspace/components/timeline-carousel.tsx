@@ -26,14 +26,13 @@ import { useUpdateVisit } from '@/features/workspace/hooks/use-update-visit';
 import { useInitializeDentition } from '@/features/workspace/hooks/use-initialize-dentition';
 import {
   getDentitionType,
-  getLayerLabel,
-  getLayerCueSwatch,
   getToothFillColor,
   DEFAULT_VISIBLE_LAYERS,
 } from '@/features/workspace/components/dental-chart.helpers';
 import { findOpenVisit } from '@/features/workspace/lib/visit-status';
 import type { ToothData, DentitionType, ChartLayer } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
+import { ChartLayerToggle } from '@/features/workspace/components/chart-layer-toggle';
 import { ChartCompareOverlay } from '@/features/workspace/components/chart-compare-overlay';
 
 export interface VisitCard {
@@ -239,101 +238,50 @@ function VisitChartCard({
           status), right-aligned, with the date the dominant element. */}
       <div className="flex min-h-[44px] items-center justify-between gap-2 px-0.5">
         {isOpenVisit ? (
-          <div
+          // #2: shared segmented control. Change C cumulative cue preserved via the
+          // group aria-label + tooltip and the "Current — all visits" scope chip in
+          // the right cluster — the layers span ALL visits, not this one alone.
+          <ChartLayerToggle
             data-testid="chart-layer-toggle"
-            role="group"
-            // Change C: cumulative cue. The Existing / Planned / Treated layers are
-            // status-filtered views across ALL visits (see lib/chart-layers.ts), not
-            // this visit alone — so Treated/Planned aren't misread as current-visit
-            // only. Communicated without restyling the tabs or adding status hues:
-            // the visible "Current — all visits" scope label sits in the same row, and
-            // the group carries the scope in its aria-label + a reinforcing tooltip.
-            aria-label="Chart layers across all visits — toggle to show or hide"
+            ariaLabel="Chart layers across all visits — toggle to show or hide"
             title="These layers (Existing · Planned · Treated) span all visits, not just this one"
-            className="flex shrink-0 items-center gap-1"
-          >
-            {layerTabs.map((layer) => {
-              const layerActive = visibleLayers.has(layer);
-              const cue = getLayerCueSwatch(layer);
-              return (
-                <button
-                  key={layer}
-                  type="button"
-                  data-testid={`chart-layer-${layer}`}
-                  aria-pressed={layerActive}
-                  onClick={() => toggleLayer(layer)}
-                  className={[
-                    'min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-2 text-xs font-medium border transition-colors',
-                    // Item 4: ON = filled chip, OFF = outline; the cue swatch carries
-                    // the layer identity so the filter doubles as the legend.
-                    layerActive
-                      ? 'bg-foreground/10 text-foreground border-foreground/30'
-                      : 'bg-transparent text-muted-foreground border-border hover:bg-muted/50',
-                  ].join(' ')}
-                >
-                  <span
-                    aria-hidden
-                    className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className} ${layerActive ? '' : 'opacity-50'}`}
-                    style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
-                  />
-                  {getLayerLabel(layer)}
-                </button>
-              );
-            })}
-          </div>
+            layers={layerTabs}
+            visibleLayers={visibleLayers}
+            onToggle={toggleLayer}
+          />
         ) : (
-          // Read-only snapshot: static layer key so users can interpret the
-          // snapshot's colors. Height is pinned via min-h-[44px] on the
-          // container row (set above on the flex wrapper) so the chart's top
-          // edge never jumps when paging between open and historical cards.
-          <div
+          // Read-only snapshot: static layer key (same segmented look, no toggling)
+          // so users can interpret the snapshot's colours. Row height is pinned by
+          // min-h-[44px] on the wrapper above so the chart's top edge never jumps.
+          <ChartLayerToggle
             data-testid="chart-layer-key"
-            aria-label="Chart layer key for this visit snapshot"
-            className="flex shrink-0 items-center gap-1"
-          >
-            {LAYER_TAB_ORDER
-              .filter(
-                (layer) =>
-                  layer !== 'declined' ||
-                  (perVisitLayers?.declined?.length ?? 0) > 0,
-              )
-              .map((layer) => {
-                const cue = getLayerCueSwatch(layer);
-                return (
-                  <span
-                    key={layer}
-                    className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground border border-transparent"
-                  >
-                    <span
-                      aria-hidden
-                      className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className}`}
-                      style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
-                    />
-                    {getLayerLabel(layer)}
-                  </span>
-                );
-              })}
-          </div>
-        )}
-        <div className="flex min-w-0 items-center justify-end gap-2">
-          <span
-            data-testid="chart-scope-label"
-            className="truncate text-[10px] font-medium text-muted-foreground"
-          >
-            {isOpenVisit ? 'Current — all visits' : 'Visit snapshot'}
-          </span>
-          <span className="whitespace-nowrap text-sm font-semibold text-foreground">
-            {formatDate(visit.activatedAt ?? visit.createdAt)}
-            {/* Change B: a visit = an encounter; same-day encounters are legitimate
-                (no day-grouping). When two or more cards fall on the SAME calendar
-                day, append the time so they stay distinguishable. The date stays the
-                dominant element — the time is a smaller, muted suffix. */}
-            {showTime && (
-              <span className="ml-1 text-[11px] font-medium text-muted-foreground">
-                · {formatTime(visit.activatedAt ?? visit.createdAt)}
-              </span>
+            ariaLabel="Chart layer key for this visit snapshot"
+            layers={LAYER_TAB_ORDER.filter(
+              (layer) => layer !== 'declined' || (perVisitLayers?.declined?.length ?? 0) > 0,
             )}
-          </span>
+          />
+        )}
+        {/* #4: scope rendered as discrete info chips (DECORATIVE — not toggles; the
+            chart always shows the cumulative all-visits overlay). Order left→right:
+            scope chips · status · date, with the date the dominant rightmost element. */}
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          {isOpenVisit ? (
+            <span data-testid="chart-scope-label" className="flex shrink-0 items-center gap-1">
+              <span className="rounded-full bg-[rgba(118,118,128,0.12)] px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                Current
+              </span>
+              <span className="rounded-full bg-[rgba(118,118,128,0.12)] px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                All visits
+              </span>
+            </span>
+          ) : (
+            <span
+              data-testid="chart-scope-label"
+              className="shrink-0 rounded-full bg-[rgba(118,118,128,0.12)] px-2 py-0.5 text-xs font-medium text-muted-foreground"
+            >
+              Snapshot
+            </span>
+          )}
           <span
             data-testid="visit-status-badge"
             className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-semibold capitalize ${
@@ -347,6 +295,18 @@ function VisitChartCard({
             }`}
           >
             {visit.status}
+          </span>
+          <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+            {formatDate(visit.activatedAt ?? visit.createdAt)}
+            {/* Change B: a visit = an encounter; same-day encounters are legitimate
+                (no day-grouping). When two or more cards fall on the SAME calendar
+                day, append the time so they stay distinguishable. The date stays the
+                dominant element — the time is a smaller, muted suffix. */}
+            {showTime && (
+              <span className="ml-1 text-[11px] font-medium text-muted-foreground">
+                · {formatTime(visit.activatedAt ?? visit.createdAt)}
+              </span>
+            )}
           </span>
         </div>
       </div>

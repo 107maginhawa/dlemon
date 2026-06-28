@@ -21,6 +21,7 @@ import {
   stateNeedsCvdMark,
   getLayerLabel,
   hasMultipleSurfaceConditions,
+  buildToothSurfaceStatus,
   type ToothState,
 } from './dental-chart.helpers';
 
@@ -47,6 +48,45 @@ describe('hasMultipleSurfaceConditions', () => {
 
   test('two surfaces, DISTINCT conditions → true (the lie case)', () => {
     expect(hasMultipleSurfaceConditions({ occlusal: 'caries', mesial: 'filled' })).toBe(true);
+  });
+});
+
+// ─── buildToothSurfaceStatus (#5 — "surface-only always") ──────────────────
+// Surface-localized conditions (caries/fractured/filled) paint ONLY their
+// surface(s), never a full-tooth fill — single condition or several. Whole-tooth
+// states (crown/missing/…) and legacy rows with no surface data return undefined
+// so the caller uses the single fill.
+describe('buildToothSurfaceStatus (#5)', () => {
+  test('surfaceConditionMap → one entry per surface, coloured per condition', () => {
+    const out = buildToothSurfaceStatus('caries', undefined, { occlusal: 'caries', mesial: 'filled' });
+    expect(out).toHaveLength(2);
+    const occlusal = out!.find((s) => s.surface === 'occlusal')!;
+    const mesial = out!.find((s) => s.surface === 'mesial')!;
+    expect(occlusal.colorCoding).toBe(getToothFillColor('caries'));
+    expect(mesial.colorCoding).toBe(getToothFillColor('filled'));
+  });
+
+  test('single surface-localized condition + surfaces[] → that surface only (not full tooth)', () => {
+    const out = buildToothSurfaceStatus('caries', ['occlusal'], undefined);
+    expect(out).toEqual([
+      { surface: 'occlusal', colorCoding: getToothFillColor('caries'), statusDesc: 'caries', surfaceName: 'occlusal' },
+    ]);
+  });
+
+  test('whole-tooth state (crown) → undefined even with surfaces[] (keeps full fill)', () => {
+    expect(buildToothSurfaceStatus('crown', ['occlusal', 'mesial'], undefined)).toBeUndefined();
+  });
+
+  test('legacy: surface-localized state with no surface data → undefined (fall back to full fill)', () => {
+    expect(buildToothSurfaceStatus('caries', undefined, undefined)).toBeUndefined();
+    expect(buildToothSurfaceStatus('caries', [], {})).toBeUndefined();
+  });
+
+  test('surfaceConditionMap wins over surfaces[] when both present', () => {
+    const out = buildToothSurfaceStatus('filled', ['buccal'], { occlusal: 'caries' });
+    expect(out).toEqual([
+      { surface: 'occlusal', colorCoding: getToothFillColor('caries'), statusDesc: 'caries', surfaceName: 'occlusal' },
+    ]);
   });
 });
 

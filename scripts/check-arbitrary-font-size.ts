@@ -33,7 +33,8 @@ import { join } from 'node:path';
 // lowered to 332 when the treatment-plan CDT-year stamp moved into the labeled
 // field grid (rem token scale) during the record-tabs polish pass.
 // lowered to 327 — layer key on historical cards uses text-xs (no new raw px).
-const BASELINE = 327;
+// lowered to 326 — carousel header scope chips (#4) use text-xs, not text-[10px].
+const BASELINE = 326;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

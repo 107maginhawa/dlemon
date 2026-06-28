@@ -23,15 +23,16 @@ import {
   isToothVisible,
   resolveToothLayer,
   getLayerOutline,
-  getLayerCueSwatch,
   stateNeedsCvdMark,
-  getLayerLabel,
   hasMultipleSurfaceConditions,
+  buildToothSurfaceStatus,
   DEFAULT_VISIBLE_LAYERS,
   getMixedDentitionTeeth,
 } from './dental-chart.helpers';
 import type { ToothData, ToothState, DentitionType, ChartLayer, ToothNotation } from './dental-chart.helpers';
+import { ChartLayerToggle } from './chart-layer-toggle';
 import { UniversalToothFdi } from './dental/universal-tooth-fdi';
+import type { SurfaceStatus } from './dental/types';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { useBranchSettings } from '@/features/settings/hooks/use-branch-settings';
 
@@ -232,6 +233,11 @@ export function DentalChart({
     // (a stroke/pattern, never a 4th saturated fill; the double-slash stays reserved
     // for extraction). Encodes state on a non-color channel for grayscale legibility.
     const isDeclinedOnLayer = toothLayer === 'declined' && !isLayerHidden;
+    // #6: Treated (completed) gets its OWN texture so it's distinct at a glance, not
+    // just a green edge. Emerald diagonal hatch running the OPPOSITE way (135°) to
+    // declined's gray 45° hatch — distinct by both hue and direction, and clear of
+    // the double-slash reserved for extraction.
+    const isCompletedOnLayer = toothLayer === 'completed' && !isLayerHidden;
     // P1-1: the layer is encoded on a NEUTRAL edge (lemon reserved for
     // interaction). Only apply the edge when the layer is actually visible.
     const outlineFor = isLayerHidden
@@ -242,8 +248,21 @@ export function DentalChart({
     // Item 5 / Option B: this tooth carries ≥2 distinct surface conditions, so
     // the single dominant fill can't tell the whole story. Flag it with a
     // corner pip → "open for detail" (the slideout renders the per-surface map).
-    const isMultiSurface =
-      !isDimmed && hasMultipleSurfaceConditions(toothByNumber.get(toothNumber)?.surfaceConditionMap);
+    const toothData = toothByNumber.get(toothNumber);
+    const surfaceConditionMap = toothData?.surfaceConditionMap;
+    const isMultiSurface = !isDimmed && hasMultipleSurfaceConditions(surfaceConditionMap);
+    // #5 ("surface-only always"): paint surface-localized conditions (caries /
+    // fractured / filled) on the affected SURFACE(s) only — never a full-tooth fill —
+    // whether the tooth carries one condition or several. surfaceConditionMap /
+    // surfaces[] use anatomical surface names (occlusal/mesial/distal/buccal/lingual…)
+    // which UniversalTooth maps to the SVG's per-surface paths. Whole-tooth states
+    // (crown/missing/implant…) and legacy rows with no surface data return undefined
+    // and fall back to the single fill below.
+    const surfacesStatus: SurfaceStatus[] | undefined = buildToothSurfaceStatus(
+      state,
+      toothData?.surfaces,
+      surfaceConditionMap,
+    );
     // Display label for the current notation preference (QW-5).
     const displayLabel = getToothDisplayLabel(toothNumber, notation);
     // Primary teeth in mixed dentition rendered at smaller size for visual distinction
@@ -270,10 +289,13 @@ export function DentalChart({
           transition: 'opacity 200ms',
           outline: outlineFor,
           outlineOffset: '-2px',
-          // Declined: diagonal hatch texture (non-color channel), gray.
+          // Layer texture (non-color channel): Declined = gray hatch at 45°;
+          // Treated (#6) = emerald hatch at 135° — distinct by hue AND direction.
           backgroundImage: isDeclinedOnLayer
             ? 'repeating-linear-gradient(45deg, rgba(156,163,175,0.35) 0, rgba(156,163,175,0.35) 2px, transparent 2px, transparent 5px)'
-            : undefined,
+            : isCompletedOnLayer
+              ? 'repeating-linear-gradient(135deg, rgba(5,150,105,0.28) 0, rgba(5,150,105,0.28) 2px, transparent 2px, transparent 6px)'
+              : undefined,
         }}
         className={[
           'relative flex flex-col items-center rounded p-0.5 cursor-pointer transition-colors duration-150',
@@ -286,7 +308,9 @@ export function DentalChart({
         <UniversalToothFdi
           fdiToothNumber={toothNumber}
           label={displayLabel}
-          fillColor={getToothFillColor(state) || undefined}
+          // #5: multi-surface teeth pass per-surface colours; others use the single fill.
+          fillColor={surfacesStatus ? undefined : getToothFillColor(state) || undefined}
+          surfacesStatus={surfacesStatus}
           size={effectiveSize}
           fill={fluid}
           interactive={false}
@@ -338,49 +362,29 @@ export function DentalChart({
     <div
       data-testid="dental-chart"
       data-dentition={dentitionType}
-      className="h-full flex flex-col rounded-md overflow-hidden border border-border bg-white"
+      // #3: pb-1 lifts the lower arch off the container's bottom edge so the bottom
+      // border line is visible (it was flush against the lower-arch numbers and read
+      // as "not showing"), and mirrors the breathing room the dashed midline gives
+      // the upper arch.
+      className="h-full flex flex-col rounded-md overflow-hidden border border-border bg-white pb-1"
     >
-      {/* P1-15: Multi-select layer chips — baseline / proposed / completed */}
+      {/* #2 / P1-15: multi-select layer control as an Apple segmented control
+          (shared <ChartLayerToggle>). One tighter track replaces the row of
+          bordered chips, freeing vertical space. */}
       {showLayerToggle && (
-        <div
-          data-testid="chart-layer-toggle"
-          role="group"
-          aria-label="Chart layers — toggle to show or hide"
-          className="flex gap-1.5 px-2 py-1.5 border-b border-border/60 bg-muted/40"
-        >
-          {LAYER_FILTER_ORDER
-            // CHART-XV: only surface the Declined chip when refused work exists —
-            // it's an uncommon state, so it stays out of the way until relevant.
-            .filter((layer) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0)
-            .map((layer) => {
-            const isActive = visibleLayers.has(layer);
-            const cue = getLayerCueSwatch(layer);
-            return (
-              <button
-                key={layer}
-                type="button"
-                data-testid={`chart-layer-${layer}`}
-                onClick={() => toggleLayer(layer)}
-                aria-pressed={isActive}
-                className={[
-                  'flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border transition-colors',
-                  // Item 4: ON = filled chip, OFF = outline. Neutral fill (no status
-                  // hue; lemon reserved for interaction) — the per-chip cue swatch
-                  // carries the layer identity, so the filter doubles as the legend.
-                  isActive
-                    ? 'bg-foreground/10 text-foreground border-foreground/30'
-                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted/50',
-                ].join(' ')}
-              >
-                <span
-                  aria-hidden
-                  className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cue.className} ${isActive ? '' : 'opacity-50'}`}
-                  style={cue.borderColor ? { borderColor: cue.borderColor } : undefined}
-                />
-                {getLayerLabel(layer)}
-              </button>
-            );
-          })}
+        <div className="px-2 py-1.5 border-b border-border/60 bg-muted/40">
+          <ChartLayerToggle
+            fullWidth
+            data-testid="chart-layer-toggle"
+            ariaLabel="Chart layers — toggle to show or hide"
+            layers={LAYER_FILTER_ORDER.filter(
+              // CHART-XV: only surface the Declined segment when refused work exists —
+              // it's an uncommon state, so it stays out of the way until relevant.
+              (layer) => layer !== 'declined' || (declinedToothNumbers?.size ?? 0) > 0,
+            )}
+            visibleLayers={visibleLayers}
+            onToggle={toggleLayer}
+          />
         </div>
       )}
 
