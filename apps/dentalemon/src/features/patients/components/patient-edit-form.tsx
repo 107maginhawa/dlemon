@@ -15,6 +15,13 @@
  */
 
 import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@monobase/ui';
 
 export interface PatientEditData {
   firstName: string;
@@ -74,8 +81,6 @@ export function PatientEditForm({
   const [phone, setPhone] = useState(initial.phone);
   const [fieldError, setFieldError] = useState<string | null>(null);
 
-  if (!open) return null;
-
   function validate(): boolean {
     if (!firstName.trim()) {
       setFieldError('First name is required');
@@ -114,17 +119,14 @@ export function PatientEditForm({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Edit patient demographics"
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-    >
-      <div className="bg-background rounded-2xl p-6 w-full max-w-md shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Edit Patient Details</h2>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit patient details</DialogTitle>
+        </DialogHeader>
 
         {disabled && (
-          <p className="text-xs text-muted-foreground mb-3">
+          <p className="text-xs text-muted-foreground">
             This patient is archived and cannot be edited. Restore the patient to make changes.
           </p>
         )}
@@ -239,24 +241,24 @@ export function PatientEditForm({
           )}
 
           {/* Buttons */}
-          <div className="flex gap-3 justify-end mt-2">
+          <DialogFooter>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+              className="min-h-[44px] rounded-lg border border-border px-4 text-sm hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={disabled || saving}
-              className="px-4 py-2 min-h-[44px] rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? 'Saving…' : 'Save changes'}
             </button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

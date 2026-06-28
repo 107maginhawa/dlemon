@@ -8,6 +8,13 @@
  */
 
 import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@monobase/ui';
 
 // P1-28: per-channel communication consent captured at registration.
 export interface CommunicationChannelConsent {
@@ -51,8 +58,6 @@ export function PatientRegistrationModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!open) return null;
-
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!displayName.trim()) errs['name'] = 'Full name is required';
@@ -80,14 +85,11 @@ export function PatientRegistrationModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Register new patient"
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-    >
-      <div className="bg-background rounded-2xl p-6 w-full max-w-md shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Register New Patient</h2>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Register new patient</DialogTitle>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           {/* Full Name */}
@@ -194,24 +196,24 @@ export function PatientRegistrationModal({
           </fieldset>
 
           {/* Buttons */}
-          <div className="flex gap-3 justify-end mt-2">
+          <DialogFooter>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+              className="min-h-[44px] rounded-lg border border-border px-4 text-sm hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 min-h-[44px] rounded-lg bg-primary text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Register Patient
+              Register patient
             </button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

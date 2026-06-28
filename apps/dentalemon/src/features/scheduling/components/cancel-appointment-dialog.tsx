@@ -5,10 +5,19 @@
  * client-side (parity with the canonical DELETE cancel policy — see FIX-002), and
  * surfaces server errors instead of silently failing. Pure presentational: the
  * parent owns the SDK call (DELETE /dental/appointments/:id?reason=...) and the
- * role gate (owner/staff_full, EM-SCH-001).
+ * role gate (owner/staff_full, EM-SCH-001). Shell is the shared @monobase/ui Dialog
+ * (Radix): focus trap, Escape, focus return + X close all map to "keep appointment".
  */
 
 import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@monobase/ui';
 
 interface CancelAppointmentDialogProps {
   open: boolean;
@@ -33,8 +42,6 @@ export function CancelAppointmentDialog({
   const [reason, setReason] = useState('');
   const [touched, setTouched] = useState(false);
 
-  if (!open) return null;
-
   const trimmed = reason.trim();
   const valid = trimmed.length >= MIN && trimmed.length <= MAX;
 
@@ -46,18 +53,14 @@ export function CancelAppointmentDialog({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Cancel appointment"
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-    >
-      <div className="bg-background rounded-2xl p-6 w-full max-w-md shadow-lg">
-        <h2 className="text-xl font-semibold mb-1">Cancel Appointment</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          {patientLabel ? `Cancel ${patientLabel}'s appointment?` : 'Cancel this appointment?'} A
-          reason is required and recorded in the audit trail.
-        </p>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Cancel appointment</DialogTitle>
+          <DialogDescription>
+            {patientLabel ? `Cancel ${patientLabel}'s appointment?` : 'Cancel this appointment?'} Add a reason below — we'll save it to the audit trail.
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleConfirm} className="flex flex-col gap-3" noValidate>
           <div className="flex flex-col gap-1">
@@ -71,12 +74,12 @@ export function CancelAppointmentDialog({
               aria-label="Cancellation reason"
               rows={3}
               maxLength={MAX}
-              className="rounded-lg border border-border px-3 py-2 text-sm resize-none"
+              className="rounded-lg border border-border px-3 py-2 text-sm resize-none focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
               placeholder="e.g. Patient called to reschedule"
             />
             {touched && !valid && (
               <span className="text-xs text-destructive">
-                Reason must be {MIN}–{MAX} characters.
+                Please add a reason (at least {MIN} characters).
               </span>
             )}
             {error && (
@@ -86,24 +89,24 @@ export function CancelAppointmentDialog({
             )}
           </div>
 
-          <div className="flex gap-3 justify-end mt-2">
+          <DialogFooter>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition-colors"
+              className="min-h-[44px] rounded-lg border border-border px-4 text-sm hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Keep appointment
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
             >
               {saving ? 'Cancelling…' : 'Cancel appointment'}
             </button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -115,11 +115,11 @@ describe('PreCompletionChecklist — completion gate UI', () => {
     try {
       renderChecklist();
       await waitFor(() =>
-        expect(screen.getByText(/1 treatment\(s\) still diagnosed or planned/)).not.toBeNull(),
+        expect(screen.getByText(/1 treatment not done yet/)).not.toBeNull(),
       );
       // CR-02: with a warn present the affirmative button becomes "Complete anyway"
       expect(screen.getByRole('button', { name: 'Complete anyway' })).not.toBeNull();
-      expect(screen.queryByRole('button', { name: 'Complete Visit' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Complete visit' })).toBeNull();
     } finally {
       f.restore();
     }
@@ -132,10 +132,10 @@ describe('PreCompletionChecklist — completion gate UI', () => {
     try {
       renderChecklist({ onCompleted, onClose });
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Complete Visit' })).not.toBeNull(),
+        expect(screen.getByRole('button', { name: 'Complete visit' })).not.toBeNull(),
       );
 
-      await userEvent.setup().click(screen.getByRole('button', { name: 'Complete Visit' }));
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Complete visit' }));
 
       await waitFor(() => expect(f.patchCalls.length).toBeGreaterThan(0));
       expect(f.patchCalls[0].url).toContain('/dental/visits/v-1');
@@ -167,7 +167,7 @@ describe('PreCompletionChecklist — completion gate UI', () => {
 
       await waitFor(() =>
         expect(
-          screen.getByText(/still has open treatments\. Mark them performed or dismiss/),
+          screen.getByText(/still has open treatments\. Mark them done or dismiss/),
         ).not.toBeNull(),
       );
       // Hard gate: the dialog must NOT close on a rejected override.
