@@ -87,7 +87,7 @@ function ToothSelector({
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-[12px] font-medium text-muted-foreground">Tag teeth (optional)</p>
+      <p className="text-xs font-medium text-muted-foreground">Tag teeth (optional)</p>
       <div className="grid grid-cols-16 gap-0.5" style={{ gridTemplateColumns: 'repeat(16, 1fr)' }}>
         {renderRow(TEETH_UPPER)}
       </div>
@@ -178,7 +178,7 @@ function UploadZone({
           <span className="text-sm font-medium text-muted-foreground">
             {upload.isPending ? 'Uploading…' : 'Tap to upload'}
           </span>
-          <span className="text-[12px] text-muted-foreground/60">JPEG, PNG, PDF</span>
+          <span className="text-xs text-muted-foreground/60">JPEG, PNG, PDF</span>
         </div>
       </button>
       {uploadErrors.length > 0 && (
@@ -373,7 +373,7 @@ export function AttachmentsSheet({ visitId, patientId, open, onClose }: Attachme
 
               {/* Image type chips */}
               <div>
-                <p className="mb-1.5 text-[12px] font-medium text-muted-foreground">Image type</p>
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Image type</p>
                 <div className="flex gap-1.5 overflow-x-auto pb-0.5">
                   {IMAGE_TYPES.map((type) => (
                     <button
@@ -381,7 +381,7 @@ export function AttachmentsSheet({ visitId, patientId, open, onClose }: Attachme
                       type="button"
                       data-testid={`chip-${type}`}
                       onClick={() => setImageType(type)}
-                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                         imageType === type
                           ? 'bg-lemon text-lemon-foreground font-semibold'
                           : 'bg-muted text-muted-foreground'

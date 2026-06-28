@@ -63,7 +63,14 @@ import { join } from 'node:path';
 // (workspace-payment-modal, appointment-modal) migrated 11/13px -> text-xs/sm
 // and 15px totals/CTAs -> text-base, browser-verified no overflow. Residual
 // literals are text-[10px] (Micro) + dense chart internals (B3/B4/B5).
-const BASELINE = 120;
+// lowered to 97 — final completeness pass: route-level files
+// (_dashboard/calendar, _dashboard/billing, _workspace/queue-board) migrated
+// 11/13px -> text-xs/sm, and whole-app text-[12px]/[14px] (size-identical to
+// text-xs/text-sm) folded into the tokens. Zero off-scale literals remain. The
+// residual 97 are token-less BY DESIGN: text-[10px] Micro (no rem token below
+// text-xs/12px), text-[17px] DESIGN card-title (between text-base/16 and
+// text-lg/18), and a few sub-micro chart-label sizes (7-9px).
+const BASELINE = 97;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

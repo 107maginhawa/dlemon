@@ -115,7 +115,8 @@ Audited every remaining module for font/palette/className-hex deviations before 
 
 Baseline 149 → 136. Residual whole-app literals are text-[10px] (Micro role, no rem token) + the deferred B2 dense panels.
 
-### Status: all 12 module groups swept; backlog B1–B12 resolved.
+### Status: COMPLETE — all module groups + route-level files swept; backlog B1–B12 resolved.
+Final completeness pass caught 8 off-scale literals in route-level files (outside `src/features/`): `_dashboard/calendar.tsx`, `_dashboard/billing.tsx`, `_workspace/queue-board.tsx` — migrated. Also folded whole-app `text-[12px]`/`text-[14px]` (size-identical to the tokens) into `text-xs`/`text-sm`. **Zero off-scale (11/13/15px) literals remain app-wide; font ratchet 326 → 97.** The residual 97 px literals are token-less by design: `text-[10px]` Micro, `text-[17px]` DESIGN card-title, and a few 7–9px chart-label sizes.
 - **Done (code):** B2, B3, B4, B6, B7, B8, B12. Plus the 7-module sweep.
 - **Closed by decision (no change):** B1 (categorical role badges), B5 (print surface), B9 (imaging dark viewer), B11 (calendar event stripes).
 - **Deferred (low value, tracked):** B10 — imaging empty-state coverage. Most of the 28 imaging files are sub-components that don't warrant empty states; revisit only if imaging UX feedback calls for it.

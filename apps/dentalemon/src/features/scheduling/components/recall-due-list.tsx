@@ -101,7 +101,7 @@ export function RecallDueList({ branchId, onSchedule }: RecallDueListProps) {
           >
             <div className="min-w-0">
               <div className="text-sm font-semibold truncate">{recall.patientName || 'Unknown patient'}</div>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {TYPE_LABEL[recall.type]} · due {formatDueDate(recall.dueDate)}
                 {recall.sendAttempts > 0 && ` · ${recall.sendAttempts} reminder${recall.sendAttempts > 1 ? 's' : ''} sent`}
               </div>
