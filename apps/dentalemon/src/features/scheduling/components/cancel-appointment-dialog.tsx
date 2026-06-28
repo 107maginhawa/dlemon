@@ -9,7 +9,7 @@
  * (Radix): focus trap, Escape, focus return + X close all map to "keep appointment".
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,15 @@ export function CancelAppointmentDialog({
 }: CancelAppointmentDialogProps) {
   const [reason, setReason] = useState('');
   const [touched, setTouched] = useState(false);
+
+  // Reset transient form state each time the dialog opens so a prior appointment's
+  // half-typed reason never bleeds into the next one (the panel stays mounted).
+  useEffect(() => {
+    if (open) {
+      setReason('');
+      setTouched(false);
+    }
+  }, [open]);
 
   const trimmed = reason.trim();
   const valid = trimmed.length >= MIN && trimmed.length <= MAX;

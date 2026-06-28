@@ -7,7 +7,7 @@
  * trap, Escape, and focus return come from the primitive (Escape / overlay / X all map to
  * "keep visit", the non-destructive default). Pure presentational: the parent owns the SDK call.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,15 @@ const MAX = 500;
 export function DiscardVisitDialog({ open, error = null, saving = false, onClose, onConfirm }: DiscardVisitDialogProps) {
   const [reason, setReason] = useState('');
   const [touched, setTouched] = useState(false);
+
+  // Reset transient form state each open so a prior visit's half-typed discard
+  // reason never carries over (the panel stays mounted while open toggles).
+  useEffect(() => {
+    if (open) {
+      setReason('');
+      setTouched(false);
+    }
+  }, [open]);
 
   const trimmed = reason.trim();
   const valid = trimmed.length >= MIN && trimmed.length <= MAX;

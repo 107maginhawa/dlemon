@@ -72,7 +72,7 @@ export interface InvoiceDetailProps {
 }
 
 export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan, canWrite = true, openToPayment = false }: InvoiceDetailProps) {
-  useSheetA11y({ open, onClose });
+  useSheetA11y({ open, onClose: handleEscape });
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   // Quick-pay: auto-open the payment form when launched from the list row action.
@@ -421,6 +421,17 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     setShowPlanCreate(false);
     setMoreOpen(false);
     onClose();
+  }
+
+  // Escape: collapse the More menu first if it's open; otherwise close the sheet.
+  // useSheetA11y handles Escape in the capture phase with stopPropagation, so the
+  // menu's own onKeyDown never fires — route Escape through here instead.
+  function handleEscape() {
+    if (moreOpen) {
+      setMoreOpen(false);
+      return;
+    }
+    handleClose();
   }
 
   // Secondary/rare footer actions, collapsed behind the "More" menu. Built from
