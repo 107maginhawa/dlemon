@@ -35,7 +35,7 @@ export function AttentionQueue({ items, onSelect }: AttentionQueueProps) {
       data-testid="attention-queue"
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+        <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
           Needs attention
         </span>
       </div>
@@ -56,7 +56,7 @@ export function AttentionQueue({ items, onSelect }: AttentionQueueProps) {
               <span className={`text-sm font-semibold tabular-nums ${TONE_COUNT[item.tone]}`}>
                 {item.count}
               </span>
-              <span className="text-[13px] text-muted-foreground truncate min-w-0">
+              <span className="text-sm text-muted-foreground truncate min-w-0">
                 {item.label}
               </span>
             </button>

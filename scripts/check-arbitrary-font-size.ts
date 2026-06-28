@@ -53,7 +53,9 @@ import { join } from 'node:path';
 // recall-due-list and queue-board 11/13/15px literals -> text-xs/sm/base. The
 // appointment-modal (DESIGN-exempt transactional panel) keeps its 1 literal,
 // deferred with the workspace-payment-modal (B2).
-const BASELINE = 163;
+// lowered to 149 — dashboard pass: metric-card, morning-briefing,
+// attention-queue, kpi-ribbon, schedule-timeline 11/13px -> text-xs/sm.
+const BASELINE = 149;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

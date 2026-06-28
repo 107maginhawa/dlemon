@@ -101,5 +101,9 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 - **appointment-modal** (1 literal) left untouched — it's the second DESIGN-exempt transactional panel; folded into **B2** (handle both exempt panels together in a verified pass).
 - **B11** Appointment/calendar cards use **side-stripe status borders** (`border-l-*`), which impeccable flags as an anti-pattern. It's the calendar's established status language; replacing it (full borders / bg tints / leading status dot) is a redesign needing design review, not a token swap. Colors are now tokenized; the pattern decision is deferred. P2.
 
+### From module 6 — dashboard ✅
+- Migrated 14 off-scale literals (metric-card, morning-briefing, attention-queue, kpi-ribbon, schedule-timeline) → text-xs/sm. Baseline 163 → 149. Palette already clean (the morning-briefing hex is JS chart data, not className).
+- **B12** Dashboard home has no error-state UI for its data fetches (schedule/kpi/attention; only morning-briefing handles error). Adding error/empty fallbacks is feature work (needs error UI + wiring), scoped separately from the token sweep. P1.
+
 ### Remaining modules (not yet swept)
-dashboard → patients → settings → reports → portal → case-presentation → onboarding/auth/booking.
+patients → settings → reports → portal → case-presentation → onboarding/auth/booking.

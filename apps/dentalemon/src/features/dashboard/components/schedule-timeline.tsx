@@ -47,7 +47,7 @@ function StatusPill({ status }: { status: string }) {
   const pill = STATUS_PILL[status] ?? SCHEDULED_PILL;
   return (
     <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap ${pill.className}`}
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${pill.className}`}
     >
       {pill.label}
     </span>
@@ -70,7 +70,7 @@ export function ScheduleTimeline({
       data-testid="schedule-timeline"
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+        <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
           Today
         </span>
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -123,17 +123,17 @@ export function ScheduleTimeline({
                 <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                   {getInitials(appt.patientName)}
                 </div>
-                <span className="text-[13px] font-medium truncate min-w-0">
+                <span className="text-sm font-medium truncate min-w-0">
                   {appt.patientName ?? appt.patientId}
                 </span>
-                <span className="text-[11px] text-muted-foreground whitespace-nowrap ml-auto">
+                <span className="text-xs text-muted-foreground whitespace-nowrap ml-auto">
                   {appt.serviceType ?? '—'}
                 </span>
                 <StatusPill status={appt.status} />
                 {showFinancials && appt.balanceCents != null && appt.balanceCents > 0 && (
                   <span
                     data-testid={`appt-balance-flag-${appt.id}`}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums bg-destructive/15 text-destructive-emphasis whitespace-nowrap"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold tabular-nums bg-destructive/15 text-destructive-emphasis whitespace-nowrap"
                   >
                     {formatCents(appt.balanceCents)}
                   </span>
