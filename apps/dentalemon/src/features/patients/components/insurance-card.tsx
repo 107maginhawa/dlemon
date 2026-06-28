@@ -231,7 +231,7 @@ function InsuranceProfileForm({
       <div data-testid="insurance-form" className="relative w-full max-w-[480px] max-h-[calc(100vh-80px)] bg-background rounded-2xl shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 h-[52px] border-b flex-shrink-0">
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">

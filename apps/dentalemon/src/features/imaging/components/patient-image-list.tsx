@@ -111,7 +111,7 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
         </div>
         <Sheet open={uploadOpen} onOpenChange={setUploadOpen}>
           <SheetTrigger asChild>
-            <button className="flex h-9 w-full items-center justify-center rounded-md bg-lemon text-black text-xs font-semibold hover:bg-lemon-hover">
+            <button className="flex h-9 coarse:min-h-[44px] w-full items-center justify-center rounded-md bg-lemon text-black text-xs font-semibold hover:bg-lemon-hover">
               Upload Image
             </button>
           </SheetTrigger>

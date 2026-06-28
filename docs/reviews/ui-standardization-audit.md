@@ -88,7 +88,7 @@ Tracked here so nothing is silently dropped. None block shipping; each needs its
 
 ### Cross-cutting (whole-app, after the module sweep)
 - **B6** ✅ DONE — `focus-visible` coverage gap (~69 hand-rolled-button files lacked a keyboard ring). Fixed with ONE `@layer base` rule in `globals.css` (`a/button/[role=button]/tab/menuitem/switch/option/summary :focus-visible → 2px lemon outline + offset`). shadcn/Radix primitives keep their own ring (their `focus-visible:outline-none` in the utilities layer wins by @layer order), so no double-ring. Verified: bare buttons get the outline, primitives don't. Note: lemon-on-white outline is low-contrast by the app's existing focus aesthetic — strengthening the focus indicator app-wide (darker/companion ring for WCAG 2.4.11) is a separate design-system call if wanted.
-- **B7** Sub-44px interactive targets (X7, ~9 sites) — spot-fixed opportunistically per module; do a final grep sweep to catch stragglers. P1.
+- **B7** ✅ DONE — sub-44px touch targets: insurance-card close 36→44px; imaging viewer rotate/flip 40→44px; apply-template-button, patient-image-list upload, claim-detail Cancel → `coarse:min-h-[44px]` (44px on touch, compact on mouse). Calendar appointment chips (`min-h-[30px]`) intentionally excluded — they're sized to time-duration; forcing 44px breaks the time grid (tap-to-open handles touch).
 - **B8** Untrapped overlay triage (X4) — `apply-template-button`, `reports/invoice-detail-sheet`, `patients/patient-statement` (verify real-modal vs print); `chart-export-overlay` is a `window.print` surface, likely exempt. P2.
 
 ### From module 4 — imaging ✅ (safe slice only)

@@ -59,7 +59,7 @@ function ApplyTemplateMenu({ visitId, patientId }: ApplyTemplateButtonProps) {
         disabled={isPending}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border text-xs font-semibold hover:bg-secondary transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 h-9 coarse:min-h-[44px] px-3 rounded-lg border border-border text-xs font-semibold hover:bg-secondary transition-colors disabled:opacity-50"
       >
         {isPending ? 'Applying…' : '+ Apply Template'}
       </button>

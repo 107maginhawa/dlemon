@@ -171,7 +171,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                               <td className="px-3 py-2">
                                 <div className="flex items-center gap-1.5 justify-end">
                                   <button type="button" onClick={() => handleSaveLine(l.id)} disabled={isMutating} data-testid={`save-line-${l.id}`} className="h-9 px-3 rounded-lg bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none">Save</button>
-                                  <button type="button" onClick={() => setEditingId(null)} className="h-9 px-3 min-w-[4rem] rounded-lg border border-border text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring outline-none">Cancel</button>
+                                  <button type="button" onClick={() => setEditingId(null)} className="h-9 coarse:min-h-[44px] px-3 min-w-[4rem] rounded-lg border border-border text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring outline-none">Cancel</button>
                                 </div>
                               </td>
                             </tr>
