@@ -68,16 +68,14 @@ test.describe('Role Gates: staff_scheduling blocked from clinical writes', () =>
     const schedCtx = await browser.newContext();
     const schedPage = await schedCtx.newPage();
 
-    // Sign up scheduling user
+    // Sign up scheduling user via the API (not the UI form). Submitting the
+    // sign-up form kicks off a post-auth redirect chain; the immediately-following
+    // page.evaluate then raced it ("Execution context was destroyed … navigation")
+    // under CI's slower timing. Loading a stable page once and signing up over
+    // fetch removes the navigation entirely.
     await schedPage.goto(`${APP}/auth/sign-up`);
-    await schedPage.waitForLoadState('networkidle');
-    await schedPage.getByLabel('Name', { exact: true }).fill(`G1 Scheduling ${suffix}`);
-    await schedPage.getByLabel('Email', { exact: true }).fill(schedEmail);
-    const schedPw = schedPage.locator('input[type="password"]');
-    await schedPw.click();
-    await schedPw.pressSequentially('E2eTestPass123!', { delay: 10 });
-    await schedPage.getByRole('button', { name: /create an account/i }).click();
-    await schedPage.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+    await schedPage.waitForLoadState('domcontentloaded');
+    await signUpApi(schedPage, schedEmail, `G1 Scheduling ${suffix}`);
     await schedPage.evaluate(async (api: string) => {
       await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
     }, API);
