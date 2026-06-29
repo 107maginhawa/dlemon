@@ -11,7 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
-import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
+import { releaseTreatmentsForInvoice } from '@/handlers/dental-visit/repos/visit-billing.facade';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -66,7 +66,7 @@ export async function voidDentalInvoice(
     // billedInvoiceId stays set and the patient can never be re-invoiced
     // (createDentalInvoice → TREATMENT_ALREADY_BILLED 422) and the visit can't be
     // discarded (discardVisit hasBilledWork). Same withTenantTx scope as the void.
-    await new TreatmentRepository(tx).clearBilledInvoiceId(invoiceId);
+    await releaseTreatmentsForInvoice(tx, invoiceId);
     return row;
   });
 

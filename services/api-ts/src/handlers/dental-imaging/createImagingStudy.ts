@@ -23,8 +23,7 @@ import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { getImagingTierForBranch } from '@/handlers/dental-org/repos/org-imaging.facade';
 import { ImagingRepository } from './repos/imaging.repo';
 import { ALLOWED_IMAGING_MIME_TYPES, type AllowedImagingMimeType, type ImagingModality } from './repos/imaging.schema';
-import { StorageFileRepository } from '@/handlers/storage/repos/file.repo';
-import type { NewStoredFile } from '@/handlers/storage/repos/file.schema';
+import { createMultipartUploadFile } from '@/handlers/storage/repos/multipart-upload.facade';
 import { logAuditEvent } from '@/core/audit-logger';
 
 // P1-9: route large DICOM/CBCT payloads (~50 MB pano) through the S3 multipart
@@ -176,16 +175,14 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     // handler) so completeMultipartUpload / abortMultipartUpload — which look the
     // file up by id — can find it. Without this, every large-DICOM/CBCT multipart
     // upload 404s on complete/abort and can never finish.
-    const storageRepo = new StorageFileRepository(db, ctx.get('logger'));
-    await storageRepo.createOne({
-      id: fileId,
+    await createMultipartUploadFile(db, ctx.get('logger'), {
+      fileId,
       filename: body.filename,
       mimeType: body.mimeType,
       size: body.size,
-      status: 'uploading',
       owner: user.id,
-    } as NewStoredFile);
-    await storageRepo.updateOneById(fileId, { multipartUploadId: uploadId });
+      uploadId,
+    });
     partSize = MULTIPART_PART_SIZE_BYTES;
     partCount = Math.ceil(body.size / MULTIPART_PART_SIZE_BYTES);
     partUrls = [];

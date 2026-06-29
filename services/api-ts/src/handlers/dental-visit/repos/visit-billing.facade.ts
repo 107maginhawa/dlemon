@@ -68,3 +68,15 @@ export async function markTreatmentsAsBilled(
 ): Promise<void> {
   return new TreatmentRepository(db).setBilledInvoiceId(treatmentIds, invoiceId);
 }
+
+/**
+ * G-01: release every treatment billed to `invoiceId` (billedInvoiceId → null) so
+ * a voided invoice's treatments become billable again. Called from dental-billing's
+ * voidDentalInvoice via this facade (never the treatment repo directly).
+ */
+export async function releaseTreatmentsForInvoice(
+  db: DatabaseInstance,
+  invoiceId: string,
+): Promise<void> {
+  return new TreatmentRepository(db).clearBilledInvoiceId(invoiceId);
+}
