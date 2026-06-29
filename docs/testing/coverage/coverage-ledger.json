@@ -196,8 +196,8 @@
       "notes": "archiveOldLogs(daysOld=365): bulk UPDATE flips retentionStatus active->archived where createdAt <= now-daysOld, stamping archivedAt + archivedBy + updatedAt. Returns count of rows archived. HIPAA 1-year active retention window."
     },
     {
-      "id": "audit-retention-purge-after-7yr",
-      "title": "Purge archived logs older than 7 years (archived -> pending-purge -> delete)",
+      "id": "audit-retention-never-purges",
+      "title": "Audit trail is append-only and is NEVER purged",
       "type": "business-rule",
       "modules": [
         "audit"
@@ -214,11 +214,11 @@
       "requiredLayers": [
         "be-unit"
       ],
-      "notes": "purgeArchivedLogs(daysOld=2555): two-step \u2014 first marks archived rows older than now-2555d as pending-purge, then hard-DELETEs all pending-purge rows, returning purged count. 2555 days = 7 years (HIPAA/GDPR minimum retention before destruction). The ONLY physical-delete path in the module."
+      "notes": "The audit trail is append-only and is NEVER deleted. The cron job audit.retention archives logs older than 1 year (active->archived) but performs NO physical deletes (plan 016 removed the purge step). The 'archived' status is terminal \u2014 no rows are ever deleted from audit_log_entry. See handlers/retention/retention-targets.ts (protected/retain) and DATA_GOVERNANCE.md \u00a72/\u00a73/\u00a77."
     },
     {
       "id": "audit-retention-status-fsm",
-      "title": "Audit retention lifecycle FSM (active -> archived -> pending-purge -> deleted)",
+      "title": "Audit retention lifecycle FSM (active -> archived; terminal — never purged)",
       "type": "business-rule",
       "modules": [
         "audit"
@@ -235,7 +235,7 @@
       "requiredLayers": [
         "be-unit"
       ],
-      "notes": "retentionStatus enum {active, archived, pending-purge}; new rows default 'active'. Forward-only transitions: logEvent sets active; archiveOldLogs active->archived; purgeArchivedLogs archived->pending-purge then physical delete. No backward transition. Filterable via retentionStatus query param + buildWhereConditions."
+      "notes": "retentionStatus enum {active, archived, pending-purge}; new rows default 'active'. Forward-only transitions: logEvent sets active; archiveOldLogs active->archived; 'archived' is terminal (append-only trail — no deletion ever, plan 016). The 'pending-purge' enum value is retained in the schema for historical compatibility but the cron never transitions rows to it. No backward transition. Filterable via retentionStatus query param + buildWhereConditions."
     },
     {
       "id": "billing-capture-authz-provider-or-admin",

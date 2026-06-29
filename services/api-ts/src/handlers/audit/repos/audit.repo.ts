@@ -253,45 +253,6 @@ export class AuditRepository extends DatabaseRepository<AuditLogEntry, NewAuditL
   }
 
   /**
-   * Purge archived audit logs (background job method)
-   * Permanently deletes logs with 'pending-purge' status older than specified days (default: 2555 days = 7 years for HIPAA)
-   */
-  async purgeArchivedLogs(daysOld: number = 2555): Promise<number> {
-    this.logger?.debug({ daysOld }, 'Starting log purge process');
-
-    const purgeDate = subDays(new Date(), daysOld);
-
-    // First, mark archived logs for purging if they exceed the retention period
-    await this.db
-      .update(auditLogEntries)
-      .set({
-        retentionStatus: 'pending-purge',
-        updatedAt: new Date()
-      })
-      .where(and(
-        eq(auditLogEntries.retentionStatus, 'archived'),
-        lte(auditLogEntries.createdAt, purgeDate)
-      ));
-
-    // Then, permanently delete logs marked as pending-purge
-    const result = await this.db
-      .delete(auditLogEntries)
-      .where(eq(auditLogEntries.retentionStatus, 'pending-purge'))
-      .returning({ id: auditLogEntries.id });
-
-    const purgedCount = result.length;
-
-    this.logger?.info({
-      purgedCount,
-      purgeDate: purgeDate.toISOString(),
-      daysOld
-    }, 'Log purge completed');
-
-    return purgedCount;
-  }
-
-
-  /**
    * Get audit statistics for compliance dashboards
    */
   async getAuditStatistics(): Promise<{

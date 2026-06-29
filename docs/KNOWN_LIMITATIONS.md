@@ -8,7 +8,7 @@ are tracked here so a new developer is not surprised. Last reviewed: 2026-06-13.
 
 | Location | Note |
 |----------|------|
-| `services/api-ts/src/core/audit.ts:45,78` | `markForPurging` retention method not yet implemented in the repository (audit purge is a no-op). |
+| `services/api-ts/src/handlers/retention/retention-targets.ts` | Audit trail is append-only by design — never purged. The vestigial `markForPurging` stub and the live `purgeArchivedLogs` cron call were removed (plan 016). `archived` is terminal; no rows are ever deleted from `audit_log_entry`. |
 | `services/api-ts/src/handlers/billing/createInvoice.ts:119` | `const tax = 0` — jurisdiction-based tax calculation not implemented (configurable via `TAX_RATE_PCT`, defaults 0). |
 | `services/api-ts/src/handlers/billing/markInvoiceUncollectible.ts:93` | Post-write-off cleanup hooks not yet wired. |
 | `services/api-ts/src/handlers/comms/joinVideoCall.ts:210` | WebRTC join currently reuses the session token; a short-lived WebRTC-scoped JWT is planned. (comms is latent in the dentalemon product.) |

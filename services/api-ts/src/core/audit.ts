@@ -35,18 +35,12 @@ export interface AuditService {
   
   /**
    * Archive old audit logs (maintenance task)
-   * Called periodically to move logs from active to archived status
+   * Called periodically to move logs from active to archived status.
+   * The audit trail is append-only and is NEVER purged — archival only
+   * changes retention_status; no rows are ever deleted.
    */
   archiveOldLogs(archiveAfterDays?: number): Promise<number>;
-  
-  /**
-   * Mark expired logs for purging (maintenance task)
-   * Called periodically to identify logs exceeding retention period
-   * TODO: Not yet implemented
-   */
-  markForPurging?(): Promise<number>;
-  
-  
+
   /**
    * Get audit statistics (for compliance dashboards)
    * Returns summary statistics for compliance monitoring
@@ -75,16 +69,13 @@ class AuditServiceImpl implements AuditService {
     this.logEvent = this.repo.logEvent.bind(this.repo);
     this.verifyIntegrity = this.repo.verifyIntegrity.bind(this.repo);
     this.archiveOldLogs = this.repo.archiveOldLogs.bind(this.repo);
-    // TODO: markForPurging method not implemented in repository yet
-    // this.markForPurging = this.repo.markForPurging.bind(this.repo);
     this.getAuditStatistics = this.repo.getAuditStatistics.bind(this.repo);
   }
-  
+
   // Method declarations
   logEvent: AuditService['logEvent'];
   verifyIntegrity: AuditService['verifyIntegrity'];
   archiveOldLogs: AuditService['archiveOldLogs'];
-  markForPurging?: AuditService['markForPurging'];
   getAuditStatistics: AuditService['getAuditStatistics'];
 }
 
