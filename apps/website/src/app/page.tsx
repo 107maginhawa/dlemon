@@ -10,6 +10,7 @@ import {
   DownloadSimple,
   Infinity as InfinityIcon,
   Check,
+  X,
   CloudCheck,
 } from "@phosphor-icons/react/dist/ssr"
 import { Logo, LemonMark } from "@/components/logo"
@@ -146,6 +147,17 @@ export default function Home() {
               </p>
             </Reveal>
 
+            {/* Right side: illustration painted as a background on the column so
+                it fills the panel rather than sitting as an inline image. White
+                art blends into the white section, so no scrim/crop needed. */}
+            <Reveal
+              delay={120}
+              role="img"
+              aria-label="An owner-dentist in her bright clinic reviewing a patient's unified timeline on Dentalemon, running on her iPad."
+              className="order-2 mx-auto aspect-[764/693] w-full max-w-md bg-[url('/images/hero-dentist.png')] bg-contain bg-center bg-no-repeat lg:max-w-none"
+            />
+
+            {/* Previous layout (inline image) — kept for easy revert:
             <Reveal delay={120} className="order-2">
               <Image
                 src="/images/hero-2.png"
@@ -157,39 +169,50 @@ export default function Home() {
                 className="mx-auto h-auto w-full max-w-md lg:max-w-none"
               />
             </Reveal>
+            */}
           </div>
         </section>
 
         {/* ---- Problem beat (provoke) ---- */}
         <section className="border-y border-line bg-paper">
-          <div className="mx-auto max-w-5xl px-5 py-20 sm:py-28">
-            <Reveal>
-              <h2 className="max-w-3xl text-[clamp(1.9rem,4vw,3rem)] font-bold leading-tight text-ink">
-                You own every chair in your clinic. You don&rsquo;t own a single tool that runs it.
-              </h2>
-              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-                The chairs are yours. The instruments are yours. The lease, the
-                lights, the people. But the software holding every patient
-                record, every schedule, every peso owed? You rent it. Every
-                month. And the day you stop paying, it all locks behind a wall
-                you do not control.
-              </p>
-            </Reveal>
-            <Reveal delay={120}>
-              <div className="mt-12 flex flex-wrap gap-2.5">
-                {["Patient records", "The schedule", "Billing and balances", "Every chart you've ever drawn"].map(
-                  (item) => (
-                    <span
-                      key={item}
-                      className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-muted"
-                    >
-                      <span className="text-[#B23A2E]">Rented</span>
-                      <span className="h-3 w-px bg-line" />
-                      {item}
-                    </span>
-                  ),
-                )}
-              </div>
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 sm:py-28 lg:grid-cols-2 lg:gap-14">
+            <div className="order-1 lg:order-2">
+              <Reveal>
+                <h2 className="max-w-2xl text-[clamp(1.9rem,4vw,3rem)] font-bold leading-tight text-ink">
+                  You own every chair in your clinic. You don&rsquo;t own a single tool that runs it.
+                </h2>
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+                  The chairs are yours. The instruments are yours. The lease, the
+                  lights, the people. But the software holding every patient
+                  record, every schedule, every peso owed? You rent it. Every
+                  month. And the day you stop paying, it all locks behind a wall
+                  you do not control.
+                </p>
+              </Reveal>
+              <Reveal delay={120}>
+                <ul className="mt-10 max-w-md divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+                  {["Patient records", "The schedule", "Billing and balances", "Every chart you've ever drawn"].map(
+                    (item) => (
+                      <li key={item} className="flex items-center gap-3.5 px-4 py-3.5">
+                        <span className="inline-flex w-[4.75rem] flex-shrink-0 justify-center rounded-md bg-[#B23A2E] px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
+                          Rented
+                        </span>
+                        <span className="text-[0.975rem] font-medium text-ink">{item}</span>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </Reveal>
+            </div>
+            <Reveal delay={120} className="order-2 lg:order-1">
+              <Image
+                src="/images/rent.png"
+                alt="A dental operatory where the chair and instruments are tagged 'Owned', but the laptop runs a monthly software subscription marked 'Rent' — printing an endless receipt of monthly charges."
+                width={1448}
+                height={1086}
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="mx-auto h-auto w-full max-w-lg lg:max-w-none"
+              />
             </Reveal>
           </div>
         </section>
@@ -217,34 +240,50 @@ export default function Home() {
               </p>
             </Reveal>
 
+            {/* Not two matching cards: the argument lives in the asymmetry.
+                Renting recedes (flat, tinted, crossed out); owning is the
+                chosen, elevated surface. */}
             <Reveal delay={140}>
-              <div className="mt-16 grid gap-5 md:grid-cols-2">
-                <div className="rounded-3xl border border-line bg-white p-8 sm:p-10">
-                  <h3 className="text-xl font-semibold text-muted">What renting buys you</h3>
-                  <ul className="mt-6 space-y-4">
+              <div className="mt-16 grid items-start gap-5 md:grid-cols-2 md:gap-6">
+                {/* Renting — the rejected option, visually diminished */}
+                <div className="rounded-3xl border border-ink/10 bg-ink/[0.035] p-8 sm:p-9 md:mt-6">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                    What renting buys you
+                  </h3>
+                  <ul className="mt-6 space-y-3.5">
                     {renting.map((line) => (
-                      <li key={line} className="flex items-start gap-3 text-muted">
-                        <span aria-hidden className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-muted/40" />
-                        <span className="text-[0.975rem] leading-snug line-through decoration-muted/40">{line}</span>
+                      <li key={line} className="flex items-start gap-3 text-ink/75">
+                        <X
+                          weight="bold"
+                          size={16}
+                          className="mt-0.5 flex-shrink-0 text-[#B23A2E]/70"
+                          aria-hidden
+                        />
+                        <span className="text-[0.975rem] leading-snug">{line}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-                <div className="rounded-3xl bg-white p-8 ring-1 ring-lemon/50 sm:p-10">
-                  <h3 className="flex items-center gap-2 text-xl font-semibold text-ink">
+
+                {/* Owning — the chosen option, elevated and lemon-blessed */}
+                <div className="relative rounded-3xl bg-white p-8 shadow-[0_24px_60px_-24px_rgba(244,196,48,0.55)] ring-1 ring-lemon/60 sm:p-9">
+                  <h3 className="flex items-center gap-2 text-xl font-bold text-ink">
                     <LemonMark className="h-5 w-5" />
                     What owning buys you
                   </h3>
-                  <ul className="mt-6 space-y-4">
+                  <ul className="mt-6 space-y-3.5">
                     {owning.map((line) => (
                       <li key={line} className="flex items-start gap-3 text-ink">
                         <span className="mt-0.5 flex-shrink-0 text-sage">
                           <Check weight="bold" size={18} />
                         </span>
-                        <span className="text-[0.975rem] font-medium leading-snug">{line}</span>
+                        <span className="text-[1.0625rem] font-medium leading-snug">{line}</span>
                       </li>
                     ))}
                   </ul>
+                  <p className="mt-7 border-t border-line pt-5 text-sm font-semibold text-ink/70">
+                    Buy once. Own forever.
+                  </p>
                 </div>
               </div>
             </Reveal>
