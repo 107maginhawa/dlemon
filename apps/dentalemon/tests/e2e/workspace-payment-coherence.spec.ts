@@ -89,14 +89,16 @@ test.describe('Workspace payment coherence (BR-009: billable = performed|verifie
     const patientId = await createDentalPatient(page, { displayName: 'All Planned Patient', branchId });
     const visitId = await createActiveVisit(page, { patientId, branchId, memberId });
 
-    // Two PLANNED treatments — nothing billable (the screenshot scenario).
+    // Two PLANNED treatments — nothing billable (the screenshot scenario). One has a
+    // deliberately LONG name to stress the row grid (the clip repro).
     await createTreatment(page, {
       visitId, patientId, toothNumber: 17, priceCents: 450000, cdtCode: 'D2330',
-      description: 'Resin composite', advanceTo: 'planned',
+      description: 'Resin composite #17 — two surfaces, established patient comprehensive',
+      advanceTo: 'planned',
     });
     await createTreatment(page, {
       visitId, patientId, toothNumber: 28, priceCents: 80000, cdtCode: 'D0120',
-      description: 'Periodic oral evaluation', advanceTo: 'planned',
+      description: 'Periodic oral evaluation - established patient', advanceTo: 'planned',
     });
 
     await gotoApp(page, `/${patientId}`);
@@ -120,6 +122,57 @@ test.describe('Workspace payment coherence (BR-009: billable = performed|verifie
     await expect(page.getByTestId('estimate-section')).toBeVisible();
     await expect(page.getByTestId('no-billable-note')).toBeVisible();
     await expect(page.getByTestId('estimate-done-btn')).toBeVisible();
+
+    // NOT a dead-end: every estimate row offers an in-place forward action.
+    await expect(page.locator('[data-testid^="mark-performed-"]').first()).toBeVisible();
+
+    // RENDERED-LAYOUT GATE (the class impeccable's static audit can't see): no element
+    // in the modal may extend past the card's right edge — the long treatment name must
+    // ellipsize, not push the Amount column off-screen (the reported clip).
+    const overflowPx = await modal.evaluate((m) => {
+      const card = m.firstElementChild as HTMLElement; // the rounded modal card
+      const cardRight = card.getBoundingClientRect().right;
+      let max = 0;
+      for (const el of Array.from(m.querySelectorAll('*'))) {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        if (r.width > 0) max = Math.max(max, Math.round(r.right - cardRight));
+      }
+      return max;
+    });
+    expect(overflowPx, 'no modal element may overflow the card (amount-column clip)').toBeLessThanOrEqual(1);
+  });
+
+  test('estimate dead-end is gone: Mark done on a planned row makes it billable in place', async ({ page }) => {
+    const { branchId, memberId } = await setupDentalOrg(page);
+    const patientId = await createDentalPatient(page, { displayName: 'Mark Done Inline', branchId });
+    const visitId = await createActiveVisit(page, { patientId, branchId, memberId });
+    // Consent is required before a treatment can advance to performed.
+    await signVisitConsent(page, { branchId, visitId, patientId });
+
+    const txId = await createTreatment(page, {
+      visitId, patientId, toothNumber: 17, priceCents: 450000, cdtCode: 'D2330',
+      description: 'Resin composite', advanceTo: 'planned',
+    });
+
+    await gotoApp(page, `/${patientId}`);
+    await page.waitForLoadState('networkidle');
+
+    const footerBtn = page.getByTestId('continue-to-payment-btn');
+    await expect(footerBtn).toBeVisible({ timeout: 15000 });
+    await expect(footerBtn).toHaveText(/estimate/i);
+    await footerBtn.click();
+    await expect(page.getByTestId('workspace-payment-modal')).toBeVisible();
+
+    // Start in the dead-end state: estimate only, no payable subtotal.
+    await expect(page.getByTestId('subtotal-row')).toHaveCount(0);
+
+    // Tap the in-modal forward action → the treatment becomes performed (billable).
+    await page.getByTestId(`mark-performed-${txId}`).click();
+
+    // The modal flips: a payable Subtotal + the Create Invoice & Pay CTA now exist,
+    // without leaving the modal — the dead-end is resolved.
+    await expect(page.getByTestId('subtotal-row')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('create-invoice-btn')).toBeVisible();
   });
 
   test('mixed visit: payable subtotal + invoice total are the PERFORMED subset only', async ({ page }) => {

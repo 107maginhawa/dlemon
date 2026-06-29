@@ -229,7 +229,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                   <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
                     {getInitials(appt.patientName)}
                   </div>
-                  <span className="text-sm font-medium truncate">
+                  <span className="min-w-0 flex-1 text-sm font-medium truncate">
                     {appt.patientName ?? appt.patientId}
                   </span>
                   <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">

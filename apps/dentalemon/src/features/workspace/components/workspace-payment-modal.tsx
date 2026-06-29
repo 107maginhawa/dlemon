@@ -16,9 +16,10 @@
  *
  * Wireframe: docs/prd/context/wireframes/ws-payment-modal.html
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
+import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
 import { splitBillable, isBillableStatus } from '../lib/billable';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { InvoiceDetail } from '@/features/billing/components/invoice-detail';
@@ -58,7 +59,11 @@ function formatCents(cents: number): string {
   })}`;
 }
 
-const GRID = '1fr 72px 64px 80px';
+// minmax(0,1fr) — NOT '1fr' (= minmax(auto,1fr)): a long treatment name would
+// otherwise expand the track to its min-content width and push the Amount column
+// off the 520px card (the `truncate` below is defeated without a 0 min). Pair with
+// `min-w-0` on the treatment cell so the ellipsis actually engages.
+const GRID = 'minmax(0,1fr) 72px 64px 80px';
 
 function statusConfig(status: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
@@ -76,45 +81,87 @@ function statusConfig(status: string): { label: string; className: string } {
 // Line item row
 // ---------------------------------------------------------------------------
 
-function LineItemRow({ item }: { item: PaymentLineItem }) {
+function LineItemRow({
+  item,
+  onMarkPerformed,
+  marking,
+  errored,
+}: {
+  item: PaymentLineItem;
+  /** Present only for estimate (planned) rows on an editable visit — advances the
+   *  treatment to performed so it becomes billable in place (no leaving the modal). */
+  onMarkPerformed?: () => void;
+  marking?: boolean;
+  errored?: boolean;
+}) {
   // "Done" == billable (the server invoices these). Real statuses are
   // performed|verified; the SoT keeps this row honest (a performed item never
   // shows "Pending").
   const isDone = isBillableStatus(item.status);
+  const showAction = !isDone && !!onMarkPerformed;
   return (
     <div
       data-testid={`line-item-${item.id}`}
       className="grid gap-1 border-b border-border py-2.5 last:border-0"
       style={{ gridTemplateColumns: GRID, alignItems: 'center' }}
     >
-      <div>
+      {/* min-w-0 lets the treatment name truncate instead of expanding the track */}
+      <div className="min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
         <p className="text-xs text-muted-foreground">
           {item.cdtCode && <span className="mr-1">{item.cdtCode}</span>}
           {item.toothNumber && <span>T{item.toothNumber}</span>}
         </p>
       </div>
-      <div
-        className="text-right"
-        role="img"
-        aria-label={isDone ? 'Status: performed' : 'Status: planned'}
-      >
-        {isDone ? (
-          <CheckCircle2 className="ml-auto h-5 w-5 text-success" />
-        ) : (
-          <Clock className="ml-auto h-5 w-5 text-muted-foreground" />
-        )}
-      </div>
-      <div className="text-right">
-        <span className={`text-xs font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
-          {isDone ? 'Done' : 'Planned'}
-        </span>
-      </div>
+      {showAction ? (
+        // Forward action: mark this planned treatment performed → it becomes billable
+        // and the modal flips to "Create Invoice & Pay" (no dead-end "Done").
+        <div className="text-right" style={{ gridColumn: 'span 2' }}>
+          <button
+            type="button"
+            data-testid={`mark-performed-${item.id}`}
+            disabled={marking}
+            onClick={onMarkPerformed}
+            className="ml-auto inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg border border-border px-2.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {marking ? 'Marking…' : 'Mark done'}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div
+            className="text-right"
+            role="img"
+            aria-label={isDone ? 'Status: performed' : 'Status: planned'}
+          >
+            {isDone ? (
+              <CheckCircle2 className="ml-auto h-5 w-5 text-success" />
+            ) : (
+              <Clock className="ml-auto h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+          <div className="text-right">
+            <span className={`text-xs font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
+              {isDone ? 'Done' : 'Planned'}
+            </span>
+          </div>
+        </>
+      )}
       <div className="text-right">
         <span className={`text-sm font-medium tabular-nums ${item.priceCents === 0 ? 'text-muted-foreground' : ''}`}>
           {formatCents(item.priceCents)}
         </span>
       </div>
+      {errored && (
+        <p
+          data-testid={`mark-performed-error-${item.id}`}
+          className="col-span-full mt-1 text-right text-xs text-destructive"
+          role="alert"
+        >
+          Couldn’t mark performed — a signed consent may be required first.
+        </p>
+      )}
     </div>
   );
 }
@@ -211,6 +258,16 @@ export function WorkspacePaymentModal({
 
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
   const { containerRef } = useSheetA11y({ open, onClose });
+
+  // Forward action for the estimate state: advance a planned treatment to performed
+  // in place (same hook + 2-step FSM as the treatment table), so the modal is never a
+  // dead-end. Success invalidates the treatments query → the parent re-feeds lineItems
+  // → the row moves estimate→billable and the CTA flips to "Create Invoice & Pay".
+  const { markDone, isPending: isMarkDonePending, isError: isMarkDoneError } = useMarkTreatmentDone();
+  const [markActingId, setMarkActingId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isMarkDoneError) setMarkActingId(null);
+  }, [isMarkDoneError]);
 
   // Split into payable (performed|verified) vs estimate (diagnosed|planned) — the SoT
   // the footer summary also consumes, so the two never disagree.
@@ -329,7 +386,20 @@ export function WorkspacePaymentModal({
                 <div className="px-5" data-testid="estimate-section">
                   <SectionHead title="Estimate" hint="not yet billable" />
                   {estimate.map((item) => (
-                    <LineItemRow key={item.id} item={item} />
+                    <LineItemRow
+                      key={item.id}
+                      item={item}
+                      onMarkPerformed={
+                        visitId
+                          ? () => {
+                              setMarkActingId(item.id);
+                              markDone(item.id, visitId, item.status as Parameters<typeof markDone>[2]);
+                            }
+                          : undefined
+                      }
+                      marking={isMarkDonePending && markActingId === item.id}
+                      errored={isMarkDoneError && markActingId === item.id}
+                    />
                   ))}
                   <div className="mt-2 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
                     <span className="text-sm font-medium text-muted-foreground">Estimate total</span>
@@ -394,8 +464,8 @@ export function WorkspacePaymentModal({
               <>
                 {hasEstimate && (
                   <p data-testid="no-billable-note" className="mb-2 text-center text-xs text-muted-foreground">
-                    Nothing to bill yet — these treatments are still planned. Mark one as
-                    performed to bill it.
+                    Nothing to bill yet — tap <span className="font-medium text-foreground">Mark done</span> on a
+                    treatment above once it’s performed, and it becomes billable here.
                   </p>
                 )}
                 <button

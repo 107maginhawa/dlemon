@@ -269,7 +269,7 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
                       })
                     : '—'}
                 </span>
-                <span className="truncate font-medium">{inv.invoiceNumber}</span>
+                <span className="min-w-0 truncate font-medium">{inv.invoiceNumber}</span>
                 <span className="text-right font-medium tabular-nums">
                   {CURRENCY_SYMBOL}{formatCents(inv.totalCents)}
                 </span>

@@ -140,6 +140,10 @@ describe('WorkspacePaymentModal', () => {
     // Human guidance + a clean exit, not a dead pay button.
     expect(screen.getByTestId('no-billable-note')).not.toBeNull();
     expect(screen.getByTestId('estimate-done-btn')).not.toBeNull();
+    // NOT a dead-end: every estimate row offers an in-place forward action
+    // (mark performed → becomes billable) so the clinician needn't leave the modal.
+    expect(screen.getByTestId('mark-performed-p-1')).not.toBeNull();
+    expect(screen.getByTestId('mark-performed-p-2')).not.toBeNull();
   });
 
   it('shows invoice banner when invoice exists (PAY-02)', async () => { // [BR-012]
