@@ -20,6 +20,7 @@ import { Skeleton } from '@monobase/ui';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { cn } from '@/lib/utils';
 import { isFeatureEnabled } from '@/lib/feature-flags';
+import { isClosedVisit } from '../../lib/visit-status';
 import { usePerioChart } from '../../hooks/use-perio-chart';
 import { useVoicePerio } from '../../hooks/use-voice-perio';
 import { PerioChartGrid } from './perio-chart-grid';
@@ -90,7 +91,7 @@ export function PerioChartOverlay({
   const [view, setView] = useState<'current' | 'history'>('current');
 
   const status = chart?.status ?? null;
-  const readOnly = status === 'completed' || status === 'locked';
+  const readOnly = isClosedVisit(status);
 
   // --- Voice charting (P2-4) — additive, behind the feature flag + capability
   // detection. Hidden entirely where unsupported (Safari/iPad) → keyboard only.

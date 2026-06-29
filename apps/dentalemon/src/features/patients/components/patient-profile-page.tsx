@@ -15,6 +15,7 @@ import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
 import { usePatientBalance } from '../hooks/use-patient-balance';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
+import { isClosedVisit } from '@/features/workspace/lib/visit-status';
 import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
@@ -169,7 +170,7 @@ function OverviewTab({ patientId }: { patientId: string }) {
                 <span
                   className={[
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap',
-                    v.status === 'completed' || v.status === 'locked'
+                    isClosedVisit(v.status)
                       ? 'bg-success/15 text-success-foreground'
                       : v.status === 'active'
                       ? 'bg-info/15 text-info-foreground'

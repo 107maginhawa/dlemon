@@ -29,7 +29,7 @@ import {
   getToothFillColor,
   DEFAULT_VISIBLE_LAYERS,
 } from '@/features/workspace/components/dental-chart.helpers';
-import { findOpenVisit } from '@/features/workspace/lib/visit-status';
+import { findOpenVisit, isClosedVisit } from '@/features/workspace/lib/visit-status';
 import type { ToothData, DentitionType, ChartLayer } from '@/features/workspace/components/dental-chart.helpers';
 import { DentalChart } from '@/features/workspace/components/dental-chart';
 import { ChartLayerToggle } from '@/features/workspace/components/chart-layer-toggle';
@@ -396,7 +396,7 @@ function VisitChartCard({
           exactly one in the DOM), Lock affordance right. The active card always
           renders this row to carry the legend; non-active cards only when a lock
           control applies. */}
-      {(isActive || visit.status === 'completed' || visit.status === 'locked') && (
+      {(isActive || isClosedVisit(visit.status)) && (
         <div className="flex items-center justify-between gap-3 mt-1 min-h-[20px]">
           {isActive ? <ChartCompactLegend /> : <span />}
           <div className="flex items-center justify-end">

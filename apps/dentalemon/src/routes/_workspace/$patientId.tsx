@@ -51,7 +51,7 @@ import { useTreatmentPlan } from '@/features/workspace/hooks/use-treatment-plan'
 import { usePreviousVisitDeferred } from '@/features/workspace/hooks/use-previous-visit-deferred';
 import { useConsentTemplates } from '@/features/settings/hooks/use-consent-templates';
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
-import { findOpenVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
+import { findOpenVisit, isClosedVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
 import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
 import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
@@ -188,8 +188,7 @@ function WorkspacePage() {
   // the year-filtered list, or an active visit hidden by the filter would falsely
   // re-enable "New Visit". Gates the New Visit affordance (one-active-visit rule).
   const openVisit = findOpenVisit(visits);
-  const isReadOnly =
-    currentVisit?.status === 'completed' || currentVisit?.status === 'locked';
+  const isReadOnly = isClosedVisit(currentVisit?.status);
   const carriedOverItems = treatmentPlan?.treatments.filter((t) => t.carriedOver) ?? [];
   // FIX-002: deferred (dismissed) treatments from the previous visit, restorable into a
   // freshly-started visit. The completion gate means a completed prior visit never retains
