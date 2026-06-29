@@ -551,6 +551,13 @@ jobs:
       - name: Role-denial & auth gates (chromium)
         run: cd apps/dentalemon && bunx playwright test --project=chromium role-gates-scheduling auth-gates auth-pin --retries=0
 
+      # Payment coherence (BR-009): the workspace payment modal must never present an
+      # enabled "Create Invoice & Pay" that 422s NO_BILLABLE_TREATMENTS. Self-provisions
+      # its own org/visit, so it's independent of the seed/journey data above. A
+      # regression hard-fails this required job (no new required check).
+      - name: Payment coherence — billable vs estimate (chromium)
+        run: cd apps/dentalemon && bunx playwright test --project=chromium workspace-payment-coherence --retries=0
+
       - name: Upload journey results
         uses: actions/upload-artifact@v4
         if: always()
