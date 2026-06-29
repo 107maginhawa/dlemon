@@ -6,7 +6,7 @@ An **orphan** is an operation with a shipped handler AND a generated SDK surface
 
 **Upstream base-template orphans** (booking / comms / email / storage / reviews / emr / notifs / generic providers-patients-persons) are tracked separately as disposition `template-base` and **excluded from the product-orphan denominator** — they are permanent upstream surface the dental product does not consume and can never be zeroed, so counting them in the orphan metric trains the team to ignore it. The list is hand-curated in `template-base.allowlist.json`; a sensitive mutating orphan can NEVER be on it (the classifier refuses).
 
-Counts: **97 product orphans** + **61 template-base** (upstream, excluded).
+Counts: **96 product orphans** + **61 template-base** (upstream, excluded).
 
 ## Sensitive mutating orphans — require a cross-tenant / ownership negative test
 
@@ -81,7 +81,7 @@ Decision column legend:
 - **remove** — dead surface; delete the handler + regenerate the SDK.
 - **keep** — intentionally headless (platform/SDK-for-3rd-parties/admin-only/dev); leave as-is.
 
-Total orphans: **97**
+Total orphans: **96**
 
 | operationId | module | method | path | decision | notes |
 |-------------|--------|--------|------|----------|-------|
@@ -130,7 +130,6 @@ Total orphans: **97**
 | `getAppointment` | dental-scheduling | GET | `/dental/appointments/{appointmentId}` | keep | _triage pending_ |
 | `getBranchesByUser` | dental-org | GET | `/dental/branches` | keep | _triage pending_ |
 | `getClaimReadiness` | dental-patient | GET | `/dental/patients/{patientId}/claims/{claimId}/readiness` | keep | _triage pending_ |
-| `getCollectionsSummary` | dental-billing | GET | `/dental/billing/collections/summary` | keep | _triage pending_ |
 | `getDentalPatientSafetyFloor` | dental-patient | GET | `/dental/patients/{id}/safety-floor` | keep | _triage pending_ |
 | `getDentalVisit` | dental-visit | GET | `/dental/visits/{visitId}` | keep | _triage pending_ |
 | `getErasureRequest` | dental-erasure | GET | `/dental/erasure-requests/{id}` | keep | _triage pending_ |
