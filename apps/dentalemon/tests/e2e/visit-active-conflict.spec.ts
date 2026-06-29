@@ -93,9 +93,12 @@ test.describe('New Visit with an existing active visit', () => {
     const discard = page.getByTestId('discard-visit-btn');
     await expect(discard).toBeVisible({ timeout: 15000 });
 
-    // The discard prompts for a reason (window.prompt) — auto-accept with one.
-    page.once('dialog', (d) => d.accept('Patient left without being seen'));
+    // PP-8 (ISSUE-041): discard now opens an accessible reason dialog (it replaced
+    // window.prompt). Drive it explicitly: open → fill the required reason → confirm.
     await discard.click();
+    await expect(page.getByTestId('discard-visit-dialog')).toBeVisible({ timeout: 10000 });
+    await page.getByTestId('discard-reason').fill('Patient left without being seen');
+    await page.getByTestId('discard-visit-confirm').click();
 
     // After discard, the open visit is gone → the in-progress indicator clears and
     // New Visit becomes enabled again.

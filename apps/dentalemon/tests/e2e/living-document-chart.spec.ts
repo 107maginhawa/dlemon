@@ -189,10 +189,12 @@ test.describe('Living-document chart — cumulative cross-visit layers', () => {
 
     await spaNavigate(page, `/${patientId}`);
 
-    // The active card is the cumulative "Current — all visits" slide.
+    // The active card is the cumulative all-visits slide.
     const activeCard = page.locator('[data-active-card="1"]');
     await expect(activeCard).toBeVisible({ timeout: 15000 });
-    await expect(activeCard.getByText('Current — all visits')).toBeVisible();
+    // The cumulative scope renders as two chips ("Current" + "All visits"); the
+    // "All visits" chip is unique to the active/open card (historical = "Snapshot").
+    await expect(activeCard.getByTestId('chart-scope-label')).toContainText('All visits');
 
     await ensureActiveChart(page);
 
@@ -241,7 +243,9 @@ test.describe('Living-document chart — cumulative cross-visit layers', () => {
     // Wait for the active card to be ready first.
     const activeCard = page.locator('[data-active-card="1"]');
     await expect(activeCard).toBeVisible({ timeout: 15000 });
-    await expect(activeCard.getByText('Current — all visits')).toBeVisible();
+    // The cumulative scope renders as two chips ("Current" + "All visits"); the
+    // "All visits" chip is unique to the active/open card (historical = "Snapshot").
+    await expect(activeCard.getByTestId('chart-scope-label')).toContainText('All visits');
 
     // Also initialise the active chart so the active card's chart request completes
     // (otherwise the API's chart endpoint for Visit B may not exist yet, causing
@@ -279,7 +283,9 @@ test.describe('Living-document chart — cumulative cross-visit layers', () => {
     // work exists in that visit's snapshot, which Visit A doesn't have).
     await expect(layerKey).toContainText('Existing');
     await expect(layerKey).toContainText('Planned');
-    await expect(layerKey).toContainText('Completed');
+    // The 'completed' layer is labeled "Treated" in the UI (Phase-3 rename; the
+    // underlying layer key stays 'completed').
+    await expect(layerKey).toContainText('Treated');
 
     // Regression: before this slice, a historical card's per-visit snapshot would
     // fall back to `baseline` for every tooth (the cumulative cross-visit sets were
