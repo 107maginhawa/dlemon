@@ -1,6 +1,11 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+} from "react"
 
 // Reveal enhances an already-visible default. SSR / no-JS / reduced-motion all
 // render content fully visible; the entrance only arms on the client when motion
@@ -10,11 +15,8 @@ export function Reveal({
   children,
   className,
   delay = 0,
-}: {
-  children: ReactNode
-  className?: string
-  delay?: number
-}) {
+  ...rest
+}: ComponentPropsWithoutRef<"div"> & { delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(true)
 
@@ -50,6 +52,7 @@ export function Reveal({
       className={`transition-all duration-700 ease-out-quint ${
         shown ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
       } ${className ?? ""}`}
+      {...rest}
     >
       {children}
     </div>
