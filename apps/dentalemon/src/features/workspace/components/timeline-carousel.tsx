@@ -228,7 +228,7 @@ function VisitChartCard({
       data-active-card={isActive ? '1' : undefined}
       // Issue 3: make the active visit unmistakably primary — neighbors are dimmed
       // and flattened so they read as context, not competing focus.
-      className={`h-full rounded-2xl border bg-card p-3 pt-4 flex flex-col gap-2 transition-all ${isActive ? 'border-lemon-hover border-2 shadow-card-active' : 'border-border opacity-55 shadow-[0_2px_8px_rgba(0,0,0,0.05)]'}`}
+      className={`h-full rounded-2xl border-2 bg-card p-3 pt-4 flex flex-col gap-2 transition-all ${isActive ? 'border-lemon-hover shadow-card-active' : 'border-border opacity-55 shadow-[0_2px_8px_rgba(0,0,0,0.05)]'}`}
     >
       {/* Change A: ONE header row, identical HEIGHT on every card. LEFT = layer
           tabs, rendered ONLY on the open/living chart (historical visits are

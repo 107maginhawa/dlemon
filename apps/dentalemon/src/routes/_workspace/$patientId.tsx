@@ -520,7 +520,12 @@ function WorkspacePage() {
           Done) can be brought fully into view. */}
       <div
         className="flex-1 flex flex-col min-h-0 overflow-y-auto"
-        style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen) ? 340 : 0, transition: 'padding-right 300ms ease-out' }}
+        // Reserve a gutter so table rows aren't hidden under the fixed 340px tooth
+        // slide-out. Snap it (no transition): animating padding-right reflowed the
+        // tall chart every frame, and the slide-out itself appears instantly, so the
+        // gutter and panel now land together. ponytail: transform-based slide-in is a
+        // future polish, not a perf requirement.
+        style={{ paddingRight: (selectedTooth !== null || slideoutKeepOpen) ? 340 : 0 }}
       >
         {/* Carousel section */}
         <div
