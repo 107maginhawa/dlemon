@@ -296,16 +296,16 @@ export default function Home() {
             <Reveal className="max-w-2xl">
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#C99A12]">
                 <Sun weight="fill" size={18} />
-                SUN
+                Here Comes the SUN
               </span>
               <h2 className="mt-4 text-[clamp(2rem,4.5vw,3.25rem)] font-bold leading-tight text-ink">
                 One patient. One story. Every visit.
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-muted">
-                SUN is the unified timeline at the heart of Dentalemon. A
-                patient&rsquo;s entire history, visit by visit, in one place you
-                can scroll through like a reel. No more digging through folders
-                to remember what you did last March.
+                SUN, your patient&rsquo;s Seamless Unified Narrative, is the
+                timeline at the heart of Dentalemon. Their entire history, visit
+                by visit, in one place you can scroll through like a reel. No
+                more digging through folders to remember what you did last March.
               </p>
             </Reveal>
 
