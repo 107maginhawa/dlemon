@@ -190,7 +190,7 @@ export default function Home() {
                 </p>
               </Reveal>
               <Reveal delay={120}>
-                <ul className="mt-10 max-w-md divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+                <ul className="mt-10 max-w-md divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white shadow-frame">
                   {["Patient records", "The schedule", "Billing and balances", "Every chart you've ever drawn"].map(
                     (item) => (
                       <li key={item} className="flex items-center gap-3.5 px-4 py-3.5">
@@ -378,7 +378,7 @@ export default function Home() {
               </a>
             </Reveal>
 
-            <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
+            <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-frame sm:grid-cols-2">
               {proofs.map((p, i) => {
                 const Icon = p.icon
                 return (
@@ -412,7 +412,7 @@ export default function Home() {
             </Reveal>
 
             <Reveal delay={120}>
-              <div className="mx-auto mt-12 max-w-2xl rounded-3xl border border-line bg-white p-8 sm:p-12">
+              <div className="mx-auto mt-12 max-w-2xl rounded-3xl border border-line bg-white p-8 shadow-frame sm:p-12">
                 <dl className="grid gap-8 sm:grid-cols-3">
                   <div>
                     <dt className="text-sm font-medium text-muted">What you pay</dt>
@@ -445,7 +445,7 @@ export default function Home() {
             {/* Optional cloud add-on, the iCloud model: the app is fully yours
                 offline; cloud is a separate, optional convenience. */}
             <Reveal delay={60}>
-              <div className="mx-auto mt-6 flex max-w-2xl flex-col items-start gap-3 rounded-2xl border border-line px-6 py-5 text-left sm:flex-row sm:items-center sm:gap-5">
+              <div className="mx-auto mt-6 flex max-w-2xl flex-col items-start gap-3 rounded-2xl border border-line px-6 py-5 text-left shadow-frame sm:flex-row sm:items-center sm:gap-5">
                 <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-sage/15 px-3 py-1 text-xs font-semibold text-[#566B3C]">
                   <CloudCheck weight="fill" size={14} />
                   Optional

@@ -41,6 +41,9 @@
    timeline). Scoped to .sun-swiper so it never leaks to the rest of the page. */
 .sun-swiper {
   padding-bottom: 2.5rem;
+  /* override Swiper's default overflow:hidden so the active card's shadow-frame
+     glow shows. Peeking neighbors are still clipped by the panel (line 768). */
+  overflow: visible;
 }
 /* Real product tooth SVG — fills its sized box; the box keeps the column aspect. */
 .tooth-svg {
