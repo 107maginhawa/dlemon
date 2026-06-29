@@ -67,15 +67,15 @@ export function formatFrequency(frequency: string): string {
 export function getPlanStatusClass(status: string): string {
   switch (status) {
     case 'on_track':
-      return 'bg-green-100 text-green-700';
+      return 'bg-status-done text-status-done-foreground';
     case 'behind':
-      return 'bg-red-100 text-red-700';
+      return 'bg-destructive/10 text-destructive-emphasis';
     case 'completed':
-      return 'bg-green-100 text-green-700';
+      return 'bg-status-done text-status-done-foreground';
     case 'defaulted':
-      return 'bg-red-100 text-red-700';
+      return 'bg-destructive/10 text-destructive-emphasis';
     default:
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-secondary text-muted-foreground';
   }
 }
 
@@ -111,9 +111,9 @@ function getInstallmentNumClass(status: string): string {
     case 'pending':
       return 'bg-orange-50 text-orange-600';
     case 'waived':
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-secondary text-muted-foreground';
     default:
-      return 'bg-gray-100 text-muted-foreground';
+      return 'bg-secondary text-muted-foreground';
   }
 }
 
@@ -126,9 +126,9 @@ function getInstallmentBadgeClass(status: string): string {
     case 'pending':
       return 'bg-orange-50 text-orange-600';
     case 'waived':
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-secondary text-muted-foreground';
     default:
-      return 'bg-gray-100 text-muted-foreground';
+      return 'bg-secondary text-muted-foreground';
   }
 }
 
@@ -147,7 +147,7 @@ function formatInstallmentStatus(status: string): string {
 // ---------------------------------------------------------------------------
 
 export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const planQuery = useQuery({
     ...getDentalPaymentPlanOptions({ path: { invoiceId } }),
     enabled: open && !!invoiceId,
@@ -202,7 +202,7 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Payment Plan">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Payment Plan">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div
@@ -257,7 +257,7 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
               {/* Plan Header */}
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/50">Payment Plan</p>
+                  <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground/50">Payment Plan</p>
                   <p className="text-xl font-bold tracking-tight mt-1">
                     {formatFrequency(plan.frequency)} Plan
                   </p>
@@ -267,15 +267,15 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="flex justify-between text-[13px]">
+                  <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Amount</span>
                     <span className="text-xl font-bold tabular-nums">{formatCents(plan.totalCents)}</span>
                   </div>
-                  <div className="flex justify-between text-[13px]">
+                  <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Paid</span>
                     <span className="font-semibold tabular-nums text-green-700">{formatCents(plan.paidCents)}</span>
                   </div>
-                  <div className="flex justify-between text-[13px]">
+                  <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Remaining</span>
                     <span className="font-semibold tabular-nums text-amber-600">{formatCents(plan.remainingCents)}</span>
                   </div>
@@ -296,10 +296,10 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
                       />
                     </div>
                     <div className="flex justify-between mt-1">
-                      <span className="text-[11px] font-semibold text-lemon-foreground tabular-nums">
+                      <span className="text-xs font-semibold text-lemon-foreground tabular-nums">
                         {calcProgress(plan.paidCents, plan.totalCents)}% paid
                       </span>
-                      <span className="text-[11px] text-muted-foreground tabular-nums">
+                      <span className="text-xs text-muted-foreground tabular-nums">
                         {formatCents(plan.remainingCents)} left
                       </span>
                     </div>
@@ -321,11 +321,11 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
                 </div>
                 <div className="bg-background border border-border rounded-xl p-4 flex flex-col gap-1">
                   <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50">Started</span>
-                  <span className="text-[15px] font-bold tabular-nums pt-0.5">{new Date(plan.startDate).toLocaleDateString()}</span>
+                  <span className="text-base font-bold tabular-nums pt-0.5">{new Date(plan.startDate).toLocaleDateString()}</span>
                 </div>
                 <div className="bg-background border border-border rounded-xl p-4 flex flex-col gap-1">
                   <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/50">Next Due</span>
-                  <span className="text-[15px] font-bold tabular-nums pt-0.5 text-amber-600">
+                  <span className="text-base font-bold tabular-nums pt-0.5 text-amber-600">
                     {plan.nextDueDate ? new Date(plan.nextDueDate).toLocaleDateString() : '--'}
                   </span>
                 </div>
@@ -333,42 +333,42 @@ export function PaymentPlanView({ invoiceId, open, onClose }: PaymentPlanViewPro
 
               {/* Installment Schedule */}
               <div className="bg-background rounded-2xl border border-border overflow-hidden">
-                <div className="text-[13px] font-semibold tracking-wider uppercase text-muted-foreground px-5 py-3 border-b border-border">
+                <div className="text-sm font-semibold tracking-wider uppercase text-muted-foreground px-5 py-3 border-b border-border">
                   Installment Schedule
                 </div>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border pl-5">#</th>
-                      <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Due Date</th>
-                      <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Amount</th>
-                      <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Paid Date</th>
-                      <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Method</th>
-                      <th className="text-left text-[11px] font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border pr-5">Status</th>
+                      <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border pl-5">#</th>
+                      <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Due Date</th>
+                      <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Amount</th>
+                      <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Paid Date</th>
+                      <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border">Method</th>
+                      <th className="text-left text-xs font-semibold tracking-wider uppercase text-muted-foreground px-4 py-2.5 border-b border-border pr-5">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {plan.installments.map((inst) => (
                       <tr key={inst.id} className="hover:bg-lemon-soft transition-colors border-b border-border last:border-b-0">
                         <td className="px-4 h-12 align-middle pl-5">
-                          <span className={`w-6 h-6 rounded-full text-[11px] font-bold inline-flex items-center justify-center ${getInstallmentNumClass(inst.status)}`}>
+                          <span className={`w-6 h-6 rounded-full text-xs font-bold inline-flex items-center justify-center ${getInstallmentNumClass(inst.status)}`}>
                             {inst.number}
                           </span>
                         </td>
-                        <td className={`px-4 h-12 align-middle text-[13px] tabular-nums ${isInstallmentOverdue(inst) ? 'font-semibold text-orange-600' : ''}`}>
+                        <td className={`px-4 h-12 align-middle text-sm tabular-nums ${isInstallmentOverdue(inst) ? 'font-semibold text-orange-600' : ''}`}>
                           {new Date(inst.dueDate).toLocaleDateString()}
                         </td>
-                        <td className="px-4 h-12 align-middle text-[13px] font-semibold tabular-nums">
+                        <td className="px-4 h-12 align-middle text-sm font-semibold tabular-nums">
                           {formatCents(inst.amountCents)}
                         </td>
-                        <td className="px-4 h-12 align-middle text-[13px] tabular-nums text-muted-foreground">
+                        <td className="px-4 h-12 align-middle text-sm tabular-nums text-muted-foreground">
                           {inst.paidDate ? new Date(inst.paidDate).toLocaleDateString() : '—'}
                         </td>
-                        <td className="px-4 h-12 align-middle text-[13px] text-muted-foreground">
+                        <td className="px-4 h-12 align-middle text-sm text-muted-foreground">
                           {inst.method ?? '—'}
                         </td>
                         <td className="px-4 h-12 align-middle pr-5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${getInstallmentBadgeClass(inst.status)}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getInstallmentBadgeClass(inst.status)}`}>
                             {formatInstallmentStatus(inst.status)}
                           </span>
                         </td>

@@ -93,7 +93,7 @@ export function AnnotationInputDialog({
         <DialogFooter>
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-sm rounded bg-zinc-200 text-zinc-800 hover:bg-zinc-300"
+            className="px-4 py-2 text-sm rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
           >
             Cancel
           </button>

@@ -50,10 +50,10 @@ const TRANSITION_BUTTON_LABELS: Record<RecallStatus, string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<RecallStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
+  pending: 'bg-warning/15 text-warning-foreground',
   sent: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-gray-100 text-gray-500',
+  completed: 'bg-success/15 text-success-foreground',
+  cancelled: 'bg-muted text-muted-foreground',
 };
 
 const RECALL_TYPES: RecallType[] = ['cleaning', 'checkup', 'treatment', 'other'];
@@ -131,7 +131,7 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">{RECALL_TYPE_LABELS[recall.type]}</span>
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_BADGE_CLASS[recall.status]}`}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE_CLASS[recall.status]}`}
           >
             {STATUS_LABELS[recall.status]}
           </span>
@@ -160,7 +160,7 @@ function RecallRow({ recall, onUpdateStatus, isUpdating }: RecallRowProps) {
               type="button"
               disabled={isUpdating}
               onClick={() => onUpdateStatus(recall.id, { status: next })}
-              className="rounded px-2 py-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors disabled:opacity-50"
+              className="rounded px-2 py-1 text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors disabled:opacity-50"
             >
               {next === 'cancelled' ? 'Cancel' : TRANSITION_BUTTON_LABELS[recall.status]}
             </button>
@@ -227,7 +227,7 @@ export function RecallsSheet({ patientId, open, onClose }: RecallsSheetProps) {
               <CalendarClock className="h-4 w-4 text-muted-foreground" />
               <DialogTitle className="text-sm font-semibold">Recalls</DialogTitle>
               {recalls.length > 0 && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   {recalls.length}
                 </span>
               )}

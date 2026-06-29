@@ -25,7 +25,7 @@ export function getThumbnailPipClass(state: ToothState): string {
     case 'crown':
       return 'bg-dental-crown';
     case 'extracted':
-      return 'border border-dashed border-gray-600 bg-transparent';
+      return 'border border-dashed border-muted-foreground bg-transparent';
     case 'missing':
       return 'bg-dental-missing/50';
     case 'implant':

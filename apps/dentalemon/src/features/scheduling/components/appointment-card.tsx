@@ -33,11 +33,11 @@ export function getStatusBadgeProps(status: string): { label: string; className:
     case 'completed':
       return { label: 'Completed', className: 'bg-green-100 text-green-700' };
     case 'cancelled':
-      return { label: 'Cancelled', className: 'bg-gray-100 text-gray-500' };
+      return { label: 'Cancelled', className: 'bg-secondary text-muted-foreground' };
     case 'no_show':
       return { label: 'No Show', className: 'bg-red-100 text-red-700' };
     default:
-      return { label: status, className: 'bg-gray-100 text-gray-500' };
+      return { label: status, className: 'bg-secondary text-muted-foreground' };
   }
 }
 
@@ -83,7 +83,7 @@ function truncateId(id: string, maxLen = 8): string {
 // Shared sizing for the hover action buttons (Confirm / Check In / No Show / Cancel).
 // Centralizing the 11px keeps the font-size ratchet to a single arbitrary literal and
 // the four buttons pixel-identical; each button adds only its bg/text-colour.
-const ACTION_BTN = 'text-[11px] font-semibold px-2.5 py-1 rounded-md';
+const ACTION_BTN = 'text-xs font-semibold px-2.5 py-1 rounded-md';
 const ACTION_BTN_SECONDARY = `${ACTION_BTN} bg-secondary border border-border hover:bg-background transition-colors`;
 
 interface AppointmentCardProps {
@@ -111,12 +111,12 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
     confirmed: 'border-l-teal-500 bg-teal-50/60',
     checked_in: 'border-l-green-500 bg-green-50/60',
     checkedIn: 'border-l-green-500 bg-green-50/60',
-    completed: 'border-l-gray-400 bg-gray-50/40',
-    cancelled: 'border-l-gray-300 bg-gray-50/30 opacity-60',
+    completed: 'border-l-muted-foreground bg-muted/40',
+    cancelled: 'border-l-border bg-muted/30 opacity-60',
     noShow: 'border-l-red-500 bg-red-50/60',
   };
 
-  const cardStyle = statusStyles[appointment.status] || 'border-l-gray-300 bg-gray-50/30';
+  const cardStyle = statusStyles[appointment.status] || 'border-l-border bg-muted/30';
 
   if (compact) {
     return (
@@ -128,7 +128,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
         tabIndex={0}
         aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.serviceType}`}
       >
-        <div className="text-[11px] font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
+        <div className="text-xs font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
         <div className="text-[10px] text-muted-foreground">{time}</div>
       </div>
     );
@@ -144,7 +144,7 @@ export function AppointmentCard({ appointment, onClick, onCheckIn, onConfirm, on
       aria-label={`${appointment.patientName ?? truncateId(appointment.patientId)}, ${time}, ${appointment.serviceType}, ${badge.label}`}
     >
       <div className="text-xs font-semibold truncate">{appointment.patientName ?? truncateId(appointment.patientId)}</div>
-      <div className="text-[11px] text-muted-foreground truncate">
+      <div className="text-xs text-muted-foreground truncate">
         {appointment.serviceType} · {time}
       </div>
       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-1 ${badge.className}`}>

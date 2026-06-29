@@ -38,7 +38,7 @@ function todayISO(): string {
 // Shared class for the calendar top-bar toggle buttons (Recare due / Waitlist).
 // One source for the 13px so the font-size ratchet sees a single literal and the
 // two toggles stay identical; each appends only its active/inactive background.
-const TOGGLE_BTN = 'h-11 px-4 rounded-[10px] border border-border text-[13px] font-medium flex items-center gap-1.5 transition-colors';
+const TOGGLE_BTN = 'h-11 px-4 rounded-[10px] border border-border text-sm font-medium flex items-center gap-1.5 transition-colors';
 
 function getMondayOfWeek(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -310,7 +310,7 @@ function CalendarPage() {
             type="button"
             onClick={() => setView('day')}
             aria-pressed={view === 'day'}
-            className={`px-3.5 h-11 text-[13px] font-medium rounded-[7px] transition-colors ${
+            className={`px-3.5 h-11 text-sm font-medium rounded-[7px] transition-colors ${
               view === 'day'
                 ? 'bg-lemon text-lemon-foreground font-semibold'
                 : 'text-muted-foreground hover:bg-background/60'
@@ -322,7 +322,7 @@ function CalendarPage() {
             type="button"
             onClick={() => setView('week')}
             aria-pressed={view === 'week'}
-            className={`px-3.5 h-11 text-[13px] font-medium rounded-[7px] transition-colors ${
+            className={`px-3.5 h-11 text-sm font-medium rounded-[7px] transition-colors ${
               view === 'week'
                 ? 'bg-lemon text-lemon-foreground font-semibold'
                 : 'text-muted-foreground hover:bg-background/60'
@@ -334,7 +334,7 @@ function CalendarPage() {
             type="button"
             onClick={() => setView('month')}
             aria-pressed={view === 'month'}
-            className={`px-3.5 h-11 text-[13px] font-medium rounded-[7px] transition-colors ${
+            className={`px-3.5 h-11 text-sm font-medium rounded-[7px] transition-colors ${
               view === 'month'
                 ? 'bg-lemon text-lemon-foreground font-semibold'
                 : 'text-muted-foreground hover:bg-background/60'
@@ -367,7 +367,7 @@ function CalendarPage() {
           <button
             type="button"
             onClick={() => handleNewAppointment(true)}
-            className="h-11 px-4 rounded-[10px] border border-border bg-background text-[13px] font-medium flex items-center gap-1.5 hover:bg-secondary transition-colors"
+            className="h-11 px-4 rounded-[10px] border border-border bg-background text-sm font-medium flex items-center gap-1.5 hover:bg-secondary transition-colors"
             aria-label="Add walk-in appointment"
           >
             <span className="text-xs">+</span> Walk-In
@@ -375,7 +375,7 @@ function CalendarPage() {
           <button
             type="button"
             onClick={() => handleNewAppointment(false)}
-            className="h-11 px-4 rounded-[10px] bg-lemon text-lemon-foreground text-[13px] font-semibold flex items-center gap-1.5 hover:bg-lemon-hover transition-colors"
+            className="h-11 px-4 rounded-[10px] bg-lemon text-lemon-foreground text-sm font-semibold flex items-center gap-1.5 hover:bg-lemon-hover transition-colors"
             aria-label="Create new appointment"
           >
             <span className="text-xs">+</span> New Appointment

@@ -14,10 +14,20 @@
  * Self-gating: renders nothing unless it is open, has a destination visit, and there is at
  * least one deferred treatment to restore — so a patient with nothing deferred is never
  * prompted.
+ *
+ * Shell: the shared @monobase/ui Dialog (Radix) — focus trap, Escape, and focus return
+ * come from the primitive; Escape/overlay/X all map to Skip via onOpenChange.
  */
 import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@monobase/ui';
 import { useCarryOverTreatments } from '@/features/workspace/hooks/use-carry-over-treatments';
-import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 
 interface CarryOverPromptProps {
   open: boolean;
@@ -40,10 +50,8 @@ export function CarryOverPrompt({
 }: CarryOverPromptProps) {
   const { carryOver, isPending } = useCarryOverTreatments({ visitId, patientId, branchId });
 
-  // ISSUE-010: hand-rolled overlay → Escape dismisses (maps to Skip) + focus restore.
-  useSheetA11y({ open, onClose });
-
-  if (!open || !visitId || deferredIds.length === 0) return null;
+  // Self-gating: only a returning patient WITH deferred work and a destination visit.
+  const shouldShow = open && !!visitId && deferredIds.length > 0;
 
   function handleConfirm() {
     void carryOver({ restoreDismissedIds: deferredIds })
@@ -54,42 +62,38 @@ export function CarryOverPrompt({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-label="Carry over from previous visit"
-        data-testid="carry-over-prompt"
-        className="w-full max-w-md rounded-2xl bg-background p-5 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-base font-semibold">Carry over from previous visit</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This patient has treatments that were deferred at a previous visit. Restore them
-          into this visit so you can continue, complete, or dismiss them here?
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            data-testid="carry-over-skip"
-            onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Skip
-          </button>
-          <button
-            type="button"
-            data-testid="carry-over-confirm"
-            disabled={isPending}
-            onClick={handleConfirm}
-            className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {isPending ? 'Restoring…' : 'Restore deferred treatments'}
-          </button>
+    <Dialog open={shouldShow} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        {/* testid on an inner div: the test harness stubs Radix Content and drops its props. */}
+        <div data-testid="carry-over-prompt">
+          <DialogHeader>
+            <DialogTitle>Carry over from previous visit</DialogTitle>
+            <DialogDescription>
+              This patient has treatments that were deferred at a previous visit. Restore them
+              into this visit so you can continue, complete, or dismiss them here?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-5">
+            <button
+              type="button"
+              data-testid="carry-over-skip"
+              onClick={onClose}
+              className="min-h-[44px] rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              data-testid="carry-over-confirm"
+              disabled={isPending}
+              onClick={handleConfirm}
+              className="min-h-[44px] rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {isPending ? 'Restoring…' : 'Restore deferred treatments'}
+            </button>
+          </DialogFooter>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

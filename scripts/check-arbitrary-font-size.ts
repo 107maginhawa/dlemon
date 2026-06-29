@@ -34,7 +34,43 @@ import { join } from 'node:path';
 // field grid (rem token scale) during the record-tabs polish pass.
 // lowered to 327 — layer key on historical cards uses text-xs (no new raw px).
 // lowered to 326 — carousel header scope chips (#4) use text-xs, not text-[10px].
-const BASELINE = 326;
+// lowered to 286 — workspace UI-standardization pass migrated 11px/13px literals
+// in the discrete sheets/banners/badges/panels (chart-conflict-banner,
+// findings-panel, attachments-sheet, treatment-plans-sheet, sync-status-badge,
+// recalls-sheet, timeline-carousel, chart-export-view, and the perio
+// summary/comparison/overlay/voice surfaces) to the rem token scale (text-xs /
+// text-sm). The workspace-payment-modal dense money panel and the dental-chart
+// canvas glyphs are intentionally left for a dedicated, individually-verified pass.
+// lowered to 183 — billing UI-standardization pass migrated the dense financial
+// tables (billing-list, invoice-detail, claims-worklist, collections-view,
+// payment-plan-view/create, invoice-insurance-block): 11px column headers ->
+// text-xs, 13px chips/cells -> text-sm, 15px bold totals -> text-base. Verified
+// in-browser at iPad/desktop that the money columns don't overflow.
+// lowered to 178 — imaging safe slice: patient-image-list, CbctStudyCard and
+// SuperimpositionPanel 11px labels -> text-xs. The imaging viewer's broader
+// palette is an intentional dark PACS theme, deferred (see B9 in the audit).
+// lowered to 163 — scheduling pass: calendar day/week/month, appointment-card,
+// recall-due-list and queue-board 11/13/15px literals -> text-xs/sm/base. The
+// appointment-modal (DESIGN-exempt transactional panel) keeps its 1 literal,
+// deferred with the workspace-payment-modal (B2).
+// lowered to 149 — dashboard pass: metric-card, morning-briefing,
+// attention-queue, kpi-ribbon, schedule-timeline 11/13px -> text-xs/sm.
+// lowered to 136 — remaining light modules (patients follow-up-notes/profile/
+// duplicate-panel, settings data-erasure/audit-log, notifications bell) 11/13px
+// -> text-xs/sm. The residual literals are text-[10px] (Micro, no rem token) and
+// the deferred dense panels (B2: workspace-payment-modal + appointment-modal).
+// lowered to 120 — B2 done: the two exempt transactional panels
+// (workspace-payment-modal, appointment-modal) migrated 11/13px -> text-xs/sm
+// and 15px totals/CTAs -> text-base, browser-verified no overflow. Residual
+// literals are text-[10px] (Micro) + dense chart internals (B3/B4/B5).
+// lowered to 97 — final completeness pass: route-level files
+// (_dashboard/calendar, _dashboard/billing, _workspace/queue-board) migrated
+// 11/13px -> text-xs/sm, and whole-app text-[12px]/[14px] (size-identical to
+// text-xs/text-sm) folded into the tokens. Zero off-scale literals remain. The
+// residual 97 are token-less BY DESIGN: text-[10px] Micro (no rem token below
+// text-xs/12px), text-[17px] DESIGN card-title (between text-base/16 and
+// text-lg/18), and a few sub-micro chart-label sizes (7-9px).
+const BASELINE = 97;
 
 const ROOT = join(import.meta.dir, '..', 'apps', 'dentalemon', 'src');
 const FONT_RE = /text-\[\d+px\]/g;

@@ -104,7 +104,7 @@ export function VoicePerioControls({
         </span>
 
         {active && (
-          <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+          <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 motion-safe:animate-spin" aria-hidden="true" />
             Mic is live — speak numbers and keywords only, never patient names.
           </span>
@@ -136,7 +136,7 @@ export function VoicePerioControls({
 
       {/* Last-3-entries mini log for quick eyeball verification. */}
       {transcriptLog.length > 1 && (
-        <ul className="flex flex-col gap-0.5 text-[11px] text-muted-foreground" data-testid="voice-recent-log">
+        <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground" data-testid="voice-recent-log">
           {transcriptLog.slice(1, 4).map((e, i) => (
             <li key={i}>
               “{e.transcript}” {e.applied ? `→ ${e.applied}` : `(${e.event})`}

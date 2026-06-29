@@ -1778,7 +1778,15 @@ async function seed() {
   if (P[8] && apptIds[8]?.length) {
     const p8ApptId = apptIds[8][0]
     const ciR = await post(`/dental/appointments/${p8ApptId}/check-in`, {}, cookie)
-    if (ciR.ok) log(`  ✓ Diego Ramos checked in — new draft visit auto-created`)
+    if (ciR.ok) {
+      // Check-in auto-creates a DRAFT visit. A draft is the open working card but
+      // is NOT a counted encounter (isEncounterVisit) — leaving it draft makes
+      // Diego's folder count < his visible timeline. Activate it so he has the
+      // same open ACTIVE current card as every §8.6 patient (counts AND shows).
+      const draftVisitId = ciR.data?.visitId
+      if (draftVisitId) await patch(`/dental/visits/${draftVisitId}`, { status: 'active' }, cookie)
+      log(`  ✓ Diego Ramos checked in — visit activated (open current card)`)
+    }
     else log(`  ⚠ Check-in (${ciR.status}): ${JSON.stringify(ciR.data).slice(0,150)}`)
   }
 

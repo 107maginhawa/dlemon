@@ -30,7 +30,7 @@ interface DentalAlertsSheetProps {
 export const SEVERITY_BADGE_CLASS: Record<DentalAlertSeverity, string> = {
   high: 'bg-red-100 text-red-700 border-red-200',
   medium: 'bg-amber-100 text-amber-700 border-amber-200',
-  low: 'bg-slate-100 text-slate-600 border-slate-200',
+  low: 'bg-secondary text-muted-foreground border-border',
 };
 
 // ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ function AlertRow({ alert, onDeactivate, isUpdating }: AlertRowProps) {
 
 export function DentalAlertsSheet({ patientId, open, onClose }: DentalAlertsSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const { alerts, isLoading, isError, createAlert, deactivateAlert, isCreating, isUpdating } =
     useDentalAlerts(patientId);
@@ -122,6 +122,7 @@ export function DentalAlertsSheet({ patientId, open, onClose }: DentalAlertsShee
 
       {/* Sheet */}
       <div
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Dental alerts"

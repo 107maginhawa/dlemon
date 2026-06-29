@@ -41,7 +41,7 @@ function pesoToCents(v: string): number {
 }
 
 export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId }: ClaimDetailProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const { claim, isLoading } = useClaimDetail(open ? claimId : null);
   const { addLine, updateLine, isMutating } = useClaimLineMutations(claimId, branchId);
   const { estimate, result: estimateResult, isEstimating } = useCoverageEstimate();
@@ -89,7 +89,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Insurance Claim Detail">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Insurance Claim Detail">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div data-testid="claim-detail" className="relative w-full max-w-[640px] max-h-[88vh] bg-background rounded-2xl shadow-2xl flex flex-col">
@@ -171,7 +171,7 @@ export function ClaimDetail({ claimId, open, onClose, canWrite = false, branchId
                               <td className="px-3 py-2">
                                 <div className="flex items-center gap-1.5 justify-end">
                                   <button type="button" onClick={() => handleSaveLine(l.id)} disabled={isMutating} data-testid={`save-line-${l.id}`} className="h-9 px-3 rounded-lg bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring outline-none">Save</button>
-                                  <button type="button" onClick={() => setEditingId(null)} className="h-9 px-3 min-w-[4rem] rounded-lg border border-border text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring outline-none">Cancel</button>
+                                  <button type="button" onClick={() => setEditingId(null)} className="h-9 coarse:min-h-[44px] px-3 min-w-[4rem] rounded-lg border border-border text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring outline-none">Cancel</button>
                                 </div>
                               </td>
                             </tr>

@@ -98,7 +98,7 @@ export interface RxSheetProps {
 
 export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = false, patientAllergies = [], open, onClose, onSaved }: RxSheetProps) {
   // WCAG 2.4.3: Escape closes the sheet; focus returns to the opener on close.
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
 
   const [mode, setMode] = useState<'new' | 'list'>('new');
 
@@ -286,6 +286,7 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-40 flex items-end"
       role="dialog"
       aria-modal="true"
@@ -630,10 +631,10 @@ export function RxSheet({ visitId, patientId, prescriberMemberId, canManage = fa
                 const status = rx.status;
                 const statusStyle =
                   status === 'dispensed'
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-success/15 text-success-foreground'
                     : status === 'cancelled'
                       ? 'bg-destructive/15 text-destructive'
-                      : 'bg-amber-100 text-amber-800';
+                      : 'bg-warning/15 text-warning-foreground';
                 const subtitle = [rx.dosage, rx.frequency].filter(Boolean).join(' · ');
                 return (
                   <div

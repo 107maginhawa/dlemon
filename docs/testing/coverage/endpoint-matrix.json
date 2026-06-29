@@ -2190,11 +2190,11 @@
     "module": "dental-billing",
     "hasHandler": true,
     "hasSDK": true,
-    "hasFEConsumer": false,
+    "hasFEConsumer": true,
     "hasContractTest": true,
     "hasIntegrationTest": false,
     "hasJourney": false,
-    "disposition": "orphan"
+    "disposition": "tested"
   },
   {
     "operationId": "getCollectionsWorklist",

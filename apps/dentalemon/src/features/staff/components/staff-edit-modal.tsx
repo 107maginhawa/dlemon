@@ -7,7 +7,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import type { DentalRole } from '@/lib/rbac';
+import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { useStaffMutations, type Member, type UpdateMemberInput } from '../hooks/use-staff-members';
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,8 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
     setPinResetDone(false);
   }, [member]);
 
+  const { containerRef } = useSheetA11y({ open, onClose: handleClose });
+
   if (!open) return null;
 
   const isOwnerRow = member.role === 'dentist_owner';
@@ -172,10 +176,11 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-40 flex items-end"
       role="dialog"
       aria-modal="true"
-      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
+      aria-label="Edit staff member"
     >
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
@@ -197,9 +202,10 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
           <button
             type="button"
             onClick={handleClose}
-            className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm"
+            aria-label="Close"
+            className="-mr-2 h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            X
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -225,6 +231,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
             <input
               id="staff-edit-name"
               type="text"
+              autoFocus
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
@@ -249,7 +256,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
                     data-testid={`edit-role-${opt.value}`}
                     aria-pressed={role === opt.value}
                     onClick={() => setRole(opt.value)}
-                    className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
+                    className={`w-full text-left px-4 py-3 rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       role === opt.value
                         ? 'border-lemon bg-lemon/10'
                         : 'border-border hover:bg-secondary/50 cursor-pointer'
@@ -329,7 +336,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
               </div>
             )}
             {pinResetDone && (
-              <div data-testid="staff-reset-pin-success" className="rounded-lg bg-green-100 border border-green-300 px-3 py-2 text-sm text-green-800 mb-2">
+              <div data-testid="staff-reset-pin-success" className="rounded-lg bg-status-done border border-status-done-foreground/30 px-3 py-2 text-sm text-status-done-foreground mb-2">
                 PIN has been reset.
               </div>
             )}
@@ -350,7 +357,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
                 data-testid="staff-reset-pin-btn"
                 onClick={handleResetPin}
                 disabled={isResettingPin}
-                className="h-11 px-4 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50"
+                className="h-11 px-4 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {isResettingPin ? 'Resetting…' : 'Reset PIN'}
               </button>
@@ -363,7 +370,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors"
+            className="flex-1 h-11 rounded-xl border border-border text-sm hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Cancel
           </button>
@@ -371,7 +378,7 @@ export function StaffEditModal({ branchId, member, open, onClose, onSaved }: Sta
             type="button"
             onClick={handleSubmit}
             disabled={isUpdating}
-            className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+            className="flex-1 h-11 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {isUpdating ? 'Saving...' : 'Save Changes'}
           </button>

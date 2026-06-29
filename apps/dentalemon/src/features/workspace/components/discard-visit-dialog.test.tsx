@@ -22,7 +22,7 @@ describe('DiscardVisitDialog', () => {
     fireEvent.change(screen.getByTestId('discard-reason'), { target: { value: 'no' } });
     fireEvent.click(screen.getByTestId('discard-visit-confirm'));
     expect(onConfirm).not.toHaveBeenCalled();
-    expect(screen.getByText(/must be 5–500 characters/)).not.toBeNull();
+    expect(screen.getByText(/Please add a reason \(at least 5 characters\)/)).not.toBeNull();
   });
 
   test('calls onConfirm with the trimmed reason when valid', () => {

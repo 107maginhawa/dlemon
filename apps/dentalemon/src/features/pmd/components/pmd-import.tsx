@@ -41,7 +41,7 @@ export interface PMDImportProps {
 type Step = 'form' | 'preview' | 'done';
 
 export function PMDImport({ patientId, open, onClose, onImported }: PMDImportProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const [step, setStep] = useState<Step>('form');
   const [sourceFacility, setSourceFacility] = useState('');
   const [sourceReference, setSourceReference] = useState('');
@@ -137,7 +137,7 @@ export function PMDImport({ patientId, open, onClose, onImported }: PMDImportPro
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
+    <div ref={containerRef} className="fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       <div

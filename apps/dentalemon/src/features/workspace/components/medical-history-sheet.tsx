@@ -16,11 +16,12 @@ export interface MedicalHistorySheetProps {
 }
 
 export function MedicalHistorySheet({ patientId, open, onClose }: MedicalHistorySheetProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   if (!open) return null;
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-40 flex items-end"
       role="dialog"
       aria-modal="true"

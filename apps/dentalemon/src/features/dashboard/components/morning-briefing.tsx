@@ -19,14 +19,16 @@ import { useNavigate } from '@tanstack/react-router';
 import { Skeleton } from '@monobase/ui';
 import { canViewFinancials } from '@/lib/rbac';
 import type { DentalRole } from '@/lib/rbac';
+import { ListErrorState } from '@/components/list-error-state';
 import { useDashboardSummary } from '../hooks/use-dashboard-summary';
 import { ScheduleTimeline } from './schedule-timeline';
 import { AttentionQueue } from './attention-queue';
-import { KpiRibbon } from './kpi-ribbon';
+import { MoneyPanel } from './money-panel';
+import { PatientQuickSearch } from './patient-quick-search';
 import {
   getGreeting, formatTodayDate,
-  groupAppointmentsByStatus,
   buildAttentionItems,
+  pickHeroDay,
   formatTime, getInitials,
 } from './morning-briefing.helpers';
 
@@ -66,7 +68,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const navigate = useNavigate();
   const showFinancials = canViewFinancials(role);
 
-  const { data, isLoading, error } = useDashboardSummary({ branchId, showFinancials });
+  const { data, isLoading, error, refetch } = useDashboardSummary({ branchId, showFinancials });
 
   const now = new Date();
   const greeting = getGreeting(now.getHours());
@@ -75,18 +77,41 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
   const todayAppointments = data?.todayAppointments ?? [];
   const tomorrowAppointments = data?.tomorrowAppointments ?? [];
   const overdueInvoices = data?.overdueInvoices ?? [];
-  const dailyCollectionsCents = data?.dailyCollectionsCents ?? null;
+  const monthCollectedCents = data?.monthCollectedCents ?? null;
   const paymentPlansBehind = data?.paymentPlansBehind ?? null;
   const overdueLabOrders = data?.overdueLabOrders ?? null;
 
-  const groups = groupAppointmentsByStatus(todayAppointments);
+  // Context-aware hero: today while it still has work, else promote tomorrow.
+  const hero = pickHeroDay(todayAppointments, tomorrowAppointments, now);
+  const heroDate =
+    hero.isToday
+      ? now
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const heroTitle = hero.isToday ? 'Today' : 'Tomorrow';
+  const heroDateLabel = heroDate.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+
+  // Operational attention reflects real-time today state (checked-in only makes
+  // sense for today); overdue balances live in the MoneyPanel, not here.
   const attentionItems = buildAttentionItems({
     appointments: todayAppointments,
     overdueInvoices,
     overdueLabOrders,
     paymentPlansBehind,
     showFinancials,
+    includeOverdueBalances: false,
   });
+
+  const moneyOverdue = overdueInvoices.map((inv) => ({
+    id: inv.id,
+    patientId: inv.patientId,
+    patientName: inv.patientName,
+    balanceCents: inv.balanceCents,
+  }));
+
+  const openPatient = (patientId: string) =>
+    navigate({ to: '/$patientId', params: { patientId } });
 
   return (
     <div className="flex flex-col gap-4" data-testid="morning-briefing">
@@ -98,7 +123,7 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
         <p className="text-sm text-muted-foreground mt-0.5">{dateLabel}</p>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick actions + patient search (the #1 daily action) */}
       <div className="flex items-center gap-2.5 flex-wrap">
         <button
           type="button"
@@ -116,21 +141,17 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
         >
           <span className="text-base leading-none">+</span> New Appointment
         </button>
-        <button
-          type="button"
-          data-testid="quick-open-workspace"
-          onClick={() => navigate({ to: '/patients' })}
-          className="h-11 px-4 rounded-xl bg-background border border-border text-sm font-medium flex items-center gap-1.5 hover:bg-secondary/50 transition-colors"
-        >
-          Open Workspace
-        </button>
+        <div className="flex-1 min-w-[200px] flex justify-end">
+          <PatientQuickSearch branchId={branchId} onSelect={openPatient} />
+        </div>
       </div>
 
-      {/* Error */}
+      {/* Error — plain-language fallback + retry (PRODUCT.md voice) */}
       {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-          {error.message}
-        </div>
+        <ListErrorState
+          message="We couldn’t load your dashboard just now. Please try again."
+          onRetry={() => { void refetch(); }}
+        />
       )}
 
       {/* Loading skeleton */}
@@ -138,34 +159,42 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
 
       {!isLoading && !error && (
         <>
-          {/* Command center: Today timeline (hero) + action rail (queue + KPIs) */}
+          {/* Command center: hero day (context-aware) + action rail (money + attention) */}
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start">
             <ScheduleTimeline
-              appointments={todayAppointments}
+              appointments={hero.appointments}
               now={now}
               showFinancials={showFinancials}
+              title={heroTitle}
+              dateLabel={heroDateLabel}
+              showNowLine={hero.isToday}
+              onSelectAppointment={openPatient}
               onAdd={() => navigate({ to: '/calendar' })}
               onViewWeek={() => navigate({ to: '/calendar' })}
             />
 
             <div className="flex flex-col gap-4">
+              {showFinancials && (
+                <MoneyPanel
+                  monthCollectedCents={monthCollectedCents}
+                  overdue={moneyOverdue}
+                  onViewBilling={() => navigate({ to: '/billing' })}
+                  onSelectOverdue={(o) => openPatient(o.patientId)}
+                />
+              )}
               <AttentionQueue
                 items={attentionItems}
                 onSelect={(route) => navigate({ to: route })}
               />
-              <KpiRibbon
-                showFinancials={showFinancials}
-                dailyCollectionsCents={dailyCollectionsCents}
-                doneCount={groups.done.length}
-                remainingCount={groups.upcoming.length}
-              />
             </div>
           </div>
 
-          {/* Up next -- Tomorrow preview (kept, shrunk) */}
+          {/* Up next -- Tomorrow preview. Hidden when the hero already shows
+              tomorrow (today empty/over), so the day is never listed twice. */}
+          {hero.isToday && (
           <div className="bg-background rounded-2xl shadow-sm p-5 flex flex-col gap-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+              <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
                 Up next &mdash; Tomorrow{' '}
                 <span className="normal-case tracking-normal text-muted-foreground/80">
                   {new Date(Date.now() + 86400000).toLocaleDateString('en-US', {
@@ -200,16 +229,17 @@ export function MorningBriefing({ role, branchId }: MorningBriefingProps) {
                   <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
                     {getInitials(appt.patientName)}
                   </div>
-                  <span className="text-[13px] font-medium truncate">
+                  <span className="text-sm font-medium truncate">
                     {appt.patientName ?? appt.patientId}
                   </span>
-                  <span className="text-[11px] text-muted-foreground ml-auto whitespace-nowrap">
+                  <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
                     {appt.serviceType ?? '—'}
                   </span>
                 </div>
               ))
             )}
           </div>
+          )}
         </>
       )}
     </div>

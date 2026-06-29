@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    text-wrap: balance;
+    letter-spacing: -0.03em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: theme("colors.lemon.DEFAULT");
+    color: theme("colors.ink");
+  }
+
+  :focus-visible {
+    outline: 2px solid theme("colors.ink");
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+/* SUN demo carousel — slide sizing + brand-toned pagination dots (the visit
+   timeline). Scoped to .sun-swiper so it never leaks to the rest of the page. */
+.sun-swiper {
+  padding-bottom: 2.5rem;
+}
+/* Real product tooth SVG — fills its sized box; the box keeps the column aspect. */
+.tooth-svg {
+  display: inline-flex;
+}
+.tooth-svg svg {
+  height: 100%;
+  width: 100%;
+  display: block;
+}
+.sun-swiper .sun-slide {
+  /* Wide focused card (close to the real workspace chart), still narrower than the
+     frame so the cover-flow neighbors peek on both sides. */
+  width: clamp(300px, 82vw, 700px);
+  height: auto;
+}
+/* Swipe affordance — the nav arrows gently nudge to signal the carousel is swipeable. */
+@keyframes sun-nudge-right {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+@keyframes sun-nudge-left {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-4px); }
+}
+.sun-arrow-next { animation: sun-nudge-right 1.7s ease-in-out infinite; }
+.sun-arrow-prev { animation: sun-nudge-left 1.7s ease-in-out infinite; }
+
+/* Ambient glow behind the SUN card — slow, subtle breathing so it feels alive. */
+@keyframes sun-glow-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.05); }
+}
+.sun-glow { animation: sun-glow-pulse 7s ease-in-out infinite; will-change: opacity, transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sun-arrow-next, .sun-arrow-prev { animation: none; }
+  .sun-glow { animation: none; opacity: 0.7; }
+}
+.sun-swiper .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background: theme("colors.ink");
+  opacity: 0.2;
+  transition: opacity 0.2s ease;
+}
+.sun-swiper .swiper-pagination-bullet-active {
+  width: 24px;
+  border-radius: 9999px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

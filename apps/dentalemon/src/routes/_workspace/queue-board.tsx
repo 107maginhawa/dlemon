@@ -31,7 +31,7 @@ function QueueBoardPage() {
         </button>
         <h1 className="text-sm font-semibold">Queue Board</h1>
         {branchId && (
-          <span className="ml-auto text-[11px] text-muted-foreground">
+          <span className="ml-auto text-xs text-muted-foreground">
             Auto-refreshes every 15s
           </span>
         )}

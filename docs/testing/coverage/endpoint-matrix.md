@@ -11,14 +11,14 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | Metric | Count |
 |--------|------:|
 | Total operations | 380 |
-| FE-consumed | 213 |
+| FE-consumed | 214 |
 | With a contract test | 277 |
 | With an integration test | 0 |
 | With a journey | 0 |
 | **gap** (consumed, untested) | **37** |
-| orphan (product handler+SDK, no FE consumer) | 97 |
+| orphan (product handler+SDK, no FE consumer) | 96 |
 | template-base (upstream-template orphan, excluded from denominator) | 61 |
-| tested / no-obligation | 185 |
+| tested / no-obligation | 186 |
 
 ## GAPS — FE-consumed but untested (ratchet-tracked)
 
@@ -234,7 +234,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `getChatRoom` | comms | GET | `/comms/chat-rooms/{room}` | ✅ | ✅ |  |  |  |  | template-base |
 | `getClaimReadiness` | dental-patient | GET | `/dental/patients/{patientId}/claims/{claimId}/readiness` | ✅ | ✅ |  |  |  |  | orphan |
 | `getCollectionsKpis` | dental-billing | GET | `/dental/billing/collections/kpis` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
-| `getCollectionsSummary` | dental-billing | GET | `/dental/billing/collections/summary` | ✅ | ✅ |  | ✅ |  |  | orphan |
+| `getCollectionsSummary` | dental-billing | GET | `/dental/billing/collections/summary` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getCollectionsWorklist` | dental-billing | GET | `/dental/billing/collections/worklist` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `getConsultation` | emr | GET | `/emr/consultations/{consultation}` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `getDashboardSummary` | dental-org | GET | `/dental/dashboard/summary` | ✅ | ✅ | ✅ | ✅ |  |  | tested |

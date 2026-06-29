@@ -227,9 +227,15 @@ export class MembershipRepository extends DatabaseRepository<
     const member = await this.findOneById(id);
     if (!member) return null;
 
-    const attempts = (member.pinFailedAttempts ?? 0) + 1;
+    // If a prior lockout window has fully elapsed, this fail starts a FRESH cycle.
+    // Without this, a member who once hit the 5/10 threshold got re-locked on every
+    // later single mistake (the counter never decayed) — staff hit a "Too many
+    // failed attempts" wall after one try.
+    const priorLockoutExpired =
+      member.pinLockedUntil != null && member.pinLockedUntil <= new Date();
+    const attempts = (priorLockoutExpired ? 0 : (member.pinFailedAttempts ?? 0)) + 1;
 
-    let pinLockedUntil: Date | null = member.pinLockedUntil ?? null;
+    let pinLockedUntil: Date | null = priorLockoutExpired ? null : (member.pinLockedUntil ?? null);
     if (attempts >= 10) {
       pinLockedUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     } else if (attempts >= 5) {

@@ -37,14 +37,24 @@ function BillingPage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [planViewOpen, setPlanViewOpen] = useState(false)
+  // Quick-pay: open the detail sheet straight to the payment form.
+  const [openToPayment, setOpenToPayment] = useState(false)
 
   function handleInvoiceClick(invoice: { id: string }) {
+    setOpenToPayment(false)
+    setSelectedInvoiceId(invoice.id)
+    setDetailOpen(true)
+  }
+
+  function handleRecordPayment(invoice: { id: string }) {
+    setOpenToPayment(true)
     setSelectedInvoiceId(invoice.id)
     setDetailOpen(true)
   }
 
   function handleDetailClose() {
     setDetailOpen(false)
+    setOpenToPayment(false)
   }
 
   function handlePlanClose() {
@@ -77,7 +87,7 @@ function BillingPage() {
               role="tab"
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`h-[44px] flex items-center justify-center px-3.5 rounded-lg text-[13px] font-medium tracking-tight transition-colors ${
+              className={`h-[44px] flex items-center justify-center px-3.5 rounded-lg text-sm font-medium tracking-tight transition-colors ${
                 tab === t
                   ? 'bg-background shadow-sm font-semibold text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -90,7 +100,7 @@ function BillingPage() {
       </div>
 
       {tab === 'invoices' ? (
-        <BillingList branchId={branchId ?? undefined} onInvoiceClick={handleInvoiceClick} />
+        <BillingList branchId={branchId ?? undefined} onInvoiceClick={handleInvoiceClick} onRecordPayment={handleRecordPayment} />
       ) : tab === 'collections' ? (
         <CollectionsView branchId={branchId} />
       ) : (
@@ -105,6 +115,7 @@ function BillingPage() {
           onUpdated={handleUpdated}
           onViewPlan={() => setPlanViewOpen(true)}
           canWrite={canWrite}
+          openToPayment={openToPayment}
         />
       )}
 

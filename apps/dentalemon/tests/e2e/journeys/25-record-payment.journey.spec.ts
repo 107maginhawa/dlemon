@@ -48,7 +48,7 @@ test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
     await expect(detail, 'invoice detail sheet must open').toBeVisible({ timeout: 10_000 })
 
     // Drive the Record-Payment form (method defaults to cash).
-    await detail.getByRole('button', { name: 'Record Payment' }).click()
+    await detail.getByRole('button', { name: 'Record payment' }).click()
     await page.locator('#pay-amount').fill((seeded.balanceCents / 100).toString())
     await page.locator('#pay-receipt').fill(`J25-${Date.now()}`)
 

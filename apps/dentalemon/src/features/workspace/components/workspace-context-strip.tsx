@@ -49,11 +49,11 @@ function StatusPill({ status }: { status: VisitStatus }) {
     VisitStatus,
     { label: string; cls: string; Icon: typeof CircleDot }
   > = {
-    active: { label: 'Active', cls: 'bg-green-100 text-green-700', Icon: CircleDot },
-    draft: { label: 'Draft', cls: 'bg-gray-100 text-gray-600', Icon: Pencil },
+    active: { label: 'Active', cls: 'bg-success/15 text-success-foreground', Icon: CircleDot },
+    draft: { label: 'Draft', cls: 'bg-muted text-muted-foreground', Icon: Pencil },
     completed: { label: 'Completed', cls: 'bg-blue-100 text-blue-700', Icon: CheckCircle2 },
     locked: { label: 'Locked', cls: 'bg-purple-100 text-purple-700', Icon: Lock },
-    discarded: { label: 'Discarded', cls: 'bg-gray-100 text-gray-500', Icon: FileText },
+    discarded: { label: 'Discarded', cls: 'bg-muted text-muted-foreground', Icon: FileText },
   };
   const { label, cls, Icon } = map[status];
   return (
@@ -151,9 +151,9 @@ export function WorkspaceContextStrip({
           {viewingOpenVisit && (
             <span
               data-testid="visit-in-progress-indicator"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-success-foreground"
             >
-              <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden />
+              <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
               In progress
             </span>
           )}

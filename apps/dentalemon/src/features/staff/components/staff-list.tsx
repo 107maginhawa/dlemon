@@ -61,7 +61,7 @@ export function getRoleBadgeClass(role: string): string {
     case 'staff_scheduling':
       return 'bg-purple-100 text-purple-700';
     default:
-      return 'bg-gray-100 text-gray-500';
+      return 'bg-secondary text-muted-foreground';
   }
 }
 
@@ -125,7 +125,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="h-10 px-4 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors"
+            className="h-11 px-4 rounded-xl bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             + Add Staff
           </button>
@@ -207,7 +207,7 @@ export function StaffList({ branchId, currentUserRole }: StaffListProps) {
                   {/* Status dot */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${member.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <div className={`w-2 h-2 rounded-full ${member.status === 'active' ? 'bg-success' : 'bg-muted-foreground/40'}`} />
                       <span className="text-sm capitalize">{member.status}</span>
                     </div>
                   </td>

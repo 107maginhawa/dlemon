@@ -18,7 +18,7 @@ interface Props {
 const STATUS_COLORS: Record<PMDStatus, string> = {
   generated: 'bg-blue-100 text-blue-700',
   signed: 'bg-green-100 text-green-700',
-  superseded: 'bg-gray-100 text-gray-500',
+  superseded: 'bg-secondary text-muted-foreground',
 };
 
 export function PMDViewer({ pmd }: Props) {

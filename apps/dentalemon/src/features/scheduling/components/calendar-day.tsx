@@ -139,7 +139,7 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
                 className="flex items-start justify-end pr-2 pt-1 border-b border-border/40"
                 style={{ height: SLOT_HEIGHT_PX }}
               >
-                <span className="text-[11px] font-medium tabular-nums whitespace-nowrap" style={{ color: isHour ? undefined : 'transparent' }}>
+                <span className="text-xs font-medium tabular-nums whitespace-nowrap" style={{ color: isHour ? undefined : 'transparent' }}>
                   {isHour ? `${slot.hour > 12 ? slot.hour - 12 : slot.hour} ${slot.hour >= 12 ? 'PM' : 'AM'}` : '.'}
                 </span>
               </div>
@@ -157,7 +157,7 @@ export function CalendarDay({ date, appointments, onAppointmentClick, onSlotClic
               style={{ height: SLOT_HEIGHT_PX }}
             >
               <div
-                className="absolute inset-1.5 border-[1.5px] border-dashed border-border rounded-md flex items-center justify-center text-[11px] font-medium text-muted-foreground cursor-pointer opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lemon/40"
+                className="absolute inset-1.5 border-[1.5px] border-dashed border-border rounded-md flex items-center justify-center text-xs font-medium text-muted-foreground cursor-pointer opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lemon/40"
                 role="button"
                 tabIndex={0}
                 aria-label={`Book ${formatSlotTime(slot.hour, slot.minute)} slot`}

@@ -75,6 +75,7 @@ describe('InvoiceDetail — BR-013 mark uncollectible', () => {
     const f = installFetch();
     try {
       renderDetail();
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       const btn = await screen.findByTestId('mark-uncollectible-btn');
       await user.click(btn);
 
@@ -97,6 +98,7 @@ describe('InvoiceDetail — BR-013 mark uncollectible', () => {
     const f = installFetch();
     try {
       renderDetail();
+      await user.click(await screen.findByTestId('invoice-more-btn'));
       await user.click(await screen.findByTestId('mark-uncollectible-btn'));
       await user.click(await screen.findByRole('button', { name: /cancel/i }));
 

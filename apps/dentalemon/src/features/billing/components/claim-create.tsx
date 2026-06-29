@@ -38,7 +38,7 @@ export function canFileClaim(sel: ClaimSelection): boolean {
 const CLAIMABLE_STATUSES = new Set(['issued', 'partial', 'overdue']);
 
 export function ClaimCreate({ branchId, open, onClose, onCreated }: ClaimCreateProps) {
-  useSheetA11y({ open, onClose });
+  const { containerRef } = useSheetA11y({ open, onClose });
   const [query, setQuery] = useState('');
   const [patientId, setPatientId] = useState('');
   const [patientName, setPatientName] = useState('');
@@ -82,7 +82,7 @@ export function ClaimCreate({ branchId, open, onClose, onCreated }: ClaimCreateP
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="File Insurance Claim">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="File Insurance Claim">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div data-testid="claim-create" className="relative w-full max-w-[520px] max-h-[88vh] bg-background rounded-2xl shadow-2xl flex flex-col">

@@ -38,7 +38,7 @@ describe('PatientEditForm', () => {
       />,
     );
     setValue('Phone', '+63 917 555 1234');
-    fireEvent.click(screen.getByText('Save Changes'));
+    fireEvent.click(screen.getByText('Save changes'));
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit.mock.calls[0][0].phone).toBe('+639175551234');
   });
@@ -49,7 +49,7 @@ describe('PatientEditForm', () => {
       <PatientEditForm open initial={initial()} onClose={() => {}} onSubmit={onSubmit} />,
     );
     setValue('Phone', '+63 (917) 555-1234');
-    fireEvent.click(screen.getByText('Save Changes'));
+    fireEvent.click(screen.getByText('Save changes'));
     expect(onSubmit.mock.calls[0][0].phone).toBe('+639175551234');
   });
 
@@ -59,7 +59,7 @@ describe('PatientEditForm', () => {
       <PatientEditForm open initial={initial()} onClose={() => {}} onSubmit={onSubmit} />,
     );
     setValue('Phone', '0917 555 1234'); // no leading + → not valid E.164
-    fireEvent.click(screen.getByText('Save Changes'));
+    fireEvent.click(screen.getByText('Save changes'));
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByText(/international format/i)).not.toBeNull();
   });
@@ -69,7 +69,7 @@ describe('PatientEditForm', () => {
     render(
       <PatientEditForm open initial={initial({ firstName: '' })} onClose={() => {}} onSubmit={onSubmit} />,
     );
-    fireEvent.click(screen.getByText('Save Changes'));
+    fireEvent.click(screen.getByText('Save changes'));
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByText('First name is required')).not.toBeNull();
   });

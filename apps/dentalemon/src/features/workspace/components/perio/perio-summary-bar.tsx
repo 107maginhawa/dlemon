@@ -78,17 +78,17 @@ export function PerioSummaryBar({
       {(stage || grade || extent) && (
         <div className="flex items-center gap-2" data-testid="perio-classification-chips">
           {stage && (
-            <span className="rounded-full bg-foreground/90 px-2 py-0.5 text-[11px] font-semibold text-background">
+            <span className="rounded-full bg-foreground/90 px-2 py-0.5 text-xs font-semibold text-background">
               Stage {stage}
             </span>
           )}
           {grade && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
               Grade {grade}
             </span>
           )}
           {extent && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
               {EXTENT_LABEL[extent]}
             </span>
           )}

@@ -58,7 +58,7 @@ export function CbctStudyCard({ item }: CbctStudyCardProps) {
 
       {/* Truthful-labeling requirement: this is a 3-D dataset, not a flat radiograph.
           The full volume must be opened in a DICOM viewer. */}
-      <p className="mt-1 text-[11px] leading-snug text-zinc-400">
+      <p className="mt-1 text-xs leading-snug text-zinc-400">
         3-D dataset — open the full volume in a DICOM viewer. Not shown as a flat image.
       </p>
 
@@ -75,7 +75,7 @@ export function CbctStudyCard({ item }: CbctStudyCardProps) {
       </Button>
 
       {viewerLink.isError ? (
-        <p className="mt-1 text-[11px] text-red-500" data-testid="cbct-viewer-error">
+        <p className="mt-1 text-xs text-red-500" data-testid="cbct-viewer-error">
           Could not prepare the viewer link. Try again.
         </p>
       ) : null}
