@@ -24,6 +24,7 @@ import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { DismissTreatmentPopover, DeclineTreatmentPopover } from './treatment-row-popovers';
 import { statusToLayer, getLayerLabel, type TreatmentLayerStatus } from './dental-chart.helpers';
+import { isBillable } from '@/features/workspace/lib/billable';
 
 /**
  * P2 — group treatments for the by-status presentation view, folded through the
@@ -226,15 +227,11 @@ export function TreatmentTable({
   }
 
   const hasRows = nativeTreatments.length > 0 || carriedOverItems.length > 0;
-  const completedCount = nativeTreatments.filter(
-    (t) => t.status === 'performed' || t.status === 'verified',
-  ).length;
+  const completedCount = nativeTreatments.filter((t) => isBillable(t)).length;
   // A visit is "pending" if it has any not-yet-done work. When nothing is pending
   // (e.g. a finished/locked historical visit), there are no rows to focus on, so the
   // hide-completed default would leave the table empty under a real money total.
-  const hasPending = nativeTreatments.some(
-    (t) => t.status !== 'performed' && t.status !== 'verified',
-  );
+  const hasPending = nativeTreatments.some((t) => !isBillable(t));
 
   // TXTBL-01: subtotal computations
   // price contract: priceCents (API) ÷ 100 → dollars (display); t.priceAmount already in dollars
@@ -255,7 +252,7 @@ export function TreatmentTable({
   const effectiveShowCompleted = showCompleted || !hasPending;
   const displayedTreatments = effectiveShowCompleted
     ? nativeTreatments
-    : nativeTreatments.filter((t) => t.status !== 'performed' && t.status !== 'verified');
+    : nativeTreatments.filter((t) => !isBillable(t));
 
   if (!hasRows) {
     return (
@@ -417,7 +414,7 @@ export function TreatmentTable({
                     {t.description || EMPTY_CELL}
                   </td>
                   <td className="px-4 py-2 text-center">
-                    {t.status === 'performed' || t.status === 'verified' ? (
+                    {isBillable(t) ? (
                       <Check className="h-4 w-4 text-green-600 mx-auto" />
                     ) : !readOnly ? (
                       <div className="flex flex-col items-center">
