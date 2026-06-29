@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 9 * * *' # nightly — runs the broad E2E sweep (e2e job below)
+  workflow_dispatch:
 
 env:
   BUN_INSTALL_CACHE_DIR: /tmp/bun-cache
@@ -316,8 +319,13 @@ jobs:
         run: bun run check:secret-logging
 
   e2e:
-    name: E2E Tests
+    name: E2E Broad Sweep (nightly, non-blocking)
     runs-on: ubuntu-latest
+    # Off pull_request: this ~70-spec chromium sweep is chronically red (a subset
+    # needs infra not provisioned here) and non-required, so it was pure PR noise.
+    # The required Journey Harness job below is the authoritative E2E gate. Run the
+    # broad sweep nightly + on-demand instead.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     # 40m: the broad ~70-spec chromium sweep runs sequentially (workers:1, by
     # design — the specs share one seeded DB and aren't parallel-safe), so at 25m
     # it was being CANCELLED mid-suite. 40m lets it finish. Combined with
@@ -533,6 +541,15 @@ jobs:
         #   need MinIO (absent here) for a seeded image. BROKEN-expected journeys
         #   returning BROKEN are OK; returning PASS (a fix!) is logged, not blocking.
         run: bun apps/dentalemon/scripts/run-journey-harness.ts --no-reseed
+
+      # Role-denial security invariants (staff_scheduling blocked from clinical
+      # writes; auth/branch-context gates; PIN flow). These self-provision unique
+      # orgs per run, so they're independent of the seed/journey data above. Run
+      # them here against the already-booted real stack so they're part of THIS
+      # required job (no new required check → no branch-protection change). A
+      # regression hard-fails the gate.
+      - name: Role-denial & auth gates (chromium)
+        run: cd apps/dentalemon && bunx playwright test --project=chromium role-gates-scheduling auth-gates auth-pin --retries=0
 
       - name: Upload journey results
         uses: actions/upload-artifact@v4
