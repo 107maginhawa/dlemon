@@ -854,6 +854,77 @@ async function seed() {
       },
     ];
 
+    // ── Carousel depth: pad selected arcs with recurring recall/maintenance ──
+    // The timeline carousel only reads as real with many per-visit layers. The
+    // hand-authored arcs above top out at ~4 visits; pad the first three to 12+
+    // with backdated maintenance encounters spaced between the patient's last
+    // detailed visit and ~30 days ago. Same direct-insert historical path; each
+    // recall carries the standing chart forward (coherent cumulative snapshot)
+    // and rotates complaint/treatments so consecutive cards visibly differ.
+    const RECALL_RECIPES = [
+      {
+        complaint: 'Periodontal maintenance recall — scaling and review',
+        treatments: [{ cdtCode: 'D4910', description: 'Periodontal maintenance', priceCents: 250000 }],
+        soap: {
+          subjective: 'Routine maintenance. No new complaints.',
+          objective: 'Pocket depths stable 3-4mm. BOP localized. Light supragingival calculus.',
+          assessment: 'Stable periodontium under maintenance therapy.',
+          plan: 'Full-mouth scaling and polish. Reinforce interdental cleaning. 3-month recall.',
+        },
+      },
+      {
+        complaint: 'Recall exam and prophylaxis',
+        treatments: [
+          { cdtCode: 'D0120', description: 'Periodic oral evaluation', priceCents: 100000 },
+          { cdtCode: 'D1110', description: 'Adult prophylaxis', priceCents: 250000 },
+        ],
+        soap: {
+          subjective: 'Routine recall. Asymptomatic.',
+          objective: 'Oral hygiene good. Existing restorations intact. No new caries detected.',
+          assessment: 'Healthy dentition, maintenance phase.',
+          plan: 'Prophylaxis and fluoride. 6-month recall scheduled.',
+        },
+      },
+      {
+        complaint: 'Recall — bitewings and fluoride varnish',
+        treatments: [
+          { cdtCode: 'D0274', description: 'Bitewing radiographs — four films', priceCents: 180000 },
+          { cdtCode: 'D1206', description: 'Topical fluoride varnish', priceCents: 80000 },
+        ],
+        soap: {
+          subjective: 'Recall visit. No pain or sensitivity.',
+          objective: 'Bitewings show no interproximal caries. Restoration margins intact.',
+          assessment: 'No active disease.',
+          plan: 'Continue maintenance. 6-month recall.',
+        },
+      },
+    ];
+
+    function padArc(arc: PatientArc, target: number) {
+      if (arc.visits.length >= target) return;
+      const last = arc.visits[arc.visits.length - 1];
+      const carryTeeth = last.teeth.map(t => ({ ...t })); // standing findings carry forward
+      const baseKey = arc.visits[0].key.replace(/-v\d+$/, ''); // e.g. 'long-p11'
+      const need = target - arc.visits.length;
+      // last.daysAgoN is the most recent detailed visit; fill the window down to ~30 days ago.
+      const step = Math.max(20, Math.floor((last.daysAgoN - 30) / (need + 1)));
+      for (let i = 0; i < need; i++) {
+        const r = RECALL_RECIPES[i % RECALL_RECIPES.length];
+        arc.visits.push({
+          key: `${baseKey}-r${i + 1}`,
+          daysAgoN: Math.max(30, last.daysAgoN - step * (i + 1)),
+          complaint: r.complaint,
+          teeth: carryTeeth,
+          treatments: r.treatments,
+          soap: r.soap,
+          status: 'completed',
+        });
+      }
+    }
+
+    // Three "deep" patients with 12+ visits so the carousel timeline is exercised.
+    for (const arc of arcs.slice(0, 3)) padArc(arc, 13);
+
     let totalVisitsInserted = 0;
     for (const arc of arcs) {
       const patientId = longPatientMap.get(arc.name);

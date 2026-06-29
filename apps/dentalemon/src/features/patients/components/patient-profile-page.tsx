@@ -128,7 +128,12 @@ function OverviewTab({ patientId }: { patientId: string }) {
       >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold">Recent Visits</h3>
-          <span className="text-xs text-muted-foreground">{visits.length} total</span>
+          {/* Count finished encounters only (completed/locked) so this matches the
+              profile's headline visit count. The list below still shows the open
+              "Current" visit with its own status badge — it just isn't tallied here. */}
+          <span className="text-xs text-muted-foreground">
+            {visits.filter((v) => v.status === 'completed' || v.status === 'locked').length} total
+          </span>
         </div>
 
         {isLoading ? (

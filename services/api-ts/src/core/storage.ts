@@ -92,10 +92,24 @@ export class S3StorageProvider implements StorageProvider {
     this.config = config;
     this.logger = logger;
 
+    // AWS SDK v3 (≥ v3.729) defaults requestChecksumCalculation to 'WHEN_SUPPORTED',
+    // which bakes an x-amz-checksum-crc32 header into EVERY request — including
+    // presigned PUTs. The checksum is signed with a placeholder, so when a client
+    // PUTs real bytes the value differs and S3-compatible stores (MinIO) reject the
+    // upload with 403. 'WHEN_REQUIRED' restores pre-2025 behavior: checksums only
+    // when the operation mandates them, which keeps presigned PUT/GET interoperable
+    // with MinIO and browser uploads to real S3. (responseChecksumValidation mirrors
+    // it for presigned GET downloads.)
+    const checksumConfig = {
+      requestChecksumCalculation: 'WHEN_REQUIRED' as const,
+      responseChecksumValidation: 'WHEN_REQUIRED' as const,
+    };
+
     // Configure S3 client based on provider
     const clientConfig: S3ClientConfig = {
       region: config.region || 'us-east-1', // Default region for MinIO
       credentials: config.credentials,
+      ...checksumConfig,
     };
 
     // Add endpoint for MinIO or custom S3-compatible storage
@@ -113,6 +127,7 @@ export class S3StorageProvider implements StorageProvider {
         credentials: config.credentials,
         endpoint: config.publicEndpoint,
         forcePathStyle: config.provider === 'minio',
+        ...checksumConfig,
       };
       this.publicClient = new S3Client(publicClientConfig);
     } else {

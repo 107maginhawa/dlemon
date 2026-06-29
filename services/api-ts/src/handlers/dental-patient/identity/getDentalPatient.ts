@@ -10,7 +10,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, ForbiddenError } from '@/core/errors';
 import { getDentalPatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
-import { getVisitsByPatientId } from '../../dental-visit/repos/visit-dental-patient.facade';
+import { getVisitsByPatientId, isCountedVisit } from '../../dental-visit/repos/visit-dental-patient.facade';
 import { getInvoicesByPatientId } from '../../dental-billing/repos/billing-dental-patient.facade';
 import { getActiveMedicalHistoryByPatientId } from '../../dental-clinical/repos/clinical-dental-patient.facade';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
@@ -39,7 +39,9 @@ export async function getDentalPatient(
   // Visit count + last visit date
   const visits = await getVisitsByPatientId(db, patientId);
 
-  const visitCount = visits.length;
+  // Count finished encounters only (completed/locked) so the profile matches the
+  // folder list. The open in-progress visit shows as "Current" but is not counted.
+  const visitCount = visits.filter(v => isCountedVisit(v.status)).length;
   const lastVisit = visits.find(v => v.status === 'completed' || v.status === 'locked')?.completedAt ?? null;
 
   // Outstanding balance: sum balanceCents from non-voided invoices

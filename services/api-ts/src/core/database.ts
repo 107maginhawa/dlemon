@@ -147,17 +147,24 @@ export function createDatabase(config: DatabaseConfig): DatabaseInstance {
       : false,
   });
 
-  // Set search_path for ALL connections in the pool (critical for test schema isolation)
-  if (schemaName) {
-    pool.on('connect', async (client) => {
-      try {
+  // Initialize every pooled connection:
+  // 1. Pin the session to UTC. `baseEntityFields.createdAt/updatedAt` are naive
+  //    `timestamp` columns written via now(); comparing them to the app's
+  //    tz-aware date windows is only correct when the DB session TZ matches the
+  //    app TZ. Prod/CI run UTC; a non-UTC dev Postgres (e.g. Asia/Manila) would
+  //    otherwise skew date-range reports (collections summary) by its offset.
+  // 2. Set search_path when a schema is supplied (test schema isolation).
+  pool.on('connect', async (client) => {
+    try {
+      await client.query(`SET TIME ZONE 'UTC'`);
+      if (schemaName) {
         await client.query(`SET search_path TO "${schemaName}", public`);
-      } catch (error) {
-        console.error(`Failed to set search_path to ${schemaName}:`, error);
-        throw error;
       }
-    });
-  }
+    } catch (error) {
+      console.error('Failed to initialize pooled connection (timezone/search_path):', error);
+      throw error;
+    }
+  });
 
   // Create and return Drizzle database instance directly
   return drizzle(pool, {

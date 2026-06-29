@@ -9,7 +9,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError } from '@/core/errors';
 import { getDentalPatientWithPerson } from '../../patient/repos/patient-dental-patient.facade';
-import { getVisitsByPatientId } from '../../dental-visit/repos/visit-dental-patient.facade';
+import { getVisitsByPatientId, isCountedVisit } from '../../dental-visit/repos/visit-dental-patient.facade';
 import {
   getInvoicesByPatientId,
   getInvoiceLineItemsByInvoiceId,
@@ -81,7 +81,7 @@ export async function getDentalPatientStatement(
     patientName: [person?.firstName, person?.lastName].filter(Boolean).join(' '),
     generatedAt: new Date().toISOString(),
     summary: {
-      totalVisits: visits.length,
+      totalVisits: visits.filter(v => isCountedVisit(v.status)).length,
       totalInvoices: invoices.length,
       totalPayments: payments.length,
       totalBilledCents,

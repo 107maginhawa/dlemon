@@ -5,7 +5,7 @@
  * Isolates cross-module access behind typed functions.
  */
 
-import { eq, desc, inArray, sql } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import type { DatabaseInstance } from '@/core/database';
 import { DentalChartRepository } from './dental-chart.repo';
 import { TreatmentRepository } from './treatment.repo';
@@ -21,6 +21,23 @@ export type { ToothChartState } from './dental-chart.schema';
  *  case-presentation aggregate (avoids a direct treatment.schema import). */
 export { TREATMENT_PHASE_ORDER } from './treatment.schema';
 export type { DentalTreatmentPhase } from './treatment.schema';
+
+/**
+ * Visit statuses that count as a finished clinical encounter in a patient's
+ * "visit count" (folder list, profile, statement). ONLY finished encounters count:
+ * - 'completed' / 'locked' — finished encounters → counted.
+ * - 'draft' / 'active'      — the OPEN, in-progress visit ("Current" card) → NOT counted.
+ * - 'discarded'             — abandoned; hidden from the timeline → NOT counted.
+ * A count that incremented on starting a visit (active/draft) would be non-monotonic
+ * and disagree with how clinicians read "how many visits". Single source of truth so
+ * the backend and the seed coherence guard agree.
+ */
+export const COUNTED_VISIT_STATUSES = ['completed', 'locked'] as const;
+
+/** True when a visit status counts toward the patient's visit total. */
+export function isCountedVisit(status: string): boolean {
+  return (COUNTED_VISIT_STATUSES as readonly string[]).includes(status);
+}
 
 /** Get chart for a visit (for visit/condition lists). */
 export async function getChartForPatientVisit(db: DatabaseInstance, visitId: string) {
@@ -71,6 +88,11 @@ export async function getVisitStatsForPatients(
       lastVisit: sql<string>`max(${dentalVisits.completedAt})`.as('last_visit'),
     })
     .from(dentalVisits)
-    .where(inArray(dentalVisits.patientId, patientIds))
+    .where(
+      and(
+        inArray(dentalVisits.patientId, patientIds),
+        inArray(dentalVisits.status, [...COUNTED_VISIT_STATUSES]),
+      ),
+    )
     .groupBy(dentalVisits.patientId);
 }
