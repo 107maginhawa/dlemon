@@ -232,7 +232,7 @@ export function TreatmentTemplates() {
                   value={it.cdtCode}
                   onChange={(e) => patchItem(idx, { cdtCode: e.target.value })}
                   placeholder="CDT"
-                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none font-mono"
+                  className="w-full min-w-0 h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none font-mono"
                 />
                 <input
                   type="text"
@@ -240,7 +240,7 @@ export function TreatmentTemplates() {
                   value={it.description}
                   onChange={(e) => patchItem(idx, { description: e.target.value })}
                   placeholder="Procedure description"
-                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
+                  className="w-full min-w-0 h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 />
                 <input
                   type="number"
@@ -249,7 +249,7 @@ export function TreatmentTemplates() {
                   onChange={(e) => patchItem(idx, { price: e.target.value })}
                   placeholder={CURRENCY_SYMBOL}
                   min={0}
-                  className="h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tabular-nums"
+                  className="w-full min-w-0 h-10 rounded-lg border border-border px-2 text-sm bg-background focus-visible:border-lemon focus-visible:ring-2 focus-visible:ring-ring outline-none tabular-nums"
                 />
                 <button
                   type="button"
