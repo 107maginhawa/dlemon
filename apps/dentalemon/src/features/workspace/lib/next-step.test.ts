@@ -7,7 +7,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { deriveNextStep } from './next-step';
+import { deriveNextStep, visitToComplete } from './next-step';
 
 const OPEN_VISIT = { id: 'v-open', status: 'active' };
 
@@ -112,5 +112,25 @@ describe('deriveNextStep', () => {
     });
     expect(s.kind).toBe('closed-no-open');
     expect(s.buttons[0].action).toBe('start-visit');
+  });
+});
+
+// G-02: "Complete visit" must always target the patient's OPEN visit, never the
+// historical visit being viewed in the open-visit-blocker state.
+describe('visitToComplete', () => {
+  test('open-visit-blocker: completes the OPEN visit, not the viewed historical one', () => {
+    expect(visitToComplete('v-historical', OPEN_VISIT)).toBe('v-open');
+  });
+
+  test('viewing the open visit: completes the current (== open) visit', () => {
+    expect(visitToComplete('v-open', OPEN_VISIT)).toBe('v-open');
+  });
+
+  test('no open visit: falls back to the current visit', () => {
+    expect(visitToComplete('v-historical', null)).toBe('v-historical');
+  });
+
+  test('nothing selectable → null', () => {
+    expect(visitToComplete(null, null)).toBeNull();
   });
 });

@@ -141,3 +141,17 @@ export function deriveNextStep(input: DeriveNextStepInput): NextStep {
     buttons: [{ label: 'Complete visit', action: 'complete', primary: false }],
   };
 }
+
+/**
+ * G-02: the visit a "Complete visit" action must target. Completion always
+ * applies to the patient's OPEN visit — never the historical visit being viewed.
+ * In the open-visit-blocker state (state 2) the user is viewing a closed visit
+ * while an open one exists, so the displayed (current) visit id is the WRONG
+ * target. When no open visit exists, fall back to the current visit.
+ */
+export function visitToComplete(
+  currentVisitId: string | null | undefined,
+  openVisit: { id: string } | null | undefined,
+): string | null {
+  return openVisit?.id ?? currentVisitId ?? null;
+}

@@ -53,6 +53,7 @@ import { useConsentTemplates } from '@/features/settings/hooks/use-consent-templ
 import { useCreateVisit } from '@/features/workspace/hooks/use-create-visit';
 import { findOpenVisit, isClosedVisit, NEW_VISIT_DISABLED_HINT } from '@/features/workspace/lib/visit-status';
 import { deriveChartLayerSets } from '@/features/workspace/lib/chart-layers';
+import { visitToComplete } from '@/features/workspace/lib/next-step';
 import { explainToothLayer } from '@/features/workspace/components/tooth-layer-explanation';
 import { useDiscardVisit } from '@/features/workspace/hooks/use-discard-visit';
 import { DiscardVisitDialog } from '@/features/workspace/components/discard-visit-dialog';
@@ -571,7 +572,15 @@ function WorkspacePage() {
           canCompare={visits.length >= 2}
           onCompare={() => setCompareOpen(true)}
           onStartVisit={handleNewVisit}
-          onComplete={() => setChecklistOpen(true)}
+          onComplete={() => {
+            // G-02: completion always targets the patient's OPEN visit. In the
+            // open-visit-blocker state the user is viewing a historical visit, so
+            // select the open visit first — otherwise the checklist (and the
+            // completion) would act on the wrong, already-closed visit.
+            const target = visitToComplete(currentVisitId, openVisit);
+            if (target && target !== currentVisitId) setCurrentVisitId(target);
+            setChecklistOpen(true);
+          }}
           onDiscard={handleDiscardVisit}
           canDiscard={orgRole === 'dentist_owner'}
         />
