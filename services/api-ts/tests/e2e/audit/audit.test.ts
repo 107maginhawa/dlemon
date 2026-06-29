@@ -9,6 +9,7 @@ import { createTestApp, type TestApp } from '../../helpers/test-app';
 import { listAuditLogs, waitForAuditLog } from '../../helpers/audit';
 import { createPerson, updatePerson, getPerson, generateTestPersonData } from '../../helpers/person';
 import { faker } from '@faker-js/faker';
+import { auditCategoryEnum } from '@/handlers/audit/repos/audit.schema';
 
 describe('Audit E2E Tests', () => {
   let testApp: TestApp;
@@ -374,7 +375,10 @@ describe('Audit E2E Tests', () => {
       expect(data.data.length).toBeGreaterThan(0);
 
       const validEventTypes = ['authentication', 'data-access', 'data-modification', 'system-config', 'security', 'compliance'];
-      const validCategories = ['regulatory', 'security', 'privacy', 'administrative', 'domain', 'financial'];
+      // Derive from the canonical enum so this drift-detection test cannot itself
+      // drift (the prior hardcoded list omitted 'hipaa'/'clinical' and invented
+      // 'regulatory'/'domain', failing on a seeded 'hipaa' log).
+      const validCategories = [...auditCategoryEnum.enumValues];
       const validActions = ['create', 'read', 'update', 'delete', 'login', 'logout'];
       const validOutcomes = ['success', 'failure', 'partial', 'denied'];
       const validRetentionStatuses = ['active', 'archived', 'pending-purge'];
