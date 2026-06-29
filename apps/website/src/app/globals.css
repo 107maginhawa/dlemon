@@ -80,6 +80,55 @@
   .sun-arrow-next, .sun-arrow-prev { animation: none; }
   .sun-glow { animation: none; opacity: 0.7; }
 }
+
+/* "Cut the cord" snap — fires when the Unsubscribe band scrolls into view
+   (.cut-play toggled by JS, motion-allowed only). Re-arms after the band fully
+   leaves the viewport so it replays on genuine re-entry, not on scroll jitter.
+   Choreography: anticipation hold → fast scissor chomp → bright spark + sever →
+   the freed end FALLS into slack on a long ease-out (gravity), then settles. The
+   snap is quick; the drop breathes. Each part animates from a taut/uncut "before"
+   pose to its natural drawn after-state, so the still frame (SSR / no-JS /
+   reduced-motion) is the meaningful cut aftermath. Pure transforms + opacity. */
+.cut-cord [class^="cut-"] { transform-box: fill-box; }
+.cut-play .cut-scissors,
+.cut-play .cut-left,
+.cut-play .cut-freed,
+.cut-play .cut-spark { will-change: transform; }
+
+.cut-play .cut-scissors { animation: cut-chomp 1.5s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: 50% 55%; }
+.cut-play .cut-left { animation: cut-recoil 1.5s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.cut-play .cut-freed { animation: cut-drop 1.5s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.cut-play .cut-spark { animation: cut-burst 1.5s 0.1s ease-out both; transform-origin: center; will-change: transform, opacity; }
+
+/* scissors: hold open, then snap shut fast (30%→42%) and settle */
+@keyframes cut-chomp {
+  0%, 30% { transform: rotate(-7deg) translateY(-2px); }
+  42%     { transform: rotate(4deg) translateY(1.5px); }
+  55%     { transform: rotate(0deg); }
+  100%    { transform: none; }
+}
+/* left cord: taut, then a quick recoil at the cut */
+@keyframes cut-recoil {
+  0%, 34% { transform: translateX(4px); }
+  41%     { transform: translateX(-3px); }
+  100%    { transform: none; }
+}
+/* freed end: held taut through the chomp, then a long gravity fall that swings
+   just past the slack (70%) and settles back — the part that gets to breathe */
+@keyframes cut-drop {
+  0%, 34% { transform: translate(-16px, -12px); }
+  70%     { transform: translate(2px, 5px); }
+  85%     { transform: translate(-1px, -1px); }
+  100%    { transform: none; }
+}
+/* spark: a fast bright pop at the instant of the cut, then settles to its resting
+   visible state (so the still frame keeps the snap marker) */
+@keyframes cut-burst {
+  0%, 33% { opacity: 0; transform: scale(0.3); }
+  40%     { opacity: 1; transform: scale(1.3); }
+  52%     { transform: scale(0.95); }
+  100%    { opacity: 1; transform: none; }
+}
 .sun-swiper .swiper-pagination-bullet {
   width: 8px;
   height: 8px;
