@@ -1,17 +1,25 @@
 /**
- * WorkspacePaymentModal — lightweight payment initiation modal in workspace
+ * WorkspacePaymentModal — payment initiation modal in the workspace.
  *
- * PAY-01: User can initiate payment — shows treatments + "Create Invoice" CTA
- * PAY-02: User can view payment status — shows invoice status when found
+ * PAY-01: initiate payment — bills the visit's BILLABLE treatments.
+ * PAY-02: view payment status — shows this visit's invoice when one exists.
  *
- * If an invoice already exists for this patient, shows it with a "View Full Invoice"
- * link that opens InvoiceDetail. Otherwise shows treatment line items + create flow.
+ * Coherence (PRODUCT.md principle #4 — "no payable that can't be paid"): the server
+ * invoices ONLY performed|verified treatments (BR-009). So the modal splits the line
+ * items via the shared `splitBillable` SoT into:
+ *   • Ready to bill (performed|verified) — summed into the payable Subtotal; the
+ *     "Create Invoice & Pay" CTA is gated on this being non-empty.
+ *   • Estimate (diagnosed|planned) — shown as a clearly NON-payable plan, never
+ *     summed into the payable total.
+ * An all-planned visit therefore never presents an enabled Pay button that 422s with
+ * NO_BILLABLE_TREATMENTS — it shows the estimate plus the correct next action.
  *
  * Wireframe: docs/prd/context/wireframes/ws-payment-modal.html
  */
 import React, { useState } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
+import { splitBillable, isBillableStatus } from '../lib/billable';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { InvoiceDetail } from '@/features/billing/components/invoice-detail';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
@@ -50,6 +58,8 @@ function formatCents(cents: number): string {
   })}`;
 }
 
+const GRID = '1fr 72px 64px 80px';
+
 function statusConfig(status: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
     draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
@@ -67,12 +77,15 @@ function statusConfig(status: string): { label: string; className: string } {
 // ---------------------------------------------------------------------------
 
 function LineItemRow({ item }: { item: PaymentLineItem }) {
-  const isDone = item.status === 'done' || item.status === 'completed';
+  // "Done" == billable (the server invoices these). Real statuses are
+  // performed|verified; the SoT keeps this row honest (a performed item never
+  // shows "Pending").
+  const isDone = isBillableStatus(item.status);
   return (
     <div
       data-testid={`line-item-${item.id}`}
       className="grid gap-1 border-b border-border py-2.5 last:border-0"
-      style={{ gridTemplateColumns: '1fr 72px 64px 80px', alignItems: 'center' }}
+      style={{ gridTemplateColumns: GRID, alignItems: 'center' }}
     >
       <div>
         <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
@@ -84,7 +97,7 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
       <div
         className="text-right"
         role="img"
-        aria-label={isDone ? 'Status: completed' : 'Status: pending'}
+        aria-label={isDone ? 'Status: performed' : 'Status: planned'}
       >
         {isDone ? (
           <CheckCircle2 className="ml-auto h-5 w-5 text-success" />
@@ -94,7 +107,7 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
       </div>
       <div className="text-right">
         <span className={`text-xs font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
-          {isDone ? 'Done' : 'Pending'}
+          {isDone ? 'Done' : 'Planned'}
         </span>
       </div>
       <div className="text-right">
@@ -106,24 +119,44 @@ function LineItemRow({ item }: { item: PaymentLineItem }) {
   );
 }
 
+/** Section heading + column headers shared by the billable + estimate groups. */
+function SectionHead({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="pt-3">
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+      </div>
+      <div className="grid border-b border-border pb-1.5 pt-2" style={{ gridTemplateColumns: GRID }}>
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+          Treatment
+        </span>
+        <span />
+        <span className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+          Status
+        </span>
+        <span className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+          Amount
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Invoice status banner (PAY-02)
 // ---------------------------------------------------------------------------
 
 function InvoiceBanner({
-  invoiceId,
   invoiceNumber,
   status,
   totalCents,
-  paidCents,
   balanceCents,
   onViewDetail,
 }: {
-  invoiceId: string;
   invoiceNumber: string;
   status: string;
   totalCents: number;
-  paidCents: number;
   balanceCents: number;
   onViewDetail: () => void;
 }) {
@@ -179,28 +212,30 @@ export function WorkspacePaymentModal({
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
   const { containerRef } = useSheetA11y({ open, onClose });
 
-  const subtotalCents = lineItems.reduce((sum, item) => sum + item.priceCents, 0);
+  // Split into payable (performed|verified) vs estimate (diagnosed|planned) — the SoT
+  // the footer summary also consumes, so the two never disagree.
+  const { billable, estimate } = splitBillable(lineItems);
+  const billableCents = billable.reduce((sum, item) => sum + item.priceCents, 0);
+  const estimateCents = estimate.reduce((sum, item) => sum + item.priceCents, 0);
+  const hasBillable = billable.length > 0;
+  const hasEstimate = estimate.length > 0;
 
-  // THIS visit's invoice (one invoice per visit). Previously this took the patient's
-  // most-recent non-voided invoice across ALL visits, so a prior visit's PAID invoice
-  // surfaced on the current (unbilled) visit: the banner showed "Paid / balance 0"
-  // while the body listed this visit's pending treatments (summary-vs-body mismatch),
-  // and "Record Payment" re-opened that paid invoice — a dead-end with no way to bill
-  // the current work (item 11). visitId is on the wire (DentalInvoice.visitId), so
-  // scope to it: no invoice for this visit → the Create-Invoice path is offered.
+  // THIS visit's invoice (one invoice per visit) — scoped to props.visitId so a prior
+  // visit's PAID invoice never surfaces on the current unbilled visit (item 11).
   const visitInvoice = invoices
     .filter((inv) => inv.status !== 'voided' && inv.visitId === visitId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   async function handleCreateInvoice() {
-    // QA-008: the backend requires a visitId (plus branch + member, sourced from
-    // org context inside the hook). Without a visit there is nothing to invoice.
-    if (!visitId) return;
+    // QA-008: the backend requires a visitId (plus branch + member, from org context
+    // inside the hook). And there must be a billable line — the CTA is gated on it,
+    // so this can no longer 422 with NO_BILLABLE_TREATMENTS.
+    if (!visitId || !hasBillable) return;
     try {
       const inv = await createInvoice.mutateAsync({ visitId });
       setInvoiceDetailId(inv.id);
     } catch {
-      // error state surfaced via createInvoice.isError / createInvoice.error
+      // surfaced via createInvoice.isError below + a toast in the hook.
     }
   }
 
@@ -252,65 +287,75 @@ export function WorkspacePaymentModal({
               </div>
             ) : visitInvoice ? (
               <InvoiceBanner
-                invoiceId={visitInvoice.id}
                 invoiceNumber={visitInvoice.invoiceNumber}
                 status={visitInvoice.status}
                 totalCents={visitInvoice.totalCents}
-                paidCents={visitInvoice.paidCents}
                 balanceCents={visitInvoice.balanceCents}
                 onViewDetail={() => setInvoiceDetailId(visitInvoice.id)}
               />
             ) : null}
 
-            {/* Line items */}
-            {lineItems.length > 0 && (
-              <div className="px-5">
-                {/* Column headers */}
+            {/* Line items render independently of invoice loading (they come from the
+                visit's treatments, not the invoices query). */}
+            <>
+              {/* Ready to bill — the payable set (performed | verified) */}
+              {hasBillable && (
+                <div className="px-5" data-testid="billable-section">
+                  <SectionHead title="Ready to bill" />
+                  {billable.map((item) => (
+                    <LineItemRow key={item.id} item={item} />
+                  ))}
+                </div>
+              )}
+
+              {/* Payable subtotal — billable only */}
+              {hasBillable && (
                 <div
-                  className="grid border-b border-border pb-1.5 pt-3"
-                  style={{ gridTemplateColumns: '1fr 72px 64px 80px' }}
+                  data-testid="subtotal-row"
+                  className="mx-0 mt-3 flex items-center justify-between border-y border-border bg-lemon-soft px-5 py-3"
                 >
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Treatment
-                  </span>
-                  <span className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground" />
-                  <span className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Status
-                  </span>
-                  <span className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Amount
+                  <span className="text-sm font-semibold text-lemon-foreground">Subtotal</span>
+                  <span
+                    data-testid="subtotal-amount"
+                    className="text-base font-bold tabular-nums text-lemon-foreground"
+                  >
+                    {formatCents(billableCents)}
                   </span>
                 </div>
-                {lineItems.map((item) => (
-                  <LineItemRow key={item.id} item={item} />
-                ))}
-              </div>
-            )}
+              )}
 
-            {lineItems.length === 0 && !invoicesLoading && (
-              <div className="flex h-24 flex-col items-center justify-center gap-1 px-5 text-center">
-                <CreditCard className="h-6 w-6 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
-                  No treatment items yet. Add treatments on the odontogram to generate a payment.
-                </p>
-              </div>
-            )}
+              {/* Estimate — planned work, NOT payable yet */}
+              {hasEstimate && (
+                <div className="px-5" data-testid="estimate-section">
+                  <SectionHead title="Estimate" hint="not yet billable" />
+                  {estimate.map((item) => (
+                    <LineItemRow key={item.id} item={item} />
+                  ))}
+                  <div className="mt-2 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                    <span className="text-sm font-medium text-muted-foreground">Estimate total</span>
+                    <span
+                      data-testid="estimate-total"
+                      className="text-sm font-semibold tabular-nums text-muted-foreground"
+                    >
+                      {formatCents(estimateCents)}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Planned treatments are billed once marked performed.
+                  </p>
+                </div>
+              )}
 
-            {/* Subtotal */}
-            {lineItems.length > 0 && (
-              <div
-                data-testid="subtotal-row"
-                className="mx-0 flex items-center justify-between bg-lemon-soft px-5 py-3 border-y border-border"
-              >
-                <span className="text-sm font-semibold text-lemon-foreground">Subtotal</span>
-                <span
-                  data-testid="subtotal-amount"
-                  className="text-base font-bold tabular-nums text-lemon-foreground"
-                >
-                  {formatCents(subtotalCents)}
-                </span>
-              </div>
-            )}
+              {/* Nothing at all (wait for the invoice check so it doesn't flash) */}
+              {!hasBillable && !hasEstimate && !visitInvoice && !invoicesLoading && (
+                <div className="flex h-24 flex-col items-center justify-center gap-1 px-5 text-center">
+                  <CreditCard className="h-6 w-6 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    No treatment items yet. Add treatments on the odontogram to generate a payment.
+                  </p>
+                </div>
+              )}
+            </>
           </div>
 
           {/* Footer actions */}
@@ -325,22 +370,43 @@ export function WorkspacePaymentModal({
                 <CreditCard className="h-4 w-4" />
                 Record Payment
               </button>
+            ) : hasBillable ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCreateInvoice}
+                  disabled={createInvoice.isPending || !visitId}
+                  data-testid="create-invoice-btn"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  {createInvoice.isPending ? 'Creating Invoice…' : 'Create Invoice & Pay'}
+                </button>
+                {createInvoice.isError && (
+                  <p className="mt-2 text-center text-xs text-destructive" role="alert">
+                    Could not create the invoice. Please try again.
+                  </p>
+                )}
+              </>
             ) : (
-              <button
-                type="button"
-                onClick={handleCreateInvoice}
-                disabled={createInvoice.isPending || lineItems.length === 0 || !visitId}
-                data-testid="create-invoice-btn"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
-              >
-                <CreditCard className="h-4 w-4" />
-                {createInvoice.isPending ? 'Creating Invoice…' : 'Create Invoice & Pay'}
-              </button>
-            )}
-            {createInvoice.isError && (
-              <p className="mt-2 text-center text-xs text-destructive" role="alert">
-                {(createInvoice.error as Error).message}
-              </p>
+              // No billable line → no Pay button that would 422. Explain + offer a
+              // clean exit (the estimate above is the answer to "what now?").
+              <>
+                {hasEstimate && (
+                  <p data-testid="no-billable-note" className="mb-2 text-center text-xs text-muted-foreground">
+                    Nothing to bill yet — these treatments are still planned. Mark one as
+                    performed to bill it.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  data-testid="estimate-done-btn"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background py-3 text-base font-semibold text-foreground hover:bg-muted transition-colors min-h-[44px]"
+                >
+                  Done
+                </button>
+              </>
             )}
           </div>
         </div>

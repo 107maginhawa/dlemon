@@ -1,17 +1,14 @@
 /**
  * PaymentSummaryBar — cross-element coherence guard for the workspace payment footer.
  *
- * Bug class: the count/total a clinician reads in the footer ("N pending · ₱X",
- * "Continue to Payment (N)") was computed from `pendingCount` (diagnosed|planned
- * only), while tapping the button bills EVERY treatment in the visit (the payment
- * modal's line items + subtotal). On a visit with any performed treatment the
- * button under-counts; on an all-performed (but not-yet-completed) visit the footer
- * read "No pending treatments" + an enabled "Continue to Payment (0)" that still
- * billed ₱X. The honest invariant: the footer figures match the BILLABLE set
- * (every visit treatment), i.e. exactly what the payment modal renders.
- *
- * The all-pending seed state masked this — which is why the suite never caught it.
- * These cases deliberately exercise the mixed / all-performed / empty states.
+ * Bug class (summary-vs-body coherence): the footer count/total a clinician reads
+ * ("N pending · ₱X", "Continue to Payment (N)") must equal what tapping the button
+ * can actually CHARGE. The server bills ONLY performed|verified treatments
+ * (BR-009 — services/api-ts/.../createDentalInvoice.ts), so the PAYABLE total is the
+ * billable subset, never "every treatment in the visit". An all-planned visit has a
+ * ₱0 payable total and must route to the ESTIMATE, not present a "Continue to
+ * Payment (N) · ₱X" that 422s on click. These cases pin that invariant via the
+ * shared `splitBillable` SoT.
  */
 import { describe, test, expect, afterEach } from 'bun:test';
 import { render, screen, cleanup } from '@testing-library/react';
@@ -42,35 +39,37 @@ function buttonCount(): number {
   return m ? Number(m[1]) : NaN;
 }
 
-describe('PaymentSummaryBar — footer figures match the billable set', () => {
-  test('all-pending visit: count + total match the treatments billed', () => {
+describe('PaymentSummaryBar — payable figures match the billable set (BR-009)', () => {
+  test('all-planned visit: ₱0 payable, button routes to the estimate (no pay dead-end)', () => {
     const treatments = [tx('diagnosed', 1000), tx('planned', 4500)];
     render(<PaymentSummaryBar treatments={treatments} isReadOnly={false} onContinue={() => {}} />);
 
-    const total = parseMoney(screen.getByTestId('treatment-total').textContent);
-    assertTotalExplainedByRows({ total, rowAmounts: treatments.map((t) => t.priceAmount) });
-    assertCountMatchesItems({ count: buttonCount(), itemCount: treatments.length, label: 'pay button' });
+    // No payable total is shown (nothing is billable) — and crucially no "Continue
+    // to Payment (N)" that would 422.
+    expect(screen.queryByTestId('treatment-total')).toBeNull();
+    const btn = screen.getByTestId('continue-to-payment-btn') as HTMLButtonElement;
+    expect(btn.textContent).toMatch(/estimate/i);
+    expect(btn.disabled).toBe(false); // reachable — opens the modal to show the estimate
   });
 
-  test('mixed visit: button count is the billable count, not the pending count', () => {
-    // 2 pending + 1 performed → payment bills 3 items; old code showed "(2)".
+  test('mixed visit: button count + total are the PERFORMED subset only', () => {
+    // 2 planned + 1 performed → only the ₱2,000 performed item bills.
     const treatments = [tx('diagnosed', 1000), tx('planned', 4500), tx('performed', 2000)];
     render(<PaymentSummaryBar treatments={treatments} isReadOnly={false} onContinue={() => {}} />);
 
     const total = parseMoney(screen.getByTestId('treatment-total').textContent);
-    // total reflects ALL treatments (= modal subtotal), not just pending
-    assertTotalExplainedByRows({ total, rowAmounts: treatments.map((t) => t.priceAmount) });
-    assertCountMatchesItems({ count: buttonCount(), itemCount: 3, label: 'pay button' });
+    assertTotalExplainedByRows({ total, rowAmounts: [2000] }); // billable subset only
+    assertCountMatchesItems({ count: buttonCount(), itemCount: 1, label: 'pay button' });
   });
 
-  test('all-performed active visit: enabled pay button is not paired with "nothing to bill"', () => {
+  test('all-performed active visit: enabled pay button equals the billable subtotal', () => {
     const treatments = [tx('performed', 2000), tx('verified', 3000)];
     render(<PaymentSummaryBar treatments={treatments} isReadOnly={false} onContinue={() => {}} />);
 
     const summary = screen.getByTestId('treatment-summary').textContent ?? '';
-    expect(summary).not.toMatch(/no treatments|no pending/i); // must not claim nothing is billable
+    expect(summary).not.toMatch(/no treatments/i);
     const total = parseMoney(screen.getByTestId('treatment-total').textContent);
-    expect(total).toBe(5000); // visible, non-zero, equals the billable subtotal
+    expect(total).toBe(5000);
     const btn = screen.getByTestId('continue-to-payment-btn') as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
     assertCountMatchesItems({ count: buttonCount(), itemCount: 2, label: 'pay button' });

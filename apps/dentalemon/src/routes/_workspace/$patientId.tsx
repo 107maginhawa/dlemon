@@ -31,6 +31,7 @@ import { LabOrdersSheet } from '@/features/workspace/components/lab-orders-sheet
 import { AttachmentsSheet } from '@/features/workspace/components/attachments-sheet';
 import { WorkspacePaymentModal } from '@/features/workspace/components/workspace-payment-modal';
 import { PaymentSummaryBar } from '@/features/workspace/components/payment-summary-bar';
+import { isBillable } from '@/features/workspace/lib/billable';
 import { PMDViewerSheet } from '@/features/pmd/components/pmd-viewer-sheet';
 import { PMDImport } from '@/features/pmd/components/pmd-import';
 import { TreatmentPlanTab } from '@/features/workspace/components/treatment-plan-tab';
@@ -561,9 +562,7 @@ function WorkspacePage() {
           openVisit={openVisit ?? null}
           currentIsOpen={!!currentVisit && currentVisit.id === openVisit?.id}
           treatmentCount={treatments.length}
-          performedCount={
-            treatments.filter((t) => t.status === 'performed' || t.status === 'verified').length
-          }
+          performedCount={treatments.filter(isBillable).length}
           conflictCount={conflictedTeeth.size}
           canCompare={visits.length >= 2}
           onCompare={() => setCompareOpen(true)}
