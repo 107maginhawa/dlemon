@@ -365,7 +365,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
 
   function handleRecordPayment() {
     const amountCents = Math.round(parseFloat(paymentAmount || '0') * 100);
-    const errs = validatePaymentForm({ amountCents, method: paymentMethod, receiptNumber });
+    const errs = validatePaymentForm({ amountCents, method: paymentMethod, receiptNumber }, invoice?.balanceCents);
     if (errs.length > 0) { setPaymentErrors(errs); return; }
     if (!recordedByMemberId) {
       setPaymentErrors(['No active staff member context — please re-select your profile and try again.']);
