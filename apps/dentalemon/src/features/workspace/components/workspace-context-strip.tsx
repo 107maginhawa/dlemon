@@ -19,7 +19,7 @@
 import { CalendarDays, CircleDot, CheckCircle2, Lock, FileText, Pencil } from 'lucide-react';
 import { ChartConflictBanner } from './chart-conflict-banner';
 import { deriveNextStep, type NextStepAction, type VisitStatus } from '../lib/next-step';
-import type { VisitLike } from '../lib/visit-status';
+import { isClosedVisit, type VisitLike } from '../lib/visit-status';
 
 export interface WorkspaceContextStripProps {
   patientId: string;
@@ -91,8 +91,7 @@ export function WorkspaceContextStrip({
     performedCount,
   });
 
-  const isReadOnly =
-    currentVisitStatus === 'completed' || currentVisitStatus === 'locked';
+  const isReadOnly = isClosedVisit(currentVisitStatus);
 
   // The currently-viewed visit IS the open (in-progress) one — surface the
   // in-progress indicator + an owner discard escape hatch right here, so the

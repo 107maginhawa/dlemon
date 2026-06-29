@@ -120,9 +120,14 @@ export function validatePaymentForm(form: {
   amountCents: number;
   method: string;
   receiptNumber: string;
-}): string[] {
+}, balanceCents?: number): string[] {
   const errors: string[] = [];
   if (!form.amountCents || form.amountCents <= 0) errors.push('Amount must be greater than zero');
+  // Mirror the server's V-BIL-004 gate (recordDentalPayment: amountCents > balanceCents
+  // → PAYMENT_EXCEEDS_BALANCE) so an over-balance amount is caught before the round-trip.
+  if (balanceCents != null && form.amountCents > balanceCents) {
+    errors.push('Amount exceeds the remaining balance');
+  }
   if (!form.method.trim()) errors.push('Payment method is required');
   if (!form.receiptNumber.trim()) errors.push('Receipt number is required');
   return errors;

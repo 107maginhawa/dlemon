@@ -9,7 +9,7 @@
  * in isolation and can never drift from what the strip renders.
  */
 
-import type { VisitLike } from './visit-status';
+import { isClosedVisit, type VisitLike } from './visit-status';
 
 export type VisitStatus = 'draft' | 'active' | 'completed' | 'locked' | 'discarded';
 
@@ -99,8 +99,7 @@ export function deriveNextStep(input: DeriveNextStepInput): NextStep {
     };
   }
 
-  const isReadOnly =
-    currentVisitStatus === 'completed' || currentVisitStatus === 'locked';
+  const isReadOnly = isClosedVisit(currentVisitStatus);
 
   // 3. Read-only visit with nothing open → the closed-visit landing CTA.
   if (isReadOnly && !openVisit) {

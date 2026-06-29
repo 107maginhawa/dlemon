@@ -15,6 +15,7 @@ import { usePatientProfile } from '@/hooks/use-patient-profile';
 import { usePatientBilling } from '../hooks/use-patient-billing';
 import { usePatientBalance } from '../hooks/use-patient-balance';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
+import { isClosedVisit } from '@/features/workspace/lib/visit-status';
 import { useUpdatePatient } from '../hooks/use-patient-actions';
 import { FollowUpNotes } from './follow-up-notes';
 import { HouseholdCard } from './household-card';
@@ -109,6 +110,11 @@ function OverviewTab({ patientId }: { patientId: string }) {
   // the profile's visit history silently 400.
   const branchId = useOrgContextStore((s) => s.branchId) ?? undefined;
   const { visits, isLoading } = useVisits({ patientId, branchId });
+  // "N total" must equal the headline visit count, which is the server's
+  // all-branch isCountedVisit tally (`usePatientProfile` is the same cached
+  // query the header reads). Counting the branch-scoped `visits` list inline
+  // diverged on multi-branch patients. See use-patient-profile.ts.
+  const { data: profile } = usePatientProfile({ patientId });
 
   return (
     <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
@@ -128,11 +134,11 @@ function OverviewTab({ patientId }: { patientId: string }) {
       >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold">Recent Visits</h3>
-          {/* Count finished encounters only (completed/locked) so this matches the
-              profile's headline visit count. The list below still shows the open
-              "Current" visit with its own status badge — it just isn't tallied here. */}
+          {/* Server-computed lifetime count (isCountedVisit: completed/locked,
+              all branches) — same figure as the profile headline. The list below
+              shows the recent branch-scoped visits incl. the open "Current" one. */}
           <span className="text-xs text-muted-foreground">
-            {visits.filter((v) => v.status === 'completed' || v.status === 'locked').length} total
+            {profile?.visitCount ?? 0} total
           </span>
         </div>
 
@@ -164,7 +170,7 @@ function OverviewTab({ patientId }: { patientId: string }) {
                 <span
                   className={[
                     'text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap',
-                    v.status === 'completed' || v.status === 'locked'
+                    isClosedVisit(v.status)
                       ? 'bg-success/15 text-success-foreground'
                       : v.status === 'active'
                       ? 'bg-info/15 text-info-foreground'
@@ -193,7 +199,11 @@ function PaymentTab({ patientId, branchId }: { patientId: string; branchId: stri
   const queryClient = useQueryClient();
   const totalBalance =
     balance?.outstandingBalanceCents ??
-    invoices.reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
+    // Match the server (getPatientBalance / getDentalPatient): a voided invoice
+    // keeps its balanceCents, so it must be excluded or the fallback inflates.
+    invoices
+      .filter((inv) => inv.status !== 'voided')
+      .reduce((sum, inv) => sum + (inv.balanceCents ?? 0), 0);
   const [showStatement, setShowStatement] = useState(false);
   const outstandingInvoices = invoices
     .filter((inv) => inv.status !== 'voided' && (inv.balanceCents ?? 0) > 0)

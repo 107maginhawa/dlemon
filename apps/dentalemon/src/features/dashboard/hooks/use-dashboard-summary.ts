@@ -41,8 +41,6 @@ export interface DashboardSummary {
   todayAppointments: DashboardAppointment[];
   tomorrowAppointments: DashboardAppointment[];
   overdueInvoices: DashboardInvoice[];
-  /** Total peso-cents collected today; null when showFinancials=false */
-  dailyCollectionsCents: number | null;
   /** Total peso-cents collected month-to-date (the momentum number); null when showFinancials=false */
   monthCollectedCents: number | null;
   activePaymentPlans: number | null;
@@ -123,9 +121,6 @@ async function fetchDashboardSummary(
   const overduePromise = showFinancials
     ? listDentalInvoices({ query: { status: 'overdue', branchId }, throwOnError: true })
     : null;
-  const allInvoicesPromise = showFinancials
-    ? listDentalInvoices({ query: { branchId }, throwOnError: true })
-    : null;
 
   // Month-to-date collected — the motivating "how are we doing" number. Reuses
   // the existing collections-summary endpoint (period=month → totalCollectedCents).
@@ -144,11 +139,10 @@ async function fetchDashboardSummary(
   // Await the schedule + financial fetches together so any rejection is jointly
   // handled (a sequential await would orphan a sibling's rejection). The
   // owner-only summary is awaited separately — it never rejects (own .catch).
-  const [todayResult, tomorrowResult, overdueResult, allInvoicesResult] = await Promise.all([
+  const [todayResult, tomorrowResult, overdueResult] = await Promise.all([
     todayPromise,
     tomorrowPromise,
     overduePromise ?? Promise.resolve(null),
-    allInvoicesPromise ?? Promise.resolve(null),
   ]);
   const summaryData = await summaryPromise;
   const monthCollectedCents = await monthCollectedPromise;
@@ -170,7 +164,6 @@ async function fetchDashboardSummary(
   const overdueLabOrders = (summaryData?.labOrders as { overdueDelivery?: number } | null)?.overdueDelivery ?? null;
 
   let overdueInvoices: DashboardInvoice[] = [];
-  let dailyCollectionsCents: number | null = null;
 
   if (showFinancials && overdueResult) {
     const overdueRaw = (overdueResult as { data: unknown }).data;
@@ -178,21 +171,10 @@ async function fetchDashboardSummary(
     overdueInvoices = (arr as DentalInvoice[]).map(toInvoice);
   }
 
-  if (showFinancials && allInvoicesResult) {
-    const allRaw = (allInvoicesResult as { data: unknown }).data;
-    const arr = Array.isArray(allRaw) ? allRaw : ((allRaw as { data?: DentalInvoice[] })?.data ?? []);
-    const allInvoices = (arr as DentalInvoice[]).map(toInvoice);
-    dailyCollectionsCents = allInvoices
-      .filter((inv) => inv.status === 'paid' || inv.status === 'partial')
-      .filter((inv) => inv.createdAt?.slice(0, 10) === today)
-      .reduce((sum, inv) => sum + (inv.paidCents ?? inv.totalCents - inv.balanceCents), 0);
-  }
-
   return {
     todayAppointments,
     tomorrowAppointments,
     overdueInvoices,
-    dailyCollectionsCents,
     monthCollectedCents,
     activePaymentPlans,
     paymentPlansBehind,

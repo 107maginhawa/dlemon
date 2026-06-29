@@ -160,6 +160,22 @@ describe('InvoiceDetail -- validatePaymentForm', () => {
     });
     expect(errors.length).toBe(0);
   });
+
+  test('amount over the remaining balance produces error (mirrors server PAYMENT_EXCEEDS_BALANCE)', () => {
+    const errors = validatePaymentForm(
+      { amountCents: 5001, method: 'cash', receiptNumber: 'R-001' },
+      5000,
+    );
+    expect(errors).toContain('Amount exceeds the remaining balance');
+  });
+
+  test('amount exactly equal to the balance is allowed', () => {
+    const errors = validatePaymentForm(
+      { amountCents: 5000, method: 'cash', receiptNumber: 'R-001' },
+      5000,
+    );
+    expect(errors.length).toBe(0);
+  });
 });
 
 describe('InvoiceDetail -- buildPaymentPayload', () => {
