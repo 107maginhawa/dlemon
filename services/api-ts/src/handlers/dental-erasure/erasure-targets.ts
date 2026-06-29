@@ -48,6 +48,7 @@ import { anonymizeImagingByPersonDetailed } from '@/handlers/dental-imaging/repo
 import { anonymizeVisitClinicalFreeTextByPerson } from '@/handlers/dental-visit/repos/visit-erasure.facade';
 import { anonymizePerioNotesByPerson } from '@/handlers/dental-perio/repos/perio-erasure.facade';
 import { anonymizeCasePresentationsByPerson } from '@/handlers/dental-patient/repos/case-presentation-erasure.facade';
+import { anonymizePatientContactsByPerson } from '@/handlers/dental-patient/repos/patient-contact-erasure.facade';
 
 /** The central PII record. Name → pseudonym, all other identifiers nulled. */
 const personTarget: ErasureTarget = {
@@ -154,6 +155,14 @@ const casePresentationTarget: ErasureTarget = {
   },
 };
 
+/** G-04: guardian/emergency contacts — scrub name→pseudonym + phone/email/notes. */
+const patientContactTarget: ErasureTarget = {
+  entityType: 'patient_contact',
+  async anonymize(db: DatabaseInstance, subjectPersonId: string) {
+    return anonymizePatientContactsByPerson(db, subjectPersonId);
+  },
+};
+
 export const ERASURE_TARGETS: ErasureTargetRegistry = {
   person: personTarget,
   patient: patientTarget,
@@ -164,6 +173,7 @@ export const ERASURE_TARGETS: ErasureTargetRegistry = {
   perio: perioTarget,
   lab_order: labOrderTarget,
   case_presentation: casePresentationTarget,
+  patient_contact: patientContactTarget,
   imaging: imagingTarget,
   attachment: attachmentTarget,
 };

@@ -9,6 +9,7 @@ import { and, eq } from 'drizzle-orm';
 import { openTestTx } from '@/core/test-tx';
 import { persons } from '../person/repos/person.schema';
 import { patients } from '../patient/repos/patient.schema';
+import { dentalPatientContacts } from '../dental-patient/repos/patient-contact.schema';
 import { dentalAuditLog } from '../dental-audit/repos/audit-log.schema';
 import { ERASED_MARKER } from '../person/repos/person-erasure.facade';
 import { requestErasure, approveErasure, rejectErasure } from './erasure-service';
@@ -72,6 +73,36 @@ describe('erasure workflow service', () => {
     expect(p!.contactInfo).toBeNull();
     const [pt] = await db.select().from(patients).where(eq(patients.person, PID));
     expect(pt!.emergencyContact).toBeNull();
+  });
+
+  // G-04: guardian/emergency contacts live in their own dental_patient_contact
+  // table (name/phone/email/notes PII), separate from patients.emergencyContact.
+  // Right-to-erasure must scrub it too, or a completed erasure leaves PII behind.
+  test('approveErasure anonymizes dental_patient_contact PII (G-04)', async () => {
+    const [pt] = await db.select({ id: patients.id }).from(patients).where(eq(patients.person, PID));
+    await db.insert(dentalPatientContacts).values({
+      patientId: pt!.id,
+      name: 'Maria Guardian',
+      relationship: 'Mother',
+      phone: '+639170001111',
+      email: 'maria@example.com',
+      isGuardian: true,
+      isEmergencyContact: true,
+      notes: 'Primary contact for the minor',
+    });
+
+    const req = await requestErasure(db, noopLogger, baseInput);
+    const { request: approved } = await approveErasure(db, noopLogger, req.id, { reviewedBy: REVIEWER });
+    expect(approved.status).toBe('anonymized');
+
+    const [c] = await db.select().from(dentalPatientContacts).where(eq(dentalPatientContacts.patientId, pt!.id));
+    expect(c!.name).toBe(ERASED_MARKER); // NOT NULL → pseudonym
+    expect(c!.phone).toBeNull();
+    expect(c!.email).toBeNull();
+    expect(c!.notes).toBeNull();
+    // structural / non-PII fields retained so the row still resolves
+    expect(c!.isGuardian).toBe(true);
+    expect(c!.isEmergencyContact).toBe(true);
   });
 
   test('legal hold blocks approval: request rejected, subject NOT anonymized', async () => {
