@@ -417,11 +417,11 @@ function VisitCard({
   return (
     <div
       aria-hidden={!isActive}
-      // No drop shadows here: Swiper's 3D (preserve-3d) context lets a card shadow
-      // escape the frame's overflow-hidden and halo the whole card. The active card
-      // stands out via its lemon border + the dimmed neighbors instead.
+      // Shadow only on the ACTIVE card: it sits front-and-center, so its lift reads
+      // as a clean frame glow. Neighbors stay shadow-less — they're tilted in Swiper's
+      // 3D (preserve-3d) context, where a shadow escapes overflow-hidden and halos.
       className={`flex h-full flex-col rounded-2xl border bg-white p-4 transition-all sm:p-5 ${
-        isActive ? "border-2 border-lemon" : "border-line opacity-80"
+        isActive ? "border-2 border-lemon shadow-frame" : "border-line opacity-80"
       }`}
     >
       {/* header: layer segmented control (interactive only on the open card) + scope/date */}

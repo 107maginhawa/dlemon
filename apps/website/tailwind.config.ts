@@ -21,6 +21,10 @@ const config: Config = {
         sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       maxWidth: { prose: "72ch" },
+      boxShadow: {
+        // soft ink-tinted lift for bordered card frames — depth without a dark line
+        frame: "0 1px 2px rgb(46 42 38 / 0.05), 0 10px 30px -12px rgb(46 42 38 / 0.18)",
+      },
       transitionTimingFunction: {
         "out-quint": "cubic-bezier(0.22, 1, 0.36, 1)",
       },
