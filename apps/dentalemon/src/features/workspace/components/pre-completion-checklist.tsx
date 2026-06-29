@@ -26,6 +26,7 @@ import {
   updateDentalVisitMutation,
   listDentalVisitsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
+import { isOpenTreatment } from '../lib/billable';
 
 export interface PreCompletionChecklistProps {
   visitId: string;
@@ -55,9 +56,7 @@ async function checkConsentSigned(visitId: string): Promise<CheckResult> {
 async function checkNoUnstartedTreatments(visitId: string): Promise<CheckResult> {
   const { data } = await listDentalTreatments({ path: { visitId } });
   const items = (data && 'data' in data ? data.data : []) as Array<{ status: string }>;
-  const unfinished = items.filter(
-    t => t.status === 'diagnosed' || t.status === 'planned',
-  );
+  const unfinished = items.filter(t => isOpenTreatment(t.status));
   return {
     label: 'No incomplete treatments',
     pass: unfinished.length === 0,

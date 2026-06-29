@@ -37,6 +37,22 @@ export function isEstimateStatus(status: string | null | undefined): boolean {
   return ESTIMATE_STATUSES.has(status ?? '');
 }
 
+/**
+ * Treatments that BLOCK completing a visit. The server's updateDentalVisit gate
+ * throws VISIT_HAS_OPEN_TREATMENTS while any treatment is still diagnosed or planned
+ * (FR1.16). Same membership as the estimate set today, but bound to a DIFFERENT
+ * server authority — the completion gate, not the invoice filter — so the two are
+ * kept separate and can drift independently. `visit-completion.binding.test.ts`
+ * reads that server guard and fails the build if this set diverges from it.
+ */
+export const OPEN_TREATMENT_STATUSES = ['diagnosed', 'planned'] as const;
+const OPEN_TREATMENT_SET = new Set<string>(OPEN_TREATMENT_STATUSES);
+
+/** True when a treatment is unfinished and blocks completing its visit. */
+export function isOpenTreatment(status: string | null | undefined): boolean {
+  return OPEN_TREATMENT_SET.has(status ?? '');
+}
+
 /** True when this treatment can be invoiced now. */
 export function isBillable<T extends HasStatus>(t: T): boolean {
   return isBillableStatus(t.status);
