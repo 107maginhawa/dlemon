@@ -33,9 +33,6 @@ const TODAY_ISO = new Date().toISOString();
 const mockOverdue = [
   { id: 'i1', invoiceNumber: 'INV-001', patientId: 'p1', visitId: 'v1', branchId: 'b1', dentistMemberId: 'dm1', patientName: 'Maria Santos', subtotalCents: 50000, discountCents: 0, taxCents: 0, taxRate: 0, totalCents: 50000, paidCents: 0, balanceCents: 50000, status: 'overdue', createdAt: TODAY_ISO, updatedAt: TODAY_ISO, version: 1 },
 ];
-const mockAllInvoices = [
-  { id: 'i2', invoiceNumber: 'INV-002', patientId: 'p2', visitId: 'v2', branchId: 'b1', dentistMemberId: 'dm1', subtotalCents: 20000, discountCents: 0, taxCents: 0, taxRate: 0, totalCents: 20000, paidCents: 20000, balanceCents: 0, status: 'paid', createdAt: TODAY_ISO, updatedAt: TODAY_ISO, version: 1 },
-];
 
 // Helper: rotate through a fixed list of responses
 function makeFetch(responses: unknown[]) {
@@ -108,13 +105,12 @@ describe('useDashboardSummary', () => {
     expect(result.current.data?.overdueLabOrders).toBe(1);
   });
 
-  test('returns overdue invoices and daily collections for financial roles', async () => {
+  test('returns overdue invoices for financial roles', async () => {
     global.fetch = makeFetch([
       mockToday,
       mockTomorrow,
       mockSummary,
       { data: mockOverdue },   // listDentalInvoices returns { data: [...] }
-      { data: mockAllInvoices },
     ]);
 
     const qc = freshClient();
@@ -126,11 +122,9 @@ describe('useDashboardSummary', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.overdueInvoices).toHaveLength(1);
     expect(result.current.data?.overdueInvoices[0]?.balanceCents).toBe(50000);
-    // Daily collections: 1 paid invoice today (20000 paidCents)
-    expect(result.current.data?.dailyCollectionsCents).toBe(20000);
   });
 
-  test('returns empty overdueInvoices and null dailyCollections when showFinancials=false', async () => {
+  test('returns empty overdueInvoices when showFinancials=false', async () => {
     global.fetch = makeFetch([
       mockToday,
       mockTomorrow,
@@ -145,7 +139,6 @@ describe('useDashboardSummary', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data?.overdueInvoices).toHaveLength(0);
-    expect(result.current.data?.dailyCollectionsCents).toBeNull();
   });
 
   test('accepts array response (not wrapped in a key)', async () => {
@@ -216,25 +209,6 @@ describe('useDashboardSummary', () => {
       const successes = [mockToday, mockTomorrow, mockSummary];
       if (i < 3) return jsonResponse(successes[i]);
       return errorResponse(403);
-    });
-
-    const qc = freshClient();
-    const { result } = renderHook(
-      () => useDashboardSummary({ branchId: 'b1', showFinancials: true }),
-      { wrapper: makeWrapper(qc) },
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.error).not.toBeNull();
-  });
-
-  test('sets error state when all-invoices fetch fails', async () => {
-    let callIdx = 0;
-    global.fetch = mock(() => {
-      const i = callIdx++;
-      const successes: unknown[] = [mockToday, mockTomorrow, mockSummary, { data: mockOverdue }];
-      if (i < 4) return jsonResponse(successes[i]);
-      return errorResponse(500);
     });
 
     const qc = freshClient();
