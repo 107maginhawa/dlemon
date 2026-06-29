@@ -206,8 +206,11 @@ describe('TimelineCarousel (Swiper)', () => {
           onNewVisit: () => {},
         });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
-      expect(labels).toContain('Current — all visits');
-      expect(labels.filter((t) => t === 'Visit snapshot').length).toBe(THREE_VISITS.length - 1);
+      // The open/active card renders the cumulative scope as two chips ("Current" +
+      // "All visits"), so its textContent is "CurrentAll visits"; historical cards
+      // render a single "Snapshot" chip.
+      expect(labels.filter((t) => t?.includes('All visits')).length).toBe(1);
+      expect(labels.filter((t) => t === 'Snapshot').length).toBe(THREE_VISITS.length - 1);
     });
 
     test('renders a DentalChart stub inside each slide', async () => {
@@ -492,12 +495,12 @@ describe('TimelineCarousel (Swiper)', () => {
   });
 
   // ── P0-1: cumulative scope binds to the OPEN visit, not the centered card ──
-  // THE BUG (provenance falsification): the cumulative "Current — all visits"
-  // overlay + label were gated to whichever card is *centered* (isActive), not to
-  // which visit is genuinely open. Centering an old Completed card relabeled it
-  // "Current — all visits" and would attribute today's cumulative status to the
-  // wrong, historical visit. Fix: bind the cumulative scope to the open visit
-  // (status active|draft) — historical centered cards stay dated snapshots.
+  // THE BUG (provenance falsification): the cumulative scope (rendered as the
+  // "Current" + "All visits" chips) was gated to whichever card is *centered*
+  // (isActive), not to which visit is genuinely open. Centering an old Completed
+  // card relabeled it cumulative and would attribute today's cumulative status to
+  // the wrong, historical visit. Fix: bind the cumulative scope to the open visit
+  // (status active|draft) — historical centered cards stay dated "Snapshot" cards.
 
   describe('P0-1: cumulative scope binds to the open visit (provenance)', () => {
     // Exactly one open (active) visit, two historical completed snapshots.
@@ -507,7 +510,7 @@ describe('TimelineCarousel (Swiper)', () => {
     // Server order is arbitrary; sorted oldest→newest = [H1, H2, OPEN] (DOM order).
     const WITH_OPEN = [OPEN, H1, H2];
 
-    test('the open visit owns "Current — all visits" on initial render', () => {
+    test('the open visit owns the cumulative "Current / All visits" scope on initial render', () => {
       renderCarousel({
         visits: WITH_OPEN,
         patientId: 'test-patient',
@@ -516,9 +519,10 @@ describe('TimelineCarousel (Swiper)', () => {
         onNewVisit: () => {},
       });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
-      // DOM/sorted order: [H1, H2, OPEN]
-      expect(labels[2]).toBe('Current — all visits');
-      expect(labels.filter((t) => t === 'Current — all visits')).toHaveLength(1);
+      // DOM/sorted order: [H1, H2, OPEN]. The open card shows the "Current" +
+      // "All visits" chips (textContent "CurrentAll visits"); the others "Snapshot".
+      expect(labels[2]).toContain('All visits');
+      expect(labels.filter((t) => t?.includes('All visits'))).toHaveLength(1);
     });
 
     test('centering a historical card does NOT relabel it "Current" — the open visit keeps it', () => {
@@ -535,14 +539,14 @@ describe('TimelineCarousel (Swiper)', () => {
       });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
       // The centered historical card (H1) must remain a dated snapshot...
-      expect(labels[0]).toBe('Visit snapshot');
+      expect(labels[0]).toBe('Snapshot');
       // ...and the genuine open visit keeps the cumulative label — never acquired
       // by centering a historical card.
-      expect(labels[2]).toBe('Current — all visits');
-      expect(labels.filter((t) => t === 'Current — all visits')).toHaveLength(1);
+      expect(labels[2]).toContain('All visits');
+      expect(labels.filter((t) => t?.includes('All visits'))).toHaveLength(1);
     });
 
-    test('with no open visit, no card is labeled "Current — all visits" (all snapshots)', () => {
+    test('with no open visit, no card shows the cumulative scope (all snapshots)', () => {
       renderCarousel({
         visits: [H1, H2],
         patientId: 'test-patient',
@@ -551,8 +555,8 @@ describe('TimelineCarousel (Swiper)', () => {
         onNewVisit: () => {},
       });
       const labels = screen.getAllByTestId('chart-scope-label').map((el) => el.textContent);
-      expect(labels.every((t) => t === 'Visit snapshot')).toBe(true);
-      expect(labels.filter((t) => t === 'Current — all visits')).toHaveLength(0);
+      expect(labels.every((t) => t === 'Snapshot')).toBe(true);
+      expect(labels.filter((t) => t?.includes('All visits'))).toHaveLength(0);
     });
   });
 
