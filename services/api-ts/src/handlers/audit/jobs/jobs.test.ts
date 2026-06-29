@@ -19,7 +19,7 @@ describe('registerAuditJobs', () => {
     expect(job.pattern).toBe('0 3 * * *');
   });
 
-  test('cron handler archives then purges logs with HIPAA retention periods', async () => {
+  test('cron handler archives logs and never purges the append-only audit trail', async () => {
     let capturedHandler: any;
     const mockScheduler: Partial<JobScheduler> = {
       registerCron: mock((_name: string, _pattern: string, handler: any) => {
@@ -44,8 +44,8 @@ describe('registerAuditJobs', () => {
     };
 
     // Override the dynamic import by spying on module resolution
-    // We verify the handler calls the repo methods with correct HIPAA periods
-    // by injecting a mock AuditRepository into the import chain.
+    // We verify the handler calls archiveOldLogs with the HIPAA archive period
+    // and that purgeArchivedLogs is NEVER called (append-only audit trail).
     // Since the handler does `await import('../repos/audit.repo')`, we mock at module level.
     mock.module('../repos/audit.repo', () => ({
       AuditRepository: class {
@@ -59,7 +59,8 @@ describe('registerAuditJobs', () => {
 
     // 1 year = 365 days (archive threshold)
     expect(mockArchive).toHaveBeenCalledWith(365);
-    // 7 years = 2555 days (HIPAA purge threshold)
-    expect(mockPurge).toHaveBeenCalledWith(2555);
+    // Audit trail is append-only — purge MUST NEVER be called
+    // (see handlers/retention/retention-targets.ts — audit is `protected`/`retain`)
+    expect(mockPurge).not.toHaveBeenCalled();
   });
 });

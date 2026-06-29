@@ -3,34 +3,34 @@
   "source": "coverage-ledger.json",
   "totals": {
     "items": 915,
-    "PARTIAL": 519,
-    "GAP": 198,
-    "COVERED": 198,
+    "PARTIAL": 534,
+    "GAP": 180,
+    "COVERED": 201,
     "gapByLayer": {
-      "be-unit": 23,
-      "contract": 36,
-      "e2e": 12
+      "be-unit": 21,
+      "contract": 44,
+      "e2e": 11
     },
     "gapByRisk": {
-      "clinical": 35,
+      "clinical": 42,
       "auth": 1,
       "rest": 1,
-      "money": 24,
+      "money": 22,
       "core": 2
     },
     "gapBySeverity": {
       "unproven": 3,
-      "e2e-gap": 11,
-      "be-unit-gap": 17,
-      "contract-only": 32
+      "e2e-gap": 10,
+      "be-unit-gap": 15,
+      "contract-only": 40
     },
     "partialUnknownByLayer": {
-      "be-unit": 72,
-      "fe-unit": 463,
+      "be-unit": 65,
+      "fe-unit": 478,
       "contract": 8
     },
-    "userReachableGaps": 63,
-    "backendOnlyGaps": 135
+    "userReachableGaps": 68,
+    "backendOnlyGaps": 112
   },
   "backlog": [
     {
@@ -117,40 +117,6 @@
         "be-unit"
       ],
       "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "be-dental-billing-loa-authorization-dependency",
-      "title": "Coverage authorization (LOA) lifecycle backing claims (inter-module)",
-      "type": "inter-module",
-      "modules": [
-        "dental-billing",
-        "dental-patient"
-      ],
-      "route": "/dental/patients/{patientId}/authorizations",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
       "absentByDesign": false,
       "itemGrade": "GAP"
     },
@@ -746,43 +712,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "imaging-create-image-link",
-      "title": "Link image to treatment plan / ortho case / report",
-      "type": "inter-module",
-      "modules": [
-        "dental-imaging",
-        "dental-billing",
-        "case-presentation",
-        "imaging",
-        "dental-clinical"
-      ],
-      "route": "/$patientId (imaging overlay, Edit sheet)",
-      "risk": "money",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "be-unit-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "MISSING",
-        "contract": "COVERED",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "be-unit"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "portal-get-my-balance",
       "title": "Patient views own outstanding balance roll-up (GET /me/balance)",
       "type": "workflow",
@@ -923,35 +852,6 @@
       "unknown": [
         "fe-unit"
       ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "br-imaging-image-link-loose-coupling",
-      "title": "G5b: image links are loose-coupled UUID refs, idempotent",
-      "type": "business-rule",
-      "modules": [
-        "dental-imaging"
-      ],
-      "route": null,
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "be-unit-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract"
-      ],
-      "grades": {
-        "be-unit": "MISSING",
-        "contract": "COVERED",
-        "fe-unit": "N/A",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "be-unit"
-      ],
-      "unknown": [],
       "absentByDesign": false,
       "itemGrade": "GAP"
     },
@@ -1159,13 +1059,16 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "be-dental-billing-refund-cap-invariant",
-      "title": "Refund cap: non-void payment/invoice, amount <= un-refunded remainder",
-      "type": "business-rule",
+      "id": "dp-list-patient-insurance-profiles",
+      "title": "List patient insurance profiles",
+      "type": "use-case",
       "modules": [
-        "dental-billing"
+        "dental-patient",
+        "patient",
+        "patients",
+        "billing"
       ],
-      "route": "/dental/billing/payments/{paymentId}/refund",
+      "route": "/patients/$patientId",
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
@@ -1191,9 +1094,9 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-list-patient-insurance-profiles",
-      "title": "List patient insurance profiles",
-      "type": "use-case",
+      "id": "dp-update-insurance-profile",
+      "title": "Update insurance profile",
+      "type": "workflow",
       "modules": [
         "dental-patient",
         "patient",
@@ -1208,13 +1111,14 @@
       "requiredLayers": [
         "be-unit",
         "contract",
+        "e2e",
         "fe-unit"
       ],
       "grades": {
         "be-unit": "COVERED",
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
+        "e2e": "COVERED"
       },
       "missing": [
         "contract"
@@ -1277,6 +1181,44 @@
       ],
       "route": "/$patientId",
       "risk": "money",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "be-dental-scheduling-promote-waitlist",
+      "title": "Promote waitlist entry → booked appointment",
+      "type": "workflow",
+      "modules": [
+        "dental-scheduling",
+        "dental-org",
+        "dental-audit",
+        "scheduling",
+        "waitlist",
+        "patient"
+      ],
+      "route": "/calendar",
+      "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
       "severity": "contract-only",
@@ -1730,6 +1672,209 @@
       "itemGrade": "GAP"
     },
     {
+      "id": "dp-add-household-member",
+      "title": "Add household member",
+      "type": "workflow",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "patients"
+      ],
+      "route": "/patients/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-br-household-single-membership",
+      "title": "Household invariants (at-most-one + guarantor protection)",
+      "type": "business-rule",
+      "modules": [
+        "dental-patient"
+      ],
+      "route": null,
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "N/A",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-br-task-fsm",
+      "title": "Patient task FSM",
+      "type": "business-rule",
+      "modules": [
+        "dental-patient"
+      ],
+      "route": null,
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "N/A",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-create-dental-alert",
+      "title": "Create dental alert",
+      "type": "workflow",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-clinical",
+        "patient-safety"
+      ],
+      "route": "/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-create-household",
+      "title": "Create household (family file)",
+      "type": "workflow",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "dental-org",
+        "dental-audit",
+        "patients"
+      ],
+      "route": "/patients/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-create-task",
+      "title": "Create patient task",
+      "type": "workflow",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-tasks"
+      ],
+      "route": "/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
       "id": "dp-detect-duplicate-patients",
       "title": "Detect duplicate patients",
       "type": "use-case",
@@ -1739,6 +1884,76 @@
         "patients"
       ],
       "route": "/patients",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-list-dental-alerts",
+      "title": "List dental alerts",
+      "type": "use-case",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-clinical"
+      ],
+      "route": "/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "N/A"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-list-patient-tasks",
+      "title": "List patient tasks",
+      "type": "use-case",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-tasks"
+      ],
+      "route": "/$patientId",
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
@@ -1903,15 +2118,88 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-update-communication-consent",
-      "title": "Update patient communication consent",
+      "id": "dp-remove-household-member",
+      "title": "Remove household member",
       "type": "workflow",
       "modules": [
         "dental-patient",
         "patient",
-        "person"
+        "patients"
       ],
-      "route": "/dental/patients/:patientId/communication-consent",
+      "route": "/patients/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-update-dental-alert",
+      "title": "Update dental alert",
+      "type": "workflow",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-clinical",
+        "patient-safety"
+      ],
+      "route": "/$patientId",
+      "risk": "clinical",
+      "feReachable": true,
+      "allOrphan": false,
+      "severity": "contract-only",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "MISSING",
+        "fe-unit": "UNKNOWN",
+        "e2e": "COVERED"
+      },
+      "missing": [
+        "contract"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "dp-update-task",
+      "title": "Update patient task (FSM)",
+      "type": "workflow",
+      "modules": [
+        "dental-patient",
+        "patient",
+        "workspace",
+        "dental-tasks"
+      ],
+      "route": "/$patientId",
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
@@ -1972,105 +2260,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "op-update-tooth",
-      "title": "Update a single tooth (per-tooth PATCH)",
-      "type": "workflow",
-      "modules": [
-        "dental-visit"
-      ],
-      "route": "/workspace/$patientId",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "patients-comm-consent-persist",
-      "title": "Persist per-channel communication consent (post-registration)",
-      "type": "business-rule",
-      "modules": [
-        "patients",
-        "person"
-      ],
-      "route": "/patients",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "patients-comm-consent-persist--1",
-      "title": "Persist per-channel communication consent (post-registration)",
-      "type": "business-rule",
-      "modules": [
-        "patients",
-        "person"
-      ],
-      "route": "/patients",
-      "risk": "clinical",
-      "feReachable": true,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "perio-upsert-tooth-reading",
       "title": "Record/update a tooth-level periodontal reading",
       "type": "workflow",
@@ -2106,13 +2295,14 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "uc-get-medical-history-review",
-      "title": "Get latest medical history review",
+      "id": "uc-list-occlusion-screenings",
+      "title": "List occlusion screenings for patient",
       "type": "use-case",
       "modules": [
-        "dental-clinical"
+        "dental-clinical",
+        "workspace"
       ],
-      "route": "/dental/clinical/medical-history-review?patientId=",
+      "route": "/$patientId",
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
@@ -2138,13 +2328,12 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "wf-record-medical-history-review",
-      "title": "Record medical history review (ASA classification)",
+      "id": "wf-create-occlusion-screening",
+      "title": "Create occlusion screening",
       "type": "workflow",
       "modules": [
         "dental-clinical",
-        "workspace",
-        "patient-safety"
+        "workspace"
       ],
       "route": "/$patientId",
       "risk": "clinical",
@@ -2263,7 +2452,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -2272,7 +2461,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -2401,7 +2589,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -2411,7 +2599,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -2523,6 +2710,204 @@
       "itemGrade": "GAP"
     },
     {
+      "id": "emr-create-consultation",
+      "title": "Create consultation note (draft)",
+      "type": "workflow",
+      "modules": [
+        "emr"
+      ],
+      "route": "/emr/consultations",
+      "risk": "clinical",
+      "feReachable": false,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "emr-finalize-consultation",
+      "title": "Finalize consultation note (terminal)",
+      "type": "workflow",
+      "modules": [
+        "emr"
+      ],
+      "route": "/emr/consultations/:consultation/finalize",
+      "risk": "clinical",
+      "feReachable": false,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "emr-get-consultation",
+      "title": "Read one consultation note (with expansion)",
+      "type": "workflow",
+      "modules": [
+        "emr"
+      ],
+      "route": "/emr/consultations/:consultation",
+      "risk": "clinical",
+      "feReachable": false,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "emr-list-consultations",
+      "title": "List consultation notes (role-scoped)",
+      "type": "workflow",
+      "modules": [
+        "emr"
+      ],
+      "route": "/emr/consultations",
+      "risk": "clinical",
+      "feReachable": false,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "emr-list-patients",
+      "title": "List EMR patients with consultation stats",
+      "type": "workflow",
+      "modules": [
+        "emr"
+      ],
+      "route": "/emr/patients",
+      "risk": "clinical",
+      "feReachable": false,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
+      "id": "emr-update-consultation",
+      "title": "Update draft consultation fields",
+      "type": "workflow",
+      "modules": [
+        "emr"
+      ],
+      "route": "/emr/consultations/:consultation",
+      "risk": "clinical",
+      "feReachable": false,
+      "allOrphan": false,
+      "severity": "e2e-gap",
+      "requiredLayers": [
+        "be-unit",
+        "contract",
+        "e2e",
+        "fe-unit"
+      ],
+      "grades": {
+        "be-unit": "COVERED",
+        "contract": "COVERED",
+        "fe-unit": "UNKNOWN",
+        "e2e": "MISSING"
+      },
+      "missing": [
+        "e2e"
+      ],
+      "unknown": [
+        "fe-unit"
+      ],
+      "absentByDesign": false,
+      "itemGrade": "GAP"
+    },
+    {
       "id": "provider-create-provider",
       "title": "createProvider — self-service provider profile",
       "type": "workflow",
@@ -2568,7 +2953,7 @@
       "route": "/reviews",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -2764,210 +3149,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "emr-create-consultation",
-      "title": "Create consultation note (draft)",
-      "type": "workflow",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "contract",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-finalize-consultation",
-      "title": "Finalize consultation note (terminal)",
-      "type": "workflow",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations/:consultation/finalize",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "contract",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-get-consultation",
-      "title": "Read one consultation note (with expansion)",
-      "type": "workflow",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations/:consultation",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "contract",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-list-consultations",
-      "title": "List consultation notes (role-scoped)",
-      "type": "workflow",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "contract",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-list-patients",
-      "title": "List EMR patients with consultation stats",
-      "type": "workflow",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/patients",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": false,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "contract",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-update-consultation",
-      "title": "Update draft consultation fields",
-      "type": "workflow",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations/:consultation",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "e2e-gap",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
-      },
-      "missing": [
-        "contract",
-        "e2e"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "person-list-operation",
       "title": "listPersons — paginated/searchable person directory (admin/support)",
       "type": "workflow",
@@ -2977,7 +3158,7 @@
       "route": "/persons",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3253,7 +3434,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3262,7 +3443,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3286,7 +3466,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3295,7 +3475,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3385,7 +3564,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3394,7 +3573,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3418,7 +3596,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -3427,7 +3605,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -3476,7 +3653,7 @@
       "route": "/booking/events",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3508,7 +3685,7 @@
       "route": "/booking/events/{event}/exceptions",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3540,7 +3717,7 @@
       "route": "/booking/events/{event}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3572,7 +3749,7 @@
       "route": "/booking/events/{event}/exceptions/{exception}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3604,7 +3781,7 @@
       "route": "/booking/events/{event}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3636,7 +3813,7 @@
       "route": "/booking/events/{event}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3668,7 +3845,7 @@
       "route": "/comms/chat-rooms",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3701,7 +3878,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/join",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3735,7 +3912,7 @@
       "route": "/comms/chat-rooms/{room}/messages",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3767,7 +3944,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/participant",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3799,7 +3976,7 @@
       "route": "/email/queue/{queue}/cancel",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3831,7 +4008,7 @@
       "route": "/email/templates",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3863,7 +4040,7 @@
       "route": "/email/queue/{queue}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3892,7 +4069,7 @@
       "route": "/email/templates/{template}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3921,7 +4098,7 @@
       "route": "/email/queue",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3950,7 +4127,7 @@
       "route": "/email/templates",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -3979,7 +4156,7 @@
       "route": "/email/queue/{queue}/retry",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4011,7 +4188,7 @@
       "route": "/email/templates/{template}/test",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4043,7 +4220,7 @@
       "route": "/email/templates/{template}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4075,7 +4252,7 @@
       "route": "/notifs/:notif",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4104,7 +4281,7 @@
       "route": "/reviews/{review}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4136,7 +4313,7 @@
       "route": "/reviews/{review}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4165,7 +4342,7 @@
       "route": "/reviews",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4195,7 +4372,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/end",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4230,7 +4407,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/join",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4265,7 +4442,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/leave",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -4807,42 +4984,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-update-insurance-profile",
-      "title": "Update insurance profile",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "patients",
-        "billing"
-      ],
-      "route": "/patients/$patientId",
-      "risk": "money",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "be-dental-scheduling-create-waitlist-entry",
       "title": "Add patient to branch waitlist (ASAP fill)",
       "type": "workflow",
@@ -4851,44 +4992,6 @@
         "dental-patient"
       ],
       "route": "/dental/branches/:branchId/waitlist",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "be-dental-scheduling-promote-waitlist",
-      "title": "Promote waitlist entry → booked appointment",
-      "type": "workflow",
-      "modules": [
-        "dental-scheduling",
-        "dental-org",
-        "dental-audit",
-        "scheduling",
-        "waitlist",
-        "patient"
-      ],
-      "route": "/calendar",
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": true,
@@ -4989,7 +5092,7 @@
       "route": "/patients/:id",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -5021,7 +5124,7 @@
       "route": "/patients/:id",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -5055,7 +5158,7 @@
       "route": "/patients",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -5088,7 +5191,7 @@
       "route": "/patients",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -5121,7 +5224,7 @@
       "route": "/patients",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -5276,41 +5379,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-add-household-member",
-      "title": "Add household member",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "patients"
-      ],
-      "route": "/patients/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "dp-approve-treatment-plan",
       "title": "Approve treatment plan (patient sign-off)",
       "type": "workflow",
@@ -5382,35 +5450,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-br-household-single-membership",
-      "title": "Household invariants (at-most-one + guarantor protection)",
-      "type": "business-rule",
-      "modules": [
-        "dental-patient"
-      ],
-      "route": null,
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "N/A",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "dp-br-sync-fsm-optimistic-lock",
       "title": "Sync-log FSM + optimistic-lock conflict",
       "type": "business-rule",
@@ -5441,109 +5480,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-br-task-fsm",
-      "title": "Patient task FSM",
-      "type": "business-rule",
-      "modules": [
-        "dental-patient"
-      ],
-      "route": null,
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "N/A",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-create-dental-alert",
-      "title": "Create dental alert",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "workspace",
-        "dental-clinical",
-        "patient-safety"
-      ],
-      "route": "/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-create-household",
-      "title": "Create household (family file)",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "dental-org",
-        "dental-audit",
-        "patients"
-      ],
-      "route": "/patients/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "dp-create-patient-contact",
       "title": "Create patient contact (guardian/emergency)",
       "type": "workflow",
@@ -5552,42 +5488,6 @@
         "patient"
       ],
       "route": "/dental/patients/:patientId/contacts",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-create-task",
-      "title": "Create patient task",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "workspace",
-        "dental-tasks"
-      ],
-      "route": "/$patientId",
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": true,
@@ -5715,42 +5615,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-get-communication-consent",
-      "title": "Get patient communication consent",
-      "type": "use-case",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "person",
-        "notifs",
-        "dental-scheduling"
-      ],
-      "route": "/dental/patients/:patientId/communication-consent",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "dp-get-household",
       "title": "Get household + members",
       "type": "use-case",
@@ -5807,41 +5671,6 @@
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-list-dental-alerts",
-      "title": "List dental alerts",
-      "type": "use-case",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "workspace",
-        "dental-clinical"
-      ],
-      "route": "/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
       },
       "missing": [
         "contract"
@@ -5919,41 +5748,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-list-patient-tasks",
-      "title": "List patient tasks",
-      "type": "use-case",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "workspace",
-        "dental-tasks"
-      ],
-      "route": "/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "dp-list-treatment-plan-status-history",
       "title": "List treatment plan status history",
       "type": "use-case",
@@ -5987,41 +5781,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-remove-household-member",
-      "title": "Remove household member",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "patients"
-      ],
-      "route": "/patients/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "dp-update-claim-status",
       "title": "Update claim status (FSM)",
       "type": "workflow",
@@ -6031,43 +5790,6 @@
         "dental-audit"
       ],
       "route": "/dental/patients/:patientId/claims/:claimId/status",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "dp-update-dental-alert",
-      "title": "Update dental alert",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "workspace",
-        "dental-clinical",
-        "patient-safety"
-      ],
-      "route": "/$patientId",
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": true,
@@ -6128,264 +5850,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "dp-update-task",
-      "title": "Update patient task (FSM)",
-      "type": "workflow",
-      "modules": [
-        "dental-patient",
-        "patient",
-        "workspace",
-        "dental-tasks"
-      ],
-      "route": "/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-br-audit-non-phi-tenant-sentinel",
-      "title": "BR: audit tenant slot is non-PHI sentinel + PHI-safe metadata",
-      "type": "business-rule",
-      "modules": [
-        "emr",
-        "audit"
-      ],
-      "route": null,
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "N/A",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-br-author-finalize-role",
-      "title": "BR: authoring/finalizing gated to owning provider",
-      "type": "business-rule",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-br-clinical-field-length-constraints",
-      "title": "BR: clinical text length + finalized-row integrity DB constraints",
-      "type": "business-rule",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-br-context-idempotency",
-      "title": "BR: context idempotency key is unique",
-      "type": "business-rule",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-br-finalize-terminal",
-      "title": "BR: finalize is terminal (draft→finalized only, no amend)",
-      "type": "business-rule",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations/:consultation/finalize",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-br-ownership-self-scope",
-      "title": "BR: isolation by provider/patient ownership (no branch/tenant)",
-      "type": "business-rule",
-      "modules": [
-        "emr"
-      ],
-      "route": "/emr/consultations",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "emr-inter-module-provider-patient-facade",
-      "title": "Inter-module: provider/patient/person resolution via facades",
-      "type": "inter-module",
-      "modules": [
-        "emr",
-        "provider",
-        "patient",
-        "person"
-      ],
-      "route": null,
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": false,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "N/A",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "person-list-search-sort-pagination",
       "title": "BR: listPersons — q search, sort whitelist, pagination bounds",
       "type": "business-rule",
@@ -6395,7 +5859,7 @@
       "route": "/persons",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -6518,39 +5982,6 @@
       "itemGrade": "GAP"
     },
     {
-      "id": "uc-list-occlusion-screenings",
-      "title": "List occlusion screenings for patient",
-      "type": "use-case",
-      "modules": [
-        "dental-clinical",
-        "workspace"
-      ],
-      "route": "/$patientId",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "N/A"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
       "id": "uc-list-postop-templates",
       "title": "List post-op templates for branch",
       "type": "use-case",
@@ -6590,40 +6021,6 @@
         "dental-clinical"
       ],
       "route": "/dental/visits/:visitId/amendments/:amendmentId/approve",
-      "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
-      "requiredLayers": [
-        "be-unit",
-        "contract",
-        "e2e",
-        "fe-unit"
-      ],
-      "grades": {
-        "be-unit": "COVERED",
-        "contract": "MISSING",
-        "fe-unit": "UNKNOWN",
-        "e2e": "COVERED"
-      },
-      "missing": [
-        "contract"
-      ],
-      "unknown": [
-        "fe-unit"
-      ],
-      "absentByDesign": false,
-      "itemGrade": "GAP"
-    },
-    {
-      "id": "wf-create-occlusion-screening",
-      "title": "Create occlusion screening",
-      "type": "workflow",
-      "modules": [
-        "dental-clinical",
-        "workspace"
-      ],
-      "route": "/$patientId",
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": true,
@@ -6916,8 +6313,8 @@
       "itemGrade": "PARTIAL"
     },
     {
-      "id": "audit-retention-purge-after-7yr",
-      "title": "Purge archived logs older than 7 years (archived -> pending-purge -> delete)",
+      "id": "audit-retention-never-purges",
+      "title": "Audit trail is append-only and is NEVER purged",
       "type": "business-rule",
       "modules": [
         "audit"
@@ -6945,7 +6342,7 @@
     },
     {
       "id": "audit-retention-status-fsm",
-      "title": "Audit retention lifecycle FSM (active -> archived -> pending-purge -> deleted)",
+      "title": "Audit retention lifecycle FSM (active -> archived; terminal — never purged)",
       "type": "business-rule",
       "modules": [
         "audit"
@@ -7388,14 +6785,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -7901,7 +7297,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -7927,7 +7323,7 @@
       "route": "/booking/bookings/{booking}/cancel",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -7956,7 +7352,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8013,7 +7409,7 @@
       "route": "/booking/events",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8042,7 +7438,7 @@
       "route": "/booking/events/{event}",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8071,7 +7467,7 @@
       "route": "/booking/bookings/{booking}/no-show",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8157,7 +7553,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8522,7 +7918,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/end",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8551,7 +7947,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/leave",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8580,7 +7976,7 @@
       "route": "/comms/chat-rooms",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8609,7 +8005,7 @@
       "route": "/comms/ice-servers",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -8635,7 +8031,7 @@
       "route": "/comms/chat-rooms/{room}/messages",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8664,7 +8060,7 @@
       "route": "/comms/chat-rooms",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8693,7 +8089,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/join",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8722,7 +8118,7 @@
       "route": "/comms/chat-rooms/{room}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8751,7 +8147,7 @@
       "route": "/comms/chat-rooms/{room}/messages",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8780,7 +8176,7 @@
       "route": "/comms/chat-rooms/{room}/messages",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -8809,7 +8205,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/join",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -10156,7 +9552,7 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -10164,18 +9560,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "be-dental-billing-remittance-idempotency",
@@ -11481,23 +10875,21 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "be-unit-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract"
       ],
       "grades": {
-        "be-unit": "MISSING",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
-      "missing": [
-        "be-unit"
-      ],
+      "missing": [],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "COVERED"
     },
     {
       "id": "br-imaging-image-patient-linkage",
@@ -12087,14 +11479,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -12117,14 +11508,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -12398,8 +11788,8 @@
       ],
       "route": null,
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -12657,8 +12047,8 @@
       ],
       "route": null,
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -14060,8 +13450,8 @@
       ],
       "route": "/dental/waitlist/:entryId/promote",
       "risk": "rest",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -14991,7 +14381,7 @@
       "route": "/email/templates",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15020,7 +14410,7 @@
       "route": "/email/queue/{queue}/cancel",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15077,7 +14467,7 @@
       "route": "/email/templates",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15106,7 +14496,7 @@
       "route": "/email/templates",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15247,7 +14637,7 @@
       "route": "/email/queue/{queue}/retry",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15276,7 +14666,7 @@
       "route": "/email/templates/{template}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15305,7 +14695,7 @@
       "route": "/email/templates/{template}/test",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15334,7 +14724,7 @@
       "route": "/email/templates",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15363,7 +14753,7 @@
       "route": "/email/templates/{template}/test",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -15394,23 +14784,21 @@
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract"
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "COVERED"
     },
     {
       "id": "emr-br-author-finalize-role",
@@ -15422,8 +14810,8 @@
       "route": "/emr/consultations",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
+      "allOrphan": false,
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -15431,18 +14819,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "emr-br-clinical-field-length-constraints",
@@ -15454,8 +14840,8 @@
       "route": "/emr/consultations",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
+      "allOrphan": false,
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -15463,18 +14849,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "emr-br-context-idempotency",
@@ -15486,8 +14870,8 @@
       "route": "/emr/consultations",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
+      "allOrphan": false,
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -15495,18 +14879,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "emr-br-finalize-terminal",
@@ -15518,8 +14900,8 @@
       "route": "/emr/consultations/:consultation/finalize",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
-      "severity": "contract-only",
+      "allOrphan": false,
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -15527,18 +14909,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "emr-br-ownership-self-scope",
@@ -15551,7 +14931,7 @@
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -15559,18 +14939,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "calibration-gate-mm-tools",
@@ -17130,7 +16508,7 @@
       "route": "/patients/:id",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -17163,7 +16541,7 @@
       "route": "/patients",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -17195,7 +16573,7 @@
       "route": "/patients",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -17359,7 +16737,7 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -17367,18 +16745,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "patients-comm-consent-persist--1",
@@ -17392,7 +16768,7 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -17400,18 +16776,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "onboarding-address-validation",
@@ -17899,7 +17273,7 @@
       "route": "/persons",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -18156,14 +17530,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -18179,7 +17552,7 @@
       "route": "/providers/practitioners/:id",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -18212,14 +17585,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -18268,7 +17640,7 @@
       "route": "/providers/practitioners",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -18334,14 +17706,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -18698,7 +18069,7 @@
       "route": "/reviews/{review}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -18727,7 +18098,7 @@
       "route": "/reviews",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -18756,7 +18127,7 @@
       "route": "/reviews",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -18785,7 +18156,7 @@
       "route": "/reviews",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -18814,7 +18185,7 @@
       "route": "/reviews/{review}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -18840,7 +18211,7 @@
       "route": "/reviews",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -18866,7 +18237,7 @@
       "route": "/reviews",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -19381,7 +18752,7 @@
       "route": "/storage/files/{file}",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -19411,7 +18782,7 @@
       "route": "/storage/multipart/{file}/complete",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -19440,7 +18811,7 @@
       "route": "/storage/multipart/{file}/complete",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -19469,7 +18840,7 @@
       "route": "/storage/files/{file}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -19775,7 +19146,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/end",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -19810,7 +19181,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/join",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -19844,7 +19215,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/join",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -19879,7 +19250,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/leave",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -19938,11 +19309,11 @@
         "dental-billing",
         "dental-patient"
       ],
-      "route": "/dental/patients/{patientId}/authorizations",
+      "route": "/patients/{patientId}",
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "e2e-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -19953,16 +19324,14 @@
         "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
-        "e2e": "MISSING"
+        "e2e": "COVERED"
       },
-      "missing": [
-        "e2e"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "erasure-facade-tenancy-and-hold-resolution",
@@ -20013,7 +19382,7 @@
       "risk": "money",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "be-unit-gap",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -20021,19 +19390,17 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "MISSING",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
-      "missing": [
-        "be-unit"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "inter-imaging-org-tier",
@@ -20433,23 +19800,21 @@
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract"
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "N/A",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "COVERED"
     },
     {
       "id": "notif-push-click-deep-link",
@@ -20749,7 +20114,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20775,7 +20140,7 @@
       "route": "/booking/events/{event}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20801,7 +20166,7 @@
       "route": "/booking/events/{event}/exceptions/{exception}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20827,7 +20192,7 @@
       "route": "/booking/slots/{slotId}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20853,7 +20218,7 @@
       "route": "/booking/bookings",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20879,7 +20244,7 @@
       "route": "/booking/events/{event}/slots",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20905,7 +20270,7 @@
       "route": "/booking/events",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -20931,7 +20296,7 @@
       "route": "/booking/events/{event}/exceptions",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -21006,7 +20371,7 @@
       "route": "/comms/chat-rooms/{room}/messages",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -21032,7 +20397,7 @@
       "route": "/comms/chat-rooms/{room}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -21058,7 +20423,7 @@
       "route": "/comms/ice-servers",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -21084,7 +20449,7 @@
       "route": "/comms/chat-rooms",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -21599,7 +20964,7 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -21607,18 +20972,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "uc-list-amendments",
@@ -21878,8 +21241,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -22943,7 +22306,7 @@
       "risk": "clinical",
       "feReachable": false,
       "allOrphan": true,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -22951,18 +22314,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "N/A"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "dp-get-dental-patient",
@@ -23272,8 +22633,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -23573,8 +22934,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -24113,8 +23474,8 @@
       ],
       "route": "/calendar",
       "risk": "rest",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25150,7 +24511,7 @@
       "route": "/providers/practitioners/:id",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25176,7 +24537,7 @@
       "route": "/providers/practitioner-roles/:id",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25204,7 +24565,7 @@
       "route": "/providers/practitioner-roles",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25230,7 +24591,7 @@
       "route": "/providers/practitioners",
       "risk": "auth",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25428,7 +24789,7 @@
       "route": "/storage/multipart/{file}/part-url",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25454,7 +24815,7 @@
       "route": "/storage/files/{file}",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25480,7 +24841,7 @@
       "route": "/storage/files/{file}/download",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25506,7 +24867,7 @@
       "route": "/storage/files",
       "risk": "rest",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit"
@@ -25871,7 +25232,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "MISSING",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -25881,7 +25242,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -25941,7 +25301,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -25950,7 +25310,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -26195,7 +25554,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -26226,7 +25585,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -26288,7 +25647,7 @@
       "route": "/booking/events",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26320,7 +25679,7 @@
       "route": "/booking/events/{event}/exceptions",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26352,7 +25711,7 @@
       "route": "/booking/events/{event}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26384,7 +25743,7 @@
       "route": "/booking/events/{event}/exceptions/{exception}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26446,7 +25805,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -26476,7 +25835,7 @@
       "route": "/booking/events/{event}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26509,7 +25868,7 @@
       "route": "/booking/bookings/{booking}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -26565,7 +25924,7 @@
       "route": "/booking/events/{event}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26597,7 +25956,7 @@
       "route": "/comms/chat-rooms",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26630,7 +25989,7 @@
       "route": "/comms/chat-rooms/{room}/messages",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -26662,7 +26021,7 @@
       "route": "/comms/chat-rooms/{room}/video-call/participant",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -27897,8 +27256,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -28067,7 +27426,7 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -28076,18 +27435,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "wf-revoke-consent-form",
@@ -29754,14 +29111,13 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
       "missing": [],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -29953,8 +29309,8 @@
       ],
       "route": "/patients/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -30196,8 +29552,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -30269,8 +29625,8 @@
       ],
       "route": "/patients/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -30305,8 +29661,8 @@
       ],
       "route": "/patients/$patientId",
       "risk": "money",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -30442,8 +29798,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -30718,8 +30074,8 @@
       ],
       "route": "/patients/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -30823,7 +30179,7 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -30832,18 +30188,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "dp-update-coverage-authorization-status",
@@ -30890,8 +30244,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -30960,8 +30314,8 @@
       ],
       "route": "/patients/$patientId",
       "risk": "money",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -31102,8 +30456,8 @@
       ],
       "route": "/$patientId",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -31880,8 +31234,8 @@
       ],
       "route": "/calendar",
       "risk": "clinical",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -32463,7 +31817,7 @@
       "risk": "clinical",
       "feReachable": true,
       "allOrphan": false,
-      "severity": "contract-only",
+      "severity": "none",
       "requiredLayers": [
         "be-unit",
         "contract",
@@ -32472,18 +31826,16 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "COVERED"
       },
-      "missing": [
-        "contract"
-      ],
+      "missing": [],
       "unknown": [
         "fe-unit"
       ],
       "absentByDesign": false,
-      "itemGrade": "GAP"
+      "itemGrade": "PARTIAL"
     },
     {
       "id": "op-update-treatment-template",
@@ -32596,7 +31948,7 @@
       "route": "/email/queue/{queue}/cancel",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32628,7 +31980,7 @@
       "route": "/email/templates",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32660,7 +32012,7 @@
       "route": "/email/queue/{queue}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32689,7 +32041,7 @@
       "route": "/email/templates/{template}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32718,7 +32070,7 @@
       "route": "/email/queue",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32747,7 +32099,7 @@
       "route": "/email/templates",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32776,7 +32128,7 @@
       "route": "/email/queue/{queue}/retry",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32808,7 +32160,7 @@
       "route": "/email/templates/{template}/test",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32840,7 +32192,7 @@
       "route": "/email/templates/{template}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32872,7 +32224,7 @@
       "route": "/emr/consultations",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32882,12 +32234,11 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "contract",
         "e2e"
       ],
       "unknown": [
@@ -32906,7 +32257,7 @@
       "route": "/emr/consultations/:consultation/finalize",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32916,12 +32267,11 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "contract",
         "e2e"
       ],
       "unknown": [
@@ -32940,7 +32290,7 @@
       "route": "/emr/consultations/:consultation",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32950,12 +32300,11 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "contract",
         "e2e"
       ],
       "unknown": [
@@ -32974,7 +32323,7 @@
       "route": "/emr/consultations",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -32984,12 +32333,11 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "contract",
         "e2e"
       ],
       "unknown": [
@@ -33018,12 +32366,11 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "contract",
         "e2e"
       ],
       "unknown": [
@@ -33042,7 +32389,7 @@
       "route": "/emr/consultations/:consultation",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -33052,12 +32399,11 @@
       ],
       "grades": {
         "be-unit": "COVERED",
-        "contract": "MISSING",
+        "contract": "COVERED",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
       },
       "missing": [
-        "contract",
         "e2e"
       ],
       "unknown": [
@@ -33169,7 +32515,7 @@
       "route": "/notifs/:notif",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -33442,7 +32788,7 @@
       "route": "/patients/:id",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -33476,7 +32822,7 @@
       "route": "/patients",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "contract-only",
       "requiredLayers": [
         "be-unit",
@@ -33734,7 +33080,7 @@
       "route": "/persons",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -33887,7 +33233,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -33896,7 +33242,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -33920,7 +33265,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -33929,7 +33274,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -34054,7 +33398,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -34063,7 +33407,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -34087,7 +33430,7 @@
         "fe-unit"
       ],
       "grades": {
-        "be-unit": "UNKNOWN",
+        "be-unit": "COVERED",
         "contract": "N/A",
         "fe-unit": "UNKNOWN",
         "e2e": "MISSING"
@@ -34096,7 +33439,6 @@
         "e2e"
       ],
       "unknown": [
-        "be-unit",
         "fe-unit"
       ],
       "absentByDesign": false,
@@ -34145,7 +33487,7 @@
       "route": "/reviews",
       "risk": "clinical",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -34178,7 +33520,7 @@
       "route": "/reviews/{review}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -34210,7 +33552,7 @@
       "route": "/reviews/{review}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -34239,7 +33581,7 @@
       "route": "/reviews",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "e2e-gap",
       "requiredLayers": [
         "be-unit",
@@ -34295,7 +33637,7 @@
       "route": "/$patientId (imaging overlay)",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -34355,7 +33697,7 @@
       "route": "/storage/multipart/{file}/complete",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -34385,7 +33727,7 @@
       "route": "/storage/files/{file}",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",
@@ -34415,7 +33757,7 @@
       "route": "/storage/multipart/initiate",
       "risk": "core",
       "feReachable": false,
-      "allOrphan": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",

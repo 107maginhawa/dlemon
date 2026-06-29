@@ -18,15 +18,14 @@ export function registerAuditJobs(scheduler: JobScheduler): void {
       const { AuditRepository } = await import('../repos/audit.repo');
       const auditRepo = new AuditRepository(db, logger);
       
-      // Archive logs older than 1 year (365 days)
+      // Archive logs older than 1 year (365 days). The audit trail is
+      // append-only and is NEVER purged (see handlers/retention/retention-targets.ts
+      // — audit is a `protected`/`retain` target). Archival only changes
+      // retention_status; no rows are ever deleted.
       const archivedCount = await auditRepo.archiveOldLogs(365);
       logger.info({ jobId, archivedCount }, `Archived ${archivedCount} audit logs older than 1 year`);
-      
-      // Purge logs older than 7 years (2555 days - HIPAA compliance)
-      const purgedCount = await auditRepo.purgeArchivedLogs(2555);
-      logger.info({ jobId, purgedCount }, `Purged ${purgedCount} audit logs older than 7 years`);
-      
-      logger.info({ jobId, archivedCount, purgedCount }, 'Audit retention job completed');
+
+      logger.info({ jobId, archivedCount }, 'Audit retention job completed');
     } catch (error) {
       logger.error({ error, jobId }, 'Audit retention job failed');
       throw error;
