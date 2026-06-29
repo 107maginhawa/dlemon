@@ -11,6 +11,7 @@ import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError } from '@/core/errors';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
 import { DentalPaymentPlanRepository } from './repos/dental-payment-plan.repo';
+import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
 import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
@@ -61,6 +62,11 @@ export async function voidDentalInvoice(
     // Lost the void race: voidInvoice's status<>'voided' predicate matched 0 rows because
     // a concurrent void already committed. Reject instead of writing a second audit row.
     if (!row) throw new BusinessLogicError('Invoice is already voided', 'ALREADY_VOIDED');
+    // G-01: a voided invoice must release the treatments it billed, otherwise their
+    // billedInvoiceId stays set and the patient can never be re-invoiced
+    // (createDentalInvoice → TREATMENT_ALREADY_BILLED 422) and the visit can't be
+    // discarded (discardVisit hasBilledWork). Same withTenantTx scope as the void.
+    await new TreatmentRepository(tx).clearBilledInvoiceId(invoiceId);
     return row;
   });
 

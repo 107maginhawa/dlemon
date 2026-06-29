@@ -126,6 +126,19 @@ export class TreatmentRepository {
       .where(inArray(dentalTreatments.id, ids));
   }
 
+  /**
+   * G-01: release every treatment billed to `invoiceId` (sets billedInvoiceId
+   * back to null). Called when an invoice is voided so the treatments become
+   * billable again — otherwise they stay permanently "billed" and the patient
+   * can never be re-invoiced (createDentalInvoice TREATMENT_ALREADY_BILLED).
+   */
+  async clearBilledInvoiceId(invoiceId: string): Promise<void> {
+    await this.db
+      .update(dentalTreatments)
+      .set({ billedInvoiceId: null, updatedAt: new Date() })
+      .where(eq(dentalTreatments.billedInvoiceId, invoiceId));
+  }
+
   async update(id: string, patch: Partial<Pick<DentalTreatment, 'status' | 'dismissReason' | 'refusalReason' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'priceCents' | 'clinicalNotes' | 'performedAt' | 'billedInvoiceId' | 'phase' | 'priority'>>): Promise<DentalTreatment | null> {
     const [updated] = await this.db
       .update(dentalTreatments)
