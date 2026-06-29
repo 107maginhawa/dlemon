@@ -17,12 +17,19 @@ export interface HasStatus {
   status?: string | null;
 }
 
-const BILLABLE_STATUSES = new Set(['performed', 'verified']);
+/**
+ * The canonical billable status set. MUST equal the server's invoice filter
+ * (services/api-ts/.../createDentalInvoice.ts) — `billable.binding.test.ts` reads
+ * that handler and fails the build if the two ever diverge, so this set is proven
+ * against BR-009 rather than asserted by a comment.
+ */
+export const BILLABLE_STATUSES = ['performed', 'verified'] as const;
+const BILLABLE_SET = new Set<string>(BILLABLE_STATUSES);
 const ESTIMATE_STATUSES = new Set(['diagnosed', 'planned']);
 
 /** True for a status the server will put on an invoice (performed | verified). */
 export function isBillableStatus(status: string | null | undefined): boolean {
-  return BILLABLE_STATUSES.has(status ?? '');
+  return BILLABLE_SET.has(status ?? '');
 }
 
 /** True for a planned/diagnosed status — shown as a non-payable estimate. */
