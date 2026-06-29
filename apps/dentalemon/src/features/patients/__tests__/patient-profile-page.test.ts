@@ -14,7 +14,6 @@ import {
   jsonResponse,
   parseMoney,
   assertTotalExplainedByRows,
-  assertCountMatchesItems,
 } from '@/test-utils';
 import { PatientProfilePage } from '../components/patient-profile-page';
 import type { Invoice } from '../hooks/use-patient-billing';
@@ -408,7 +407,7 @@ describe('PatientProfilePage', () => {
     expect(summaryValue).toBe(4500);
   });
 
-  test('COHERENCE: "Recent Visits" header count matches the rendered visit rows', async () => {
+  test('COHERENCE: "Recent Visits" total equals the authoritative server visitCount (not a re-derived branch-scoped tally)', async () => {
     installFetch({ visits: VISITS });
     renderPage();
     await waitFor(() => expect(screen.getByTestId('visit-history-section')).not.toBeNull());
@@ -419,14 +418,16 @@ describe('PatientProfilePage', () => {
     const headerCount = parseMoney(
       (section.textContent?.match(/(\d+)\s+total/) ?? [])[1],
     );
-    // Count the rendered visit <li> rows.
-    const renderedRows = section.querySelectorAll('ul > li').length;
 
-    assertCountMatchesItems({
-      count: headerCount,
-      itemCount: renderedRows,
-      label: 'Recent Visits header',
-    });
+    // The "N total" badge must equal the server's lifetime isCountedVisit count
+    // (RAW_PROFILE.visitCount) — the SAME figure the profile headline shows — so the
+    // two visit counts on the page can never disagree (e.g. on a multi-branch
+    // patient where the branch-scoped recent list is a strict subset).
+    expect(headerCount).toBe(RAW_PROFILE.visitCount);
+
+    // The list itself is the recent (branch-scoped) subset, rendered in full here.
+    const renderedRows = section.querySelectorAll('ul > li').length;
     expect(renderedRows).toBe(VISITS.length);
+    expect(renderedRows).toBeLessThanOrEqual(headerCount);
   });
 });
