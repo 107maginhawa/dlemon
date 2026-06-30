@@ -171,6 +171,40 @@ describe('OnboardingWizard — shipped component', () => {
     }
   });
 
+  test('submits entered fee-schedule prices on finish (G-11)', async () => {
+    const user = userEvent.setup();
+    const onComplete = mock(() => {});
+    const f = installFetch();
+    try {
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete })));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+
+      // fees step: set ₱500 for the first CDT (D0120), leave the rest at 0
+      await waitFor(() => expect(screen.getByRole('heading', { name: 'Fee Schedule' })).not.toBeNull());
+      const priceInputs = screen.getAllByRole('spinbutton');
+      await user.type(priceInputs[0]!, '500');
+      await user.click(screen.getByRole('button', { name: /^next$/i }));
+
+      // skip the patient step and finish
+      await waitFor(() => expect(screen.getByRole('button', { name: /skip for now/i })).not.toBeNull());
+      await user.click(screen.getByRole('button', { name: /skip for now/i }));
+      await waitFor(() => expect(onComplete.mock.calls.length).toBe(1));
+
+      // G-11: the entered price must be PATCHed to /dental/fee-schedule/{cdt} with the
+      // new branch — previously the fees state was held but never submitted (dropped).
+      const feeCall = f.calls.find(c => c.method === 'PATCH' && c.url.includes('/dental/fee-schedule/D0120'));
+      expect(feeCall).toBeDefined();
+      expect(feeCall!.body.priceCents).toBe(50000);
+      expect(feeCall!.body.branchId).toBe('branch-1');
+
+      // a fee left at 0 (default) is NOT submitted
+      expect(f.calls.some(c => c.method === 'PATCH' && c.url.includes('/dental/fee-schedule/D7140'))).toBe(false);
+    } finally {
+      f.restore();
+    }
+  });
+
   test('"Skip for now" runs the chain without the patient call', async () => {
     const user = userEvent.setup();
     const onComplete = mock(() => {});

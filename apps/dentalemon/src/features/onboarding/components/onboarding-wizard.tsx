@@ -5,6 +5,7 @@ import {
   createOnboardingMutation,
   dentalMembershipManagementSetPinMutation,
   createDentalPatientMutation,
+  updateFeeScheduleEntryMutation,
 } from '@monobase/sdk-ts/generated/react-query';
 import type {
   DentalOrgModuleOnboardingResponse,
@@ -91,6 +92,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const onboardMut = useMutation(createOnboardingMutation());
   const setPinMut = useMutation(dentalMembershipManagementSetPinMutation());
   const createPatientMut = useMutation(createDentalPatientMutation());
+  const setFeeMut = useMutation(updateFeeScheduleEntryMutation());
 
   useEffect(() => {
     saveState({ step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees });
@@ -197,6 +199,23 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           throw new Error(body?.message || `PIN setup failed (${err.status})`);
         }
         throw err;
+      }
+
+      // G-11: persist the entered fee-schedule prices. Previously the `fees` state
+      // was held but never submitted — the owner's prices were silently dropped and
+      // the schedule stayed at the seeded 0 defaults. Submit only non-default
+      // (non-zero) prices; best-effort (org is already provisioned, prices are
+      // editable later in Settings) so a fee hiccup never traps onboarding.
+      const enteredFees = fees.filter((fee) => fee.priceCents > 0);
+      if (enteredFees.length > 0) {
+        await Promise.allSettled(
+          enteredFees.map((fee) =>
+            setFeeMut.mutateAsync({
+              path: { cdt: fee.cdtCode },
+              body: { branchId: onb.branchId, priceCents: fee.priceCents },
+            }),
+          ),
+        );
       }
 
       if (!skipPatient && patientName.trim()) {
