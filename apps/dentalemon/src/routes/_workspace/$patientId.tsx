@@ -671,7 +671,7 @@ function WorkspacePage() {
               <h2 className="text-sm font-semibold">Treatment Plan</h2>
               <button type="button" aria-label="Close treatment plan" onClick={closeTreatmentPlanSheet} className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors">×</button>
             </div>
-            <TreatmentPlanTab patientId={patientId} branchId={branchId} />
+            <TreatmentPlanTab patientId={patientId} branchId={branchId} visitId={currentVisitId} patientName={patientProfile?.displayName} />
           </div>
         </div>
       )}
