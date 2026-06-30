@@ -251,7 +251,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
   return (
     <aside
       data-testid="tooth-slideout"
-      className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl overflow-y-auto z-30 lg:translate-x-0 max-lg:bottom-0 max-lg:top-0 max-lg:w-full max-lg:z-50 max-lg:pb-[env(safe-area-inset-bottom)]"
+      className="fixed right-0 top-[56px] bottom-[56px] w-[340px] flex flex-col border-l bg-card shadow-xl overflow-hidden z-30 lg:translate-x-0 max-lg:bottom-0 max-lg:top-0 max-lg:w-full max-lg:z-50 max-lg:pb-[env(safe-area-inset-bottom)]"
       style={{ transform: 'translateX(0)' }}
       aria-label={`Tooth ${toothNumber} details`}
     >
@@ -327,7 +327,7 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
       </div>
 
       {/* Step content */}
-      <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
+      <div className="flex-1 min-h-0 p-4 flex flex-col gap-4 overflow-y-auto">
         {step === 'overview' && (
           <ToothOverviewStep
             toothNumber={toothNumber}
@@ -449,8 +449,10 @@ export function ToothSlideout({ toothNumber, patientId, open, onClose, onSave, o
         />
       )}
 
-      {/* Footer navigation */}
-      <div className="flex items-center justify-between p-4 border-t gap-2">
+      {/* Footer navigation — shrink-0 so the action row stays pinned at the panel
+          bottom and is never pushed below the viewport on short (iPad-landscape)
+          heights. The scrollable body above carries min-h-0 to absorb overflow. */}
+      <div className="flex shrink-0 items-center justify-between p-4 border-t gap-2">
         {readOnly ? (
           <>
             <button

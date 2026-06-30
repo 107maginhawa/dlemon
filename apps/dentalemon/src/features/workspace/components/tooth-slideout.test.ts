@@ -172,3 +172,25 @@ describe('ToothSlideout', () => {
     expect(screen.queryByTestId('amendments-list')).toBeNull();
   });
 });
+
+// FIX #3 — at short (iPad-landscape, ~768px) heights the panel's action footer
+// (Next / Save / Continue) was pushed below the viewport because the outer panel
+// double-scrolled and the body lacked min-h-0. Lock the flexbox sticky-footer
+// shape so the footer stays reachable.
+describe('ToothSlideout — footer reachable at short viewports (FIX #3)', () => {
+  test('outer panel does not double-scroll, body has min-h-0, footer is shrink-0', () => {
+    global.fetch = mock(() => jsonResponse({ items: [], total: 0, limit: 20, offset: 0 })) as unknown as typeof fetch;
+    const { container } = render(
+      React.createElement(ToothSlideout, baseProps({ visitId: 'v1' })),
+      { wrapper: makeWrapper() },
+    );
+    const panel = screen.getByTestId('tooth-slideout');
+    // Outer panel clips instead of scrolling (the double-scroll pushed the footer off-screen).
+    expect(panel.className).toContain('overflow-hidden');
+    expect(panel.className).not.toContain('overflow-y-auto');
+    // Scrollable body absorbs overflow (min-h-0) rather than growing the column.
+    expect(container.querySelector('.flex-1.min-h-0.overflow-y-auto')).not.toBeNull();
+    // Footer action row is pinned at the panel bottom.
+    expect(container.querySelector('.border-t.shrink-0')).not.toBeNull();
+  });
+});

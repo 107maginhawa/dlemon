@@ -73,6 +73,13 @@ describe('WorkspacePage layout', () => {
       expect(await src()).toContain('perio-disabled-hint');
     });
 
+    test('2.4: Share PMD is v2-deferred — the route button is gated behind workspace.pmd (not just isReadOnly)', async () => {
+      const s = await src();
+      // Code stays in the tree, but the render is flag-gated for v1.
+      expect(s).toContain('data-testid="share-pmd-btn"');
+      expect(s).toContain("isFeatureEnabled('workspace.pmd')");
+    });
+
     test('N1: the plan-docs trigger is relabelled "Plan docs"', async () => {
       expect(await src()).toContain('Plan docs');
     });

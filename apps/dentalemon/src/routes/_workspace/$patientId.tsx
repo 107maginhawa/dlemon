@@ -510,7 +510,7 @@ function WorkspacePage() {
         >
           Profile
         </Link>
-        {isReadOnly && (
+        {isReadOnly && isFeatureEnabled('workspace.pmd') && (
           <button
             type="button"
             data-testid="share-pmd-btn"
