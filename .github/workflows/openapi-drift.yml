@@ -1,14 +1,20 @@
-name: OpenAPI Drift Detection
+name: Generated Artifact Drift Detection
 
-# Fails if specs/api/dist/ is out of sync with TypeSpec sources.
-# Forces contributors to commit regenerated artifacts after touching .tsp files.
+# Fails if the COMMITTED generated artifacts are out of sync with the TypeSpec
+# sources. The old gate diffed specs/api/dist/ — but dist/ is gitignored (.gitignore
+# bare `dist`), so `git diff specs/api/dist/` matched 0 tracked files and ALWAYS
+# passed: a false-green no-op (audit G-06). It also never regenerated the SDK (G-07).
 #
-# Runs on EVERY pull request (no `paths:` filter). `detect-drift` is a required
-# branch-protection check, and a path-filtered workflow is *skipped* (never
-# reports) on PRs that don't touch the filtered paths — which leaves the required
-# check permanently pending and blocks every frontend-only PR. Running always
-# (on a no-spec-change PR the regen produces no diff, so it passes fast) keeps the
-# gate honest and unblockable. See the regen step below for the actual drift check.
+# This regenerates the full chain (TypeSpec -> OpenAPI/types -> api-ts
+# routes/validators -> TS SDK) and diffs the TRACKED generated outputs:
+#   - services/api-ts/src/generated   (routes, validators, types)
+#   - packages/sdk-ts/src/generated   (the client SDK)
+# A regen is deterministic, so a no-spec-change PR produces no diff and passes fast.
+#
+# Runs on EVERY PR (no `paths:` filter): `detect-drift` is a required branch-
+# protection check, and a path-filtered workflow is *skipped* (never reports) on PRs
+# that don't touch the filtered paths, leaving the required check permanently pending.
+# The job id MUST stay `detect-drift` so the required check keeps matching.
 
 on:
   pull_request:
@@ -16,7 +22,7 @@ on:
 jobs:
   detect-drift:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -25,24 +31,34 @@ jobs:
         with:
           bun-version: 1.2.21
 
-      - name: Install specs/api dependencies
-        working-directory: specs/api
+      - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Regenerate OpenAPI + TypeScript types
         working-directory: specs/api
         run: bun run build
 
-      - name: Check for OpenAPI drift
+      - name: Regenerate api-ts routes/validators
+        working-directory: services/api-ts
+        run: bun run generate
+
+      - name: Regenerate TypeScript SDK
+        working-directory: packages/sdk-ts
+        run: bun run generate
+
+      - name: Check for generated-artifact drift
         run: |
-          if ! git diff --exit-code specs/api/dist/; then
+          PATHS="services/api-ts/src/generated packages/sdk-ts/src/generated"
+          if ! git diff --exit-code -- $PATHS; then
             echo ""
-            echo "OpenAPI spec is out of sync with TypeSpec sources."
-            echo "Run the following, then commit the updated dist/ files:"
+            echo "Committed generated artifacts are out of sync with the TypeSpec sources."
+            echo "Regenerate and commit the updated files:"
             echo ""
-            echo "  cd specs/api && bun run build"
+            echo "  (cd specs/api && bun run build) \\"
+            echo "    && (cd services/api-ts && bun run generate) \\"
+            echo "    && (cd packages/sdk-ts && bun run generate)"
             echo ""
-            git diff --stat specs/api/dist/
+            git diff --stat -- $PATHS
             exit 1
           fi
-          echo "OpenAPI spec is up to date."
+          echo "Generated artifacts are in sync with TypeSpec."
