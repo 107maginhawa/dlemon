@@ -20,8 +20,46 @@
           document.documentElement.classList.add('theme-white', 'skin-line');
       } catch (e) {}
     </script>
+    <!-- Landscape-only clinical app. Tauri/iOS locks orientation natively; the
+         web/PWA can't, so a touch device held in portrait gets a rotate prompt.
+         Gated to (pointer: coarse) so a desktop user narrowing their window is
+         never blocked. Pure CSS — paints before React, no JS needed. -->
+    <style>
+      #rotate-gate { display: none; }
+      @media (orientation: portrait) and (pointer: coarse) {
+        #rotate-gate {
+          display: flex;
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+          padding: 2rem;
+          text-align: center;
+          background: #fffdf5;
+          color: #1c1c1e;
+          font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+        }
+        #rotate-gate svg { width: 56px; height: 56px; }
+        #rotate-gate h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+        #rotate-gate p { margin: 0; font-size: 0.95rem; opacity: 0.7; max-width: 22rem; }
+        #root { display: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="rotate-gate" role="alertdialog" aria-label="Rotate your device">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#caa800" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 12a10 10 0 0 1 10-10" />
+        <path d="m2 8 0 4 4 0" />
+        <rect x="14" y="2" width="8" height="20" rx="1.5" />
+      </svg>
+      <h1>Rotate to landscape</h1>
+      <p>Dentalemon is designed for landscape — turn your iPad sideways to continue.</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/app.tsx"></script>
   </body>

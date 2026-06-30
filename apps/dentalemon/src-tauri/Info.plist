@@ -10,5 +10,17 @@
     <string>Monobase Account needs permission to save images to your photo library</string>
     <key>NSPrintingUsageDescription</key>
     <string>Monobase Account uses printing for reports and invoices</string>
+    <!-- Landscape-only: this is a clinical iPad app (chairside, arm-mounted).
+         Portrait is never used for charting; lock both landscape orientations. -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
 </dict>
 </plist>
