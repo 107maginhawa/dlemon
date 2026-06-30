@@ -174,7 +174,10 @@ export type DentalTreatmentStatus = typeof VALID_TREATMENT_STATUSES[number];
 export const TREATMENT_TRANSITIONS: Record<DentalTreatmentStatus, DentalTreatmentStatus[]> = {
   diagnosed: ['planned', 'dismissed', 'declined'],
   planned: ['performed', 'dismissed', 'declined'],
-  performed: ['verified', 'dismissed'],
+  // performed→planned is the error-correction "undo" — permitted by the map but
+  // GUARDED in updateDentalTreatment: rejected once the treatment is on an invoice
+  // (billedInvoiceId set), so you can only un-perform work that hasn't been billed.
+  performed: ['verified', 'dismissed', 'planned'],
   verified: ['dismissed'],
   dismissed: [], // terminal
   declined: [],  // terminal — patient declined recommended treatment
