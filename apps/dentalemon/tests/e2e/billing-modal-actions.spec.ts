@@ -130,4 +130,29 @@ test.describe('Payment-modal per-row actions', () => {
     await expect(page.getByTestId(`mark-performed-${txId}`)).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('subtotal-row')).toHaveCount(0);
   });
+
+  test('Collect Deposit on an estimate mints a deposit invoice and opens record-payment', async ({ page }) => {
+    const { branchId, memberId } = await setupDentalOrg(page);
+    const patientId = await createDentalPatient(page, { displayName: 'Deposit In Modal', branchId });
+    const visitId = await createActiveVisit(page, { patientId, branchId, memberId });
+    // Two PLANNED treatments → an estimate, nothing billable yet.
+    await createTreatment(page, { visitId, patientId, toothNumber: 46, priceCents: 1800000, cdtCode: 'D2740', description: 'Crown #46', advanceTo: 'planned' });
+    await createTreatment(page, { visitId, patientId, toothNumber: 14, priceCents: 400000, cdtCode: 'D2391', description: 'Resin composite #14', advanceTo: 'planned' });
+
+    await openPaymentModal(page, patientId);
+    await expect(page.getByTestId('estimate-section')).toBeVisible();
+
+    // Estimate = ₱22,000 → take a 50% deposit (₱11,000). dispatchEvent avoids the
+    // fixed-modal auto-scroll quirk (verified a real click lands fine).
+    await page.getByTestId('collect-deposit-btn').dispatchEvent('click');
+    await expect(page.getByTestId('deposit-form')).toBeVisible();
+    await page.getByTestId('deposit-pct-50').dispatchEvent('click');
+    await expect(page.getByTestId('deposit-amount-input')).toHaveValue('11000.00');
+    await page.getByTestId('confirm-deposit-btn').dispatchEvent('click');
+
+    // Deposit invoice is minted (born issued) and opens straight to record-payment
+    // (openToPayment) — the Receipt # field is the proof the deposit is payable now.
+    await expect(page.getByLabel(/Receipt/i)).toBeVisible({ timeout: 15000 });
+    await page.screenshot({ path: 'test-results/modal-deposit-record.png' });
+  });
 });

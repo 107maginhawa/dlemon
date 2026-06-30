@@ -18,7 +18,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
-import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
+import { usePatientInvoices, useCreateInvoice, useCreateDepositInvoice } from '../hooks/use-workspace-payment';
 import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
 import { useUpdateTreatment } from '../hooks/use-update-treatment';
 import { DeclineTreatmentPopover, DismissTreatmentPopover } from './treatment-row-popovers';
@@ -319,6 +319,14 @@ export function WorkspacePaymentModal({
     open ? patientId : null,
   );
   const createInvoice = useCreateInvoice(patientId);
+  const createDeposit = useCreateDepositInvoice(patientId);
+
+  // Collect-Deposit (Phase 1D): take a down-payment against a planned estimate.
+  // Amount is entered in pesos (string) — as a % chip of the estimate or freely —
+  // and capped at the estimate total. Minting opens the deposit invoice straight
+  // to record-payment (reuses openToPayment).
+  const [showDepositForm, setShowDepositForm] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
 
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
   const { containerRef } = useSheetA11y({ open, onClose });
@@ -369,6 +377,31 @@ export function WorkspacePaymentModal({
       setInvoiceDetailId(inv.id);
     } catch {
       // surfaced via createInvoice.isError below + a toast in the hook.
+    }
+  }
+
+  // Deposit amount in cents, parsed from the pesos field and capped at the estimate.
+  const depositCents = Math.min(
+    Math.round((parseFloat(depositAmount || '0') || 0) * 100),
+    estimateCents,
+  );
+  const depositValid = depositCents >= 1 && depositCents <= estimateCents;
+
+  function setDepositPct(pct: number) {
+    // % chip → fill the pesos field with that fraction of the estimate (2dp).
+    setDepositAmount(((estimateCents * pct) / 100 / 100).toFixed(2));
+  }
+
+  async function handleCollectDeposit() {
+    if (!visitId || !depositValid) return;
+    try {
+      const inv = await createDeposit.mutateAsync({ visitId, depositCents });
+      setShowDepositForm(false);
+      setDepositAmount('');
+      setOpenInvoiceToPayment(true); // deposit is born issued → record payment now
+      setInvoiceDetailId(inv.id);
+    } catch {
+      // surfaced via createDeposit.isError + a toast in the hook.
     }
   }
 
@@ -553,18 +586,92 @@ export function WorkspacePaymentModal({
               // the lemon "Mark done" on each estimate row above; the footer must not
               // out-shout it, so "Done" is a quiet close, not a big bordered block.
               <>
-                {hasEstimate && (
+                {hasEstimate && !showDepositForm && (
                   <p data-testid="no-billable-note" className="mb-2 text-center text-xs text-muted-foreground">
                     Performed this work? Tap the yellow{' '}
                     <span className="font-semibold text-foreground">Mark done</span> on each treatment above to
-                    bill it.
+                    bill it — or take a deposit now.
                   </p>
                 )}
+
+                {/* Collect Deposit: a down-payment against the planned estimate. % chips
+                    or a free peso amount, capped at the estimate; mints a deposit invoice
+                    and opens record-payment. The deposit credit later draws down the
+                    performed-work invoice (no double-charge). */}
+                {hasEstimate && (showDepositForm ? (
+                  <div data-testid="deposit-form" className="rounded-xl border border-border p-3 flex flex-col gap-2.5">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm font-semibold">Collect deposit</span>
+                      <span className="text-xs text-muted-foreground">max {formatCents(estimateCents)}</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {[25, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          data-testid={`deposit-pct-${pct}`}
+                          onClick={() => setDepositPct(pct)}
+                          className="flex-1 rounded-lg border border-border py-2 text-xs font-medium hover:bg-muted min-h-[44px]"
+                        >
+                          {pct}%
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-border px-3">
+                      <span className="text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        data-testid="deposit-amount-input"
+                        aria-label="Deposit amount"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="h-11 flex-1 bg-transparent text-sm tabular-nums outline-none"
+                      />
+                    </div>
+                    {createDeposit.isError && (
+                      <p className="text-xs text-destructive" role="alert">Could not collect the deposit. Please try again.</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setShowDepositForm(false); setDepositAmount(''); }}
+                        className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-muted min-h-[44px]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="confirm-deposit-btn"
+                        disabled={!depositValid || createDeposit.isPending}
+                        onClick={handleCollectDeposit}
+                        className="flex-[2] rounded-xl bg-lemon py-2.5 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
+                      >
+                        {createDeposit.isPending ? 'Collecting…' : `Collect ${formatCents(depositCents)}`}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="collect-deposit-btn"
+                    onClick={() => setShowDepositForm(true)}
+                    disabled={!visitId}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-lemon bg-lemon-soft py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon transition-colors min-h-[44px] disabled:opacity-50"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Collect Deposit
+                  </button>
+                ))}
+
                 <button
                   type="button"
                   onClick={onClose}
                   data-testid="estimate-done-btn"
-                  className="mx-auto flex items-center justify-center py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
+                  className="mx-auto mt-2 flex items-center justify-center py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
                 >
                   Close
                 </button>

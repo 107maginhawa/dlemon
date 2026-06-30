@@ -197,6 +197,32 @@ describe('WorkspacePaymentModal', () => {
     );
   });
 
+  it('Collect Deposit on an estimate: % chip fills amount, confirm POSTs depositCents', async () => {
+    const user = userEvent.setup();
+    const deposits: Record<string, unknown>[] = [];
+    const issuedDeposit = { ...INVOICE, id: 'dep-1', kind: 'deposit', status: 'issued', subtotalCents: 275000, totalCents: 275000, balanceCents: 275000 };
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = input instanceof Request ? input.method : 'GET';
+      if (method === 'POST' && url.includes('/invoices/deposit')) {
+        deposits.push(JSON.parse(await input.clone().text()));
+        return jsonResponse(issuedDeposit);
+      }
+      if (url.includes('/dental/billing/invoices/dep-1')) return jsonResponse(issuedDeposit);
+      return invoiceListResponse([]);
+    });
+    // PLANNED_ONLY estimate = 450000 + 100000 = 550000¢; 50% = 275000¢.
+    renderModal({ lineItems: PLANNED_ONLY });
+    await user.click(await screen.findByTestId('collect-deposit-btn'));
+    await user.click(await screen.findByTestId('deposit-pct-50')); // 50% chip
+    const amount = screen.getByTestId('deposit-amount-input') as HTMLInputElement;
+    expect(amount.value).toBe('2750.00'); // 50% of ₱5,500
+    await user.click(screen.getByTestId('confirm-deposit-btn'));
+    await waitFor(() =>
+      expect(deposits.some((d) => d.depositCents === 275000)).toBe(true),
+    );
+  });
+
   it('shows invoice banner when invoice exists (PAY-02)', async () => { // [BR-012]
     mockFetch.mockImplementation(() => invoiceListResponse([INVOICE]));
     renderModal();
