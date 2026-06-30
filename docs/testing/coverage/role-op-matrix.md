@@ -8,11 +8,11 @@ Computed comparison of what each handler *enforces* via `assertBranchRole(...)` 
 
 | Metric | Count |
 |--------|------:|
-| Operations with a role gate | 112 |
+| Operations with a role gate | 113 |
 | Joined to the spec matrix | 28 |
 | **Drift (code ≠ spec)** | **0** |
 | Dynamic (computed) gates | 6 |
-| Gated but unmapped to spec | 84 |
+| Gated but unmapped to spec | 85 |
 
 ## DRIFT
 
@@ -59,6 +59,7 @@ _No drift detected._
 | `createAttachment` | dental-clinical | POST | `/dental/visits/{visitId}/attachments` | dentist_owner, dentist_associate, staff_full, dental_assistant | dentist_owner, dentist_associate, staff_full, dental_assistant |  |
 | `createCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations` | dentist_owner, dentist_associate, treatment_coordinator | dentist_owner, dentist_associate, treatment_coordinator |  |
 | `createConsentForm` | dental-clinical | POST | `/dental/visits/{visitId}/consents` | dentist_owner, dentist_associate | dentist_owner, dentist_associate |  |
+| `createDentalDepositInvoice` | dental-billing | POST | `/dental/billing/invoices/deposit` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `createDentalFinding` | dental-visit | POST | `/dental/visits/{visitId}/findings` | dentist_owner, dentist_associate, hygienist, dental_assistant | — (unmapped) |  |
 | `createDentalInvoice` | dental-billing | POST | `/dental/billing/invoices` | dentist_owner, dentist_associate | dentist_owner, dentist_associate |  |
 | `createDentalPatient` | dental-patient | POST | `/dental/patients` | dentist_owner, dentist_associate, staff_full | — (unmapped) |  |

@@ -1170,6 +1170,19 @@
     "disposition": "gap"
   },
   {
+    "operationId": "createDentalDepositInvoice",
+    "method": "POST",
+    "path": "/dental/billing/invoices/deposit",
+    "module": "dental-billing",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
+  },
+  {
     "operationId": "createDentalFinding",
     "method": "POST",
     "path": "/dental/visits/{visitId}/findings",
