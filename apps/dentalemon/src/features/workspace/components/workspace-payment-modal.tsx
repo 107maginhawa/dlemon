@@ -20,6 +20,8 @@ import React, { useState, useEffect } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
 import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
+import { useUpdateTreatment } from '../hooks/use-update-treatment';
+import { DeclineTreatmentPopover, DismissTreatmentPopover } from './treatment-row-popovers';
 import { splitBillable, isBillableStatus } from '../lib/billable';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { InvoiceDetail } from '@/features/billing/components/invoice-detail';
@@ -84,14 +86,26 @@ function statusConfig(status: string): { label: string; className: string } {
 function LineItemRow({
   item,
   onMarkPerformed,
+  onDecline,
+  onDismiss,
+  onUndo,
   marking,
+  actionPending,
   errored,
 }: {
   item: PaymentLineItem;
   /** Present only for estimate (planned) rows on an editable visit — advances the
    *  treatment to performed so it becomes billable in place (no leaving the modal). */
   onMarkPerformed?: () => void;
+  /** Estimate rows: record an informed refusal (patient declined) — drops the row
+   *  from the estimate + total. Reason is captured in the popover. */
+  onDecline?: (reason: string) => void;
+  /** Estimate rows: strike a treatment added by mistake (dismiss). Reason-gated. */
+  onDismiss?: (reason: string) => void;
+  /** Billable rows (pre-invoice): undo a mistaken Mark done → back to planned. */
+  onUndo?: () => void;
   marking?: boolean;
+  actionPending?: boolean;
   errored?: boolean;
 }) {
   // "Done" == billable (the server invoices these). Real statuses are
@@ -99,6 +113,10 @@ function LineItemRow({
   // shows "Pending").
   const isDone = isBillableStatus(item.status);
   const showAction = !isDone && !!onMarkPerformed;
+  const [declineOpen, setDeclineOpen] = React.useState(false);
+  const [declineReason, setDeclineReason] = React.useState('');
+  const [dismissOpen, setDismissOpen] = React.useState(false);
+  const [dismissReason, setDismissReason] = React.useState('');
   return (
     <div
       data-testid={`line-item-${item.id}`}
@@ -115,8 +133,10 @@ function LineItemRow({
       </div>
       {showAction ? (
         // Forward action: mark this planned treatment performed → it becomes billable
-        // and the modal flips to "Create Invoice & Pay" (no dead-end "Done").
-        <div className="text-right" style={{ gridColumn: 'span 2' }}>
+        // and the modal flips to "Create Invoice & Pay". Decline/Dismiss sit beneath
+        // it (reason-gated) so the patient's actual choice can be recorded without
+        // forcing a Mark done that bills refused work.
+        <div className="flex flex-col items-end gap-1.5" style={{ gridColumn: 'span 2' }}>
           <button
             type="button"
             data-testid={`mark-performed-${item.id}`}
@@ -124,11 +144,37 @@ function LineItemRow({
             onClick={onMarkPerformed}
             // Primary affordance: this is THE way forward out of the estimate state,
             // so it reads as a filled-lemon CTA — not a faint ghost the eye skips.
-            className="ml-auto inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-lemon px-3 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover disabled:opacity-50"
+            className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-lemon px-3 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover disabled:opacity-50"
           >
             <CheckCircle2 className="h-4 w-4" />
             {marking ? 'Marking…' : 'Mark done'}
           </button>
+          {(onDecline || onDismiss) && (
+            <div className="flex items-center gap-3">
+              {onDecline && (
+                <DeclineTreatmentPopover
+                  treatmentId={item.id}
+                  open={declineOpen}
+                  reason={declineReason}
+                  isPending={!!actionPending}
+                  onOpenChange={setDeclineOpen}
+                  onReasonChange={setDeclineReason}
+                  onConfirm={() => { onDecline(declineReason.trim()); setDeclineOpen(false); }}
+                />
+              )}
+              {onDismiss && (
+                <DismissTreatmentPopover
+                  treatmentId={item.id}
+                  open={dismissOpen}
+                  reason={dismissReason}
+                  isPending={!!actionPending}
+                  onOpenChange={setDismissOpen}
+                  onReasonChange={setDismissReason}
+                  onConfirm={() => { onDismiss(dismissReason.trim()); setDismissOpen(false); }}
+                />
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -147,6 +193,18 @@ function LineItemRow({
             <span className={`text-xs font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
               {isDone ? 'Done' : 'Planned'}
             </span>
+            {isDone && onUndo && (
+              <button
+                type="button"
+                data-testid={`undo-performed-${item.id}`}
+                disabled={actionPending}
+                onClick={onUndo}
+                title="Undo — move back to planned (only before it's invoiced)"
+                className="block ml-auto text-xs font-medium text-muted-foreground hover:text-primary hover:underline disabled:opacity-50"
+              >
+                Undo
+              </button>
+            )}
           </div>
         </>
       )}
@@ -275,6 +333,17 @@ export function WorkspacePaymentModal({
     if (!isMarkDoneError) setMarkActingId(null);
   }, [isMarkDoneError]);
 
+  // Other per-row outcomes the patient's choice may require, without leaving the modal:
+  //  • Decline (informed refusal) + Dismiss (added by mistake) on estimate rows — both
+  //    drop the row from the estimate + total (declined/dismissed are excluded by the SoT).
+  //  • Undo (performed→planned) on billable rows — only before an invoice exists; the
+  //    server hard-blocks it once invoiced (TREATMENT_ALREADY_INVOICED).
+  const updateTreatment = useUpdateTreatment(visitId ?? '');
+  function patchStatus(treatmentId: string, body: Record<string, unknown>) {
+    if (!visitId) return;
+    updateTreatment.mutate({ path: { visitId, treatmentId }, body: body as never });
+  }
+
   // Split into payable (performed|verified) vs estimate (diagnosed|planned) — the SoT
   // the footer summary also consumes, so the two never disagree.
   const { billable, estimate } = splitBillable(lineItems);
@@ -367,7 +436,14 @@ export function WorkspacePaymentModal({
                 <div className="px-5" data-testid="billable-section">
                   <SectionHead title="Ready to bill" />
                   {billable.map((item) => (
-                    <LineItemRow key={item.id} item={item} />
+                    <LineItemRow
+                      key={item.id}
+                      item={item}
+                      // Undo only before an invoice exists for this visit; once invoiced
+                      // the server hard-blocks the un-perform (TREATMENT_ALREADY_INVOICED).
+                      onUndo={visitId && !visitInvoice ? () => patchStatus(item.id, { status: 'planned' }) : undefined}
+                      actionPending={updateTreatment.isPending}
+                    />
                   ))}
                 </div>
               )}
@@ -404,7 +480,10 @@ export function WorkspacePaymentModal({
                             }
                           : undefined
                       }
+                      onDecline={visitId ? (reason) => patchStatus(item.id, { status: 'declined', refusalReason: reason }) : undefined}
+                      onDismiss={visitId ? (reason) => patchStatus(item.id, { status: 'dismissed', dismissReason: reason }) : undefined}
                       marking={isMarkDonePending && markActingId === item.id}
+                      actionPending={updateTreatment.isPending}
                       errored={isMarkDoneError && markActingId === item.id}
                     />
                   ))}

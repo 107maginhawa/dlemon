@@ -25,7 +25,7 @@ function issuedInvoice() {
 }
 
 function installFetch() {
-  const calls: Array<{ url: string; method: string; body: any }> = [];
+  const calls: Array<{ url: string; method: string; body: Record<string, unknown> | undefined }> = [];
   const original = global.fetch;
   global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
     const url = req instanceof Request ? req.url : String(req);

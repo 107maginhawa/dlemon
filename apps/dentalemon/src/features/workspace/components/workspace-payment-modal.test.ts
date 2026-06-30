@@ -161,6 +161,42 @@ describe('WorkspacePaymentModal', () => {
     expect(doneBtn.className).not.toContain('border-border');
   });
 
+  it('Undo on a billable row reverts performed→planned', async () => {
+    const user = userEvent.setup();
+    const patches: Record<string, unknown>[] = [];
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      if (input instanceof Request && input.method === 'PATCH') {
+        patches.push(JSON.parse(await input.clone().text()));
+        return jsonResponse({ id: 'li-1', status: 'planned' });
+      }
+      return invoiceListResponse([]);
+    });
+    renderModal(); // LINE_ITEMS: li-1 performed (billable) + li-2 planned
+    await user.click(await screen.findByTestId('undo-performed-li-1'));
+    await waitFor(() =>
+      expect(patches.some((p) => p.status === 'planned')).toBe(true),
+    );
+  });
+
+  it('Decline on an estimate row records an informed refusal (declined + reason)', async () => {
+    const user = userEvent.setup();
+    const patches: Record<string, unknown>[] = [];
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      if (input instanceof Request && input.method === 'PATCH') {
+        patches.push(JSON.parse(await input.clone().text()));
+        return jsonResponse({ id: 'p-1', status: 'declined' });
+      }
+      return invoiceListResponse([]);
+    });
+    renderModal({ lineItems: PLANNED_ONLY });
+    await user.click((await screen.findAllByTestId('decline-btn'))[0]!);
+    await user.type(await screen.findByTestId('refusal-reason-input'), 'Cannot afford');
+    await user.click(screen.getByTestId('confirm-decline-btn'));
+    await waitFor(() =>
+      expect(patches.some((p) => p.status === 'declined' && p.refusalReason === 'Cannot afford')).toBe(true),
+    );
+  });
+
   it('shows invoice banner when invoice exists (PAY-02)', async () => { // [BR-012]
     mockFetch.mockImplementation(() => invoiceListResponse([INVOICE]));
     renderModal();
