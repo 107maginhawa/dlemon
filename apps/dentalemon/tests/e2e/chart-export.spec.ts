@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 async function seedChart(page: Page, opts: { branchId: string; memberId: string }): Promise<string> {
   const result = await page.evaluate(
@@ -61,6 +62,8 @@ async function seedChart(page: Page, opts: { branchId: string; memberId: string 
 
 test.describe('Structured chart export', () => {
   test('the Export button opens the print-ready structured export', async ({ page }) => {
+    // Chart export is v2-deferred (workspace.chart_export) — opt in for this proof.
+    await enableWorkspaceFlags(page, 'workspace.chart_export');
     const { branchId, memberId } = await signUpOnboardAndUnlock(page, { tier: 'solo', label: 'Export' });
     const patientId = await seedChart(page, { branchId, memberId });
 

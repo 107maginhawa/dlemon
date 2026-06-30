@@ -12,6 +12,7 @@
 
 import { test, expect } from '@playwright/test';
 import { setupDentalOrg, createDentalPatient, APP , gotoApp} from './fixtures';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 test.describe('Workspace empty states — P2-007', () => {
   test('RecallsSheet: empty state for new patient', async ({ page }) => {
@@ -37,6 +38,8 @@ test.describe('Workspace empty states — P2-007', () => {
   });
 
   test('TreatmentPlansSheet: empty state for new patient', async ({ page }) => {
+    // Plan docs is v2-deferred (workspace.plan_docs) — opt in for this empty-state proof.
+    await enableWorkspaceFlags(page, 'workspace.plan_docs');
     const { branchId } = await setupDentalOrg(page);
     const patientId = await createDentalPatient(page, {
       displayName: 'Empty Plans Patient',

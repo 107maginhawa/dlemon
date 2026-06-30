@@ -61,10 +61,31 @@ function readEnv(key: string): string | undefined {
 }
 
 /**
+ * Dev/E2E-only runtime override: `localStorage['ff:<flag>'] = 'true' | 'false'`.
+ * Lets Playwright specs (and manual QA) flip a v2 flag per-session without a
+ * rebuild — the shared dev server can't vary build-time env per test. Gated to
+ * DEV so a production build never honours a stray localStorage key.
+ */
+function readDevOverride(flag: FeatureFlag): boolean | undefined {
+  const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+  if (!env?.DEV) return undefined;
+  try {
+    const v = globalThis.localStorage?.getItem(`ff:${flag}`);
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+  } catch {
+    // no localStorage (SSR / non-DOM test) — fall through to env/default
+  }
+  return undefined;
+}
+
+/**
  * Resolve a feature flag. Env var (`VITE_FF_*`, parsed as a boolean) wins over
  * the built-in default; unknown/empty env values fall back to the default.
  */
 export function isFeatureEnabled(flag: FeatureFlag): boolean {
+  const override = readDevOverride(flag);
+  if (override !== undefined) return override;
   const raw = readEnv(envKey(flag));
   if (raw === 'true' || raw === '1') return true;
   if (raw === 'false' || raw === '0') return false;

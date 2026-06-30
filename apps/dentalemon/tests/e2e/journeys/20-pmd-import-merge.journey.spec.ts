@@ -28,6 +28,7 @@ import {
   API,
 } from './_journey-helpers'
 import { expect } from '@playwright/test'
+import { enableWorkspaceFlags } from '../helpers/feature-flags'
 
 const META: JourneyMeta = {
   id: 'J20',
@@ -38,6 +39,8 @@ const META: JourneyMeta = {
 }
 
 test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+  // PMD is a v2-deferred tool (workspace.pmd) — opt back in for this journey.
+  await enableWorkspaceFlags(page, 'workspace.pmd')
   try {
     // ── Precondition resolution (independent read, no browser yet) ─────────
     const { branchId } = await readOrgContext(apiReader)

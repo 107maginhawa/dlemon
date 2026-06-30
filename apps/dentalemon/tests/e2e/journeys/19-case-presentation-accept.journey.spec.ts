@@ -43,6 +43,7 @@ import {
   recordJourneyError,
 } from './_journey-helpers'
 import type { Locator, Page, APIRequestContext } from '@playwright/test'
+import { enableWorkspaceFlags } from '../helpers/feature-flags'
 
 const META: JourneyMeta = {
   id: 'J19',
@@ -127,6 +128,8 @@ async function presentToPatient(page: Page, sheet: Locator): Promise<string> {
 }
 
 test(`${META.id} — ${META.name}`, async ({ page, apiReader }) => {
+  // Plan docs / case-presentation is v2-deferred (workspace.plan_docs) — opt in.
+  await enableWorkspaceFlags(page, 'workspace.plan_docs')
   try {
     const { branchId } = await readOrgContext(apiReader)
     // §15: resolve targets by plan STATUS, not by hardcoded patient name (the seed

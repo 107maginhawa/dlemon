@@ -11,6 +11,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 async function setupPatient(page: Page): Promise<string> {
   const { branchId, memberId } = await signUpOnboardAndUnlock(page, { tier: 'clinic', label: 'LabUI' });
@@ -39,6 +40,8 @@ async function setupPatient(page: Page): Promise<string> {
 
 test.describe('Lab Orders — UI reachability (FIX-003)', () => {
   test('the Lab top-bar button opens the Lab Orders sheet and creates an order', async ({ page }) => {
+    // Lab is v2-deferred (workspace.lab_orders) — opt back in for this UI proof.
+    await enableWorkspaceFlags(page, 'workspace.lab_orders');
     const patientId = await setupPatient(page);
     await spaNavigate(page, `/${patientId}`);
 
