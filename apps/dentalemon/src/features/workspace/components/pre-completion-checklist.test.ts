@@ -110,16 +110,19 @@ describe('PreCompletionChecklist — completion gate UI', () => {
     }
   });
 
-  test('#12 surfaces open-treatment warning and offers "Complete anyway"', async () => {
+  test('#12 open-treatment is a HARD block — no "Complete anyway", completion disabled (G-09)', async () => {
     const f = installFetch({ ...ALL_PASS, treatments: [{ status: 'diagnosed' }] });
     try {
       renderChecklist();
       await waitFor(() =>
         expect(screen.getByText(/1 treatment not done yet/)).not.toBeNull(),
       );
-      // CR-02: with a warn present the affirmative button becomes "Complete anyway"
-      expect(screen.getByRole('button', { name: 'Complete anyway' })).not.toBeNull();
-      expect(screen.queryByRole('button', { name: 'Complete visit' })).toBeNull();
+      // G-09: open treatments are a server hard-gate (VISIT_HAS_OPEN_TREATMENTS,
+      // 422, no override). The old "Complete anyway" was a false affordance — it is
+      // gone; "Complete visit" is shown but disabled until the blocker is resolved.
+      expect(screen.queryByRole('button', { name: 'Complete anyway' })).toBeNull();
+      const complete = screen.getByRole('button', { name: 'Complete visit' }) as HTMLButtonElement;
+      expect(complete.disabled).toBe(true);
     } finally {
       f.restore();
     }
@@ -147,14 +150,18 @@ describe('PreCompletionChecklist — completion gate UI', () => {
     }
   });
 
-  test('#16 override path: backend 422 VISIT_HAS_OPEN_TREATMENTS surfaces in dialog, stays open', async () => {
+  test('#16 soft-override path: a 422 the server returns on confirm surfaces in dialog, stays open', async () => {
     const onClose = mock(() => {});
+    // A SOFT warning (open lab order) keeps "Complete anyway" available — the
+    // overridable path. If the server still rejects the confirm (422), the error
+    // must surface and the dialog must stay open. (Hard blocks like open
+    // treatments / unsigned consent no longer reach this path — see #12.)
     const f = installFetch({
       ...ALL_PASS,
-      treatments: [{ status: 'diagnosed' }],
+      labOrders: [{ status: 'ordered' }],
       patch: {
         status: 422,
-        body: { code: 'VISIT_HAS_OPEN_TREATMENTS', message: 'Visit has open treatments' },
+        body: { code: 'SOME_SERVER_GUARD', message: 'Server rejected the completion.' },
       },
     });
     try {
@@ -166,11 +173,9 @@ describe('PreCompletionChecklist — completion gate UI', () => {
       await userEvent.setup().click(screen.getByRole('button', { name: 'Complete anyway' }));
 
       await waitFor(() =>
-        expect(
-          screen.getByText(/still has open treatments\. Mark them done or dismiss/),
-        ).not.toBeNull(),
+        expect(screen.getByText(/Server rejected the completion/)).not.toBeNull(),
       );
-      // Hard gate: the dialog must NOT close on a rejected override.
+      // The dialog must NOT close on a rejected completion.
       expect(onClose.mock.calls.length).toBe(0);
     } finally {
       f.restore();

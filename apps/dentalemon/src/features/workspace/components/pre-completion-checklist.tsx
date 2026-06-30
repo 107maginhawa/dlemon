@@ -27,6 +27,7 @@ import {
   listDentalVisitsQueryKey,
 } from '@monobase/sdk-ts/generated/react-query';
 import { isOpenTreatment } from '../lib/billable';
+import { deriveCompletionGate } from '../lib/pre-completion-gate';
 
 export interface PreCompletionChecklistProps {
   visitId: string;
@@ -40,6 +41,8 @@ interface CheckResult {
   label: string;
   pass: boolean;
   message?: string;
+  /** True when the server HARD-blocks completion on this check (422, no override). */
+  blocking?: boolean;
 }
 
 async function checkConsentSigned(visitId: string): Promise<CheckResult> {
@@ -49,6 +52,8 @@ async function checkConsentSigned(visitId: string): Promise<CheckResult> {
   return {
     label: 'Consent form signed',
     pass: signed,
+    // Server hard-blocks: VISIT_CONSENT_REQUIRED (422, no override).
+    blocking: true,
     message: signed ? undefined : 'No signed consent form on file',
   };
 }
@@ -60,6 +65,8 @@ async function checkNoUnstartedTreatments(visitId: string): Promise<CheckResult>
   return {
     label: 'No incomplete treatments',
     pass: unfinished.length === 0,
+    // Server hard-blocks: VISIT_HAS_OPEN_TREATMENTS (422, no override).
+    blocking: true,
     message:
       unfinished.length > 0
         ? `${unfinished.length} treatment${unfinished.length === 1 ? '' : 's'} not done yet — mark done or dismiss`
@@ -165,7 +172,7 @@ export function PreCompletionChecklist({
     });
   }
 
-  const hasWarns = checks.some(c => !c.pass);
+  const gate = deriveCompletionGate(checks);
   const isPending = completeMutation.isPending;
 
   return (
@@ -232,10 +239,12 @@ export function PreCompletionChecklist({
               >
                 Not yet
               </button>
-              {/* CR-02: the four checks are warnings, not hard blocks (BR-014 allows
-                  owner override). When warnings exist, offer an explicit
-                  "Complete anyway" instead of disabling completion entirely. */}
-              {hasWarns ? (
+              {/* G-09: consent + open-treatments are server HARD blocks (422, no
+                  override) — when one fails the gate is 'blocked' and completion is
+                  disabled (clicking would 422). SOAP-note content + open lab orders
+                  are not enforced server-side, so they stay soft: 'override' offers
+                  an explicit "Complete anyway" (owner override). */}
+              {gate === 'override' ? (
                 <button
                   type="button"
                   onClick={handleComplete}
@@ -248,7 +257,8 @@ export function PreCompletionChecklist({
                 <button
                   type="button"
                   onClick={handleComplete}
-                  disabled={isPending || checks.length === 0}
+                  disabled={isPending || checks.length === 0 || gate === 'blocked'}
+                  title={gate === 'blocked' ? 'Resolve the flagged items above before completing.' : undefined}
                   className="flex-1 h-11 rounded-lg bg-lemon text-lemon-foreground text-sm font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {isPending ? 'Completing…' : 'Complete visit'}
