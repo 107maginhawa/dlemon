@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { isBillable, isBillableStatus, isEstimateStatus, splitBillable } from './billable';
+import { isBillable, isBillableStatus, isEstimateStatus, isValuedTreatment, splitBillable, sumTreatmentValue } from './billable';
 
 describe('billable SoT (mirrors server BR-009)', () => {
   test('only performed|verified are billable', () => {
@@ -34,6 +34,28 @@ describe('billable SoT (mirrors server BR-009)', () => {
   test('isBillable works on a treatment-like object', () => {
     expect(isBillable({ status: 'performed' })).toBe(true);
     expect(isBillable({ status: 'planned' })).toBe(false);
+  });
+
+  // Treatment-plan VALUE: everything real (diagnosed|planned|performed|verified)
+  // counts; refused (declined) and abandoned (dismissed) do NOT. A declined crown
+  // must never inflate the Grand Total (the ₱26,300 incoherence bug).
+  test('isValuedTreatment excludes only declined + dismissed', () => {
+    expect(isValuedTreatment('diagnosed')).toBe(true);
+    expect(isValuedTreatment('planned')).toBe(true);
+    expect(isValuedTreatment('performed')).toBe(true);
+    expect(isValuedTreatment('verified')).toBe(true);
+    expect(isValuedTreatment('declined')).toBe(false);
+    expect(isValuedTreatment('dismissed')).toBe(false);
+  });
+
+  test('sumTreatmentValue ignores declined/dismissed', () => {
+    const items = [
+      { status: 'performed', priceAmount: 4300 },
+      { status: 'declined', priceAmount: 18000 }, // refused — excluded
+      { status: 'planned', priceAmount: 4000 },
+      { status: 'dismissed', priceAmount: 999 }, // abandoned — excluded
+    ];
+    expect(sumTreatmentValue(items, (t) => t.priceAmount)).toBe(8300);
   });
 
   // Failure mode #3: the original bug hid because the seed was all-pending, so no
