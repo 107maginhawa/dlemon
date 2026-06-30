@@ -15,6 +15,7 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 import { ClinicStep } from './wizard-step-clinic';
 import { DentistStep } from './wizard-step-dentist';
 import { FeesStep, type FeeEntry, DEFAULT_FEES } from './wizard-step-fees';
+import { resumeStep } from '../lib/resume-step';
 import { PatientStep } from './wizard-step-patient';
 
 type Step = 'clinic' | 'dentist' | 'fees' | 'patient';
@@ -64,7 +65,10 @@ export interface OnboardingWizardProps {
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const saved = loadState();
 
-  const [step, setStep] = useState<Step>(saved.step ?? 'clinic');
+  // G-26: the PIN is never persisted, so a session resumed past the dentist step
+  // would reach Finish with no PIN. Clamp the resume step back to 'dentist' to force
+  // PIN re-entry instead of persisting the credential.
+  const [step, setStep] = useState<Step>(resumeStep(saved.step));
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
