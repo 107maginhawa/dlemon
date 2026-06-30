@@ -17,6 +17,7 @@ export function ClinicSettings() {
   const [registeredName, setRegisteredName] = useState('');
   const [businessStyle, setBusinessStyle] = useState('');
   const [tin, setTin] = useState('');
+  const [receiptNumberNext, setReceiptNumberNext] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Populate form when settings load
@@ -31,6 +32,7 @@ export function ClinicSettings() {
     setRegisteredName(settings.registeredName ?? '');
     setBusinessStyle(settings.businessStyle ?? '');
     setTin(settings.tin ?? '');
+    setReceiptNumberNext(settings.receiptNumberNext ?? '');
   }, [settings]);
 
   function validate(): string[] {
@@ -61,6 +63,7 @@ export function ClinicSettings() {
         registeredName: registeredName.trim() || undefined,
         businessStyle: businessStyle.trim() || undefined,
         tin: tin.trim() || undefined,
+        receiptNumberNext: receiptNumberNext.trim() || undefined,
       });
     } catch {
       // error is exposed via saveError
@@ -101,6 +104,11 @@ export function ClinicSettings() {
           <div><label className={labelClass}>Registered Name</label><input type="text" data-testid="clinic-registered-name" value={registeredName} onChange={e => setRegisteredName(e.target.value)} placeholder="Legal name as registered with BIR" className={inputClass} /></div>
           <div><label className={labelClass}>Business Style</label><input type="text" data-testid="clinic-business-style" value={businessStyle} onChange={e => setBusinessStyle(e.target.value)} placeholder="Trade name / DBA" className={inputClass} /></div>
           <div><label className={labelClass}>TIN</label><input type="text" data-testid="clinic-tin" value={tin} onChange={e => setTin(e.target.value)} placeholder="000-000-000-000" className={inputClass} /></div>
+          <div>
+            <label className={labelClass}>Next Official Receipt #</label>
+            <input type="text" data-testid="clinic-receipt-next" value={receiptNumberNext} onChange={e => setReceiptNumberNext(e.target.value)} placeholder="e.g. OR-000001" className={inputClass} />
+            <p className="mt-1 text-xs text-muted-foreground">Pre-fills the receipt # when recording a payment, then advances automatically. Set this to your BIR booklet’s current number; you can still edit it on each receipt.</p>
+          </div>
         </div>
       </div>
 
