@@ -558,6 +558,15 @@ jobs:
       - name: Payment coherence — billable vs estimate (chromium)
         run: cd apps/dentalemon && bunx playwright test --project=chromium workspace-payment-coherence --retries=0
 
+      # Sendable/approvable Estimate (Phase 2): the estimate must print and capture
+      # an in-person e-signature that freezes an immutable plan version (accept 201).
+      # Self-provisions its own org/visit, needs no external infra, so it's a stable
+      # required gate in THIS job (no new required check → no branch-protection change).
+      # The spec is ipad-prefixed (patient signs on the iPad) so it ALSO runs in the
+      # iPad project matrix below; this chromium run is the named blocking signal.
+      - name: Estimate print & approval (chromium)
+        run: cd apps/dentalemon && bunx playwright test --project=chromium ipad-estimate-approval --retries=0
+
       - name: Upload journey results
         uses: actions/upload-artifact@v4
         if: always()
