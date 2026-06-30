@@ -543,6 +543,13 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.listDentalInvoices as unknown as Handler
   );
 
+  // createDentalDepositInvoice
+  app.post('/dental/billing/invoices/deposit',
+    authMiddleware({ roles: ["user"] }),
+    zValidator('json', validators.CreateDentalDepositInvoiceBody, validationErrorHandler),
+    registry.createDentalDepositInvoice as unknown as Handler
+  );
+
   // getDentalInvoice
   app.get('/dental/billing/invoices/:invoiceId',
     authMiddleware({ roles: ["user"] }),

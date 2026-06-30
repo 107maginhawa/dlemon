@@ -146,6 +146,83 @@ describe('WorkspacePaymentModal', () => {
     expect(screen.getByTestId('mark-performed-p-2')).not.toBeNull();
   });
 
+  it('estimate state: Mark done is the PRIMARY affordance and Done is a quiet close', async () => {
+    // The reported dead-end is a hierarchy bug, not a missing path: the forward
+    // action (Mark done) was a faint ghost button buried under a dominant bordered
+    // "Done" exit, so the modal read as terminal. Lock the inverted hierarchy:
+    // Mark done = filled-lemon primary; Done = low-emphasis close, not a big block.
+    renderModal({ lineItems: PLANNED_ONLY });
+    const markBtn = await screen.findByTestId('mark-performed-p-1');
+    expect(markBtn.className).toContain('bg-lemon'); // forward action = primary CTA
+
+    const doneBtn = screen.getByTestId('estimate-done-btn');
+    expect(doneBtn.className).not.toContain('bg-lemon');
+    // No longer a full bordered block that out-shouts Mark done.
+    expect(doneBtn.className).not.toContain('border-border');
+  });
+
+  it('Undo on a billable row reverts performed→planned', async () => {
+    const user = userEvent.setup();
+    const patches: Record<string, unknown>[] = [];
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      if (input instanceof Request && input.method === 'PATCH') {
+        patches.push(JSON.parse(await input.clone().text()));
+        return jsonResponse({ id: 'li-1', status: 'planned' });
+      }
+      return invoiceListResponse([]);
+    });
+    renderModal(); // LINE_ITEMS: li-1 performed (billable) + li-2 planned
+    await user.click(await screen.findByTestId('undo-performed-li-1'));
+    await waitFor(() =>
+      expect(patches.some((p) => p.status === 'planned')).toBe(true),
+    );
+  });
+
+  it('Decline on an estimate row records an informed refusal (declined + reason)', async () => {
+    const user = userEvent.setup();
+    const patches: Record<string, unknown>[] = [];
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      if (input instanceof Request && input.method === 'PATCH') {
+        patches.push(JSON.parse(await input.clone().text()));
+        return jsonResponse({ id: 'p-1', status: 'declined' });
+      }
+      return invoiceListResponse([]);
+    });
+    renderModal({ lineItems: PLANNED_ONLY });
+    await user.click((await screen.findAllByTestId('decline-btn'))[0]!);
+    await user.type(await screen.findByTestId('refusal-reason-input'), 'Cannot afford');
+    await user.click(screen.getByTestId('confirm-decline-btn'));
+    await waitFor(() =>
+      expect(patches.some((p) => p.status === 'declined' && p.refusalReason === 'Cannot afford')).toBe(true),
+    );
+  });
+
+  it('Collect Deposit on an estimate: % chip fills amount, confirm POSTs depositCents', async () => {
+    const user = userEvent.setup();
+    const deposits: Record<string, unknown>[] = [];
+    const issuedDeposit = { ...INVOICE, id: 'dep-1', kind: 'deposit', status: 'issued', subtotalCents: 275000, totalCents: 275000, balanceCents: 275000 };
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = input instanceof Request ? input.method : 'GET';
+      if (method === 'POST' && url.includes('/invoices/deposit')) {
+        deposits.push(JSON.parse(await input.clone().text()));
+        return jsonResponse(issuedDeposit);
+      }
+      if (url.includes('/dental/billing/invoices/dep-1')) return jsonResponse(issuedDeposit);
+      return invoiceListResponse([]);
+    });
+    // PLANNED_ONLY estimate = 450000 + 100000 = 550000¢; 50% = 275000¢.
+    renderModal({ lineItems: PLANNED_ONLY });
+    await user.click(await screen.findByTestId('collect-deposit-btn'));
+    await user.click(await screen.findByTestId('deposit-pct-50')); // 50% chip
+    const amount = screen.getByTestId('deposit-amount-input') as HTMLInputElement;
+    expect(amount.value).toBe('2750.00'); // 50% of ₱5,500
+    await user.click(screen.getByTestId('confirm-deposit-btn'));
+    await waitFor(() =>
+      expect(deposits.some((d) => d.depositCents === 275000)).toBe(true),
+    );
+  });
+
   it('shows invoice banner when invoice exists (PAY-02)', async () => { // [BR-012]
     mockFetch.mockImplementation(() => invoiceListResponse([INVOICE]));
     renderModal();
@@ -223,6 +300,30 @@ describe('WorkspacePaymentModal', () => {
       const calls = mockFetch.mock.calls as [Request | string, RequestInit?][];
       const postCall = calls.find(([input]) => input instanceof Request && input.method === 'POST');
       expect(postCall).not.toBeNull();
+    });
+  });
+
+  it('opens straight to the Record-payment form after Create Invoice & Pay (no extra tap)', async () => {
+    const user = userEvent.setup();
+    const issued = { ...INVOICE, status: 'issued' };
+    mockFetch.mockImplementation((input: Request | string) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = input instanceof Request ? input.method : 'GET';
+      if (method === 'POST') return jsonResponse(issued);
+      if (url.includes('/dental/billing/invoices/inv-1')) return jsonResponse(issued);
+      return invoiceListResponse([]);
+    });
+
+    renderModal();
+    await waitFor(() => {
+      expect((screen.getByTestId('create-invoice-btn') as HTMLButtonElement).disabled).toBe(false);
+    });
+    await user.click(screen.getByTestId('create-invoice-btn'));
+
+    // The collect-now path lands directly on the payment form — the Amount field
+    // is present without a separate "Record payment" tap.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Amount/i)).not.toBeNull();
     });
   });
 

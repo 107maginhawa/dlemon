@@ -16,7 +16,7 @@ import type { ValidatedContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import { UnauthorizedError, NotFoundError, BusinessLogicError, ValidationError } from '@/core/errors';
 import { assertBranchAccess } from '@/handlers/shared/assert-branch-access';
-import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
+import { getBranchOrgId, getActiveMembershipId } from '@/handlers/dental-org/repos/org-billing.facade';
 import { withTenantTx } from '@/core/tenant-tx';
 import { logAuditEvent } from '@/core/audit-logger';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
@@ -44,6 +44,13 @@ export async function applyCreditToInvoice(
     throw new BusinessLogicError('Cannot apply credit to a voided invoice', 'INVOICE_VOIDED');
   }
 
+  // §g F-07: a deposit invoice is itself the source of a deposit credit; applying
+  // credit TO it would let the deposit pay itself (circular). Credit is applied
+  // only to standard (performed-work) invoices.
+  if (invoice.kind === 'deposit') {
+    throw new BusinessLogicError('Cannot apply credit to a deposit invoice', 'INVOICE_IS_DEPOSIT');
+  }
+
   const result = await withTenantTx(db, { branchIds: [invoice.branchId] }, async (tx) => {
     const invoiceRepo = new DentalInvoiceRepository(tx);
     const creditRepo = new DentalPatientCreditRepository(tx);
@@ -64,7 +71,12 @@ export async function applyCreditToInvoice(
       throw new BusinessLogicError('Invoice has no outstanding balance', 'INVOICE_SETTLED');
     }
 
-    const available = await creditRepo.getBalance(live.patientId);
+    // §g F-02: the patient credit wallet is GLOBAL (cross-branch). Read it on `db`
+    // (superuser) so branch-scoped RLS on dental_patient_credit doesn't truncate
+    // the deposit credit (which is keyed to the deposit invoice's branch). Safe
+    // under the 1001 lock above: every credit mutator takes it, so no competing
+    // write commits while we hold it, whichever connection observes the wallet.
+    const available = await new DentalPatientCreditRepository(db).getBalance(live.patientId);
     if (available <= 0) throw new BusinessLogicError('Patient has no available credit', 'NO_CREDIT');
 
     // BR-052: cap at both the invoice balance and the available credit.
@@ -82,12 +94,16 @@ export async function applyCreditToInvoice(
     }
 
     const updated = await invoiceRepo.addPayment(invoiceId, body.amountCents);
+    // Attribute the consuming row to the acting staff member (best-effort — never
+    // blocks the draw-down if no membership resolves).
+    const member = await getActiveMembershipId(db, user.id, live.branchId);
     await creditRepo.create({
       patientId: live.patientId,
       branchId: live.branchId,
       amountCents: -body.amountCents, // consuming row
       source: 'applied',
       invoiceId,
+      createdByMemberId: member?.id ?? null,
       createdBy: user.id,
       updatedBy: user.id,
     });

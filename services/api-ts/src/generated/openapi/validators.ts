@@ -1090,6 +1090,15 @@ export const CreateDentalVisitRequestSchema = z.object({
   localId: z.string().optional()
 });
 
+export const CreateDepositInvoiceRequestSchema = z.object({
+  visitId: UUIDSchema,
+  patientId: UUIDSchema,
+  branchId: UUIDSchema,
+  dentistMemberId: UUIDSchema,
+  depositCents: z.number().int().gte(1),
+  localId: z.string().optional()
+});
+
 export const CreateFindingRequestSchema = z.object({
   toothNumber: z.number().int(),
   surface: ToothSurfaceCodeSchema.optional(),
@@ -2168,6 +2177,7 @@ export const DentalInvoiceSchema = z.object({
   dentistMemberId: UUIDSchema,
   invoiceNumber: z.string(),
   status: DentalInvoiceStatusSchema,
+  kind: z.enum(["standard", "deposit"]),
   subtotalCents: z.number().int(),
   discountCents: z.number().int(),
   taxCents: z.number().int(),
@@ -2185,6 +2195,8 @@ export const DentalInvoiceSchema = z.object({
   createdAt: z.string().datetime().transform((str) => new Date(str)),
   updatedAt: z.string().datetime().transform((str) => new Date(str))
 });
+
+export const DentalInvoiceKindSchema = z.enum(["standard", "deposit"]);
 
 export const DentalLegalHoldModuleLegalHoldSchema = z.object({
   id: z.string().uuid(),
@@ -20523,6 +20535,11 @@ export const ListDentalInvoicesResponse = z.object({
   hasPreviousPage: z.boolean()
 })
 });
+
+export const CreateDentalDepositInvoiceBody = CreateDepositInvoiceRequestSchema;
+export type CreateDentalDepositInvoiceBody = z.infer<typeof CreateDentalDepositInvoiceBody>;
+
+export const CreateDentalDepositInvoiceResponse = DentalInvoiceSchema;
 
 export const GetDentalInvoiceParams = z.object({
   invoiceId: UUIDSchema,

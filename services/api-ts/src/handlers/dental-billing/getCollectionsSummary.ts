@@ -18,7 +18,7 @@ import { getActiveBranchIdsForPerson } from '@/handlers/dental-org/repos/org-bil
 import { withTenantTx } from '@/core/tenant-tx';
 import { dentalInvoices } from './repos/dental-invoice.schema';
 import { dentalPayments } from './repos/dental-payment.schema';
-import { and, eq, gte, lte, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, ne, gte, lte, inArray, sql, type SQL } from 'drizzle-orm';
 
 function startOfDay(d: Date): Date {
   const s = new Date(d);
@@ -72,6 +72,10 @@ export async function getCollectionsSummary(ctx: BaseContext) {
   const invoiceConditions: SQL<unknown>[] = [
     gte(dentalInvoices.issuedAt, from),
     lte(dentalInvoices.issuedAt, to),
+    // §g DQ3 / F-02: exclude deposit invoices from billed/outstanding/overdue so
+    // the collections summary matches the KPI dashboard. Collected cash is summed
+    // from dental_payment rows below, so deposit CASH still counts there once.
+    ne(dentalInvoices.kind, 'deposit'),
   ];
   if (q['branchId']) {
     invoiceConditions.push(eq(dentalInvoices.branchId, q['branchId']));

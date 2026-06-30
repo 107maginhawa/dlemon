@@ -24,7 +24,7 @@ import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { DismissTreatmentPopover, DeclineTreatmentPopover } from './treatment-row-popovers';
 import { statusToLayer, getLayerLabel, type TreatmentLayerStatus } from './dental-chart.helpers';
-import { isBillable } from '@/features/workspace/lib/billable';
+import { isBillable, isValuedTreatment, sumTreatmentValue } from '@/features/workspace/lib/billable';
 
 /**
  * P2 — group treatments for the by-status presentation view, folded through the
@@ -233,17 +233,13 @@ export function TreatmentTable({
   // hide-completed default would leave the table empty under a real money total.
   const hasPending = nativeTreatments.some((t) => !isBillable(t));
 
-  // TXTBL-01: subtotal computations
-  // price contract: priceCents (API) ÷ 100 → dollars (display); t.priceAmount already in dollars
-  // NOTE: this sums ALL native (this-visit, non-carried) treatments, including
-  // dismissed/declined-priced ones. Those rows also render (the filter below only hides
-  // performed/verified), so visible rows still match this total. Carried-over rows are
-  // summed separately below so the Grand Total never counts a carried row twice.
-  const thisVisitTotal = nativeTreatments.reduce((sum, t) => sum + (t.priceAmount ?? 0), 0);
-  const carriedOverTotal = carriedOverItems.reduce(
-    (sum, i) => sum + (i.priceCents / 100), // price contract: priceCents (API) ÷ 100 → dollars (display)
-    0,
-  );
+  // TXTBL-01: subtotal computations. Grand Total = treatment-plan VALUE = real
+  // work only. `sumTreatmentValue` (billable SoT) excludes declined (refused) and
+  // dismissed (struck) rows so a declined ₱18,000 crown never inflates the total —
+  // those rows still render for the clinical record, just unsummed.
+  // price contract: priceCents (API) ÷ 100 → dollars; t.priceAmount already in dollars.
+  const thisVisitTotal = sumTreatmentValue(nativeTreatments, (t) => t.priceAmount ?? 0);
+  const carriedOverTotal = sumTreatmentValue(carriedOverItems, (i) => i.priceCents / 100);
   const grandTotal = thisVisitTotal + carriedOverTotal;
 
   // TXTBL-05: filter displayed treatments.
@@ -538,7 +534,13 @@ export function TreatmentTable({
                           setEditingPriceId(t.id);
                           setDraftPrice(String(t.priceAmount ?? 0));
                         }}
-                        className="tabular-nums rounded px-1 hover:underline hover:bg-primary/10 focus:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:bg-transparent"
+                        // Declined/dismissed prices are struck + muted: shown for the
+                        // clinical record but visibly NOT part of the Grand Total.
+                        title={isValuedTreatment(t.status) ? undefined : 'Not counted in the total'}
+                        className={[
+                          'tabular-nums rounded px-1 hover:underline hover:bg-primary/10 focus:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:bg-transparent',
+                          isValuedTreatment(t.status) ? '' : 'line-through text-muted-foreground',
+                        ].join(' ')}
                       >
                         {CURRENCY_SYMBOL}
                         {(t.priceAmount ?? 0).toLocaleString(APP_LOCALE)}

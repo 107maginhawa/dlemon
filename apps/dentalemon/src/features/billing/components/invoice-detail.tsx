@@ -34,6 +34,8 @@ import {
 } from './invoice-detail.helpers';
 import { Skeleton } from '@monobase/ui';
 import { useOrgContextStore } from '@/stores/org-context.store';
+import { useBranchSettings, useUpdateBranchSettings } from '@/features/settings/hooks/use-branch-settings';
+import { incrementReceiptNumber } from '../lib/receipt-series';
 import { canApplyDiscount, canVoidPayment, type DentalRole } from '@/lib/rbac';
 import { PaymentReceipt } from './payment-receipt';
 import { PaymentPlanCreate } from './payment-plan-create';
@@ -148,6 +150,20 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   // Without it the POST sends an empty recordedByMemberId and the backend
   // rejects it with 400 "Invalid UUID" (mirrors useWorkspacePayment / QA-008).
   const recordedByMemberId = useOrgContextStore((s) => s.memberId);
+  // OR series: pre-fill the receipt # from the clinic's saved next-number and
+  // advance it on a successful record (recorder model — see receipt-series.ts).
+  const branchId = useOrgContextStore((s) => s.branchId);
+  const { settings: branchSettings } = useBranchSettings(branchId);
+  const { update: updateBranchSettings } = useUpdateBranchSettings(branchId);
+  // OR pre-fill: when the payment form opens with an empty receipt field, seed it
+  // with the clinic's saved next OR number. Only fills when empty, so it never
+  // fights a value the user typed or cleared. Editable + advanced on record.
+  useEffect(() => {
+    if (showPaymentForm && !receiptNumber && branchSettings?.receiptNumberNext) {
+      setReceiptNumber(branchSettings.receiptNumberNext);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPaymentForm, branchSettings?.receiptNumberNext]);
   // FIX-003/004: discount + payment-void are OWNER-ONLY (backend
   // assertBranchRole(['dentist_owner'])) — STRICTER than the canWrite prop
   // (owner||associate). Source role from the same org context as recordedByMemberId
@@ -373,15 +389,26 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
     }
     setPaymentErrors([]);
     const payload = buildPaymentPayload({ amountCents, method: paymentMethod, receiptNumber, recordedByMemberId });
-    recordPaymentMutation.mutate({
-      path: { invoiceId },
-      body: {
-        amountCents: payload.amountCents,
-        method: payload.method as Parameters<typeof recordPaymentMutation.mutate>[0]['body']['method'],
-        receiptNumber: payload.receiptNumber,
-        recordedByMemberId: payload.recordedByMemberId,
+    recordPaymentMutation.mutate(
+      {
+        path: { invoiceId },
+        body: {
+          amountCents: payload.amountCents,
+          method: payload.method as Parameters<typeof recordPaymentMutation.mutate>[0]['body']['method'],
+          receiptNumber: payload.receiptNumber,
+          recordedByMemberId: payload.recordedByMemberId,
+        },
       },
-    });
+      {
+        // Advance the OR series from what was actually recorded (follows manual
+        // jumps and preserves width/prefix). Best-effort: a failed settings write
+        // must never surface as a failed payment.
+        onSuccess: () => {
+          const next = payload.receiptNumber ? incrementReceiptNumber(payload.receiptNumber) : null;
+          if (branchId && next) updateBranchSettings({ receiptNumberNext: next }).catch(() => {});
+        },
+      },
+    );
   }
 
   function handleApplyDiscount() {

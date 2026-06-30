@@ -36,6 +36,10 @@ export interface BranchSettings {
   registeredName?: string;
   businessStyle?: string;
   tin?: string;
+  // OR series: the next Official Receipt number to suggest when recording a payment.
+  // Recorder model — seeded to the clinic's BIR booklet position, auto-advanced on
+  // each record (incrementReceiptNumber), always editable per-payment.
+  receiptNumberNext?: string;
   // Locale
   locale?: string;
   currency?: string;

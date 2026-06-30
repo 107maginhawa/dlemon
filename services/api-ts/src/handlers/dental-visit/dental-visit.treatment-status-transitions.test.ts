@@ -212,6 +212,42 @@ describe('updateDentalTreatment', () => {
     expect(body.code).toBe('TREATMENT_IMMUTABLE');
   });
 
+  test('performed→planned (undo) when NOT invoiced → 200, status planned, performedAt cleared', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit('active');
+    const treatment = await seedTreatment(visit.id, 'performed', { performedAt: new Date() });
+
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe('planned');
+    expect(body.performedAt ?? null).toBeNull();
+  });
+
+  test('performed→planned (undo) when already invoiced → 422 TREATMENT_ALREADY_INVOICED', async () => {
+    const app = buildTestApp(TEST_USER);
+    const visit = await seedVisit('active');
+    const treatment = await seedTreatment(visit.id, 'performed', {
+      performedAt: new Date(),
+      billedInvoiceId: crypto.randomUUID(),
+    });
+
+    const res = await app.request(`/dental/visits/${visit.id}/treatments/${treatment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'planned' }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = await res.json() as any;
+    expect(body.code).toBe('TREATMENT_ALREADY_INVOICED');
+  });
+
   // AC-VIS-003 / BR-007: field-immutability begins at `performed` (not `verified`).
   // Canonical ruling V-VIS-101 — MODULE_SPEC + code are authoritative; a PATCH
   // changing cdt_code/tooth/surface on a performed treatment must return 422.

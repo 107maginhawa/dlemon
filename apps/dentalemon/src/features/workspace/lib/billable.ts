@@ -53,6 +53,35 @@ export function isOpenTreatment(status: string | null | undefined): boolean {
   return OPEN_TREATMENT_SET.has(status ?? '');
 }
 
+/**
+ * Treatment-plan VALUE membership. A treatment counts toward the plan's money
+ * total (This Visit / Carried Over / Grand Total) when it represents real work —
+ * diagnosed|planned|performed|verified. `declined` (patient refused) and
+ * `dismissed` (struck from the plan) are NOT owed and NOT production, so they
+ * are excluded from every total even though their rows still render for the
+ * clinical record. Mirrors Square/Stripe: a refused/removed line never sums.
+ * This is the SoT that keeps the Treatment Breakdown total from blending a
+ * declined ₱18,000 crown into a "Grand Total" the patient doesn't owe.
+ */
+const VALUELESS_STATUSES = new Set(['declined', 'dismissed']);
+
+/** True when a treatment counts toward the treatment-plan money total. */
+export function isValuedTreatment(status: string | null | undefined): boolean {
+  return !VALUELESS_STATUSES.has(status ?? '');
+}
+
+/**
+ * Sum a price across treatments, counting only valued (non-declined/-dismissed)
+ * rows. `price` extracts the per-item amount (callers differ: priceAmount in
+ * dollars vs priceCents/100), so the exclusion rule lives in ONE place.
+ */
+export function sumTreatmentValue<T extends HasStatus>(
+  items: T[],
+  price: (item: T) => number,
+): number {
+  return items.reduce((sum, item) => (isValuedTreatment(item.status) ? sum + price(item) : sum), 0);
+}
+
 /** True when this treatment can be invoiced now. */
 export function isBillable<T extends HasStatus>(t: T): boolean {
   return isBillableStatus(t.status);

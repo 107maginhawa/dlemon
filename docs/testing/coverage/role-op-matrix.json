@@ -482,6 +482,18 @@
     "drift": false
   },
   {
+    "operationId": "createDentalDepositInvoice",
+    "method": "POST",
+    "path": "/dental/billing/invoices/deposit",
+    "module": "dental-billing",
+    "codeAllowedRoles": [
+      "dentist_owner",
+      "dentist_associate"
+    ],
+    "specAllowedRoles": null,
+    "drift": false
+  },
+  {
     "operationId": "createDentalFinding",
     "method": "POST",
     "path": "/dental/visits/{visitId}/findings",

@@ -18,6 +18,16 @@ export const dentalInvoiceStatusEnum = pgEnum('dental_invoice_status', [
   'draft', 'issued', 'partial', 'paid', 'overdue', 'voided', 'uncollectible',
 ]);
 
+// Invoice kind discriminator. `standard` = a normal bill of performed work
+// (line items from performed/verified treatments). `deposit` = an advance/
+// downpayment invoice for PLANNED work (one non-treatment line, due-on-receipt);
+// excluded from recognized-revenue / AR-invoiced totals so it is not
+// double-counted against the later performed-work invoice it funds (billing-
+// audit §g, DQ3). The deposit cash still counts once as collected.
+export const dentalInvoiceKindEnum = pgEnum('dental_invoice_kind', [
+  'standard', 'deposit',
+]);
+
 export const dentalInvoices = pgTable('dental_invoice', {
   ...baseEntityFields,
   ...syncableEntityFields,
@@ -27,6 +37,9 @@ export const dentalInvoices = pgTable('dental_invoice', {
   dentistMemberId: uuid('dentist_member_id').notNull().references(() => dentalMemberships.id),
   invoiceNumber: text('invoice_number').notNull(),
   status: dentalInvoiceStatusEnum('status').notNull().default('draft'),
+  // §g DQ3: deposit invoices are excluded from revenue/AR; default keeps every
+  // existing + standard invoice unchanged.
+  kind: dentalInvoiceKindEnum('kind').notNull().default('standard'),
   subtotalCents: integer('subtotal_cents').notNull().default(0),
   discountCents: integer('discount_cents').notNull().default(0),
   taxCents: integer('tax_cents').notNull().default(0),

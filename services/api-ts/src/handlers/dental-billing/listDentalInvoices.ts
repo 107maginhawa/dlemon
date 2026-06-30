@@ -55,6 +55,7 @@ export async function listDentalInvoices(
         visitId: dentalInvoices.visitId,
         branchId: dentalInvoices.branchId,
         dentistMemberId: dentalInvoices.dentistMemberId,
+        kind: dentalInvoices.kind, // §g DQ3: discriminator so clients can treat deposits as advances
         status: dentalInvoices.status,
         subtotalCents: dentalInvoices.subtotalCents,
         discountCents: dentalInvoices.discountCents,

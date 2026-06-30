@@ -43,7 +43,11 @@ export async function getPatientBalance(ctx: BaseContext) {
       plans: await planRepo.findByPatient(patientId),
     };
   });
-  const activeInvoices = invoices.filter(inv => inv.status !== 'voided');
+  // §g DQ3 / F-04: exclude deposit invoices from the patient's service balance.
+  // A deposit is an advance; its effect lands on the performed-work invoice it
+  // later funds (via the credit-application), so counting both would double the
+  // billed/paid figures. The deposit's prepaid value lives in the credit ledger.
+  const activeInvoices = invoices.filter(inv => inv.status !== 'voided' && inv.kind !== 'deposit');
 
   const totalBilledCents = activeInvoices.reduce((sum, inv) => sum + inv.totalCents, 0);
   const totalPaidCents = activeInvoices.reduce((sum, inv) => sum + inv.paidCents, 0);

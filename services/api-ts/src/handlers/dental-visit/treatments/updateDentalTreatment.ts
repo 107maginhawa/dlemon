@@ -64,6 +64,15 @@ export async function updateDentalTreatment(
         `Invalid status transition: '${currentStatus}' → '${newStatus}'. Allowed: [${allowed.join(', ') || 'none'}]`,
       );
     }
+    // Undo guard: performed→planned is an error-correction only while the treatment
+    // hasn't been billed. Once it's on an invoice (billedInvoiceId set), the financial
+    // record owns it — void the invoice to release it (G-01) before un-performing.
+    if (currentStatus === 'performed' && newStatus === 'planned' && treatment.billedInvoiceId) {
+      throw new BusinessLogicError(
+        'Cannot undo a treatment that has been invoiced — void the invoice first',
+        'TREATMENT_ALREADY_INVOICED',
+      );
+    }
   }
 
   // Require signed consent before marking a treatment as performed (P0-003)
@@ -124,6 +133,8 @@ export async function updateDentalTreatment(
   const patch: Partial<Pick<DentalTreatment, 'status' | 'toothNumber' | 'surfaces' | 'cdtCode' | 'description' | 'conditionCode' | 'clinicalNotes' | 'performedAt' | 'phase' | 'priority'>> = {};
   if (body.status) patch.status = body.status as DentalTreatment['status'];
   if (body.status === 'performed') patch.performedAt = new Date();
+  // Undo (performed→planned): clear performedAt so the row reads as not-yet-done again.
+  if (body.status === 'planned') patch.performedAt = null;
   if (body.toothNumber !== undefined) patch.toothNumber = body.toothNumber;
   if (body.surfaces) patch.surfaces = body.surfaces;
   if (body.cdtCode) patch.cdtCode = body.cdtCode;

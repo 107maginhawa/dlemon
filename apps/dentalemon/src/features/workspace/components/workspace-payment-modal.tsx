@@ -18,8 +18,10 @@
  */
 import React, { useState, useEffect } from 'react';
 import { X, CreditCard, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
-import { usePatientInvoices, useCreateInvoice } from '../hooks/use-workspace-payment';
+import { usePatientInvoices, useCreateInvoice, useCreateDepositInvoice } from '../hooks/use-workspace-payment';
 import { useMarkTreatmentDone } from '../hooks/use-mark-treatment-done';
+import { useUpdateTreatment } from '../hooks/use-update-treatment';
+import { DeclineTreatmentPopover, DismissTreatmentPopover } from './treatment-row-popovers';
 import { splitBillable, isBillableStatus } from '../lib/billable';
 import { useSheetA11y } from '@/hooks/use-sheet-a11y';
 import { InvoiceDetail } from '@/features/billing/components/invoice-detail';
@@ -84,14 +86,26 @@ function statusConfig(status: string): { label: string; className: string } {
 function LineItemRow({
   item,
   onMarkPerformed,
+  onDecline,
+  onDismiss,
+  onUndo,
   marking,
+  actionPending,
   errored,
 }: {
   item: PaymentLineItem;
   /** Present only for estimate (planned) rows on an editable visit — advances the
    *  treatment to performed so it becomes billable in place (no leaving the modal). */
   onMarkPerformed?: () => void;
+  /** Estimate rows: record an informed refusal (patient declined) — drops the row
+   *  from the estimate + total. Reason is captured in the popover. */
+  onDecline?: (reason: string) => void;
+  /** Estimate rows: strike a treatment added by mistake (dismiss). Reason-gated. */
+  onDismiss?: (reason: string) => void;
+  /** Billable rows (pre-invoice): undo a mistaken Mark done → back to planned. */
+  onUndo?: () => void;
   marking?: boolean;
+  actionPending?: boolean;
   errored?: boolean;
 }) {
   // "Done" == billable (the server invoices these). Real statuses are
@@ -99,6 +113,10 @@ function LineItemRow({
   // shows "Pending").
   const isDone = isBillableStatus(item.status);
   const showAction = !isDone && !!onMarkPerformed;
+  const [declineOpen, setDeclineOpen] = React.useState(false);
+  const [declineReason, setDeclineReason] = React.useState('');
+  const [dismissOpen, setDismissOpen] = React.useState(false);
+  const [dismissReason, setDismissReason] = React.useState('');
   return (
     <div
       data-testid={`line-item-${item.id}`}
@@ -115,18 +133,48 @@ function LineItemRow({
       </div>
       {showAction ? (
         // Forward action: mark this planned treatment performed → it becomes billable
-        // and the modal flips to "Create Invoice & Pay" (no dead-end "Done").
-        <div className="text-right" style={{ gridColumn: 'span 2' }}>
+        // and the modal flips to "Create Invoice & Pay". Decline/Dismiss sit beneath
+        // it (reason-gated) so the patient's actual choice can be recorded without
+        // forcing a Mark done that bills refused work.
+        <div className="flex flex-col items-end gap-1.5" style={{ gridColumn: 'span 2' }}>
           <button
             type="button"
             data-testid={`mark-performed-${item.id}`}
             disabled={marking}
             onClick={onMarkPerformed}
-            className="ml-auto inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg border border-border px-2.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-50"
+            // Primary affordance: this is THE way forward out of the estimate state,
+            // so it reads as a filled-lemon CTA — not a faint ghost the eye skips.
+            className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-lemon px-3 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover disabled:opacity-50"
           >
             <CheckCircle2 className="h-4 w-4" />
             {marking ? 'Marking…' : 'Mark done'}
           </button>
+          {(onDecline || onDismiss) && (
+            <div className="flex items-center gap-3">
+              {onDecline && (
+                <DeclineTreatmentPopover
+                  treatmentId={item.id}
+                  open={declineOpen}
+                  reason={declineReason}
+                  isPending={!!actionPending}
+                  onOpenChange={setDeclineOpen}
+                  onReasonChange={setDeclineReason}
+                  onConfirm={() => { onDecline(declineReason.trim()); setDeclineOpen(false); }}
+                />
+              )}
+              {onDismiss && (
+                <DismissTreatmentPopover
+                  treatmentId={item.id}
+                  open={dismissOpen}
+                  reason={dismissReason}
+                  isPending={!!actionPending}
+                  onOpenChange={setDismissOpen}
+                  onReasonChange={setDismissReason}
+                  onConfirm={() => { onDismiss(dismissReason.trim()); setDismissOpen(false); }}
+                />
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -145,6 +193,18 @@ function LineItemRow({
             <span className={`text-xs font-medium ${isDone ? 'text-success-foreground' : 'text-muted-foreground'}`}>
               {isDone ? 'Done' : 'Planned'}
             </span>
+            {isDone && onUndo && (
+              <button
+                type="button"
+                data-testid={`undo-performed-${item.id}`}
+                disabled={actionPending}
+                onClick={onUndo}
+                title="Undo — move back to planned (only before it's invoiced)"
+                className="block ml-auto text-xs font-medium text-muted-foreground hover:text-primary hover:underline disabled:opacity-50"
+              >
+                Undo
+              </button>
+            )}
           </div>
         </>
       )}
@@ -250,11 +310,23 @@ export function WorkspacePaymentModal({
   onClose,
 }: WorkspacePaymentModalProps) {
   const [invoiceDetailId, setInvoiceDetailId] = useState<string | null>(null);
+  // Pay-intent: when the invoice sheet is opened to COLLECT (create-and-pay, or the
+  // footer "Record Payment"), jump straight to the payment form — skip the extra tap.
+  // Opening it to VIEW (the banner "View Invoice" link) stays view-first.
+  const [openInvoiceToPayment, setOpenInvoiceToPayment] = useState(false);
 
   const { data: invoices = [], isLoading: invoicesLoading } = usePatientInvoices(
     open ? patientId : null,
   );
   const createInvoice = useCreateInvoice(patientId);
+  const createDeposit = useCreateDepositInvoice(patientId);
+
+  // Collect-Deposit (Phase 1D): take a down-payment against a planned estimate.
+  // Amount is entered in pesos (string) — as a % chip of the estimate or freely —
+  // and capped at the estimate total. Minting opens the deposit invoice straight
+  // to record-payment (reuses openToPayment).
+  const [showDepositForm, setShowDepositForm] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
 
   // ISSUE-010: hand-rolled overlay (not Radix) → wire Escape-to-dismiss + focus restore.
   const { containerRef } = useSheetA11y({ open, onClose });
@@ -268,6 +340,17 @@ export function WorkspacePaymentModal({
   useEffect(() => {
     if (!isMarkDoneError) setMarkActingId(null);
   }, [isMarkDoneError]);
+
+  // Other per-row outcomes the patient's choice may require, without leaving the modal:
+  //  • Decline (informed refusal) + Dismiss (added by mistake) on estimate rows — both
+  //    drop the row from the estimate + total (declined/dismissed are excluded by the SoT).
+  //  • Undo (performed→planned) on billable rows — only before an invoice exists; the
+  //    server hard-blocks it once invoiced (TREATMENT_ALREADY_INVOICED).
+  const updateTreatment = useUpdateTreatment(visitId ?? '');
+  function patchStatus(treatmentId: string, body: Record<string, unknown>) {
+    if (!visitId) return;
+    updateTreatment.mutate({ path: { visitId, treatmentId }, body: body as never });
+  }
 
   // Split into payable (performed|verified) vs estimate (diagnosed|planned) — the SoT
   // the footer summary also consumes, so the two never disagree.
@@ -290,9 +373,35 @@ export function WorkspacePaymentModal({
     if (!visitId || !hasBillable) return;
     try {
       const inv = await createInvoice.mutateAsync({ visitId });
+      setOpenInvoiceToPayment(true); // just created → collect now
       setInvoiceDetailId(inv.id);
     } catch {
       // surfaced via createInvoice.isError below + a toast in the hook.
+    }
+  }
+
+  // Deposit amount in cents, parsed from the pesos field and capped at the estimate.
+  const depositCents = Math.min(
+    Math.round((parseFloat(depositAmount || '0') || 0) * 100),
+    estimateCents,
+  );
+  const depositValid = depositCents >= 1 && depositCents <= estimateCents;
+
+  function setDepositPct(pct: number) {
+    // % chip → fill the pesos field with that fraction of the estimate (2dp).
+    setDepositAmount(((estimateCents * pct) / 100 / 100).toFixed(2));
+  }
+
+  async function handleCollectDeposit() {
+    if (!visitId || !depositValid) return;
+    try {
+      const inv = await createDeposit.mutateAsync({ visitId, depositCents });
+      setShowDepositForm(false);
+      setDepositAmount('');
+      setOpenInvoiceToPayment(true); // deposit is born issued → record payment now
+      setInvoiceDetailId(inv.id);
+    } catch {
+      // surfaced via createDeposit.isError + a toast in the hook.
     }
   }
 
@@ -314,9 +423,12 @@ export function WorkspacePaymentModal({
         aria-modal="true"
         aria-label="Payment"
         data-testid="workspace-payment-modal"
-        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
       >
-        <div className="flex w-full max-w-[520px] max-h-[calc(100dvh-80px)] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-border">
+        {/* max-h uses svh (stable small-viewport height — unlike dvh it doesn't flap
+            with toolbar/timing), so the card reliably fits and the body scrolls. The
+            py-6 above guarantees the card never touches the screen edges. */}
+        <div className="flex w-full max-w-[520px] max-h-[calc(100svh-3rem)] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-border">
           {/* Header */}
           <div className="flex shrink-0 items-start justify-between border-b border-border px-5 py-4">
             <div>
@@ -335,8 +447,9 @@ export function WorkspacePaymentModal({
             </button>
           </div>
 
-          {/* Body (scrollable) */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Body (scrollable). min-h-0 lets this flex child shrink below its content
+              height so overflow-y-auto actually scrolls instead of growing the card. */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {/* Invoice status banner (PAY-02) */}
             {invoicesLoading ? (
               <div className="flex h-14 items-center justify-center">
@@ -348,7 +461,7 @@ export function WorkspacePaymentModal({
                 status={visitInvoice.status}
                 totalCents={visitInvoice.totalCents}
                 balanceCents={visitInvoice.balanceCents}
-                onViewDetail={() => setInvoiceDetailId(visitInvoice.id)}
+                onViewDetail={() => { setOpenInvoiceToPayment(false); setInvoiceDetailId(visitInvoice.id); }}
               />
             ) : null}
 
@@ -360,7 +473,14 @@ export function WorkspacePaymentModal({
                 <div className="px-5" data-testid="billable-section">
                   <SectionHead title="Ready to bill" />
                   {billable.map((item) => (
-                    <LineItemRow key={item.id} item={item} />
+                    <LineItemRow
+                      key={item.id}
+                      item={item}
+                      // Undo only before an invoice exists for this visit; once invoiced
+                      // the server hard-blocks the un-perform (TREATMENT_ALREADY_INVOICED).
+                      onUndo={visitId && !visitInvoice ? () => patchStatus(item.id, { status: 'planned' }) : undefined}
+                      actionPending={updateTreatment.isPending}
+                    />
                   ))}
                 </div>
               )}
@@ -397,7 +517,10 @@ export function WorkspacePaymentModal({
                             }
                           : undefined
                       }
+                      onDecline={visitId ? (reason) => patchStatus(item.id, { status: 'declined', refusalReason: reason }) : undefined}
+                      onDismiss={visitId ? (reason) => patchStatus(item.id, { status: 'dismissed', dismissReason: reason }) : undefined}
                       marking={isMarkDonePending && markActingId === item.id}
+                      actionPending={updateTreatment.isPending}
                       errored={isMarkDoneError && markActingId === item.id}
                     />
                   ))}
@@ -433,7 +556,7 @@ export function WorkspacePaymentModal({
             {visitInvoice ? (
               <button
                 type="button"
-                onClick={() => setInvoiceDetailId(visitInvoice.id)}
+                onClick={() => { setOpenInvoiceToPayment(true); setInvoiceDetailId(visitInvoice.id); }}
                 data-testid="open-invoice-detail-btn"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px]"
               >
@@ -459,22 +582,98 @@ export function WorkspacePaymentModal({
                 )}
               </>
             ) : (
-              // No billable line → no Pay button that would 422. Explain + offer a
-              // clean exit (the estimate above is the answer to "what now?").
+              // No billable line → no Pay button that would 422. The forward path is
+              // the lemon "Mark done" on each estimate row above; the footer must not
+              // out-shout it, so "Done" is a quiet close, not a big bordered block.
               <>
-                {hasEstimate && (
+                {hasEstimate && !showDepositForm && (
                   <p data-testid="no-billable-note" className="mb-2 text-center text-xs text-muted-foreground">
-                    Nothing to bill yet — tap <span className="font-medium text-foreground">Mark done</span> on a
-                    treatment above once it’s performed, and it becomes billable here.
+                    Performed this work? Tap the yellow{' '}
+                    <span className="font-semibold text-foreground">Mark done</span> on each treatment above to
+                    bill it — or take a deposit now.
                   </p>
                 )}
+
+                {/* Collect Deposit: a down-payment against the planned estimate. % chips
+                    or a free peso amount, capped at the estimate; mints a deposit invoice
+                    and opens record-payment. The deposit credit later draws down the
+                    performed-work invoice (no double-charge). */}
+                {hasEstimate && (showDepositForm ? (
+                  <div data-testid="deposit-form" className="rounded-xl border border-border p-3 flex flex-col gap-2.5">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm font-semibold">Collect deposit</span>
+                      <span className="text-xs text-muted-foreground">max {formatCents(estimateCents)}</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {[25, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          data-testid={`deposit-pct-${pct}`}
+                          onClick={() => setDepositPct(pct)}
+                          className="flex-1 rounded-lg border border-border py-2 text-xs font-medium hover:bg-muted min-h-[44px]"
+                        >
+                          {pct}%
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-border px-3">
+                      <span className="text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        data-testid="deposit-amount-input"
+                        aria-label="Deposit amount"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="h-11 flex-1 bg-transparent text-sm tabular-nums outline-none"
+                      />
+                    </div>
+                    {createDeposit.isError && (
+                      <p className="text-xs text-destructive" role="alert">Could not collect the deposit. Please try again.</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setShowDepositForm(false); setDepositAmount(''); }}
+                        className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-muted min-h-[44px]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="confirm-deposit-btn"
+                        disabled={!depositValid || createDeposit.isPending}
+                        onClick={handleCollectDeposit}
+                        className="flex-[2] rounded-xl bg-lemon py-2.5 text-sm font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px] disabled:opacity-50"
+                      >
+                        {createDeposit.isPending ? 'Collecting…' : `Collect ${formatCents(depositCents)}`}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="collect-deposit-btn"
+                    onClick={() => setShowDepositForm(true)}
+                    disabled={!visitId}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-lemon bg-lemon-soft py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon transition-colors min-h-[44px] disabled:opacity-50"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Collect Deposit
+                  </button>
+                ))}
+
                 <button
                   type="button"
                   onClick={onClose}
                   data-testid="estimate-done-btn"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background py-3 text-base font-semibold text-foreground hover:bg-muted transition-colors min-h-[44px]"
+                  className="mx-auto mt-2 flex items-center justify-center py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
                 >
-                  Done
+                  Close
                 </button>
               </>
             )}
@@ -487,7 +686,8 @@ export function WorkspacePaymentModal({
         <InvoiceDetail
           invoiceId={invoiceDetailId}
           open={Boolean(invoiceDetailId)}
-          onClose={() => setInvoiceDetailId(null)}
+          openToPayment={openInvoiceToPayment}
+          onClose={() => { setInvoiceDetailId(null); setOpenInvoiceToPayment(false); }}
           onUpdated={() => {/* query invalidation handled by InvoiceDetail */}}
         />
       )}

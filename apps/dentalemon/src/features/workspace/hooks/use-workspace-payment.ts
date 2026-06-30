@@ -9,7 +9,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { createDentalInvoice, issueDentalInvoice } from '@monobase/sdk-ts/generated';
+import { createDentalInvoice, issueDentalInvoice, createDentalDepositInvoice } from '@monobase/sdk-ts/generated';
 import { toastError } from '@/lib/error-toast';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { type Invoice } from '@/features/billing/hooks/use-invoices';
@@ -92,6 +92,36 @@ export function useCreateInvoice(patientId: string | null) {
     // V-FE-ERR-001: surface invoice-creation failures instead of swallowing them.
     onError: (err) => {
       toastError(err, 'Failed to create invoice. Please try again.');
+    },
+  });
+}
+
+/**
+ * useCreateDepositInvoice — collect a deposit/down-payment against a PLANNED
+ * estimate. Mints a kind='deposit' invoice, born issued + due-on-receipt (no
+ * separate issue step), payable immediately. The cash mirrors to the patient
+ * credit wallet and later draws down the performed-work invoice (no double-charge).
+ */
+export function useCreateDepositInvoice(patientId: string | null) {
+  const qc = useQueryClient();
+  const branchId = useOrgContextStore((s) => s.branchId);
+  const dentistMemberId = useOrgContextStore((s) => s.memberId);
+  return useMutation({
+    mutationFn: async (input: { visitId: string; depositCents: number }) => {
+      if (!patientId || !branchId || !dentistMemberId) {
+        throw new Error('Missing patient, branch, or member context — cannot collect a deposit.');
+      }
+      const { data } = await createDentalDepositInvoice({
+        body: { patientId, visitId: input.visitId, branchId, dentistMemberId, depositCents: input.depositCents },
+        throwOnError: true,
+      });
+      return data; // already issued + due-on-receipt → ready to record payment
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listDentalInvoicesQueryKey({ query: { patientId: patientId ?? undefined } }) });
+    },
+    onError: (err) => {
+      toastError(err, 'Failed to collect the deposit. Please try again.');
     },
   });
 }

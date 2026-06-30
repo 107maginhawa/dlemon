@@ -259,7 +259,8 @@ const FROZEN: Record<string, Record<string, string[]>> = {
     ],
     "performed": [
       "verified",
-      "dismissed"
+      "dismissed",
+      "planned"
     ],
     "verified": [
       "dismissed"
