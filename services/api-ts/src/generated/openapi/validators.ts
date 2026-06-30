@@ -740,10 +740,16 @@ export const CollectionsKpiResponseSchema = z.object({
   agingSeries: z.array(AgingBucketPointSchema)
 });
 
+export const DailyCollectionsEntrySchema = z.object({
+  date: z.string(),
+  collectedCents: z.number().int()
+});
+
 export const CollectionsSummaryResponseSchema = z.object({
   totalCollectedCents: z.number().int(),
   period: z.string(),
-  invoiceCount: z.number().int()
+  invoiceCount: z.number().int(),
+  dailyCollections: z.array(DailyCollectionsEntrySchema).optional()
 });
 
 export const CollectionsWorklistRowSchema = z.object({
@@ -20472,6 +20478,8 @@ export const CreateCollectionNoteResponse = CollectionNoteSchema;
 export const GetCollectionsSummaryQuery = z.object({
   branchId: UUIDSchema.optional(),
   period: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
 });
 export type GetCollectionsSummaryQuery = z.infer<typeof GetCollectionsSummaryQuery>;
 

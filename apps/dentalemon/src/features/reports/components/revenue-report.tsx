@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@monobase/ui';
+import { getCollectionsSummary } from '@monobase/sdk-ts/generated';
 import { CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useInvoices } from '@/features/billing/hooks/use-invoices';
 import { InvoiceDetailSheet } from './invoice-detail-sheet';
@@ -31,29 +33,48 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
   // SDK-only data access: listDentalInvoices via the canonical billing hook (it
   // unwraps the { data, pagination } envelope and gates on branchId). Date-range
   // narrowing stays client-side, matching the prior behaviour.
-  const { invoices: allInvoices, isLoading: loading } = useInvoices({ branchId });
+  const { invoices: allInvoices, isLoading: loadingInvoices } = useInvoices({ branchId });
   const invoices = allInvoices.filter((i) => {
     const d = toDateKey(i.createdAt);
     return d >= startDate && d <= endDate;
   });
 
+  // G-13: "Collected" must come from the SAME payment-date source as the dashboard
+  // MoneyPanel (getCollectionsSummary), not from summing invoice.paidCents over
+  // invoices CREATED in the window — otherwise an invoice created one month and paid
+  // the next makes the report and dashboard disagree under the same label. Billed +
+  // Outstanding stay invoice-based (they are about invoices, not cash received).
+  const { data: collections, isLoading: loadingCollections } = useQuery({
+    queryKey: ['revenue-collections', branchId, startDate, endDate],
+    queryFn: async () => {
+      const { data } = await getCollectionsSummary({
+        query: { branchId, from: startDate, to: endDate },
+        throwOnError: true,
+      });
+      return data;
+    },
+    enabled: !!branchId,
+  });
+  const loading = loadingInvoices || loadingCollections;
+
   const totalBilled = invoices.reduce((s, i) => s + i.totalCents, 0);
-  const totalCollected = invoices.reduce((s, i) => s + i.paidCents, 0);
+  const totalCollected = collections?.totalCollectedCents ?? 0;
   const totalOutstanding = invoices.reduce((s, i) => s + i.balanceCents, 0);
   const collectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
 
-  // Group by day
-  const dayMap = new Map<string, { billed: number; collected: number }>();
+  // Daily: Billed by invoice creation date, Collected by payment date (server) —
+  // over the union of both day-sets so the table's Collected sums to the headline.
+  const billedByDay = new Map<string, number>();
   for (const inv of invoices) {
     const date = toDateKey(inv.createdAt);
-    const existing = dayMap.get(date) ?? { billed: 0, collected: 0 };
-    existing.billed += inv.totalCents;
-    existing.collected += inv.paidCents;
-    dayMap.set(date, existing);
+    billedByDay.set(date, (billedByDay.get(date) ?? 0) + inv.totalCents);
   }
-  const dailyData = Array.from(dayMap.entries())
-    .map(([date, data]) => ({ date, ...data }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const collectedByDay = new Map<string, number>(
+    (collections?.dailyCollections ?? []).map((d) => [d.date, d.collectedCents]),
+  );
+  const dailyData = Array.from(new Set([...billedByDay.keys(), ...collectedByDay.keys()]))
+    .sort((a, b) => a.localeCompare(b))
+    .map((date) => ({ date, billed: billedByDay.get(date) ?? 0, collected: collectedByDay.get(date) ?? 0 }));
 
   function handleExportCSV() {
     // ISSUE-021: money columns are decimal pesos (centavos/100), NOT raw centavos —
@@ -121,7 +142,7 @@ export function RevenueReport({ branchId }: RevenueReportProps) {
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Collected</p>
-              <p className="text-2xl font-bold mt-1 text-success-foreground">{formatCents(totalCollected)}</p>
+              <p data-testid="revenue-collected" className="text-2xl font-bold mt-1 text-success-foreground">{formatCents(totalCollected)}</p>
             </div>
             <div className="rounded-xl border border-border p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Outstanding</p>

@@ -307,10 +307,24 @@ model PatientBalanceResponse {
   activePaymentPlanCount: int32;
 }
 
+/** A single day's collected total (payments received that day, payment-date based). */
+model DailyCollectionsEntry {
+  /** YYYY-MM-DD (UTC) */
+  date: string;
+  collectedCents: int32;
+}
+
 model CollectionsSummaryResponse {
   totalCollectedCents: int32;
   period: string;
   invoiceCount: int32;
+
+  /**
+   * G-13: per-day collected breakdown over the period (payments by payment date),
+   * so a revenue report's daily "Collected" column and its headline both derive
+   * from the same payment-date source the dashboard MoneyPanel uses — no drift.
+   */
+  dailyCollections?: DailyCollectionsEntry[];
 }
 
 // AHA dental-billing FIX-007: reconciled to the implemented (tested) handler
@@ -1186,7 +1200,11 @@ namespace DentalBillingModule {
     @operationId("getCollectionsSummary")
     getCollectionsSummary(
       @query branchId?: UUID,
-      @query period?: string
+      @query period?: string,
+      /** ISO date (YYYY-MM-DD); custom-range start. Overridden by `period`. */
+      @query from?: string,
+      /** ISO date (YYYY-MM-DD); custom-range end. Overridden by `period`. */
+      @query to?: string
     ): ApiOkResponse<CollectionsSummaryResponse>
       | ApiUnauthorizedResponse;
 

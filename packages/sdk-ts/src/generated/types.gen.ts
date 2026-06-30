@@ -1366,6 +1366,12 @@ export type CollectionsSummaryResponse = {
     totalCollectedCents: number;
     period: string;
     invoiceCount: number;
+    /**
+     * G-13: per-day collected breakdown over the period (payments by payment date),
+     * so a revenue report's daily "Collected" column and its headline both derive
+     * from the same payment-date source the dashboard MoneyPanel uses — no drift.
+     */
+    dailyCollections?: Array<DailyCollectionsEntry>;
 };
 
 export type CollectionsWorklistResponse = {
@@ -2749,6 +2755,17 @@ export type CurrencyAmount = number;
  * Three-letter ISO 4217 currency code
  */
 export type CurrencyCode = string;
+
+/**
+ * A single day's collected total (payments received that day, payment-date based).
+ */
+export type DailyCollectionsEntry = {
+    /**
+     * YYYY-MM-DD (UTC)
+     */
+    date: string;
+    collectedCents: number;
+};
 
 /**
  * Daily configuration within a weekly schedule
@@ -65708,6 +65725,14 @@ export type GetCollectionsSummaryData = {
     query?: {
         branchId?: Uuid;
         period?: string;
+        /**
+         * ISO date (YYYY-MM-DD); custom-range start. Overridden by `period`.
+         */
+        from?: string;
+        /**
+         * ISO date (YYYY-MM-DD); custom-range end. Overridden by `period`.
+         */
+        to?: string;
     };
     url: '/dental/billing/collections/summary';
 };

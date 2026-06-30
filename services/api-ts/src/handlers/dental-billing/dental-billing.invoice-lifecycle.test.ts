@@ -358,6 +358,30 @@ describe('FR4.5: getCollectionsSummary', () => {
     const res = await app.request('/dental/billing/collections/summary');
     expect(res.status).toBe(401);
   });
+
+  // G-13: per-day collected breakdown (payment-date based) so a revenue report's
+  // daily "Collected" and its headline both derive from the same source as the
+  // dashboard — no drift, and the daily entries sum to totalCollectedCents.
+  test('returns a dailyCollections breakdown that sums to totalCollectedCents', async () => {
+    const invoice = await seedInvoice({ totalCents: 20000, balanceCents: 20000 });
+    await seedPayment(invoice.id, 5000);
+    await seedPayment(invoice.id, 3000);
+
+    const app = buildTestApp({ db, user: STAFF_USER });
+    const res = await app.request('/dental/billing/collections/summary?period=today');
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      totalCollectedCents: number;
+      dailyCollections: Array<{ date: string; collectedCents: number }>;
+    };
+
+    expect(Array.isArray(body.dailyCollections)).toBe(true);
+    const summed = body.dailyCollections.reduce((s, d) => s + d.collectedCents, 0);
+    expect(summed).toBe(body.totalCollectedCents);
+    expect(body.totalCollectedCents).toBeGreaterThanOrEqual(8000);
+    // each entry keyed by a YYYY-MM-DD date
+    for (const d of body.dailyCollections) expect(d.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 });
 
 // =============================================================================

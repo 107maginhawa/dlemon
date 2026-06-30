@@ -129,6 +129,19 @@ export async function getCollectionsSummary(ctx: BaseContext) {
     byMethod[p.method] = (byMethod[p.method] ?? 0) + p.amountCents;
   }
 
+  // G-13: per-day collected breakdown (keyed by payment date, UTC YYYY-MM-DD) so a
+  // revenue report's daily "Collected" column derives from the same payment-date
+  // source as totalCollectedCents and the dashboard MoneyPanel — no drift. The
+  // entries sum to totalCollectedCents by construction.
+  const byDay = new Map<string, number>();
+  for (const p of payments) {
+    const day = p.createdAt.toISOString().slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + p.amountCents);
+  }
+  const dailyCollections = Array.from(byDay.entries())
+    .map(([date, collectedCents]) => ({ date, collectedCents }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   logger?.info({ action: 'getCollectionsSummary', from, to, totalCollectedCents }, 'Collections summary retrieved');
 
   return ctx.json({
@@ -140,5 +153,6 @@ export async function getCollectionsSummary(ctx: BaseContext) {
     overdueCount,
     paymentCount: payments.length,
     collectionsByMethod: byMethod,
+    dailyCollections,
   }, 200);
 }
