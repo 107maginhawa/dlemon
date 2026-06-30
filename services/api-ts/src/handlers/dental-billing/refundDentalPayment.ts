@@ -98,7 +98,14 @@ export async function refundDentalPayment(
     // §g F-01: refunding a DEPOSIT payment must reverse the mirrored deposit credit
     // (recordDentalPayment mirrored the deposit cash into the wallet), or the
     // patient keeps both the cash AND the spendable credit — money from nothing.
-    if (liveInvoice?.kind === 'deposit') {
+    //
+    // P1: take the per-patient credit lock (1001) for ANY refund that touches the
+    // wallet — deposit reversals AND bookAsCredit refunds. Without it, a non-deposit
+    // bookAsCredit refund reads availableCreditBefore (below) outside the lock, so
+    // two concurrent credit mutations can read the same stale base and the
+    // arithmetically-computed creditBalanceCents in the response loses one of them
+    // (the ledger rows stay correct; only the reported number is wrong).
+    if (liveInvoice?.kind === 'deposit' || bookAsCredit) {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${payment.patientId}))`);
     }
     // F-02: the wallet is patient-GLOBAL — read it on db (superuser) so branch-

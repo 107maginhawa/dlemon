@@ -27,6 +27,7 @@ import { AppError } from '@/core/errors';
 import { VisitRepository } from '@/handlers/dental-visit/repos/visit.repo';
 import { TreatmentRepository } from '@/handlers/dental-visit/repos/treatment.repo';
 import { DentalInvoiceRepository } from './repos/dental-invoice.repo';
+import { DentalPatientCreditRepository } from './repos/dental-patient-credit.repo';
 import { dentalMemberships } from '@/handlers/dental-org/repos/membership.schema';
 import { dentalBranches } from '@/handlers/dental-org/repos/branch.schema';
 import { dentalOrganizations } from '@/handlers/dental-org/repos/organization.schema';
@@ -53,7 +54,7 @@ const BRANCH = 'ba000000-0000-4000-8000-000000107001';
 const MEMBER = 'ca000000-0000-4000-8000-000000107001';
 
 afterEach(async () => {
-  await db.execute(sql`TRUNCATE TABLE dental_payment_refund, dental_payment, dental_invoice_line_item, dental_invoice, dental_treatment, consent_form, dental_visit CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE dental_patient_credit, dental_payment_refund, dental_payment, dental_invoice_line_item, dental_invoice, dental_treatment, consent_form, dental_visit CASCADE`);
 });
 
 async function ensureOrg() {
@@ -128,6 +129,31 @@ function refund(paymentId: string, amountCents: number) {
   });
 }
 
+function refundAsCredit(paymentId: string, amountCents: number) {
+  return buildApp().request(`/dental/billing/payments/${paymentId}/refund`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amountCents, reason: 'overcharge correction', bookAsCredit: true }),
+  });
+}
+
+/**
+ * Seed one fully-paid, NON-deposit payment for an EXISTING patient and return
+ * its paymentId. Each call uses its own visit/invoice (₱50 performed treatment,
+ * full ₱50 cash payment). The visit is completed afterward so the next call can
+ * activate a new visit (EC7: only one active visit per patient).
+ */
+async function seedPaidPaymentForPatient(patientId: string): Promise<string> {
+  const visitRepo = new VisitRepository(db);
+  const v = await visitRepo.createOne({ patientId, branchId: BRANCH, dentistMemberId: MEMBER });
+  const visit = await visitRepo.activate(v.id);
+  await new TreatmentRepository(db).createOne({ visitId: visit!.id, patientId, cdtCode: 'D2150', description: 'Amalgam', priceCents: 5000, carriedOver: false, status: 'performed' });
+  await db.insert(consentForms).values({ id: crypto.randomUUID(), visitId: visit!.id, patientId, templateId: 'general-consent-v1', templateName: 'General Treatment Consent', signed: true, signedAt: new Date(), signatureData: 'x', createdBy: USER.id, updatedBy: USER.id });
+  const { invoiceId } = await seedIssuedInvoice(visit!.id, patientId);
+  const paymentId = await record(invoiceId, 5000);
+  await visitRepo.complete(visit!.id); // free the active-visit slot for the next payment
+  return paymentId;
+}
+
 async function state(invoiceId: string, paymentId: string): Promise<{ paid: number; total: number; refundedSum: number; refundCount: number }> {
   const ir = await db.execute(sql`SELECT paid_cents, total_cents FROM dental_invoice WHERE id = ${invoiceId}`);
   const i = (ir as any).rows?.[0] ?? (ir as any)[0];
@@ -165,7 +191,72 @@ describe('refundDentalPayment — concurrent refunds cannot over-refund a paymen
       const loserBody = (await loser.json()) as { code?: string };
       expect(loserBody.code, `round ${i}: loser must be EXCEEDS_REFUNDABLE`).toBe('EXCEEDS_REFUNDABLE');
 
-      await db.execute(sql`TRUNCATE TABLE dental_payment_refund, dental_payment, dental_invoice_line_item, dental_invoice, dental_treatment, consent_form, dental_visit CASCADE`);
+      await db.execute(sql`TRUNCATE TABLE dental_patient_credit, dental_payment_refund, dental_payment, dental_invoice_line_item, dental_invoice, dental_treatment, consent_form, dental_visit CASCADE`);
+    }
+  });
+});
+
+/**
+ * P1: bookAsCredit refunds must take the per-patient credit lock (1001) too —
+ * not just deposit refunds. The returned `creditBalanceCents` is computed
+ * arithmetically from `availableCreditBefore`, which is read on `db` OUTSIDE any
+ * lock for a non-deposit bookAsCredit refund. Two concurrent bookAsCredit
+ * refunds of DIFFERENT payments for the SAME patient therefore both read the
+ * same stale base (0) and each reports only its own amount — a lost update in
+ * the reported balance (the ledger rows are still correct, so the wallet itself
+ * is right; only the number echoed to the client is wrong).
+ *
+ * RED (without the 1001 lock covering bookAsCredit): both refunds read base=0,
+ * report 2000 and 3000 respectively; max reported = 3000 < wallet 5000.
+ * GREEN (lock widened to `kind==='deposit' || bookAsCredit`): the refunds
+ * serialize on 1001, so the second reads the first's row and reports 5000;
+ * max reported = 5000 = wallet.
+ *
+ * The RED is timing-dependent (both reads must land before either commits), so
+ * the test runs many rounds; without the fix at least one round drops a refund.
+ */
+describe('refundDentalPayment — concurrent bookAsCredit refunds report a consistent wallet balance', () => {
+  test('two simultaneous bookAsCredit refunds for the same patient → wallet = sum, no lost update in reported creditBalanceCents', async () => {
+    const ROUNDS = 12;
+    const AMT_A = 2000;
+    const AMT_B = 3000;
+    for (let i = 0; i < ROUNDS; i++) {
+      await ensureOrg();
+      const personId = crypto.randomUUID();
+      const patientId = crypto.randomUUID();
+      await db.insert(persons).values({ id: personId, firstName: 'Credit', lastName: 'Race', createdBy: USER.id, updatedBy: USER.id });
+      await db.insert(patients).values({ id: patientId, person: personId, preferredBranchId: BRANCH, createdBy: USER.id, updatedBy: USER.id });
+
+      const payA = await seedPaidPaymentForPatient(patientId);
+      const payB = await seedPaidPaymentForPatient(patientId);
+
+      // Concurrent bookAsCredit refunds of two distinct payments, same patient.
+      const [ra, rb] = await Promise.all([refundAsCredit(payA, AMT_A), refundAsCredit(payB, AMT_B)]);
+      expect(ra.status, `round ${i}: refund A must succeed (${await ra.clone().text()})`).toBe(200);
+      expect(rb.status, `round ${i}: refund B must succeed (${await rb.clone().text()})`).toBe(200);
+      const ba = (await ra.json()) as { creditBalanceCents: number };
+      const bb = (await rb.json()) as { creditBalanceCents: number };
+
+      const wallet = await new DentalPatientCreditRepository(db).getBalance(patientId);
+
+      // (a) Ledger truth: the wallet holds BOTH refunds (always true — the rows commit).
+      expect(wallet, `round ${i}: wallet must equal the sum of both refunds`).toBe(AMT_A + AMT_B);
+
+      // (b) No lost update in the REPORTED balance: under serialization the second
+      // refund sees the first, so the larger reported creditBalanceCents must equal
+      // the final wallet. Without the 1001 lock for bookAsCredit, both refunds read
+      // base=0 and report only their own amount → max reported = 3000 < 5000.
+      const maxReported = Math.max(ba.creditBalanceCents, bb.creditBalanceCents);
+      expect(
+        maxReported,
+        `round ${i}: reported creditBalanceCents dropped a concurrent refund (a=${ba.creditBalanceCents} b=${bb.creditBalanceCents} wallet=${wallet})`,
+      ).toBe(wallet);
+
+      // Neither response may report a balance that omits its own refund either.
+      expect(ba.creditBalanceCents, `round ${i}: A must at least include its own refund`).toBeGreaterThanOrEqual(AMT_A);
+      expect(bb.creditBalanceCents, `round ${i}: B must at least include its own refund`).toBeGreaterThanOrEqual(AMT_B);
+
+      await db.execute(sql`TRUNCATE TABLE dental_patient_credit, dental_payment_refund, dental_payment, dental_invoice_line_item, dental_invoice, dental_treatment, consent_form, dental_visit CASCADE`);
     }
   });
 });
