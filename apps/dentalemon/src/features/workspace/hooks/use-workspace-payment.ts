@@ -9,7 +9,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listDentalInvoicesOptions, listDentalInvoicesQueryKey } from '@monobase/sdk-ts/generated/react-query';
-import { createDentalInvoice } from '@monobase/sdk-ts/generated';
+import { createDentalInvoice, issueDentalInvoice } from '@monobase/sdk-ts/generated';
 import { toastError } from '@/lib/error-toast';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { type Invoice } from '@/features/billing/hooks/use-invoices';
@@ -73,6 +73,17 @@ export function useCreateInvoice(patientId: string | null) {
         },
         throwOnError: true,
       });
+      // G-08: issue immediately so the "Create Invoice & Pay" CTA lands on a payable
+      // invoice. createDentalInvoice yields status='draft' and recordDentalPayment
+      // rejects draft (INVALID_STATUS_TRANSITION 'issue it first') — so without this
+      // the CTA over-promised and stranded the user on an Issue step. Surfacing an
+      // issue failure (no swallow) keeps the create+issue an all-or-nothing promise.
+      if (data?.id) {
+        await issueDentalInvoice({
+          path: { invoiceId: data.id },
+          throwOnError: true,
+        });
+      }
       return data;
     },
     onSuccess: () => {

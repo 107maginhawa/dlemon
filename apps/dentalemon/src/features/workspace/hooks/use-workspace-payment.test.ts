@@ -134,6 +134,12 @@ describe('useCreateInvoice', () => {
     qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
     global.fetch = mockFetch as unknown as typeof fetch;
     mockFetch.mockReset();
+    // G-08: useCreateInvoice now create→issue (two requests). Default any call to a
+    // 200 INVOICE so the chained issue resolves; per-test mockResolvedValueOnce still
+    // governs the first (create) call.
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify(INVOICE), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
     // QA-008: POST /dental/billing/invoices requires branchId + dentistMemberId
     // (sourced from org context inside the hook). Seed them so the request fires.
     useOrgContextStore.setState({ branchId: 'branch-1', memberId: 'member-1' });
@@ -218,6 +224,28 @@ describe('useCreateInvoice', () => {
     result.current.mutate({ visitId: 'visit-1' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('G-08: issues the invoice immediately so "Create Invoice & Pay" lands on a payable invoice', async () => {
+    const calls: Array<{ url: string; method: string }> = [];
+    mockFetch.mockImplementation(async (req: Request | string) => {
+      const url = req instanceof Request ? req.url : String(req);
+      const method = req instanceof Request ? req.method : 'GET';
+      calls.push({ url, method });
+      return new Response(JSON.stringify(INVOICE), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+
+    const wrapper = makeWrapper(qc);
+    const { result } = renderHook(() => useCreateInvoice('pat-1'), { wrapper });
+    result.current.mutate({ visitId: 'visit-1' });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // create POST, then issue PATCH on the new invoice — recordDentalPayment rejects
+    // 'draft', so without the issue the CTA over-promised one-step payment.
+    expect(calls.some(c => c.method === 'POST' && c.url.includes('/dental/billing/invoices'))).toBe(true);
+    expect(calls.some(c => c.method === 'PATCH' && c.url.includes('/dental/billing/invoices/inv-1/issue'))).toBe(true);
+    // still returns the invoice id the modal opens
+    expect(result.current.data?.id).toBe('inv-1');
   });
 
   it('V-FE-ERR-001: surfaces a toast on create failure', async () => {
