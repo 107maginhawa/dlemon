@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { BRAND_GOLD, BRAND_GOLD_TEXT, CURRENCY_SYMBOL, APP_LOCALE } from '@/constants/brand';
 import { useTreatmentPlan, type TreatmentPlanItem, type TreatmentPhase } from '../hooks/use-treatment-plan';
+import { EstimateOverlay } from './estimate-overlay';
 
 /**
  * P1-18: clinical sequencing phases, in canonical clinical order, with the
@@ -57,6 +58,10 @@ const PHASE_RANK = (p: TreatmentPhase | null | undefined): number =>
 interface TreatmentPlanTabProps {
   patientId: string;
   branchId: string | null;
+  /** Current visit — threaded to the Estimate overlay (approval is visit-anchored). */
+  visitId?: string | null;
+  /** Patient display name for the printed estimate header. */
+  patientName?: string;
 }
 
 interface TreatmentRowProps {
@@ -254,9 +259,10 @@ function EmptyState() {
   );
 }
 
-export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps) {
+export function TreatmentPlanTab({ patientId, branchId, visitId, patientName }: TreatmentPlanTabProps) {
   // Hook must be called unconditionally (Rules of Hooks)
   const { data, isLoading, error, acceptPlan, isAccepting, declineTreatment, assignPhase } = useTreatmentPlan({ patientId, branchId });
+  const [estimateOpen, setEstimateOpen] = useState(false);
 
   // P1-A: Empty/null branchId — query is disabled; surface this explicitly
   // so clinicians don't see a misleading "No pending treatments" empty state
@@ -402,16 +408,37 @@ export function TreatmentPlanTab({ patientId, branchId }: TreatmentPlanTabProps)
             Total: <span className="font-semibold text-foreground">{CURRENCY_SYMBOL}{totalDisplay}</span>
           </p>
         </div>
-        <button
-          type="button"
-          data-testid="accept-plan-btn"
-          onClick={() => acceptPlan()}
-          disabled={isAccepting}
-          className="shrink-0 h-9 px-4 rounded-xl bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
-        >
-          {isAccepting ? 'Accepting…' : 'Accept Plan'}
-        </button>
+        <div className="shrink-0 flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="view-estimate-btn"
+            onClick={() => setEstimateOpen(true)}
+            className="h-9 px-4 rounded-xl border border-border text-foreground text-xs font-semibold hover:bg-muted transition-colors"
+          >
+            View Estimate
+          </button>
+          <button
+            type="button"
+            data-testid="accept-plan-btn"
+            onClick={() => acceptPlan()}
+            disabled={isAccepting}
+            className="h-9 px-4 rounded-xl bg-lemon text-lemon-foreground text-xs font-semibold hover:bg-lemon-hover transition-colors disabled:opacity-50"
+          >
+            {isAccepting ? 'Accepting…' : 'Accept Plan'}
+          </button>
+        </div>
       </div>
+
+      <EstimateOverlay
+        open={estimateOpen}
+        onClose={() => setEstimateOpen(false)}
+        patientId={patientId}
+        branchId={branchId}
+        visitId={visitId ?? null}
+        patientName={patientName}
+        planItems={data.treatments}
+        version={data.version}
+      />
     </div>
   );
 }
