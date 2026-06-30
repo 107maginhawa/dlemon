@@ -390,9 +390,12 @@ export function WorkspacePaymentModal({
         aria-modal="true"
         aria-label="Payment"
         data-testid="workspace-payment-modal"
-        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
       >
-        <div className="flex w-full max-w-[520px] max-h-[calc(100dvh-80px)] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-border">
+        {/* max-h uses svh (stable small-viewport height — unlike dvh it doesn't flap
+            with toolbar/timing), so the card reliably fits and the body scrolls. The
+            py-6 above guarantees the card never touches the screen edges. */}
+        <div className="flex w-full max-w-[520px] max-h-[calc(100svh-3rem)] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-border">
           {/* Header */}
           <div className="flex shrink-0 items-start justify-between border-b border-border px-5 py-4">
             <div>
@@ -411,8 +414,9 @@ export function WorkspacePaymentModal({
             </button>
           </div>
 
-          {/* Body (scrollable) */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Body (scrollable). min-h-0 lets this flex child shrink below its content
+              height so overflow-y-auto actually scrolls instead of growing the card. */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {/* Invoice status banner (PAY-02) */}
             {invoicesLoading ? (
               <div className="flex h-14 items-center justify-center">
