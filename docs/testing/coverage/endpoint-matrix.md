@@ -10,15 +10,15 @@ Per-operation coverage across the four test layers (contract / integration / jou
 
 | Metric | Count |
 |--------|------:|
-| Total operations | 380 |
-| FE-consumed | 214 |
-| With a contract test | 277 |
+| Total operations | 381 |
+| FE-consumed | 215 |
+| With a contract test | 278 |
 | With an integration test | 0 |
 | With a journey | 0 |
 | **gap** (consumed, untested) | **37** |
 | orphan (product handler+SDK, no FE consumer) | 96 |
 | template-base (upstream-template orphan, excluded from denominator) | 61 |
-| tested / no-obligation | 186 |
+| tested / no-obligation | 187 |
 
 ## GAPS — FE-consumed but untested (ratchet-tracked)
 
@@ -156,6 +156,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `createConsultation` | emr | POST | `/emr/consultations` | ✅ | ✅ |  | ✅ |  |  | template-base |
 | `createCoverageAuthorization` | dental-patient | POST | `/dental/patients/{patientId}/authorizations` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalAlert` | dental-patient | POST | `/dental/patients/{patientId}/dental-alerts` | ✅ | ✅ | ✅ |  |  |  | gap |
+| `createDentalDepositInvoice` | dental-billing | POST | `/dental/billing/invoices/deposit` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalFinding` | dental-visit | POST | `/dental/visits/{visitId}/findings` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalInvoice` | dental-billing | POST | `/dental/billing/invoices` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `createDentalPatient` | dental-patient | POST | `/dental/patients` | ✅ | ✅ | ✅ | ✅ |  |  | tested |

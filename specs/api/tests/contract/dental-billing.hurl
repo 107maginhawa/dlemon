@@ -618,6 +618,95 @@ jsonpath "$.credits" isCollection
 
 
 # ============================================================
+# Phase 1 §g (DQ3) — deposit invoice: collect a deposit against a PLANNED
+# estimate. Mints a finalized (issued, due-on-receipt) kind='deposit' invoice
+# WITHOUT loosening the performed|verified billable filter. A fresh patient +
+# visit keeps this self-contained (one active visit per patient).
+# ============================================================
+POST {{api}}/dental/patients
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "displayName": "Deposit Test Patient {{suffix}}",
+  "consentGiven": true,
+  "branchId": "{{branch_id}}"
+}
+HTTP 201
+[Captures]
+deposit_patient_id: jsonpath "$.id"
+
+
+POST {{api}}/dental/visits
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "patientId": "{{deposit_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "chiefComplaint": "Deposit estimate visit"
+}
+HTTP 201
+[Captures]
+deposit_visit_id: jsonpath "$.id"
+
+
+PATCH {{api}}/dental/visits/{{deposit_visit_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "active"
+}
+HTTP 200
+
+
+# A PLANNED (not performed) treatment → an active estimate of 20000 to deposit against.
+POST {{api}}/dental/visits/{{deposit_visit_id}}/treatments
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{deposit_visit_id}}",
+  "patientId": "{{deposit_patient_id}}",
+  "cdtCode": "D2740",
+  "description": "Crown (planned estimate)",
+  "toothNumber": 16,
+  "priceCents": 20000
+}
+HTTP 201
+[Captures]
+deposit_treatment_id: jsonpath "$.id"
+
+
+PATCH {{api}}/dental/visits/{{deposit_visit_id}}/treatments/{{deposit_treatment_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "status": "planned"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "planned"
+
+
+# Collect a 10000 deposit (half the planned estimate). Born issued, due-on-receipt.
+POST {{api}}/dental/billing/invoices/deposit
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "visitId": "{{deposit_visit_id}}",
+  "patientId": "{{deposit_patient_id}}",
+  "branchId": "{{branch_id}}",
+  "dentistMemberId": "{{dentist_member_id}}",
+  "depositCents": 10000
+}
+HTTP 201
+[Asserts]
+jsonpath "$.kind" == "deposit"
+jsonpath "$.status" == "issued"
+jsonpath "$.totalCents" == 10000
+jsonpath "$.balanceCents" == 10000
+
+
+# ============================================================
 # Plan 015 S4c + S4d — cross-tenant authz deny pins for the two FE-reachable
 # money mutations (refundDentalPayment, markUncollectible). Both are owner-gated
 # billing actions (assertBranchRole dentist_owner); a caller with NO membership in

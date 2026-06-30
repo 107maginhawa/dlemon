@@ -3165,7 +3165,7 @@
     "schemaFile": "services/api-ts/src/handlers/dental-visit/repos/treatment.schema.ts",
     "from": "performed",
     "to": "planned",
-    "legal": false,
+    "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-treatment.test.ts",
     "evidenceLine": 378
@@ -3265,7 +3265,7 @@
     "legal": true,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts",
-    "evidenceLine": 250
+    "evidenceLine": 286
   },
   {
     "fsm": "Treatment",
@@ -3276,7 +3276,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts",
-    "evidenceLine": 215
+    "evidenceLine": 251
   },
   {
     "fsm": "Treatment",
@@ -3876,7 +3876,7 @@
     "legal": false,
     "coveredByTest": true,
     "evidenceFile": "services/api-ts/src/handlers/dental-visit/dental-visit.treatment-status-transitions.test.ts",
-    "evidenceLine": 350
+    "evidenceLine": 386
   },
   {
     "fsm": "Visit",
