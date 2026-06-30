@@ -67,6 +67,15 @@ export async function applyCreditToInvoice(
     // Re-read inside the tx + under the lock so balance + available credit are consistent.
     const live = await invoiceRepo.findOneById(invoiceId);
     if (!live) throw new NotFoundError('Invoice');
+    // Re-check voided status in-tx (mirrors refundDentalPayment): the outer check
+    // (above) read `invoice` BEFORE the lock, so an invoice voided concurrently —
+    // between that read and this locked re-read — would otherwise slip through.
+    // voidInvoice does NOT zero balanceCents, so the balance guard below can't
+    // catch it; draw-down against a voided invoice would burn the patient's credit
+    // for an erased debt. Reject instead.
+    if (live.status === 'voided') {
+      throw new BusinessLogicError('Cannot apply credit to a voided invoice', 'INVOICE_VOIDED');
+    }
     if (live.balanceCents <= 0) {
       throw new BusinessLogicError('Invoice has no outstanding balance', 'INVOICE_SETTLED');
     }
