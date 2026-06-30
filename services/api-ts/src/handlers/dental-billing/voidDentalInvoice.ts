@@ -40,6 +40,17 @@ export async function voidDentalInvoice(
     throw new BusinessLogicError('Invoice is already voided', 'ALREADY_VOIDED');
   }
 
+  // §g F-04: voiding a PAID deposit invoice would strand the mirrored deposit
+  // credit (patient keeps spendable credit with no invoice debt). Require the
+  // deposit payment to be refunded/voided first — which reverses the credit —
+  // before the deposit invoice can be voided.
+  if (invoice.kind === 'deposit' && invoice.paidCents > 0) {
+    throw new BusinessLogicError(
+      'Refund or void the deposit payment before voiding the deposit invoice',
+      'DEPOSIT_HAS_PAYMENT',
+    );
+  }
+
   // NOTE: Voiding from any status (including 'paid') is intentional — allows
   // admin corrections (e.g., duplicate invoice, billing error). BR-011 guards
   // against voiding with an active payment plan. No additional role check is

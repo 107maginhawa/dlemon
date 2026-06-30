@@ -35,6 +35,15 @@ enum DentalInvoiceStatus {
   uncollectible,
 }
 
+// §g DQ3: invoice kind discriminator. `standard` bills performed work; `deposit`
+// is an advance/downpayment invoice for PLANNED work (one non-treatment line,
+// due-on-receipt), excluded from recognized revenue/AR so it is not
+// double-counted against the performed-work invoice it later funds.
+enum DentalInvoiceKind {
+  standard,
+  deposit,
+}
+
 enum PaymentMethod {
   cash,
   card,
@@ -73,6 +82,7 @@ enum PlanFrequency {
   dentistMemberId: "m1a2b3c4-0000-4000-8000-000000000001",
   invoiceNumber: "INV-2026-0042",
   status: DentalInvoiceStatus.issued,
+  kind: DentalInvoiceKind.standard,
   subtotalCents: 36000,
   discountCents: 0,
   taxCents: 0,
@@ -93,6 +103,9 @@ model DentalInvoice {
   dentistMemberId: UUID;
   invoiceNumber: string;
   status: DentalInvoiceStatus;
+  /** §g DQ3: `standard` (default) or `deposit`. Deposit invoices are advance
+   *  payments on planned work, excluded from recognized revenue/AR. */
+  kind: DentalInvoiceKind;
   subtotalCents: int32;
   discountCents: int32;
   taxCents: int32;
@@ -219,6 +232,25 @@ model CreateDentalInvoiceRequest {
   paymentTermsDays?: int32;
 
   /** GAP-001: optional client-generated id for offline-first idempotent sync */
+  localId?: string;
+}
+
+// §g: collect a deposit / pay-in-full against a PLANNED treatment estimate. Mints
+// a finalized (created-and-issued, due-on-receipt) deposit invoice with one
+// non-treatment line. Does NOT touch treatments or the performed|verified billable
+// filter. The deposit is paid via the normal recordDentalPayment → BIR OR path and
+// later reconciled to the performed-work invoice via the patient-credit bridge.
+model CreateDepositInvoiceRequest {
+  visitId: UUID;
+  patientId: UUID;
+  branchId: UUID;
+  dentistMemberId: UUID;
+
+  /** Deposit amount in cents (≥ 1). Capped at the visit's planned estimate total
+   *  in the handler. VAT is carved out of this gross per the branch tax mode. */
+  @minValue(1) depositCents: int32;
+
+  /** Optional client-generated id for offline-first idempotent replay (F-06). */
   localId?: string;
 }
 
@@ -1025,6 +1057,21 @@ namespace DentalBillingModule {
       @body body: CreateDentalInvoiceRequest
     ): ApiCreatedResponse<DentalInvoice>
       | ApiBadRequestResponse
+      | ApiUnauthorizedResponse;
+
+    // §g: deposit/pay-in-full on a planned estimate. Mints a finalized
+    // (issued, due-on-receipt) kind='deposit' invoice. Owner/associate only.
+    @post
+    @route("/invoices/deposit")
+    @useAuth(bearerAuth)
+    @extension("x-security-required-roles", #["user"])
+    @operationId("createDentalDepositInvoice")
+    createDepositInvoice(
+      @body body: CreateDepositInvoiceRequest
+    ): ApiCreatedResponse<DentalInvoice>
+      | ApiBadRequestResponse
+      | ApiNotFoundResponse
+      | ApiConflictResponse
       | ApiUnauthorizedResponse;
 
     @get

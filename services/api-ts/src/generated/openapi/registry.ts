@@ -73,6 +73,7 @@ import { addPatientCredit } from '../../handlers/dental-billing/addPatientCredit
 import { applyCreditToInvoice } from '../../handlers/dental-billing/applyCreditToInvoice';
 import { applyDentalDiscount } from '../../handlers/dental-billing/applyDentalDiscount';
 import { createCollectionNote } from '../../handlers/dental-billing/createCollectionNote';
+import { createDentalDepositInvoice } from '../../handlers/dental-billing/createDentalDepositInvoice';
 import { createDentalInvoice } from '../../handlers/dental-billing/createDentalInvoice';
 import { createDentalPaymentPlan } from '../../handlers/dental-billing/createDentalPaymentPlan';
 import { createInsuranceClaim } from '../../handlers/dental-billing/createInsuranceClaim';
@@ -468,6 +469,7 @@ export const registry = {
   applyCreditToInvoice,
   applyDentalDiscount,
   createCollectionNote,
+  createDentalDepositInvoice,
   createDentalInvoice,
   createDentalPaymentPlan,
   createInsuranceClaim,

@@ -95,6 +95,26 @@ export async function refundDentalPayment(
       );
     }
 
+    // §g F-01: refunding a DEPOSIT payment must reverse the mirrored deposit credit
+    // (recordDentalPayment mirrored the deposit cash into the wallet), or the
+    // patient keeps both the cash AND the spendable credit — money from nothing.
+    if (liveInvoice?.kind === 'deposit') {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(1001, hashtext(${payment.patientId}))`);
+    }
+    // F-02: the wallet is patient-GLOBAL — read it on db (superuser) so branch-
+    // scoped RLS does not truncate it. Safe under the 1001 lock above (every credit
+    // mutator takes it, so no competing write commits while we hold it).
+    const availableCreditBefore = await new DentalPatientCreditRepository(db).getBalance(payment.patientId);
+    // F-01 conservation: a deposit's cash is refundable only while its mirrored
+    // credit is still in the wallet. If already applied to a performed invoice, the
+    // spent portion is no longer cash-refundable.
+    if (liveInvoice?.kind === 'deposit' && availableCreditBefore < body.amountCents) {
+      throw new BusinessLogicError(
+        `Deposit already applied — only ${Math.max(0, availableCreditBefore)} cents of it remain refundable as cash; refund the rest from the performed-work invoice`,
+        'DEPOSIT_ALREADY_APPLIED',
+      );
+    }
+
     const updatedInvoice = await invoiceRepo.removePayment(payment.invoiceId, body.amountCents);
     const refund = await refundRepo.create({
       paymentId,
@@ -109,18 +129,37 @@ export async function refundDentalPayment(
       updatedBy: session.userId,
     });
 
+    // §g F-01: reverse the mirrored deposit credit (consuming row).
+    if (liveInvoice?.kind === 'deposit') {
+      await creditRepo.create({
+        patientId: payment.patientId,
+        branchId: payment.branchId,
+        amountCents: -body.amountCents, // negative: remove the deposit credit
+        source: 'deposit_reversed',
+        invoiceId: payment.invoiceId,
+        createdByMemberId: membership?.id ?? null, // attribute the reversal to the refunding staff
+        createdBy: session.userId,
+        updatedBy: session.userId,
+      });
+    }
+
     if (bookAsCredit) {
       await creditRepo.create({
         patientId: payment.patientId,
         branchId: payment.branchId,
         amountCents: body.amountCents, // positive: credit to the patient
         source: 'refund',
-        invoiceId: payment.invoiceId,
+        invoiceId: null, // non-consuming (positive) row — invoiceId is only for consuming rows
+        createdByMemberId: membership?.id ?? null, // attribute the refund-to-credit to the acting staff
         createdBy: session.userId,
         updatedBy: session.userId,
       });
     }
-    const creditBalanceCents = await creditRepo.getBalance(payment.patientId);
+    // F-02: compute the global wallet arithmetically — an in-tx db read can't see
+    // the rows just written on `tx`, and a tx read would be branch-truncated.
+    const creditBalanceCents = availableCreditBefore
+      + (bookAsCredit ? body.amountCents : 0)
+      + (liveInvoice?.kind === 'deposit' ? -body.amountCents : 0);
 
     return {
       refundId: refund.id,
