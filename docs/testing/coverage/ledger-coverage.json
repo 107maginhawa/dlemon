@@ -20606,8 +20606,8 @@
       ],
       "route": "/dental/billing/collections/summary",
       "risk": "money",
-      "feReachable": false,
-      "allOrphan": true,
+      "feReachable": true,
+      "allOrphan": false,
       "severity": "none",
       "requiredLayers": [
         "be-unit",

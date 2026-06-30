@@ -85,7 +85,7 @@ Every declared `*_TRANSITIONS` state machine, expanded to its full edge space (s
 | Appointment | `cancelled` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:67 |
 | Appointment | `cancelled` | `no_show` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:67 |
 | Appointment | `cancelled` | `scheduled` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:67 |
-| Appointment | `checked_in` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:91 |
+| Appointment | `checked_in` | `cancelled` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment-completion-on-visit.test.ts`:105 |
 | Appointment | `checked_in` | `completed` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:90 |
 | Appointment | `checked_in` | `confirmed` | ⛔ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment-confirm.test.ts`:127 |
 | Appointment | `checked_in` | `no_show` | ✅ | ✓ | `services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts`:92 |

@@ -62,8 +62,8 @@
     "to": "cancelled",
     "legal": true,
     "coveredByTest": true,
-    "evidenceFile": "services/api-ts/src/handlers/dental-scheduling/appointment.fsm.property.test.ts",
-    "evidenceLine": 91
+    "evidenceFile": "services/api-ts/src/handlers/dental-scheduling/appointment-completion-on-visit.test.ts",
+    "evidenceLine": 105
   },
   {
     "fsm": "Appointment",
