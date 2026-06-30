@@ -146,6 +146,21 @@ describe('WorkspacePaymentModal', () => {
     expect(screen.getByTestId('mark-performed-p-2')).not.toBeNull();
   });
 
+  it('estimate state: Mark done is the PRIMARY affordance and Done is a quiet close', async () => {
+    // The reported dead-end is a hierarchy bug, not a missing path: the forward
+    // action (Mark done) was a faint ghost button buried under a dominant bordered
+    // "Done" exit, so the modal read as terminal. Lock the inverted hierarchy:
+    // Mark done = filled-lemon primary; Done = low-emphasis close, not a big block.
+    renderModal({ lineItems: PLANNED_ONLY });
+    const markBtn = await screen.findByTestId('mark-performed-p-1');
+    expect(markBtn.className).toContain('bg-lemon'); // forward action = primary CTA
+
+    const doneBtn = screen.getByTestId('estimate-done-btn');
+    expect(doneBtn.className).not.toContain('bg-lemon');
+    // No longer a full bordered block that out-shouts Mark done.
+    expect(doneBtn.className).not.toContain('border-border');
+  });
+
   it('shows invoice banner when invoice exists (PAY-02)', async () => { // [BR-012]
     mockFetch.mockImplementation(() => invoiceListResponse([INVOICE]));
     renderModal();
@@ -223,6 +238,30 @@ describe('WorkspacePaymentModal', () => {
       const calls = mockFetch.mock.calls as [Request | string, RequestInit?][];
       const postCall = calls.find(([input]) => input instanceof Request && input.method === 'POST');
       expect(postCall).not.toBeNull();
+    });
+  });
+
+  it('opens straight to the Record-payment form after Create Invoice & Pay (no extra tap)', async () => {
+    const user = userEvent.setup();
+    const issued = { ...INVOICE, status: 'issued' };
+    mockFetch.mockImplementation((input: Request | string) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const method = input instanceof Request ? input.method : 'GET';
+      if (method === 'POST') return jsonResponse(issued);
+      if (url.includes('/dental/billing/invoices/inv-1')) return jsonResponse(issued);
+      return invoiceListResponse([]);
+    });
+
+    renderModal();
+    await waitFor(() => {
+      expect((screen.getByTestId('create-invoice-btn') as HTMLButtonElement).disabled).toBe(false);
+    });
+    await user.click(screen.getByTestId('create-invoice-btn'));
+
+    // The collect-now path lands directly on the payment form — the Amount field
+    // is present without a separate "Record payment" tap.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Amount/i)).not.toBeNull();
     });
   });
 

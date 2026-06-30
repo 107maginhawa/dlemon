@@ -122,7 +122,9 @@ function LineItemRow({
             data-testid={`mark-performed-${item.id}`}
             disabled={marking}
             onClick={onMarkPerformed}
-            className="ml-auto inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg border border-border px-2.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-50"
+            // Primary affordance: this is THE way forward out of the estimate state,
+            // so it reads as a filled-lemon CTA — not a faint ghost the eye skips.
+            className="ml-auto inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-lemon px-3 text-xs font-semibold text-lemon-foreground hover:bg-lemon-hover disabled:opacity-50"
           >
             <CheckCircle2 className="h-4 w-4" />
             {marking ? 'Marking…' : 'Mark done'}
@@ -250,6 +252,10 @@ export function WorkspacePaymentModal({
   onClose,
 }: WorkspacePaymentModalProps) {
   const [invoiceDetailId, setInvoiceDetailId] = useState<string | null>(null);
+  // Pay-intent: when the invoice sheet is opened to COLLECT (create-and-pay, or the
+  // footer "Record Payment"), jump straight to the payment form — skip the extra tap.
+  // Opening it to VIEW (the banner "View Invoice" link) stays view-first.
+  const [openInvoiceToPayment, setOpenInvoiceToPayment] = useState(false);
 
   const { data: invoices = [], isLoading: invoicesLoading } = usePatientInvoices(
     open ? patientId : null,
@@ -290,6 +296,7 @@ export function WorkspacePaymentModal({
     if (!visitId || !hasBillable) return;
     try {
       const inv = await createInvoice.mutateAsync({ visitId });
+      setOpenInvoiceToPayment(true); // just created → collect now
       setInvoiceDetailId(inv.id);
     } catch {
       // surfaced via createInvoice.isError below + a toast in the hook.
@@ -348,7 +355,7 @@ export function WorkspacePaymentModal({
                 status={visitInvoice.status}
                 totalCents={visitInvoice.totalCents}
                 balanceCents={visitInvoice.balanceCents}
-                onViewDetail={() => setInvoiceDetailId(visitInvoice.id)}
+                onViewDetail={() => { setOpenInvoiceToPayment(false); setInvoiceDetailId(visitInvoice.id); }}
               />
             ) : null}
 
@@ -433,7 +440,7 @@ export function WorkspacePaymentModal({
             {visitInvoice ? (
               <button
                 type="button"
-                onClick={() => setInvoiceDetailId(visitInvoice.id)}
+                onClick={() => { setOpenInvoiceToPayment(true); setInvoiceDetailId(visitInvoice.id); }}
                 data-testid="open-invoice-detail-btn"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-lemon py-3 text-base font-semibold text-lemon-foreground hover:bg-lemon-hover transition-colors min-h-[44px]"
               >
@@ -459,22 +466,24 @@ export function WorkspacePaymentModal({
                 )}
               </>
             ) : (
-              // No billable line → no Pay button that would 422. Explain + offer a
-              // clean exit (the estimate above is the answer to "what now?").
+              // No billable line → no Pay button that would 422. The forward path is
+              // the lemon "Mark done" on each estimate row above; the footer must not
+              // out-shout it, so "Done" is a quiet close, not a big bordered block.
               <>
                 {hasEstimate && (
                   <p data-testid="no-billable-note" className="mb-2 text-center text-xs text-muted-foreground">
-                    Nothing to bill yet — tap <span className="font-medium text-foreground">Mark done</span> on a
-                    treatment above once it’s performed, and it becomes billable here.
+                    Performed this work? Tap the yellow{' '}
+                    <span className="font-semibold text-foreground">Mark done</span> on each treatment above to
+                    bill it.
                   </p>
                 )}
                 <button
                   type="button"
                   onClick={onClose}
                   data-testid="estimate-done-btn"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background py-3 text-base font-semibold text-foreground hover:bg-muted transition-colors min-h-[44px]"
+                  className="mx-auto flex items-center justify-center py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
                 >
-                  Done
+                  Close
                 </button>
               </>
             )}
@@ -487,7 +496,8 @@ export function WorkspacePaymentModal({
         <InvoiceDetail
           invoiceId={invoiceDetailId}
           open={Boolean(invoiceDetailId)}
-          onClose={() => setInvoiceDetailId(null)}
+          openToPayment={openInvoiceToPayment}
+          onClose={() => { setInvoiceDetailId(null); setOpenInvoiceToPayment(false); }}
           onUpdated={() => {/* query invalidation handled by InvoiceDetail */}}
         />
       )}
