@@ -14,6 +14,7 @@ import { VisitRepository } from '../repos/visit.repo';
 import { VISIT_TRANSITIONS, type DentalVisitStatus } from '../repos/visit.schema';
 import { TreatmentRepository, VisitNotesRepository } from '../repos/treatment.repo';
 import { countAttachmentsForVisit, hasSignedConsentForVisit } from '@/handlers/dental-clinical/repos/clinical-visit.facade';
+import { completeAppointmentForVisit } from '@/handlers/dental-scheduling/repos/appointment-visit.facade';
 import { getBranchOrgId } from '@/handlers/dental-org/repos/org-billing.facade';
 import type { User } from '@/types/auth';
 import type { UpdateDentalVisitBody, UpdateDentalVisitParams } from '@/generated/openapi/validators';
@@ -165,6 +166,10 @@ export async function updateDentalVisit(
       const completedRaw = await r.complete(visitId);
       if (!completedRaw) throw new NotFoundError('Dental visit');
       if (patch.chiefComplaint) await r.updateStatus(visitId, { chiefComplaint: patch.chiefComplaint });
+      // G-12: advance the linked appointment checked_in → completed, atomically with
+      // the visit completion. Idempotent + guarded (walk-in visits with no
+      // appointment, or a cancelled/no_show appointment, are a no-op).
+      await completeAppointmentForVisit(tx, visitId, user.id);
       return patch.chiefComplaint ? await r.findOneById(visitId) ?? completedRaw : completedRaw;
     });
     log?.info({ requestId, action: 'dental_visit_complete', visitId, by: user.id }, 'Visit completed');

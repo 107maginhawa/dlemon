@@ -284,4 +284,26 @@ export class DentalAppointmentRepository extends DatabaseRepository<DentalAppoin
       .returning();
     return updated ?? null;
   }
+
+  /**
+   * G-12: advance the appointment linked to `visitId` from checked_in → completed
+   * when its visit is completed. Idempotent + guarded: only a checked_in appointment
+   * matching visitId is advanced (already-completed/cancelled/no_show match nothing →
+   * null no-op). Returns the updated row, or null when there is nothing to advance.
+   */
+  async completeByVisit(visitId: string, updatedBy?: string): Promise<DentalAppointment | null> {
+    const [updated] = await this.db
+      .update(dentalAppointments)
+      .set({
+        status: 'completed',
+        updatedAt: new Date(),
+        ...(updatedBy ? { updatedBy } : {}),
+      })
+      .where(and(
+        eq(dentalAppointments.visitId, visitId),
+        eq(dentalAppointments.status, 'checked_in'),
+      ))
+      .returning();
+    return updated ?? null;
+  }
 }
