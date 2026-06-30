@@ -32,6 +32,16 @@ export const PHI_METADATA_KEYS = new Set([
   'phone',
   'ssn',
   'address',
+  // G-33: address is stored as `primaryAddress` (jsonb) with street/city/state/zip
+  // children; strip the container AND the components (flattened PATCH bodies too).
+  'primaryaddress',
+  'street1',
+  'street2',
+  'city',
+  'state',
+  'postalcode',
+  'zip',
+  'postal',
   'mrn',
   // Date of birth (multiple spellings)
   'dateofbirth',
