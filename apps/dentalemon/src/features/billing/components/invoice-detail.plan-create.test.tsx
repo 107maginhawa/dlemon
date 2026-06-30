@@ -32,10 +32,21 @@ function installFetch() {
   return { restore: () => { global.fetch = original; } };
 }
 
+// Payment plans are v2-deferred (workspace.advanced_billing). Force the flag ON
+// so these tests isolate the create-plan RBAC/entry behaviour, not the v1 gate.
+function setFlag(key: string, val: string | undefined) {
+  const env = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env) ?? {};
+  if (val === undefined) delete env[key];
+  else env[key] = val;
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env = env;
+}
+
 beforeEach(() => {
+  setFlag('VITE_FF_WORKSPACE_ADVANCED_BILLING', 'true');
   useOrgContextStore.setState({ memberId: MEMBER_ID, branchId: 'b-1', orgId: 'o-1', role: 'dentist_owner' });
 });
 afterEach(() => {
+  setFlag('VITE_FF_WORKSPACE_ADVANCED_BILLING', undefined);
   cleanup();
   useOrgContextStore.setState({ memberId: null, branchId: null, orgId: null, role: null });
 });
@@ -69,6 +80,21 @@ describe('InvoiceDetail — Create Payment Plan entry point', () => {
       renderDetail(false);
       // Record Payment is role-independent for an issued invoice → "loaded" signal.
       await screen.findByRole('button', { name: /record payment/i });
+      expect(screen.queryByRole('button', { name: /create payment plan/i })).toBeNull();
+    } finally {
+      f.restore();
+    }
+  });
+
+  test('v1 default (workspace.advanced_billing OFF): even a writer does NOT see Create Payment Plan', async () => {
+    setFlag('VITE_FF_WORKSPACE_ADVANCED_BILLING', undefined);
+    const f = installFetch();
+    try {
+      renderDetail(true);
+      // The core invoice action still renders…
+      await screen.findByRole('button', { name: /record payment/i });
+      // …but payment plans are deferred in v1.
+      await screen.findByTestId('invoice-more-btn').then((b) => b.click()).catch(() => {});
       expect(screen.queryByRole('button', { name: /create payment plan/i })).toBeNull();
     } finally {
       f.restore();

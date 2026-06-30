@@ -13,6 +13,7 @@ import { requireRole } from '@/lib/guards'
 import { useQueryClient } from '@tanstack/react-query'
 import { canWriteBilling, type DentalRole } from '@/lib/rbac'
 import { useOrgContextStore } from '@/stores/org-context.store'
+import { isFeatureEnabled } from '@/lib/feature-flags'
 import { BillingList } from '../../features/billing/components/billing-list'
 import { CollectionsView } from '../../features/billing/components/collections-view'
 import { ClaimsWorklist } from '../../features/billing/components/claims-worklist'
@@ -34,6 +35,12 @@ function BillingPage() {
   // payments but must NOT see issue/void actions.
   const canWrite = role ? canWriteBilling(role) : false
   const [tab, setTab] = useState<BillingTab>('invoices')
+  // G2: v1 billing = invoices (issue → record payment → void → BIR receipt).
+  // Collections/dunning + insurance claims are v2 (workspace.advanced_billing).
+  const advancedBilling = isFeatureEnabled('workspace.advanced_billing')
+  const billingTabs: readonly BillingTab[] = advancedBilling
+    ? (['invoices', 'collections', 'insurance'] as const)
+    : (['invoices'] as const)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [planViewOpen, setPlanViewOpen] = useState(false)
@@ -79,8 +86,9 @@ function BillingPage() {
           className="flex items-center gap-0.5 bg-secondary/50 rounded-xl p-0.5"
           role="tablist"
           aria-label="Billing section"
+          hidden={billingTabs.length === 1}
         >
-          {(['invoices', 'collections', 'insurance'] as const).map((t) => (
+          {billingTabs.map((t) => (
             <button
               key={t}
               type="button"
@@ -99,12 +107,13 @@ function BillingPage() {
         </div>
       </div>
 
-      {tab === 'invoices' ? (
-        <BillingList branchId={branchId ?? undefined} onInvoiceClick={handleInvoiceClick} onRecordPayment={handleRecordPayment} />
-      ) : tab === 'collections' ? (
+      {advancedBilling && tab === 'collections' ? (
         <CollectionsView branchId={branchId} />
-      ) : (
+      ) : advancedBilling && tab === 'insurance' ? (
         <ClaimsWorklist branchId={branchId} canWrite={canWrite} />
+      ) : (
+        // v1 default + fallback: the invoice list (issue → pay → void → receipt).
+        <BillingList branchId={branchId ?? undefined} onInvoiceClick={handleInvoiceClick} onRecordPayment={handleRecordPayment} />
       )}
 
       {selectedInvoiceId && (

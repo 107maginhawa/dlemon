@@ -37,6 +37,7 @@ import { useOrgContextStore } from '@/stores/org-context.store';
 import { useBranchSettings, useUpdateBranchSettings } from '@/features/settings/hooks/use-branch-settings';
 import { incrementReceiptNumber } from '../lib/receipt-series';
 import { canApplyDiscount, canVoidPayment, type DentalRole } from '@/lib/rbac';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import { PaymentReceipt } from './payment-receipt';
 import { PaymentPlanCreate } from './payment-plan-create';
 
@@ -111,6 +112,7 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   const [refundError, setRefundError] = useState<string | null>(null);
   // FIX-005: payment-plan create dialog open state.
   const [showPlanCreate, setShowPlanCreate] = useState(false);
+  const advancedBilling = isFeatureEnabled('workspace.advanced_billing');
   // Footer overflow: rare/secondary actions collapse into a "More" menu so the
   // primary action (Record payment / Issue) isn't lost in a row of 7 buttons.
   const [moreOpen, setMoreOpen] = useState(false);
@@ -474,10 +476,12 @@ export function InvoiceDetail({ invoiceId, open, onClose, onUpdated, onViewPlan,
   };
   const secondaryActions: SecondaryAction[] = [];
   if (invoice) {
-    if (onViewPlan) {
+    // G2: installment payment plans are v2 (workspace.advanced_billing). v1 keeps
+    // the core invoice → record payment → void → receipt (and simple refunds).
+    if (advancedBilling && onViewPlan) {
       secondaryActions.push({ key: 'view-plan', label: 'View payment plan', onClick: () => onViewPlan() });
     }
-    if (showCreatePlanButton(invoice.status, canWrite, invoice.balanceCents)) {
+    if (advancedBilling && showCreatePlanButton(invoice.status, canWrite, invoice.balanceCents)) {
       secondaryActions.push({ key: 'create-plan', label: 'Create payment plan', onClick: () => setShowPlanCreate(true) });
     }
     if (showDiscountButton(invoice.status, canDiscount) && !showDiscountForm) {
