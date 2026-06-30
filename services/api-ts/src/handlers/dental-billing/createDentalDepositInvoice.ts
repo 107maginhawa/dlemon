@@ -86,8 +86,12 @@ export async function createDentalDepositInvoice(
     // non-dismissed / non-declined treatments — the case value the patient is
     // depositing against). No active plan → nothing to deposit against.
     const treatments = await getTreatmentsForInvoice(tx, body.visitId);
+    // The deposit is an advance on PLANNED (future) work only — diagnosed|planned.
+    // Performed/verified work is delivered and gets a STANDARD invoice, never a
+    // deposit (review P1-1: counting performed work let a deposit be taken against
+    // already-done treatment, and diverged from the frontend's planned-only cap).
     const estimateCents = treatments
-      .filter((t) => t.status !== 'dismissed' && t.status !== 'declined')
+      .filter((t) => t.status === 'diagnosed' || t.status === 'planned')
       .reduce((sum, t) => sum + t.priceCents, 0);
     if (estimateCents <= 0) {
       throw new BusinessLogicError('No planned work to take a deposit against', 'NO_PLANNED_WORK');
