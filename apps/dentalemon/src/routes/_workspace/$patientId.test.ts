@@ -62,9 +62,11 @@ describe('WorkspacePage layout', () => {
       expect((s.match(/className=\{WORKSPACE_TOOL_BTN\}/g) ?? []).length).toBeGreaterThanOrEqual(7);
     });
 
-    test('2.2: Export is always rendered (disabled + hinted), not conditionally hidden', async () => {
+    test('2.2: Export is v2-deferred — gated behind workspace.chart_export; when ON it is disabled + hinted (not silently hidden)', async () => {
       const s = await src();
+      // Still present in source (code stays in the tree), but flag-gated for v1.
       expect(s).toContain('Select a visit to export the chart');
+      expect(s).toContain("isFeatureEnabled('workspace.chart_export')");
     });
 
     test('2.3: Perio exposes an inline disabled hint for touch devices', async () => {

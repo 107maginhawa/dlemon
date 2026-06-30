@@ -41,6 +41,7 @@ import { CarryOverPrompt } from '@/features/workspace/components/carry-over-prom
 import { WorkspaceImagingOverlay } from '@/features/workspace/components/workspace-imaging-overlay';
 import { PerioChartOverlay } from '@/features/workspace/components/perio/perio-chart-overlay';
 import { WorkspaceTopBar } from '@/features/workspace/components/workspace-top-bar';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import { YearSegmentControl } from '@/features/workspace/components/year-segment-control';
 import { useVisits } from '@/features/workspace/hooks/use-visits';
 import { useDentalChart } from '@/features/workspace/hooks/use-dental-chart-query';
@@ -429,16 +430,18 @@ function WorkspacePage() {
           )}
         </div>
 
-        {/* PP-7 (ISSUE-044): Occlusion screening tab trigger */}
-        <button
-          type="button"
-          data-testid="occlusion-tab-btn"
-          onClick={() => setOcclusionOpen(true)}
-          className={WORKSPACE_TOOL_BTN}
-        >
-          <Stethoscope className="h-3.5 w-3.5" />
-          Occlusion
-        </button>
+        {/* PP-7 (ISSUE-044): Occlusion screening tab trigger. v2-deferred. */}
+        {isFeatureEnabled('workspace.occlusion') && (
+          <button
+            type="button"
+            data-testid="occlusion-tab-btn"
+            onClick={() => setOcclusionOpen(true)}
+            className={WORKSPACE_TOOL_BTN}
+          >
+            <Stethoscope className="h-3.5 w-3.5" />
+            Occlusion
+          </button>
+        )}
 
         {/* B3: Recalls tab trigger */}
         <button
@@ -451,43 +454,49 @@ function WorkspacePage() {
           Recalls
         </button>
 
-        {/* PP-7 (ISSUE-043): Tasks tab trigger */}
-        <button
-          type="button"
-          data-testid="tasks-tab-btn"
-          onClick={() => setTasksOpen(true)}
-          className={WORKSPACE_TOOL_BTN}
-        >
-          <ListChecks className="h-3.5 w-3.5" />
-          Tasks
-        </button>
+        {/* PP-7 (ISSUE-043): Tasks tab trigger. v2-deferred. */}
+        {isFeatureEnabled('workspace.tasks') && (
+          <button
+            type="button"
+            data-testid="tasks-tab-btn"
+            onClick={() => setTasksOpen(true)}
+            className={WORKSPACE_TOOL_BTN}
+          >
+            <ListChecks className="h-3.5 w-3.5" />
+            Tasks
+          </button>
+        )}
 
         {/* B4: Treatment Plans tab trigger. N1: "Plan docs" disambiguates from the
-            top-bar "Treatment Plan" working list. */}
-        <button
-          type="button"
-          data-testid="treatment-plans-tab-btn"
-          onClick={() => setTreatmentPlansOpen(true)}
-          className={WORKSPACE_TOOL_BTN}
-        >
-          <ClipboardList className="h-3.5 w-3.5" />
-          Plan docs
-        </button>
+            top-bar "Treatment Plan" working list. v2-deferred (FSM plan docs +
+            case-presentation; verified independent of the v1 Estimate flow). */}
+        {isFeatureEnabled('workspace.plan_docs') && (
+          <button
+            type="button"
+            data-testid="treatment-plans-tab-btn"
+            onClick={() => setTreatmentPlansOpen(true)}
+            className={WORKSPACE_TOOL_BTN}
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+            Plan docs
+          </button>
+        )}
 
-        {/* P0-B: structured chart export (print-ready). 2.2: always rendered;
-            disabled + explained when no visit is selected (mirrors Perio) rather
-            than silently vanishing. */}
-        <button
-          type="button"
-          data-testid="chart-export-btn"
-          onClick={() => setChartExportOpen(true)}
-          disabled={currentVisitId === null}
-          title={currentVisitId === null ? 'Select a visit to export the chart' : 'Export the chart'}
-          className={WORKSPACE_TOOL_BTN}
-        >
-          <Download className="h-3.5 w-3.5" />
-          Export
-        </button>
+        {/* P0-B: structured chart export (print-ready). v2-deferred. When ON:
+            disabled + explained when no visit is selected (mirrors Perio). */}
+        {isFeatureEnabled('workspace.chart_export') && (
+          <button
+            type="button"
+            data-testid="chart-export-btn"
+            onClick={() => setChartExportOpen(true)}
+            disabled={currentVisitId === null}
+            title={currentVisitId === null ? 'Select a visit to export the chart' : 'Export the chart'}
+            className={WORKSPACE_TOOL_BTN}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </button>
+        )}
 
         {/* B5: Sync status badge */}
         <SyncStatusBadge branchId={branchId ?? null} />
@@ -569,7 +578,7 @@ function WorkspacePage() {
           treatmentCount={treatments.length}
           performedCount={treatments.filter(isBillable).length}
           conflictCount={conflictedTeeth.size}
-          canCompare={visits.length >= 2}
+          canCompare={visits.length >= 2 && isFeatureEnabled('workspace.compare')}
           onCompare={() => setCompareOpen(true)}
           onStartVisit={handleNewVisit}
           onComplete={() => {

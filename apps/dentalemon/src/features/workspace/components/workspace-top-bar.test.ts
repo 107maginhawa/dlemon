@@ -175,13 +175,26 @@ function renderBarWithSpies(role: DentalRole) {
   return calls;
 }
 
+// Lab + PMD are v2-deferred (workspace.lab_orders / workspace.pmd). These RBAC
+// tests force the flags ON so they isolate the *role* gate, not the v1 flag gate.
+function setFlag(key: string, val: string | undefined) {
+  const env = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env) ?? {};
+  if (val === undefined) delete env[key];
+  else env[key] = val;
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env = env;
+}
+
 describe('WorkspaceTopBar — Lab + PMD affordances (FIX-001/002)', () => {
   beforeEach(() => {
+    setFlag('VITE_FF_WORKSPACE_LAB_ORDERS', 'true');
+    setFlag('VITE_FF_WORKSPACE_PMD', 'true');
     global.fetch = mockFetch as unknown as typeof fetch;
     mockFetch.mockReset();
     mockFetch.mockImplementation(emptyResponse);
   });
   afterEach(() => {
+    setFlag('VITE_FF_WORKSPACE_LAB_ORDERS', undefined);
+    setFlag('VITE_FF_WORKSPACE_PMD', undefined);
     global.fetch = originalFetch;
     useOrgContextStore.setState({ role: null });
     cleanup();
@@ -205,6 +218,30 @@ describe('WorkspaceTopBar — Lab + PMD affordances (FIX-001/002)', () => {
   test('dental_assistant sees neither Lab nor PMD (dentist-gated)', async () => {
     renderBarWithSpies('dental_assistant');
     await waitFor(() => expect(screen.getByLabelText('Attachments')).not.toBeNull());
+    expect(screen.queryByLabelText('Lab orders')).toBeNull();
+    expect(screen.queryByLabelText('Portable medical document')).toBeNull();
+  });
+});
+
+describe('WorkspaceTopBar — v1 feature-flag gating (Lab/PMD deferred)', () => {
+  beforeEach(() => {
+    // No flags set → v1 defaults (OFF).
+    global.fetch = mockFetch as unknown as typeof fetch;
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(emptyResponse);
+  });
+  afterEach(() => {
+    global.fetch = originalFetch;
+    useOrgContextStore.setState({ role: null });
+    cleanup();
+    mockFetch.mockReset();
+  });
+
+  test('at v1 default (flags OFF), even a dentist sees neither Lab nor PMD', async () => {
+    renderBarWithSpies('dentist_owner');
+    // The v1 home-base affordances still render…
+    await waitFor(() => expect(screen.getByLabelText('Attachments')).not.toBeNull());
+    // …but the deferred tools are gated off.
     expect(screen.queryByLabelText('Lab orders')).toBeNull();
     expect(screen.queryByLabelText('Portable medical document')).toBeNull();
   });

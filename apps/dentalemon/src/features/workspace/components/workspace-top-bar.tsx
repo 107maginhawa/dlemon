@@ -16,6 +16,7 @@ import { useMedicalHistory } from '@/features/workspace/hooks/use-medical-histor
 import { useDentalAlerts, DENTAL_ALERT_TYPE_LABELS, type DentalAlertSeverity } from '@/features/workspace/hooks/use-dental-alerts';
 import { useOrgContextStore } from '@/stores/org-context.store';
 import { canPrescribe, canAddTreatment, canCaptureConsent, type DentalRole } from '@/lib/rbac';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 
 interface WorkspaceTopBarProps {
   patientId: string;
@@ -128,8 +129,9 @@ export function WorkspaceTopBar({
   const allowConsent = role ? canCaptureConsent(role) : true;
   // FIX-001/002: Lab orders match the backend createLabOrder gate (dentists);
   // PMD generation is dentist-only. Both reuse the dentist-level treatment gate.
-  const allowLab = role ? canAddTreatment(role) : true;
-  const allowPmd = role ? canAddTreatment(role) : true;
+  // v1/v2: both are deferred behind workspace.* flags (OFF in v1).
+  const allowLab = (role ? canAddTreatment(role) : true) && isFeatureEnabled('workspace.lab_orders');
+  const allowPmd = (role ? canAddTreatment(role) : true) && isFeatureEnabled('workspace.pmd');
 
   const firstName = profile?.firstName ?? '';
   const lastName = profile?.lastName ?? '';
