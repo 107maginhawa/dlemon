@@ -266,7 +266,17 @@ The 4 P1 blockers that made this a NO-GO are now fixed (each failing-test-first,
 
 **Post-fix gate state:** backend 4854/0, FE 2844/0, typecheck/lint/boundaries(error-mode clean for my modules)/rls-posture green, contract 50/50. Required Journey Harness green. Full `test:e2e` has 7 non-required reds (2 chronic, 3 flaky nav-race, 2 date-fragile after the 06-30 rollover) — **none caused by these fixes** (changed files touch zero scheduling/calendar/signup code; `billing-queue-morgan › Void Invoice` passes).
 
-**Remaining before a WIDE launch (not P1, your call):** the P2 cluster — especially **G-09** (PreCompletionChecklist "Complete anyway" is a false affordance vs the server's hard 422), **G-08** (draft-invoice can't be paid in one step), **G-11/G-26** (onboarding fee-schedule + owner-PIN silently discarded — also surfaces as E2E G-40), **G-12** (appointment never reaches `completed`), **G-13** (revenue report drifts from dashboard), **G-10** (same-status visit PATCH re-runs side effects). These are real but narrower than the P1 dead-ends. P3s are mostly dead-code cleanup + missing-coverage and can follow.
+**P2 cluster — progress (commits on local `main`):**
+- ✅ **G-12** appointment never reaches `completed` → `completeByVisit` + facade, advanced atomically on visit completion (`864da544`).
+- ✅ **G-09** "Complete anyway" false affordance → `deriveCompletionGate`; consent + open-treatments now hard-block, soft checks still overridable (`dd1c4a05`; 2 bug-encoding tests updated with approval).
+- ✅ **G-11** onboarding fee-schedule discarded → fees PATCHed to `/dental/fee-schedule/{cdt}` on finish (`2a0f1d9a`).
+- ⏸️ **G-13** revenue-report "Collected" drifts from dashboard — headline can source the server summary (`getCollectionsSummary` supports a date range), but the report's **daily table** is invoice-`paidCents`-based and the server exposes only a single total. A fully-coherent fix needs a server daily-payment-breakdown endpoint; a headline-only change would make the report internally inconsistent. **Needs a small server addition — flagged, not half-fixed.**
+- ⏸️ **G-08** "Create Invoice & Pay" → draft that can't be paid — fix = auto-issue on create, which is a **money-FSM product decision** (one-step pay vs explicit Issue step). Needs your call.
+- ⏸️ **G-10** same-status visit PATCH re-runs side effects — real but lower-impact (requires a redundant re-PATCH); deferred.
+- ⏸️ **G-26** owner PIN not persisted across wizard resume — FE; pairs with onboarding, deferred.
+- ⏸️ **G-06 / G-07** drift-gate holes — fix involves deciding whether to **commit generated artifacts** (`specs/api/dist`, SDK) or restructure the diff; a CI-config decision. Flagged.
+
+P3s are mostly dead-code cleanup + missing-coverage and can follow.
 
 **Two test-infra holes worth a fast follow (cheap, high leverage):** **G-06** (OpenAPI drift gate is a false-green no-op — `specs/api/dist` is gitignored) and **G-07** (no SDK-drift gate). Both let generated-artifact drift land silently.
 
