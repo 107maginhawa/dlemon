@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-29  ·  **Branch:** `fix/prod-readiness-p1-blockers`  ·  **Auditor:** Claude Code (workflow-orchestrated)
 
-> **UPDATE (fixes applied):** All 4 P1 blockers fixed TDD-style (failing test → fix → green), one atomic commit each, plus a boundary-isolation refactor. Commits: G-01 `1f36a2da`, G-03 `16f69b26`, G-04 `bcd5bff5`, G-02 `6018101a`, boundaries `ad8113b9`. Post-fix gates: backend 4854/0, FE 2844/0, typecheck/lint/boundaries/rls all green, contract 50/50. E2E re-running. See §7.
+> **UPDATE (fixes applied):** All **4 P1 blockers + 6 P2 items** fixed TDD-style (failing test → fix → green), atomic commits, merged to **local `main`** (not pushed). P1: G-01 `1f36a2da`, G-03 `16f69b26`, G-04 `bcd5bff5`, G-02 `6018101a` (+ boundary refactor `ad8113b9`). P2: G-12 `864da544`, G-09 `dd1c4a05`, G-11 `2a0f1d9a`, G-08 `24d12ab3`, G-13 `c49ccc61`, G-06/G-07 `9dd576e9`. Post-fix gates: **backend 4857/0, FE 2852/0, typecheck clean, contract 50/50, rls intact, boundaries clean (11 pre-existing, none new), drift-gate deterministic**. Remaining: G-10 + G-26 (deferred, see §5). See §5 for the full status.
 
 Method: codegraph-mapped all 26 backend modules + FE + contract layer + 4 cross-module flows, then ran a skeptical evidence-backed gap hunt (11 parallel read-only agents, ~1.25M tokens). All 7 acceptance gates run locally with docker infra up. P1s spot-verified against cited source lines.
 
@@ -266,15 +266,17 @@ The 4 P1 blockers that made this a NO-GO are now fixed (each failing-test-first,
 
 **Post-fix gate state:** backend 4854/0, FE 2844/0, typecheck/lint/boundaries(error-mode clean for my modules)/rls-posture green, contract 50/50. Required Journey Harness green. Full `test:e2e` has 7 non-required reds (2 chronic, 3 flaky nav-race, 2 date-fragile after the 06-30 rollover) — **none caused by these fixes** (changed files touch zero scheduling/calendar/signup code; `billing-queue-morgan › Void Invoice` passes).
 
-**P2 cluster — progress (commits on local `main`):**
+**P2 cluster — FIXED (commits on local `main`; all TDD):**
 - ✅ **G-12** appointment never reaches `completed` → `completeByVisit` + facade, advanced atomically on visit completion (`864da544`).
 - ✅ **G-09** "Complete anyway" false affordance → `deriveCompletionGate`; consent + open-treatments now hard-block, soft checks still overridable (`dd1c4a05`; 2 bug-encoding tests updated with approval).
 - ✅ **G-11** onboarding fee-schedule discarded → fees PATCHed to `/dental/fee-schedule/{cdt}` on finish (`2a0f1d9a`).
-- ⏸️ **G-13** revenue-report "Collected" drifts from dashboard — headline can source the server summary (`getCollectionsSummary` supports a date range), but the report's **daily table** is invoice-`paidCents`-based and the server exposes only a single total. A fully-coherent fix needs a server daily-payment-breakdown endpoint; a headline-only change would make the report internally inconsistent. **Needs a small server addition — flagged, not half-fixed.**
-- ⏸️ **G-08** "Create Invoice & Pay" → draft that can't be paid — fix = auto-issue on create, which is a **money-FSM product decision** (one-step pay vs explicit Issue step). Needs your call.
-- ⏸️ **G-10** same-status visit PATCH re-runs side effects — real but lower-impact (requires a redundant re-PATCH); deferred.
-- ⏸️ **G-26** owner PIN not persisted across wizard resume — FE; pairs with onboarding, deferred.
-- ⏸️ **G-06 / G-07** drift-gate holes — fix involves deciding whether to **commit generated artifacts** (`specs/api/dist`, SDK) or restructure the diff; a CI-config decision. Flagged.
+- ✅ **G-08** "Create Invoice & Pay" draft dead-end → `useCreateInvoice` now create→issue, so the CTA lands on a payable invoice (`24d12ab3`).
+- ✅ **G-13** revenue-report "Collected" drift → added a payment-date daily breakdown (`dailyCollections`) + `from`/`to` range to `getCollectionsSummary` (aligned the stale TypeSpec with the handler; regenerated SDK+validators); report headline + daily Collected now source the server SoT and agree with the dashboard, and the report's table sums to its own headline (`c49ccc61`).
+- ✅ **G-06 / G-07** false-green drift gates → CI now regenerates the full chain and diffs the **tracked** generated artifacts (api-ts + SDK) instead of gitignored `dist`; verified the regen is deterministic and clean on the in-sync tree (`9dd576e9`).
+
+**P2 — remaining (deferred, lower-priority / needs care):**
+- ⏸️ **G-10** same-status visit PATCH re-runs side effects — real but lower-impact (requires a redundant re-PATCH); heavy completion-prereq setup. Deferred.
+- ⏸️ **G-26** owner PIN not persisted across wizard resume — note: the obvious fix (persist the PIN to localStorage) is a **security anti-pattern** (credential in plaintext storage); the right fix is to re-prompt the PIN on resume. Needs a small UX decision. Deferred.
 
 P3s are mostly dead-code cleanup + missing-coverage and can follow.
 
