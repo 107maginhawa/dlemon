@@ -17,7 +17,7 @@ import { CephTracingOverlay } from './CephTracingOverlay'
 import { CephAngleArcLayer } from './CephAngleArcLayer'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
-import type { CephTransformState } from '@monobase/ceph-math'
+import { screenToImage, type CephTransformState } from '@monobase/ceph-math'
 import { MeasurementShape, AnnotationShape, DrawingPreview, AnnotationActionBar } from './canvas-overlays'
 import { BRAND_GOLD } from '@/constants/brand'
 import { toast } from 'sonner'
@@ -336,8 +336,12 @@ export function ImagingWorkspace({
         setSelectedAnnotationId(null)
         return
       }
+      // No transform yet means no image drawn — nothing to annotate onto.
+      if (!cephTransform) return
       const rect = svg.getBoundingClientRect()
-      const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      // Store geometry in IMAGE space (screenToImage) so overlays stay glued to the
+      // film under zoom/pan/rotate/flip and measurement values are transform-invariant.
+      const newPoint = screenToImage(e.clientX - rect.left, e.clientY - rect.top, cephTransform)
       const action = processToolClick({
         toolMode,
         drawPoints,
@@ -379,7 +383,7 @@ export function ImagingWorkspace({
           return
       }
     },
-    [toolMode, drawPoints, pixelSpacingMm, createMeasurement, onMeasurementSaved],
+    [toolMode, drawPoints, pixelSpacingMm, createMeasurement, onMeasurementSaved, cephTransform],
   )
 
   // Confirm handler for the annotation input dialog. Builds the measurement from
@@ -579,7 +583,9 @@ export function ImagingWorkspace({
               </filter>
             </defs>
 
-            {measurements.map((m) => {
+            {/* Overlays live in image space and map image→screen via the canvas
+                transform; without it (image not drawn yet) there's nothing to place. */}
+            {cephTransform && measurements.map((m) => {
               const isAnnotationType = ['label', 'arrow', 'freehand', 'shape', 'tooth'].includes(m.type)
               const Shape = isAnnotationType ? AnnotationShape : MeasurementShape
               return (
@@ -587,16 +593,18 @@ export function ImagingWorkspace({
                   key={m.id}
                   annotation={m}
                   pixelSpacingMm={pixelSpacingMm}
+                  transform={cephTransform}
                   selectMode={selectMode}
                   isSelected={selectMode && m.id === selectedAnnotationId}
                   onSelect={setSelectedAnnotationId}
                 />
               )
             })}
-            <DrawingPreview toolMode={toolMode} points={drawPoints} />
-            {selectMode && selectedAnnotation && (
+            {cephTransform && <DrawingPreview toolMode={toolMode} points={drawPoints} transform={cephTransform} />}
+            {selectMode && selectedAnnotation && cephTransform && (
               <AnnotationActionBar
                 annotation={selectedAnnotation}
+                transform={cephTransform}
                 onDelete={handleDeleteAnnotation}
                 onLinkFinding={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
               />

@@ -1,7 +1,15 @@
 import { Trash2 } from 'lucide-react'
+import { imageToScreen, type CephTransformState } from '@monobase/ceph-math'
 import type { ImagingAnnotation } from '../hooks/use-measurements'
 import type { ToolMode } from './measurement-toolbar'
 import { BRAND_GOLD } from '@/constants/brand'
+
+// Overlay geometry is stored in IMAGE space; the canvas draws the film under a
+// zoom/pan/rotate/flip transform. Map every rendered point image→screen (mirroring
+// the ceph landmark/tracing layers) so overlays stay glued to the film. Stroke
+// widths / font sizes stay constant screen-size because we map points, not the
+// coordinate system.
+const S = (p: XY, t: CephTransformState): XY => imageToScreen(p.x, p.y, t)
 
 // Inline tag glyph — lucide's Tag isn't resolvable under bun-test CJS interop;
 // inline SVG keeps this render-safe everywhere.
@@ -17,6 +25,7 @@ function TagIcon({ className }: { className?: string }) {
 interface AnnotationShapeProps {
   annotation: ImagingAnnotation
   pixelSpacingMm: number | null | undefined
+  transform: CephTransformState
   selectMode?: boolean
   isSelected?: boolean
   onSelect?: (id: string) => void
@@ -109,7 +118,7 @@ export function annotationAnchor(annotation: ImagingAnnotation): XY | null {
   }
 }
 
-export function MeasurementShape({ annotation, selectMode, isSelected, onSelect }: AnnotationShapeProps) {
+export function MeasurementShape({ annotation, transform, selectMode, isSelected, onSelect }: AnnotationShapeProps) {
   const geo = annotation.geometry as Record<string, unknown>
 
   const wrap = (inner: React.ReactNode) => (
@@ -119,10 +128,10 @@ export function MeasurementShape({ annotation, selectMode, isSelected, onSelect 
   )
 
   if (annotation.type === 'line' || annotation.type === 'distance') {
-    const pts = geo.points as XY[] | undefined
-    if (!pts || pts.length < 2) return null
-    const p1 = pts[0]!
-    const p2 = pts[1]!
+    const raw = geo.points as XY[] | undefined
+    if (!raw || raw.length < 2) return null
+    const p1 = S(raw[0]!, transform)
+    const p2 = S(raw[1]!, transform)
     const mx = (p1.x + p2.x) / 2
     const my = (p1.y + p2.y) / 2
     const uncalibrated = isUncalibratedPxMeasurement(annotation)
@@ -143,11 +152,11 @@ export function MeasurementShape({ annotation, selectMode, isSelected, onSelect 
   }
 
   if (annotation.type === 'angle') {
-    const pts = geo.points as XY[] | undefined
-    if (!pts || pts.length < 3) return null
-    const p1 = pts[0]!
-    const p2 = pts[1]!
-    const p3 = pts[2]!
+    const raw = geo.points as XY[] | undefined
+    if (!raw || raw.length < 3) return null
+    const p1 = S(raw[0]!, transform)
+    const p2 = S(raw[1]!, transform)
+    const p3 = S(raw[2]!, transform)
     const label =
       annotation.measurementValue !== null ? `${annotation.measurementValue.toFixed(1)}°` : ''
     return wrap(
@@ -161,8 +170,9 @@ export function MeasurementShape({ annotation, selectMode, isSelected, onSelect 
   }
 
   if (annotation.type === 'area') {
-    const pts = geo.points as XY[] | undefined
-    if (!pts || pts.length < 3) return null
+    const raw = geo.points as XY[] | undefined
+    if (!raw || raw.length < 3) return null
+    const pts = raw.map((p) => S(p, transform))
     const pointsStr = pts.map((p) => `${p.x},${p.y}`).join(' ')
     const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length
     const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length
@@ -186,7 +196,7 @@ export function MeasurementShape({ annotation, selectMode, isSelected, onSelect 
   return null
 }
 
-export function AnnotationShape({ annotation, selectMode, isSelected, onSelect }: AnnotationShapeProps) {
+export function AnnotationShape({ annotation, transform, selectMode, isSelected, onSelect }: AnnotationShapeProps) {
   const geo = annotation.geometry as Record<string, unknown>
 
   const wrap = (inner: React.ReactNode) => (
@@ -196,9 +206,10 @@ export function AnnotationShape({ annotation, selectMode, isSelected, onSelect }
   )
 
   if (annotation.type === 'label') {
-    const pt = geo.point as XY | undefined
+    const raw = geo.point as XY | undefined
     const text = geo.text as string | undefined
-    if (!pt || !text) return null
+    if (!raw || !text) return null
+    const pt = S(raw, transform)
     return wrap(
       // UJ-IMG-002: annotation text rendered as JSX string child — React escapes it, no XSS possible
       <text x={pt.x} y={pt.y} fill={BRAND_GOLD} fontSize={13} fontWeight={600}>
@@ -208,17 +219,20 @@ export function AnnotationShape({ annotation, selectMode, isSelected, onSelect }
   }
 
   if (annotation.type === 'arrow') {
-    const from = geo.from as XY | undefined
-    const to = geo.to as XY | undefined
-    if (!from || !to) return null
+    const rawFrom = geo.from as XY | undefined
+    const rawTo = geo.to as XY | undefined
+    if (!rawFrom || !rawTo) return null
+    const from = S(rawFrom, transform)
+    const to = S(rawTo, transform)
     return wrap(
       <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={BRAND_GOLD} strokeWidth={2} markerEnd="url(#arrowhead)" />,
     )
   }
 
   if (annotation.type === 'freehand') {
-    const pts = geo.points as XY[] | undefined
-    if (!pts || pts.length < 2) return null
+    const raw = geo.points as XY[] | undefined
+    if (!raw || raw.length < 2) return null
+    const pts = raw.map((p) => S(p, transform))
     return wrap(
       <polyline points={pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke={BRAND_GOLD} strokeWidth={2} />,
     )
@@ -232,23 +246,35 @@ export function AnnotationShape({ annotation, selectMode, isSelected, onSelect }
     const height = geo.height as number | undefined
     if (shapeType == null || x == null || y == null || width == null || height == null) return null
 
+    // Map the two defining corners; derive the axis-aligned screen box. Exact for
+    // zoom/pan/flip. ponytail: under 90/270° rotation the box stays axis-aligned
+    // (position follows the film; footprint isn't re-oriented) — upgrade to a mapped
+    // polygon/rotated <g> only if clinicians rotate boxed regions.
+    const tl = S({ x, y }, transform)
+    const br = S({ x: x + width, y: y + height }, transform)
+    const sx = Math.min(tl.x, br.x)
+    const sy = Math.min(tl.y, br.y)
+    const sw = Math.abs(br.x - tl.x)
+    const sh = Math.abs(br.y - tl.y)
+
     if (shapeType === 'rect') {
       return wrap(
-        <rect x={x} y={y} width={width} height={height} fill={BRAND_GOLD} fillOpacity={0.1} stroke={BRAND_GOLD} strokeWidth={2} />,
+        <rect x={sx} y={sy} width={sw} height={sh} fill={BRAND_GOLD} fillOpacity={0.1} stroke={BRAND_GOLD} strokeWidth={2} />,
       )
     }
     if (shapeType === 'ellipse') {
       return wrap(
-        <ellipse cx={x + width / 2} cy={y + height / 2} rx={width / 2} ry={height / 2} fill={BRAND_GOLD} fillOpacity={0.1} stroke={BRAND_GOLD} strokeWidth={2} />,
+        <ellipse cx={sx + sw / 2} cy={sy + sh / 2} rx={sw / 2} ry={sh / 2} fill={BRAND_GOLD} fillOpacity={0.1} stroke={BRAND_GOLD} strokeWidth={2} />,
       )
     }
     return null
   }
 
   if (annotation.type === 'tooth') {
-    const pt = geo.point as XY | undefined
+    const raw = geo.point as XY | undefined
     const toothNumber = geo.toothNumber as number | undefined
-    if (!pt || toothNumber == null) return null
+    if (!raw || toothNumber == null) return null
+    const pt = S(raw, transform)
     return wrap(
       <>
         <circle cx={pt.x} cy={pt.y} r={14} fill={BRAND_GOLD} fillOpacity={0.2} stroke={BRAND_GOLD} strokeWidth={2} />
@@ -264,6 +290,7 @@ export function AnnotationShape({ annotation, selectMode, isSelected, onSelect }
 
 interface ActionBarProps {
   annotation: ImagingAnnotation
+  transform: CephTransformState
   onDelete: (id: string) => void
   onLinkFinding?: (id: string) => void
 }
@@ -275,9 +302,10 @@ interface ActionBarProps {
  * Rides in the same overlay coord space as the annotation, so it stays glued to
  * its shape. Label/tooth annotations also get a "Link finding" shortcut.
  */
-export function AnnotationActionBar({ annotation, onDelete, onLinkFinding }: ActionBarProps) {
-  const anchor = annotationAnchor(annotation)
-  if (!anchor) return null
+export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFinding }: ActionBarProps) {
+  const raw = annotationAnchor(annotation)
+  if (!raw) return null
+  const anchor = S(raw, transform)
   const showLink =
     (annotation.type === 'label' || annotation.type === 'tooth') && onLinkFinding != null
   const width = showLink ? 96 : 52
@@ -313,10 +341,14 @@ export function AnnotationActionBar({ annotation, onDelete, onLinkFinding }: Act
 interface DrawingPreviewProps {
   toolMode: ToolMode | undefined
   points: XY[]
+  transform: CephTransformState
 }
 
-export function DrawingPreview({ toolMode, points }: DrawingPreviewProps) {
-  if (points.length === 0) return null
+export function DrawingPreview({ toolMode, points: rawPoints, transform }: DrawingPreviewProps) {
+  if (rawPoints.length === 0) return null
+  // In-progress points are captured in image space (screenToImage on click); map
+  // back to screen for the live preview, same as saved overlays.
+  const points = rawPoints.map((p) => S(p, transform))
 
   if (toolMode === 'calibration' || toolMode === 'distance') {
     const p0 = points[0]
