@@ -389,16 +389,16 @@ export class ImagingRepository {
   }
 
   async listMeasurementAnnotations(imageId: string): Promise<ImagingAnnotation[]> {
+    // Return EVERY visible overlay for the image — measurements (line/angle/area)
+    // AND annotations (label/arrow/freehand/shape/tooth). The frontend renders all
+    // of them from this single list. A stale type whitelist here (line/angle/area
+    // only) silently dropped saved annotations on refetch — a Label would save,
+    // toast success, then vanish. The annotation-type enum IS the full overlay set,
+    // so scoping by imageId + visible is both correct and drift-proof.
     return await this.db
       .select()
       .from(imagingAnnotations)
-      .where(
-        and(
-          eq(imagingAnnotations.imageId, imageId),
-          inArray(imagingAnnotations.type, ['line', 'angle', 'area']),
-          eq(imagingAnnotations.visible, true),
-        ),
-      );
+      .where(and(eq(imagingAnnotations.imageId, imageId), eq(imagingAnnotations.visible, true)));
   }
 
   async findAnnotationById(id: string): Promise<ImagingAnnotation | undefined> {

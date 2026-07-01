@@ -3,8 +3,9 @@
  *
  * GET /dental/imaging/images/:imageId/measurements
  *
- * Returns measurement annotations (line/angle/area) for an image.
- * Only visible annotations are returned.
+ * Returns every visible overlay for an image — measurements (line/angle/area)
+ * AND annotations (label/arrow/freehand/shape/tooth). The frontend renders all
+ * overlay types from this single list.
  */
 
 import type { BaseContext } from '@/types/app';

@@ -784,19 +784,23 @@ describe('createMeasurement', () => {
 // =============================================================================
 
 describe('listMeasurements', () => {
-  test('happy path: returns only measurement-type (line/angle/area) annotations', async () => {
+  // REGRESSION (UJ-IMG "label saved but nothing shows"): the list endpoint feeds
+  // BOTH the measurement overlays (line/angle/area) AND the annotation overlays
+  // (label/arrow/freehand/shape/tooth) — the frontend renders every type from
+  // this single list. The old assertion here *encoded the bug*, expecting label
+  // to be excluded, which is exactly why a saved Label vanished on refetch.
+  test('happy path: returns measurement AND annotation overlays for the image', async () => {
     const { imageId } = await seedStudyWithImage();
     await seedAnnotation(imageId, 'line');
-    await seedAnnotation(imageId, 'label'); // should be excluded
+    await seedAnnotation(imageId, 'label'); // annotation overlays MUST be returned
 
     const app = buildTestApp(DENTIST);
     const res = await app.request(`/dental/imaging/images/${imageId}/measurements`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as { items: { type: string }[] };
     expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0].type).toBe('line');
+    expect(body.items.map((i) => i.type).sort()).toEqual(['label', 'line']);
   });
 
   test('404 when image does not exist', async () => {
