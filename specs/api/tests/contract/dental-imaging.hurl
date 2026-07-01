@@ -758,6 +758,24 @@ HTTP 200
 jsonpath "$.items" isCollection
 
 
+# 25b. Update measurement (move) — PATCH new geometry + value; type stays immutable.
+PATCH {{api}}/dental/imaging/measurements/{{measurement_id}}
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "geometry": {"type": "distance", "points": [{"x": 110, "y": 210}, {"x": 170, "y": 280}]},
+  "measurementValue": 12.5,
+  "measurementUnit": "mm"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{measurement_id}}"
+# type is immutable — a moved 'distance' overlay stays stored as 'line'.
+jsonpath "$.type" == "line"
+jsonpath "$.geometry.points[1].x" == 170
+jsonpath "$.measurementValue" == 12.5
+
+
 # 26. Delete measurement
 DELETE {{api}}/dental/imaging/measurements/{{measurement_id}}
 Cookie: better-auth.session_token={{session_token}}
