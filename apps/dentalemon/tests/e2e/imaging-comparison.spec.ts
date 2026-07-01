@@ -48,21 +48,30 @@ test.describe('PatientImageList comparison selection — IMG-17', () => {
     await page.goto(IMAGING_TEST_URL)
   })
 
-  test('"Compare ▶" button is not visible when 0 images selected', async ({ page }) => {
-    await expect(page.getByTestId('compare-btn')).not.toBeVisible()
+  // N3: Compare is a discoverable affordance — ALWAYS visible, disabled until
+  // exactly two 2-D images are selected (it enables at 2). These assert the
+  // disabled/enabled state, not visibility.
+  test('"Compare" button is present but disabled with 0 images selected', async ({ page }) => {
+    await expect(page.getByTestId(/^select-image-/).first()).toBeVisible()
+    const compare = page.getByTestId('compare-btn')
+    await expect(compare).toBeVisible()
+    await expect(compare).toBeDisabled()
   })
 
-  test('"Compare ▶" button is not visible when only 1 image selected', async ({ page }) => {
-    const firstCheckbox = page.getByTestId(/^select-image-/).first()
-    await firstCheckbox.check()
-    await expect(page.getByTestId('compare-btn')).not.toBeVisible()
+  test('"Compare" button stays disabled when only 1 image is selected', async ({ page }) => {
+    await page.getByTestId(/^select-image-/).first().check()
+    const compare = page.getByTestId('compare-btn')
+    await expect(compare).toBeVisible()
+    await expect(compare).toBeDisabled()
   })
 
-  test('"Compare ▶" button becomes visible when exactly 2 images are selected', async ({ page }) => {
+  test('"Compare ▶" button enables when exactly 2 images are selected', async ({ page }) => {
     const checkboxes = page.getByTestId(/^select-image-/)
     await checkboxes.nth(0).check()
     await checkboxes.nth(1).check()
-    await expect(page.getByTestId('compare-btn')).toBeVisible()
+    const compare = page.getByTestId('compare-btn')
+    await expect(compare).toBeVisible()
+    await expect(compare).toBeEnabled()
   })
 
   test('3rd checkbox click does not add a 3rd selection (max 2 enforced)', async ({ page }) => {

@@ -13,6 +13,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
 import { signVisitConsent } from './fixtures';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 async function setup(page: Page) {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
@@ -165,6 +166,8 @@ test.describe('Payment Plan', () => {
   });
 
   test('payment plan installment schedule RENDERS in the UI (3 installments)', async ({ page }) => {
+    // Payment-plan UI is v2 (workspace.advanced_billing) — opt in before navigating.
+    await enableWorkspaceFlags(page, 'workspace.advanced_billing');
     const { patientId, branchId, memberId } = await setup(page);
     const visitId = await createAndCompleteVisit(page, patientId, branchId, memberId);
 

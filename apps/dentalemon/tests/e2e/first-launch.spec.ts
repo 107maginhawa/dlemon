@@ -14,7 +14,7 @@ const API = 'http://localhost:7213';
 
 test.describe('First Launch Onboarding', () => {
   test('can set up clinic, dentist, and first patient', async ({ page }) => {
-    const suffix = Date.now();
+    const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
     // Sign up
     await page.goto('http://localhost:3003/auth/sign-up');

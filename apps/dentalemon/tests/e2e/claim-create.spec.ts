@@ -8,6 +8,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 interface Seeded {
   patientId: string;
@@ -61,6 +62,8 @@ async function seedClaimable(page: Page, branchId: string, memberId: string): Pr
 
 test.describe('Insurance claims: file a claim from the worklist (slice 1b.A)', () => {
   test('New claim → patient → payer → invoice → file → claim appears in worklist', async ({ page }) => {
+    // Insurance claims are v2 (workspace.advanced_billing) — opt in before navigating.
+    await enableWorkspaceFlags(page, 'workspace.advanced_billing');
     const { branchId, memberId } = await signUpOnboardAndUnlock(page, { tier: 'clinic', label: 'Claim' });
     const seeded = await seedClaimable(page, branchId, memberId);
 

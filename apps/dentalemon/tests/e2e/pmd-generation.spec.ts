@@ -22,6 +22,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { setupDentalOrg, createDentalPatient, gotoApp, API } from './fixtures';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 interface SeedCtx {
   patientId: string;
@@ -137,6 +138,8 @@ async function createAndCompleteVisit(page: Page, ctx: SeedCtx): Promise<string>
 
 test.describe('FR12.6: Share PMD Button on Completed Visits', () => {
   test('Share PMD button appears on completed visit in workspace', async ({ page }) => {
+    // Share PMD is v2 (workspace.pmd) — opt in before navigating.
+    await enableWorkspaceFlags(page, 'workspace.pmd');
     const ctx = await setup(page, 'PMD Share Patient');
     await createAndCompleteVisit(page, ctx);
 

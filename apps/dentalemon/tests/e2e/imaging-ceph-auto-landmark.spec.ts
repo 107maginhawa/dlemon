@@ -12,6 +12,7 @@ import {
   assertWorkspaceReady,
   assertNoLoginRedirect,
 } from './helpers/imaging-harness'
+import { enableWorkspaceFlags } from './helpers/feature-flags'
 
 /**
  * P1-10 — AI / Auto Cephalometric Landmarking (Phase 0) E2E.
@@ -60,6 +61,8 @@ function detectResult() {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Cephalometric analysis is v2 (workspace.ceph) — opt in before navigating.
+  await enableWorkspaceFlags(page, 'workspace.ceph')
   await installDefaultApiStub(page)
 })
 

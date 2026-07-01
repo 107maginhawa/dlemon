@@ -51,7 +51,7 @@ test.describe('Cold-start full loop', () => {
   test('fresh signup → full clinical→billing→back-office loop with content assertions', async ({ errorAwarePage: page }) => {
     test.setTimeout(180_000);
 
-    const suffix = Date.now();
+    const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
     const email = `coldstart-${suffix}@example.org`;
     const password = 'E2eColdStart123!';
     const clinicName = `Cold Start Clinic ${suffix}`;

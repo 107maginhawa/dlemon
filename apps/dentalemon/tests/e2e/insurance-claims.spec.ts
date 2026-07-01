@@ -10,12 +10,13 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 const API = 'http://localhost:7213';
 const APP = 'http://localhost:3003';
 
 async function signUpAndSeed(page: Page) {
-  const suffix = Date.now();
+  const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const email = `insurance-e2e-${suffix}@example.org`;
   const password = 'E2eTestPass123!';
 
@@ -41,18 +42,29 @@ async function signUpAndSeed(page: Page) {
     throw new Error(`Sign-up POST returned ${response.status()}: ${body.slice(0, 500)}`);
   }
   await page.waitForURL((url: URL) => !url.pathname.includes('/auth/sign-up'), { timeout: 15000 });
+  // A post-signup client redirect can still be in flight here, which destroys the
+  // page.evaluate execution context mid-fetch. Settle first, then retry on that race.
+  await page.waitForLoadState('networkidle').catch(() => {});
 
   // Mark email verified + create the caller's person record so the workspace/
   // dashboard guards don't bounce the authenticated owner to a setup wizard.
-  await page.evaluate(async (api) => {
-    await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
-    await fetch(`${api}/persons`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ firstName: 'Insurance', lastName: 'Owner' }),
-    });
-  }, API);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.evaluate(async (api) => {
+        await fetch(`${api}/dev/verify-email`, { method: 'POST', credentials: 'include' });
+        await fetch(`${api}/persons`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ firstName: 'Insurance', lastName: 'Owner' }),
+        });
+      }, API);
+      break;
+    } catch (err) {
+      if (attempt === 2 || !/context was destroyed|Execution context/i.test(String(err))) throw err;
+      await page.waitForLoadState('networkidle').catch(() => {});
+    }
+  }
 
   // Provision org + default branch + dentist_owner membership in ONE self-service
   // call (org creation is admin-only now — EM-ORG-002). The caller becomes owner.
@@ -149,6 +161,11 @@ async function spaNavigate(page: Page, path: string): Promise<void> {
 }
 
 test.describe('Insurance / Revenue-Cycle (P1-26)', () => {
+  // Insurance / revenue-cycle is v2 (workspace.advanced_billing) — opt in before each nav.
+  test.beforeEach(async ({ page }) => {
+    await enableWorkspaceFlags(page, 'workspace.advanced_billing');
+  });
+
   test('Insurance tab surfaces the claims worklist (empty state for a fresh branch)', async ({ page }) => {
     await signUpAndSeed(page);
     await spaNavigate(page, '/billing');

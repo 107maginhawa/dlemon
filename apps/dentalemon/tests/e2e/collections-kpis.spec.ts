@@ -7,9 +7,12 @@
  */
 import { test, expect } from '@playwright/test';
 import { signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 test.describe('AR KPI dashboard', () => {
   test('Phase 3.1: the Metrics tab renders the KPI cards', async ({ page }) => {
+    // Collections/AR is v2 (workspace.advanced_billing) — opt in before navigating.
+    await enableWorkspaceFlags(page, 'workspace.advanced_billing');
     await signUpOnboardAndUnlock(page, { tier: 'clinic', label: 'Kpis' });
 
     await spaNavigate(page, '/billing');

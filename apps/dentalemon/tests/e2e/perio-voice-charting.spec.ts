@@ -75,7 +75,7 @@ async function feed(page: Page, transcript: string, confidence = 1, isFinal = tr
 }
 
 async function signUpSeedOrgAndVisit(page: Page) {
-  const suffix = Date.now();
+  const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const email = `perio-voice-${suffix}@example.org`;
   const password = 'E2eTestPass123!';
 

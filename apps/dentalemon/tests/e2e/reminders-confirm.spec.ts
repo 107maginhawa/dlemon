@@ -18,7 +18,7 @@ const API = 'http://localhost:7213';
 const APP = 'http://localhost:3003';
 
 async function signUpAndSeedOrg(page: Page) {
-  const suffix = Date.now();
+  const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const email = `remind-e2e-${suffix}@example.org`;
   const password = 'E2eTestPass123!';
 

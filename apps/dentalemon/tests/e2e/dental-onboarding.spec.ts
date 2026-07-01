@@ -85,7 +85,7 @@ async function unlockToDashboard(page: Page, pin: string): Promise<void> {
 
 /** Sign up + complete 2-step person profile. Returns page on the dental-onboarding or dashboard screen. */
 async function signUpAndSetupPerson(page: Page): Promise<void> {
-  const suffix = Date.now();
+  const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const email = `dental-onboarding-${suffix}@example.org`;
   const password = 'TestPass123!';
 
@@ -163,11 +163,18 @@ async function signUpAndSetupPerson(page: Page): Promise<void> {
 
   // Complete person profile if we landed on /onboarding
   if (page.url().includes('/onboarding') && !page.url().includes('/dental-onboarding')) {
-    // Step 1: Personal info (select DOB)
-    await page.getByLabel(/date of birth/i).click();
+    // Step 1: Personal info (select DOB). Wait for the profile form to actually
+    // paint before interacting — under parallel load the /onboarding route can
+    // win the URL race before its form renders, which flaked the DOB click.
+    await page.waitForLoadState('networkidle').catch(() => {});
+    const dobTrigger = page.getByLabel(/date of birth/i);
+    await dobTrigger.waitFor({ state: 'visible', timeout: 15000 });
+    await dobTrigger.click();
     await page.getByRole('combobox', { name: /choose the year/i }).selectOption('1985');
     await page.getByRole('combobox', { name: /choose the month/i }).selectOption({ index: 0 });
-    await page.getByRole('button', { name: /January 1st, 1985/i }).click();
+    const dayBtn = page.getByRole('button', { name: /January 1st, 1985/i });
+    await dayBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await dayBtn.click();
     await page.click('button:has-text("Next")');
 
     // Step 2: Skip address

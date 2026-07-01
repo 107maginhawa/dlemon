@@ -9,9 +9,12 @@
  */
 import { test, expect } from '@playwright/test';
 import { signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 test.describe('Collections worklist', () => {
   test('BR-051: the Worklist tab renders the worklist table', async ({ page }) => {
+    // Collections/AR is v2 (workspace.advanced_billing) — opt in before navigating.
+    await enableWorkspaceFlags(page, 'workspace.advanced_billing');
     await signUpOnboardAndUnlock(page, { tier: 'clinic', label: 'Worklist' });
 
     await spaNavigate(page, '/billing');

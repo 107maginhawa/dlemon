@@ -12,6 +12,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { API, signUpOnboardAndUnlock, spaNavigate } from './helpers/e2e-seed';
+import { enableWorkspaceFlags } from './helpers/feature-flags';
 
 async function signUpAndSeedBilling(page: Page) {
   // Provision org+branch+owner via /dental/onboarding (org creation is admin-only
@@ -247,6 +248,8 @@ test.describe('Billing (FR4.x)', () => {
   // FIX-005: the owner creates a payment plan end-to-end and the plan view renders
   // its installment schedule — the headline PH installment journey.
   test('FR4.3: owner creates a 6×monthly payment plan and the plan view shows it', async ({ page }) => {
+    // Payment plans are v2 (workspace.advanced_billing) — opt in before navigating.
+    await enableWorkspaceFlags(page, 'workspace.advanced_billing');
     const { branchId, memberId } = await signUpAndSeedBilling(page);
     const invoiceId = await seedIssuedInvoice(page, branchId, memberId);
 

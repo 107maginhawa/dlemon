@@ -166,7 +166,7 @@ test.describe('Staff Management', () => {
     // onboarding via /dental/onboarding. The owner then adds a SEPARATE staff_full member
     // (member creation by an owner is allowed) linked to a second signed-up user. That
     // staff_full user unlocks their own PIN session and is the one denied /staff.
-    const suffix = Date.now();
+    const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
     const pin = '246802';
 
     // ── Owner context: onboard org + branch ──────────────────────────────

@@ -10,6 +10,7 @@ import {
   assertWorkspaceReady,
   assertNoLoginRedirect,
 } from './helpers/imaging-harness'
+import { enableWorkspaceFlags } from './helpers/feature-flags'
 
 /**
  * Cephalometric export & report E2E spec — CEPH-06 through CEPH-10.
@@ -28,6 +29,8 @@ const REPORT_ROUTE_URL = `/imaging-ceph-report/${IMAGE_ID}?version=1`
 // backend request fails loudly rather than hitting a real server.
 // setupCephRoutes / per-test overrides are registered after this and win.
 test.beforeEach(async ({ page }) => {
+  // Cephalometric analysis is v2 (workspace.ceph) — opt in before navigating.
+  await enableWorkspaceFlags(page, 'workspace.ceph')
   await installDefaultApiStub(page)
 })
 

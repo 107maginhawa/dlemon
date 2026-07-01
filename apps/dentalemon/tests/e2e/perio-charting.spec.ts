@@ -25,7 +25,7 @@ interface SeedContext {
 }
 
 async function signUpSeedOrgAndVisit(page: Page): Promise<SeedContext> {
-  const suffix = Date.now();
+  const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const email = `perio-e2e-${suffix}@example.org`;
   const password = 'E2eTestPass123!';
 

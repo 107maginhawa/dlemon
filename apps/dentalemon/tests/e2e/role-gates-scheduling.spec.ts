@@ -30,7 +30,7 @@ async function signUpApi(page: { evaluate: Function }, email: string, name: stri
 
 test.describe('Role Gates: staff_scheduling blocked from clinical writes', () => {
   test('staff_scheduling gets 403 on treatment, prescription, and invoice-void endpoints', async ({ browser }: { browser: Browser }) => {
-    const suffix = Date.now();
+    const suffix = `${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
     // ── Owner context: set up org, branch, patient, visit ─────────────────
     const ownerCtx = await browser.newContext();
