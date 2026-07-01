@@ -82,13 +82,14 @@ test.describe('Annotation select & remove', () => {
       { id: 'seed-1', imageId: 'test', type: 'shape', geometry: { type: 'shape', shapeType: 'rect', x: 60, y: 60, width: 140, height: 90 }, measurementValue: null, measurementUnit: null, toothNumber: null, visible: true, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
     ])
     await ready(page)
-    const svg = page.locator('[data-testid="measurement-svg-overlay"]')
-    const box = (await svg.boundingBox())!
+    // Overlays render at transform-mapped screen positions (they store image-space
+    // geometry), so target the rendered element rather than guessed coordinates.
+    const rect = page.locator('[data-testid="annotation-shape"] rect')
 
     // No delete control until we select. Enter Select mode (no draw tool armed).
     await expect(page.getByTestId('annotation-delete')).toHaveCount(0)
     await page.getByTestId('tool-select').click()
-    await page.mouse.click(box.x + 130, box.y + 105) // inside the rect
+    await rect.click()
     await expect(page.getByTestId('annotation-delete')).toBeVisible()
 
     // Escape deselects (control disappears).
@@ -96,7 +97,7 @@ test.describe('Annotation select & remove', () => {
     await expect(page.getByTestId('annotation-delete')).toHaveCount(0)
 
     // Reselect, then remove with the keyboard.
-    await page.mouse.click(box.x + 130, box.y + 105)
+    await rect.click()
     await expect(page.getByTestId('annotation-delete')).toBeVisible()
     await page.keyboard.press('Delete')
     await expect(page.locator('[data-testid="measurement-svg-overlay"] rect')).toHaveCount(0)
