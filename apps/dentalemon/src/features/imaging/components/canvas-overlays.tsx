@@ -323,9 +323,11 @@ export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFin
   const isTextual = annotation.type === 'label' || annotation.type === 'tooth'
   const showEdit = isTextual && onEdit != null
   const showLink = isTextual && onLinkFinding != null
-  // 44px touch target + gap per button, plus horizontal padding.
+  // 44px touch target per button + px-1 (8px) padding + the gap-1 (4px) flex gaps
+  // BETWEEN buttons. Omitting the gaps under-sizes the box so the buttons shrink
+  // below the 44px WCAG/iPad minimum (2 buttons → 100px, 3 → 148px).
   const count = 1 + (showEdit ? 1 : 0) + (showLink ? 1 : 0)
-  const width = 8 + count * 44
+  const width = 8 + count * 44 + Math.max(0, count - 1) * 4
   const height = 52
   return (
     <foreignObject x={anchor.x + 6} y={Math.max(0, anchor.y - height - 6)} width={width} height={height} data-testid="annotation-action-bar">
@@ -335,7 +337,7 @@ export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFin
           aria-label="Delete annotation"
           data-testid="annotation-delete"
           onClick={(e) => { e.stopPropagation(); onDelete(annotation.id) }}
-          className="flex h-11 w-11 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
         >
           <Trash2 className="h-5 w-5" aria-hidden />
         </button>
@@ -345,7 +347,7 @@ export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFin
             aria-label="Edit annotation"
             data-testid="annotation-edit"
             onClick={(e) => { e.stopPropagation(); onEdit?.(annotation.id) }}
-            className="flex h-11 w-11 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             <Pencil className="h-5 w-5" aria-hidden />
           </button>
@@ -356,7 +358,7 @@ export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFin
             aria-label="Link to finding"
             data-testid="annotation-link-finding"
             onClick={(e) => { e.stopPropagation(); onLinkFinding?.(annotation.id) }}
-            className="flex h-11 w-11 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             <TagIcon className="h-5 w-5" />
           </button>
