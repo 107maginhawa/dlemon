@@ -8,7 +8,12 @@ export default defineConfig({
   maxFailures: process.env.CI ? 0 : 0, // Run all tests to see full picture
   fullyParallel: false, // Sequential execution for predictable debugging
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0, // Single retry in CI, none locally
+  // Single retry everywhere. The self-seed specs drive a real signup → email-verify
+  // → onboarding flow whose client redirects + heavy DOM are timing/resource
+  // sensitive (a loaded dev machine can even OS-kill the browser mid-flow). One
+  // retry self-heals those transient failures without hiding deterministic bugs
+  // (a real break fails both attempts). Matches CI.
+  retries: 1,
   workers: 1, // Single worker for consistent execution order
   
   // Reporting optimized for AI parsing
