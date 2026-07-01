@@ -79,6 +79,22 @@ export interface ProcessToolClickArgs {
   pixelSpacingMm: number | null
 }
 
+/**
+ * Keyboard decision for the annotation SELECT mode. Delete/Backspace removes the
+ * selected annotation; Escape clears the selection. Returns null when there is
+ * nothing selected or the key is irrelevant. Pure so the shortcut contract is
+ * unit-testable without the canvas.
+ */
+export function decideAnnotationKey(
+  key: string,
+  hasSelection: boolean,
+): 'delete' | 'deselect' | null {
+  if (!hasSelection) return null
+  if (key === 'Delete' || key === 'Backspace') return 'delete'
+  if (key === 'Escape') return 'deselect'
+  return null
+}
+
 export function processToolClick({
   toolMode,
   drawPoints,
@@ -86,7 +102,9 @@ export function processToolClick({
   isDoubleClick,
   pixelSpacingMm,
 }: ProcessToolClickArgs): ToolClickAction {
-  if (toolMode === 'none') return { type: 'noop' }
+  // 'none' = viewer idle (canvas pan reachable); 'select' = pick/remove existing
+  // annotations. Neither draws, so a canvas click never commits a new overlay.
+  if (toolMode === 'none' || toolMode === 'select') return { type: 'noop' }
 
   const newPoints = [...drawPoints, newPoint]
 

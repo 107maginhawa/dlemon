@@ -57,4 +57,28 @@ describe('AnnotationToolbar', () => {
     await user.click(screen.getByRole('button', { name: 'Tooth' }));
     expect(onToolChange).toHaveBeenCalledWith('tooth');
   });
+
+  test('renders a Select tool that enters select mode', async () => {
+    const user = userEvent.setup();
+    const { onToolChange } = renderToolbar({ toolMode: 'none' });
+    const selectBtn = screen.getByRole('button', { name: 'Select' });
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('false');
+    await user.click(selectBtn);
+    expect(onToolChange).toHaveBeenCalledWith('select');
+  });
+
+  test('Select is pressed in select mode and toggles back to none', async () => {
+    const user = userEvent.setup();
+    const { onToolChange } = renderToolbar({ toolMode: 'select' });
+    const selectBtn = screen.getByRole('button', { name: 'Select' });
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('true');
+    await user.click(selectBtn);
+    expect(onToolChange).toHaveBeenCalledWith('none');
+  });
+
+  test('shows a persistent "Saved automatically" hint (no Save button to hunt for)', () => {
+    renderToolbar();
+    expect(screen.getByTestId('autosave-hint').textContent).toContain('Saved automatically');
+    expect(screen.queryByRole('button', { name: /^Save$/ })).toBeNull();
+  });
 });

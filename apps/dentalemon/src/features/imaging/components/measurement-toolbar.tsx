@@ -1,6 +1,6 @@
 import { Badge } from '@monobase/ui'
 
-export type ToolMode = 'none' | 'calibration' | 'distance' | 'angle' | 'area' | 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth' | 'ceph'
+export type ToolMode = 'none' | 'select' | 'calibration' | 'distance' | 'angle' | 'area' | 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth' | 'ceph'
 
 /**
  * Tools that produce linear or area measurements in physical units (mm / mm²).

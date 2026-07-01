@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { composeCephCanvas, canvasToPngBlob } from '../lib/ceph-export'
 import type { LayerState } from './CephLayerPanel'
 import { useOfflineCache } from '../hooks/use-offline-cache'
-import { useMeasurements } from '../hooks/use-measurements'
+import { useMeasurements, type CreateMeasurementInput } from '../hooks/use-measurements'
 import { MeasurementToolbar, type ToolMode } from './measurement-toolbar'
 import { AnnotationToolbar } from './annotation-toolbar'
 import { CalibrationDialog } from './calibration-dialog'
@@ -18,7 +18,7 @@ import { CephAngleArcLayer } from './CephAngleArcLayer'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import type { CephTransformState } from '@monobase/ceph-math'
-import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-overlays'
+import { MeasurementShape, AnnotationShape, DrawingPreview, AnnotationActionBar } from './canvas-overlays'
 import { BRAND_GOLD } from '@/constants/brand'
 import { toast } from 'sonner'
 import { toastError } from '@/lib/error-toast'
@@ -30,7 +30,15 @@ import {
   buildToothMeasurement,
   buildCalibrationRequest,
   confirmCalibrationSave,
+  decideAnnotationKey,
 } from './imaging-workspace.handlers'
+
+// distance/angle/area are the numeric MEASUREMENT tools; label/arrow/freehand/
+// shape/tooth are ANNOTATION overlays. A "Measurement saved" toast for a text
+// label reads wrong ("I didn't measure anything") — word the toast per category.
+const MEASUREMENT_TYPES = new Set(['distance', 'angle', 'area'])
+const savedLabelFor = (type: string): string =>
+  MEASUREMENT_TYPES.has(type) ? 'Measurement saved' : 'Annotation saved'
 
 interface ImagingWorkspaceProps {
   imageId: string
@@ -119,6 +127,66 @@ export function ImagingWorkspace({
   const pixelSpacingMm = externalPixelSpacingMm ?? internalPixelSpacingMm
 
   const { measurements, createMeasurement, deleteMeasurement } = useMeasurements(imageId)
+
+  // Selection model: Select mode lets the clinician pick an existing overlay to
+  // remove it — reachable without arming a draw tool, and a click never starts a
+  // new drawing (see processToolClick's 'select' short-circuit).
+  const selectMode = toolMode === 'select'
+  const selectedAnnotation = selectedAnnotationId
+    ? (measurements.find((m) => m.id === selectedAnnotationId) ?? null)
+    : null
+  // Focus the viewport when an annotation is selected so keyboard Delete/Esc work
+  // immediately (a paired keyboard on iPad, or after a tap-select).
+  const viewportRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (selectMode && selectedAnnotationId) viewportRef.current?.focus()
+  }, [selectMode, selectedAnnotationId])
+
+  // Delete is destructive on autosaved clinical data with no server-side undo, so
+  // offer a client-side Undo (re-POST the same overlay) on the confirmation toast.
+  const handleDeleteAnnotation = useCallback(
+    (id: string) => {
+      const target = measurements.find((m) => m.id === id)
+      setSelectedAnnotationId(null)
+      deleteMeasurement.mutate(id, {
+        onError: (err) => toastError(err, 'Could not delete annotation.'),
+        onSuccess: () => {
+          if (!target) {
+            toast.success('Annotation deleted')
+            return
+          }
+          const restore: CreateMeasurementInput = {
+            type: target.type,
+            geometry: target.geometry,
+            measurementValue: target.measurementValue,
+            measurementUnit: target.measurementUnit,
+          }
+          toast.success('Annotation deleted', {
+            action: {
+              label: 'Undo',
+              onClick: () =>
+                createMeasurement.mutate(restore, {
+                  onError: (err) => toastError(err, 'Could not restore annotation.'),
+                }),
+            },
+          })
+        },
+      })
+    },
+    [measurements, deleteMeasurement, createMeasurement],
+  )
+
+  // Select-mode shortcuts: Delete/Backspace removes the selection, Esc clears it.
+  const handleAnnotationKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const decision = decideAnnotationKey(e.key, selectedAnnotationId != null)
+      if (!decision) return
+      e.preventDefault()
+      if (decision === 'delete') handleDeleteAnnotation(selectedAnnotationId!)
+      else setSelectedAnnotationId(null)
+    },
+    [selectedAnnotationId, handleDeleteAnnotation],
+  )
 
   const { getCachedBlob, setCachedBlob } = useOfflineCache()
 
@@ -262,6 +330,12 @@ export function ImagingWorkspace({
     (e: React.MouseEvent<SVGSVGElement>) => {
       const svg = svgRef.current
       if (!svg) return
+      // In Select mode a bare canvas click (annotations stop propagation) clears
+      // the selection; it must never fall through to the drawing reducer.
+      if (toolMode === 'select') {
+        setSelectedAnnotationId(null)
+        return
+      }
       const rect = svg.getBoundingClientRect()
       const newPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top }
       const action = processToolClick({
@@ -285,7 +359,13 @@ export function ImagingWorkspace({
           return
         case 'commit':
           createMeasurement.mutate(action.input, {
-            onSuccess: () => toast.success('Measurement saved'),
+            onSuccess: (created) => {
+              toast.success(savedLabelFor(action.input.type))
+              // Hybrid flow: drop into Select with the fresh overlay picked, so a
+              // mistake is immediately removable without hunting for it.
+              setSelectedAnnotationId(created.id)
+              setToolMode('select')
+            },
             onError: (err) => toastError(err, 'Could not save measurement.'),
           })
           setDrawPoints([])
@@ -320,7 +400,11 @@ export function ImagingWorkspace({
         return
       }
       createMeasurement.mutate(input, {
-        onSuccess: () => toast.success('Measurement saved'),
+        onSuccess: (created) => {
+          toast.success(savedLabelFor(input.type))
+          setSelectedAnnotationId(created.id)
+          setToolMode('select')
+        },
         onError: (err) => toastError(err, 'Could not save measurement.'),
       })
       setDrawPoints([])
@@ -457,10 +541,14 @@ export function ImagingWorkspace({
 
       <div className="flex flex-row flex-1 overflow-hidden">
         <div
+          ref={viewportRef}
           style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)`, flex: 1, position: 'relative' }}
           className="overflow-hidden outline-none"
-          tabIndex={isCeph && cephPanelOpen ? 0 : undefined}
-          onKeyDown={handleCephKeyDown}
+          tabIndex={(isCeph && cephPanelOpen) || selectMode ? 0 : undefined}
+          onKeyDown={(e) => {
+            handleCephKeyDown(e)
+            if (selectMode) handleAnnotationKeyDown(e)
+          }}
           onPointerMove={(e) => {
             if (!isCeph || !cephPanelOpen || !cephSelectedCode) return
             const rect = e.currentTarget.getBoundingClientRect()
@@ -474,7 +562,7 @@ export function ImagingWorkspace({
             className="absolute inset-0 w-full h-full"
             data-testid="measurement-svg-overlay"
             style={{
-              cursor: toolMode !== 'none' ? 'crosshair' : 'default',
+              cursor: toolMode === 'select' ? 'default' : toolMode !== 'none' ? 'crosshair' : 'default',
               pointerEvents: toolMode !== 'none' ? 'auto' : 'none',
             }}
             onClick={handleSvgClick}
@@ -483,37 +571,36 @@ export function ImagingWorkspace({
               <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
                 <polygon points="0 0, 8 3, 0 6" fill={BRAND_GOLD} />
               </marker>
+              {/* Selected-annotation cue: a white halo. Gold overlays glow white so the
+                  selection reads on the dark film without relying on colour alone (paired
+                  with the action bar as the non-colour signal). */}
+              <filter id="annotationSelectGlow" x="-40%" y="-40%" width="180%" height="180%">
+                <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#FFFFFF" floodOpacity="0.9" />
+              </filter>
             </defs>
 
             {measurements.map((m) => {
               const isAnnotationType = ['label', 'arrow', 'freehand', 'shape', 'tooth'].includes(m.type)
-              if (isAnnotationType) {
-                return (
-                  <AnnotationShape
-                    key={m.id}
-                    annotation={m}
-                    pixelSpacingMm={pixelSpacingMm}
-                    onDelete={(id) =>
-                      deleteMeasurement.mutate(id, {
-                        // ISSUE-027: createMeasurement toasts on failure but delete
-                        // was silent — a failed delete just reverted with no feedback.
-                        onError: (err) => toastError(err, 'Could not delete measurement.'),
-                      })
-                    }
-                    onAnnotationClick={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
-                  />
-                )
-              }
+              const Shape = isAnnotationType ? AnnotationShape : MeasurementShape
               return (
-                <MeasurementShape
+                <Shape
                   key={m.id}
                   annotation={m}
                   pixelSpacingMm={pixelSpacingMm}
-                  onDelete={(id) => deleteMeasurement.mutate(id)}
+                  selectMode={selectMode}
+                  isSelected={selectMode && m.id === selectedAnnotationId}
+                  onSelect={setSelectedAnnotationId}
                 />
               )
             })}
             <DrawingPreview toolMode={toolMode} points={drawPoints} />
+            {selectMode && selectedAnnotation && (
+              <AnnotationActionBar
+                annotation={selectedAnnotation}
+                onDelete={handleDeleteAnnotation}
+                onLinkFinding={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
+              />
+            )}
           </svg>
 
           {isCeph && cephPanelOpen && cephTransform && (
