@@ -133,6 +133,30 @@ export function createDatabase(config: DatabaseConfig): DatabaseInstance {
     cleanUrl = config.url;
   }
 
+  // Per-connection session settings, applied via the libpq `options` startup
+  // parameter so they take effect during the connection handshake — BEFORE the
+  // client is handed to a pool consumer.
+  //
+  // These MUST NOT be set via an async `pool.on('connect')` handler: pg does not
+  // await async connect listeners before releasing the client, so a `SET ...`
+  // query there races the first consumer's query on the same client (pg logs
+  // "client is already executing a query"). For drizzle's boot-time `migrate()`
+  // that race interleaves migration statements and corrupts ordering — a fresh DB
+  // then fails with spurious "relation does not exist" errors mid-migration.
+  //
+  // 1. Pin the session to UTC. `baseEntityFields.createdAt/updatedAt` are naive
+  //    `timestamp` columns written via now(); comparing them to the app's
+  //    tz-aware date windows is only correct when the DB session TZ matches the
+  //    app TZ. Prod/CI run UTC; a non-UTC dev Postgres (e.g. Asia/Manila) would
+  //    otherwise skew date-range reports (collections summary) by its offset.
+  // 2. Set search_path when a schema is supplied (test schema isolation).
+  const startupOptions = [
+    '-c timezone=UTC',
+    schemaName ? `-c search_path=${schemaName},public` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   // Create PostgreSQL connection pool
   const pool = new Pool({
     connectionString: cleanUrl,
@@ -140,30 +164,12 @@ export function createDatabase(config: DatabaseConfig): DatabaseInstance {
     min: config.poolMin || 2,
     idleTimeoutMillis: config.idleTimeoutMs || 30000,
     connectionTimeoutMillis: 5000,
+    options: startupOptions,
     ssl: config.ssl
       ? {
           rejectUnauthorized: true,
         }
       : false,
-  });
-
-  // Initialize every pooled connection:
-  // 1. Pin the session to UTC. `baseEntityFields.createdAt/updatedAt` are naive
-  //    `timestamp` columns written via now(); comparing them to the app's
-  //    tz-aware date windows is only correct when the DB session TZ matches the
-  //    app TZ. Prod/CI run UTC; a non-UTC dev Postgres (e.g. Asia/Manila) would
-  //    otherwise skew date-range reports (collections summary) by its offset.
-  // 2. Set search_path when a schema is supplied (test schema isolation).
-  pool.on('connect', async (client) => {
-    try {
-      await client.query(`SET TIME ZONE 'UTC'`);
-      if (schemaName) {
-        await client.query(`SET search_path TO "${schemaName}", public`);
-      }
-    } catch (error) {
-      console.error('Failed to initialize pooled connection (timezone/search_path):', error);
-      throw error;
-    }
   });
 
   // Create and return Drizzle database instance directly
