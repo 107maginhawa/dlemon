@@ -22,6 +22,7 @@ import { MeasurementShape, AnnotationShape, DrawingPreview } from './canvas-over
 import { BRAND_GOLD } from '@/constants/brand'
 import { toast } from 'sonner'
 import { toastError } from '@/lib/error-toast'
+import { isFeatureEnabled } from '@/lib/feature-flags'
 import { imagingMgmtUpdateImageCalibration } from '@monobase/sdk-ts/generated'
 import {
   processToolClick,
@@ -103,7 +104,10 @@ export function ImagingWorkspace({
   // two ran separate useCephAnalysis queries and the arcs ignored the switcher.
   const [cephAnalysisType, setCephAnalysisType] = useState<string>('steiner_hybrid_sn')
 
-  const isCeph = modality === 'cephalometric'
+  // Cephalometric analysis (landmarks/tracing/report) is a v2-deferred surface
+  // (workspace.ceph). v1 still stores + views ceph images as plain films; only the
+  // analysis panel is gated. Flag OFF → isCeph false → plain imaging-view.
+  const isCeph = modality === 'cephalometric' && isFeatureEnabled('workspace.ceph')
   const { landmarks: cephLandmarks, dragLandmark, commitLandmark } = useCephLandmarks(
     isCeph && cephPanelOpen ? imageId : '',
   )
