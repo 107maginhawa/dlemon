@@ -267,6 +267,42 @@ describe('OnboardingWizard — shipped component', () => {
     }
   });
 
+  test('preserves entered first-patient details across a page refresh (G-40)', async () => {
+    const user = userEvent.setup();
+    const f = installFetch();
+    try {
+      const first = render(makeWrapper(React.createElement(OnboardingWizard, { onComplete: () => {} })));
+      await fillClinicAndAdvance(user);
+      await fillDentistAndAdvance(user);
+      await advanceFees(user);
+
+      // patient step — enter the first patient's details
+      await waitFor(() => expect(screen.getByLabelText('Date of Birth')).not.toBeNull());
+      await user.type(screen.getByLabelText('Full Name'), 'Juan dela Cruz');
+      await user.type(screen.getByLabelText('Date of Birth'), '2000-01-01');
+
+      // Simulate a page refresh: unmount + remount so loadState() re-reads
+      // localStorage exactly as a fresh page load would.
+      first.unmount();
+      cleanup();
+      render(makeWrapper(React.createElement(OnboardingWizard, { onComplete: () => {} })));
+
+      // resumeStep (G-26) clamps a saved 'patient' step back to 'dentist' to force
+      // PIN re-entry (the PIN is never persisted). Re-enter it and walk forward.
+      await waitFor(() => expect(screen.getByLabelText('6-digit PIN')).not.toBeNull());
+      await user.type(screen.getByLabelText('6-digit PIN'), '123456');
+      await user.click(screen.getByRole('button', { name: /^next$/i }));
+      await advanceFees(user);
+
+      // The patient details entered before the refresh must still be there.
+      await waitFor(() => expect(screen.getByLabelText('Date of Birth')).not.toBeNull());
+      expect((screen.getByLabelText('Full Name') as HTMLInputElement).value).toBe('Juan dela Cruz');
+      expect((screen.getByLabelText('Date of Birth') as HTMLInputElement).value).toBe('2000-01-01');
+    } finally {
+      f.restore();
+    }
+  });
+
   test('surfaces a verify-email message on 403 EMAIL_NOT_VERIFIED and stops', async () => {
     const user = userEvent.setup();
     const onComplete = mock(() => {});

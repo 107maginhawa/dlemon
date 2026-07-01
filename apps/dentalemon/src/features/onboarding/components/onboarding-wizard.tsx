@@ -39,6 +39,10 @@ interface WizardState {
   licenseNumber: string;
   specialization: string;
   fees: FeeEntry[];
+  patientName: string;
+  birthDate: string;
+  gender: string;
+  patientPhone: string;
 }
 
 function loadState(): Partial<WizardState> {
@@ -84,10 +88,10 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const [fees, setFees] = useState<FeeEntry[]>(saved.fees ?? DEFAULT_FEES);
 
-  const [patientName, setPatientName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [gender, setGender] = useState('male');
-  const [patientPhone, setPatientPhone] = useState('');
+  const [patientName, setPatientName] = useState(saved.patientName ?? '');
+  const [birthDate, setBirthDate] = useState(saved.birthDate ?? '');
+  const [gender, setGender] = useState(saved.gender ?? 'male');
+  const [patientPhone, setPatientPhone] = useState(saved.patientPhone ?? '');
 
   const stepIndex = STEPS.indexOf(step);
   const isLast = stepIndex === STEPS.length - 1;
@@ -99,8 +103,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const setFeeMut = useMutation(updateFeeScheduleEntryMutation());
 
   useEffect(() => {
-    saveState({ step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees });
-  }, [step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees]);
+    // The owner PIN is deliberately excluded (G-26: no credential in localStorage);
+    // resumeStep re-prompts for it on resume. Everything else the owner typed —
+    // including the first-patient details (G-40) — is persisted so a refresh mid-
+    // wizard doesn't drop their work.
+    saveState({ step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees, patientName, birthDate, gender, patientPhone });
+  }, [step, clinicName, countryCode, address, clinicPhone, dentistName, licenseNumber, specialization, fees, patientName, birthDate, gender, patientPhone]);
 
   function validate(): string[] {
     const errs: string[] = [];
