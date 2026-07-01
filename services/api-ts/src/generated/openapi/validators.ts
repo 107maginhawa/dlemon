@@ -2167,6 +2167,13 @@ export const DentalImagingModuleUpdateLandmarkBodySchema = z.object({
   status: DentalImagingModuleCephLandmarkStatusSchema.optional()
 });
 
+export const DentalImagingModuleUpdateMeasurementBodySchema = z.object({
+  geometry: z.record(z.string(), z.unknown()).optional(),
+  measurementValue: z.union([z.number(), z.null()]).optional(),
+  measurementUnit: z.union([z.string(), z.null()]).optional(),
+  visible: z.boolean().optional()
+});
+
 export const DentalInvoiceStatusSchema = z.enum(["draft", "issued", "partial", "paid", "overdue", "voided", "uncollectible"]);
 
 export const DentalInvoiceSchema = z.object({
@@ -21296,6 +21303,16 @@ export const ImagingMgmt_deleteMeasurementParams = z.object({
 export type ImagingMgmt_deleteMeasurementParams = z.infer<typeof ImagingMgmt_deleteMeasurementParams>;
 
 export const ImagingMgmt_deleteMeasurementResponse = ErrorResponseSchema;
+
+export const ImagingMgmt_updateMeasurementParams = z.object({
+  measurementId: UUIDSchema,
+});
+export type ImagingMgmt_updateMeasurementParams = z.infer<typeof ImagingMgmt_updateMeasurementParams>;
+
+export const ImagingMgmt_updateMeasurementBody = DentalImagingModuleUpdateMeasurementBodySchema;
+export type ImagingMgmt_updateMeasurementBody = z.infer<typeof ImagingMgmt_updateMeasurementBody>;
+
+export const ImagingMgmt_updateMeasurementResponse = z.union([DentalImagingModuleImagingAnnotationSchema, ErrorResponseSchema]);
 
 export const CephMgmt_listCephSuperimpositionsParams = z.object({
   patientId: UUIDSchema,

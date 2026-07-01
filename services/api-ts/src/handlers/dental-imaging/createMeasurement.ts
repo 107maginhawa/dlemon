@@ -77,7 +77,9 @@ const ToothGeometry = z.object({
   toothNumber: z.number().int().min(1).max(32),
 });
 
-const MeasurementGeometry = z.discriminatedUnion('type', [
+// Exported for reuse by updateMeasurement (edit/move) — same per-type geometry
+// validation + API→DB type mapping, so create and update stay in lockstep.
+export const MeasurementGeometry = z.discriminatedUnion('type', [
   DistanceGeometry,
   AngleGeometry,
   AreaGeometry,
@@ -97,7 +99,7 @@ const ANNOTATION_TYPES = new Set(['label', 'arrow', 'freehand', 'shape', 'tooth'
 // Map API type to imagingAnnotationTypeEnum value
 type AnnotationType = 'line' | 'angle' | 'area' | 'label' | 'arrow' | 'freehand' | 'shape' | 'tooth';
 
-const TYPE_MAP: Record<string, AnnotationType> = {
+export const TYPE_MAP: Record<string, AnnotationType> = {
   distance: 'line',
   angle: 'angle',
   area: 'area',

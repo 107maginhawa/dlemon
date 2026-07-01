@@ -455,3 +455,99 @@ describe('useMeasurements — deleteMeasurement', () => {
     await waitFor(() => expect(result.current.deleteMeasurement.isError).toBe(true));
   });
 });
+
+// ─── updateMeasurement (edit/move) tests ─────────────────────────────────────
+
+describe('useMeasurements — updateMeasurement', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+    cleanup();
+  });
+
+  test('PATCHes /measurements/:id with the patch body', async () => {
+    let capturedUrl = '';
+    let capturedMethod = '';
+    let capturedBody: unknown = null;
+    global.fetch = mock(async (req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'PATCH') {
+        capturedUrl = reqUrl(req);
+        capturedMethod = 'PATCH';
+        capturedBody = await reqBody(req, init);
+        return jsonResponse(makeAnnotation({ id: 'ann-1', geometry: { moved: true } }));
+      }
+      return jsonResponse({ items: [] });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useMeasurements('img-1'), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.updateMeasurement.mutate({ id: 'ann-1', geometry: { moved: true }, measurementValue: 9 });
+    });
+
+    await waitFor(() => expect(result.current.updateMeasurement.isSuccess).toBe(true));
+    expect(capturedMethod).toBe('PATCH');
+    expect(capturedUrl).toContain('/dental/imaging/measurements/ann-1');
+    expect(capturedBody).toEqual({ geometry: { moved: true }, measurementValue: 9 });
+  });
+
+  test('optimistically patches the cached item before the server responds', async () => {
+    let resolvePatch!: (r: Response) => void;
+    const patchPromise = new Promise<Response>((res) => { resolvePatch = res; });
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'PATCH') return patchPromise;
+      return jsonResponse({ items: [] });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useMeasurements('img-1'), { wrapper: makeWrapper(qc) });
+
+    qc.setQueryData(measurementsQueryKey('img-1'), {
+      items: [makeAnnotation({ id: 'ann-1', visible: true })],
+    });
+
+    await act(async () => {
+      result.current.updateMeasurement.mutate({ id: 'ann-1', visible: false });
+    });
+
+    // Optimistic: cached item hidden before the network resolves.
+    await waitFor(() => {
+      const cached = qc.getQueryData<{ items: ImagingAnnotation[] }>(measurementsQueryKey('img-1'));
+      return cached?.items[0]?.visible === false;
+    });
+
+    resolvePatch(jsonResponse(makeAnnotation({ id: 'ann-1', visible: false })) as Response);
+    await waitFor(() => expect(result.current.updateMeasurement.isSuccess).toBe(true));
+  });
+
+  test('rolls back the optimistic patch on error', async () => {
+    // List GET returns server truth (5.2). After a failed PATCH the displayed value
+    // must be that truth, never the optimistic 99 — proving no stuck optimistic state.
+    global.fetch = mock((req: Request | string | URL, init?: RequestInit) => {
+      if (reqMethod(req, init) === 'PATCH') return jsonResponse({ message: 'boom' }, 500);
+      return jsonResponse({ items: [makeAnnotation({ id: 'ann-1', measurementValue: 5.2 })] });
+    });
+
+    const qc = freshClient();
+    const { result } = renderHook(() => useMeasurements('img-1'), { wrapper: makeWrapper(qc) });
+
+    qc.setQueryData(measurementsQueryKey('img-1'), {
+      items: [makeAnnotation({ id: 'ann-1', measurementValue: 5.2 })],
+    });
+
+    await act(async () => {
+      result.current.updateMeasurement.mutate({ id: 'ann-1', measurementValue: 99 });
+    });
+
+    await waitFor(() => expect(result.current.updateMeasurement.isError).toBe(true));
+    // Never stuck at the optimistic 99 (rolled back, then reconciled to server truth).
+    await waitFor(() => {
+      const cached = qc.getQueryData<{ items: ImagingAnnotation[] }>(measurementsQueryKey('img-1'));
+      return cached?.items[0]?.measurementValue === 5.2;
+    });
+    expect(
+      qc.getQueryData<{ items: ImagingAnnotation[] }>(measurementsQueryKey('img-1'))?.items[0]?.measurementValue,
+    ).toBe(5.2);
+  });
+});

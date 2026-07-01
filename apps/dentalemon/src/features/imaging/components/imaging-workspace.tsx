@@ -18,7 +18,8 @@ import { CephAngleArcLayer } from './CephAngleArcLayer'
 import { useCephLandmarks } from '../hooks/use-ceph-landmarks'
 import { useCephAnalysis } from '../hooks/use-ceph-analysis'
 import { screenToImage, type CephTransformState } from '@monobase/ceph-math'
-import { MeasurementShape, AnnotationShape, DrawingPreview, AnnotationActionBar } from './canvas-overlays'
+import { MeasurementShape, AnnotationShape, DrawingPreview, AnnotationActionBar, ShapeResizeHandles } from './canvas-overlays'
+import { translateGeometry, resizeShapeGeometry, type ResizeHandle } from '../lib/annotation-geometry'
 import { BRAND_GOLD } from '@/constants/brand'
 import { toast } from 'sonner'
 import { toastError } from '@/lib/error-toast'
@@ -96,6 +97,8 @@ export function ImagingWorkspace({
   // Pending annotation captured by the styled input dialog (replaces window.prompt).
   // Holds the click point + which kind of input we're collecting; null = closed.
   const [pendingAnnotation, setPendingAnnotation] = useState<{ kind: 'label' | 'tooth'; point: Point } | null>(null)
+  // Edit/re-type of a selected label/tooth via the prefilled input dialog.
+  const [editingAnnotation, setEditingAnnotation] = useState<{ id: string; kind: 'label' | 'tooth'; point: Point; initialValue: string } | null>(null)
   const [calibrationOpen, setCalibrationOpen] = useState(false)
   const [calibrationPixelDist, setCalibrationPixelDist] = useState(0)
   const [internalPixelSpacingMm, setInternalPixelSpacingMm] = useState<number | null>(null)
@@ -126,7 +129,8 @@ export function ImagingWorkspace({
 
   const pixelSpacingMm = externalPixelSpacingMm ?? internalPixelSpacingMm
 
-  const { measurements, createMeasurement, deleteMeasurement } = useMeasurements(imageId)
+  const { measurements, createMeasurement, updateMeasurement, patchMeasurementLocal, deleteMeasurement } =
+    useMeasurements(imageId)
 
   // Selection model: Select mode lets the clinician pick an existing overlay to
   // remove it — reachable without arming a draw tool, and a click never starts a
@@ -176,16 +180,144 @@ export function ImagingWorkspace({
     [measurements, deleteMeasurement, createMeasurement],
   )
 
-  // Select-mode shortcuts: Delete/Backspace removes the selection, Esc clears it.
+  // ── Edit / move ──────────────────────────────────────────────────────────
+  // Drag (body) and resize (shape corner) reuse the ceph-landmark model: mutate
+  // the cache locally each pointermove (patchMeasurementLocal, no network), then
+  // PATCH once on pointer-up. Refs hold the in-flight gesture so re-renders from the
+  // optimistic cache writes don't reset it.
+  type Geo = Record<string, unknown>
+  const moveRef = useRef<{ id: string; type: string; startImg: Point; origGeo: Geo } | null>(null)
+  const resizeRef = useRef<{ id: string; handle: ResizeHandle; startImg: Point; origGeo: Geo } | null>(null)
+  const editGeoRef = useRef<Geo | null>(null)
+
+  const screenPoint = useCallback((clientX: number, clientY: number): Point | null => {
+    const svg = svgRef.current
+    if (!svg || !cephTransform) return null
+    const rect = svg.getBoundingClientRect()
+    return screenToImage(clientX - rect.left, clientY - rect.top, cephTransform)
+  }, [cephTransform])
+
+  const commitEditedGeometry = useCallback(
+    (id: string) => {
+      const geometry = editGeoRef.current
+      editGeoRef.current = null
+      if (!geometry) return
+      updateMeasurement.mutate(
+        { id, geometry },
+        { onError: (err) => toastError(err, 'Could not update annotation.') },
+      )
+    },
+    [updateMeasurement],
+  )
+
+  const handleStartMove = useCallback(
+    (id: string, clientX: number, clientY: number) => {
+      const target = measurements.find((m) => m.id === id)
+      const startImg = screenPoint(clientX, clientY)
+      if (!target || !startImg) return
+      moveRef.current = { id, type: target.type, startImg, origGeo: target.geometry as Geo }
+    },
+    [measurements, screenPoint],
+  )
+
+  const handleStartResize = useCallback(
+    (handle: ResizeHandle, clientX: number, clientY: number) => {
+      const target = selectedAnnotation
+      const startImg = screenPoint(clientX, clientY)
+      if (!target || !startImg) return
+      resizeRef.current = { id: target.id, handle, startImg, origGeo: target.geometry as Geo }
+    },
+    [selectedAnnotation, screenPoint],
+  )
+
+  const handleEditPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const gesture = moveRef.current ?? resizeRef.current
+      if (!gesture) return
+      const cur = screenPoint(e.clientX, e.clientY)
+      if (!cur) return
+      const dx = cur.x - gesture.startImg.x
+      const dy = cur.y - gesture.startImg.y
+      const next = moveRef.current
+        ? translateGeometry(moveRef.current.type, gesture.origGeo, dx, dy)
+        : resizeShapeGeometry(gesture.origGeo, resizeRef.current!.handle, dx, dy)
+      editGeoRef.current = next
+      patchMeasurementLocal(gesture.id, next)
+    },
+    [screenPoint, patchMeasurementLocal],
+  )
+
+  const handleEditPointerUp = useCallback(() => {
+    const id = moveRef.current?.id ?? resizeRef.current?.id
+    moveRef.current = null
+    resizeRef.current = null
+    if (id) commitEditedGeometry(id)
+  }, [commitEditedGeometry])
+
+  // Open the prefilled dialog to re-type a label / re-number a tooth.
+  const handleEditAnnotation = useCallback(
+    (id: string) => {
+      const target = measurements.find((m) => m.id === id)
+      if (!target) return
+      const geo = target.geometry as Geo
+      const point = geo.point as Point | undefined
+      if (!point) return
+      if (target.type === 'label') {
+        setEditingAnnotation({ id, kind: 'label', point, initialValue: String(geo.text ?? '') })
+      } else if (target.type === 'tooth') {
+        setEditingAnnotation({ id, kind: 'tooth', point, initialValue: String(geo.toothNumber ?? '') })
+      }
+    },
+    [measurements],
+  )
+
+  const handleEditConfirm = useCallback(
+    (raw: string) => {
+      const editing = editingAnnotation
+      setEditingAnnotation(null)
+      if (!editing) return
+      const geometry: Geo =
+        editing.kind === 'label'
+          ? { type: 'label', point: editing.point, text: raw }
+          : { type: 'tooth', point: editing.point, toothNumber: Number(raw) }
+      updateMeasurement.mutate(
+        { id: editing.id, geometry },
+        {
+          onSuccess: () => toast.success('Annotation updated'),
+          onError: (err) => toastError(err, 'Could not update annotation.'),
+        },
+      )
+    },
+    [editingAnnotation, updateMeasurement],
+  )
+
+  // Select-mode shortcuts: Delete/Backspace removes the selection, Esc clears it,
+  // arrow keys nudge the selected overlay 1px (image space), mirroring ceph landmarks.
+  const NUDGE: Record<string, Point> = {
+    ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
+  }
   const handleAnnotationKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const nudge = NUDGE[e.key]
+      if (nudge && selectedAnnotation) {
+        e.preventDefault()
+        const next = translateGeometry(selectedAnnotation.type, selectedAnnotation.geometry as Geo, nudge.x, nudge.y)
+        patchMeasurementLocal(selectedAnnotation.id, next)
+        updateMeasurement.mutate(
+          { id: selectedAnnotation.id, geometry: next },
+          { onError: (err) => toastError(err, 'Could not update annotation.') },
+        )
+        return
+      }
       const decision = decideAnnotationKey(e.key, selectedAnnotationId != null)
       if (!decision) return
       e.preventDefault()
       if (decision === 'delete') handleDeleteAnnotation(selectedAnnotationId!)
       else setSelectedAnnotationId(null)
     },
-    [selectedAnnotationId, handleDeleteAnnotation],
+    // NUDGE is a stable literal; excluded intentionally.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedAnnotationId, selectedAnnotation, handleDeleteAnnotation, patchMeasurementLocal, updateMeasurement],
   )
 
   const { getCachedBlob, setCachedBlob } = useOfflineCache()
@@ -570,6 +702,9 @@ export function ImagingWorkspace({
               pointerEvents: toolMode !== 'none' ? 'auto' : 'none',
             }}
             onClick={handleSvgClick}
+            onPointerMove={handleEditPointerMove}
+            onPointerUp={handleEditPointerUp}
+            onPointerLeave={handleEditPointerUp}
           >
             <defs>
               <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
@@ -597,17 +732,28 @@ export function ImagingWorkspace({
                   selectMode={selectMode}
                   isSelected={selectMode && m.id === selectedAnnotationId}
                   onSelect={setSelectedAnnotationId}
+                  onStartMove={handleStartMove}
                 />
               )
             })}
             {cephTransform && <DrawingPreview toolMode={toolMode} points={drawPoints} transform={cephTransform} />}
             {selectMode && selectedAnnotation && cephTransform && (
-              <AnnotationActionBar
-                annotation={selectedAnnotation}
-                transform={cephTransform}
-                onDelete={handleDeleteAnnotation}
-                onLinkFinding={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
-              />
+              <>
+                {selectedAnnotation.type === 'shape' && (
+                  <ShapeResizeHandles
+                    annotation={selectedAnnotation}
+                    transform={cephTransform}
+                    onStartResize={handleStartResize}
+                  />
+                )}
+                <AnnotationActionBar
+                  annotation={selectedAnnotation}
+                  transform={cephTransform}
+                  onDelete={handleDeleteAnnotation}
+                  onEdit={handleEditAnnotation}
+                  onLinkFinding={(id) => { setSelectedAnnotationId(id); setFindingsPanelOpen(true) }}
+                />
+              </>
             )}
           </svg>
 
@@ -670,11 +816,14 @@ export function ImagingWorkspace({
         onCancel={() => { setCalibrationOpen(false); setDrawPoints([]) }}
       />
 
+      {/* One dialog, two flows: creating a new label/tooth (pendingAnnotation) or
+          re-typing an existing one (editingAnnotation, prefilled). */}
       <AnnotationInputDialog
-        open={pendingAnnotation !== null}
-        kind={pendingAnnotation?.kind ?? 'label'}
-        onConfirm={handleAnnotationConfirm}
-        onCancel={handleAnnotationCancel}
+        open={pendingAnnotation !== null || editingAnnotation !== null}
+        kind={editingAnnotation?.kind ?? pendingAnnotation?.kind ?? 'label'}
+        initialValue={editingAnnotation?.initialValue}
+        onConfirm={editingAnnotation ? handleEditConfirm : handleAnnotationConfirm}
+        onCancel={editingAnnotation ? () => setEditingAnnotation(null) : handleAnnotationCancel}
       />
     </div>
   )

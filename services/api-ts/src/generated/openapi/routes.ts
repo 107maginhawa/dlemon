@@ -1162,6 +1162,14 @@ export function registerRoutes(app: Hono<{ Variables: Variables }>) {
     registry.ImagingMgmt_deleteMeasurement as unknown as Handler
   );
 
+  // ImagingMgmt_updateMeasurement
+  app.patch('/dental/imaging/measurements/:measurementId',
+    authMiddleware(),
+    zValidator('param', validators.ImagingMgmt_updateMeasurementParams, validationErrorHandler),
+    zValidator('json', validators.ImagingMgmt_updateMeasurementBody, validationErrorHandler),
+    registry.ImagingMgmt_updateMeasurement as unknown as Handler
+  );
+
   // CephMgmt_listCephSuperimpositions
   app.get('/dental/imaging/patients/:patientId/ceph/superimpositions',
     authMiddleware(),

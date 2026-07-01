@@ -851,6 +851,129 @@ describe('deleteMeasurement', () => {
 });
 
 // =============================================================================
+// updateMeasurement — PATCH /dental/imaging/measurements/:measurementId
+// =============================================================================
+
+describe('updateMeasurement', () => {
+  test('happy path: patch geometry (move), returns 200 with new geometry, type unchanged', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'line');
+    const app = buildTestApp(DENTIST);
+
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({
+        geometry: { type: 'distance', points: [{ x: 10, y: 10 }, { x: 20, y: 22 }] },
+        measurementValue: 15.6, measurementUnit: 'mm',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.id).toBe(annotationId);
+    expect(body.type).toBe('line'); // immutable
+    expect(body.measurementValue).toBe(15.6);
+    expect((body.geometry as any).points).toEqual([{ x: 10, y: 10 }, { x: 20, y: 22 }]);
+
+    // Persisted (re-fetch via list)
+    const listRes = await app.request(`/dental/imaging/images/${imageId}/measurements`);
+    const listBody = (await listRes.json()) as { items: any[] };
+    const persisted = listBody.items.find((m) => m.id === annotationId);
+    expect((persisted!.geometry as any).points[1]).toEqual({ x: 20, y: 22 });
+  });
+
+  test('patch visible=false hides the overlay, returns 200', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'line');
+    const app = buildTestApp(DENTIST);
+
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({ visible: false }),
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as any).visible).toBe(false);
+
+    // list only returns visible=true overlays → now empty
+    const listRes = await app.request(`/dental/imaging/images/${imageId}/measurements`);
+    expect(((await listRes.json()) as { items: any[] }).items).toHaveLength(0);
+  });
+
+  test('label re-type: patch label geometry text, returns 200', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'label');
+    const app = buildTestApp(DENTIST);
+
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({ geometry: { type: 'label', point: { x: 5, y: 5 }, text: 'Revised note' } }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.type).toBe('label');
+    expect((body.geometry as any).text).toBe('Revised note');
+  });
+
+  test('400 VALIDATION_ERROR on invalid geometry (distance needs 2 points)', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'line');
+    const app = buildTestApp(DENTIST);
+
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({ geometry: { type: 'distance', points: [{ x: 0, y: 0 }] } }),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as any).code).toBe('VALIDATION_ERROR');
+  });
+
+  test('400 VALIDATION_ERROR when geometry would change the type (immutable)', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'line'); // stored type 'line'
+    const app = buildTestApp(DENTIST);
+
+    // A label geometry maps to stored type 'label' ≠ 'line' → rejected.
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({ geometry: { type: 'label', point: { x: 1, y: 1 }, text: 'x' } }),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as any).code).toBe('VALIDATION_ERROR');
+  });
+
+  test('403 when caller lacks branch role (hygienist)', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'line');
+    const app = buildTestApp(HYGIENIST);
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({ visible: false }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('404 when measurement does not exist', async () => {
+    const app = buildTestApp(DENTIST);
+    const res = await app.request(`/dental/imaging/measurements/${uuidv4()}`, {
+      method: 'PATCH',
+      ...json({ visible: false }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test('401 when unauthenticated', async () => {
+    const { imageId } = await seedStudyWithImage();
+    const annotationId = await seedAnnotation(imageId, 'line');
+    const app = buildTestApp(); // no user
+    const res = await app.request(`/dental/imaging/measurements/${annotationId}`, {
+      method: 'PATCH',
+      ...json({ visible: false }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+// =============================================================================
 // deleteImage — DELETE /dental/imaging/images/:imageId
 // =============================================================================
 

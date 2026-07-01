@@ -274,6 +274,18 @@ namespace DentalImagingModule {
     items: ImagingAnnotation[];
   }
 
+  // Edit/move a saved overlay. All fields optional (partial patch). `type` is
+  // IMMUTABLE — a label stays a label — so it is absent here; the handler validates
+  // any new `geometry` against the same per-type union as create and rejects a
+  // geometry whose type would change the stored kind. Value/unit are client-computed
+  // (symmetric with create).
+  model UpdateMeasurementBody {
+    geometry?: Record<unknown>;
+    measurementValue?: float64 | null;
+    measurementUnit?: string | null;
+    visible?: boolean;
+  }
+
   @route("/dental/imaging")
   interface ImagingManagement {
     @post
@@ -350,6 +362,13 @@ namespace DentalImagingModule {
     @route("/measurements/{measurementId}")
     @useAuth(bearerAuth)
     deleteMeasurement(@path measurementId: UUID): void | ErrorResponse | ApiUnauthorizedResponse;
+
+    // Edit/move a saved overlay (geometry/value/unit/visibility). Same branch-role
+    // gate as create/delete; type is immutable.
+    @patch
+    @route("/measurements/{measurementId}")
+    @useAuth(bearerAuth)
+    updateMeasurement(@path measurementId: UUID, @body body: UpdateMeasurementBody): ImagingAnnotation | ErrorResponse | ApiUnauthorizedResponse;
   }
 
   interface PatientImageListing {

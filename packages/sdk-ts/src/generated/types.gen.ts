@@ -3937,6 +3937,15 @@ export type DentalImagingModuleUpdateLandmarkBody = {
     status?: DentalImagingModuleCephLandmarkStatus;
 };
 
+export type DentalImagingModuleUpdateMeasurementBody = {
+    geometry?: {
+        [key: string]: unknown;
+    };
+    measurementValue?: number | null;
+    measurementUnit?: string | null;
+    visible?: boolean;
+};
+
 export type DentalInvoice = {
     id: Uuid;
     visitId: Uuid;
@@ -68859,6 +68868,33 @@ export type ImagingMgmtDeleteMeasurementResponses = {
 };
 
 export type ImagingMgmtDeleteMeasurementResponse = ImagingMgmtDeleteMeasurementResponses[keyof ImagingMgmtDeleteMeasurementResponses];
+
+export type ImagingMgmtUpdateMeasurementData = {
+    body: DentalImagingModuleUpdateMeasurementBody;
+    path: {
+        measurementId: Uuid;
+    };
+    query?: never;
+    url: '/dental/imaging/measurements/{measurementId}';
+};
+
+export type ImagingMgmtUpdateMeasurementErrors = {
+    /**
+     * Unauthorized access response
+     */
+    401: AuthenticationError;
+};
+
+export type ImagingMgmtUpdateMeasurementError = ImagingMgmtUpdateMeasurementErrors[keyof ImagingMgmtUpdateMeasurementErrors];
+
+export type ImagingMgmtUpdateMeasurementResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: DentalImagingModuleImagingAnnotation | ErrorResponse;
+};
+
+export type ImagingMgmtUpdateMeasurementResponse = ImagingMgmtUpdateMeasurementResponses[keyof ImagingMgmtUpdateMeasurementResponses];
 
 export type CephMgmtListCephSuperimpositionsData = {
     body?: never;

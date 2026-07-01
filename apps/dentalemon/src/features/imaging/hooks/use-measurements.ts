@@ -4,6 +4,7 @@
  * API: GET/POST /dental/imaging/images/{imageId}/measurements
  *      DELETE /dental/imaging/measurements/{measurementId}
  */
+import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   imagingMgmtListMeasurementsOptions,
@@ -12,8 +13,10 @@ import {
 import {
   imagingMgmtCreateMeasurement,
   imagingMgmtDeleteMeasurement,
+  imagingMgmtUpdateMeasurement,
   type DentalImagingModuleImagingAnnotation,
   type DentalImagingModuleCreateMeasurementBody,
+  type DentalImagingModuleUpdateMeasurementBody,
   type DentalImagingModuleMeasurementListResponse,
 } from '@monobase/sdk-ts/generated'
 
@@ -48,6 +51,16 @@ export interface CreateMeasurementInput {
   geometry: unknown
   measurementValue?: number | null
   measurementUnit?: string | null
+}
+
+// Edit/move patch. `type` is immutable server-side, so it's absent. geometry is the
+// full new geometry object for the annotation's kind (drag/resize/retype all send it).
+export interface UpdateMeasurementInput {
+  id: string
+  geometry?: Record<string, unknown>
+  measurementValue?: number | null
+  measurementUnit?: string | null
+  visible?: boolean
 }
 
 export function useMeasurements(imageId: string) {
@@ -116,6 +129,41 @@ export function useMeasurements(imageId: string) {
     },
   })
 
+  const updateMeasurement = useMutation({
+    mutationFn: async ({ id, ...patch }: UpdateMeasurementInput): Promise<ImagingAnnotation> => {
+      const { data } = await imagingMgmtUpdateMeasurement({
+        path: { measurementId: id },
+        body: patch as DentalImagingModuleUpdateMeasurementBody,
+        throwOnError: true,
+      })
+      if (!data || 'error' in data) throw new Error('Unexpected error response from updateMeasurement')
+      return toViewModel(data)
+    },
+    onMutate: async ({ id, ...patch }) => {
+      await queryClient.cancelQueries({ queryKey })
+      // Same { items: [...] } cache shape as create/delete — patch the matching item.
+      const previous = queryClient.getQueryData<DentalImagingModuleMeasurementListResponse>(queryKey)
+      queryClient.setQueryData<DentalImagingModuleMeasurementListResponse>(queryKey, (old) =>
+        old
+          ? {
+              items: old.items.map((m) =>
+                m.id === id ? { ...m, ...patch, geometry: (patch.geometry ?? m.geometry) as { [key: string]: unknown } } : m,
+              ),
+            }
+          : old,
+      )
+      return { previous }
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(queryKey, context.previous)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey })
+    },
+  })
+
   const deleteMeasurement = useMutation({
     mutationFn: async (measurementId: string): Promise<void> => {
       await imagingMgmtDeleteMeasurement({
@@ -142,10 +190,33 @@ export function useMeasurements(imageId: string) {
     },
   })
 
+  // Pure-local geometry patch for live drag/resize — mutate the cache only, no
+  // network (mirrors ceph dragLandmark). Commit once on pointer-up via
+  // updateMeasurement.mutate. Not wrapped in the {items} previous/rollback dance
+  // because pointer-up's mutation owns the server round-trip + rollback.
+  const patchMeasurementLocal = useCallback(
+    (id: string, geometry: Record<string, unknown>) => {
+      queryClient.setQueryData<DentalImagingModuleMeasurementListResponse>(queryKey, (old) =>
+        old
+          ? {
+              items: old.items.map((m) =>
+                m.id === id ? { ...m, geometry: geometry as { [key: string]: unknown } } : m,
+              ),
+            }
+          : old,
+      )
+    },
+    // queryKey is a stable value for a given imageId (SDK builds it deterministically).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient, imageId],
+  )
+
   return {
     measurements: query.data ?? [],
     isLoading: query.isLoading,
     createMeasurement,
+    updateMeasurement,
+    patchMeasurementLocal,
     deleteMeasurement,
   }
 }

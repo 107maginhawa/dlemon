@@ -410,6 +410,23 @@ export class ImagingRepository {
     return annotation ?? undefined;
   }
 
+  async updateAnnotation(
+    id: string,
+    patch: Partial<
+      Pick<
+        NewImagingAnnotation,
+        'geometry' | 'measurementValue' | 'measurementUnit' | 'visible' | 'toothNumber' | 'updatedBy'
+      >
+    >,
+  ): Promise<ImagingAnnotation | undefined> {
+    const [annotation] = await this.db
+      .update(imagingAnnotations)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(imagingAnnotations.id, id))
+      .returning();
+    return annotation ?? undefined;
+  }
+
   async deleteAnnotation(id: string): Promise<void> {
     await this.db.delete(imagingAnnotations).where(eq(imagingAnnotations.id, id));
   }

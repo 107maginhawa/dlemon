@@ -1,5 +1,6 @@
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import { imageToScreen, type CephTransformState } from '@monobase/ceph-math'
+import type { ResizeHandle } from '../lib/annotation-geometry'
 import type { ImagingAnnotation } from '../hooks/use-measurements'
 import type { ToolMode } from './measurement-toolbar'
 import { BRAND_GOLD } from '@/constants/brand'
@@ -29,6 +30,8 @@ interface AnnotationShapeProps {
   selectMode?: boolean
   isSelected?: boolean
   onSelect?: (id: string) => void
+  /** Pointer-down on a selected overlay body starts a drag-to-move (see workspace). */
+  onStartMove?: (id: string, clientX: number, clientY: number) => void
 }
 
 /**
@@ -58,6 +61,7 @@ function SelectableGroup({
   selectMode,
   isSelected,
   onSelect,
+  onStartMove,
   children,
 }: {
   id: string
@@ -65,6 +69,7 @@ function SelectableGroup({
   selectMode?: boolean
   isSelected?: boolean
   onSelect?: (id: string) => void
+  onStartMove?: (id: string, clientX: number, clientY: number) => void
   children: React.ReactNode
 }) {
   return (
@@ -72,11 +77,18 @@ function SelectableGroup({
       data-testid={testId}
       data-annotation-id={id}
       data-selected={isSelected ? 'true' : undefined}
-      style={{ cursor: selectMode ? 'pointer' : 'default' }}
+      style={{ cursor: selectMode ? (isSelected ? 'move' : 'pointer') : 'default' }}
       onClick={(e) => {
         if (!selectMode) return
         e.stopPropagation() // never let a select-click fall through and start a draw
         onSelect?.(id)
+      }}
+      onPointerDown={(e) => {
+        // Drag-to-move: only a selected overlay body starts a move. First pointer-down
+        // on an unselected overlay just selects it (via onClick) — no accidental drag.
+        if (!selectMode || !isSelected || !onStartMove) return
+        e.stopPropagation()
+        onStartMove(id, e.clientX, e.clientY)
       }}
       filter={isSelected ? 'url(#annotationSelectGlow)' : undefined}
     >
@@ -118,11 +130,11 @@ export function annotationAnchor(annotation: ImagingAnnotation): XY | null {
   }
 }
 
-export function MeasurementShape({ annotation, transform, selectMode, isSelected, onSelect }: AnnotationShapeProps) {
+export function MeasurementShape({ annotation, transform, selectMode, isSelected, onSelect, onStartMove }: AnnotationShapeProps) {
   const geo = annotation.geometry as Record<string, unknown>
 
   const wrap = (inner: React.ReactNode) => (
-    <SelectableGroup id={annotation.id} testId="saved-measurement" selectMode={selectMode} isSelected={isSelected} onSelect={onSelect}>
+    <SelectableGroup id={annotation.id} testId="saved-measurement" selectMode={selectMode} isSelected={isSelected} onSelect={onSelect} onStartMove={onStartMove}>
       {inner}
     </SelectableGroup>
   )
@@ -196,11 +208,11 @@ export function MeasurementShape({ annotation, transform, selectMode, isSelected
   return null
 }
 
-export function AnnotationShape({ annotation, transform, selectMode, isSelected, onSelect }: AnnotationShapeProps) {
+export function AnnotationShape({ annotation, transform, selectMode, isSelected, onSelect, onStartMove }: AnnotationShapeProps) {
   const geo = annotation.geometry as Record<string, unknown>
 
   const wrap = (inner: React.ReactNode) => (
-    <SelectableGroup id={annotation.id} testId="annotation-shape" selectMode={selectMode} isSelected={isSelected} onSelect={onSelect}>
+    <SelectableGroup id={annotation.id} testId="annotation-shape" selectMode={selectMode} isSelected={isSelected} onSelect={onSelect} onStartMove={onStartMove}>
       {inner}
     </SelectableGroup>
   )
@@ -293,6 +305,8 @@ interface ActionBarProps {
   transform: CephTransformState
   onDelete: (id: string) => void
   onLinkFinding?: (id: string) => void
+  /** Re-type a label / re-number a tooth (opens the prefilled input dialog). */
+  onEdit?: (id: string) => void
 }
 
 /**
@@ -300,15 +314,18 @@ interface ActionBarProps {
  * buttons (via <foreignObject>) at ≥44px touch targets — replacing the old 12px
  * SVG dot that was under the WCAG target and unreachable without an armed tool.
  * Rides in the same overlay coord space as the annotation, so it stays glued to
- * its shape. Label/tooth annotations also get a "Link finding" shortcut.
+ * its shape. Label/tooth annotations also get Edit (re-type) + "Link finding".
  */
-export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFinding }: ActionBarProps) {
+export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFinding, onEdit }: ActionBarProps) {
   const raw = annotationAnchor(annotation)
   if (!raw) return null
   const anchor = S(raw, transform)
-  const showLink =
-    (annotation.type === 'label' || annotation.type === 'tooth') && onLinkFinding != null
-  const width = showLink ? 96 : 52
+  const isTextual = annotation.type === 'label' || annotation.type === 'tooth'
+  const showEdit = isTextual && onEdit != null
+  const showLink = isTextual && onLinkFinding != null
+  // 44px touch target + gap per button, plus horizontal padding.
+  const count = 1 + (showEdit ? 1 : 0) + (showLink ? 1 : 0)
+  const width = 8 + count * 44
   const height = 52
   return (
     <foreignObject x={anchor.x + 6} y={Math.max(0, anchor.y - height - 6)} width={width} height={height} data-testid="annotation-action-bar">
@@ -322,6 +339,17 @@ export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFin
         >
           <Trash2 className="h-5 w-5" aria-hidden />
         </button>
+        {showEdit && (
+          <button
+            type="button"
+            aria-label="Edit annotation"
+            data-testid="annotation-edit"
+            onClick={(e) => { e.stopPropagation(); onEdit?.(annotation.id) }}
+            className="flex h-11 w-11 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            <Pencil className="h-5 w-5" aria-hidden />
+          </button>
+        )}
         {showLink && (
           <button
             type="button"
@@ -335,6 +363,52 @@ export function AnnotationActionBar({ annotation, transform, onDelete, onLinkFin
         )}
       </div>
     </foreignObject>
+  )
+}
+
+interface ResizeHandlesProps {
+  annotation: ImagingAnnotation
+  transform: CephTransformState
+  onStartResize: (handle: ResizeHandle, clientX: number, clientY: number) => void
+}
+
+/**
+ * Corner resize handles for a selected `shape` (rect/ellipse). Each handle carries a
+ * 44px transparent touch target (WCAG AA / iPad) around a small visible knob, mapped
+ * image→screen so it tracks the film. No-op for non-shape overlays.
+ */
+export function ShapeResizeHandles({ annotation, transform, onStartResize }: ResizeHandlesProps) {
+  if (annotation.type !== 'shape') return null
+  const geo = annotation.geometry as Record<string, unknown>
+  const x = geo.x as number | undefined
+  const y = geo.y as number | undefined
+  const width = geo.width as number | undefined
+  const height = geo.height as number | undefined
+  if (x == null || y == null || width == null || height == null) return null
+
+  const corners: { handle: ResizeHandle; img: XY }[] = [
+    { handle: 'nw', img: { x, y } },
+    { handle: 'ne', img: { x: x + width, y } },
+    { handle: 'sw', img: { x, y: y + height } },
+    { handle: 'se', img: { x: x + width, y: y + height } },
+  ]
+
+  return (
+    <g data-testid="shape-resize-handles">
+      {corners.map(({ handle, img }) => {
+        const p = S(img, transform)
+        return (
+          <g
+            key={handle}
+            style={{ cursor: handle === 'nw' || handle === 'se' ? 'nwse-resize' : 'nesw-resize' }}
+            onPointerDown={(e) => { e.stopPropagation(); onStartResize(handle, e.clientX, e.clientY) }}
+          >
+            <rect x={p.x - 22} y={p.y - 22} width={44} height={44} fill="transparent" data-resize-handle={handle} />
+            <rect x={p.x - 5} y={p.y - 5} width={10} height={10} fill="#FFFFFF" stroke={BRAND_GOLD} strokeWidth={2} />
+          </g>
+        )
+      })}
+    </g>
   )
 }
 

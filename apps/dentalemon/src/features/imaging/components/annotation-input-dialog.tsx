@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ interface AnnotationInputDialogProps {
   kind: AnnotationInputKind
   onConfirm: (raw: string) => void
   onCancel: () => void
+  /** Prefill for edit/re-type — the existing label text or tooth number. */
+  initialValue?: string
 }
 
 /**
@@ -31,9 +33,19 @@ export function AnnotationInputDialog({
   kind,
   onConfirm,
   onCancel,
+  initialValue,
 }: AnnotationInputDialogProps) {
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(initialValue ?? '')
   const [error, setError] = useState<string | null>(null)
+
+  // Re-seed the field each time the dialog opens (the component stays mounted, so
+  // useState's initial value alone won't refresh between a create and a later edit).
+  useEffect(() => {
+    if (open) {
+      setValue(initialValue ?? '')
+      setError(null)
+    }
+  }, [open, initialValue])
 
   const reset = () => {
     setValue('')
