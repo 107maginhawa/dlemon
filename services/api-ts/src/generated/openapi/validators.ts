@@ -1977,7 +1977,9 @@ export const DentalImagingModuleCreateImagingStudyBodySchema = z.object({
   size: z.number().int(),
   toothNumbers: z.array(z.number().int()).optional(),
   sequenceNumber: z.number().int().optional(),
-  pixelSpacingMm: z.number().optional()
+  pixelSpacingMm: z.number().optional(),
+  capturedAt: z.string().datetime().transform((str) => new Date(str)).optional(),
+  capturedAtSource: z.enum(["dicom_tag", "exif", "visit", "manual"]).optional()
 });
 
 export const DentalImagingModuleImagingStudySchema = z.object({
@@ -2011,7 +2013,9 @@ export const DentalImagingModuleImagingStudyImageSchema = z.object({
   isDiagnostic: z.boolean().optional(),
   qualityStatus: z.enum(["ok", "retake"]).optional(),
   retakeReason: z.union([z.string(), z.null()]).optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  capturedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]).optional(),
+  capturedAtSource: z.union([z.enum(["dicom_tag", "exif", "visit", "manual", "defaulted_upload"]), z.null()]).optional()
 });
 
 export const DentalImagingModuleCreateImagingStudyResponseSchema = z.object({
@@ -2122,7 +2126,9 @@ export const DentalImagingModulePatientImageItemSchema = z.object({
   qualityStatus: z.enum(["ok", "retake"]).optional(),
   retakeReason: z.union([z.string(), z.null()]).optional(),
   tags: z.array(z.string()).optional(),
-  links: z.array(DentalImagingModuleImagingLinkSchema).optional()
+  links: z.array(DentalImagingModuleImagingLinkSchema).optional(),
+  capturedAt: z.union([z.string().datetime().transform((str) => new Date(str)), z.null()]).optional(),
+  capturedAtSource: z.union([z.enum(["dicom_tag", "exif", "visit", "manual", "defaulted_upload"]), z.null()]).optional()
 });
 
 export const DentalImagingModuleListPatientImagesResponseSchema = z.object({
@@ -2154,7 +2160,8 @@ export const DentalImagingModuleUpdateImageMetadataBodySchema = z.object({
   isDiagnostic: z.boolean().optional(),
   qualityStatus: z.enum(["ok", "retake"]).optional(),
   retakeReason: z.union([z.string(), z.null()]).optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  capturedAt: z.string().datetime().transform((str) => new Date(str)).optional()
 });
 
 export const DentalImagingModuleUpdateImageModalityBodySchema = z.object({

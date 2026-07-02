@@ -3736,6 +3736,8 @@ export type DentalImagingModuleCreateImagingStudyBody = {
     toothNumbers?: Array<number>;
     sequenceNumber?: number;
     pixelSpacingMm?: number;
+    capturedAt?: Date;
+    capturedAtSource?: 'dicom_tag' | 'exif' | 'visit' | 'manual';
 };
 
 export type DentalImagingModuleCreateImagingStudyResponse = {
@@ -3856,6 +3858,8 @@ export type DentalImagingModuleImagingStudyImage = {
     qualityStatus?: 'ok' | 'retake';
     retakeReason?: string | null;
     tags?: Array<string>;
+    capturedAt?: Date | null;
+    capturedAtSource?: 'dicom_tag' | 'exif' | 'visit' | 'manual' | 'defaulted_upload';
 };
 
 export type DentalImagingModuleImagingStudyWithImages = {
@@ -3902,6 +3906,8 @@ export type DentalImagingModulePatientImageItem = {
     retakeReason?: string | null;
     tags?: Array<string>;
     links?: Array<DentalImagingModuleImagingLink>;
+    capturedAt?: Date | null;
+    capturedAtSource?: 'dicom_tag' | 'exif' | 'visit' | 'manual' | 'defaulted_upload';
 };
 
 export type DentalImagingModuleUpdateCalibrationBody = {
@@ -3925,6 +3931,7 @@ export type DentalImagingModuleUpdateImageMetadataBody = {
     qualityStatus?: 'ok' | 'retake';
     retakeReason?: string | null;
     tags?: Array<string>;
+    capturedAt?: Date;
 };
 
 export type DentalImagingModuleUpdateImageModalityBody = {

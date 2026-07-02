@@ -42,6 +42,11 @@ export interface PatientImageItem {
   visitId: string | null;
   toothNumbers: number[];
   createdAt: Date;
+  // §capture-date: when the image was ACQUIRED (distinct from createdAt = upload).
+  // The list sorts + labels by this; null only for rows with no backing metadata
+  // (consumers coalesce capturedAt ?? createdAt). capturedAtSource is provenance.
+  capturedAt: Date | null;
+  capturedAtSource: string | null;
   downloadUrl: string | null;
   // P2-7 CBCT: volume affordance discriminator (legacy/2-D = 'image').
   isVolume: boolean;
@@ -68,6 +73,10 @@ export function mapLegacyAttachment(att: LegacyAttachmentImage): PatientImageIte
     visitId: att.visitId ?? null,
     toothNumbers: Array.isArray(att.toothNumbers) ? (att.toothNumbers as number[]) : [],
     createdAt: att.createdAt,
+    // §capture-date: legacy attachments carry no acquisition date — their only known
+    // timestamp is the upload/created time, flagged as a default (not a real capture).
+    capturedAt: att.createdAt,
+    capturedAtSource: 'defaulted_upload',
     // Legacy attachments are stored by filePath, not object-store fileId — no presigned URL.
     downloadUrl: null,
     // Legacy attachments are always flat 2-D rasters.
@@ -187,6 +196,10 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
         visitId: null,
         toothNumbers: [],
         createdAt: row.createdAt,
+        // §capture-date: prefer the stored acquisition date; coalesce to createdAt
+        // defensively (live rows are backfilled, so this is effectively never null).
+        capturedAt: row.capturedAt ?? row.createdAt,
+        capturedAtSource: row.capturedAtSource ?? 'defaulted_upload',
         downloadUrl: await downloadUrlFor(row.fileId),
         // P2-7 CBCT: surface the volume affordance so the list renders a volume card
         // (never a flat thumbnail) for CBCT / multi-frame objects.
@@ -212,9 +225,13 @@ export async function listPatientImages(ctx: BaseContext): Promise<Response> {
   const legacyRows = await getLegacyAttachmentImages(db, patientId, branchId);
   const legacyItems = legacyRows.map(mapLegacyAttachment);
 
-  // 3. Combine and sort by createdAt DESC
+  // 3. Combine and sort by capture date DESC (§capture-date) — chronology is WHEN
+  // the image was taken, not when it was uploaded. Coalesce to createdAt for any
+  // row without a capture date, and tiebreak equal capture dates by upload time so
+  // same-day bulk uploads keep a stable order.
+  const effectiveDate = (i: PatientImageItem) => (i.capturedAt ?? i.createdAt).getTime();
   const merged: PatientImageItem[] = [...imagingItems, ...legacyItems].sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    (a, b) => effectiveDate(b) - effectiveDate(a) || b.createdAt.getTime() - a.createdAt.getTime(),
   );
 
   // G5: apply optional library filters (diagnostic-only / quality / tag) post-merge

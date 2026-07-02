@@ -105,6 +105,9 @@ image_id: jsonpath "$.image.id"
 jsonpath "$.study.modality" == "cephalometric"
 jsonpath "$.uploadUrl" isString
 jsonpath "$.uploadMethod" == "PUT"
+# §capture-date: no capturedAt supplied → server defaults to upload time, flagged.
+jsonpath "$.image.capturedAt" isString
+jsonpath "$.image.capturedAtSource" == "defaulted_upload"
 
 
 # 2. Calibrate image — required for calibrated measurements.
@@ -143,6 +146,29 @@ jsonpath "$.retakeReason" == "overexposed"
 jsonpath "$.tags" count == 2
 jsonpath "$.tags" contains "ortho"
 jsonpath "$.tags" contains "review"
+
+# 2b2. §capture-date — correct the acquisition date via the metadata PATCH.
+# The image was TAKEN earlier than it was uploaded; the correction stamps
+# source=manual (an operator override, audited server-side).
+PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "capturedAt": "2026-03-15T00:00:00.000Z"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.capturedAt" startsWith "2026-03-15"
+jsonpath "$.capturedAtSource" == "manual"
+
+# 2b3. §capture-date — a future capture date is rejected (422).
+PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata
+Cookie: better-auth.session_token={{session_token}}
+Content-Type: application/json
+{
+  "capturedAt": "2099-01-01T00:00:00.000Z"
+}
+HTTP 422
 
 # 2c. Reset to a clean diagnostic state so later ceph steps are unaffected.
 PATCH {{api}}/dental/imaging/images/{{image_id}}/metadata

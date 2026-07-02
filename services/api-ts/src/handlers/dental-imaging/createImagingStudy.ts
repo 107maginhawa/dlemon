@@ -35,6 +35,13 @@ const MULTIPART_THRESHOLD_BYTES = MULTIPART_PART_SIZE_BYTES;
 // Plausible mm-per-pixel window for a DICOM-tag-derived calibration value.
 const DICOM_SPACING_MIN = 0.01;
 const DICOM_SPACING_MAX = 2.0;
+// §capture-date: client-supplied provenance values (never 'defaulted_upload' —
+// that is the server's own no-date-supplied fallback).
+const CLIENT_CAPTURE_SOURCES = ['dicom_tag', 'exif', 'visit', 'manual'] as const;
+type CapturedAtSource = 'dicom_tag' | 'exif' | 'visit' | 'manual' | 'defaulted_upload';
+// Tolerance for a "future" capture date — a "today" date entered in a timezone
+// ahead of the server's UTC clock can legitimately read up to ~a day ahead.
+const FUTURE_CAPTURE_SKEW_MS = 24 * 60 * 60 * 1000;
 
 export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
   const user = ctx.get('user') as User | undefined;
@@ -52,6 +59,11 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     sequenceNumber?: number;
     // P1-9: PixelSpacing (mm/px) parsed client-side from the DICOM (0028,0030) tag.
     pixelSpacingMm?: number;
+    // §capture-date: acquisition date + provenance. When the client can determine
+    // the real capture date (DICOM AcquisitionDate 0008,0022 parsed client-side, or
+    // a user-entered date) it sends it here. Absent → defaulted to upload time.
+    capturedAt?: string;
+    capturedAtSource?: string;
   };
 
   // V-IMG-003 / §15: unsupported MIME → 422 UNSUPPORTED_MIME_TYPE (not 400 VALIDATION_ERROR).
@@ -121,6 +133,29 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
       `File size exceeds maximum limit of ${formatByteCeiling(maxFileSize)}`,
       'FILE_TOO_LARGE',
     );
+  }
+
+  // §capture-date: resolve the acquisition date + provenance at WRITE time so
+  // reads are a plain ORDER BY captured_at (no join, no read-time coalesce). When
+  // the client supplies a date (DICOM tag or user-entered) we validate it isn't in
+  // the future; absent → default to the upload moment, flagged defaulted_upload.
+  let capturedAt: Date;
+  let capturedAtSource: CapturedAtSource;
+  if (body.capturedAt != null) {
+    const parsed = new Date(body.capturedAt);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BusinessLogicError('capturedAt must be a valid date', 'INVALID_CAPTURE_DATE');
+    }
+    if (parsed.getTime() > Date.now() + FUTURE_CAPTURE_SKEW_MS) {
+      throw new BusinessLogicError('Capture date cannot be in the future', 'INVALID_CAPTURE_DATE');
+    }
+    capturedAt = parsed;
+    capturedAtSource = (CLIENT_CAPTURE_SOURCES as readonly string[]).includes(body.capturedAtSource ?? '')
+      ? (body.capturedAtSource as CapturedAtSource)
+      : 'manual';
+  } else {
+    capturedAt = new Date();
+    capturedAtSource = 'defaulted_upload';
   }
 
   const storage = ctx.get('storage') as StorageProvider;
@@ -202,6 +237,8 @@ export async function createImagingStudy(ctx: BaseContext): Promise<Response> {
     pixelSpacingMm: dicomSpacing,
     dicomMetadata,
     sequenceNumber: body.sequenceNumber ?? 0,
+    capturedAt,
+    capturedAtSource,
   });
 
   // Link to tooth numbers if provided

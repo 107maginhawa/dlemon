@@ -11,8 +11,9 @@
 import type { BaseContext } from '@/types/app';
 import type { DatabaseInstance } from '@/core/database';
 import type { User } from '@/types/auth';
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/core/errors';
+import { UnauthorizedError, NotFoundError, ValidationError, BusinessLogicError } from '@/core/errors';
 import { assertBranchRole } from '@/handlers/shared/assert-branch-role';
+import { logAuditEvent } from '@/core/audit-logger';
 import { ImagingRepository } from './repos/imaging.repo';
 
 const QUALITY_STATUSES = ['ok', 'retake'] as const;
@@ -20,12 +21,18 @@ type QualityStatus = (typeof QUALITY_STATUSES)[number];
 const TAG_MAX_LEN = 50;
 const MAX_TAGS = 30;
 const RETAKE_REASON_MAX_LEN = 500;
+// §capture-date: a "today" date entered in a timezone ahead of the server's UTC
+// clock can legitimately read up to ~a day ahead — tolerate that, reject beyond.
+const FUTURE_CAPTURE_SKEW_MS = 24 * 60 * 60 * 1000;
 
 export interface ImageMetadataPatch {
   isDiagnostic?: boolean;
   qualityStatus?: QualityStatus;
   retakeReason?: string | null;
   tags?: string[];
+  // §capture-date: a user correction always stamps source=manual (server-set).
+  capturedAt?: Date;
+  capturedAtSource?: 'manual';
 }
 
 export async function updateImageMetadata(ctx: BaseContext): Promise<Response> {
@@ -38,6 +45,7 @@ export async function updateImageMetadata(ctx: BaseContext): Promise<Response> {
     qualityStatus?: unknown;
     retakeReason?: unknown;
     tags?: unknown;
+    capturedAt?: unknown;
   };
 
   const patch: ImageMetadataPatch = {};
@@ -82,6 +90,23 @@ export async function updateImageMetadata(ctx: BaseContext): Promise<Response> {
     patch.tags = normalized;
   }
 
+  // §capture-date: a user correction to the acquisition date. Stamps source=manual
+  // and is audited (below) so the old→new change is on the append-only record.
+  if (body.capturedAt !== undefined) {
+    if (typeof body.capturedAt !== 'string') {
+      throw new ValidationError('capturedAt must be an ISO date string');
+    }
+    const parsed = new Date(body.capturedAt);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new ValidationError('capturedAt must be a valid date');
+    }
+    if (parsed.getTime() > Date.now() + FUTURE_CAPTURE_SKEW_MS) {
+      throw new BusinessLogicError('Capture date cannot be in the future', 'INVALID_CAPTURE_DATE');
+    }
+    patch.capturedAt = parsed;
+    patch.capturedAtSource = 'manual';
+  }
+
   if (Object.keys(patch).length === 0) {
     throw new ValidationError('No metadata fields supplied');
   }
@@ -99,6 +124,28 @@ export async function updateImageMetadata(ctx: BaseContext): Promise<Response> {
   await assertBranchRole(db, user.id, study.branchId, ['dentist_owner', 'dentist_associate']);
 
   const updated = await repo.updateImageMetadata(imageId, patch);
+
+  // §capture-date: dental images are legal records — a capture-date correction is
+  // an operator override of the record's clinical date, so it goes on the
+  // append-only audit trail with the old→new value. Other metadata edits (quality
+  // flags/tags) are not date-of-record and stay unaudited as before.
+  if (patch.capturedAt) {
+    await logAuditEvent(db, ctx.get('logger'), {
+      personId: user.id,
+      tenantId: study.branchId,
+      branchId: study.branchId,
+      action: 'imaging_image.capture_date_update',
+      eventType: 'data-modification',
+      resourceType: 'imaging_study_image',
+      resourceId: imageId,
+      metadata: {
+        previous: image.capturedAt ? new Date(image.capturedAt).toISOString() : null,
+        previousSource: image.capturedAtSource ?? null,
+        next: patch.capturedAt.toISOString(),
+        source: 'manual',
+      },
+    });
+  }
 
   return ctx.json(updated, 200);
 }

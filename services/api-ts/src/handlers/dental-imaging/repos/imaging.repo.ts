@@ -108,6 +108,9 @@ export class ImagingRepository {
         qualityStatus: imagingStudyImages.qualityStatus,
         retakeReason: imagingStudyImages.retakeReason,
         tags: imagingStudyImages.tags,
+        // §capture-date: acquisition date + provenance (list sorts/labels by it).
+        capturedAt: imagingStudyImages.capturedAt,
+        capturedAtSource: imagingStudyImages.capturedAtSource,
         createdAt: imagingStudyImages.createdAt,
         updatedAt: imagingStudyImages.updatedAt,
         version: imagingStudyImages.version,
@@ -199,6 +202,9 @@ export class ImagingRepository {
       qualityStatus?: 'ok' | 'retake';
       retakeReason?: string | null;
       tags?: string[];
+      // §capture-date: acquisition-date correction (+ its provenance).
+      capturedAt?: Date;
+      capturedAtSource?: 'dicom_tag' | 'exif' | 'visit' | 'manual' | 'defaulted_upload';
     },
   ): Promise<ImagingStudyImage> {
     const set: Partial<NewImagingStudyImage> = { updatedAt: new Date() };
@@ -206,6 +212,8 @@ export class ImagingRepository {
     if (patch.qualityStatus !== undefined) set.qualityStatus = patch.qualityStatus;
     if (patch.retakeReason !== undefined) set.retakeReason = patch.retakeReason;
     if (patch.tags !== undefined) set.tags = patch.tags;
+    if (patch.capturedAt !== undefined) set.capturedAt = patch.capturedAt;
+    if (patch.capturedAtSource !== undefined) set.capturedAtSource = patch.capturedAtSource;
     const [updated] = await this.db
       .update(imagingStudyImages)
       .set(set)

@@ -71,6 +71,20 @@ export const imagingAnnotationTypeEnum = pgEnum('imaging_annotation_type', [
   'tooth',
 ]);
 
+// §capture-date: provenance of an image's `capturedAt`. Distinguishes a REAL
+// acquisition date from an upload-time default — a medico-legal question ("is this
+// June 1 a true capture date or the upload date wearing a costume?"). Mirrors the
+// `calibrationMethod: 'dicom_tag'` provenance precedent. 'exif' is reserved for a
+// future non-DICOM extraction; 'visit' for a visit-date default; 'defaulted_upload'
+// is the migration backfill + the no-date-supplied create fallback.
+export const imagingCapturedAtSourceEnum = pgEnum('imaging_captured_at_source', [
+  'dicom_tag',
+  'exif',
+  'visit',
+  'manual',
+  'defaulted_upload',
+]);
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -120,6 +134,14 @@ export const imagingStudyImages = pgTable('imaging_study_image', {
   qualityStatus: imagingQualityStatusEnum('quality_status').notNull().default('ok'),
   retakeReason: text('retake_reason'),
   tags: jsonb('tags').notNull().$type<string[]>().default([]),
+  // §capture-date: when the image was ACQUIRED, distinct from createdAt (upload
+  // time) — so chronology sorts by capture, not upload. Nullable column, but the
+  // create handler always writes a value (DICOM AcquisitionDate → today) and the
+  // migration backfills existing rows to created_at, so live rows are effectively
+  // non-null; consumers coalesce (capturedAt ?? createdAt) for legacy safety.
+  // timestamptz keeps sub-day ordering (FMX bursts) + timezone.
+  capturedAt: timestamp('captured_at', { withTimezone: true }),
+  capturedAtSource: imagingCapturedAtSourceEnum('captured_at_source'),
 });
 
 /**

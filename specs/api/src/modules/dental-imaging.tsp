@@ -77,6 +77,12 @@ namespace DentalImagingModule {
     qualityStatus?: "ok" | "retake";
     retakeReason?: string | null;
     tags?: string[];
+    // Capture date (§capture-date): when the image was ACQUIRED, distinct from
+    // createdAt (upload time). Resolved server-side at write (DICOM AcquisitionDate
+    // → today) so chronology sorts by capture, not upload. capturedAtSource records
+    // provenance so a real capture date is distinguishable from an upload default.
+    capturedAt?: utcDateTime | null;
+    capturedAtSource?: "dicom_tag" | "exif" | "visit" | "manual" | "defaulted_upload" | null;
   }
 
   model ImagingStudyWithImages extends ImagingStudy {
@@ -111,6 +117,10 @@ namespace DentalImagingModule {
     tags?: string[];
     // G5b: context links (treatment plan / report). Empty for legacy.
     links?: ImagingLink[];
+    // Capture date (§capture-date): the list sorts + labels by capturedAt (falls
+    // back to createdAt when null, e.g. legacy attachments). See ImagingStudyImage.
+    capturedAt?: utcDateTime | null;
+    capturedAtSource?: "dicom_tag" | "exif" | "visit" | "manual" | "defaulted_upload" | null;
   }
 
   model ListPatientImagesResponse {
@@ -143,6 +153,13 @@ namespace DentalImagingModule {
     // When present, the image is persisted pre-calibrated (calibrationMethod=dicom_tag),
     // so mm measurements work without a manual ruler. Ignored for non-DICOM uploads.
     pixelSpacingMm?: float64;
+    // Capture date (§capture-date). When the client can determine the real
+    // acquisition date (DICOM AcquisitionDate 0008,0022, parsed client-side, or a
+    // user-entered date) it sends it here with its provenance. When absent the
+    // server defaults capturedAt to the upload time with source=defaulted_upload.
+    // A future capturedAt is rejected (422).
+    capturedAt?: utcDateTime;
+    capturedAtSource?: "dicom_tag" | "exif" | "visit" | "manual";
   }
 
   // P1-9: a single PUT for small files; an S3 multipart envelope for large DICOM/CBCT
@@ -235,6 +252,9 @@ namespace DentalImagingModule {
     qualityStatus?: "ok" | "retake";
     retakeReason?: string | null;
     tags?: string[];
+    // Capture date correction (§capture-date). A user-entered fix; the server
+    // stamps source=manual and audits the old→new value. A future date is 422.
+    capturedAt?: utcDateTime;
   }
 
   // G5b: a context link from an image to a treatment plan / ceph report.
