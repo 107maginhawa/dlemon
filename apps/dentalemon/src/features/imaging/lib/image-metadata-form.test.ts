@@ -4,6 +4,8 @@ import {
   tagsToInput,
   buildMetadataBody,
   isValidLinkTarget,
+  isoToDateInput,
+  dateInputToIso,
 } from './image-metadata-form'
 
 describe('normalizeTags', () => {
@@ -83,6 +85,45 @@ describe('buildMetadataBody', () => {
       tagsInput: '',
     })
     expect(body.retakeReason).toBeNull()
+  })
+
+  // §capture-date: the editor sends the full metadata each save, so capturedAt is
+  // only included when the operator actually changed the date — otherwise every
+  // save would re-stamp source=manual + write an audit row.
+  it('omits capturedAt when unchanged from the initial value', () => {
+    const body = buildMetadataBody({
+      isDiagnostic: true, qualityStatus: 'ok', retakeReason: '', tagsInput: '',
+      capturedAtInput: '2026-05-01', initialCapturedAtInput: '2026-05-01',
+    })
+    expect('capturedAt' in body).toBe(false)
+  })
+
+  it('includes capturedAt (Date at midnight UTC) when the date changed', () => {
+    const body = buildMetadataBody({
+      isDiagnostic: true, qualityStatus: 'ok', retakeReason: '', tagsInput: '',
+      capturedAtInput: '2026-04-15', initialCapturedAtInput: '2026-05-01',
+    })
+    expect(body.capturedAt).toBeInstanceOf(Date)
+    expect((body.capturedAt as Date).toISOString()).toBe('2026-04-15T00:00:00.000Z')
+  })
+
+  it('omits capturedAt when the input is blank', () => {
+    const body = buildMetadataBody({
+      isDiagnostic: true, qualityStatus: 'ok', retakeReason: '', tagsInput: '',
+      capturedAtInput: '', initialCapturedAtInput: '2026-05-01',
+    })
+    expect('capturedAt' in body).toBe(false)
+  })
+})
+
+describe('capture-date input helpers (§capture-date)', () => {
+  it('isoToDateInput → YYYY-MM-DD (UTC day)', () => {
+    expect(isoToDateInput('2026-05-01T09:30:00.000Z')).toBe('2026-05-01')
+    expect(isoToDateInput(null)).toBe('')
+  })
+  it('dateInputToIso → midnight-UTC ISO', () => {
+    expect(dateInputToIso('2026-05-01')).toBe('2026-05-01T00:00:00.000Z')
+    expect(dateInputToIso('')).toBe('')
   })
 })
 

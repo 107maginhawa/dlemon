@@ -1,5 +1,26 @@
 import { describe, test, expect } from 'bun:test'
-import { isDicomMimeType, parseDicomPixelSpacing, DICOM_MIME_TYPE } from './dicom'
+import { isDicomMimeType, parseDicomPixelSpacing, parseDicomAcquisitionDate, DICOM_MIME_TYPE } from './dicom'
+
+/**
+ * Build a minimal little-endian explicit-VR DICOM buffer with a single element
+ * (group, element, VR, ascii value). Used to exercise the date-tag scanner.
+ */
+function buildDicomWithElement(group: number, element: number, vr: string, value: string): ArrayBuffer {
+  const enc = new TextEncoder()
+  const valueBytes = enc.encode(value.length % 2 === 0 ? value : value + ' ')
+  const total = 128 + 4 + 2 + 2 + 2 + 2 + valueBytes.length
+  const buf = new ArrayBuffer(total)
+  const view = new DataView(buf)
+  const bytes = new Uint8Array(buf)
+  let off = 128
+  bytes.set(enc.encode('DICM'), off); off += 4
+  view.setUint16(off, group, true); off += 2
+  view.setUint16(off, element, true); off += 2
+  bytes.set(enc.encode(vr), off); off += 2
+  view.setUint16(off, valueBytes.length, true); off += 2
+  bytes.set(valueBytes, off)
+  return buf
+}
 
 /**
  * Build a minimal little-endian explicit-VR DICOM byte buffer containing a
@@ -72,5 +93,34 @@ describe('parseDicomPixelSpacing (P1-9)', () => {
   test('returns null for an implausible spacing (guards bad parses)', () => {
     const buf = buildDicomWithPixelSpacing('999\\999')
     expect(parseDicomPixelSpacing(buf)).toBeNull()
+  })
+})
+
+describe('parseDicomAcquisitionDate (§capture-date)', () => {
+  test('extracts AcquisitionDate (0008,0022) as an ISO day', () => {
+    const buf = buildDicomWithElement(0x0008, 0x0022, 'DA', '20260501')
+    expect(parseDicomAcquisitionDate(buf)).toBe('2026-05-01T00:00:00.000Z')
+  })
+
+  test('falls back to StudyDate (0008,0020) when AcquisitionDate is absent', () => {
+    const buf = buildDicomWithElement(0x0008, 0x0020, 'DA', '20251231')
+    expect(parseDicomAcquisitionDate(buf)).toBe('2025-12-31T00:00:00.000Z')
+  })
+
+  test('returns null when no date tag is present', () => {
+    const enc = new TextEncoder()
+    const buf = new ArrayBuffer(128 + 4)
+    new Uint8Array(buf).set(enc.encode('DICM'), 128)
+    expect(parseDicomAcquisitionDate(buf)).toBeNull()
+  })
+
+  test('returns null for a malformed date value', () => {
+    const buf = buildDicomWithElement(0x0008, 0x0022, 'DA', 'notadate')
+    expect(parseDicomAcquisitionDate(buf)).toBeNull()
+  })
+
+  test('returns null when not a DICOM file', () => {
+    const buf = new TextEncoder().encode('nope').buffer
+    expect(parseDicomAcquisitionDate(buf)).toBeNull()
   })
 })

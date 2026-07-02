@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Upload } from 'lucide-react'
 import { Button, Input, Label } from '@monobase/ui'
 import { useImagingUpload } from '@/features/imaging/hooks/use-imaging-upload'
-import { DICOM_MIME_TYPE, isDicomMimeType } from '@/features/imaging/lib/dicom'
+import { DICOM_MIME_TYPE, isDicomMimeType, parseDicomAcquisitionDate } from '@/features/imaging/lib/dicom'
+import { isoToDateInput, dateInputToIso } from '@/features/imaging/lib/image-metadata-form'
 
 const MODALITY_OPTIONS = [
   { value: 'periapical', label: 'Periapical' },
@@ -31,11 +32,23 @@ interface ImageUploadProps {
   onSuccess?: (studyId: string) => void
 }
 
+// §capture-date: today as a native date-input value (YYYY-MM-DD). Also the max
+// allowed capture date — an image can't be taken in the future.
+function todayInput(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUploadProps) {
   const [modality, setModality] = useState('other')
   const [toothNumber, setToothNumber] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
+  // §capture-date: when the image was TAKEN (not uploaded). Prefilled to today;
+  // seeded from the DICOM AcquisitionDate on file-select when present. Source flips
+  // to 'manual' the moment the operator edits it.
+  const today = todayInput()
+  const [captureDate, setCaptureDate] = useState(today)
+  const [captureSource, setCaptureSource] = useState<'dicom_tag' | 'manual'>('manual')
   const { progress, upload, isUploading, abort } = useImagingUpload()
 
   const validateFile = (f: File): string => {
@@ -48,22 +61,37 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
     return ''
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] ?? null
+  // Select a file: validate, and (§capture-date) seed the capture date from the
+  // DICOM AcquisitionDate when present, so the operator confirms rather than types.
+  const applyFile = async (selected: File | null) => {
     setFile(selected)
-    if (selected) {
-      setError(validateFile(selected))
-    } else {
+    if (!selected) {
       setError('')
+      return
     }
+    setError(validateFile(selected))
+    if (isDicomFile(selected)) {
+      try {
+        const iso = parseDicomAcquisitionDate(await selected.arrayBuffer())
+        if (iso) {
+          setCaptureDate(isoToDateInput(iso))
+          setCaptureSource('dicom_tag')
+        }
+      } catch {
+        // best-effort — fall back to the current (today / user-entered) date
+      }
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    void applyFile(e.target.files?.[0] ?? null)
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     const dropped = e.dataTransfer.files[0]
     if (!dropped) return
-    setFile(dropped)
-    setError(validateFile(dropped))
+    void applyFile(dropped)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,6 +102,11 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
       setError(validationError)
       return
     }
+    // §capture-date: an image can't have been taken in the future.
+    if (captureDate && captureDate > today) {
+      setError("Capture date can't be in the future.")
+      return
+    }
     setError('')
     try {
       const result = await upload(file, {
@@ -82,10 +115,13 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
         visitId,
         modality,
         toothNumbers: toothNumber ? [parseInt(toothNumber, 10)] : [],
+        ...(captureDate ? { capturedAt: dateInputToIso(captureDate), capturedAtSource: captureSource } : {}),
       })
       onSuccess?.(result.studyId)
       setFile(null)
       setToothNumber('')
+      setCaptureDate(today)
+      setCaptureSource('manual')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     }
@@ -93,6 +129,23 @@ export function ImageUpload({ patientId, branchId, visitId, onSuccess }: ImageUp
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="image-upload-capture-date">Capture date</Label>
+        <Input
+          id="image-upload-capture-date"
+          type="date"
+          aria-label="Capture date"
+          data-testid="image-upload-capture-date"
+          max={today}
+          value={captureDate}
+          onChange={(e) => {
+            setCaptureDate(e.target.value)
+            setCaptureSource('manual')
+          }}
+          className="coarse:min-h-[44px]"
+        />
+        <p className="text-xs text-muted-foreground">When the image was taken (not when it was uploaded). Defaults to today.</p>
+      </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="image-upload-modality">Modality</Label>
         <select

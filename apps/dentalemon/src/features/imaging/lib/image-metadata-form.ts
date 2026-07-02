@@ -10,6 +10,24 @@ export interface MetadataForm {
   qualityStatus: 'ok' | 'retake'
   retakeReason: string
   tagsInput: string
+  // §capture-date: the date input (YYYY-MM-DD) + the image's original value, so
+  // the body only carries capturedAt when the operator actually changed it.
+  capturedAtInput?: string
+  initialCapturedAtInput?: string
+}
+
+/** ISO timestamp → a native <input type="date"> value (YYYY-MM-DD, UTC day). */
+export function isoToDateInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toISOString().slice(0, 10)
+}
+
+/** A <input type="date"> value (YYYY-MM-DD) → a midnight-UTC ISO timestamp. */
+export function dateInputToIso(day: string): string {
+  if (!day) return ''
+  return `${day}T00:00:00.000Z`
 }
 
 /**
@@ -44,11 +62,20 @@ export function buildMetadataBody(form: MetadataForm): DentalImagingModuleUpdate
     form.qualityStatus === 'retake' && trimmedReason.length > 0
       ? trimmedReason.slice(0, RETAKE_REASON_MAX_LEN)
       : null
+  // §capture-date: include capturedAt only when the operator changed the date
+  // (and it's non-blank) — the editor sends full metadata on every save, and any
+  // present capturedAt re-stamps source=manual + writes an audit row server-side.
+  const capturedAtChanged =
+    form.capturedAtInput != null &&
+    form.capturedAtInput.length > 0 &&
+    form.capturedAtInput !== form.initialCapturedAtInput
   return {
     isDiagnostic: form.isDiagnostic,
     qualityStatus: form.qualityStatus,
     retakeReason,
     tags: normalizeTags(form.tagsInput),
+    // The SDK body types utcDateTime as Date (the client serializes it to ISO).
+    ...(capturedAtChanged ? { capturedAt: new Date(dateInputToIso(form.capturedAtInput!)) } : {}),
   }
 }
 

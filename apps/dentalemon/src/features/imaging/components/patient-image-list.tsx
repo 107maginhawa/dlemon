@@ -249,10 +249,29 @@ export function PatientImageList({ patientId, branchId, onSelectImage, onCompare
                     <p className="text-xs text-zinc-400 capitalize">
                       {item.modality.replace('_', ' ')}
                     </p>
-                    {/* 1.2: capture date — pick X-rays by when, not just filename. */}
-                    <p className="text-xs text-zinc-400">
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </p>
+                    {/* §capture-date: lead with when the image was TAKEN (the list
+                        sorts by it). Show the upload date only when it differs —
+                        words, not color, carry the distinction (WCAG: color is
+                        never the sole signal). */}
+                    {(() => {
+                      const captured = item.capturedAt ?? item.createdAt
+                      const capturedDay = new Date(captured).toISOString().slice(0, 10)
+                      const uploadedDay = new Date(item.createdAt).toISOString().slice(0, 10)
+                      const differs = capturedDay !== uploadedDay
+                      return (
+                        <>
+                          <p className="text-xs text-zinc-400 tabular-nums" data-testid={`capture-date-${item.id}`}>
+                            {differs ? 'Taken ' : ''}
+                            {new Date(captured).toLocaleDateString()}
+                          </p>
+                          {differs && (
+                            <p className="text-xs text-zinc-400 tabular-nums" data-testid={`upload-date-${item.id}`}>
+                              Added {new Date(item.createdAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </>
+                      )
+                    })()}
                     {/* G5: quality / diagnostic badges + tags + context-link badges */}
                     {(item.qualityStatus === 'retake' || !item.isDiagnostic || item.tags.length > 0 || item.links.length > 0) && (
                       <div className="mt-1 flex flex-wrap items-center gap-1">

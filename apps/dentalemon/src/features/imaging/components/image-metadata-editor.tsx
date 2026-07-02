@@ -10,6 +10,7 @@ import {
   buildMetadataBody,
   tagsToInput,
   isValidLinkTarget,
+  isoToDateInput,
   type MetadataForm,
 } from '@/features/imaging/lib/image-metadata-form'
 import { LINK_TYPE_LABELS } from '@/features/imaging/lib/image-library-filter'
@@ -48,12 +49,19 @@ export function ImageMetadataEditor({ item, patientId, branchId, onSaved }: Imag
     useImageLibrary({ patientId, branchId })
   const { links } = useImageLinks(item.id)
 
+  // §capture-date: seed the date input from the image's current capture date
+  // (its own value, not upload time). initialCapturedAtInput lets buildMetadataBody
+  // send capturedAt only when the operator actually changes it.
+  const initialCaptureInput = isoToDateInput(item.capturedAt)
   const [form, setForm] = useState<MetadataForm>({
     isDiagnostic: item.isDiagnostic,
     qualityStatus: item.qualityStatus,
     retakeReason: item.retakeReason ?? '',
     tagsInput: tagsToInput(item.tags),
+    capturedAtInput: initialCaptureInput,
+    initialCapturedAtInput: initialCaptureInput,
   })
+  const todayInput = new Date().toISOString().slice(0, 10)
 
   const [linkType, setLinkType] = useState<ImageLinkType>('treatment_plan')
   const [linkTarget, setLinkTarget] = useState('')
@@ -162,6 +170,20 @@ export function ImageMetadataEditor({ item, patientId, branchId, onSaved }: Imag
             />
           </label>
         )}
+
+        <label className="flex flex-col gap-1 text-zinc-700">
+          <span className="text-xs font-medium text-zinc-500">Capture date</span>
+          <input
+            type="date"
+            aria-label="Capture date"
+            max={todayInput}
+            value={form.capturedAtInput ?? ''}
+            onChange={(e) => setForm((f) => ({ ...f, capturedAtInput: e.target.value }))}
+            data-testid="meta-capture-date"
+            className="rounded border border-zinc-200 px-2 py-1 coarse:min-h-[44px]"
+          />
+          <span className="text-xs text-zinc-400">When the image was taken (not when it was uploaded).</span>
+        </label>
 
         <label className="flex flex-col gap-1 text-zinc-700">
           <span className="text-xs font-medium text-zinc-500">Tags (comma-separated)</span>

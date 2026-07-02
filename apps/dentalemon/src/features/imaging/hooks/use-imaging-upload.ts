@@ -27,6 +27,11 @@ export interface UploadOptions {
   visitId?: string
   modality?: string
   toothNumbers?: number[]
+  // §capture-date: acquisition date (ISO) + its provenance, resolved by the form
+  // (DICOM AcquisitionDate → user-entered → today). Omitted → server defaults to
+  // upload time (source=defaulted_upload).
+  capturedAt?: string
+  capturedAtSource?: 'dicom_tag' | 'exif' | 'visit' | 'manual'
 }
 
 export function useImagingUpload() {
@@ -72,6 +77,8 @@ export function useImagingUpload() {
           size: BigInt(file.size),
           toothNumbers: options.toothNumbers ?? [],
           ...(pixelSpacingMm != null ? { pixelSpacingMm } : {}),
+          ...(options.capturedAt ? { capturedAt: new Date(options.capturedAt) } : {}),
+          ...(options.capturedAtSource ? { capturedAtSource: options.capturedAtSource } : {}),
         },
         throwOnError: true,
       })

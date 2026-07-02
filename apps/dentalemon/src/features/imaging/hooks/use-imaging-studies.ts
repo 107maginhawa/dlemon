@@ -24,6 +24,11 @@ export interface PatientImageItem {
   visitId: string | null
   toothNumbers: number[]
   createdAt: string
+  // §capture-date: when the image was TAKEN (ISO). Null only for rows with no
+  // backing metadata; consumers coalesce capturedAt ?? createdAt. Provenance in
+  // capturedAtSource ('dicom_tag' | 'manual' | 'defaulted_upload' | …).
+  capturedAt: string | null
+  capturedAtSource: string | null
   downloadUrl: string | null
   isVolume?: boolean
   frameCount?: number | null
@@ -51,6 +56,8 @@ function toViewModel(item: DentalImagingModulePatientImageItem): PatientImageIte
     visitId: item.visitId,
     toothNumbers: item.toothNumbers,
     createdAt: toIso(item.createdAt),
+    capturedAt: item.capturedAt != null ? toIso(item.capturedAt) : null,
+    capturedAtSource: item.capturedAtSource ?? null,
     downloadUrl: item.downloadUrl,
     ...(item.isVolume !== undefined ? { isVolume: item.isVolume } : {}),
     ...(item.frameCount !== undefined ? { frameCount: item.frameCount } : {}),

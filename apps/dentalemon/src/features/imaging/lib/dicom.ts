@@ -108,3 +108,76 @@ export function parseDicomPixelSpacing(buffer: ArrayBuffer): DicomPixelSpacing |
 
   return null
 }
+
+/** Parse a DICOM DA value ("YYYYMMDD") into a midnight-UTC ISO string, or null. */
+function daToIso(raw: string): string | null {
+  const v = raw.trim()
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(v)
+  if (!m) return null
+  const [, y, mo, d] = m
+  const iso = `${y}-${mo}-${d}T00:00:00.000Z`
+  const parsed = new Date(iso)
+  // Guard against impossible dates (e.g. month 13) that Date silently rolls over.
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== iso) return null
+  return iso
+}
+
+/**
+ * §capture-date: parse the acquisition date from a DICOM file's bytes. Reads, in
+ * priority order, AcquisitionDate (0008,0022) → ContentDate (0008,0023) →
+ * StudyDate (0008,0020), all group-0008 DA-VR tags. Returns a midnight-UTC ISO
+ * string, or null if not DICOM / no usable date tag. Deliberately small — mirrors
+ * parseDicomPixelSpacing; anything unparseable falls back to the upload-time
+ * default at the call site.
+ */
+export function parseDicomAcquisitionDate(buffer: ArrayBuffer): string | null {
+  const bytes = new Uint8Array(buffer)
+  if (bytes.length < PREAMBLE_LEN + MAGIC.length) return null
+  if (readAscii(bytes, PREAMBLE_LEN, MAGIC.length) !== MAGIC) return null
+
+  const view = new DataView(buffer)
+  let off = PREAMBLE_LEN + MAGIC.length
+  const found: Record<number, string> = {}
+
+  while (off + 8 <= bytes.length) {
+    const group = view.getUint16(off, true)
+    const element = view.getUint16(off + 2, true)
+    const vr = readAscii(bytes, off + 4, 2)
+
+    const isVrChars = /^[A-Z]{2}$/.test(vr)
+    const longVr = isVrChars && ['OB', 'OW', 'OF', 'SQ', 'UT', 'UN'].includes(vr)
+
+    let valueOffset: number
+    let length: number
+    if (!isVrChars) {
+      length = view.getUint32(off + 4, true)
+      valueOffset = off + 8
+    } else if (longVr) {
+      length = view.getUint32(off + 8, true)
+      valueOffset = off + 12
+    } else {
+      length = view.getUint16(off + 6, true)
+      valueOffset = off + 8
+    }
+    if (length < 0 || valueOffset + length > bytes.length) break
+
+    if (group === 0x0008 && (element === 0x0020 || element === 0x0022 || element === 0x0023)) {
+      found[element] = readAscii(bytes, valueOffset, length)
+    }
+
+    // Date tags all live in group 0008 — stop once we pass it (ascending tag order).
+    if (group > 0x0008) break
+
+    off = valueOffset + length
+  }
+
+  // Priority: AcquisitionDate → ContentDate → StudyDate.
+  for (const element of [0x0022, 0x0023, 0x0020]) {
+    const raw = found[element]
+    if (raw !== undefined) {
+      const iso = daToIso(raw)
+      if (iso) return iso
+    }
+  }
+  return null
+}
