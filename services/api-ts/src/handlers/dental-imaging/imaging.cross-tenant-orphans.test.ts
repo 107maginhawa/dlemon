@@ -13,12 +13,20 @@
  * needs a heavier report->image->study repo mock).
  */
 
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, test, expect, mock, afterAll } from 'bun:test';
 import { z } from 'zod';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { AppError } from '@/core/errors';
 import { createDatabase } from '@/core/database';
+// Capture the REAL repo exports before mocking so they can be restored after
+// this file — bun's mock.module is process-global and does NOT auto-restore, so
+// without the afterAll below every imaging test file that runs after this one
+// gets the stub ImagingRepository (only findStudyById/findImageById) and 500s.
+// NOTE: bun patches the module namespace object in place, so the namespace
+// import alone is NOT a snapshot — copy the export VALUES before mock.module.
+import * as realImagingRepo from '@/handlers/dental-imaging/repos/imaging.repo';
+const REAL_REPO_EXPORTS = { ...realImagingRepo };
 
 const db = createDatabase({
   url: process.env['DATABASE_URL'] ?? 'postgres://postgres:password@localhost:5432/monobase_test',
@@ -34,6 +42,11 @@ mock.module('@/handlers/dental-imaging/repos/imaging.repo', () => ({
     findImageById = () => Promise.resolve({ id: 'img', studyId: 'st' });
   },
 }));
+
+afterAll(() => {
+  // Undo the process-global module mock for subsequent test files.
+  mock.module('@/handlers/dental-imaging/repos/imaging.repo', () => REAL_REPO_EXPORTS);
+});
 function makeErrorHandler() {
   return (err: any, c: any) =>
     err instanceof AppError ? c.json({ error: err.message }, err.statusCode as any) : c.json({ error: String(err?.message) }, 500);
