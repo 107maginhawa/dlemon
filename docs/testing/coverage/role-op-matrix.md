@@ -8,11 +8,11 @@ Computed comparison of what each handler *enforces* via `assertBranchRole(...)` 
 
 | Metric | Count |
 |--------|------:|
-| Operations with a role gate | 113 |
+| Operations with a role gate | 114 |
 | Joined to the spec matrix | 28 |
 | **Drift (code ≠ spec)** | **0** |
 | Dynamic (computed) gates | 6 |
-| Gated but unmapped to spec | 85 |
+| Gated but unmapped to spec | 86 |
 
 ## DRIFT
 
@@ -42,6 +42,7 @@ _No drift detected._
 | `ImagingMgmt_updateImageCalibration` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/calibration` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `ImagingMgmt_updateImageMetadata` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/metadata` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `ImagingMgmt_updateImageModality` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/modality` | dentist_owner, dentist_associate | — (unmapped) |  |
+| `ImagingMgmt_updateMeasurement` | dental-imaging | PATCH | `/dental/imaging/measurements/{measurementId}` | dentist_owner, dentist_associate | — (unmapped) |  |
 | `acceptCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations/{presentationId}/accept` | dentist_owner, dentist_associate, treatment_coordinator, staff_full, front_desk, dental_assistant | — (unmapped) |  |
 | `addFollowUpNote` | dental-patient | POST | `/dental/patients/{id}/follow-up-notes` | _dynamic_ | — (unmapped) |  |
 | `applyDentalDiscount` | dental-billing | POST | `/dental/billing/invoices/{invoiceId}/discount` | dentist_owner | — (unmapped) |  |

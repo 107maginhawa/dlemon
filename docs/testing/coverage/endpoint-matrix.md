@@ -10,15 +10,15 @@ Per-operation coverage across the four test layers (contract / integration / jou
 
 | Metric | Count |
 |--------|------:|
-| Total operations | 381 |
-| FE-consumed | 215 |
-| With a contract test | 278 |
+| Total operations | 382 |
+| FE-consumed | 216 |
+| With a contract test | 279 |
 | With an integration test | 0 |
 | With a journey | 0 |
 | **gap** (consumed, untested) | **37** |
 | orphan (product handler+SDK, no FE consumer) | 96 |
 | template-base (upstream-template orphan, excluded from denominator) | 61 |
-| tested / no-obligation | 187 |
+| tested / no-obligation | 188 |
 
 ## GAPS — FE-consumed but untested (ratchet-tracked)
 
@@ -109,6 +109,7 @@ Per-operation coverage across the four test layers (contract / integration / jou
 | `ImagingMgmt_updateImageCalibration` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/calibration` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `ImagingMgmt_updateImageMetadata` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/metadata` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `ImagingMgmt_updateImageModality` | dental-imaging | PATCH | `/dental/imaging/images/{imageId}/modality` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
+| `ImagingMgmt_updateMeasurement` | dental-imaging | PATCH | `/dental/imaging/measurements/{measurementId}` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `PatientImageMgmt_listPatientImages` | dental-imaging | GET | `/dental/patients/{patientId}/images` | ✅ | ✅ | ✅ | ✅ |  |  | tested |
 | `abortMultipartUpload` | storage | DELETE | `/storage/multipart/{file}/abort` | ✅ | ✅ |  |  |  |  | template-base |
 | `acceptCasePresentation` | dental-patient | POST | `/dental/patients/{patientId}/case-presentations/{presentationId}/accept` | ✅ | ✅ | ✅ | ✅ |  |  | tested |

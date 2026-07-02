@@ -1,6 +1,6 @@
 # Security Advisories — Accepted Baseline
 
-Last audited: 2026-06-19
+Last audited: 2026-07-02
 
 This document records known advisories that have been triaged and accepted as part of the operational risk baseline. Accepted advisories are re-evaluated on each `bun audit` run in CI.
 
@@ -38,6 +38,18 @@ This document records known advisories that have been triaged and accepted as pa
 > the upgrade removes the vulnerable surface entirely. Covered by the 42 email-handler
 > tests + the contract auth-email round-trip (Mailpit) scenarios.
 
+> **2026-07-02 re-audit.** One newly-published advisory since 2026-06-19 (lockfile
+> unchanged — began failing `Security Audit` on every branch + `main`):
+> `@hey-api/openapi-ts` `GHSA-hhx9-57xq-r5rw` (moderate, CVSS 4.8) — prototype-chain
+> substitution via an unknown `$<slot>___proto__` key in the `buildClientParams`
+> template. **Build/codegen tooling only, not in any runtime path.** `@hey-api/openapi-ts`
+> is the SDK generator (a `devDependency` of `packages/sdk-ts`); the emitted
+> `buildClientParams` helper (`src/generated/core/params.gen.ts`) is exported but
+> **never called** — the SDK's request path uses the hand-written transport, so no
+> attacker-controlled args ever reach it. Triaged + accepted below; the upgrade to
+> `@hey-api/openapi-ts ≥0.97.3` (+ SDK regen) is deferred to the tracked dependency PR
+> to avoid lockfile/codegen churn in unrelated work.
+
 ## Accepted Advisories
 
 | ID | Package | Severity | Description | Rationale | Accepted |
@@ -55,6 +67,7 @@ This document records known advisories that have been triaged and accepted as pa
 | GHSA-vxr8-fq34-vvx9 | dompurify <3.4.9 | low | Trusted Types policy survives `clearConfig()` and can poison later sanitization | Transitive via `@scalar/api-reference` (the `/docs` UI — dev/docs tooling). Low severity, niche config interaction; the app does not call `clearConfig()` in a way that crosses trust boundaries. Upgrade dompurify ≥3.4.9 with the `@scalar` bump (tracked). | 2026-06-16 |
 | GHSA-gvmj-g25r-r7wr | dompurify >=3.0.0 <=3.4.7 | low | `SAFE_FOR_TEMPLATES` bypass — template expressions survive sanitization | Transitive via `@scalar/api-reference`. Low severity; only affects callers using `SAFE_FOR_TEMPLATES` mode, which this app does not. Upgrade dompurify ≥3.4.8 with the `@scalar` bump (tracked). | 2026-06-16 |
 | GHSA-cmwh-pvxp-8882 | dompurify <=3.4.10 | moderate | Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard | Transitive via `@scalar/api-reference` (the `/docs` UI — dev/docs tooling), same surface as the two dompurify rows above. The API does not sanitize attacker-controlled HTML through this dompurify instance at runtime. Upgrade dompurify ≥3.4.11 with the `@scalar` bump (tracked dep PR). | 2026-06-19 |
+| GHSA-hhx9-57xq-r5rw | @hey-api/openapi-ts <0.97.3 | moderate | Prototype-chain substitution via unknown `$<slot>___proto__` key in the `buildClientParams` template | SDK **codegen** tooling (`devDependency` of `packages/sdk-ts`); the emitted `buildClientParams` helper is exported from the generated client but **never called** — the SDK request path uses the hand-written transport, so no attacker-controlled args reach it. Not in any runtime path. Upgrade `@hey-api/openapi-ts` ≥0.97.3 + regen the SDK (tracked dep PR). | 2026-07-02 |
 ## Rust (`cargo audit`) — Tracked Remediation (not yet accepted)
 
 Audited: 2026-06-07. The `rust-security` job (`quality.yml:rust-security`) runs `cargo audit`

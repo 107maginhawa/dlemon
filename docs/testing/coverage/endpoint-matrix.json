@@ -559,6 +559,19 @@
     "disposition": "tested"
   },
   {
+    "operationId": "ImagingMgmt_updateMeasurement",
+    "method": "PATCH",
+    "path": "/dental/imaging/measurements/{measurementId}",
+    "module": "dental-imaging",
+    "hasHandler": true,
+    "hasSDK": true,
+    "hasFEConsumer": true,
+    "hasContractTest": true,
+    "hasIntegrationTest": false,
+    "hasJourney": false,
+    "disposition": "tested"
+  },
+  {
     "operationId": "PatientImageMgmt_listPatientImages",
     "method": "GET",
     "path": "/dental/patients/{patientId}/images",
